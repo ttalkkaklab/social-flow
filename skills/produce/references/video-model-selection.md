@@ -190,7 +190,7 @@ ModelArk docs directly, with the write-up in [Seedance API notes](https://github
   - [Where not to take the ranking at face value](#where-not-to-take-the-ranking-at-face-value)
 - [The traps this pipeline hits](#the-traps-this-pipeline-hits)
   - [The character panels — how a channel cast is stored](#the-character-panels-how-a-channel-cast-is-stored)
-- [The four Seedance models — what differs](#the-four-seedance-models-what-differs)
+- [The five Seedance models — what differs](#the-five-seedance-models-what-differs)
 - [Prompt grammar — Seedance](#prompt-grammar-seedance)
   - [Positive locks — what an exclusion turns into on Seedance](#positive-locks-what-an-exclusion-turns-into-on-seedance)
   - [The batch-failure ladder — which level to change](#the-batch-failure-ladder-which-level-to-change)
@@ -255,10 +255,7 @@ over a non-speaking picture passes on any adapter; a `visual.clip` slot with lin
 `generateAudio:false` there. MSR's voice sample stays optional: without one the prompt voices the
 speaker and the plan warns ([voice-continuity.md](voice-continuity.md)).
 
-**2. If the source contains a live-action person, Seedance 2.x is out.** The Dreamina Seedance
-2.5/2.0 family rejects input faces — probed 2026-08-15 with a face PNG, Seedance 2.0 rejected it
-at `first_frame` (`InputImageSensitiveContentDetected.PrivacyInformation`). Photoreal real-person
-sources go to the LTX lanes (ASTRA GenAI, ASTRA).
+**2. On Seedance, a portrait uses its approved ModelArk asset ID.** Select the face panel and its character's voice sample. For an original virtual character use the AIGC library. A real person needs a verified LivenessFace group. Raw real-person face uploads can receive `InputImageSensitiveContentDetected.PrivacyInformation`. Follow [portrait registration](../../register-seedance-portrait/SKILL.md).
 
 **3. (First setup) If the slot discards the sound, generate it silent** (`generateAudio:false`).
 Once a model is saved it serves both slots.
@@ -294,26 +291,19 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | `engine` | `seedance` for this route; other cuts take the saved engine |
 | `modelPurpose` | `standard` (default), `complex-motion`, `reference`, `fixed-voice`, or `previz` (the 3D previz clip as `Video 1` — storyboard `blender-previz.md` §6; every generated_video cut on the Seedance route) |
 | `modelReason` | Optional explanation of the action or reference requirement |
-| `realFaceInput` | Set after inspecting all source/reference images. 2.x requires `false`; a generated photoreal face counts as a face too |
+| `realFaceInput` | Set true when the shot includes a portrait. Use sheet images for faces and reviewed asset URIs for portrait videos. Ordinary props, fitting panels and motion references keep their original roles |
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
-| `referenceAudioPaths` | Planned fixed-voice samples; forces the 2.5 speaking/b-roll route |
+| `referenceAudioPaths` | Voice samples in prompt order. On 2.0 include an image or video. |
+| `referenceVideoPaths`, `referenceVideoUrls` | Local storyboard paths and public URLs or library assets. Inputs count toward the video rate. |
+| `referenceVideoTaskIds` | Eligible completed same-account Seedance originals. Each receives a video slot after local videos and URLs and counts toward the video-input price. Use the actor’s `visual.characterInputs[].faceTaskId` when that original supplies the face. |
+| `omniReferenceTaskType` | 2.5 and Flash accept `auto`, `reference`, `edit`, or `extend`. Editing keeps the input duration. |
 | `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
 | `resolution` | The saved resolution for this model (720p allowed, CLAUDE.md 2026-09-12); the final canvas scales the source |
 
-A photoreal face cannot ride a 2.x cut. Do not remove the face or change the shot merely to
-qualify for 2.x; report the cut for an explicit exception to an LTX lane and replan it there
-before generating, multi-reference and voice requirements included.
+For a photoreal portrait, keep its authored framing and register the corresponding character sheet. A missing library entitlement pauses the approved request until the user activates it.
 
-Produce reads each Seedance row's `generation` object from `cost-preview.js --json` and
-uses its `tool`, `model`, `resolution`, `generateAudio`, and reference paths as the `video_plan`
-operation args, with `requiredSeconds` from `plan-video-duration.js` for the length
-(video-duration.md; the legacy `durationSeconds` is not sent beside it). Resolve relative reference paths from the storyboard directory.
-Add the stored prompt and source/output paths. Do not send planning fields such as
-`modelPurpose`, `modelReason`, `realFaceInput`, `priceKey`, or `kind` as tool arguments.
-`seedance_img2video` takes the existing source still; `seedance_reference` takes the
-resolved reference paths, and on a previz cut `referenceVideoPaths` too. Bind image/video/audio
-indices in the stored prompt before approval.
+Use each Seedance row’s `generation` object to review the forecast. Call `video_plan` with the episode, scene or shot, and request ID. The managed planner reads the prompt, selected model, character panels, voice samples and previz from the storyboard. Compare its actual image, video and audio slots to the authored direction before approval. Set `maxCostUsd` when the user has specified a cap. For a shot that needs a duration override, use `requiredSeconds` from `plan-video-duration.js` or the exact duration field by itself.
 
 The forecast bills the model's minimum duration and rounds fractional used seconds up;
 a 3-second scene therefore pays for 4 seconds. It rejects overlong scenes. Changing
@@ -338,15 +328,15 @@ Reference/voice requirements cannot be dropped just to fit the cap.
 | **A non-speaking cut** — narration over the picture, mood, place | Any adapter: `astra_genai_img2video`, `seedance_img2video`, `astra_img2video` … (b-roll carries no narration — produce rule 9) |
 | **Motion background** (`visual.video` — the builder discards the sound) | The saved model with `generateAudio: false`; on Seedance, `seedance_reference` with an optional previz as `referenceVideoPaths` (§Seedance per-cut selection) or `seedance_img2video` with a `frame_and_prompt` previz |
 | **b-roll slot** (produce absolute rule 9 uses the clip's own sound) | The saved model with its audio on; a b-roll whose characters speak takes the voice-lane rows above |
-| Source contains a **live-action person** | An LTX lane (ASTRA GenAI, ASTRA). Seedance 2.x rejects face input |
+| Source contains a **live-action person** | LTX can use the source image. With Seedance 2.x, use a reviewed portrait in the person's verified ModelArk group. For an original photoreal fictional character, use the virtual portrait library. |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images. References carry look and style, not composition |
-| **Register a character once and keep calling it** | The Seedance asset library (`asset://`) |
+| **Register a character once and keep calling it** | An eligible account can use the private Seedance asset library (`asset://`). The public catalog supplies preset characters. |
 | **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images); MSR takes up to four subject images plus the background |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` |
-| **Extend** a clip or re-roll one span | `astra_genai_desktop_extend` · `astra_genai_desktop_retake` · `astra_video_retake` |
+| **Extend** or edit a clip | Seedance 2.5 / Flash with `seedance_reference` and `omniReferenceTaskType:"extend"` or `"edit"`. For ASTRA use `astra_genai_desktop_extend` for an extension or `astra_genai_desktop_retake` / `astra_video_retake` for one span. |
 | A length past 15s in one call | Seedance 2.5 (4–30s); LTX lanes take frame counts ([video-duration.md](video-duration.md)) |
 | **21:9 / 4:3 / 1:1 / 3:4** frame | `seedance_*` — every ratio |
-| **4K** | `dreamina-seedance-2-0-260128` |
+| **4K** | Standard Seedance 2.5 or 2.0 |
 | **Cheapest** paid single cut | `dreamina-seedance-2-0-mini-260615` — 720p 5s ≈ $0.38; ASTRA and local MLX cost wall clock instead |
 
 ---
@@ -361,14 +351,13 @@ ASTRA and local MLX cost wall clock, not money.
 
 | | 480p | 720p | 1080p | 4K |
 |---|---|---|---|---|
-| Seedance 2.5 | 0.103 | 0.231 | 0.569 *(from 8/17)* | — |
+| Seedance 2.5 | 0.103 | 0.231 | 0.569 | 0.914 |
+| Seedance 2.5 Flash | 0.068 | 0.152 | — | — |
 | Seedance 2.0 | 0.070 | 0.152 | 0.374 | 0.778 |
 | Seedance 2.0 fast | 0.056 | 0.120 | — | — |
 | Seedance 2.0 mini | 0.036 | 0.076 | — | — |
 
-The Seedance figures are the official docs' 5s example prices divided down to per-second
-(2026-08-15). Three time-limited discounts are not reflected — 2.5's 1080p at 72% of list (through ~09-17),
-2.0 mini at 40% and 2.0 fast at 75% (through 2026-10-07, rechecked 2026-09-05).
+These estimates use the five-second examples without video input. With video input, the provider charges a separate token rate for input and output together. The managed budget uses a conservative reservation and settles on reported completion tokens. [BytePlus ModelArk pricing](https://docs.byteplus.com/en/docs/modelark/model-pricing)
 
 ---
 
@@ -395,9 +384,9 @@ cross-board number comparisons are meaningless.
 
 ### What to read from it
 
-**Dreamina Seedance 2.0 is #1 in image→video.** But what the arena tested is **720p output**,
-this model rejects live-action face input, and it sits behind the $30-balance gate. The LTX
-lanes have no arena reading here; judge them on the episode's own clips.
+**Dreamina Seedance 2.0 ranked first in this 720p image-to-video comparison.** The ranking
+does not measure continuity for a particular face. Check the episode's own clips for that,
+including LTX clips where the arena has no reading.
 
 ### The models with no evaluation yet
 
@@ -434,17 +423,11 @@ prices, §Price comparison above is the source of truth.
 
 ## The traps this pipeline hits
 
-**1. Live-action faces — 2.x won't take them as input.**
-The Dreamina Seedance 2.5/2.0 family rejects reference images and videos containing real
-human faces. A photoreal source with a real face goes to an LTX lane (ASTRA GenAI, ASTRA) or a
-compatible host tool. Cuts with no visible face (back view, silhouette) are accepted by every
-model.
+**1. Register face-bearing references before generation.** The original image stays in the character sheet. The plugin checks its digest and sends the active ModelArk URI in the same image slot. The asset group's type determines whether the owner needs to complete real-person verification.
 
-**2. Touching `ratio` crops the source.**
-`seedance_img2video`'s ratio default is `adaptive` — it follows the source image's ratio.
-Pass anything else and the server **center-crops**. Feed a 1088×1920 cover with `16:9` and
-only the middle band of the frame survives. If you don't intend to change the ratio, don't
-pass the argument.
+**2. First-frame aspect ratio follows the model.**
+Both 2.5 models require `adaptive` when an opening image is supplied. On 2.0 the
+default also follows the opening image. A different ratio can crop the frame.
 
 **3. `generateAudio`'s vendor default is `true`; ours is `false`.**
 Narration is added separately via `tts_*`, so a model-generated voice makes two layers. The tool
@@ -453,9 +436,10 @@ reference into a silent clip has nothing to shape, so `seedance_reference` rejec
 `referenceAudioPaths` with `generateAudio: false` before the call.
 
 **4. Result URLs live for 24 hours.**
-The server saves a local mp4 the moment polling completes and returns only the path, so
-normally there's nothing to think about. But a task that failed on timeout (15 min) must be
-retrieved from the ModelArk console, and even that disappears after a day.
+The plugin verifies the downloaded MP4 before saving it. If a managed call times out or
+the download fails, run `video_status` with `action:"refresh"` and the same request ID.
+It polls the recorded ModelArk task and downloads the result while the URL is valid.
+If the submission was interrupted before an ID was recorded, reconcile it in the ModelArk console.
 
 **5. Seedance 2.0 hallucinates more captions in portrait.**
 Unrequested text gets burned into the frame, and the vendor docs state the probability is
@@ -536,52 +520,27 @@ trousers sew themselves back up a beat later). Generate a second sheet for the c
 the other way for a flashback: age the character, the location and the props together, or the
 flashback reads as a costume instead of a memory.
 
-**A live-action character keeps its single image.** The panel convention is for drawn characters.
-Where the canonical asset is a photograph (Ttalkkak Lab's `mouse/real.png` — the mouse-helmet
-figure), that one file stays the reference and goes to an LTX lane, since Seedance 2.x rejects
-real faces.
-
-**Engine routing** — a drawn character goes to the saved reference adapter:
-`seedance_reference` (1–30 images on 2.5, 1–9 on 2.0) or `astra_genai_msr` (one character uses
-its face close-up, headless front and headless back; three or four use one face each). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
-real faces outright. On the image lane, the same panels go to
-the saved image adapter's edit tool as input images, same order, same reason.
+**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. With ASTRA GenAI MSR, the single-character layout can use its face close-up and headless front and back panels. For three or four characters the layout uses one face per subject. The image adapter's edit tool takes the same authored panel order.
 
 ---
 
-## The four Seedance models — what differs
+## The five Seedance models — what differs
 
-| Model ID | Resolution | Length | Reference images | Audio | Live-action face input |
+| Model ID | Resolution | Length | Maximum reference images | Audio | Photoreal character sheet |
 |---|---|---|---|---|---|
-| `dreamina-seedance-2-5-260628` | 480p–1080p | 4–30s | 1–30 | ○ | **rejected** |
-| `dreamina-seedance-2-0-260128` **default** | 480p–4K | 4–15s | 1–9 | ○ | **rejected** |
-| `dreamina-seedance-2-0-fast-260128` | 480p·720p | 4–15s | 1–9 | ○ | **rejected** |
-| `dreamina-seedance-2-0-mini-260615` | 480p·720p | 4–15s | 1–9 | ○ | **rejected** |
+| `dreamina-seedance-2-5-260628` | 480p–4K | 4–30s | 30 | ○ | Reviewed portrait asset |
+| `dreamina-seedance-2-5-flash-261115` | 480p·720p | 4–30s | 10 | ○ | Reviewed portrait asset |
+| `dreamina-seedance-2-0-260128` **default** | 480p–4K | 4–15s | 9 | ○ | Reviewed portrait asset |
+| `dreamina-seedance-2-0-fast-260128` | 480p·720p | 4–15s | 9 | ○ | Reviewed portrait asset |
+| `dreamina-seedance-2-0-mini-260615` | 480p·720p | 4–15s | 9 | ○ | Reviewed portrait asset |
 
 All models are fixed 24fps and accept every ratio: 16:9, 9:16, 4:3, 3:4, 1:1, 21:9, adaptive.
 Each takes first+last frames. `seedance_text2video`, `seedance_img2video` and
 `seedance_reference` all default to `dreamina-seedance-2-0-260128`.
 
-2.5's 1080p opened on **2026-08-17 (UTC+8)** and sits in the
-`dreamina-seedance-2-5-260628.resolutions` capability table (`server/src/seedance-client.ts`)
-— 10-bit color, and the one tier the 28%-off list campaign covers through 2026-09-17.
-4K stayed 2.0-only.
+Seedance 2.5 and Flash accept up to 10 and 5 reference videos or audio clips respectively. Both accept audio alone. With 2.0, pair audio with an image or video. Use `ratio:"adaptive"` for 2.5 first/last frames, edits and extensions. In a reference call use `omniReferenceTaskType:"edit"` and `durationSeconds:-1` to edit the input video, or `"extend"` to generate its continuation. Select `"reference"` for a new shot using the supplied assets. Auto duration reserves the maximum output length. The plugin saves MP4.
 
-**The Dreamina Seedance 2.5/2.0 family doesn't unlock on a key alone** — it activates only
-with an account balance over $30 or a purchased resource pack.
-
-**API deltas the tool surface doesn't carry yet** (2026-08-25 delta check — candidates for
-`seedance-client.ts`, not exposed today):
-
-- **`duration: -1`** — the model picks a whole-second length inside its valid range (2.0; the
-  2.5 *default*). Our pipeline computes each
-  scene's length from the narration, so the deterministic path stays the rule — `-1` is for a
-  cut whose length genuinely doesn't matter.
-- **2.5 only**: `output_format: "mov"` (H.264 + YUV 4:4:4 + PCM — color-safe for edit/extend
-  chains) and `omni_reference_task_type` (declares reference/edit/extend up front so bad
-  combinations fail at submission instead of as async errors).
-- **Reading order**: this vendor updates the **Chinese docs first**. Open the volcengine ZH
-  page first, use BytePlus EN to cross-check.
+Check the [ModelArk contract and examples](../../../docs/research/2026-11-22-seedance-api/README.md). Enable the model in the BytePlus console before calling it.
 
 ---
 
@@ -778,10 +737,6 @@ angles — eye level vs high is only a trend (p=.082). This is a default guide, 
 
 ## What Seedance can't do
 
-- **Extend or edit local video.** ModelArk's video input takes public URLs and asset IDs
-  only, no base64. `seedance_reference` publishes a local reference video for the life of the
-  task (`MEDIA_UPLOAD_URL` hosting, else a cloudflared quick tunnel — `media-publish.ts`), but
-  2.5's edit and extend task types are not wired, so extension goes to `astra_genai_desktop_extend`.
 - **Prompt language.** Write every video prompt in English, 2.5 included; dialogue alone keeps the video's language inside quotes.
 
 ---

@@ -691,7 +691,7 @@ the price.
   bans text-to-video here (the same prompt renders a different scene every time, so there's
   no baseline to roll back to). Under absolute rule 9 the b-roll segment uses the clip's own
   audio.
-  Seedance 2.x rejects real human faces, so a photoreal person goes to an LTX lane. **If the
+  On Seedance, pass a reviewed character portrait from the ModelArk library. **If the
   source shows anyone who reads as a child or teenager, remake the person as an adult.**
 
   Existing 720p clips follow the `visual.reuse` source contract. New clips follow the selected

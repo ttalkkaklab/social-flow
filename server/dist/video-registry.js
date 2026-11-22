@@ -9,13 +9,40 @@ import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
+export function requiredCharacters(shot) {
+    const inputs = shot.visual?.characterInputs;
+    // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
+    return Array.isArray(inputs) ? inputs.filter(person => person?.face && typeof person.bodyPath === 'string') : [];
+}
 const entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === 'audio' ? 'supplied' : 'none' });
 const reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, 'reference', schema), voice: 'reference' });
 /** Schemas and model constraints remain owned by adapters, never copied into a second validator. */
 export const VIDEO_ADAPTERS = Object.freeze({
     seedance_text2video: entry('seedance', 'byteplus', 'text', seedance.seedanceText2VideoSchema),
     seedance_img2video: entry('seedance', 'byteplus', 'image', seedance.seedanceImg2VideoSchema),
-    seedance_reference: reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+    seedance_reference: {
+        ...reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+        bindCharacterSources(args, cast) {
+            const originals = new Map();
+            for (const person of cast) {
+                const id = person.face.taskId;
+                if (!id)
+                    continue;
+                if (originals.has(id) && originals.get(id) !== person.character)
+                    throw new Error('character_face_source_ambiguous: each facial reference needs one identifiable character');
+                originals.set(id, person.character);
+            }
+            const taskIds = [...originals.keys()];
+            if (args.realFaceInput === false && taskIds.length ||
+                taskIds.length && args.referenceVideoTaskIds !== undefined && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
+                throw new Error('character_inputs_mismatch: use the face sources declared on the storyboard');
+            const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
+            const offset = videos.reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+            const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+            return { ...args, realFaceInput: args.realFaceInput ?? true,
+                ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt: [args.prompt, ...notes].join('\n') } : {}) };
+        },
+    },
     ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
         'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),
         entry('astra-genai-desktop', 'gateway-desktop-v1', ({ 'text-to-video': 'text', 'image-to-video': 'image', 'audio-to-video': 'audio', keyframes: 'keyframe' }[feature] || feature), schema),
@@ -152,6 +179,8 @@ export function speechVideoCapabilities(provider, model, operation, subjectRefer
     if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' || provider === 'ltx-desktop-local' ||
         provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))
         return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'The supplied track conditions video generation. Mouth movement and phoneme alignment require output review.' };
+    if (provider === 'seedance' && operation === 'reference')
+        return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing.' };
     if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
         return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
     if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-desktop-local', 'ltx-api', 'minimax', 'heygen'].includes(provider))

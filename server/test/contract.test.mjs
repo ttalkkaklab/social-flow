@@ -446,10 +446,10 @@ describe('Seedance 2.x tool surface', () => {
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '1080p' }).success,
       true,
     );
-    // but 4K is 2.0-only — 2.5 never got it
+    // Standard 2.5 now also outputs 4K.
     assert.equal(
       seedanceText2VideoSchema.safeParse({ prompt: 'x', model: 'dreamina-seedance-2-5-260628', resolution: '4k' }).success,
-      false,
+      true,
     );
     // the 2.0 duration cap is 15 seconds
     assert.equal(seedanceText2VideoSchema.safeParse({ prompt: 'x', durationSeconds: 20 }).success, false);

@@ -1,0 +1,30 @@
+## Target verification report — iteration 4
+
+Verify Seedance adapter parity, virtual portrait registration before video submission, receipt reuse and same-plan recovery. The frozen threshold is 95/100 with zero P0 defects.
+
+### Overall score — 80/100
+
+| Criterion | Awarded | Max | Evidence and attempted refutation |
+|---|---:|---:|---|
+| Reachable behavior | 32 | 40 | Selection/catalog 8. The Flash plan and per-slot overrides passed at `server/test/video-routing.test.mjs:1112` and `:1230`. Shot and scene routing 0. The prior edit-prompt and reference-scope reproductions now pass across the three card slots and both scene paths at `server/test/video-routing.test.mjs:1230` and `:1286`. A portrait resolution failure still consumes the approved request before submission in the managed entry point. ModelArk payloads 8. The edit and extend HTTP mock verifies the wire fields at `server/test/seedance-client.test.mjs:31`. The portrait HTTP mock verifies that two uses of the same reviewed face supply the same asset URI with one creation at `server/test/modelark-assets.test.mjs:124`. Budget/settlement 8. The token rates at `server/src/video-pricing.ts:10` and measured charges or release at `server/test/video-routing.test.mjs:1162` and `:1205` passed the rerun. Provider-ID recovery 8. Recovery at `server/test/video-routing.test.mjs:1112` reuses the provider job after download and output verification failures. |
+| Objective gate | 25 | 25 | The full check reported exit 0 and `/tmp/hafgufa-portrait-final-gate.log` records 1,220 passed, zero failures and zero skips. Fresh runs of skill lint and `git diff --check` both exited 0. Lint found 17 rules across 35 skills. |
+| Regression coverage | 15 | 15 | The independent focused test command exercised all five frozen behaviors, including selection and both scene compilers, HTTP requests, pricing, moderation and recovery. Fifteen tests passed with zero skips. It also exercised identity preservation, receipt reuse, ambiguous upload recovery and entitlement refusal at `server/test/modelark-assets.test.mjs:124`, `:178` and `:196`. |
+| Code and documentation consistency | 8 | 10 | The distributed handler and registration tool agree on asset arguments at `server/src/handlers.ts:1076` and `server/src/tools.ts:2360`. The new skill tells first-time users to identify the portrait type, then tells them to call the tool with only `identityPath` and `panel` at `skills/register-seedance-portrait/SKILL.md:11`. Those two arguments alone fail on a new sheet at `server/src/modelark-assets.ts:270`. |
+| Existing behavior and scope | 0 | 10 | The original Seedance default and unrelated routes pass the full gate. The distributed Seedance adapter stops an ordinary headless sheet image previously allowed by the planning and generation contract. See defect 1. |
+
+### P0 defects
+
+1. **An ordinary headless character panel now requires a portrait entitlement.** A temporary canonical `assets/characters/rue/back.png` belonged to an existing unclassified sheet and was declared `realFaceInput:false`. A direct distributed `seedance_reference` request failed with `modelark_asset_kind_required` before any network operation. `server/src/modelark-assets.ts:427` returns a portrait candidate for any file in a character directory. `server/src/seedance-client.ts:674` resolves every candidate through the portrait library regardless of panel role and flag. The normal character reference set includes the headless front and back, and the board explicitly distinguishes a shot without a visible face at `skills/produce/references/video-model-selection.md:489` and `skills/produce/references/video-generation.md:54`. Under the current lookup a character with a saved AIGC type would also send those nonportrait panels for registration. This changes existing ordinary-media behavior and which files reach the asset service.
+2. **An ambiguous copied portrait loses both its structured handoff and the approved request.** I assigned two cast members identical face-panel bytes, bound a copy in the storyboard, set `realFaceInput:true`, then called the actual `ROUTES.video_execute` twice on one approved plan. The first response contained `modelark_asset_ambiguous` as plain text and no `structuredContent`. The job moved to `failed`. The second call returned `video_request_failed` and required a new request ID. The standalone mock recorded zero network operations. The resolution exception at `server/src/modelark-assets.ts:462` reaches `server/src/seedance-client.ts:874` outside its `PortraitError` wrapper. The special pre-submission release at `server/src/video-routing.ts:892` consequently does not run. The same loss applies to a cast identity conflict thrown by the same resolver. The entitlement-specific response and reservation release separately passed their existing tests.
+
+### Fix directives
+
+1. Resolve face-bearing panels and known registered portraits in their authored slots. Preserve ordinary headless panels and props as ordinary images. Exercise a historical sheet with its headless back panel, and a reference request mixing a registered face with nonportrait media. Assert the ordered wire values and exactly which file reaches registration.
+2. Carry portrait lookup exceptions through the structured pre-submission result for both reference and image-to-video requests. Exercise a real `video_execute` call on an ambiguous copied face and verify the job slot is released, the request has made zero inference calls, and a corrected cast mapping can resume the same approval.
+3. Show the first-use `groupType` argument in the registration skill and `verifiedGroupId` for a verified real person.
+
+### Verification scope
+
+The previous two P0 reproductions now pass in the distributed build. All verifier network transports used local mocks and temporary images. The supplied live receipt covers the provider's `403 SubscriptionRequired` response. Successful production registration and paid video generation remain unverified while the owner completes enterprise verification.
+
+ASTRA_LOOP_RESULT: score=80 verdict=FAIL p0=2 iter=4

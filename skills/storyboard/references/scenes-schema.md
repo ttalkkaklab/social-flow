@@ -2677,8 +2677,9 @@ With a previz on a 2.x grade the same slot adds `modelPurpose: "previz"` and the
 above.
 
 Use the same fields in `visual` for b-roll and `visual.clip` for speaking clips.
-An actual photoreal face, including a generated face, is ineligible for 2.x. Route such
-an action to an LTX lane instead. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
+For a photoreal face on Seedance 2.x, link the character's sheet panel and set
+`realFaceInput:true`. The plugin resolves the reviewed portrait before sending the video.
+Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
 2026-10-31 because none takes a voice reference; a slot naming one fails as
 `video_engine_unsupported`, and its existing clip stays reusable under `visual.reuse`.
 
@@ -2713,8 +2714,8 @@ uses its sound, the duration), so this slot's default is a silent Seedance (`vis
 overrides — the decision table's source of truth is produce
 `references/video-model-selection.md`, order face → sound → grid). Write into the plan the
 facts the validation needs — **whether there's a face in the source and, if so, whether it's
-an adult**. Seedance 2.x refuses photorealistic faces outright, so filtering at the planning stage avoids redrawing
-the picture.
+an adult**. Link each photoreal face to its character's portrait. If the account lacks the
+entitlement needed to register that portrait, preserve the approved cut and report the error.
 
 **`prompt` is the stored final clip prompt, written in the route's grammar** (§clip prompt) —
 for this slot that means Seedance grammar. The camera part is not written by hand: the

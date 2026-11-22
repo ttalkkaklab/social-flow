@@ -7,7 +7,8 @@ import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { MINIMAX_MODELS } from './minimax-video.js';
 const PRICE_FILE = fileURLToPath(new URL('../../skills/autoproduce/references/prices.tsv', import.meta.url));
 const TOKEN_RATES = {
-    'dreamina-seedance-2-5-260628': [10.7, 6.4, 11.7, 7],
+    'dreamina-seedance-2-5-260628': [10.7, 6.4, 11.7, 7, 4.7, 2.9],
+    'dreamina-seedance-2-5-flash-261115': [7, 4.3],
     'dreamina-seedance-2-0-260128': [7, 4.3, 7.7, 4.7, 4, 2.4],
     'dreamina-seedance-2-0-fast-260128': [5.6, 3.3],
     'dreamina-seedance-2-0-mini-260615': [3.5, 2.1],
@@ -26,20 +27,20 @@ export function quoteVideo(tool, args) {
     if (tool.startsWith('seedance_')) {
         const model = String(args.model), resolution = String(args.resolution);
         const spec = SEEDANCE_MODEL_SPECS[model];
-        const hasVideo = ['referenceVideoPaths', 'referenceVideoUrls'].some(k => Array.isArray(args[k]) && args[k].length);
+        const hasVideo = ['referenceVideoPaths', 'referenceVideoUrls', 'referenceVideoTaskIds'].some(k => Array.isArray(args[k]) && args[k].length);
         const rates = TOKEN_RATES[model];
         const index = resolution === '4k' ? 4 : resolution === '1080p' ? 2 : 0;
         const tokenRate = rates?.[index + (hasVideo ? 1 : 0)];
         if (!spec || !Number.isFinite(tokenRate))
             throw new Error('Price unavailable for selected Seedance deployment');
         const pixels = { '480p': 864 * 512, '720p': 1344 * 768, '1080p': 1984 * 1152, '4k': 3904 * 2240 }[resolution];
-        const seconds = Number(args.durationSeconds);
+        const seconds = args.durationSeconds === -1 ? spec.duration[1] : Number(args.durationSeconds);
         // Reserve the entire permitted reference duration, including remote clips we cannot measure.
         // This is an estimate bound against the pinned rate sheet, not a vendor-enforced dollar cap.
         const inputSeconds = hasVideo ? spec.referenceVideos.totalSeconds : 0;
         const estimatedUsd = roundUp((seconds + inputSeconds) * pixels * 24 / 1024 * tokenRate / 1e6);
         return { estimatedUsd, reserveUsd: estimatedUsd, tokenRate, revision,
-            basis: 'BytePlus token rates checked 2026-10-18; padded pixel estimate and maximum reference duration; settle completion_tokens' };
+            basis: 'BytePlus token rates checked 2026-11-22; padded pixel estimate and maximum reference duration; settle completion_tokens' };
     }
     const price = priceOf(tool, args);
     const rate = (key) => {

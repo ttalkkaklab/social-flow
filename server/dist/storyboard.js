@@ -189,7 +189,14 @@ export const cameraSchema = z.record(z.unknown()).superRefine((value, ctx) => {
     for (const message of cameraContract().cameraInputErrors(value))
         ctx.addIssue({ code: z.ZodIssueCode.custom, message });
 });
-const visualSchema = z.object({ camera: cameraSchema.optional() }).passthrough();
+const visualSchema = z.object({
+    camera: cameraSchema.optional(),
+    characterInputs: z.array(z.object({
+        character: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+        bodyView: z.enum(['front', 'back']).optional().describe('Body panel for this actor when the camera view is ambiguous'),
+        faceTaskId: z.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/).optional().describe('Eligible same-account Seedance original selected for this actor’s face'),
+    }).strict()).nonempty().optional(),
+}).passthrough();
 /** The stable shot id storyboard_apply assigns (R6): `s` + four or more digits. */
 export const shotIdSchema = z.string().regex(/^s\d{4,}$/);
 export const shotSchema = z

@@ -33,6 +33,10 @@ test('Seedance maps speakers to existing audio order and explicit image ownershi
   assert.deepEqual(result.args.referenceAudioPaths,[friend.voiceReference.path,hero.voiceReference.path]);
   assert.match(result.args.prompt,/hero.*@Image 2.*@Audio 2/);
   assert.match(result.args.prompt,/friend.*@Image 1.*@Audio 1/);
+  assert.match(result.args.prompt,/@Audio 2 \(@Image 2\): "Hello hero"[\s\S]*@Audio 1 \(@Image 1\): "Hello friend"/);
+  const legacy = {...input, prompt:'They exchange a glance. "Hello hero" then "Hello friend".'};
+  assert.equal(prepareVideoVoice('seedance_reference',legacy,ctx).args.prompt.split('"Hello hero"').length,2);
+  assert.throws(()=>prepareVideoVoice('seedance_reference',{...input,prompt:'"Hello friend" then "Hello hero".'},ctx),/video_dialogue_embedded/);
   assert.match(result.args.prompt,/timbre and accent only/);
   assert.equal(result.voiceContinuity.strategy,'reference_voice');
   assert.equal(result.voiceContinuity.review.voiceIdentity,'not_reviewed');
@@ -83,7 +87,8 @@ test('speech identity, acting and reference changes alter the voice revision',t=
   ctx.shot.narration[0].acting={direction:'quiet question'};
   const after=prepareVideoVoice('seedance_reference',input,ctx);
   assert.notEqual(before.voiceContinuity.revision,after.voiceContinuity.revision);
-  assert.equal(before.args.prompt,after.args.prompt,'scene acting must not overwrite stable identity');
+  assert.deepEqual(before.voiceContinuity.speakers,after.voiceContinuity.speakers,'acting must not overwrite stable identity');
+  assert.match(after.args.prompt,/speaks \(quiet question\)/);
 });
 test('Korean cast metadata does not break the 2.0 English/Chinese direction contract',t=>{
   const ctx=fixture(t);ctx.board.SB_DOC.characters[0].name='민재';ctx.board.SB_DOC.characters[0].tts={...tts,voiceDirection:'낮고 차분한 목소리'};

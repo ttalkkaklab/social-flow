@@ -105,7 +105,7 @@ function boardPanelFindings(win, boardDir, channelDir) {
   return findings;
 }
 // Resolve ownership from the episode cast, never from a transport filename or a scene image.
-function readPanelSheets(boardDir, ids) {
+function readPanelSheets(boardDir, ids, requiredViews) {
   let cast = [];
   const castFile = path.join(boardDir, 'cast.json');
   if (fs.existsSync(castFile)) {
@@ -132,7 +132,7 @@ function readPanelSheets(boardDir, ids) {
     try { manifest = JSON.parse(fs.readFileSync(path.join(folder, 'panels.json'), 'utf8')); }
     catch { throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`); }
     const panels = {};
-    for (const view of ['face', 'front', 'back']) {
+    for (const view of requiredViews?.get(id) ?? ['face', 'front', 'back']) {
       const panel = manifest.panels?.[view];
       const file = localFile(folder, panel?.file);
       // Older manifests omitted these tags; an explicitly different tag is never a character panel.
@@ -186,4 +186,87 @@ function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
         : `${id}'s body and outfit, ${view}` };
   }));
 }
-module.exports = { SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
+// Resolve the character's appearance before an engine chooses its wire format.
+function resolveShotCharacterInputs(shot, boardDir) {
+  const visual = shot.visual || {}, view = visual.camera?.view;
+  const cast = [].concat(visual.character || []).map(c => typeof c === 'string' ? c : c.id);
+  const explicit = visual.characterInputs;
+  const bodyForView = id => {
+    if (view?.mode === 'ots' && view.viewerId === id) return 'back';
+    if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
+    if (['detail', 'object', 'space'].includes(view?.subjectType)) return;
+    if (view?.mode === 'rear' || visual.camera?.rear === true) return 'back';
+    if (['front', 'three-quarter-left', 'three-quarter-right', 'profile-left', 'profile-right'].includes(view?.mode)) return 'front';
+  };
+  if (explicit === undefined && (visual.frames?.mode !== 'reference' || !cast.some(bodyForView))) return shot;
+  const specs = explicit ?? cast.map(character => ({ character }));
+  if (!Array.isArray(specs) || !specs.length) throw new Error('character_inputs_invalid: specify the visible cast');
+  const views = new Map();
+  for (const spec of specs) {
+    const id = spec?.character;
+    if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) ||
+        Object.keys(spec).some(key => !['character', 'faceTaskId', 'bodyView'].includes(key)))
+      throw new Error('character_inputs_invalid: use distinct cast IDs and supported character input fields');
+    if (spec.faceTaskId !== undefined && (typeof spec.faceTaskId !== 'string' || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
+      throw new Error('character_face_source_invalid: specify a Seedance generation task ID');
+    const body = spec.bodyView ?? bodyForView(id);
+    if (!['front', 'back'].includes(body)) throw new Error('character_body_view_required: select front or back for ' + id);
+    views.set(id, spec.faceTaskId ? [body] : ['face', body]);
+  }
+  if (cast.length && (cast.some(id => !views.has(id)) || specs.some(spec => !cast.includes(spec.character))))
+    throw new Error('character_inputs_invalid: specify each visible principal in visual.character');
+  const sheets = readPanelSheets(boardDir, [...views.keys()], views);
+  const lines = require('../../storyboard/references/scene-direction.js').orderedSpeech(shot);
+  const faces = [], bodies = [], contracts = [], replacedFaces = new Set();
+  for (const { character, faceTaskId } of specs) {
+    const sheet = sheets.get(character);
+    if (faceTaskId) {
+      for (const slot of ['face', 'msr']) {
+        const name = sheet.entries[slot]?.file;
+        if (typeof name === 'string') replacedFaces.add(path.resolve(sheet.folder, name));
+      }
+    }
+    const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
+    const face = faceTaskId ? { taskId: faceTaskId } : { path: sheet.paths.face };
+    const voiceRequired = lines.some(line => line.speaker === character && line.tts?.trim() && ['on_screen', 'off_screen'].includes(line.delivery));
+    contracts.push({ character, face, bodyView, bodyPath, voiceRequired });
+    const ref = { character, role: 'character', use: 'video' };
+    if (face.path) faces.push({ ...ref, id: shot.id+'-'+character+'-face', path: face.path, purpose: character+' facial identity and hair.' });
+    const fitting = sheet.entries[bodyView].wardrobe === 'fitting';
+    bodies.push({ ...ref, id: shot.id+'-'+character+'-'+bodyView, path: bodyPath, ...(fitting ? { wardrobe:'fitting' } : {}),
+      purpose: character+' '+bodyView+' physique. Show one complete person using the face reference. ' +
+        (fitting ? 'Use the scene wardrobe.' : 'Match the outfit unless the scene changes it.') });
+  }
+  const pending = new Map([...faces, ...bodies].map(ref => [path.resolve(boardDir, ref.path), ref]));
+  const references = [], ids = new Set();
+  for (const authored of visual.references || []) {
+    const file = authored.path && path.resolve(boardDir, authored.path);
+    if (replacedFaces.has(file) && authored.use !== 'image')
+      throw new Error('character_face_source_conflict: remove the superseded face from video references');
+    const selected = pending.get(file);
+    if (selected && authored.use !== 'image') {
+      references.push({ ...authored, character:selected.character, role:'character', purpose:[authored.purpose, selected.purpose].filter(Boolean).join(' ') });
+      pending.delete(file);
+    } else references.push(authored);
+    ids.add(authored.id);
+  }
+  for (const ref of pending.values()) {
+    let id = ref.id;
+    while (ids.has(id)) id += '-video';
+    references.push({ ...ref, id });
+    ids.add(id);
+  }
+  const normalized = { ...visual, characterInputs:contracts, frames:visual.frames ?? { mode:'reference' }, references };
+  const videoPaths = refs => refs.filter(ref => ['both','video'].includes(ref.use)).map(ref => ref.path);
+  const slot = require('../../storyboard/references/production-mode.js').videoSlot(shot);
+  if (slot?.referenceImagePaths !== undefined) {
+    if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
+      throw new Error('image_plan_invalid: legacy paths disagree with authored references');
+    const referenceImagePaths = videoPaths(references);
+    if (shot.type === 'quote' && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
+    else if (shot.type === 'broll' && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
+    normalized.video = { ...slot, referenceImagePaths };
+  }
+  return { ...shot, visual:normalized };
+}
+module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };

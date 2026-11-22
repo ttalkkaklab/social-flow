@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
@@ -5,12 +6,12 @@ import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
  * The API video engine next to the LTX lanes. When to use which is governed by
  * skills/produce/references/video-model-selection.md.
  *
- * - 4 models: Dreamina Seedance 2.5 / 2.0·fast·mini. Seedance 1.x left the plugin on 2026-10-31:
+ * - 5 models: Dreamina Seedance 2.5 / Flash and 2.0 / Fast / Mini. Seedance 1.x left the plugin on 2026-10-31:
  *   it takes no reference audio, so it cannot keep a character's voice.
  * - Text-to-Video, Image-to-Video (first frame · first+last frame), reference images,
  *   reference audio (a clip's voice timbre or dialogue content, `role: reference_audio`)
  *   and reference video (camera, blocking and motion timing from a clip such as the
- *   Blender previz, `role: reference_video`; public URL only, see media-publish.ts)
+ *   Blender previz, `role: reference_video`; public URL or ModelArk asset, see media-publish.ts)
  * - 7 aspect ratios (9:16 included) · fixed 24fps · duration 4~30s (varies per model)
  * - Generation is async — POST creates a task, GET polls it, then the mp4 is downloaded
  *
@@ -22,27 +23,30 @@ import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
  * The API key is validated at call time, not at startup (config.requireArkKey).
  */
 import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
 import { arkBaseUrl, requireArkKey } from './config.js';
+import { saveVendorOutput } from './vendor-video.js';
 import { publishFiles } from './media-publish.js';
+import { ensurePortrait, portraitForImage, PortraitError } from './modelark-assets.js';
 import { ALLOWED_EXTENSIONS, bareFilenameSchema, mimeFromExtension, resolveOutputFile, validateFilePath, } from './media-utils.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 // ── Model capability table (source of truth) ────────────────────────
 //
 // A direct transcription of the per-model constraints in the official docs
-// (docs.byteplus.com/en/docs/ModelArk 1330310·1520757·1544106, checked 2026-08-15).
+// (see docs/research/2026-11-22-seedance-api).
 // Schema validation, tool enums, and docs all derive from this table — copying
 // the values into multiple places means only one gets fixed when a model is added.
 export const VALID_SEEDANCE_RESOLUTIONS = ['480p', '720p', '1080p', '4k'];
 /** 7 aspect ratios. adaptive follows the input's (image/video) ratio as-is. */
 export const VALID_SEEDANCE_RATIOS = ['16:9', '9:16', '4:3', '3:4', '1:1', '21:9', 'adaptive'];
+const REFERENCE_TASK_TYPES = ['auto', 'reference', 'edit', 'extend'];
 export const SEEDANCE_MODEL_SPECS = {
-    // 1080p opened on 2026-08-17 (UTC+8) — 10-bit color, and the only tier the discount
-    // campaign covers (28% off list through 2026-09-17). 2.5 has no 4K; 2.0 does.
     'dreamina-seedance-2-5-260628': {
-        resolutions: ['480p', '720p', '1080p'],
+        referenceTaskTypes: REFERENCE_TASK_TYPES,
+        resolutions: ['480p', '720p', '1080p', '4k'],
         duration: [4, 30],
         lastFrame: true,
         referenceImages: [1, 30],
@@ -50,9 +54,24 @@ export const SEEDANCE_MODEL_SPECS = {
         referenceVideos: { maxClips: 10, clipSeconds: [2, 30], totalSeconds: 30 },
         audio: true,
         realFaceInput: false,
+        portraitAssetInput: true,
+        activationGate: true,
+    },
+    'dreamina-seedance-2-5-flash-261115': {
+        referenceTaskTypes: REFERENCE_TASK_TYPES,
+        resolutions: ['480p', '720p'],
+        duration: [4, 30],
+        lastFrame: true,
+        referenceImages: [1, 10],
+        referenceAudio: { maxClips: 5, clipSeconds: [2, 30], totalSeconds: 30, audioOnly: true },
+        referenceVideos: { maxClips: 5, clipSeconds: [2, 30], totalSeconds: 30 },
+        audio: true,
+        realFaceInput: false,
+        portraitAssetInput: true,
         activationGate: true,
     },
     'dreamina-seedance-2-0-260128': {
+        referenceTaskTypes: [],
         resolutions: ['480p', '720p', '1080p', '4k'],
         duration: [4, 15],
         lastFrame: true,
@@ -61,9 +80,11 @@ export const SEEDANCE_MODEL_SPECS = {
         referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
         audio: true,
         realFaceInput: false,
+        portraitAssetInput: true,
         activationGate: true,
     },
     'dreamina-seedance-2-0-fast-260128': {
+        referenceTaskTypes: [],
         resolutions: ['480p', '720p'],
         duration: [4, 15],
         lastFrame: true,
@@ -72,9 +93,11 @@ export const SEEDANCE_MODEL_SPECS = {
         referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
         audio: true,
         realFaceInput: false,
+        portraitAssetInput: true,
         activationGate: true,
     },
     'dreamina-seedance-2-0-mini-260615': {
+        referenceTaskTypes: [],
         resolutions: ['480p', '720p'],
         duration: [4, 15],
         lastFrame: true,
@@ -83,6 +106,7 @@ export const SEEDANCE_MODEL_SPECS = {
         referenceVideos: { maxClips: 3, clipSeconds: [2, 15], totalSeconds: 15 },
         audio: true,
         realFaceInput: false,
+        portraitAssetInput: true,
         activationGate: true,
     },
 };
@@ -142,7 +166,8 @@ function validateCommon(data, ctx) {
         });
     }
     const [minDuration, maxDuration] = spec.duration;
-    if ((data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) < minDuration || (data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION) > maxDuration) {
+    const seconds = data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION;
+    if (seconds !== -1 && (seconds < minDuration || seconds > maxDuration)) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['durationSeconds'],
@@ -169,6 +194,7 @@ export const seedanceText2VideoSchema = z
 export const seedanceImg2VideoSchema = z
     .object({
     ...commonFields,
+    realFaceInput: z.boolean().optional(),
     sourceImagePath: z.string().min(1, 'Source image path is required'),
     lastImagePath: z.string().optional(),
     // Following the input image's ratio is the default — specifying a different
@@ -178,6 +204,9 @@ export const seedanceImg2VideoSchema = z
 })
     .superRefine((data, ctx) => {
     validateCommon(data, ctx);
+    if (data.model.startsWith('dreamina-seedance-2-5-') && data.ratio !== 'adaptive') {
+        ctx.addIssue({ code: 'custom', path: ['ratio'], message: 'Seedance 2.5 first-frame generation requires adaptive ratio.' });
+    }
     if (data.lastImagePath && !SEEDANCE_MODEL_SPECS[data.model].lastFrame) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -191,10 +220,13 @@ export const seedanceImg2VideoSchema = z
 export const seedanceReferenceSchema = z
     .object({
     ...commonFields,
+    omniReferenceTaskType: z.enum(REFERENCE_TASK_TYPES).optional(),
+    realFaceInput: z.boolean().optional(),
     referenceImagePaths: z.array(z.string()).optional().default([]),
     referenceAudioPaths: z.array(z.string()).optional().default([]),
     referenceVideoPaths: z.array(z.string()).optional().default([]),
-    referenceVideoUrls: z.array(z.string().url()).optional().default([]),
+    referenceVideoTaskIds: z.array(z.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/)).optional(),
+    referenceVideoUrls: z.array(z.string().url().regex(/^(?:https?:\/\/|asset:\/\/)[^/\s]+/i, 'Use a public HTTP(S) video URL or asset:// ID')).optional().default([]),
     ratio: z.enum(VALID_SEEDANCE_RATIOS).optional().default('adaptive'),
 })
     .superRefine((data, ctx) => {
@@ -208,7 +240,19 @@ export const seedanceReferenceSchema = z
             message: `${data.model} allows at most ${maxImages} reference images (requested: ${data.referenceImagePaths.length}).`,
         });
     }
-    const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length;
+    const videoCount = data.referenceVideoPaths.length + data.referenceVideoUrls.length + (data.referenceVideoTaskIds?.length ?? 0);
+    const task = data.omniReferenceTaskType;
+    if (task && !spec.referenceTaskTypes.includes(task)) {
+        ctx.addIssue({ code: 'custom', path: ['omniReferenceTaskType'], message: 'Task type selection requires Seedance 2.5 or Flash.' });
+    }
+    if (task === 'edit' || task === 'extend') {
+        if (!videoCount)
+            ctx.addIssue({ code: 'custom', path: ['referenceVideoPaths'], message: 'Editing and extension need a reference video.' });
+        if (data.ratio !== 'adaptive')
+            ctx.addIssue({ code: 'custom', path: ['ratio'], message: 'Editing and extension require adaptive ratio.' });
+        if (task === 'edit' && data.durationSeconds !== undefined && data.durationSeconds !== -1)
+            ctx.addIssue({ code: 'custom', path: ['durationSeconds'], message: 'Editing keeps the input duration and requires -1.' });
+    }
     if (data.referenceImagePaths.length === 0 && data.referenceAudioPaths.length === 0 && videoCount === 0) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -255,11 +299,11 @@ export const seedanceReferenceSchema = z
             message: `${data.model} allows at most ${audio.maxClips} reference audio clips (requested: ${data.referenceAudioPaths.length}).`,
         });
     }
-    if (!audio.audioOnly && data.referenceImagePaths.length === 0) {
+    if (!audio.audioOnly && data.referenceImagePaths.length === 0 && !videoCount) {
         ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['referenceImagePaths'],
-            message: `${data.model} needs at least one reference image alongside reference audio — audio-only input is dreamina-seedance-2-5-260628 only.`,
+            message: `${data.model} needs a reference image or video; audio-only input requires Seedance 2.5.`,
         });
     }
     for (const filePath of data.referenceAudioPaths) {
@@ -279,7 +323,7 @@ export const seedanceReferenceSchema = z
             message: 'Reference audio with generateAudio: false produces a silent video, so the voice reference has nothing to shape. Set generateAudio: true.',
         });
     }
-}).transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
+}).transform(data => ({ ...data, durationSeconds: data.durationSeconds ?? (data.omniReferenceTaskType === 'edit' ? -1 : DEFAULT_SEEDANCE_DURATION) }));
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -299,10 +343,13 @@ function describeHttpError(status, body) {
 }
 /** Create a task → task ID */
 async function createTask(apiKey, body) {
+    const payload = JSON.stringify(body);
+    if (Buffer.byteLength(payload) > MAX_REQUEST_BYTES)
+        throw Object.assign(new Error('Seedance request exceeds 64 MB'), { terminal: true });
     const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify(body),
+        body: payload,
         signal: AbortSignal.timeout(5 * 60_000),
     });
     if (!response.ok) {
@@ -323,7 +370,82 @@ async function getTask(apiKey, taskId) {
     if (!response.ok) {
         throw new Error(`Failed to get task status: ${describeHttpError(response.status, await response.text())}`);
     }
-    return response.json();
+    const task = await response.json();
+    if (task.id !== undefined && task.id !== taskId)
+        throw new Error('ModelArk status has a different task ID');
+    if (!task.status)
+        throw new Error('ModelArk status response has no task state');
+    return task;
+}
+const runProbe = promisify(execFile);
+async function inspectMedia(file, decode = false) {
+    try {
+        const { stdout, stderr } = await runProbe('ffprobe', ['-v', 'error', ...(decode ? ['-count_frames'] : []),
+            '-show_entries', 'stream=codec_type,codec_name,width,height,r_frame_rate,duration,nb_frames,nb_read_frames:format=format_name,duration:format_tags=major_brand',
+            '-of', 'json', file], { timeout: decode ? 180_000 : 15_000 });
+        const media = JSON.parse(stdout);
+        if (stderr.trim() || !media.streams?.length || !media.format?.format_name)
+            throw new Error('invalid media');
+        return media;
+    }
+    catch (error) {
+        if (error.code === 'ENOENT')
+            throw new Error('Seedance media validation requires ffprobe');
+        throw new Error('Unreadable Seedance media: ' + path.basename(file));
+    }
+}
+function completeVideo(media) {
+    const video = media.streams.find(stream => stream.codec_type === 'video');
+    const decoded = Number(video?.nb_read_frames), declared = Number(video?.nb_frames);
+    if (!media.format.format_name.split(',').includes('mp4') || !video?.width || !video.height ||
+        !Number.isSafeInteger(decoded) || decoded < 1 || Number.isFinite(declared) && decoded !== declared)
+        throw new Error('Invalid Seedance video: expected a complete MP4 or MOV video stream');
+    return video;
+}
+export async function verifySeedanceVideo(file) {
+    completeVideo(await inspectMedia(file, true));
+}
+function checkDimensions(width, height, name) {
+    if (Math.min(width, height) < 300 || Math.max(width, height) > 6000 || width / height < 0.4 || width / height > 2.5)
+        throw new Error(name + ' needs 300–6000 pixels per side and a width/height ratio in [0.4, 2.5]');
+}
+/** The account-authenticated task result is the authority for the original, never a caller-supplied URL. */
+async function trustedReferenceVideos(apiKey, ids, spec) {
+    return Promise.all(ids.map(async (id) => {
+        const task = await getTask(apiKey, id);
+        const age = Date.now() / 1000 - Number(task.created_at);
+        const url = task.content?.video_url;
+        const seconds = task.duration;
+        if (task.id !== id || task.status !== 'succeeded' || !Object.hasOwn(SEEDANCE_MODEL_SPECS, task.model ?? '') ||
+            !Number.isFinite(age) || age < 0 || age >= 30 * 86400 || !url || !url.startsWith('https://'))
+            throw new Error('seedance_original_unavailable: select an accessible, completed Seedance 2.x task from this account within 30 days');
+        const [min, max] = spec.referenceVideos.clipSeconds;
+        if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < min || seconds > max)
+            throw new Error('seedance_original_duration: the source task duration is outside this model’s reference limits');
+        return { url, seconds };
+    }));
+}
+/** Verify account access and eligibility at planning time without retaining signed URLs. */
+export async function checkSeedanceReferenceTasks(request) {
+    if (!request.referenceVideoTaskIds?.length)
+        return;
+    const spec = SEEDANCE_MODEL_SPECS[request.model];
+    const originals = await trustedReferenceVideos(requireArkKey(), request.referenceVideoTaskIds, spec);
+    const seconds = originals.reduce((total, item) => total + item.seconds, 0);
+    if (seconds > spec.referenceVideos.totalSeconds)
+        throw new Error('seedance_original_duration: the original videos exceed the total reference duration');
+}
+/** Poll an existing receipt once. A transient read or download failure keeps its reservation open. */
+export async function pollSeedanceTask(id) {
+    const task = await getTask(requireArkKey(), id);
+    if (task.status === 'succeeded') {
+        if (!task.content?.video_url)
+            throw new Error('Seedance task succeeded without a download URL');
+        return { state: 'done', url: task.content.video_url, meta: { completionTokens: task.usage?.completion_tokens, duration: task.duration } };
+    }
+    if (task.status === 'failed' || task.status === 'expired' || task.status === 'cancelled')
+        return { state: 'failed', error: task.error?.message ?? task.status };
+    return { state: 'running' };
 }
 /**
  * Poll for completion → download the mp4 → save locally.
@@ -350,11 +472,13 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
             continue;
         }
         if (task.status === 'failed' || task.status === 'expired' || task.status === 'cancelled') {
+            recordVideoTokens(0); // ModelArk bills successful generations only.
             const reason = task.error?.message || task.status;
             return { error: `Generation ${task.status}: ${reason}`, terminal: true };
         }
         if (task.status !== 'succeeded')
             continue;
+        recordVideoTokens(task.usage?.completion_tokens);
         const videoUrl = task.content?.video_url;
         if (!videoUrl)
             return { error: 'Task succeeded but no video_url in response' };
@@ -362,11 +486,9 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
         // rejecting after receiving tens of MB wastes bandwidth, and the result URL
         // disappears after 24 hours so there's no retry either.
         const fullPath = resolveOutputFile(outputPath, filename, 'video');
-        const download = await fetch(videoUrl, { signal: AbortSignal.timeout(10 * 60_000) });
-        if (!download.ok) {
-            return { error: `Failed to download video: HTTP ${download.status} (URL is valid for 24 hours)` };
-        }
-        fs.writeFileSync(fullPath, Buffer.from(await download.arrayBuffer()));
+        const saved = await saveVendorOutput({ state: 'done', url: videoUrl }, fullPath, taskId, verifySeedanceVideo);
+        if (!saved.success)
+            return { error: saved.error };
         console.error(`[Seedance] Video saved to: ${fullPath}`);
         return { videoPath: fullPath, task };
     }
@@ -381,22 +503,39 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
  */
 function readImageDataUri(filePath) {
     const stats = fs.statSync(filePath);
-    if (stats.size > MAX_INPUT_IMAGE_BYTES) {
+    if (stats.size >= MAX_INPUT_IMAGE_BYTES) {
         throw new Error(`Input image too large: ${path.basename(filePath)} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 30MB)`);
     }
     const buffer = fs.readFileSync(filePath);
-    return `data:${mimeFromExtension(filePath, 'image')};base64,${buffer.toString('base64')}`;
+    return `data:${path.extname(filePath).toLowerCase() === '.bmp' ? 'image/bmp' : mimeFromExtension(filePath, 'image')};base64,${buffer.toString('base64')}`;
 }
 /** Validate input image paths and convert to data URIs (existence·extension·size·total). */
-function loadImages(filePaths) {
-    const uris = [];
+async function prepareImages(filePaths, output, realFaceInput, hasPortraitVideo = false) {
+    const inputs = [];
     for (const filePath of filePaths) {
         validateFilePath(filePath, { allowedExtensions: ALLOWED_EXTENSIONS.image });
         if (!fs.existsSync(filePath))
             throw new Error(`Image not found: ${filePath}`);
-        uris.push(readImageDataUri(filePath));
+        const image = (await inspectMedia(filePath)).streams.find(stream => stream.codec_type === 'video');
+        const extension = path.extname(filePath).slice(1).toLowerCase();
+        const codec = ['jpg', 'jpeg'].includes(extension) ? 'mjpeg' : extension;
+        if (!image?.width || !image.height || image.codec_name !== codec)
+            throw new Error('Invalid Seedance image format: ' + path.basename(filePath));
+        checkDimensions(image.width, image.height, path.basename(filePath));
+        const portrait = portraitForImage(filePath, output, realFaceInput);
+        if (portrait && new URL(arkBaseUrl()).hostname !== 'ark.ap-southeast.bytepluses.com')
+            throw new PortraitError(new Error('modelark_asset_region: select the Singapore inference endpoint for this asset'));
+        inputs.push(portrait ? { portrait, sha256: createHash('sha256').update(fs.readFileSync(filePath)).digest('hex') } : readImageDataUri(filePath));
     }
-    assertRequestBudget(uris);
+    if (realFaceInput && !hasPortraitVideo && !inputs.some(input => typeof input !== 'string'))
+        throw new PortraitError(new Error('modelark_asset_sheet_required: the shot declares a face but has no character sheet portrait or reviewed video asset'));
+    assertRequestBudget(inputs.filter(input => typeof input === 'string'));
+    return inputs;
+}
+async function resolvePortraits(inputs) {
+    const uris = [];
+    for (const input of inputs)
+        uris.push(typeof input === 'string' ? input : (await ensurePortrait(input.portrait, input.sha256)).uri);
     return uris;
 }
 /** The whole request body must stay under 64MB (official) — base64 across every reference file. */
@@ -428,37 +567,41 @@ function loadReferenceAudio(filePaths) {
         return `data:${audioMimeFromExtension(filePath)};base64,${fs.readFileSync(filePath).toString('base64')}`;
     });
 }
-/** Frame facts of a video via ffprobe — null when ffprobe is missing or the file is unreadable. */
-export function probeVideo(filePath) {
-    return new Promise((resolve) => {
-        execFile('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height,r_frame_rate:format=duration', '-of', 'json', filePath], { timeout: 15_000 }, (error, out) => {
-            if (error)
-                return resolve(null);
-            try {
-                const parsed = JSON.parse(String(out));
-                const stream = parsed.streams?.[0];
-                const [num, den] = String(stream?.r_frame_rate || '').split('/').map(Number);
-                const fps = num && den ? num / den : NaN;
-                const seconds = Number.parseFloat(String(parsed.format?.duration ?? ''));
-                if (!stream?.width || !stream?.height || !Number.isFinite(fps) || !Number.isFinite(seconds) || seconds <= 0)
-                    return resolve(null);
-                resolve({ seconds, fps, width: stream.width, height: stream.height });
-            }
-            catch {
-                resolve(null);
-            }
-        });
-    });
+function videoSeconds(video, media) {
+    const seconds = Number(video.duration ?? media.format.duration);
+    if (!Number.isFinite(seconds) || seconds <= 0)
+        throw new Error('Could not measure Seedance video duration');
+    return seconds;
+}
+function videoFrameFacts(stream, media) {
+    const [num, den] = (stream.r_frame_rate || '').split('/').map(Number);
+    const fps = num / den;
+    if (!stream.width || !stream.height || !Number.isFinite(fps) || fps <= 0)
+        throw new Error('Could not read Seedance video dimensions or frame rate');
+    return { width: stream.width, height: stream.height, fps, seconds: videoSeconds(stream, media) };
+}
+/** A quick output probe for the shot timing check. */
+export async function probeVideo(file) {
+    try {
+        const media = await inspectMedia(file);
+        const stream = media.streams.find(s => s.codec_type === 'video');
+        return stream ? videoFrameFacts(stream, media) : null;
+    }
+    catch {
+        return null;
+    }
 }
 /**
  * Reference-video limits (official): size, frame rate, pixel count, per-clip and total
  * length. The vendor rejects these only after the task is queued and the clip has been
  * fetched, so a wrong render fails here, before a tunnel is opened or anything is billed.
  */
-async function checkReferenceVideos(filePaths, spec, model) {
-    const [minSeconds, maxSeconds] = spec.clipSeconds;
+async function checkReferenceVideos(filePaths, spec, model, edit) {
+    const [minimum, maxSeconds] = spec.clipSeconds;
+    const minSeconds = edit ? 4 : minimum;
     const [minFps, maxFps] = SEEDANCE_REFERENCE_VIDEO_FPS;
-    const [minPixels, maxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
+    const [minPixels, legacyMaxPixels] = SEEDANCE_REFERENCE_VIDEO_PIXELS;
+    const maxPixels = model.startsWith('dreamina-seedance-2-5-') ? 8_847_360 : legacyMaxPixels;
     let total = 0;
     for (const filePath of filePaths) {
         validateFilePath(filePath, { allowedExtensions: SEEDANCE_REFERENCE_VIDEO_EXTENSIONS });
@@ -469,15 +612,22 @@ async function checkReferenceVideos(filePaths, spec, model) {
         if (stats.size > MAX_INPUT_VIDEO_BYTES) {
             throw new Error(`Reference video too large: ${name} (${(stats.size / 1024 / 1024).toFixed(1)}MB, limit 200MB)`);
         }
-        const facts = await probeVideo(filePath);
-        if (!facts) {
-            console.error(`[Seedance] ffprobe unavailable — skipping the frame checks for ${name} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${minFps}~${maxFps} fps)`);
-            continue;
-        }
+        const media = await inspectMedia(filePath, true);
+        const stream = completeVideo(media);
+        const mov = path.extname(filePath).toLowerCase() === '.mov';
+        const quickTime = media.format.tags?.major_brand?.trim() === 'qt';
+        if (mov !== quickTime || !['h264', 'hevc'].includes(stream.codec_name))
+            throw new Error('Reference video must contain H.264 or H.265 in the matching MP4 or MOV container: ' + name);
+        const badAudio = media.streams.some(s => s.codec_type === 'audio' &&
+            !['aac', 'mp3'].includes(s.codec_name) && !(mov && s.codec_name.startsWith('pcm_')));
+        if (badAudio)
+            throw new Error('Reference video has an unsupported audio codec: ' + name);
+        const facts = videoFrameFacts(stream, media);
+        checkDimensions(facts.width, facts.height, name);
         if (facts.seconds < minSeconds || facts.seconds > maxSeconds) {
             throw new Error(`Reference video ${name} is ${facts.seconds.toFixed(1)}s — ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`);
         }
-        if (facts.fps < minFps - 0.01 || facts.fps > maxFps + 0.01) {
+        if (facts.fps < minFps || facts.fps > maxFps) {
             throw new Error(`Reference video ${name} is ${facts.fps.toFixed(3)} fps — the vendor takes ${minFps}~${maxFps} fps (render the previz at 24 or 30).`);
         }
         const pixels = facts.width * facts.height;
@@ -491,30 +641,18 @@ async function checkReferenceVideos(filePaths, spec, model) {
     }
     return total;
 }
-/** Clip length via ffprobe — null when ffprobe is missing or the file is unreadable. */
-function probeAudioSeconds(filePath) {
-    return new Promise((resolve) => {
-        execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', filePath], { timeout: 15_000 }, (error, out) => {
-            const seconds = Number.parseFloat(String(out ?? '').trim());
-            resolve(!error && Number.isFinite(seconds) && seconds > 0 ? seconds : null);
-        });
-    });
-}
-/**
- * Per-clip and total length limits for reference audio (official). The vendor
- * enforces them on its side too, but only after the task is queued — checking
- * here turns a minutes-later failure into an immediate one. No ffprobe means
- * the check is skipped with a note, not a failure.
- */
+/** Reject unreadable or mislabeled audio before publishing any local references. */
 async function checkReferenceAudioDurations(filePaths, spec, model) {
     const [minSeconds, maxSeconds] = spec.clipSeconds;
     let total = 0;
     for (const filePath of filePaths) {
-        const seconds = await probeAudioSeconds(filePath);
-        if (seconds === null) {
-            console.error(`[Seedance] ffprobe unavailable — skipping the duration check for ${path.basename(filePath)} (${model}: ${minSeconds}~${maxSeconds}s per clip, ${spec.totalSeconds}s total)`);
-            continue;
-        }
+        const media = await inspectMedia(filePath, true);
+        const audio = media.streams.find(stream => stream.codec_type === 'audio');
+        const format = path.extname(filePath).slice(1).toLowerCase();
+        const seconds = Number(audio?.duration ?? media.format.duration);
+        if (!audio || !media.format.format_name.split(',').includes(format) ||
+            !(Number(audio.nb_read_frames) > 0) || !Number.isFinite(seconds))
+            throw new Error('Invalid reference audio: ' + path.basename(filePath));
         if (seconds < minSeconds || seconds > maxSeconds) {
             throw new Error(`Reference audio ${path.basename(filePath)} is ${seconds.toFixed(1)}s — ${model} accepts ${minSeconds}~${maxSeconds}s per clip.`);
         }
@@ -534,6 +672,7 @@ function buildBody(request, parts) {
         resolution: request.resolution,
         duration: request.durationSeconds,
         watermark: request.watermark,
+        ...(request.omniReferenceTaskType && { omni_reference_task_type: request.omniReferenceTaskType }),
     };
     // The vendor default for generate_audio is true. Passing it to a silent-only
     // model gets rejected, so we send it only to models that support it and flip
@@ -545,7 +684,6 @@ function buildBody(request, parts) {
 }
 /** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(request, videoPath, task, taskId) {
-    recordVideoTokens(task.usage?.completion_tokens);
     return {
         success: true,
         videoPath,
@@ -553,8 +691,8 @@ function toResponse(request, videoPath, task, taskId) {
         model: request.model,
         ratio: task.ratio ?? request.ratio,
         resolution: task.resolution ?? request.resolution,
-        duration: task.duration ?? request.durationSeconds,
-        durationSource: task.duration !== undefined ? 'provider_reported' : 'requested_seconds',
+        duration: task.duration ?? (request.durationSeconds > 0 ? request.durationSeconds : undefined),
+        durationSource: task.duration !== undefined ? 'provider_reported' : request.durationSeconds > 0 ? 'requested_seconds' : undefined,
         completionTokens: task.usage?.completion_tokens,
         taskId,
     };
@@ -563,7 +701,7 @@ function toResponse(request, videoPath, task, taskId) {
 function toFailure(error, posted) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[Seedance] Error: ${message}`);
-    return { success: false, error: message, terminal: !posted || error?.terminal === true };
+    return { success: false, error: message, ...(!posted && error instanceof PortraitError ? { portraitProblem: error.report } : {}), terminal: !posted || error?.terminal === true };
 }
 // ── The 3 generation functions ──────────────────────────────────────
 /** Generate video from a text prompt */
@@ -590,7 +728,7 @@ export async function generateFromImage(request) {
     let posted = false;
     try {
         const paths = [request.sourceImagePath, ...(request.lastImagePath ? [request.lastImagePath] : [])];
-        const uris = loadImages(paths);
+        const uris = await resolvePortraits(await prepareImages(paths, request.outputPath, request.realFaceInput));
         const images = uris.map((url, index) => ({
             type: 'image_url',
             image_url: { url },
@@ -622,29 +760,36 @@ export async function generateWithReferences(request) {
     let posted = false;
     try {
         const spec = SEEDANCE_MODEL_SPECS[request.model];
-        const imageUris = loadImages(request.referenceImagePaths);
+        let originals;
+        try {
+            originals = await trustedReferenceVideos(apiKey, request.referenceVideoTaskIds ?? [], spec);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return { success: false, terminal: true, error: message,
+                originalProblem: { stage: 'seedance_original_lookup', videoSubmitted: false, message } };
+        }
+        const images = await prepareImages(request.referenceImagePaths, request.outputPath, request.realFaceInput, originals.length > 0 || request.referenceVideoUrls.some(url => url.startsWith('asset://')));
         const audioUris = loadReferenceAudio(request.referenceAudioPaths);
-        assertRequestBudget([...imageUris, ...audioUris]);
+        assertRequestBudget([...images.filter(input => typeof input === 'string'), ...audioUris]);
         if (audioUris.length > 0) {
             await checkReferenceAudioDurations(request.referenceAudioPaths, spec.referenceAudio, request.model);
         }
-        let referenceVideoSeconds = 0;
+        let referenceVideoSeconds = originals.reduce((sum, item) => sum + item.seconds, 0);
         if (request.referenceVideoPaths.length > 0) {
-            referenceVideoSeconds = await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model);
+            referenceVideoSeconds += await checkReferenceVideos(request.referenceVideoPaths, spec.referenceVideos, request.model, request.omniReferenceTaskType === 'edit');
         }
-        // A URL clip cannot be probed; it is counted at the output length toward the model total
-        // (the ledger's assumption too), so a local+URL mix over the cap fails here, not in the queue.
-        if (request.referenceVideoUrls.length > 0) {
-            const assumed = request.referenceVideoUrls.length * request.durationSeconds;
-            if (referenceVideoSeconds + assumed > spec.referenceVideos.totalSeconds) {
-                throw new Error(`Reference videos total at least ${(referenceVideoSeconds + assumed).toFixed(1)}s (URL clips counted at ${request.durationSeconds}s each) — ${request.model} allows ${spec.referenceVideos.totalSeconds}s across all clips.`);
-            }
+        // Remote media duration is checked by ModelArk. Each clip contributes at least its minimum.
+        const minimumRemoteSeconds = request.omniReferenceTaskType === 'edit' ? 4 : spec.referenceVideos.clipSeconds[0];
+        if (originals.some(item => item.seconds < minimumRemoteSeconds))
+            throw new Error('Original reference video is too short for this operation');
+        if (referenceVideoSeconds + request.referenceVideoUrls.length * minimumRemoteSeconds > spec.referenceVideos.totalSeconds) {
+            throw new Error('Reference videos exceed the model duration limit.');
         }
-        // The vendor reads a video from a public URL only, so local previz clips are published
-        // for the life of the task and released once it settles (media-publish.ts).
+        const imageUris = await resolvePortraits(images);
         const published = await publishFiles(request.referenceVideoPaths);
         try {
-            const videoUrls = [...published.urls, ...request.referenceVideoUrls];
+            const videoUrls = [...published.urls, ...request.referenceVideoUrls, ...originals.map(item => item.url)];
             // Images, then videos, then audio. The prompt's @Image N / @Video N / @Audio N count
             // each kind in its own upload order, so the caller's binding sentence ("Images 1-2 are
             // Character 1 and correspond to Audio 1") reads straight off the arrays.
@@ -657,7 +802,7 @@ export async function generateWithReferences(request) {
             if (imageUris.length > 0)
                 console.error(`[Seedance] Reference images: ${request.referenceImagePaths.join(', ')}`);
             if (videoUrls.length > 0)
-                console.error(`[Seedance] Reference videos: ${[...request.referenceVideoPaths, ...request.referenceVideoUrls].join(', ')}`);
+                console.error(`[Seedance] Reference videos: ${videoUrls.length}`);
             if (audioUris.length > 0)
                 console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
             posted = true;
@@ -672,8 +817,8 @@ export async function generateWithReferences(request) {
                 referenceAudios: request.referenceAudioPaths,
                 ...(videoUrls.length > 0
                     ? {
-                        referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls],
-                        referenceVideoSeconds,
+                        referenceVideos: [...request.referenceVideoPaths, ...request.referenceVideoUrls, ...(request.referenceVideoTaskIds ?? [])],
+                        ...(request.referenceVideoUrls.length ? {} : { referenceVideoSeconds }),
                         ...(published.urls.length > 0 ? { referenceVideoRoute: published.how } : {}),
                     }
                     : {}),

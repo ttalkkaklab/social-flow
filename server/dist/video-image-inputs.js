@@ -179,7 +179,7 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
     const callerOpening = openingField && input[openingField];
     // A legacy caller may provide its own opening. An authored pair still binds
     // both endpoints, even when the caller repeats one of them.
-    const legacyFrames = !structured && ['ltx-api', 'ltx-desktop-local', 'veo', 'astra-genai'].includes(engine) &&
+    const legacyFrames = !structured && (['ltx-api', 'ltx-desktop-local', 'veo', 'astra-genai'].includes(engine) || tool === 'seedance_img2video') &&
         (frames.end || frames.mode !== 'reference' && frames.start && !openingField);
     if (!structured && !legacyFrames) {
         const msr = tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && Array.isArray(input.references));
@@ -195,7 +195,7 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
         throw new Error('image_plan_invalid: ' + errors.join('; '));
     let references = routing.imageReferences(shot);
     const rawCast = shot.visual?.character;
-    const canonicalMsr = tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
+    const canonicalMsr = !visual.characterInputs && tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
         && existsSync(path.join(episode, 'storyboard', 'cast.json'));
     if (canonicalMsr) {
         const ids = [].concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : entry.id);

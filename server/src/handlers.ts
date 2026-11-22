@@ -33,6 +33,7 @@ import * as music from './music-client.js';
 import * as qwen3asr from './qwen3-asr-client.js';
 import * as suno from './suno-client.js';
 import * as naver from './naver-client.js';
+import { ensurePortrait, portraitAssetSchema, PortraitError } from './modelark-assets.js';
 import * as seedance from './seedance-client.js';
 import type { VendorResult } from './vendor-video.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
@@ -79,6 +80,10 @@ export interface ToolResult {
   /** Only set on successful responses of tools that declare outputSchema (MCP: schema conformance is a MUST). */
   structuredContent?: Record<string, unknown>;
   isError?: boolean;
+}
+
+function seedancePreflightError(report: Record<string, unknown>): ToolResult {
+  return {isError:true, terminal:true, structuredContent:report, content:[{type:'text',text:JSON.stringify(report)}]};
 }
 
 function text(message: string, isError = false): ToolResult {
@@ -1069,6 +1074,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   minimax_reference: async (args) => vendorReport(await generateMinimaxVideo(parseArgs(minimaxReferenceSchema, args))),
   heygen_img2video: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenImg2VideoSchema, args))),
   heygen_reference: async (args) => vendorReport(await generateHeygenVideo(parseArgs(heygenReferenceSchema, args))),
+  modelark_portrait_register: async args => {
+    try {return text(JSON.stringify(await ensurePortrait(parseArgs(portraitAssetSchema,args))));}
+    catch(error){if(error instanceof PortraitError) return seedancePreflightError(error.report);throw error;}
+  },
   seedance_text2video: async (args) => {
     const result = await seedance.generateFromText(parseArgs(seedance.seedanceText2VideoSchema, args));
     if (!result.success) return { ...text(`Seedance video generation failed: ${result.error}`, true), terminal: result.terminal === true };
@@ -1076,6 +1085,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   seedance_img2video: async (args) => {
     const result = await seedance.generateFromImage(parseArgs(seedance.seedanceImg2VideoSchema, args));
+    if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text(`Seedance video generation from image failed: ${result.error}`, true), terminal: result.terminal === true };
     const lastImageInfo = result.lastImage ? `\nLast Frame Image: ${result.lastImage}` : '';
     const modeInfo = result.lastImage ? ' (frame interpolation mode)' : '';
@@ -1085,6 +1095,8 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   },
   seedance_reference: async (args) => {
     const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
+    if (result.originalProblem) return seedancePreflightError(result.originalProblem);
+    if (result.portraitProblem) return seedancePreflightError(result.portraitProblem);
     if (!result.success) return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
     const refImagesInfo = result.referenceImages?.length
       ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`

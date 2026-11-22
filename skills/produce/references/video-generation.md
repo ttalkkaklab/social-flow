@@ -31,9 +31,10 @@ is `"api"` or `"astra"`. The decision table's source of truth is
 wrote (who speaks on screen, who is in the source, whether the slot uses its sound), **the
 storyboard records the planned route** — `visual.engine`, or the saved model — and writes
 the stored prompt in that route's grammar. This section is how you **validate** the route
-against those facts, not re-decide it. A route that fails validation (a spoken cut on an
-adapter with no voice lane, a real face on a Seedance 2.x model) is a storyboard defect: send
-it back. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
+against those facts. Return a spoken cut to the storyboard if its adapter has no voice lane.
+For a Seedance cut with a photoreal face, link its character sheet portrait. If registration
+is blocked by the account's library entitlement, keep the approved plan and report the provider error.
+Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
 voice reference; their existing clips stay reusable through `visual.reuse`.
 
 **① Does a character speak** — the voice lane rules adapters out first.
@@ -50,10 +51,7 @@ voice reference; their existing clips stay reusable through `visual.reuse`.
 
 **② Who's in the shot.**
 
-- **A photoreal real-person face**: Dreamina Seedance 2.x **rejects it at task creation**
-  (`InputImageSensitiveContentDetected.PrivacyInformation` — a rejection isn't billed, so
-  probing the boundary is free). A photoreal real-person source goes to an LTX lane
-  (ASTRA GenAI or ASTRA).
+- **A photoreal portrait on Seedance** uses the registered sheet panel and an active ModelArk asset ID. Set `realFaceInput:true` for face-bearing inputs. Use the virtual library for original fictional characters and a verified group for real people. See [portrait registration](../../register-seedance-portrait/SKILL.md).
 - **A shot with no visible face** (from behind, a silhouette, just hands and a screen):
   every model takes it, including `dreamina-seedance-2-0-260128`, the public arena's #1 for
   image→video.

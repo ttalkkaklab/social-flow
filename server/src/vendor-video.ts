@@ -92,7 +92,7 @@ export async function runVendorJob(job: VendorJob): Promise<VendorResult> {
 }
 
 /** Downloads and recovery publish a complete file atomically, even if the process is interrupted. */
-export async function saveVendorOutput(status: Extract<VendorPoll, { state: 'done' }>, target: string, id: string): Promise<VendorResult> {
+export async function saveVendorOutput(status: Extract<VendorPoll, { state: 'done' }>, target: string, id: string, verify?: (file: string) => Promise<void>): Promise<VendorResult> {
   const temporary = target + '.' + randomUUID() + '.tmp';
   try {
     let bytes: Buffer;
@@ -104,6 +104,7 @@ export async function saveVendorOutput(status: Extract<VendorPoll, { state: 'don
     }
     if (!bytes.length) throw new Error('empty video');
     fs.writeFileSync(temporary, bytes, { flag: 'wx' });
+    if (verify) await verify(temporary);
     fs.renameSync(temporary, target);
     return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
   } catch (error) {

@@ -128,13 +128,15 @@ their existing clips stay reusable through `visual.reuse`.
 
 | Selected route | Practice | Boundary |
 | --- | --- | --- |
-| Seedance 2.5 reference | Pass `generateAudio:true`; map each speaker to its sample and explicitly owned images using `@Audio N` / `@Image N`. | No promise of waveform preservation or exact line timing. |
-| Seedance 2.0 / Fast / Mini reference | Same ownership mapping with `Audio N` / `Image N`; obey model input limits. | Do not automatically upgrade to 2.5. The installed schema requires an image with reference audio. |
+| Seedance 2.5 / Flash reference | Pass `generateAudio:true`; map each speaker to its sample and explicitly owned images using `@Audio N` / `@Image N`. | No promise of waveform preservation or exact line timing. |
+| Seedance 2.0 / Fast / Mini reference | Same ownership mapping with `Audio N` / `Image N`; obey model input limits. | A reference audio clip needs at least one reference image or video. |
 | ASTRA GenAI MSR | Write the dialogue in the prompt; a pinned sample rides on the speaker's subject image when the speaker is subject 1 or 2 and the gateway accepts samples ([GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). | Without a usable sample the prompt voices the speaker and the plan warns. A sample sent to a gateway without sample support fails (`msr_voice_unsupported`). MSR physical dialogue has one speaker per shot, including explicit off_screen delivery. Silent/inner-thought shots use image2video; thoughts use external timed character TTS, not native MSR turns. |
 | FastH3 Omni reference (local) | Same ownership mapping; the plan writes each pinned sample's actual reference index. | No promise of waveform preservation or exact line timing. |
 | Supplied lane: ASTRA, ASTRA GenAI and desktop audio2video | Generate final pinned-voice lines, compose the shot WAV, then animate from that WAV. | The track is re-encoded; mouth and speaker correctness stay unreviewed. |
 | Lane `none`: image/text-to-video, keyframes, retake, `ltx_video_generate` | Non-speaking pictures only; narration stays a separate pinned TTS track. | An on-screen line or native voicing is refused (`voice_lane_required`). Do not enable sound just to fill a quota. |
 | Host | Preserve external TTS and inspect the actual host's capabilities. | Do not invent an audio input or silently change model. Host calls remain outside managed enforcement. |
+
+Seedance 2.5 and Flash can receive a character's selected WAV as the only reference. That request uses the video inference API key and does not call the portrait library. Reuse the same voice sample for each cut and put the new line in the shot dialogue. For exact spoken audio, assemble each line from the character's fixed TTS voice. The separately rendered picture still needs a lip-sync check. [ModelArk input contract](https://ai.byteplus.com/ark/region%3Aap-southeast-1/docs/create-video-generation-task-api) · [Voice prompting](https://ai.byteplus.com/ark/region%3Aap-southeast-1/docs/seedance-2-5-prompt-guide)
 
 For Seedance 2.5, write Korean explicitly as the dialogue language. Its documented
 prompt conventions distinguish dialogue `{}`, music `()` and effects `<>`; these

@@ -77,6 +77,8 @@ before upload/submission; an unsupported combination never drops references or
 switches the saved model. Dev takes temporal pins. Direct Desktop I2V takes
 the two endpoints. See [GenAI image conditioning](astra-genai.md).
 
+For a shot with `visual.frames.mode: "reference"`, a named `visual.character` and a front, rear or profile subject view, the planner reads the face and directional body panel from the cast sheet. For explicit control set `visual.characterInputs: [{character:"seorin", bodyView:"front"}]`. Include every visible principal, specify ambiguous views per character, and keep the spoken line in narration. The plan’s `characterInputs`, `imageBindings` and `voiceContinuity.speakers` show which files and slots the adapter can carry. A missing required panel or selected voice blocks approval. Seedance also accepts a character’s `faceTaskId` for a recent eligible same-account original. The plan records the stable task ID and the adapter obtains the signed video URL when it submits. Veo can carry the visual references on eligible models. A speaking shot that requires the actor’s WAV needs a voice-capable adapter.
+
 Character speech also uses the [voice continuity contract](../produce/references/voice-continuity.md).
 The planner adds stable acoustic descriptions and, on audible Seedance reference
 requests, pinned character samples with explicit speaker/image/audio mappings.

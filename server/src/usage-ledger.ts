@@ -1,3 +1,4 @@
+import { SEEDANCE_MODEL_SPECS } from './seedance-client.js';
 import { gptImageFamily } from './image-models.js';
 import { localVideoStrategy } from './local-video-models.js';
 /**
@@ -136,30 +137,11 @@ export function recordUsage(outputPath: string | undefined, event: UsageEvent): 
    translation between them, and `server/test/usage-ledger.test.mjs` checks that every key it
    can emit is a real row in prices.tsv. */
 
-const SEEDANCE_FAMILY: Record<string, string> = {
-  'dreamina-seedance-2-5-260628': '2-5',
-  'dreamina-seedance-2-0-260128': '2-0',
-  'dreamina-seedance-2-0-fast-260128': '2-0-fast',
-  'dreamina-seedance-2-0-mini-260615': '2-0-mini',
-};
-
-/**
- * The video keys prices.tsv actually carries. The key is composed from the call's arguments —
- * family and resolution — and the two vocabularies do not line up: every Seedance model
- * accepts 480p and no 480p row exists. Rows for retired engines (Veo, Omni, Seedance 1.x) stay
- * in prices.tsv for earlier ledgers but are never composed here. A composed key nobody priced used to go into the ledger anyway, where
- * cost-report.sh answers it with `!! unknown key` and exit 1 — one unpriced call and the whole
- * episode loses its cost verdict. Membership is checked here instead, and an unpriced
- * combination comes back with a null key and a note saying which one, like an unmapped model.
- */
-export const PRICED_VIDEO_KEYS = new Set([
-  'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
-  'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
-  // A request that carries a reference video (the previz lane) bills input + output seconds
-  // at the vendor's lower with-video token rate — its own rows.
-  'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
-  'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
-]);
+/** Each supported model/resolution has a forecast row with and without input video. */
+export const PRICED_VIDEO_KEYS = new Set(Object.entries(SEEDANCE_MODEL_SPECS).flatMap(([model, spec]) => {
+  const family = model.replace('dreamina-seedance-', '').replace(/-\d{6}$/, '');
+  return spec.resolutions.flatMap(res => [`seedance.${family}.${res}`, `seedance.${family}-video.${res}`]);
+}));
 
 const ELEVENLABS_KEY: Record<string, string> = { eleven_v4: 'tts.elevenlabs' };
 const GEMINI_UNPRICED = 'unit price unconfirmed (? in prices.tsv) — cost-report.sh flags the line instead of counting it as $0';
@@ -245,15 +227,17 @@ export function priceOf(
     const model = str(args.model, 'dreamina-seedance-2-0-260128');
     const resolution = str(args.resolution, '720p');
     const seconds = num(args.durationSeconds, 5);
-    const base = SEEDANCE_FAMILY[model];
-    if (!base) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
+    const base = model.replace('dreamina-seedance-', '').replace(/-\d{6}$/, '');
+    if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model)) return { key: null, quantity: seconds, note: `unmapped seedance model: ${model}` };
     const videos = [
       ...(Array.isArray(args.referenceVideoPaths) ? (args.referenceVideoPaths as unknown[]) : []),
+      ...(Array.isArray(args.referenceVideoTaskIds) ? args.referenceVideoTaskIds : []),
       ...(Array.isArray(args.referenceVideoUrls) ? (args.referenceVideoUrls as unknown[]) : []),
     ].filter((v): v is string => typeof v === 'string');
     const family = videos.length ? `${base}-video` : base;
     const key = `seedance.${family}.${resolution}`;
     if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds, note: `no price row for ${key}` };
+    if (seconds === -1) return { key, quantity: null, note: 'Adaptive output duration; settle using ModelArk completion tokens.' };
     if (!videos.length) return { key, quantity: seconds };
     // tokens = (input + output seconds) × w × h × fps / 1024 — the input clips count. Their
     // length is read off the files; a URL or a missing ffprobe falls back to one output length
