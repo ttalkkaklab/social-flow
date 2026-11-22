@@ -1,14 +1,46 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {mkdtempSync, rmSync} from 'node:fs';
+import {mkdtempSync, readFileSync, rmSync, writeFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {NativeTalk, openingParts, spokenVideoRequest, talkPrompt} from '../dist/live-native.js';
 import {genaiImageToVideoSchema} from '../dist/astra-genai-video.js';
 import {SAMPLES} from '../dist/live-character.js';
+import {LiveRenderPool, UnresolvedLiveVideo} from '../dist/live-program.js';
+import {config} from '../dist/config.js';
 
 const actor = {asset:'/host.png',voiceSample:'/voice.wav',language:'ko',voiceDirection:'Warm and relaxed.'};
+
+test('unavailable status for a submitted video preserves the receipt and blocks queued and new submissions', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'live-unresolved-'));
+  const portrait = join(dir, 'host.png'), voice = join(dir, 'voice.wav');
+  writeFileSync(portrait, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  writeFileSync(voice, Buffer.alloc(44));
+  const render = new NativeTalk({...actor, asset:portrait, voiceSample:voice}, dir, talkPrompt);
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'test-only';
+  t.after(() => { config.astraGenaiApiKey = key; render.close(); rmSync(dir, {recursive:true, force:true}); });
+  let submitted = 0, polled = 0;
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    const path = new URL(url).pathname;
+    if (path === '/v1/models') return Response.json({data:[{id:'ltx-2.5-22b-distilled', parameters_by_mode:{image2video:['num_frames']}}]});
+    if (path.endsWith('/capabilities')) return Response.json({image_conditioning:true, voice_references:true});
+    if (path.endsWith('/uploads')) return new Response(null, {status:404});
+    if (init.method === 'POST') { submitted++; return Response.json({id:'accepted-job'}); }
+    assert.ok(path.endsWith('/accepted-job'));
+    polled++;
+    return new Response(null, {status:403});
+  });
+  const pool = new LiveRenderPool(1), signal = new AbortController().signal;
+  const schedule = text => pool.run(true, () => render.render(text, signal));
+  const results = await Promise.allSettled([schedule('안녕하세요.'), schedule('반가워요.')]);
+  assert.ok(pool.paused instanceof UnresolvedLiveVideo, results[0].reason?.message);
+  for (const result of results) assert.equal(result.reason, pool.paused);
+  await assert.rejects(schedule('어서 오세요.'), error => error === pool.paused);
+  assert.equal(JSON.parse(readFileSync(pool.paused.receiptPath)).jobId, 'accepted-job');
+  assert.deepEqual([submitted, polled], [1, 1]);
+});
 
 test('live dialogue binds the exact line and voice reference to the on-screen host', () => {
   const words = '제 책갈피는 남색이에요.';

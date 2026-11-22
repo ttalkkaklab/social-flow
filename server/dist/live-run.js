@@ -288,7 +288,7 @@ async function main() {
             while (!controller.signal.aborted && Date.now() < acceptingUntil) {
                 try {
                     const hostCapacity = Math.max(1, pool.limit - 1);
-                    if (program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity
+                    if (!pool.paused && program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity
                         && pendingHost.size + ready.length < Math.max(2, pool.limit)) {
                         await prepareHost(false);
                     }
@@ -315,6 +315,7 @@ async function main() {
                 const question = { speaker: event.speaker, text: event.text };
                 let stage = 'generating';
                 const failure = (error) => {
+                    program.dropFailedReply(key);
                     if (signal.aborted) {
                         unfinished(event.source, event.id, stage);
                         return;
@@ -383,6 +384,8 @@ async function main() {
         await encode([], join(out, 'recording.flv'), destinations, seconds, controller.signal, take, onLog, motion, () => planningReply || pendingReplies.size > 0 || queue.pending > 0 || ready.some(e => isReply(e.source)), clip => program.finish(clip));
         if (observerError)
             throw observerError;
+        if (pool.paused)
+            throw pool.paused;
         outcome = controller.signal.aborted ? 'interrupted' : 'finished';
     }
     finally {

@@ -49,6 +49,8 @@ topic cues. The host continues after the last cue.
 
 One model call decides whether a viewer message merits an answer and writes it. Set `maxConcurrentVideos` to a positive integer (default 3). During playout the host leaves one slot for chat when at least two are available. Selected replies take the next free slots. Plan the next line against recent chat and pending replies. Discard obsolete host results, let submitted jobs finish and keep replies from a single viewer in order. An on-air line always finishes, including
 when the chat intake window closes. Standby fills only gaps between ready spoken segments.
+If repeated status checks leave a video submission unresolved, the runner pauses new video requests
+and keeps playing available clips. The `live_video_unresolved` event records the receipt for recovery.
 The event log records chat admission, skipped messages, generation, and the first frame and last
 audio sample sent. If YouTube exhausts the chat quota, tell the operator that new messages
 may be missed. Standby frames are center-cropped for 720×1280 playout.

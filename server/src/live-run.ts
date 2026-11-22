@@ -272,7 +272,7 @@ async function main() {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
         try {
           const hostCapacity = Math.max(1, pool.limit - 1);
-          if (program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity
+          if (!pool.paused && program.canPlanHost && !queue.pending && pendingHost.size < hostCapacity
               && pendingHost.size + ready.length < Math.max(2, pool.limit)) {
             await prepareHost(false);
           }
@@ -295,6 +295,7 @@ async function main() {
         const question = { speaker: event.speaker, text: event.text };
         let stage = 'generating';
         const failure = (error: unknown) => {
+          program.dropFailedReply(key);
           if (signal.aborted) { unfinished(event.source, event.id, stage); return; }
           failedReplies++;
           const reason = error instanceof GenaiRequestError ? 'gateway_http_' + error.httpStatus
@@ -364,6 +365,7 @@ async function main() {
       clip => program.finish(clip)
     );
     if (observerError) throw observerError;
+    if (pool.paused) throw pool.paused;
     outcome = controller.signal.aborted ? 'interrupted' : 'finished';
   } finally {
     stop();

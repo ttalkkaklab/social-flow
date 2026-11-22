@@ -3,25 +3,40 @@ import type { ChatMessage } from './live-character.js';
 
 export const isReply = (source: string) => !['host', 'opening', 'standby'].includes(source);
 
+export class UnresolvedLiveVideo extends Error {
+  constructor(readonly receiptPath: string, cause: unknown) {
+    super('Live video submission unresolved. Check the existing receipt: ' + receiptPath, { cause });
+  }
+}
+
 /** Pending viewer clips get the next free slot. Submitted renders keep theirs to completion. */
 export class LiveRenderPool {
   private active = 0;
-  private waiting: { viewer: boolean; start: () => void }[] = [];
+  private waiting: { viewer: boolean; start: () => void; reject: (error: Error) => void }[] = [];
+  private unresolved?: UnresolvedLiveVideo;
 
   constructor(readonly limit: number) {}
+  get paused() { return this.unresolved; }
 
   run<T>(viewer: boolean, render: () => Promise<T>): Promise<T> {
+    if (this.unresolved) return Promise.reject(this.unresolved);
     return new Promise<T>((resolve, reject) => {
       const start = () => {
         this.active++;
-        Promise.resolve().then(render).then(resolve, reject).finally(() => {
+        Promise.resolve().then(render).then(resolve, error => {
+          if (error instanceof UnresolvedLiveVideo && !this.unresolved) {
+            this.unresolved = error;
+            for (const queued of this.waiting.splice(0)) queued.reject(error);
+          }
+          reject(error);
+        }).finally(() => {
           this.active--;
           const viewerIndex = this.waiting.findIndex(job => job.viewer);
           this.waiting.splice(Math.max(0, viewerIndex), 1)[0]?.start();
         });
       };
       if (this.active < this.limit) start();
-      else this.waiting.push({ viewer, start });
+      else this.waiting.push({ viewer, start, reject });
     });
   }
 }
@@ -70,6 +85,10 @@ export class LiveProgram {
     for (let i = this.ready.length - 1; i >= 0; i--) {
       if (this.ready[i].source === 'host') this.release(this.ready.splice(i, 1)[0]);
     }
+  }
+
+  dropFailedReply(key: string) {
+    if (this.draftingReplies.delete(key)) this.changeContext();
   }
 
   queueReply(clip: Utterance, alreadyPlanned = false) {

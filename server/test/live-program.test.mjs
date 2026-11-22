@@ -99,3 +99,18 @@ test('the configured video slots stay occupied until settled and waiting replies
     await Promise.all(jobs);
   }
 });
+
+test('dropping a failed viewer answer invalidates queued and in-flight host follow-ups', () => {
+  const released = [], program = new LiveProgram(clip => released.push(clip.id));
+  program.draftingReplies.set('youtube:q', {host:'The blue book.'});
+  const version = program.version;
+  program.draftingHosts.set('future', 'Another detail about that book.');
+  program.ready.push({source:'host', id:'follow-up'}, {source:'youtube', id:'unrelated'});
+  program.dropFailedReply('youtube:q');
+  assert.notEqual(program.version, version);
+  assert.deepEqual(released, ['follow-up']);
+  assert.equal(program.draftingHosts.size, 0);
+  assert.equal(program.draftingReplies.size, 0);
+  assert.equal(program.take(true).id, 'unrelated');
+  assert.equal(program.take(true), undefined);
+});

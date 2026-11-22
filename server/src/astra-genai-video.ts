@@ -571,7 +571,7 @@ export async function checkGenaiVideoOptions(tool: string, args: Record<string, 
   if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
 
-export async function generateGenaiVideo(operation: Operation, input: unknown, signal?: AbortSignal) {
+export async function generateGenaiVideo(operation: Operation, input: unknown, signal?: AbortSignal, statusRetries = 1) {
   signal?.throwIfAborted();
   const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
     : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
@@ -584,7 +584,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown, s
   const receiptPath = videoPath + '.astra-genai.json';
   const finish = async () => {
     const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation,args)),
-      `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal);
+      `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal, statusRetries);
     return { ...result, receiptPath };
   };
   async function followSubmission() {

@@ -88,27 +88,26 @@ export async function requestGenai(method, route, body, timeoutMs = 60_000, onRe
     }
 }
 /**
- * Poll a submitted job every 5 s for up to 30 minutes. One transient 5xx on the status GET is
+ * Poll a submitted job every 5 s for up to 30 minutes. Transient 5xx status reads are
  * retried, and an HTTP error on the GET never counts as terminal job evidence; only a job the
  * gateway reports failed (thrown as GenaiRequestError with HTTP 200) does. Never wraps a POST.
  */
-export async function pollGenaiJob(check, pending, signal) {
+export async function pollGenaiJob(check, pending, signal, statusRetries = 1) {
     const deadline = Date.now() + 30 * 60_000;
-    let retried = false;
+    let failures = 0;
     do {
         try {
             signal?.throwIfAborted();
             const result = await check();
             if (result.downloaded)
                 return result;
-            retried = false;
+            failures = 0;
         }
         catch (error) {
             if (!(error instanceof GenaiRequestError) || error.httpStatus === 200)
                 throw error;
-            if (error.httpStatus < 500 || retried)
+            if (error.httpStatus < 500 || ++failures > statusRetries)
                 throw new Error(error.message);
-            retried = true;
         }
         if (signal)
             await sleep(5000, undefined, { signal });

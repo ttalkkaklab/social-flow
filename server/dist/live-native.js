@@ -8,8 +8,9 @@ import { promisify } from 'node:util';
 import { RATE, SAMPLES, mouthLevel } from './live-character.js';
 import { IdleRotation, idleCount, idleFrameCounts, nativeWidth, nativeHeight, prepareIdleClips } from './live-idle.js';
 import { MotionFrames } from './live-motion.js';
+import { UnresolvedLiveVideo } from './live-program.js';
 import { generateGenaiVideo } from './astra-genai-video.js';
-import { astraGenaiBaseUrl } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, GenaiRequestError } from './astra-genai-client.js';
 const execute = promisify(execFile);
 const { estimateSpeechSeconds } = createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export const talkPrompt = 'Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.';
@@ -120,6 +121,7 @@ export class NativeTalk {
         return this.render(text, signal);
     }
     async render(text, signal) {
+        signal.throwIfAborted();
         const input = this.videoInput(text);
         const { outputPath } = input;
         mkdirSync(outputPath, { recursive: true, mode: 0o700 });
@@ -127,7 +129,24 @@ export class NativeTalk {
         // Identical replies share the remote job, but each playout owns its own decoded frames.
         let download = this.downloads.get(input.filename);
         if (!download) {
-            download = generateGenaiVideo('image-to-video', input, signal)
+            const receiptPath = join(outputPath, input.filename) + '.astra-genai.json';
+            download = generateGenaiVideo('image-to-video', input, signal, 3)
+                .catch(error => {
+                if (signal.aborted || error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)
+                    throw error;
+                if (existsSync(receiptPath)) {
+                    let completed = false;
+                    try {
+                        completed = JSON.parse(readFileSync(receiptPath, 'utf8')).status === 'completed';
+                    }
+                    catch { /* An unreadable receipt cannot establish completion. */ }
+                    if (!completed) {
+                        this.log?.('live_video_unresolved', { receiptPath });
+                        throw new UnresolvedLiveVideo(receiptPath, error);
+                    }
+                }
+                throw error;
+            })
                 .finally(() => this.downloads.delete(input.filename));
             this.downloads.set(input.filename, download);
         }
