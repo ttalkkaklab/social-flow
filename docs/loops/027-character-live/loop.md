@@ -21,3 +21,5 @@ The owner-scoped YouTube request reached the real API and was rejected before a 
 ## Updated broadcast destination, November 22
 
 The operator moved the live test to the enabled Pundago YouTube channel under the Luda profile and chose Han Seorin from Ears Up Club. The eight-point live-platform criterion now uses that channel, her Korean voice and a chest-up moving performance during both speech and silence. The weights, playback proof, visibility and closure criteria still apply. A motion score requires decoded footage across the broadcast and inspection of the viewer's player.
+
+[The sixth independent review](verify-6.md) awarded 99/100 with zero P0 defects after the real unlisted Pundago broadcast and confirmed Korean chat reply.
