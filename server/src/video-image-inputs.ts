@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyImageFile, type ImageMetadata } from './image-media.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { resolveVideoDuration } from './video-duration.js';
-import { FRAME_FIELDS, VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
+import { FRAME_FIELDS, VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, requiredCharacters, referenceLabel } from './video-registry.js';
 
 const load = createRequire(import.meta.url);
 const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/references/render-routing.js', import.meta.url))) as {
@@ -18,7 +18,7 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   imageReferences(scene: unknown): ImageReference[];
   referenceConstraints(ref: ImageReference): string;
 };
-interface ImageReference { id: string; path: string; role: string; use: string; purpose: string; wardrobe?: 'fitting'; defaultOutfit?: string; preserve?: string[]; avoid?: string[] }
+interface ImageReference { resolvedPanel?: boolean; id: string; path: string; role: string; use: string; purpose: string; wardrobe?: 'fitting'; defaultOutfit?: string; preserve?: string[]; avoid?: string[] }
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
   canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string, options?: { combined?: boolean }): ImageReference[];
   sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
@@ -211,7 +211,18 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     const authored = visual.references?.find(item => item.id === ref.id || path.resolve(episode, 'storyboard', item.path) === path.resolve(episode, 'storyboard', ref.path));
     return { ...ref, ...(authored?.preserve ? { preserve: authored.preserve } : {}), ...(authored?.avoid ? { avoid: authored.avoid } : {}) };
   });
-  const videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
+  let videoRefs = references.filter(ref => ['video', 'both'].includes(ref.use));
+  if (tool === 'seedance_reference' && videoRefs.length && videoRefs.every(ref => ref.resolvedPanel) &&
+      Array.isArray(input.referenceImagePaths)) {
+    const panels = new Map(videoRefs.map(ref => [realpathSync(path.resolve(episode,'storyboard',ref.path)),ref]));
+    const prefix = input.referenceImagePaths.map((file, index) => {
+      const absolute = realpathSync(path.resolve(episode,file));
+      const panel = panels.get(absolute);
+      panels.delete(absolute);
+      return panel ?? {id:'input-'+(index+1),path:absolute,role:'continuity',use:'video',purpose:'Keep the authored prompt binding for this image.'};
+    });
+    videoRefs = [...prefix, ...panels.values()];
+  }
   const frameMode = frames.mode !== 'reference';
   const genaiPins = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
   const fps = Number(input.fps ?? input.frameRate ?? 24);
@@ -280,7 +291,16 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
     }
     const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
     if (msr) put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
-    else put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);
+    else {
+      // A caller may repeat the authored prefix. Only the cast resolver may append the remaining panels.
+      const caller = args.referenceImagePaths;
+      if (tool === 'seedance_reference' && Array.isArray(caller) && caller.length < paths.length &&
+          equal(caller, paths.slice(0, caller.length)) && paths.slice(caller.length).every(file =>
+            requiredCharacters(shot).some(person => [person.face?.path, person.bodyPath].some(panel =>
+              panel && realpathSync(path.resolve(episode, 'storyboard', panel)) === file))))
+        delete args.referenceImagePaths;
+      put('referenceImagePaths', [...paths, ...(start ? [start] : [])]);
+    }
     if (vendor && start && args.ratio === undefined) {
       const opening = bindings[bindings.length - 1];
       args.ratio = nearestRatio(opening.width, opening.height);

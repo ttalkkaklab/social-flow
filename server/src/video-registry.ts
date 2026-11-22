@@ -20,7 +20,7 @@ import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js'
 export type VoiceLane = 'reference' | 'supplied' | 'none';
 export interface CharacterVideoInput {
   character: string;
-  face: { path: string; taskId?: never } | { taskId: string; path?: never };
+  face?: { path: string; taskId?: never } | { taskId: string; reviewPath?: string; path?: never };
   bodyView: 'front' | 'back';
   bodyPath: string;
   voiceRequired: boolean;
@@ -29,7 +29,7 @@ export interface CharacterVideoInput {
 export function requiredCharacters(shot: Record<string, unknown>): CharacterVideoInput[] {
   const inputs = (shot.visual as { characterInputs?: CharacterVideoInput[] } | undefined)?.characterInputs;
   // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
-  return Array.isArray(inputs) ? inputs.filter(person => person?.face && typeof person.bodyPath === 'string') : [];
+  return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
 }
 
 export interface VideoAdapter {
@@ -53,7 +53,7 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
     bindCharacterSources(args, cast) {
       const originals = new Map<string, string>();
       for (const person of cast) {
-        const id = person.face.taskId;
+        const id = person.face?.taskId;
         if (!id) continue;
         if (originals.has(id) && originals.get(id) !== person.character)
           throw new Error('character_face_source_ambiguous: each facial reference needs one identifiable character');
@@ -67,7 +67,7 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
       const offset = videos.reduce<number>((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
       const notes = [...originals.values()].map((character, index) =>
         `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
-      return { ...args, realFaceInput: args.realFaceInput ?? true,
+      return { ...args, realFaceInput: cast.some(person => person.face) || args.realFaceInput === true,
         ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt:[args.prompt, ...notes].join('\n') } : {}) };
     },
   },

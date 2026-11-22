@@ -295,13 +295,13 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 | `referenceImagePaths` | Planned character/product panel paths, in prompt reference order; one source frame is not a reference set |
 | `referenceAudioPaths` | Voice samples in prompt order. On 2.0 include an image or video. |
 | `referenceVideoPaths`, `referenceVideoUrls` | Local storyboard paths and public URLs or library assets. Inputs count toward the video rate. |
-| `referenceVideoTaskIds` | Eligible completed same-account Seedance originals. Each receives a video slot after local videos and URLs and counts toward the video-input price. Use the actor’s `visual.characterInputs[].faceTaskId` when that original supplies the face. |
+| `referenceVideoTaskIds` | Eligible completed same-account Seedance originals. Each receives a video slot after local videos and URLs and counts toward the video-input price. Bind the actor’s `faceTaskId` and `faceReviewPath` to a passed cast continuity review when that original supplies the face. |
 | `omniReferenceTaskType` | 2.5 and Flash accept `auto`, `reference`, `edit`, or `extend`. Editing keeps the input duration. |
 | `previz` | `{ renderer, clip, firstFrame, sha256, fps, seconds, camera: { movement }, handoff?, actors?, blend? }` with `modelPurpose:"previz"` — the clip rendered at the billed length, `referenceImagePaths[0]` the source still, no end frame; billed as input + output seconds on the `…-video` price rows. On `engine:"host"` the same record carries `handoff:"frame_and_prompt"` and none of the Seedance fields |
 | `model` | Optional exact model ID; omit to use the purpose-based selection. An explicit override must pass the same capability checks |
 | `resolution` | The saved resolution for this model (720p allowed, CLAUDE.md 2026-09-12); the final canvas scales the source |
 
-For a photoreal portrait, keep its authored framing and register the corresponding character sheet. A missing library entitlement pauses the approved request until the user activates it.
+For a photoreal portrait, keep its authored framing and register the corresponding character sheet. A managed face reference needs an active registration on the selected account before approval. Read the returned stage and asset status before retrying.
 
 Use each Seedance row’s `generation` object to review the forecast. Call `video_plan` with the episode, scene or shot, and request ID. The managed planner reads the prompt, selected model, character panels, voice samples and previz from the storyboard. Compare its actual image, video and audio slots to the authored direction before approval. Set `maxCostUsd` when the user has specified a cap. For a shot that needs a duration override, use `requiredSeconds` from `plan-video-duration.js` or the exact duration field by itself.
 

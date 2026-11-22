@@ -119,7 +119,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       images.push(image);
     };
     const people = requiredCharacters(raw[index]);
-    const ownerOf = (file: string) => people.find(person => file === person.face.path || file === person.bodyPath)?.character;
+    const ownerOf = (file: string) => people.find(person => file === person.face?.path || file === person.bodyPath)?.character;
     const claimed = new Set<Reference>();
     for (const pin of pins.sort((a,b) => a.frame - b.frame)) {
       const ref = ['face','outfit'].includes(pin.role) ? references.find(r => r.path === pin.path) : undefined;

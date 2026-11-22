@@ -12,7 +12,7 @@ import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js'
 export function requiredCharacters(shot) {
     const inputs = shot.visual?.characterInputs;
     // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
-    return Array.isArray(inputs) ? inputs.filter(person => person?.face && typeof person.bodyPath === 'string') : [];
+    return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
 }
 const entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === 'audio' ? 'supplied' : 'none' });
 const reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, 'reference', schema), voice: 'reference' });
@@ -25,7 +25,7 @@ export const VIDEO_ADAPTERS = Object.freeze({
         bindCharacterSources(args, cast) {
             const originals = new Map();
             for (const person of cast) {
-                const id = person.face.taskId;
+                const id = person.face?.taskId;
                 if (!id)
                     continue;
                 if (originals.has(id) && originals.get(id) !== person.character)
@@ -39,7 +39,7 @@ export const VIDEO_ADAPTERS = Object.freeze({
             const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
             const offset = videos.reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
             const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
-            return { ...args, realFaceInput: args.realFaceInput ?? true,
+            return { ...args, realFaceInput: cast.some(person => person.face) || args.realFaceInput === true,
                 ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt: [args.prompt, ...notes].join('\n') } : {}) };
         },
     },

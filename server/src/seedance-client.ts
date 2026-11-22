@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { recordVideoSubmission, recordVideoTokens } from './video-events.js';
+import { recordVideoSubmission, recordVideoTokens, videoEvents } from './video-events.js';
 /**
  * ByteDance Seedance video generation client (BytePlus ModelArk).
  *
@@ -31,7 +31,7 @@ import { z } from 'zod';
 import { arkBaseUrl, requireArkKey } from './config.js';
 import { saveVendorOutput, type VendorPoll } from './vendor-video.js';
 import { publishFiles } from './media-publish.js';
-import { ensurePortrait, portraitForImage, PortraitError } from './modelark-assets.js';
+import { ensurePortrait, portraitForImage, approvedPortrait, verifyApprovedPortrait, PortraitError } from './modelark-assets.js';
 import {
   ALLOWED_EXTENSIONS,
   bareFilenameSchema,
@@ -432,6 +432,7 @@ export interface SeedanceGenerationResponse {
   videoPath?: string;
   error?: string;
   portraitProblem?: Record<string, unknown>;
+  inputProblem?: Record<string, unknown>;
   originalProblem?: Record<string, unknown>;
   prompt?: string;
   model?: string;
@@ -506,9 +507,10 @@ function describeHttpError(status: number, body: string): string {
 }
 
 /** Create a task → task ID */
-async function createTask(apiKey: string, body: CreateTaskBody): Promise<string> {
+async function createTask(apiKey: string, body: CreateTaskBody, onPost: () => void): Promise<string> {
   const payload = JSON.stringify(body);
   if (Buffer.byteLength(payload) > MAX_REQUEST_BYTES) throw Object.assign(new Error('Seedance request exceeds 64 MB'), {terminal:true});
+  onPost();
   const response = await fetch(`${arkBaseUrl()}/contents/generations/tasks`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
@@ -596,7 +598,7 @@ async function trustedReferenceVideos(apiKey: string, ids: string[], spec: Seeda
     const [min, max] = spec.referenceVideos.clipSeconds;
     if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < min || seconds > max)
       throw new Error('seedance_original_duration: the source task duration is outside this model’s reference limits');
-    return { url, seconds };
+    return { id, url, seconds };
   }));
 }
 
@@ -711,7 +713,30 @@ async function prepareImages(filePaths: string[], output?: string, realFaceInput
 
 async function resolvePortraits(inputs: Awaited<ReturnType<typeof prepareImages>>): Promise<string[]> {
   const uris: string[] = [];
-  for (const input of inputs) uris.push(typeof input==='string' ? input : (await ensurePortrait(input.portrait,input.sha256)).uri);
+  const approved = videoEvents.getStore()?.characterBindings;
+  for (const [index, input] of inputs.entries()) {
+    const binding = approved?.find(b => b.media === 'Image' && b.slot === index + 1);
+    if (!approved) {
+      uris.push(typeof input === 'string' ? input : (await ensurePortrait(input.portrait, input.sha256)).uri);
+      continue;
+    }
+    try {
+      if (!binding || Boolean(binding.asset) !== (typeof input !== 'string'))
+        throw new Error('modelark_asset_stale: image slot changed after approval');
+      if (typeof input === 'string') { uris.push(input); continue; }
+      const asset = approvedPortrait(input.portrait.identityPath, input.portrait.panel ?? 'face', input.sha256);
+      if (input.sha256 !== binding.sha256 || asset.assetId !== binding.asset!.assetId ||
+          asset.groupId !== binding.asset!.groupId || asset.scope !== binding.asset!.scope ||
+          binding.character && path.basename(path.dirname(input.portrait.identityPath)) !== binding.character)
+        throw new Error('modelark_asset_stale: registered identity changed after approval');
+      await verifyApprovedPortrait(asset);
+      uris.push('asset://' + asset.assetId);
+    } catch (error) {
+      const problem = new PortraitError(error);
+      Object.assign(problem.report, {shotId:binding?.shotId, character:binding?.character, role:binding?.role, slot:index + 1});
+      throw problem;
+    }
+  }
   return uris;
 }
 
@@ -875,6 +900,28 @@ function buildBody(
   return body;
 }
 
+/** Check the serialized content before handing the body to the paid transport. */
+function checkCastParts(body: CreateTaskBody, originals: {id:string; url:string}[]) {
+  for (const binding of videoEvents.getStore()?.characterBindings ?? []) {
+    const index = binding.slot - 1;
+    let matches: boolean;
+    if (binding.media === 'Video') {
+      const part = body.content.filter(p => p.type === 'video_url')[index];
+      matches = !!part && part.video_url.url === originals.find(v => v.id === binding.taskId)?.url;
+    } else {
+      const uri = binding.media === 'Image' ? body.content.filter(p => p.type === 'image_url')[index]?.image_url.url :
+        body.content.filter(p => p.type === 'audio_url')[index]?.audio_url.url;
+      matches = binding.asset ? uri === 'asset://' + binding.asset.assetId :
+        !!uri?.startsWith('data:') && createHash('sha256').update(Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64')).digest('hex') === binding.sha256;
+    }
+    if (!matches) {
+      const problem = new PortraitError(new Error('modelark_asset_stale: final ' + binding.media + ' ' + binding.slot + ' differs from the approved ' + binding.role));
+      Object.assign(problem.report, {shotId:binding.shotId, character:binding.character, role:binding.role, slot:binding.slot});
+      throw problem;
+    }
+  }
+}
+
 /** Assemble the success response — the actual generation result (values the vendor returned) wins. */
 function toResponse(
   request: { prompt: string; model: SeedanceModel; ratio: SeedanceRatio; resolution: SeedanceResolution; durationSeconds: number },
@@ -900,7 +947,8 @@ function toResponse(
 function toFailure(error: unknown, posted: boolean): SeedanceGenerationResponse {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`[Seedance] Error: ${message}`);
-  return { success: false, error: message, ...(!posted && error instanceof PortraitError ? {portraitProblem:error.report} : {}), terminal: !posted || (error as { terminal?: unknown })?.terminal === true };
+  return { success: false, error: message, ...(!posted ? error instanceof PortraitError ? {portraitProblem:error.report} :
+    {inputProblem:{stage:'seedance_inputs',code:'seedance_input_invalid',message,videoSubmitted:false}} : {}), terminal: !posted || (error as { terminal?: unknown })?.terminal === true };
 }
 
 // ── The 3 generation functions ──────────────────────────────────────
@@ -913,8 +961,7 @@ export async function generateFromText(
   let posted = false;
   try {
     console.error(`[Seedance] Starting text-to-video generation... (model: ${request.model})`);
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, []));
+    const taskId = await createTask(apiKey, buildBody(request, []), () => { posted = true; });
     recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
@@ -950,8 +997,7 @@ export async function generateFromImage(
     console.error(`[Seedance] First frame: ${request.sourceImagePath}`);
     if (request.lastImagePath) console.error(`[Seedance] Last frame: ${request.lastImagePath}`);
 
-    posted = true;
-    const taskId = await createTask(apiKey, buildBody(request, images));
+    const taskId = await createTask(apiKey, buildBody(request, images), () => { posted = true; });
     recordVideoSubmission(taskId);
 
     const saved = await awaitVideoAndSave(
@@ -1024,8 +1070,10 @@ export async function generateWithReferences(
       if (videoUrls.length > 0) console.error(`[Seedance] Reference videos: ${videoUrls.length}`);
       if (audioUris.length > 0) console.error(`[Seedance] Reference audio: ${request.referenceAudioPaths.join(', ')}`);
 
-      posted = true;
-      const taskId = await createTask(apiKey, buildBody(request, parts));
+      const body = buildBody(request, parts);
+      checkCastParts(body, originals);
+      videoEvents.getStore()?.castVerified?.();
+      const taskId = await createTask(apiKey, body, () => { posted = true; });
       recordVideoSubmission(taskId);
 
       const saved = await awaitVideoAndSave(

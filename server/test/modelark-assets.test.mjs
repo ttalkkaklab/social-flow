@@ -212,6 +212,9 @@ test('real-person registration requires a verified group and an unclassified she
   const result = await f.generate();
   assert.equal(result.terminal, true);
   assert.match(result.error, /kind_required/);
+  const legacy = await generateWithReferences(seedanceReferenceSchema.parse({prompt:'The actor waves.',
+    model:'dreamina-seedance-2-5-flash-261115', referenceImagePaths:[f.image], realFaceInput:false, outputPath:f.root}));
+  assert.equal(legacy.portraitProblem.code,'modelark_asset_kind_required');
   assert.deepEqual(f.counters, {});
 });
 

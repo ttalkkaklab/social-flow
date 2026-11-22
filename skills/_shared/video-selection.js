@@ -34,7 +34,7 @@ function seedanceMedia(shot) {
     if (slot[key] !== undefined) fields[key] = slot[key];
   const originals = [...new Set((shot.visual?.characterInputs ?? []).map(c => c.faceTaskId ?? c.face?.taskId).filter(Boolean))];
   if (originals.length) {
-    if (fields.realFaceInput === false || fields.referenceVideoTaskIds !== undefined &&
+    if (fields.referenceVideoTaskIds !== undefined &&
         JSON.stringify(fields.referenceVideoTaskIds) !== JSON.stringify(originals))
       throw new Error('character_inputs_mismatch: use the cast’s declared face sources');
     fields.referenceVideoTaskIds = originals;
@@ -93,7 +93,7 @@ class MissingSceneDirection extends Error {
   }
 }
 
-function readVideoContext(episode, shotId, sceneNo) {
+function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   const root = fs.realpathSync(episode);
   const boardFile = path.join(root, 'storyboard/scenes.js');
   const board = fs.existsSync(boardFile) ? evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'), { filename: boardFile }) : {};
@@ -116,7 +116,9 @@ function readVideoContext(episode, shotId, sceneNo) {
   const { selection: savedSelection, source } = choice(storedMembers[0]);
   const members = storedMembers.map(raw => {
     const shotWithRefs = Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw;
-    let shot = resolveShotCharacterInputs(shotWithRefs, path.join(root, 'storyboard'));
+    const seedance = savedSelection.engine === 'seedance';
+    let shot = selectionOnly && seedance && !raw.visual?.characterInputs ? shotWithRefs :
+      resolveShotCharacterInputs(shotWithRefs, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters);
     if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
       const slot = videoSlot(shot);
       if (slot) shot = { ...shot, visual: { ...shot.visual, video:slot } };

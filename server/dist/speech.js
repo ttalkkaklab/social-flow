@@ -344,7 +344,7 @@ export function manageSpeech(args) {
             actingSchema.nullable().optional().parse(line.acting);
         const episode = dirname(dirname(file));
         if (existsSync(join(episode, '.work/model-settings.json'))) {
-            const { selection } = routingContext(episode, args.shotId);
+            const { selection } = routingContext(episode, args.shotId, undefined, true);
             // The shot's video tool decides the route (MSR speaks its prompt; audio-to-video takes line audio);
             // without one, the saved default operation does, as in video_plan.
             const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;

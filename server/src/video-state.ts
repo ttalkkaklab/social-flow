@@ -6,7 +6,10 @@ export { atomicJson } from './routing-files.js';
 import { fileURLToPath } from 'node:url';
 import { refreshVideoReview } from './video-review.js';
 
+import type { SeedanceBinding } from './seedance-bindings.js';
+
 export interface VideoJob {
+  characterBindings?: SeedanceBinding[];
   planId: string;
   requestId: string;
   shotId: string;

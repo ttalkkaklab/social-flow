@@ -32202,7 +32202,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile, readFile, mkdir } = __require("node:fs/promises");
-    var { dirname: dirname6, resolve: resolve6 } = __require("node:path");
+    var { dirname: dirname7, resolve: resolve6 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -32433,7 +32433,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError("Snapshot path is required");
         }
         const resolvedPath = resolve6(path10);
-        await mkdir(dirname6(resolvedPath), { recursive: true });
+        await mkdir(dirname7(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash3, snapshot]) => ({
           hash: hash3,
           snapshot
@@ -53569,7 +53569,7 @@ function resolveVideoDuration(tool, input) {
 // src/video-registry.ts
 function requiredCharacters(shot) {
   const inputs2 = shot.visual?.characterInputs;
-  return Array.isArray(inputs2) ? inputs2.filter((person) => person?.face && typeof person.bodyPath === "string") : [];
+  return Array.isArray(inputs2) ? inputs2.filter((person) => person && typeof person.bodyPath === "string") : [];
 }
 var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
@@ -53581,7 +53581,7 @@ var VIDEO_ADAPTERS = Object.freeze({
     bindCharacterSources(args, cast) {
       const originals = /* @__PURE__ */ new Map();
       for (const person of cast) {
-        const id = person.face.taskId;
+        const id = person.face?.taskId;
         if (!id) continue;
         if (originals.has(id) && originals.get(id) !== person.character)
           throw new Error("character_face_source_ambiguous: each facial reference needs one identifiable character");
@@ -53595,7 +53595,7 @@ var VIDEO_ADAPTERS = Object.freeze({
       const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return {
         ...args,
-        realFaceInput: args.realFaceInput ?? true,
+        realFaceInput: cast.some((person) => person.face) || args.realFaceInput === true,
         ...taskIds.length ? { referenceVideoTaskIds: taskIds, prompt: [args.prompt, ...notes].join("\n") } : {}
       };
     }
@@ -53741,7 +53741,7 @@ function resolveCharacterVoice(character, context, warnings) {
     }
   }
   const reference2 = object2(resolved.voiceReference);
-  if (required) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required.face.path, required.bodyPath].filter(Boolean) } };
+  if (required) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required.face?.path, required.bodyPath].filter(Boolean) } };
   if (!Array.isArray(reference2.imagePaths) && existsSync4(folder)) {
     const root = realpathSync(folder) + path7.sep;
     const refs = object2(context.shot.visual).references;
@@ -53842,7 +53842,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       images.push(image2);
     };
     const people = requiredCharacters(raw[index]);
-    const ownerOf = (file) => people.find((person) => file === person.face.path || file === person.bodyPath)?.character;
+    const ownerOf = (file) => people.find((person) => file === person.face?.path || file === person.bodyPath)?.character;
     const claimed = /* @__PURE__ */ new Set();
     for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
       const ref = ["face", "outfit"].includes(pin.role) ? references.find((r2) => r2.path === pin.path) : void 0;
@@ -54244,19 +54244,19 @@ function refreshVideoReview(episode) {
 
 // src/project.ts
 import * as nodeModule from "node:module";
-import { dirname as dirname3, join as join4, resolve as resolve3 } from "node:path";
+import { dirname as dirname4, join as join4, resolve as resolve3 } from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 var loadFromHere = nodeModule.createRequire(import.meta.url);
-var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
+var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/video-routing.ts
 var load6 = createRequire8(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-function routingContext(episode, shotId, sceneNo) {
+function routingContext(episode, shotId, sceneNo, selectionOnly) {
   const reader = load6(shared);
   try {
-    return reader.readVideoContext(episode, shotId, sceneNo);
+    return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly);
   } catch (error) {
     if (sceneNo === void 0 || !(error instanceof reader.MissingSceneDirection)) throw error;
     const timeline = compileSceneTimeline(error.members, {}, episode, error.board);
@@ -54631,9 +54631,9 @@ function evaluateWindowScript(source, options = {}) {
 // src/storyboard.ts
 import { existsSync as existsSync6, mkdirSync as mkdirSync2, readFileSync as readFileSync8, renameSync as renameSync2, statSync as statSync7, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
-import { basename as basename4, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
+import { basename as basename4, dirname as dirname5, join as join5, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
-var PLUGIN_ROOT = resolve4(dirname4(fileURLToPath6(import.meta.url)), "..", "..");
+var PLUGIN_ROOT = resolve4(dirname5(fileURLToPath6(import.meta.url)), "..", "..");
 var REFERENCES_DIR = join5(PLUGIN_ROOT, "skills", "storyboard", "references");
 var CONTRACT_FILE = join5(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join5(REFERENCES_DIR, "check-scenes.js");
@@ -54773,6 +54773,8 @@ var visualSchema = external_exports.object({
   characterInputs: external_exports.array(external_exports.object({
     character: external_exports.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     bodyView: external_exports.enum(["front", "back"]).optional().describe("Body panel for this actor when the camera view is ambiguous"),
+    visibility: external_exports.enum(["face_visible", "body_only", "hands_only"]).optional().describe("Seedance appearance for this character in this shot"),
+    faceReviewPath: nonEmpty.optional().describe("Storyboard-relative cast continuity review of the selected original"),
     faceTaskId: external_exports.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/).optional().describe("Eligible same-account Seedance original selected for this actor\u2019s face")
   }).strict()).nonempty().optional()
 }).passthrough();
@@ -55180,7 +55182,7 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync7 } from "node:fs";
-import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
+import { dirname as dirname6, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync5 } from "node:child_process";
 
@@ -55377,9 +55379,9 @@ function manageSpeech(args) {
   const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname5(dirname5(file)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname6(dirname6(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
-  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname5(file), board: win });
+  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname6(file), board: win });
   const scenes = win.SCENES;
   let changed = false;
   let timing;
@@ -55439,7 +55441,7 @@ function manageSpeech(args) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve5(dirname5(file), args.audioPath);
+      const audioPath = resolve5(dirname6(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const voice = audioCharacter(line.speaker)?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
@@ -55506,9 +55508,9 @@ function manageSpeech(args) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    const episode = dirname5(dirname5(file));
+    const episode = dirname6(dirname6(file));
     if (existsSync7(join6(episode, ".work/model-settings.json"))) {
-      const { selection } = routingContext(episode, args.shotId);
+      const { selection } = routingContext(episode, args.shotId, void 0, true);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
@@ -55518,10 +55520,10 @@ function manageSpeech(args) {
     }
     plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
     const continuityContract = nodeModule4.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
-    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname5(file)) };
+    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname6(file)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve5(dirname5(file), args.videoPath);
+      const videoPath = resolve5(dirname6(file), args.videoPath);
       const bytes = readFileSync9(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const native = plan.mode === "native";
@@ -55563,7 +55565,7 @@ function manageSpeech(args) {
         video.speechStatus = "stale";
         invalidated = { video, edit: true };
       } else {
-        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname5(file), videoPath, video.clip, plan.warnings);
+        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file), videoPath, video.clip, plan.warnings);
         const trim = object3(scene.edit);
         if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
@@ -55649,7 +55651,7 @@ function manageSpeech(args) {
       ids.add(line.id);
       if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve5(dirname5(file), "../.work/speech-history");
+    const work = resolve5(dirname6(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
     const backup = join6(work, revision + ".js");
     if (!existsSync7(backup)) writeFileSync5(backup, before);
@@ -55658,16 +55660,16 @@ function manageSpeech(args) {
     const tmp = file + "." + randomUUID4() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
-    refreshVideoReview(dirname5(dirname5(file)));
+    refreshVideoReview(dirname6(dirname6(file)));
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
-    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win });
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win });
     const generation = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
       speechContext: { path: file, lineId: line.id, expectedRevision: revision }
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash2(readFileSync9(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname5(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash2(readFileSync9(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

@@ -37,6 +37,8 @@ export class PortraitError extends Error {
             modelark_asset_access_denied: 'Check the management key, project and IAM asset permissions. This response does not establish the account subscription status.',
             modelark_asset_credentials: 'Set the project management access key and secret securely; video inference uses a separate key.',
             modelark_asset_ambiguous: 'Select the reference directly from its owning character sheet and update the shot. Plan the edited shot again.',
+            modelark_asset_registration_required: 'Register this character’s face panel with modelark_portrait_register and wait for Active before planning the video.',
+            modelark_asset_stale: 'Register the current panel and plan again with its reviewed asset.',
             modelark_asset_sheet_required: 'Select the character sheet image that owns the face reference and plan the edited shot again.',
             modelark_asset_kind_required: 'Confirm the portrait type on the character sheet and call modelark_portrait_register.',
             modelark_asset_liveness_required: 'The real person must complete verification and authorize their portrait. Supply the returned group ID.',
@@ -68,6 +70,43 @@ function credentials() {
     if (!access || !secret)
         throw new Error('modelark_asset_credentials: set BYTEPLUS_ACCESS_KEY_ID and BYTEPLUS_SECRET_ACCESS_KEY for this project');
     return { access, secret, project: process.env.BYTEPLUS_PROJECT_NAME || 'default' };
+}
+function libraryScope() {
+    const { access, project } = credentials();
+    return { project, scope: sha(access + '\n' + project).slice(0, 20) };
+}
+/** Read the registration receipt without uploading a file or starting review during video planning. */
+export function approvedPortrait(identityPath, panel, digest) {
+    const doc = identityBlock(sheetFile(identityPath)).doc;
+    if (!doc.modelArk?.libraries)
+        throw new Error('modelark_asset_registration_required: no reviewed sheet asset');
+    const { project, scope } = libraryScope();
+    const shelf = doc.modelArk.libraries[scope];
+    const row = shelf?.assets[path.basename(portraitImage(identityPath, panel))];
+    if (!shelf?.groupId || shelf.project !== project || !row)
+        throw new Error('modelark_asset_registration_required: no registration for this account, project and panel');
+    if (row.sha256 !== digest)
+        throw new Error('modelark_asset_stale: registered sheet bytes changed');
+    if (row.status === 'Failed')
+        throw new Error('modelark_asset_failed: ' + row.id);
+    if (row.status === 'Processing')
+        throw new Error('modelark_asset_processing: ' + row.id);
+    if (row.status === 'Submitting')
+        throw new Error('modelark_asset_unknown: reconcile the existing upload');
+    if (row.status !== 'Active' || !row.id)
+        throw new Error('modelark_asset_registration_required: no active registration');
+    return { assetId: row.id, groupId: shelf.groupId, project, region, scope, name: 'sf-' + digest.slice(0, 48) };
+}
+export async function verifyApprovedPortrait(pin) {
+    const { scope, project } = libraryScope();
+    if (scope !== pin.scope || project !== pin.project)
+        throw new Error('modelark_asset_identity_conflict: account or project changed');
+    const asset = await arkAssetCall('GetAsset', { Id: pin.assetId });
+    if (asset.Id !== pin.assetId || asset.Name !== pin.name || asset.GroupId !== pin.groupId || asset.AssetType !== 'Image')
+        throw new Error('modelark_asset_identity_conflict: wrong asset returned');
+    if (asset.Status !== 'Active')
+        throw new Error((asset.Status === 'Failed' ? 'modelark_asset_failed' :
+            asset.Status === 'Processing' ? 'modelark_asset_processing' : 'modelark_asset_status') + ': ' + pin.assetId);
 }
 /** BytePlus OpenAPI v4 signature. ModelArk's inference bearer token cannot sign control-plane requests. */
 export async function arkAssetCall(action, params) {
@@ -190,7 +229,7 @@ async function register(raw, expectedSha256) {
         throw new Error('modelark_asset_panel: the image must meet the asset library dimensions and aspect ratio');
     if (expectedSha256 && expectedSha256 !== digest)
         throw new Error('modelark_asset_stale: the sheet no longer matches the approved image');
-    const { access, project } = credentials(), scope = sha(access + '\n' + project).slice(0, 20);
+    const { project, scope } = libraryScope();
     const lock = path.join(folder, '.modelark-portrait.lock');
     const release = await lockfile
         .lock(identity, { lockfilePath: lock, stale: 120000, update: 10000, retries: 0 })
@@ -366,7 +405,7 @@ function usesPortraitLibrary(identity, file, faceDeclared) {
         return false;
     if (faceDeclared === true)
         return true;
-    return facePanel && (faceDeclared !== false || Boolean(doc.modelArk?.kind));
+    return facePanel;
 }
 export function portraitForImage(file, output, faceDeclared) {
     try {

@@ -10,7 +10,7 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 
 For a character reference shot, set `visual.character` and the camera’s subject and view. The plan binds the sheet face and the front or rear body panel to that character. Use `visual.characterInputs` to specify each principal’s body view when their directions differ. On-screen and off-screen lines by a principal require the selected voice sample. Check the panel paths and speaker slots before approval.
 
-For a photoreal Seedance sheet face, follow [character portrait registration](../register-seedance-portrait/SKILL.md). When the user selects a previously generated face, set the character’s `faceTaskId` to the eligible same-account Seedance original. The adapter verifies the task and uses its original video for facial identity with the selected body panel and WAV. Reusing a generated face carries that take’s appearance forward.
+For Seedance, follow [character portrait registration](../register-seedance-portrait/SKILL.md) before planning a visible face. Inspect the shot, character, asset and numbered slots in `characterBindings`. Keep existing location and prop references in prompt order. If an old card leaves the performer’s view unresolved, fix that card and plan again. For a selected original, supply the character’s `faceTaskId` and a passed cast continuity review in `faceReviewPath`. Follow the [binding and retry rules](../_shared/video-routing.md).
 
 
 Steps 7–8 of [the production order](../_shared/production-workflow.md) (user directive

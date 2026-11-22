@@ -120,7 +120,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             images.push(image);
         };
         const people = requiredCharacters(raw[index]);
-        const ownerOf = (file) => people.find(person => file === person.face.path || file === person.bodyPath)?.character;
+        const ownerOf = (file) => people.find(person => file === person.face?.path || file === person.bodyPath)?.character;
         const claimed = new Set();
         for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
             const ref = ['face', 'outfit'].includes(pin.role) ? references.find(r => r.path === pin.path) : undefined;
