@@ -81,9 +81,18 @@ const directedMoves = [
     /\btrack(?:s|ing)? backward\b/i,
     /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
 ];
-export function sceneVoiceDirection(acting, spoken) {
-    return [acting?.vocal || acting?.direction, ...(acting?.tags || [])].filter((v) => !!v)
-        .map(cue => spoken ? cue.split(spoken).join('the authored line') : cue).filter(cue => !nonEnglishOutsideQuotes(cue)).join(' ');
+export function sceneVoiceDirection(acting, spoken, legacy = false) {
+    const cues = legacy ? [acting?.vocal || acting?.direction] : [acting?.direction, acting?.vocal];
+    const seen = new Set();
+    return [...cues, ...(acting?.tags || [])].filter((v) => !!v)
+        .map(cue => (spoken ? cue.split(spoken).join('the authored line') : cue).trim())
+        .filter(cue => {
+        const key = cue.toLowerCase().replace(/[.!?\s]+$/, '');
+        if (!key || seen.has(key) || nonEnglishOutsideQuotes(cue))
+            return false;
+        seen.add(key);
+        return true;
+    }).join(' ');
 }
 export function scenePromptText(scene, camera, timeline, lines, bindTurns) {
     const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')

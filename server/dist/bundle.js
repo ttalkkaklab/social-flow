@@ -93961,7 +93961,7 @@ var require_scene_direction = __commonJS({
             delete acting.vocal;
             delete acting.direction;
             delete acting.tags;
-          } else if (acting.vocal) delete acting.direction;
+          }
           const fields2 = actingFields(acting, line.delivery !== "voiceover", /* @__PURE__ */ new Set(), redact, accept);
           const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
           const to = text4(event.to) || text4(line.to);
@@ -118318,8 +118318,15 @@ var directedMoves = [
   /\btrack(?:s|ing)? backward\b/i,
   /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
 ];
-function sceneVoiceDirection(acting, spoken) {
-  return [acting?.vocal || acting?.direction, ...acting?.tags || []].filter((v) => !!v).map((cue) => spoken ? cue.split(spoken).join("the authored line") : cue).filter((cue) => !nonEnglishOutsideQuotes(cue)).join(" ");
+function sceneVoiceDirection(acting, spoken, legacy = false) {
+  const cues = legacy ? [acting?.vocal || acting?.direction] : [acting?.direction, acting?.vocal];
+  const seen = /* @__PURE__ */ new Set();
+  return [...cues, ...acting?.tags || []].filter((v) => !!v).map((cue) => (spoken ? cue.split(spoken).join("the authored line") : cue).trim()).filter((cue) => {
+    const key = cue.toLowerCase().replace(/[.!?\s]+$/, "");
+    if (!key || seen.has(key) || nonEnglishOutsideQuotes(cue)) return false;
+    seen.add(key);
+    return true;
+  }).join(" ");
 }
 function scenePromptText(scene, camera, timeline, lines, bindTurns) {
   const dialogue = bindTurns ? [] : lines.filter((l) => l.delivery !== "voiceover").map((l) => [sceneVoiceDirection(l.acting, l.tts), l.speaker + " (" + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(" "));
@@ -119062,14 +119069,17 @@ function prepareVideoVoice(tool2, input, context2) {
     if (lines.some((line) => quoted.some((words) => words.includes(text2(line.tts)))))
       throw new Error("video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order");
     const bySpeaker = new Map(speakers.map((speaker) => [speaker.speaker, speaker]));
+    const owners = object4(context2.board.STRUCTURE).scenes;
+    const owner = Array.isArray(owners) && owners.find((scene) => scene.no === context2.shot.scene);
+    const legacyScene = !context2.timed && !owner?.directionDefaults;
     const script = lines.map((line, turn) => {
       const id = text2(line.speaker) || text2(doc.narratorCharacterId), speaker = bySpeaker.get(id);
       const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text2(object4(line.acting).direction);
       const who = image2 ? img(image2) : speaker?.name ?? id;
       if (context2.sceneDirection) {
-        const owner = context2.sceneDirection.openingPositions.find((p) => p.character === id);
-        const imageSlot = image2 ?? owner?.images[0];
-        const deliveryCue = text2(object4(line.acting).vocal) || direction;
+        const owner2 = context2.sceneDirection.openingPositions.find((p) => p.character === id);
+        const imageSlot = image2 ?? owner2?.images[0];
+        const deliveryCue = sceneVoiceDirection(object4(line.acting), text2(line.tts), legacyScene);
         const binding2 = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === "off_screen" && "off screen"].filter(Boolean).join(", ");
         return `${deliveryCue ? deliveryCue + " " : ""}${id}${binding2 ? " (" + binding2 + ")" : ""}: "${text2(line.tts)}"`;
       }

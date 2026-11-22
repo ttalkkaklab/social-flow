@@ -522,7 +522,7 @@ test('scene camera returns to its default after the insert and every shot cue re
   assert.match(single.body.prompt,/Suspicion turns to relief/);
   assert.match(single.body.prompt,/static frame/);
   const acting = {context:'The clerk is watching.',intent:'Make the guard underestimate her.',emotion:'Panic gives way to defiance.',
-    visual:'Her hand grips the lock.',vocal:'Whisper the authored line.',leadInSeconds:1.5,tailOutSeconds:0.75};
+    visual:'Her hand grips the lock.',direction:'Stammer on the first syllable.',vocal:'Drop to a whisper.',tags:['sighs','Sighs.'],leadInSeconds:1.5,tailOutSeconds:0.75};
   const line = {id:'l1',speaker:'miran',delivery:'on_screen',tts:'Not yet.',acting};
   const spoken = {...cards[0], narration:[line], timeline:{...cards[0].timeline,dialogueCues:[{lineId:'l1',frame:0}]}};
   for (const list of [[spoken], [spoken,...cards.slice(1)]]) {
@@ -531,7 +531,8 @@ test('scene camera returns to its default after the insert and every shot cue re
     for (const cue of [acting.intent,acting.emotion,acting.context,acting.visual,'Anticipation 1.5 seconds','reaction 0.75 seconds'])
       assert.ok(first.description.includes(cue),cue);
     assert.equal(first.dialogue[0].text,line.tts);
-    assert.equal(first.dialogue[0].direction,acting.vocal);
+    assert.equal(first.dialogue[0].direction,'Stammer on the first syllable. Drop to a whisper. sighs');
+    assert.ok(build(list).providerPrompt.includes(first.dialogue[0].direction));
     assert.ok(!first.description.includes(acting.vocal));
     assert.ok(!first.description.includes(line.tts));
     assert.ok(!directed.body.shots.slice(1).some(s=>s.description.includes(acting.visual)));

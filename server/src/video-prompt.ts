@@ -103,9 +103,17 @@ const directedMoves = [
   /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i,
 ];
 
-export function sceneVoiceDirection(acting?: {vocal?: string; direction?: string; tags?: string[]}, spoken?:string) {
-  return [acting?.vocal || acting?.direction, ...(acting?.tags || [])].filter((v):v is string => !!v)
-    .map(cue => spoken ? cue.split(spoken).join('the authored line') : cue).filter(cue => !nonEnglishOutsideQuotes(cue)).join(' ');
+export function sceneVoiceDirection(acting?: {vocal?: string; direction?: string; tags?: string[]}, spoken?:string, legacy = false) {
+  const cues = legacy ? [acting?.vocal || acting?.direction] : [acting?.direction, acting?.vocal];
+  const seen = new Set<string>();
+  return [...cues, ...(acting?.tags || [])].filter((v):v is string => !!v)
+    .map(cue => (spoken ? cue.split(spoken).join('the authored line') : cue).trim())
+    .filter(cue => {
+      const key = cue.toLowerCase().replace(/[.!?\s]+$/, '');
+      if (!key || seen.has(key) || nonEnglishOutsideQuotes(cue)) return false;
+      seen.add(key);
+      return true;
+    }).join(' ');
 }
 export function scenePromptText(scene: SceneVideoDirection, camera: string | undefined, timeline: string | undefined,
   lines: { speaker?: string; delivery?: string; tts?: string; acting?: {vocal?:string;direction?:string;tags?:string[]} }[], bindTurns: boolean) {

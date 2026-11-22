@@ -47,7 +47,7 @@
       // Native adapters bind vocal direction to the spoken turn. The picture carries how the actor performs it.
       if (visualOnly || line.delivery === 'voiceover') {
         delete acting.vocal; delete acting.direction; delete acting.tags;
-      } else if (acting.vocal) delete acting.direction;
+      }
       const fields = actingFields(acting, line.delivery !== 'voiceover', new Set(), redact, accept);
       const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
       const to = text(event.to) || text(line.to);

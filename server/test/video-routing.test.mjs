@@ -803,6 +803,11 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  const prompt=reordered.args.prompt;
  assert.ok(prompt.indexOf(words[1])>=0 && prompt.indexOf(words[1])<prompt.indexOf(words[0]));
  assert.match(prompt,/Beat 1 with line 2[\s\S]*Touch the latch[\s\S]*Beat 3 with line 1/);
+ f.board.STRUCTURE.scenes[0].directionDefaults={camera:'camera.static'};
+ first.narration[0].acting={direction:'Stammer on the first syllable.',vocal:'Whisper the answer.',tags:['sighs']};
+ f.save();
+ const directed=planVideo({...input,requestId:'scene-direction'},false);
+ assert.match(directed.args.prompt,/Stammer on the first syllable\. Whisper the answer\. sighs/);
  f.board.SCENES[0].narration[1].tts='다른 대사'; f.save();
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
  await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);
