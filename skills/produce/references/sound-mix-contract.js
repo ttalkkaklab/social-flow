@@ -90,7 +90,13 @@ function musicEnvelopeFilter(rows) {
   return `volume=eval=frame:volume='pow(10,(${terms.join('+')})/20)',`;
 }
 
-module.exports = { MIX_FIELDS, mixFindings, mixEnvironment, musicEnvelopeFindings, musicEnvelopeFilter };
+function hasClipSound(shot) {
+  return shot.sound?.audioSource === 'video' || shot.shot?.render?.mode === 'generated_video' ||
+    shot.render?.mode === 'generated_video' || Boolean(shot.visual?.clip || shot.visual?.video?.clip) ||
+    (Array.isArray(shot.productionPlan?.cuts) && shot.productionPlan.cuts.some(cut => cut?.kind === 'generated_video'));
+}
+
+module.exports = { MIX_FIELDS, mixFindings, mixEnvironment, musicEnvelopeFindings, musicEnvelopeFilter, hasClipSound };
 if (require.main === module) {
   const fs = require('fs');
   const rows = fs.readFileSync(process.argv[2], 'utf8').trim().split('\n').filter(Boolean)

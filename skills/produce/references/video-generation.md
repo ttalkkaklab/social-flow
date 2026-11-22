@@ -33,7 +33,7 @@ storyboard records the planned route** — `visual.engine`, or the saved model �
 the stored prompt in that route's grammar. This section is how you **validate** the route
 against those facts, not re-decide it. A route that fails validation (a spoken cut on an
 adapter with no voice lane, a real face on a Seedance 2.x model) is a storyboard defect: send
-it back. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
+it back. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a
 voice reference; their existing clips stay reusable through `visual.reuse`.
 
 **① Does a character speak** — the voice lane rules adapters out first.
@@ -173,7 +173,7 @@ generated cover. These three are generated only when the episode has that kind o
   quietly disappears; add a slot that isn't there and you've broken the contract and wasted
   money.
 
-  Existing 720p clips follow the `visual.reuse` source contract, Veo, Gemini Omni and
+  Existing 720p clips follow the `visual.reuse` source contract, Gemini Developer API Veo previews, Gemini Omni and
   Seedance 1.x clips included; never regenerate one solely to migrate. New clips follow the
   selected model resolution.
 

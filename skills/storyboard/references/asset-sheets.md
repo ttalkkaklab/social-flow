@@ -12,8 +12,13 @@ silently bypassed; it stops no other step except the episode cast's own panels (
   appearance, wardrobe, behavior and speech/voice choices, marking unresolved fields honestly.
   New visual sheets use headless front/back mannequin panels and one face close-up;
   follow the linked character-panel contract for generation and legacy reuse.
-- **Props:** use [prop continuity](prop-continuity.md). Write canonical `SB_DOC.props` in
-  `scenes.js`: stable id, name, concrete appearance/material/scale, references and tracking.
+- **Props:** look the real thing up first ([prop research](prop-research.md), user directive
+  2026-11-21). A will, a certificate, a banknote, a uniform or any object a viewer knows from
+  life is searched, its real pictures are saved and viewed, and the prop's description and
+  own picture are made from them; a prop with nothing real to look up records
+  `research: "none"`. Never write "keep writing unreadable" in place of finding out what the
+  page says. Then use [prop continuity](prop-continuity.md). Write canonical `SB_DOC.props` in
+  `scenes.js`: stable id, name, `research`, concrete appearance/material/scale, references and tracking.
   For handled/transferred props, establish `propContinuity` initial ownership, custody,
   location and condition before adding shot events. Link appearances with `visual.props`.
   Do not create a second editable prop-sheet file.

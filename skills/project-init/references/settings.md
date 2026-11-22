@@ -7,15 +7,23 @@ visual style and format. `request` and `updatedAt` record the last explicit chan
 
 The helper `skills/_shared/project-settings.js` and MCP `project_manage` share the
 same implementation. Every operation needs the explicit absolute workspace except
-`options`. `init`/`update` read JSON on stdin; paths with spaces are supported.
+`options`. `select`, `init` and `update` read JSON on stdin; paths with spaces are supported.
 
 ```bash
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" options
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" status "$WORKSPACE"
+node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" select "$WORKSPACE" < directory-selection.json
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" init "$WORKSPACE" < setup-input.json
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" episode "$WORKSPACE" history-01
 node "$CLAUDE_PLUGIN_ROOT/skills/_shared/project-settings.js" update "$WORKSPACE" < change-input.json
 ```
+
+For a new or unbound directory use `project-settings.js select "$WORKSPACE"` with
+`{"request":"<the user's actual directory selection>"}` on stdin. The saved `workspace`
+is the canonical directory. After a copy or move, select its new path once. Status
+lists missing choices individually, including `models.music` and `models.speech`.
+Save explicit `engine:"none"` choices for unused music generation or separate TTS.
+Use `init` to fill missing choices and preserve existing models and episode snapshots.
 
 Example `setup-input.json` (illustrative choices, never automatic defaults):
 
@@ -27,8 +35,9 @@ Example `setup-input.json` (illustrative choices, never automatic defaults):
     "videoType": {"id":"documentary"},
     "models": {
       "video": {"engine":"seedance","model":"dreamina-seedance-2-0-fast-260128","resolution":"720p"},
-      "speech": {"engine":"gemini","model":"gemini-3.8-flash-tts"},
-      "image": {"engine":"host","model":"host-managed","host":"codex"}
+      "music": {"engine":"lyria","model":"lyria-3.5"},
+      "image": {"engine":"host","model":"host-managed","host":"codex"},
+      "speech": {"engine":"gemini","model":"gemini-3.8-flash-tts"}
     },
     "style": {"preset":"webtoon","palette":"Muted ochre and blue"},
     "production": {"mode":"video_50","renderRatioVersion":1,"format":"shorts-9x16","previzRenderer":"blender","episodeBudgetUsd":5},
@@ -47,7 +56,7 @@ For an existing model-only file, send only missing project/style/production/SNS
 fields; existing genre and models are retained. An explicit update passes
 `expectedRevision` from status alongside `request` and `settings`. Each supplied
 style/production/SNS object replaces that category; keep its unchanged fields.
-Models are merged by video/speech/image category. Existing episode snapshots never
+Models are merged by video/music/image/speech category. Existing episode snapshots never
 change. Repeating identical initialization preserves file bytes and revision.
 
 SNS records include `enabled`, `status`, optional public `handle`, verified
@@ -75,7 +84,8 @@ Only the session's explicit `cwd` is checked; it does not search parent projects
 or initialize an arbitrary working directory. Hosts without this hook use the
 same skill preflight. Hook execution itself is network-free and read-only.
 
+Follow `options.modelSetupOrder` at first setup. After video credentials, ask which
+`music_catalog` model should make BGM and audience-only tonal cues. Save `models.music:{engine:"none"}`
+when the user chooses existing music or no score. Continue with image and optional TTS.
 For a project without separate TTS, save `models.speech:{engine:"none"}` with no
-`model`. This explicit choice is required; omitting speech still means setup is
-incomplete. Follow model-settings.md for sequential video, image and optional TTS
-credential checks. Project `ready` validates saved choices, not live credentials.
+`model`. Project `ready` validates saved choices. Use `capability_status` for provider setup.

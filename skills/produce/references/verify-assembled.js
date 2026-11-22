@@ -6,14 +6,39 @@ const {execFileSync}=require('node:child_process'),{createHash}=require('node:cr
 const hash=f=>createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 const motion=require('./measure-motion.js');
 const expectation=require('./motion-expectation.js');
-// Measure every card, retaining proxy motion findings as quality warnings.
-// Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
-function cardMotion(work,scenes,policy){
-  const master=path.join(work,'reel.mp4');
+const audioSignal=require('../../_shared/audio-signal.js');
+
+function renderedTimeline(work,master){
   const rate=execFileSync('ffprobe',['-v','error','-select_streams','v:0','-show_entries','stream=avg_frame_rate','-of','csv=p=0',master],{encoding:'utf8'}).trim();
   const [num,den]=rate.split('/').map(Number),fps=num/den;
   if(!Number.isFinite(fps)||fps<=0)throw new Error('cannot read the master frame rate');
   const rows=fs.readFileSync(path.join(work,'work/edit-timeline.tsv'),'utf8').trim().split('\n').map(l=>l.split('\t'));
+  return {rows,fps};
+}
+
+function checkSound(master,scenes,{rows,fps}){
+  const {status,spans}=audioSignal.inspect(master);
+  const last=rows.at(-1);
+  const featureSeconds=(Number(last[1])+Number(last[2]))/fps;
+  if(status==='missing'||status==='silent'||audioSignal.covers(spans,0,featureSeconds,1/fps))
+    throw new Error('the assembled feature has no audible soundtrack; add effects, ambience or the intended speech before delivery');
+  const silent=[];
+  for(const [id,start,frames] of rows){
+    const shot=scenes[+id];
+    if(!shot)throw new Error('timeline references an unknown card: '+id);
+    const generated=shot.shot?.render?.mode==='generated_video'||shot.visual?.video?.clip||
+      shot.productionPlan?.cuts?.some(cut=>cut.kind==='generated_video');
+    if(!generated)continue;
+    const seconds=+frames/fps;
+    if(audioSignal.covers(spans,+start/fps,seconds,Math.min(1/fps,seconds/10)))
+      silent.push(`shot ${Number(id)+1}${shot.id?` (${shot.id})`:''} at ${(+start/fps).toFixed(2)}s`);
+  }
+  if(silent.length)throw new Error(`assembled generated shots below ${audioSignal.SILENCE_DB} dBFS throughout: ${silent.join(', ')}. Add effects or ambience to the mix or bind the intended soundtrack.`);
+}
+
+// Measure every card, retaining proxy motion findings as quality warnings.
+// Read/decode/timing errors still fail; a low difference score is not proof of a freeze.
+function cardMotion(master,scenes,policy,{rows,fps}){
   const stillLimit=motion.plateStillLimit(policy),cards=[],problems=[];
   for(const [id,start,frames] of rows){
     const s=scenes[+id];
@@ -58,6 +83,7 @@ function masters(work){
   match(work,verified.outputs);
   if(!verified.editCheckSha256)throw new Error('rebuild: missing rendered edit verification');
   match(work,{'edit-check.json':verified.editCheckSha256});
+  if(verified.audienceSha256)match(work,{'work/audience-resolved.json':verified.audienceSha256});
   if(verified.groupCheckSha256)match(work,{'group-check.json':verified.groupCheckSha256});
   return verified;
 }
@@ -82,13 +108,17 @@ function check(work,delivery,burned,subtitles){
   if(!Number.isFinite(planned)||Math.abs(actual-planned)>.5)throw new Error(`opening is ${actual}s but the plan says ${planned}s; reconcile measured narration and trim before assembly`);
   if(fs.existsSync(path.join(work,'reel-sub.mp4'))&&Math.abs(duration(path.join(work,'reel-sub.mp4'))-duration(master))>.07)throw new Error('clean master and the legacy reel-sub.mp4 differ in duration');
   require('./check-edit-timeline.js').check(work);
-  const measured=cardMotion(work,scenes,policy);
+  const timeline=renderedTimeline(work,master);
+  if(process.env.SILENT!=='1')checkSound(master,scenes,timeline);
+  const measured=cardMotion(master,scenes,policy,timeline);
   // Guidance, not a gate (owner 2026-10-16): a text-led card past 8 seconds is recorded for review and the build continues.
   for(const i of proof.cards)if(scenes[i].shot?.render?.mode==='editorial_html'&&duration(path.join(work,'work',`v${i}.mp4`))>8.07){
     const w='card '+i+': text-led card runs past 8 seconds after encoding; split it or shorten the line when the read drags';
     measured.warnings.push(w);measured.status='needs-review';console.error('Assembled warning: '+w);
   }
-  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
+  fs.writeFileSync(path.join(work,'assembled-check.json'),JSON.stringify({...(
+    fs.existsSync(path.join(work,'work/audience-resolved.json')) ? {audienceSha256:hash(path.join(work,'work/audience-resolved.json'))} : {}),
+    editCheckSha256:hash(path.join(work,'edit-check.json')),groupCheckSha256:scenes.some(s=>s.visual?.video?.groupPlan!==undefined)?hash(path.join(work,'group-check.json')):null,outputs:hashes(work,BASE),duration:duration(master),opening:actual,plannedOpening:planned,motion:measured},null,2)+'\n');
 }
 function splice(work,args,finish=false){
   const {proof,scenes}=load(work);masters(work);
@@ -96,6 +126,16 @@ function splice(work,args,finish=false){
   if(finish){
     const saved=JSON.parse(fs.readFileSync(record,'utf8'));
     if(saved.assembledSha256!==hash(path.join(work,'assembled-check.json')))throw new Error('master changed during splice');
+    if (saved.bodyCuts) {
+      let offset = 0;
+      const seconds = file => Number(execFileSync('ffprobe',['-v','error','-show_entries','format=duration','-of','csv=p=0',path.join(work,'splice',file)],{encoding:'utf8'}));
+      saved.deliverySegments = [{bodyStart:0,splicedStart:0}];
+      saved.bodyCuts.forEach((bodyStart,i) => {
+        offset += seconds('reel-s'+i+'.mp4') + seconds('clip'+i+'.mp4');
+        if (!Number.isFinite(offset)) throw new Error('Unmeasurable splice segment');
+        saved.deliverySegments.push({bodyStart,splicedStart:offset});
+      });
+    }
     match(work,saved.inputs);saved.outputs=hashes(work,SPLICED);fs.writeFileSync(record,JSON.stringify(saved,null,2)+'\n');return;
   }
   const inserts=scenes.map((s,i)=>({s,i})).filter(({s})=>s.type==='broll');
@@ -111,11 +151,11 @@ function splice(work,args,finish=false){
     if(Math.abs(duration(file)-s.duration)>.1)throw new Error('splice clip duration differs from SCENES');
     inputs[file]=hash(file);
   });
-  fs.writeFileSync(record,JSON.stringify({assembledSha256:hash(path.join(work,'assembled-check.json')),inputs},null,2)+'\n');
+  fs.writeFileSync(record,JSON.stringify({assembledSha256:hash(path.join(work,'assembled-check.json')),bodyCuts:inserts.map((_,i)=>Number(args[i*2+1])),inputs},null,2)+'\n');
 }
 if(require.main===module){try{
  const [work,mode,...args]=process.argv.slice(2),dir=path.resolve(work);
  if(mode==='--splice-start')splice(dir,args);else if(mode==='--splice-finish')splice(dir,[],true);else check(dir,mode,...args);
  console.log('Assembled timeline verified.');
 }catch(e){console.error('assembly: '+e.message);process.exitCode=1}}
-module.exports={check,splice,cardMotion};
+module.exports={check,splice,checkSound};

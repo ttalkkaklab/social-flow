@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "social-flow",
   "display_name": "Social Flow",
-  "version": "0.122.1",
+  "version": "0.126.0",
   "description": "The social-flow MCP tools for the Claude Desktop chat \u2014 research search, image, video, voice and music generation, and SNS publishing. A desktop extension carries no skills; the full pipeline installs as a plugin in Cowork.",
   "author": {
     "name": "Zeans",
@@ -35,7 +35,9 @@
         "GEMINI_API_KEY": "${user_config.gemini_api_key}",
         "ARK_API_KEY": "${user_config.ark_api_key}",
         "SERPAPI_API_KEY": "${user_config.serpapi_api_key}",
-        "SNS_TOKEN_DIR": "${user_config.sns_token_dir}"
+        "SNS_TOKEN_DIR": "${user_config.sns_token_dir}",
+        "GOOGLE_CLOUD_PROJECT": "${user_config.google_cloud_project}",
+        "LTX_API_KEY": "${user_config.ltx_api_key}"
       }
     }
   },
@@ -49,13 +51,13 @@
     "gemini_api_key": {
       "type": "string",
       "title": "Gemini API key",
-      "description": "veo_* video, tts_generate narration, music_* BGM. Empty keeps the on-device voice.",
+      "description": "Gemini narration and music.",
       "sensitive": true
     },
     "ark_api_key": {
       "type": "string",
       "title": "BytePlus ModelArk API key",
-      "description": "seedance_* video. Optional \u2014 veo_* works without it.",
+      "description": "Optional key for Seedance video.",
       "sensitive": true
     },
     "serpapi_api_key": {
@@ -69,6 +71,17 @@
       "title": "Credentials directory",
       "description": "SNS token files, plus a .env file with every other variable (README \u00a7 Environment variables). The server fills any key left empty here from that file.",
       "default": "${HOME}/.config/social-flow"
+    },
+    "google_cloud_project": {
+      "type": "string",
+      "title": "Google Cloud project",
+      "description": "Project for Veo 3.1 in us-central1. Uses Google Cloud Application Default Credentials."
+    },
+    "ltx_api_key": {
+      "type": "string",
+      "title": "LTX API key",
+      "description": "Optional key for the hosted LTX API.",
+      "sensitive": true
     }
   },
   "tools_generated": true,

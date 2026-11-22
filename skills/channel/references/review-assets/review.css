@@ -1052,7 +1052,7 @@
 .review-feature > h2 { font-size: var(--ds-text-scene); font-weight: 700; letter-spacing: var(--ds-tracking-subtle); }
 .review-feature .review-card { padding: var(--ds-s3); border-radius: var(--ds-radius-hero); }
 .review-feature .review-image { border-radius: var(--ds-radius-lg); background: var(--ds-sunk); }
-.review-page .review-feature .review-cover, .review-page .review-catalog .review-cover { padding: 0; object-fit: cover; }
+.review-feature .review-cover, .review-catalog .review-cover { padding: 0; }
 .review-feature-copy { padding: var(--ds-s3) var(--ds-s4) var(--ds-s3) 0; }
 .review-feature-copy h3 { font-size: var(--ds-text-heading); font-weight: 700; letter-spacing: var(--ds-tracking-snug); word-break: keep-all; }
 .review-feature-copy .review-status > span { padding: var(--ds-inset-xs) var(--review-s10); border-radius: var(--ds-radius-pill); background: var(--ds-sunk); color: var(--ds-muted); font-weight: 600; }

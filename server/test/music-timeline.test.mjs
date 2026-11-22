@@ -1,3 +1,4 @@
+import { setupProject } from './workflow-fixture.mjs';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -98,6 +99,7 @@ test('compiler owns timeline manifests, validates before writes and removes them
 
 test('full builder adds timeline music after editing without requiring a default bed', { timeout: 60000 }, () => {
   const dir = mkdtempSync(path.join(tmpdir(), 'music-assembly-'));
+  setupProject(dir);
   try {
     const work = path.join(dir, 'work'), board = path.join(dir, 'storyboard');
     mkdirSync(work); mkdirSync(board);

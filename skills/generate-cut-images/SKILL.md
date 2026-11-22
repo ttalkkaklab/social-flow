@@ -56,7 +56,11 @@ place (`location` is refused) and records its own props in `frames.endProps`, so
 appears only at the end goes in the end call. Each prop goes in through the prop ledger
 ([prop continuity](../storyboard/references/prop-continuity.md#production-and-review)):
 hidden ones stay out, the picture matches its condition at that end of the shot, and its
-description and state ride on its `Image N` line; a prop without a picture is a warning. Only `still_camera` and `generated_video` cuts
+description and state ride on its `Image N` line; a prop without a picture is a warning.
+A prop with no look-up of the real thing warns `prop_research_missing`: research it and make
+its own picture first ([prop research](../storyboard/references/prop-research.md)), since a
+shot image cannot repair an imagined document. Compare each frame that shows a researched
+prop with its `research.observed` notes and saved real picture. Only `still_camera` and `generated_video` cuts
 take images. The tool adds the size, angle, depth
 and technique words, the episode style and an `Image N` line for every input, then runs
 `image_plan` → `image_execute` with the saved model and the existing spending authorization.
@@ -71,7 +75,12 @@ GPT model or a differently proportioned explicit `size` reports `image_aspect_mi
 inspect the actual delivery crop before using that image as a video input.
 
 One character's inputs are its face, headless front and headless back panels; two
-characters take each face, then each front. The place goes first as the picture to edit.
+characters take each face, then each front. No panel shows the head on the body, so the
+tool adds each character's head count from the sheet (`physical.proportions`, e.g. "7.5
+heads tall") as a sentence wherever the crop shows the body, and warns `head_count_missing`
+when the sheet has none: write it with `character_manage` rather than in `prompt`. After
+generation, look at the head against the shoulders and body; correct an oversized head
+with `editExisting` and a prompt that changes only the head size. The place goes first as the picture to edit.
 A model that takes fewer pictures than the frame composes refuses
 (`image_references_unsupported`): report it and ask which model to use — gpt-image takes up
 to 16, astra-genai-native and an MLX Qwen-Image-2.1 pack up to 10, MLX FLUX.2 klein and
@@ -147,6 +156,9 @@ storyboard metadata first if the revision changes them. A start revision still m
 its old end image stale. A plain edit does not reassemble the scene; `reframe:true`
 explicitly reapplies the saved opening composition and is only for a start image.
 
+Use fitting panels for the character's build and proportions. Dress the character in
+the scene's wardrobe or the usual `physical.outfit`. For example, a chef drawn in
+a fitted T-shirt and shorts on the sheet can wear a chef's coat in the kitchen.
 Keep confirmed identity attributes in their original language when no faithful English
 translation is available. Do not delete clothing because its description mentions a
 head, hood or other body part. Describe the intended crop separately. Known Qwen edit

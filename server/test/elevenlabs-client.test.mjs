@@ -1,7 +1,7 @@
 /** ElevenLabs v4 schema, payload and mocked provider contracts. No paid network calls. */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, it } from 'node:test';
@@ -447,4 +447,27 @@ describe('ElevenLabs provider boundary (mocked fetch)', () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+});
+
+it('shares a paid channel asset once and preserves uncertain submissions across retries', async () => {
+  const dir=mkdtempSync(path.join(tmpdir(),'sfx-reuse-')),savedFetch=globalThis.fetch,savedKey=config.elevenLabsApiKey;
+  const request=elevenLabsSfxSchema.parse({text:'falling pluck',outputPath:path.join(dir,'assets/audio/sfx'),filename:'bend.wav',outputFormat:'wav_24000'});
+  let calls=0;
+  config.elevenLabsApiKey='test-key';
+  try {
+    globalThis.fetch=async()=>{calls++;return new Response(pcmToWav(Buffer.alloc(48000),24000,1));};
+    const results=await Promise.all([generateElevenLabsSoundEffect(request),generateElevenLabsSoundEffect(request)]);
+    assert.equal(calls,1);assert.equal(results.filter(r=>r.success).length,1);
+    assert.equal((await generateElevenLabsSoundEffect(request)).reused,true);assert.equal(calls,1);
+    assert.equal((await generateElevenLabsSoundEffect({...request,text:'different'})).success,false);
+    globalThis.fetch=async()=>{calls++;throw new Error('connection interrupted');};
+    const lost={...request,filename:'lost.wav'};
+    assert.equal((await generateElevenLabsSoundEffect(lost)).submitted,true);
+    assert.equal((await generateElevenLabsSoundEffect(lost)).submitted,false);
+    assert.equal(calls,2);
+    writeFileSync(path.join(request.outputPath,'incomplete.wav'),'unverified bytes');
+    const incomplete=await generateElevenLabsSoundEffect({...request,filename:'incomplete.wav'});
+    assert.match(incomplete.error,/Incomplete catalog asset/);
+    assert.equal(incomplete.submitted,false);assert.equal(calls,2);
+  } finally {globalThis.fetch=savedFetch;config.elevenLabsApiKey=savedKey;rmSync(dir,{recursive:true,force:true});}
 });

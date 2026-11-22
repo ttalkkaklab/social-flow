@@ -4,7 +4,7 @@ import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
 import * as seedance from './seedance-client.js';
 import * as astra from './astra-video-client.js';
-import { ltxApiImg2VideoSchema, ltxApiAudio2VideoSchema } from './ltx-api-video.js';
+import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { genaiTextToVideoSchema, genaiImageToVideoSchema, genaiAudioToVideoSchema, genaiMsrSchema } from './astra-genai-video.js';
@@ -16,6 +16,11 @@ const effectSchema = z.object({
     sfx: z.string().min(1).optional(),
     atSeconds: z.number().finite().nonnegative().optional(),
     separationLu: z.number().finite().min(0).max(30).optional(),
+    audience: z.object({ intent: z.string().trim().min(1), caseId: z.string().optional(), release: z.string().optional(), source: z.literal('music').optional(),
+        timingBasis: z.string().optional() }).strict().optional(),
+    end: z.object({ shotId: z.string().min(1), atSeconds: z.union([z.number().finite().nonnegative(), z.literal('end')]) }).strict().optional(),
+    fadeInSeconds: z.number().finite().nonnegative().optional(), fadeOutSeconds: z.number().finite().nonnegative().optional(),
+    sourceStartSeconds: z.number().finite().nonnegative().optional(),
     intensity: z.enum(['subtle', 'normal', 'strong']).optional(),
 }).strict();
 const schemas = {
@@ -27,7 +32,7 @@ const schemas = {
     astra_genai_audio2video: genaiAudioToVideoSchema, astra_genai_msr: genaiMsrSchema,
     astra_text2video: astra.astraText2VideoSchema, astra_img2video: astra.astraImg2VideoSchema,
     astra_audio2video: astra.astraAudio2VideoSchema, astra_keyframe_video: astra.astraKeyframeVideoSchema,
-    ltx_api_img2video: ltxApiImg2VideoSchema, ltx_api_audio2video: ltxApiAudio2VideoSchema,
+    ...Object.fromEntries(Object.entries(HOSTED_VIDEO_ROUTES).map(([name, route]) => [name, route.schema])),
     minimax_img2video: minimaxImg2VideoSchema, minimax_reference: minimaxReferenceSchema,
     heygen_img2video: heygenImg2VideoSchema, heygen_reference: heygenReferenceSchema,
 };
@@ -37,6 +42,10 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('Unsupported sound adapter: ' + tool);
     z.string().min(1).parse(input.prompt);
     const effects = z.array(effectSchema).parse(sound.effects ?? []);
+    for (const effect of effects)
+        if (effect.audience && effect.description &&
+            String(input.prompt).toLowerCase().includes(effect.description.toLowerCase()))
+            throw new Error('audience_delivery_conflict: remove the post cue description from the video prompt');
     const ids = effects.flatMap(effect => effect.id ? [effect.id] : []);
     if (new Set(ids).size !== ids.length)
         throw new Error('Effect ids must be unique within the shot');
@@ -54,21 +63,26 @@ export function prepareVideoSound(tool, input, sound = {}) {
             throw new Error('Unknown Seedance model: ' + String(model));
         nativeAudio = spec.audio;
     }
-    const resolved = effects.map(effect => {
-        // An existing asset cue is a legacy post effect. Only new described intent opts into auto.
-        const requested = effect.delivery ?? (effect.sfx ? 'post' : 'auto');
-        const delivery = requested === 'auto'
-            ? nativeAudio && input.generateAudio !== false && sound.audioSource !== 'speech' ? 'native' : 'post'
-            : requested;
+    const warnings = [];
+    const canGenerateEffects = nativeAudio && input.generateAudio !== false && sound.audioSource !== 'speech';
+    const resolved = effects.flatMap(effect => {
+        if (effect.audience && (effect.delivery === 'input' || effect.delivery === 'native'))
+            throw new Error('audience_delivery_conflict: ' + effect.id + ' belongs in post');
+        const delivery = effect.audience ? 'post' : effect.delivery === 'input' ? 'input' : 'native';
+        if (!effect.audience && effect.delivery !== 'native' && effect.delivery !== 'input' &&
+            (!canGenerateEffects || !effect.description || !effect.trigger)) {
+            warnings.push(`Scene effect ${effect.id ?? effect.sfx ?? '(unnamed)'} omitted from post. Describe its action for a video model with native audio.`);
+            return [];
+        }
         if (delivery === 'native' && (!nativeAudio || input.generateAudio === false))
-            throw new Error('Native SFX unavailable in this mode or explicitly disabled; use post');
+            throw new Error('Native SFX unavailable in this mode or explicitly disabled');
         if (delivery === 'input' && !fixedInput)
             throw new Error('Input SFX require ASTRA audio2video; reference audio is not a preserved soundtrack');
         if (delivery !== 'post' && sound.audioSource === 'speech')
             throw new Error('Native/input SFX require audioSource=video; replacing it with speech discards the effects');
         if (delivery !== 'post' && (!effect.description || !effect.trigger))
             throw new Error('Native/input effects need description and trigger');
-        return { ...effect, delivery };
+        return [{ ...effect, delivery }];
     });
     const native = resolved.filter(effect => effect.delivery === 'native');
     const conditioned = resolved.filter(effect => effect.delivery === 'input');
@@ -76,11 +90,9 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('audioSource=video conflicts with a silent output; select speech/post or enable supported audio');
     if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
         throw new Error('Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction');
-    if (sound.sfx && resolved.some(effect => effect.delivery !== 'post' && effect.sfx === sound.sfx))
-        throw new Error('The same effect cannot belong to the native/input soundtrack and the legacy post cue');
     const args = { ...input };
     // The genai audio-to-video soundtrack is always the supplied audio; it has no generateAudio switch.
-    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || tool === 'ltx_api_img2video') && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
+    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
         if (input.generateAudio === false)
             throw new Error('Cannot discard the requested input soundtrack');
         if (!tool.startsWith('astra_genai_desktop_'))
@@ -99,14 +111,13 @@ export function prepareVideoSound(tool, input, sound = {}) {
     if (unknown.length)
         throw new Error('Unsupported adapter arguments: ' + unknown.join(', '));
     const audioSource = native.length || conditioned.length ? 'video' : sound.audioSource;
-    const warnings = [];
     if (conditioned.length)
         warnings.push('Input effects must already be mixed into audioPath. This planner does not synthesize or mix them; inspect their action and mouth alignment.');
     if (resolved.some(effect => effect.delivery === 'post' && (!effect.sfx || effect.atSeconds === undefined)))
-        warnings.push('Post effects need an asset and an observed shot-relative atSeconds before assembly.');
+        warnings.push('Audience effects need an asset and an observed shot-relative atSeconds before assembly.');
     if (native.length)
         warnings.push('Native audio is a mixed soundtrack. Do not overlay a second dialogue track; inspect missing or unwanted effects before acceptance.');
     return { tool, arguments: parsed, sound: { ...sound, ...(audioSource ? { audioSource } : {}), effects: resolved },
-        capabilities: { nativeAudio, inputAudio: fixedInput ? (['astra_genai_desktop_audio2video', 'ltx_api_audio2video'].includes(tool) ? 'conditioned_reencoded' : 'preserved') : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) ? 'reference' : 'none' },
+        capabilities: { nativeAudio, inputAudio: fixedInput ? 'conditioned_reencoded' : ['seedance_reference', 'fasth3_omni_reference', 'astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) ? 'reference' : 'none' },
         warnings, review: 'not_reviewed', generated: false };
 }

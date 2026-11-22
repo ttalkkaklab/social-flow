@@ -1,3 +1,4 @@
+import { hasVideoSubjectReferences } from './video-image-inputs.js';
 import { routingContext } from './video-routing.js';
 import { resolveCharacterVoice } from './video-voice.js';
 import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
@@ -18,6 +19,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileVideoPrompt } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js');
+const audioSignalContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/audio-signal.js');
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -35,9 +37,9 @@ export const speechManageSchema = z.object({
 }).strict();
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+const videoSeconds = (file) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
 /** Keep the storyboard player on the bound clip without replacing authored multi-cut edits. */
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-    const duration = (file) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
     const production = object(scene.productionPlan), cuts = production.cuts;
     if (Array.isArray(cuts) && cuts.length) {
         const cut = object(cuts[0]);
@@ -47,7 +49,7 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
             return;
         }
         try {
-            if (Math.abs(Number(cut.seconds) - duration(resolve(boardDir, oldClip))) > 0.05) {
+            if (Math.abs(Number(cut.seconds) - videoSeconds(resolve(boardDir, oldClip))) > 0.05) {
                 warnings.push('The existing production cut has an authored duration; it was preserved for an explicit edit.');
                 return;
             }
@@ -58,14 +60,35 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
         }
     }
     try {
-        const seconds = duration(videoPath);
+        const seconds = videoSeconds(videoPath);
         if (!Number.isFinite(seconds) || seconds <= 0)
             throw new Error('Missing video duration');
         scene.productionPlan = { ...production, cuts: [{ kind: 'generated_video', path: relative(boardDir, videoPath), start: 0, seconds }] };
+        return seconds;
     }
     catch {
         warnings.push('Could not measure the bound video stream; production cuts were not changed.');
     }
+}
+// A source soundtrack uses the existing sync edit lane. Keep authored moving
+// joins, layered cuts and audio margins on their separate assembly audio.
+function bindGeneratedSoundtrack(scene, next, clipSeconds) {
+    const { carry } = nodeModule.createRequire(import.meta.url)('../../skills/produce/references/edit-plan.js');
+    const edit = object(scene.edit);
+    const visual = object(scene.visual);
+    const transition = String(scene.transition ?? 'cut');
+    if (!clipSeconds || edit.pre || edit.post || visual.slide || visual.reuse !== undefined || object(visual.video).groupPlan ||
+        scene.type === 'broll' || scene.type === 'outro' || carry.test(transition) || carry.test(String(next?.transition)) ||
+        (transition.startsWith('dip') && edit.pre !== 0))
+        return false;
+    const start = Number(edit.in ?? 0);
+    const end = edit.out ?? (typeof scene.duration === 'number' ? start + scene.duration : clipSeconds);
+    if (typeof end !== 'number' || !Number.isFinite(end) || end <= start || end > clipSeconds + 0.001)
+        return false;
+    if (edit.out === undefined && typeof scene.duration === 'number')
+        scene.edit = { ...edit, out: end };
+    scene.sound = { ...object(scene.sound), audioSource: 'video' };
+    return true;
 }
 export function speechRevision(line, character) {
     return hash(JSON.stringify(actingContract().speechRevisionPayload(line, character?.tts)));
@@ -144,19 +167,22 @@ export function speechVideoPlan(input, capabilities) {
     const physicalSpeech = lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
     if (capabilities.nativeSpeech && physicalSpeech && lines.some(line => line.delivery === 'voiceover'))
         throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
-    const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning && capabilities.lipSync ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
+    const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
     if (!mode)
         throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
     const saved = object(object(object(scene.visual).video).promptSource);
     const design = object(object(scene.shot).videoDesign);
+    // The preview fits the ASTRA limit as video_plan does, so an over-limit flag means the authored text itself is too long.
+    const astra = capabilities.provider.trim().toLowerCase() === 'astra';
     const compiled = compileVideoPrompt(scene, {
         action: typeof saved.action === 'string' ? saved.action : typeof design.action === 'string' ? design.action : '',
         ...(typeof saved.end === 'string' ? { end: saved.end } : {}),
         ...(typeof saved.sound === 'string' ? { sound: saved.sound } : {}),
-    }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line), validateLanguage: false });
+    }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line), validateLanguage: false,
+        ...(astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}) });
     const timeline = compiled.performance;
     const videoPrompt = compiled.prompt;
-    const promptLength = capabilities.provider.trim().toLowerCase() === 'astra'
+    const promptLength = astra
         ? { characters: videoPrompt.length, maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS, exceeded: videoPrompt.length > ASTRA_VIDEO_MAX_PROMPT_CHARS }
         : undefined;
     const warnings = [...compiled.warnings];
@@ -324,7 +350,7 @@ export function manageSpeech(args) {
             const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
             if (args.tool && adapter?.engine !== selection.engine)
                 throw new Error('model_selection_mismatch: tool does not match selected engine');
-            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation);
+            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
             if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
                 args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
                 Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
@@ -384,6 +410,7 @@ export function manageSpeech(args) {
                     quality = { ...quality, unverifiedSpeechSync: receipt.speechSync || null, receiptBinding: 'unverified' };
             }
             catch { /* Missing review evidence stays explicit, without blocking usable footage. */ }
+            let boundSeconds;
             if (priorBinding.videoSha256 === videoSha256 && (performanceChanged || audioChanged) && !tailTrim) {
                 plan.warnings.push('Unchanged video bytes retain their original performance and audio binding; the revised performance or speech has not been generated in this footage.');
                 video.speechStatus = 'stale';
@@ -391,7 +418,7 @@ export function manageSpeech(args) {
             }
             else {
                 if (!tailTrim)
-                    syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
+                    boundSeconds = syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
                 // edit.in / edit.out were measured on the clip they trimmed; on other bytes they would cut somewhere else, perhaps into the line.
                 const trim = object(scene.edit);
                 if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== undefined || trim.out !== undefined)) {
@@ -432,18 +459,33 @@ export function manageSpeech(args) {
             else if (selected.length && plan.mode === 'voiceover') {
                 scene.sound = { ...sound, audioSource: 'speech' };
             }
-            else if (!selected.length && sound.audioSource === 'video') {
+            else if (!selected.length && sound.audioSource !== 'speech') {
+                let status;
                 try {
-                    const streams = execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'a', '-show_entries', 'stream=index', '-of', 'csv=p=0', videoPath], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-                    if (!streams) {
-                        const silentSound = { ...sound };
-                        delete silentSound.audioSource;
-                        scene.sound = silentSound;
-                        plan.warnings.push('The bound speechless clip has no audio stream; the previous video soundtrack source was removed. Supply the silent card clock separately.');
-                    }
+                    status = audioSignalContract().inspect(videoPath).status;
                 }
                 catch {
-                    plan.warnings.push('Could not inspect the bound clip audio streams; the existing sound source was preserved for inspection before assembly.');
+                    plan.warnings.push('Could not decode the bound clip audio; inspect its sound source before assembly.');
+                }
+                if (status === 'signal' && sound.audioSource === 'video') {
+                    const end = object(scene.edit).out;
+                    if (typeof end === 'number' && !(end <= (boundSeconds ?? videoSeconds(videoPath)) + 0.001))
+                        throw new Error('The replacement cannot cover edit.out; keep the current source or revise the authored trim before attaching it.');
+                }
+                else if (status === 'signal') {
+                    const next = scenes.slice(scenes.indexOf(scene) + 1).find(shot => shot.type !== 'broll' && shot.type !== 'outro');
+                    if (!bindGeneratedSoundtrack(scene, next, boundSeconds))
+                        plan.warnings.push('This edit does not use the clip as sync footage. Carry its sound into the separate assembly audio or add post effects and ambience.');
+                }
+                else if (status === 'silent' || status === 'missing') {
+                    const reason = status === 'missing' ? 'has no audio stream' : 'has a silent audio stream';
+                    if (sound.audioSource === 'video' && (object(scene.edit).out !== undefined ||
+                        (Array.isArray(sound.effects) && sound.effects.some(effect => ['native', 'input'].includes(String(object(effect).delivery))))))
+                        throw new Error(`The replacement ${reason}; keep the current source or revise the authored soundtrack and trim before attaching it.`);
+                    const silentSound = { ...sound };
+                    delete silentSound.audioSource;
+                    scene.sound = silentSound;
+                    plan.warnings.push(`The bound speechless clip ${reason}. Add post effects or ambience before completing the mix.`);
                 }
             }
             visual.video = video;

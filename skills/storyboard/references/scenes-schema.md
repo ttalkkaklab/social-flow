@@ -105,7 +105,7 @@ report missing mappings; they do not certify the scene's artistic quality.
   - [Clip audio (`visual.audio`)](#clip-audio-visualaudio)
   - [Clip prompt — one scene, one call, the prompt stored here](#clip-prompt-one-scene-one-call-the-prompt-stored-here)
   - [Music cues (`window.MUSIC` · `sound`)](#music-cues-windowmusic-sound)
-  - [Sound effects (`window.SFX` · `sound.sfx`)](#sound-effects-windowsfx-soundsfx)
+  - [Sound effects (`window.SFX` · `sound.effects`)](#sound-effects-windowsfx-soundeffects)
   - [Cut length (`duration`) — decided by what the cut is for](#cut-length-duration-decided-by-what-the-cut-is-for)
   - [Motion background (`visual.video`) — a scene background from image to video](#motion-background-visualvideo-a-scene-background-from-image-to-video)
   - [broll — a generated-video stretch (reference only) · spliced between scenes](#broll-a-generated-video-stretch-reference-only-spliced-between-scenes)
@@ -870,8 +870,8 @@ the required `style.world` is the fallback.
 New generated shots declare `visual.frames` and `visual.references` (an empty array
 means no extra conditioning). Keep the number of images tied to visible requirements,
 not the model's maximum slot count. MSR (`astra_genai_msr`, `frames.mode:"reference"`) is
-the exception: each of at most two characters defaults to its sheet panels — face close-up,
-headless front, headless back for one; both faces, then both fronts for two — with
+the exception: each character defaults to its sheet panels — face close-up,
+headless front, headless back for one; both faces, then both fronts for two, one face per person for three or four — with
 `use:"video"` or `"both"`, and the shot's start image rides in the background slot while
 the plain place picture stays `use:"image"` (user directive 2026-10-31;
 [GenAI MSR](../../_shared/astra-genai.md#msr-and-v2-video)). `shot_image` writes these
@@ -2214,7 +2214,7 @@ them anywhere in the assembled prompt, the `--scene`·`--mood`·`--exclude` text
 
 ```js
 character: "claude"                  // one character on screen
-character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first; two is the limit
+character: ["mouse", "claude"]       // two — array order is reference weight, so the shot's subject goes first
 character: null                      // nobody from the channel cast is on screen
 
 character: [                         // an entry may carry its jurisdiction instead of being a bare id
@@ -2225,12 +2225,10 @@ character: [                         // an entry may carry its jurisdiction inst
 
 `shot_characters` writes this field in the storyboard's second step, after every shot story.
 
-**Two principal characters per shot (user directive, 2026-10-31).** `visual.character` lists at
-most two ids; `check-scenes.js` rejects a third (`[character-limit]`) in draft and full checks.
-A third cast member in view and unnamed figures stay out of `visual.character`.
+**Character reference slots.** `visual.character` accepts up to four cast IDs. A trio or quartet uses one face image per ID on LTX. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
 
 **People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
-`visual.bystanders` — up to two cast ids seen without an on-screen line, three of the cast in a
+`visual.bystanders` — up to two cast ids seen without an on-screen line, four of the cast in a
 shot at most — and `visual.extras`, one English description of unnamed people ("six children in
 orange bibs chasing a ball"). `shot_image` adds each bystander's face and front panels as
 `role:"bystander", use:"image"` references and writes the extras into the image prompt; when the
@@ -2603,81 +2601,18 @@ these as working practice, as in bgm-scoring §3. On a story-v2 board:
 The review page draws the cue lane under each sequence and scene heading and marks the shots
 that change, drop or empty the bed.
 
-### Sound effects (`window.SFX` · `sound.sfx`)
+### Sound effects (`window.SFX` · `sound.effects`)
 
-An effect is heard at the shot's first frame, so it belongs to **the cut** — to what changed
-between the previous shot and this one — not to the shot's content. The clip's own soundtrack
-is `visual.audio` (what the model records); an effect is what the edit lays on top.
+Describe diegetic sound with the action that makes it. An audio-capable video request
+can render it in the clip. A separate effect is an audience cue with
+`sound.effects[].audience.intent`, a visible trigger and a catalog asset. Use the saved
+music model for an original [audience-only effect](#audience-only-effects). Place the cue
+against the chosen picture and record its timing basis.
 
-```js
-window.SFX = {
-  "whoosh-soft": { prompt: "short soft whoosh, fabric through air, no tail", seconds: 0.8 },
-  "hit-low":     { prompt: "low cinematic impact, single hit, short decay, no music", seconds: 1.5 },
-  "tick":        { asset: "ui-tick" }         // a channel catalog id instead of a generated effect
-};
-```
-
-Each key is an effect id — lowercase letters, digits and hyphens, named by family and variant
-(`whoosh-soft`, `hit-low`, `riser-2s`) so the next episode reuses it. `prompt` goes to
-`sfx_elevenlabs_generate` **once**: produce saves the file as `assets/audio/sfx/<id>.wav` in the
-channel catalog with a `.json` provenance sidecar (tool, model, prompt, seconds, request id, date,
-rights), and every later episode that names the same id fetches it at $0. `seconds` (0.5–30) pins
-the length — 0.6–1.0 for a whoosh, 1–2 for a hit, 2–4 for a riser; `loop: true` with 10–30 s is a
-bed (room tone), never a one-shot. `asset` skips generation and names a catalog id
-(`resolve-asset.py <channel dir> sfx <id>`).
-
-**Without `window.SFX`, `sound.sfx` is a catalog id**, and the full check refuses one whose file
-is missing. With it, `sound.sfx` names a key there, and a name that isn't there is an error.
-
-Which cuts get one — the effect matches the size and speed of what moved on the cut:
-
-| What happened on the cut | Effect | Family |
-|---|---|---|
-| a `whip:` or `push:` transition, a smash `cut` onto a new place | the air moving with the camera | `whoosh` — soft for a push, hard for a whip |
-| the line before `sound.drop` — the hit, then the silence | one low impact on this cut; the drop is the next shot's | `hit` · `braam` |
-| a figure, a stamp or a label landing on a slide (`kind:"diagram"`, a reveal group) | a small dry click as it lands, once per shot at most | `tick` · `pop` |
-| a build across several shots toward the turn | a rise that ends on the cut it aims at | `riser` |
-| an `insert` of a thing doing something on a still — a phone ringing, a stamp coming down | the thing's own sound | the object's family |
-| a `dissolve`, a `dip`, a slow `dolly in`, a caption appearing | **nothing** — a soft picture takes a small sound or none | — |
-
-- **Budget.** A short carries one effect per ~10 s at most and never two on adjacent cards; the
-  hook may carry one. Long-form: one per scene. Past that they read as decoration, and
-  `check-scenes.js` warns.
-- **Not a substitute for a drop.** The drop is the loudest thing an edit can do; an effect
-  announces the drop, it does not replace it.
-- **Not on `broll` or `outro`.** A broll plays its own sound (produce absolute rule 9) and the
-  outro is spliced after the build; the checker refuses both.
-- **Not twice.** When `visual.audio` already asks the clip for the sound (a door closing in the
-  clip), don't add the same door as `sound.sfx` — one source per sound.
-- **Level is measured, not a knob.** The builder measures each effect and gains it so its loudest
-  400 ms sits 6 LU under the narration (`SFX_SEP`), pulled back when its own true peak would pass
-  −1 dBTP, and keys the ducking on the voice alone, so an effect never pushes the bed down. Two
-  effects from two prompts land at the same distance from the voice; what the prompt still owns
-  is the shape ("short decay", "no tail", "no music") — a hit with a musical tail is a bed
-  fragment however quietly it sits (bgm-scoring §effects).
-
-**Room tone — `sound.ambience`.** Between sentences the mix used to fall to digital silence,
-which is what a viewer hears as a loading failure and what makes a cut sound spliced. A shot's
-`sound.ambience` names a `window.SFX` entry with `loop: true` (10–30 s — "quiet office room tone,
-no music, no speech", "night rain on a window, steady") and the room starts on that card and
-holds until a later shot names another or ends it with `ambience: null` (or `"-"` / `"none"`). The builder
-lays it 15 LU under the narration (`AMB_SEP`, the JAES figure for ambience under commentary)
-and never ducks it. One room per place: it changes where `STRUCTURE` changes place, not per
-shot. The checker refuses an entry that isn't a loop and an ambience on a `broll` or the
-`outro`. A hook that opens on room tone is the cheapest fix for the first-second silence.
-
-**A silent clip that needs its own sound.** The plugin has no video-to-audio lane (nothing takes
-a clip and returns synchronised foley — the candidates in the sound-design research need a
-key or a GPU the plugin does not have). What it does have covers most of the need: an effect
-the clip's length, prompted from the action in `visual.prompt` ("a cart rolling over gravel,
-six seconds, no music"), named on that card's `sound.sfx`. It lands on the cut and plays under
-the clip; it is not frame-synchronised to a footstep, so use it for continuous sounds (rolling,
-rain, an engine) and leave a single impact to the cut it belongs to.
-
-Where the numbers under all this come from, and which of them are evidence and which are our own
-practice: [bgm-scoring.md](../../produce/references/bgm-scoring.md). The short version — the bed
-is set 10 LU under the measured narration and the build stops below 4 LU, and those two are the
-only figures here with published listening tests behind them. Where a cue changes is craft.
+Legacy `sound.sfx` and untagged post effects are retained as board metadata. They
+have no playback effect. A generated clip supplies its own room tone when available.
+A still card can name an existing loop as `sound.ambience`; it holds until changed,
+stopped with `null`, or interrupted by a generated clip.
 
 ### Cut length (`duration`) — decided by what the cut is for
 
@@ -2743,7 +2678,7 @@ above.
 
 Use the same fields in `visual` for b-roll and `visual.clip` for speaking clips.
 An actual photoreal face, including a generated face, is ineligible for 2.x. Route such
-an action to an LTX lane instead. Veo, Gemini Omni and Seedance 1.x left the plugin on
+an action to an LTX lane instead. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
 2026-10-31 because none takes a voice reference; a slot naming one fails as
 `video_engine_unsupported`, and its existing clip stays reusable under `visual.reuse`.
 
@@ -4035,3 +3970,68 @@ in framing. Editing a selection does not certify or regenerate existing media.
 ## Motion graphic plan (version 1)
 
 Optional `shot.motionGraphic` records the semantic type independently of `render.mode`. New motion-graphic shots follow [motion-graphics.md](motion-graphics.md). The shared catalog and MCP storyboard input expose type, intent, reason, evidence, style, beats and content. `motion_html` executes seekable abstract motion scenes; it does not replace physical mesh or recorded-evidence routes. Existing boards without this field retain their previous behavior.
+
+### Audience-only effects
+
+`story_sequence` marks a new story-first board with `STORY.audienceSoundVersion:1`.
+On these boards each `STRUCTURE.scenes[]` entry starts with `audienceSound:{decision:"undecided"}`
+unless the author supplies a decision. With `story_scene`, set `audienceSound` to
+`{decision:"use",reason:"Her hand stills before anyone else notices the signature."}`
+or `{decision:"none",reason:"The witness's pause lets the denial land."}`. Read
+`storyboard_read.audienceSpotting` for the scenes awaiting a decision, a `use` without a cue
+or a `none` with a cue. An explicitly placed span can cover several scenes. A `none` here
+leaves room tone (`sound.ambience`) and music (`scene.music`) under their own controls.
+
+A `use` decision can also carry three optional strings. For example:
+
+```json
+{
+  "decision": "use",
+  "reason": "Let the audience share his certainty while the outcome is still open.",
+  "perspective": "The contestant who expects to win",
+  "shift": "He looks up from their joined hands and grins.",
+  "exit": "Clear the first syllable of the referee's start call."
+}
+```
+
+The scene card and `audienceSpotting.scenes` show these notes. Write the cue's actual
+start and end on its shot after checking the take. Older decisions with only a reason
+remain valid.
+
+`sound.effects[].audience` stores `intent`, optional `caseId` (001–120), `release`, and the
+observed `timingBasis`. The event has a stable `id`, `sfx`, `trigger` and `description`, with
+`delivery:"post"`. Optional `end:{shotId,atSeconds}` accepts a number or `"end"`;
+`fadeOutSeconds` fades that event at its end. On `place`, optional `sourceStartSeconds`
+chooses the in-point within the original WAV. It defaults to zero. Set `fadeInSeconds`
+for a gradual entrance within the playable excerpt. A cut into the source uses at least
+a one-millisecond fade. Omit either field on a later placement to keep it, or pass
+`null` to clear it. Playback stops when the WAV runs out. Choose
+a WAV long enough to reach the release, with any rising pitch, swell or changing texture
+already in the recording. For a new instrumental cue write its music direction in
+`sfxEntries[id].prompt`. The detailed board read returns its source for the saved music
+model. Its WAV plays independently of `MUSIC.$timeline`. A registered channel sound
+can be reused with `sfxEntries[id].asset`. Keep physical sounds already present in the
+selected video on its soundtrack. Plan, place and remove through `storyboard_apply.audienceEffects`.
+On an existing board, `{op:"plan",source:"music",...}` sets `effect.audience.source` on
+that event alone. It uses the saved music model even when the same ID exists in the
+channel catalog. Omit `source` on a later edit to keep the choice or pass `null` to
+restore the board's default. A scene's `audienceSound` records the editorial decision
+independently. Both edits work on older boards with no `STORY.audienceSoundVersion`.
+See [situations](audience-sound/index.md) and [production timing](../../produce/references/video-sound.md#audience-effects).
+
+## Scene video direction
+
+Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
+
+```js
+videoDirection: {
+  openingPositions: [
+    {character:"miran", images:[1,3], position:"near left, already standing with her back to us at the witness rail"},
+    {character:"nephew", images:[2,4], position:"far right, seated behind the counsel table across the aisle"}
+  ],
+  emotion:"The nephew’s disbelief turns to anger. Miran feels the weight of his accusation.",
+  action:"He rises behind that same far-right table and points across the aisle at Miran."
+}
+```
+
+The planner requires `openingPositions` and `emotion`. Use an empty array for a scene without people. An unreferenced person can have `images:[]`. Optional `action`, `camera` and `sound` describe what must happen in this scene. Each `story_shot.timeline` carries the scene-relative start and exclusive end frame, incoming transition, English framing and action. Its images name their file, frame and role. A scene generation reads all shots in playback order and shares one audio input across them. See the [scene input contract](../../_shared/video-routing.md).

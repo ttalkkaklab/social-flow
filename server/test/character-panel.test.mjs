@@ -21,7 +21,7 @@ function orc(t) {
   return { root, identityPath };
 }
 
-test('each panel prompt comes from the sheet: the face from appearance, the body panels from height, weight, build and outfit', (t) => {
+test('front and back use matching fitting clothes and the sheet build, independently of the character costume', (t) => {
   const { identityPath } = orc(t);
   const face = characterPanelRequest({ identityPath, view: 'face' });
   assert.deepEqual(face.inputs, []);
@@ -33,17 +33,46 @@ test('each panel prompt comes from the sheet: the face from appearance, the body
   assert.equal(JSON.parse(readFileSync(face.panelsFile, 'utf8')).panels.face.file, 'kardum-face-v1.png');
   const front = characterPanelRequest({ identityPath, view: 'front' });
   assert.deepEqual(front.inputs, [face.file]);
-  assert.match(front.prompt, /Headless front.*Character: 225 cm tall; about 200 kg; broad extremely muscular orc.*worn dark iron plate armor/);
+  assert.match(front.prompt, /Headless front.*225 cm tall; about 200 kg; broad extremely muscular orc/);
+  assert.match(front.prompt, /fitted T-shirt and short mid-thigh shorts/);
+  assert.doesNotMatch(front.prompt, /plate armor/);
+  assert.equal(face.panel.wardrobe, undefined);
   assert.equal(front.requestId, 'kardum-front-v1');
   writeFileSync(front.file, png);
   recordCharacterPanel(front);
   // A face reference or "keep this character" left Qwen redrawing the front; the back turns the front alone around.
   const back = characterPanelRequest({ identityPath, view: 'back' });
   assert.deepEqual(back.inputs, [front.file]);
-  assert.match(back.prompt, /^Turn this headless costume mannequin around 180 degrees/);
+  assert.match(back.prompt, /^Turn this headless mannequin around 180 degrees/);
+  assert.match(back.prompt, /fitted T-shirt and short mid-thigh shorts/);
+  assert.equal(back.panel.wardrobe, 'fitting');
+  assert.equal(JSON.parse(readFileSync(front.panelsFile)).panels.front.wardrobe, 'fitting');
   // The sheet's head words (relativeScale, "head not oversized") drew a head back onto the body panels.
   assert.doesNotMatch(back.prompt, /Character:[^.]*\b(head|ears)\b/);
   assert.match(back.prompt, /about 7\.5 heads tall/);
+  assert.equal(back.warnings.some(w => /^head_count_missing/.test(w)), false);
+});
+
+test('costume and legacy fronts keep their wardrobe for the rear edit', t => {
+  const { identityPath } = orc(t);
+  const front = characterPanelRequest({ identityPath, view: 'front', wardrobe: 'character', references: [] });
+  assert.match(front.prompt, /plate armor/);
+  writeFileSync(front.file, png);
+  recordCharacterPanel(front);
+  for (const wardrobe of ['character', undefined]) {
+    const manifest = JSON.parse(readFileSync(front.panelsFile));
+    manifest.panels.front.wardrobe = wardrobe;
+    writeFileSync(front.panelsFile, JSON.stringify(manifest));
+    const back = characterPanelRequest({ identityPath, view: 'back' });
+    assert.equal(back.panel.wardrobe, 'character');
+    assert.match(back.prompt, /plate armor/);
+    assert.doesNotMatch(back.prompt, /T-shirt|shorts/);
+    assert.equal(characterPanelRequest({ identityPath, view: 'back', references: [] }).panel.wardrobe, 'character');
+  }
+  const fittingBack = characterPanelRequest({ identityPath, view: 'back', wardrobe: 'fitting' });
+  assert.equal(fittingBack.panel.wardrobe, 'fitting');
+  assert.match(fittingBack.prompt, /fitted T-shirt/);
+  assert.doesNotMatch(fittingBack.prompt, /plate armor|Match the front panel’s clothing|same build, clothing/);
 });
 
 test('the GenAI cap reports overlength without dropping style or identity', (t) => {
@@ -69,11 +98,22 @@ test('body panels rule the head out with a negative prompt on models that take o
 
 
 test('confirmed multilingual clothing and body-part clothing clauses survive', () => {
-  const { panelPrompt } = createRequire(import.meta.url)('../../skills/_shared/character-identity.js');
-  const result = panelPrompt({ physical: { outfit: { status: 'confirmed', value: '붉은 두루마기; red coat with a hood behind the head; black boots' } } }, 'front');
+  const { sheetPanelPrompt } = createRequire(import.meta.url)('../../skills/_shared/character-identity.js');
+  const result = sheetPanelPrompt({ physical: { outfit: { status: 'confirmed', value: '붉은 두루마기; red coat with a hood behind the head; black boots' } } }, 'front', 'character');
   assert.match(result.text, /붉은 두루마기/);
   assert.match(result.text, /red coat with a hood behind the head/);
   assert.deepEqual(result.skipped, []);
+});
+
+test('an unclothed design keeps its species and natural markings in both body views', () => {
+  const { sheetPanelPrompt } = createRequire(import.meta.url)('../../skills/_shared/character-identity.js');
+  const character = { identity: { species: { status: 'confirmed', value: 'tortoise' } }, physical: { outfit: { status: 'not_applicable', value: null } } };
+  for (const view of ['front', 'back']) {
+    const result = sheetPanelPrompt(character, view);
+    assert.equal(result.wardrobe, 'character');
+    assert.match(result.text, /tortoise.*natural body surface/);
+    assert.doesNotMatch(result.text, /T-shirt|shorts/);
+  }
 });
 
 test('a smile on the sheet stays out of the neutral face panel and is reported', () => {

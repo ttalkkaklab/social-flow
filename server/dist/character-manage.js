@@ -37,7 +37,7 @@ export function manageCharacter(raw) {
         throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id))
         throw new Error('character_path_invalid: the character folder needs a kebab-case id');
-    const { GROUPS, REQUIRED, identityErrors } = catalog();
+    const { GROUPS, REQUIRED, identityErrors, headsTall } = catalog();
     const created = !existsSync(file);
     let source = created ? `# ${args.name}\n\n\`\`\`json\n{}\n\`\`\`\n` : readFileSync(file, 'utf8');
     const blocks = [...source.matchAll(JSON_BLOCK)].filter(m => { try {
@@ -106,7 +106,7 @@ export function manageCharacter(raw) {
     catch (error) {
         sheet = { error: error.message };
     }
-    return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice }, sheet };
+    return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice, headCount: !headsTall(character) }, sheet };
 }
 /** JSON schema of the optional fields, one property per catalog entry outside the required basics. */
 export function characterFieldsProperty() {

@@ -13,6 +13,7 @@ type Group = [string, string, string, [string, string, string, string?][]];
 const catalog = () => load('../../skills/_shared/character-identity.js') as {
   GROUPS: Group[]; REQUIRED: Record<string, string[]>;
   identityErrors(character: unknown, options?: { ready?: boolean }): string[];
+  headsTall(character: unknown): number | null;
 };
 
 const pending = z.object({ status: z.literal('pending'), reason: z.string().trim().min(1).max(2000) }).strict();
@@ -47,7 +48,7 @@ export function manageCharacter(raw: unknown) {
   if (path.basename(file) !== 'identity.md' || path.basename(path.dirname(folder)) !== 'characters' || path.basename(path.dirname(path.dirname(folder))) !== 'assets')
     throw new Error('character_path_invalid: identityPath must be <channel>/assets/characters/<id>/identity.md');
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error('character_path_invalid: the character folder needs a kebab-case id');
-  const { GROUPS, REQUIRED, identityErrors } = catalog();
+  const { GROUPS, REQUIRED, identityErrors, headsTall } = catalog();
 
   const created = !existsSync(file);
   let source = created ? `# ${args.name}\n\n\`\`\`json\n{}\n\`\`\`\n` : readFileSync(file, 'utf8');
@@ -98,7 +99,7 @@ export function manageCharacter(raw: unknown) {
     const result = (load('../../skills/channel/references/review-library.js') as { exportChannel(dir: string): { contentWarnings: { characterId: string; message: string }[] } }).exportChannel(channel);
     sheet = { path: path.join(folder, 'index.html'), warnings: result.contentWarnings.filter(w => w.characterId === id).map(w => w.message) };
   } catch (error) { sheet = { error: (error as Error).message }; }
-  return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice }, sheet };
+  return { identityPath: file, id, name: args.name, created, version: character.version, missing: { basics, images, voice, headCount: !headsTall(character) }, sheet };
 }
 
 /** JSON schema of the optional fields, one property per catalog entry outside the required basics. */

@@ -112,6 +112,19 @@ write prints a reading of it against the format and platforms. This reports and 
 it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
 Evidence and its limits: `docs/research/2026-11-18-opening-hooks/`.
 
+## Dramatic pressure and payoff (user directive, 2026-11-20)
+
+For a new or substantially revised story-led synopsis or board, use
+[story-intensity](skills/story-intensity/SKILL.md) and
+[story-catharsis](skills/story-catharsis/SKILL.md) during authoring. Choose pressure tied to
+a concrete choice and use a payoff that answers the frustration the story actually raises.
+Apply the devices in the synopsis and in observable setup, choices and outcomes in scenes
+and shots. Respect the requested tone, established canon and factual evidence. Claim-led
+and quiet work can use the uncertainty, proof or discovery already present. This pass uses
+the existing story fields and does not add a write gate. Research:
+[pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
+[payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+
 ## Clichés as story material (user directive, 2026-11-18)
 
 Drama, comedy and romance episodes use researched clichés by default; every other type gets a
@@ -140,6 +153,17 @@ user's pick is reported as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
 limits: `docs/research/2026-11-18-kdrama-cliches/`.
+
+## Scene sound and audience effects (user directive, 2026-11-21)
+
+Use the video model’s soundtrack for sounds made in the scene, including room
+tone and actions such as steps or water hitting a surface. Describe the source
+and timing in the video sound direction. If that render mode cannot make the
+sound, leave the effect out of post. Preserve the selected speech and music lanes.
+Generate and mix separate effects only for a planned audience cue
+(`sound.effects[].audience`), such as a restrained surprise hit or a tension rise.
+The builder skips untagged scene effects and uses only the music-off flags from
+legacy `sfx.tsv`. See [Model-aware effects](skills/produce/references/video-sound.md).
 
 ## TikTok private upload and cover (user directive, 2026-11-18)
 
@@ -236,6 +260,47 @@ sheet's `appearance` describes structure: `character_panel` leaves smile, grin a
 out of the neutral face panel and reports them. The moment-before rule is about movement; the
 opening face already shows the shot's emotion. See `skills/storyboard/SKILL.md` §3.
 
+## Character sheet clothing (user directive, 2026-11-21)
+
+For new headless front and rear panels, prefer a fitted T-shirt and short mid-thigh
+shorts so the shoulders, waist and leg proportions read in both views. Match the
+front when drawing the back. Keep the character's own design when clothing is integral,
+inapplicable or explicitly requested for the sheet. Fitting clothes belong to the
+sheet. In a shot, use the character's established outfit or the scene's wardrobe change.
+
+## Props from the real thing (user directive, 2026-11-21)
+
+Documents were drawn from imagination: a handwritten Korean will went onto its prop sheet as
+"one off-white signed sheet, keep writing unreadable" and an exam result as a generic
+certificate, and the user asked for research prop by prop, twice in three days. Nothing on the
+prop path asked for it. So before a prop is described or drawn, the author looks up the real
+thing: the rule or issuer's form that makes it genuine, and pictures of actual examples, saved
+under `storyboard/images/research/<prop id>/` and viewed. `SB_DOC.props[].research` records
+`{sources:[{url,title,image}], observed}` or `"none"` for a prop with nothing real to look up;
+the description is written from `observed`, with the words the prop displays inside quotation
+marks, and the prop's own picture is made from the saved real picture with the story's
+particulars. Real logos, official seals and personal data stay out unless the user asks for that
+real one. Every board write prints the props with no decision and those looked up without a
+saved picture, `shot_image` warns `prop_research_missing`, and the review page shows the observed
+facts, sources and real pictures on each prop card. Each of these reports; none refuses, and
+existing prop pictures are not regenerated for this alone. Places and wardrobe deserve the same
+look-up and have no report yet. Follow `skills/storyboard/references/prop-research.md`.
+
+## Head against body (user directive, 2026-11-21)
+
+Nothing on a character sheet sized the head against the body: the face panel is an enlarged
+close-up, the front and back panels are headless, and the sheet's `proportions` reached only
+those headless prompts (the Qwen route sent no sheet words at all). The head count is read from
+`physical.proportions` ("7.5 heads tall", "about two heads tall", "3등신") and never guessed from
+age, species or style; a range or two different counts reads as none. `shot_image` states it for each character and bystander wherever the crop
+shows the body — the count, shape words and the head's length in cm, and that a face panel sets
+no head size — and tells a set render's coloured figures apart as position, facing and height
+only. A sheet without a count reads `head_count_missing` in `character_manage`
+(`missing.headCount` and the sheet warnings), `character_panel` and `shot_image`. Each of these reports; none refuses.
+The shape words come from twelve rows by head count, geometry only with no age or style label:
+the rows at 1.5–2, 3, 7.5 and 8 heads follow the pages read, the rest are ours. Whether the
+sentence moves Qwen or any saved model is not measured. Evidence and limits: `docs/research/2026-11-21-head-body-proportion/README.md`.
+
 ## Silence around native lines (user directive, 2026-11-16)
 
 MSR clips kept opening and closing on a silent character: on 299 measured clips half of each
@@ -294,22 +359,19 @@ A cut without physical dialogue uses img2video; inner thoughts use separate time
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
-At most two characters take references; anyone else on screen is described in the action
-and drawn by the model. For a declared MSR cast, storyboard writes and video planning rebuild
+Three or four principals use one face per person. Four subject image slots are shared with clothing and props. Voice samples still use only the first two subjects. For a declared MSR cast, storyboard writes and video planning rebuild
 the character references from the cast's shared panels.json in that same order. Missing
 faces cannot fall back to a body-only picture or an old transport alias; planning reports
 the missing panel. Storyboard writes also synchronize the displayed face/front/back links.
 Pinned samples follow the registered panel owner even when an old voiceReference names
 transport copies. On boards without a declared cast, legacy explicit image ownership stays.
-`video_plan` refuses references for a third character
-(`msr_character_limit`). `video_plan` names the panels that show one character and lays the
+`video_plan` counts MSR subject images separately from the optional background and temporal pins. `video_plan` names the panels that show one character and lays the
 prompt out as the model card does: reference descriptions first, then the action, then
 `Audio N (Image M): "…"` lines.
 
 ## Voice-consistent video models only (user directive, 2026-10-31)
 
-Video models that cannot keep a character's voice are not supported: Veo, Gemini Omni and
-Seedance 1.x left the plugin. Every adapter in `server/src/video-registry.ts` declares a voice
+Google Cloud Veo 3.1 is supported for non-speaking pictures and external voiceover (2026-11-21). LTX keeps its existing image, reference and supplied-audio routes. New providers declare operation and voice capabilities. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x remain retired. Every adapter in `server/src/video-registry.ts` declares a voice
 lane — `reference` (a pinned per-character voice sample: `astra_genai_msr`, `seedance_reference`,
 `fasth3_omni_reference`), `supplied` (the pinned TTS track drives the clip: the three
 audio2video adapters) or `none`. `video_plan` refuses `voice_lane_required` when a `none`
@@ -367,6 +429,24 @@ place picture stays out. Each shot's video then waits for the user's yes to its 
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
 approval the user did not give.
 
+## Camera moves reach the video (user directive, 2026-11-21)
+
+The mochi_bo boards held 337 of 390 video shots and left 29 unchosen in the 2026-11-20 sample,
+mostly through one `shot_icons` value mapped over every shot. Of 24 planned moves, 23 used a
+hand-written prompt. Those requests need individual inspection. EP05 s0015 asked to preserve
+the composition and the sampled frames hold it. EP01 s0104 requested a right pan and the
+cafe doorway shifts left in the footage. On the GenAI image and MSR lanes, which take
+2,000 characters, 97 of 185 board prompts ran past it (the
+audio-to-video lane takes 5,000, and its prompts were rewritten by hand all the same). So
+`video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
+beats' acting fields and then expressions before the camera, action or lines; beats say an
+action once and drop voice direction a model does not voice. A hand-written prompt that drops or
+locks the board's move is named (`camera_move_missing`, `camera_move_contradicted`); `shot_icons`
+names video shots left with no move (`camera_move_unset`) and a call that holds every video shot
+it sets; board writes count unchosen moves. Each of these reports; none refuses, and no share of
+moving shots is asked for. These observations cover two clips. See
+`skills/storyboard/references/action-direction.md` and `skills/generate-cut-videos/SKILL.md`.
+
 ## Music spotting (user directive, 2026-11-14)
 
 Three episodes got their music at assembly, from files made for other episodes, and the
@@ -392,11 +472,9 @@ non-Latin letters outside quotes (`video_prompt_language`). Assembled prompts na
 with a non-Latin name by character id and report a non-English voice description for translation;
 `speech_manage` warns when its scene videoPrompt carries authored text in another language.
 
-## Two principal characters per shot (user directive, 2026-10-31)
+## LTX character references (user directive, 2026-11-21)
 
-From the storyboard on, a shot's `visual.character` lists at most two principal characters;
-`check-scenes.js` rejects a third (`[character-limit]`). A third cast member in view and unnamed
-figures stay out of `visual.character`: see People in the frame (2026-11-17).
+A shot can reference up to four principal characters on MSR and reference-conditioned distilled I2V. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
 MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
@@ -408,8 +486,8 @@ An episode came out as fifty waist-up pictures of whoever was speaking: its shot
 per line, so none showed the place, the work a character does or the person a line lands on.
 One speaker per shot limits who talks in an LTX clip, not who is seen. `shot_characters` takes
 `bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
-described in English. `visual.character` still lists the two the video call references; a shot
-shows at most three of the cast. `shot_image` draws a bystander from their face and front
+described in English. `visual.character` still lists those the video call references. A shot
+shows at most four of the cast. `shot_image` draws a bystander from their face and front
 panels and extras from the words; the video call references neither, since the start image
 carries them, and `shot_prompt` keeps them in the prompt. A bystander with an on-screen line is
 refused (`shot_bystander_speaks`). Whether a clip holds a bystander's look from the start image
@@ -589,6 +667,11 @@ The builder reruns source-plan checks and records its version and input hashes b
 
 ## Complete project setup (user directive, 2026-10-16)
 
+For every storyboard or video request, establish the user's selected project directory first.
+Ask and wait if it is unclear. Record a new or moved directory with `project_manage select`.
+Require that directory's `project_manage status` to return `ready` before authoring or
+production, including resumed work. Fill missing choices once, including music and separate
+TTS (explicit none is valid), and preserve existing episode snapshots.
 Use `skills/project-init/SKILL.md` for workspace initialization. Save SNS targets
 and connection records, genre, models, visual style, video ratio and format in
 `.social-flow/models.json`. Reuse these defaults for new episodes without repeated
@@ -613,11 +696,14 @@ and quoting, retain existing spending authorization, and inspect the resulting t
 Do not regenerate existing assets solely to migrate models. Code-rendered typography
 is not a generated-image model call. See [image routing](skills/_shared/image-routing.md).
 
-**Directory model selection (user directive, 2026-10-16) supersedes automatic routing.**
+**Directory model selection (user directive, 2026-11-21) supersedes automatic routing.**
 Once the working directory is known, follow `skills/_shared/model-settings.md`: ask
 for the video type first (drama, comedy, documentary, explainer and the researched
-catalog's other options), then video model and credentials, image model and credentials,
-then whether separate TTS is needed. If yes, select its model and configure credentials;
+catalog's other options), then the video model and its credentials. Ask next for the model
+that makes BGM and audience-only drones, risers and stingers. Use an exact catalog model and
+check its credentials, or save `models.music:{engine:"none"}` for existing music or no score.
+Then ask for the image model and credentials and whether separate TTS is needed.
+If yes, select its model and configure credentials;
 if no, save `models.speech:{engine:"none"}` and skip TTS setup. Save all choices
 in `.social-flow/models.json`, and use
 those settings for subsequent episodes until the user explicitly requests a change.
@@ -758,3 +844,7 @@ Before committing or merging, check `git status` and recently modified files
 ## 워크트리 경로
 
 워크트리는 기본 체크아웃 루트의 `.worktree/<이름>/`에 만든다. 연결된 워크트리에서도 기본 루트를 기준으로 삼는다. `AGENTS.md`의 2026-10-10 사용자 지침을 적용하며 ASTRA나 도구의 기본 경로보다 우선한다.
+
+## Scene video generation — owner directive, 2026-11-21
+
+Write one storyboard card per shot and compile one video request per scene. A cut to a new setup starts a shot. Continuous camera moves and entrances stay on the current card. An explicit one-take request uses one uninterrupted shot. Record each shot’s incoming transition, scene-frame interval, framing, action and image roles. Inspect the actual opening image. Describe each character’s position or off-screen starting place, their emotional change and the essential action at the visible landmark. Use the authored lines and the saved model selection, including distilled LTX first-frame and subject conditioning where supported. Scene audio spans the cuts once. Carry every designated input to the selected adapter or report its shot, role and frame before generation. See [scene generation](skills/generate-cut-videos/SKILL.md).

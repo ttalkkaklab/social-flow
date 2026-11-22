@@ -6,6 +6,17 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -176,6 +187,17 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -348,6 +370,17 @@
       "engine": "seedance",
       "deployment": "byteplus",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -522,6 +555,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -555,6 +599,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -589,6 +644,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -608,6 +674,14 @@
         "reserveUsd",
         "outputPath",
         "filename",
+        "negativePrompt",
+        "nagScale",
+        "nagAlpha",
+        "nagTau",
+        "passShape",
+        "audioStartTime",
+        "audioMaxDuration",
+        "numFrames",
         "audioPath",
         "imagePath",
         "aspectRatio",
@@ -623,6 +697,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "extend",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -653,6 +738,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "retake",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -684,6 +780,17 @@
       "engine": "astra-genai-desktop",
       "deployment": "gateway-desktop-v1",
       "operation": "keyframe",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -719,6 +826,17 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "gateway_prompt_only",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -728,13 +846,20 @@
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
+        "numGeneratedKeyframes",
+        "lora",
         "prompt",
         "negativePrompt",
         "model",
         "duration",
+        "numFrames",
         "resolution",
         "fps",
         "generateAudio",
+        "shots",
         "reserveUsd",
         "outputPath",
         "filename"
@@ -744,7 +869,7 @@
           "ltx-2.5-22b-distilled",
           "ltx-2.5-22b-dev"
         ],
-        "note": "Explicit duration and resolution; server validates deployment limits. No supplied audio, keyframes or LoRA."
+        "note": "Use duration, exact numFrames or automatic duration. Optional shots describe 2–4 cuts. Plain distilled generation accepts registered LoRAs on supporting backends."
       }
     },
     {
@@ -752,22 +877,51 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "sceneRenderer": {
+          "model": "ltx-2.5-22b-distilled",
+          "sceneAudioModes": [
+            "native",
+            "mix"
+          ],
+          "sceneRendering": "per_shot",
+          "requiresUserChoice": true,
+          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
+          "validation": "/v1/ltx/v2/scene-to-video/validate"
+        },
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "gateway_prompt_only",
+        "sceneAudio": false
+      },
       "voice": {
-        "lane": "none",
-        "dialogue": "refused",
-        "voiceReference": "unsupported",
+        "lane": "conditional_reference",
+        "dialogue": "requires_subject_references",
+        "voiceReference": "backend_dependent_with_subject_references",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
+        "numGeneratedKeyframes",
+        "lora",
         "prompt",
         "negativePrompt",
         "model",
         "duration",
+        "numFrames",
         "resolution",
         "fps",
         "generateAudio",
+        "shots",
         "reserveUsd",
         "outputPath",
         "filename",
@@ -775,7 +929,12 @@
         "imagePath",
         "lastFrameUri",
         "lastFramePath",
+        "keyframes",
+        "referenceStrength",
+        "referenceFrames",
+        "skipStage2",
         "references",
+        "openingPositions",
         "guidanceScale",
         "nagScale",
         "nagAlpha",
@@ -790,9 +949,14 @@
           "subjects": 4,
           "background": 1,
           "model": "ltx-2.5-22b-distilled",
-          "capability": "/v1/ltx/msr/capabilities:image_conditioning"
+          "voiceSubjects": [
+            1,
+            2
+          ],
+          "capability": "/v1/ltx/msr/capabilities:image_conditioning",
+          "voiceCapability": "voice_references"
         },
-        "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with explicit duration. Dev takes start/end only. generateAudio:false removes the soundtrack. No intermediate keyframes or supplied speech."
+        "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
       }
     },
     {
@@ -800,6 +964,27 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-v2",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "sceneRenderer": {
+          "model": "ltx-2.5-22b-dev",
+          "sceneAudioModes": [
+            "conditioning"
+          ],
+          "sceneRendering": "per_shot",
+          "requiresUserChoice": true,
+          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
+          "validation": "/v1/ltx/v2/scene-to-video/validate"
+        },
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -809,10 +994,14 @@
         "review": "not_reviewed"
       },
       "fields": [
+        "seed",
+        "numInferenceSteps",
+        "guidance",
         "prompt",
         "negativePrompt",
         "model",
         "resolution",
+        "keyframes",
         "fps",
         "audioPath",
         "audioUri",
@@ -826,9 +1015,10 @@
       ],
       "modelConstraints": {
         "models": [
-          "ltx-2.5-22b-dev"
+          "ltx-2.5-22b-dev",
+          "ltx-2.5-22b-distilled"
         ],
-        "note": "Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+        "note": "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
       }
     },
     {
@@ -836,6 +1026,17 @@
       "engine": "astra-genai",
       "deployment": "genai-ltx-msr",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -851,7 +1052,9 @@
         "nagScale",
         "nagAlpha",
         "nagTau",
+        "skipStage2",
         "references",
+        "openingPositions",
         "referenceStrength",
         "referenceFrames",
         "width",
@@ -873,6 +1076,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -910,6 +1124,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -949,6 +1174,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "keyframe",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": true,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -982,6 +1218,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1023,6 +1270,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "control",
+      "sceneInputs": {
+        "fpsField": "frameRate",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1058,6 +1316,17 @@
       "engine": "astra",
       "deployment": "self-hosted-ltx",
       "operation": "retake",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1085,6 +1354,17 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1123,6 +1403,17 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -1163,6 +1454,17 @@
       "engine": "mlx",
       "deployment": "local-mlx",
       "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1203,6 +1505,17 @@
       "engine": "ltx-api",
       "deployment": "ltx-api-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1229,6 +1542,156 @@
           "ltx-2-5-pro",
           "ltx-2-5-fast"
         ],
+        "resolutions": {
+          "720p": [
+            "1280x720",
+            "720x1280",
+            "720x720",
+            "1080x720",
+            "720x1080"
+          ],
+          "1080p": [
+            "1920x1080",
+            "1080x1920",
+            "1080x1080",
+            "1620x1080",
+            "1080x1620"
+          ],
+          "1440p": [
+            "2560x1440",
+            "1440x2560",
+            "1440x1440",
+            "2160x1440",
+            "1440x2160"
+          ],
+          "4k": [
+            "3840x2160",
+            "2160x3840",
+            "2160x2160",
+            "3240x2160",
+            "2160x3240"
+          ]
+        },
+        "limits": {
+          "ltx-2-5-pro": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          },
+          "ltx-2-5-fast": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          }
+        },
         "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
       }
     },
@@ -1237,6 +1700,17 @@
       "engine": "ltx-api",
       "deployment": "ltx-api-v2",
       "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1262,7 +1736,652 @@
           "ltx-2-5-pro",
           "ltx-2-5-fast"
         ],
+        "resolutions": {
+          "720p": [
+            "1280x720",
+            "720x1280",
+            "720x720",
+            "1080x720",
+            "720x1080"
+          ],
+          "1080p": [
+            "1920x1080",
+            "1080x1920",
+            "1080x1080",
+            "1620x1080",
+            "1080x1620"
+          ],
+          "1440p": [
+            "2560x1440",
+            "1440x2560",
+            "1440x1440",
+            "2160x1440",
+            "1440x2160"
+          ],
+          "4k": [
+            "3840x2160",
+            "2160x3840",
+            "2160x2160",
+            "3240x2160",
+            "2160x3240"
+          ]
+        },
+        "limits": {
+          "ltx-2-5-pro": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          },
+          "ltx-2-5-fast": {
+            "720p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1080p": {
+              "imageSeconds": [
+                6,
+                8,
+                10,
+                12,
+                14,
+                16,
+                18,
+                20
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 20
+            },
+            "1440p": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            },
+            "4k": {
+              "imageSeconds": [
+                6,
+                8,
+                10
+              ],
+              "highFpsSeconds": [
+                6,
+                8,
+                10
+              ],
+              "audioMaxSeconds": 10
+            }
+          }
+        },
         "note": "Official LTX API. I2V: 6/8/10 s (Fast at 720p/1080p, 24/25 fps: 6-20 s), first and optional last frame, 7 MB inline images. A2V: the supplied track sets the length (2-10 s; Fast at 720p/1080p up to 20 s), billed on audio seconds. No voice reference, seed or negative prompt."
+      }
+    },
+    {
+      "tool": "veo_text2video",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "text",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_img2video",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "sourceImagePath",
+        "lastImagePath"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_reference",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "referenceImagePaths"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
+      }
+    },
+    {
+      "tool": "veo_extend",
+      "engine": "veo",
+      "deployment": "google-cloud-us-central1",
+      "operation": "extend",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "aspectRatio",
+        "generateAudio",
+        "negativePrompt",
+        "seed",
+        "outputPath",
+        "filename",
+        "sourceVideoPath"
+      ],
+      "modelConstraints": {
+        "veo-3.1-generate-001": {
+          "priceFamily": "standard",
+          "resolutions": [
+            "720p",
+            "1080p",
+            "4k"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-fast-generate-001": {
+          "priceFamily": "fast",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "reference",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 3,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        },
+        "veo-3.1-lite-generate-001": {
+          "priceFamily": "lite",
+          "resolutions": [
+            "720p",
+            "1080p"
+          ],
+          "operations": [
+            "text",
+            "image",
+            "extend"
+          ],
+          "durationSeconds": [
+            4,
+            6,
+            8
+          ],
+          "referenceSeconds": 8,
+          "extensionSeconds": 7,
+          "aspectRatios": [
+            "16:9",
+            "9:16"
+          ],
+          "maxAssetImages": 0,
+          "lastFrame": true,
+          "generateAudio": true,
+          "voiceReference": false
+        }
       }
     },
     {
@@ -1270,6 +2389,17 @@
       "engine": "minimax",
       "deployment": "minimax-open-platform-v2",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1303,6 +2433,17 @@
       "engine": "minimax",
       "deployment": "minimax-open-platform-v2",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -1337,6 +2478,17 @@
       "engine": "heygen",
       "deployment": "heygen-v3",
       "operation": "image",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1368,6 +2520,17 @@
       "engine": "heygen",
       "deployment": "heygen-v3",
       "operation": "reference",
+      "sceneInputs": {
+        "fpsField": null,
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",

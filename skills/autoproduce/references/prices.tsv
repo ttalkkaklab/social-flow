@@ -21,7 +21,23 @@ image.local	image	0.000	official	Z-Image Turbo via mflux — on-device. No key, 
 image.host	image	0.000	derived	Host-provided image generation uses the included allowance; no separate API charge. Subscription/allowance limits are not priced here.
 image.mlx	image	0.000	official	mlx_image_generate · mlx_image_edit — MLX Core / mlx-serve on-device. Electricity only
 
-# ── Video (Veo 3.1) ──────────────────────────────────────────────────────
+# Google Cloud Veo at cloud.google.com/model-garden/pricing (2026-11-21); separate from historical Gemini API prices.
+veo.vertex.standard.720p.audio	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.720p.silent	second	0.20	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.1080p.audio	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.1080p.silent	second	0.20	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.4k.audio	second	0.60	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.standard.4k.silent	second	0.40	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.720p.audio	second	0.10	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.720p.silent	second	0.08	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.1080p.audio	second	0.12	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.fast.1080p.silent	second	0.10	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.720p.audio	second	0.05	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.720p.silent	second	0.03	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.1080p.audio	second	0.08	official	Google Cloud Veo 3.1; generated seconds
+veo.vertex.lite.1080p.silent	second	0.05	official	Google Cloud Veo 3.1; generated seconds
+
+# ── Historical Gemini API (Veo 3.1) ──────────────────────────────────────────────────────
 # Retired 2026-10-31 with Gemini Omni and Seedance 1.x below: none of them can keep a character's
 # voice, so the plugin no longer calls them. The rows stay so earlier episode ledgers still price.
 # Billed per second and **audio is always included** — it can't be turned off. No free tier.
@@ -115,7 +131,7 @@ music.lyria-clip	clip	0.04	official	music_generate_clip — lyria-3-clip-preview
 # report line as "total $X + 1 item excluded from the tally (BGM)" (cost-tally.md §reading exit codes).
 music.lyria-realtime	second	?	unconfirmed	music_generate variable length — no Lyria RealTime row in the official price table (checked 2026-08-15)
 # music_generate_song with lyria-3-clip-preview is priced by the music.lyria-clip row above.
-music.lyria-3.5	song	?	unconfirmed	music_generate_song model lyria-3.5 — no confirmed per-song price in this repo (2026-10-31); reconcile provider billing
+music.lyria-3.5	song	0.08	official	music_generate_song model lyria-3.5 — "$0.08 per song" at aistudio.google.com/docs/pricing (read 2026-11-21)
 # ── Music (ElevenLabs) ───────────────────────────────────────────
 music.elevenlabs.music_v2	song	?	unconfirmed	music_elevenlabs_generate model music_v2 — per-song price not confirmed here (2026-10-31); reconcile provider billing
 music.elevenlabs.music_v2_5	song	?	unconfirmed	music_elevenlabs_generate model music_v2_5 — per-song price not confirmed here (2026-10-31); reconcile provider billing
@@ -127,7 +143,7 @@ music.suno-generate	call	0.06	derived	suno_generate — 12 credits × $0.005 (su
 music.suno.V6	call	?	unconfirmed	suno_generate model V6 — credit cost not confirmed (2026-10-31); do not reuse the legacy rate
 music.suno.V6_MINI	call	?	unconfirmed	suno_generate model V6_MINI — credit cost not confirmed (2026-10-31)
 music.suno.V6_WILD	call	?	unconfirmed	suno_generate model V6_WILD — credit cost not confirmed (2026-10-31)
-music.suno-sound	call	?	unconfirmed	suno_generate_sound — credit cost not on the public table (2026-08-20)
+music.suno-sound	call	?	unconfirmed	suno_generate_sound — refused before submission (2026-11-21); credit cost not on the public table
 music.suno-lyrics	call	?	unconfirmed	suno_generate_lyrics — credit cost not on the public table (2026-08-20)
 music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-device. Quantity is durationSeconds. Electricity only
 

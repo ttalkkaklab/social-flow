@@ -193,18 +193,22 @@ function sceneDirection(scene = {}, performance = []) {
 }
 const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.';
 // Shared temporal instructions; native MSR dialogue is mapped to image/audio slots later.
-function performanceBeats(performance, mode, includeDialogue = true) {
+// A video model reads every sentence, so a beat says each thing once (2026-11-21: on mochi_bo the
+// line's context and visual repeated its action beat word for word, and 71% of compiled prompts
+// ran past the 2,000 characters the GenAI image lane takes). brief leaves the acting fields out.
+function performanceBeats(performance, mode, includeDialogue = true, { brief = false } = {}) {
   const dialogue = performance.filter(line => line.kind !== 'action').map(line => line.text).filter(text => typeof text === 'string' && text.length);
   const visualDirection = value => {
     let text = String(value);
     for (const words of dialogue) text = text.split(words).join('the supplied speech');
     return text;
   };
+  const said = new Set(performance.filter(line => line.kind === 'action').map(line => String(line.videoDirection || line.text || '').trim()));
   return performance.map((line, index) => {
     if (line.kind === 'action') {
       const relation = line.withGroup === undefined ? 'in this event order' : `concurrently with speech group ${line.withGroup}; do not add a separate pause`;
-      const timing = line.startSeconds === null || line.endSeconds === null ? 'Timing unresolved; preserve this action when timing is planned.' : `Action interval ${line.startSeconds}–${line.endSeconds} seconds.`;
-      return `Beat ${index + 1} (action by ${visualDirection(line.character || 'unspecified')}): ${visualDirection(line.videoDirection || line.text)}; ${relation}. ${timing}`;
+      const timing = line.startSeconds === null || line.endSeconds === null ? '' : ` Action interval ${line.startSeconds}–${line.endSeconds} seconds.`;
+      return `Beat ${index + 1} (action by ${visualDirection(line.character || 'unspecified')}): ${visualDirection(line.videoDirection || line.text)}; ${relation}.${timing}`;
     }
     const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
@@ -217,18 +221,27 @@ function performanceBeats(performance, mode, includeDialogue = true) {
       : delivery === 'off_screen'
         ? 'Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait.'
         : 'This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.';
-    const fields = ['direction', 'context', 'intent', 'emotion', 'vocal', 'visual'].filter(key => acting[key])
+    // Voice direction reaches the model only when the model voices the line; text an action beat
+    // or an earlier field already says is not said again.
+    const seen = new Set(said);
+    const fields = brief ? [] : ['direction', 'context', 'intent', 'emotion', 'vocal', 'visual'].filter(key => acting[key] && !(key === 'vocal' && mode !== 'native'))
+      .filter(key => { const value = String(acting[key]).trim(); if (seen.has(value)) return false; seen.add(value); return true; })
       .map(key => `${key}: ${visualDirection(acting[key])}`);
-    if (acting.tags?.length) fields.push(`vocal events: ${acting.tags.map(visualDirection).join(', ')}`);
+    if (!brief && acting.tags?.length) fields.push(`vocal events: ${acting.tags.map(visualDirection).join(', ')}`);
     const timing = line.speechStartSeconds == null || line.speechEndSeconds == null
-      ? (mode === 'native' ? 'The model paces this line within the shot.' : 'Use the measured speech interval once audio is attached.')
+      ? (mode === 'native' ? 'The model paces this line within the shot.' : '')
       : `Speech interval ${line.speechStartSeconds}–${line.speechEndSeconds} seconds.`;
-    return `Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth} ${includeDialogue && mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'". ' : ''}${line.to ? 'Addressed to '+visualDirection(line.to)+'. Preserve the authored crop and any planned eyeline; the addressee need not appear in frame.' : ''} ${fields.join(' ')} ${timing} Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.`;
+    const pauses = line.leadInSeconds || line.tailOutSeconds ? `Anticipation ${line.leadInSeconds || 0} seconds; reaction ${line.tailOutSeconds || 0} seconds.` : '';
+    // The opening crop is stated once with the camera; repeating "preserve the crop" here fought every move.
+    return [`Beat ${index + 1} (speaker: ${visualDirection(line.speaker || 'unspecified')}; delivery: ${delivery}): ${mouth}`,
+      includeDialogue && mode === 'native' && delivery !== 'on_screen' ? 'Speak "'+line.text+'".' : '',
+      line.to ? 'Addressed to '+visualDirection(line.to)+'; keep the planned eyeline, and the addressee need not appear in frame.' : '',
+      ...fields, timing, pauses].filter(Boolean).join(' ');
   });
 }
 function sceneVideoPrompt(performance, mode, scene = {}) {
   const route = !performance.some(event => event.kind !== 'action')
-    ? 'This is a silent scene. Perform the ordered visible actions without invented speech or voiceover.'
+    ? 'Perform the ordered visible actions without invented speech or voiceover.'
     : mode === 'native'
     ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'

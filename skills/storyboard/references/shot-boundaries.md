@@ -13,13 +13,12 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    It includes every join, not just suspected mistakes. `no` is a storage locator,
    not a stable id; use `id` for edits and `playbackPosition` for order. Missing or duplicate
    ids must be resolved before an id-addressed change. Review silent actions and readable
-   two-person exchanges too; split at every speaker change and choose the new shot's size and angle.
+   two-person exchanges too. Keep replies on one card for an explicit one-take. Otherwise set framing for each speaker's coverage.
 3. For each join compare three options: hold the current frame, motivate a move/reframe,
    or cut within the one-speaking-character-per-shot rule. Choose the simplest option that carries the whole performance. Do not replace
    every cut with a complicated camera move. State what the viewer must see that the
    current frame cannot convey, or the time/place change or verified generation limit.
-   Check [dialogue coverage](dialogue-coverage.md): a reply needs its own generation unit,
-   but its attention subject may be a meaningful action, listener, detail or space instead
+   Check [dialogue coverage](dialogue-coverage.md): conventional coverage gives the reply its own shot in the same scene request. Its attention subject may be a meaningful action, listener, detail or space instead
    of the speaker's face. Choose a reverse when the face carries the change; never force a two-shot or
    relabel a visible hidden-mouth speaker as offscreen merely to reduce cuts.
    A glance, pause, new sentence or hand movement alone is insufficient. Intentional
@@ -40,8 +39,7 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    allowing independent handling, travel and reactions. Check its selected `videoTiming`
    route after the revision. Per-shot `fits` values do not establish a merged shot fits.
    Unknown timing/limits stay unknown; fetch the actual adapter limits before generating.
-   If capacity requires splitting, make the fewest motivated divisions without truncating
-   speech, changing fps/model, or moving a necessary visible event offscreen just to fit.
+   If the requested uninterrupted performance exceeds capacity, report the limit. If the user revises the scene, preserve speech, frame rate and essential visible action.
 
 `boundaryReview.version` is `shot-boundaries-v1`; its status is always `not_reviewed`.
 Continuing speakers, repeated casts, silent actions and repeated reasons are factual review
@@ -98,12 +96,12 @@ keep a cut when its removal loses information, geography, performance or feasibl
 | One student introduces a report, then announces entry in the same locked camera | One performance through the head turn; cut when the newly noticed person is shown. |
 | Refusing a question, then stating a condition, same speaker and listener | Keep the complete answer unless the next view reveals evidence the current frame cannot. |
 | Boss confirms identity, grants permission and sends regards | One sustained performance can include pauses and departure; do not allocate a shot to each clause. |
-| Two people exchange several lines in a readable two-shot | Split at each speaker change; consecutive lines by the same character may stay together. |
+| Two people exchange several lines in a readable two-shot | Keep a requested one-take continuous through the replies. For conventional coverage, cut where the next speaker’s view begins. |
 | Same face/size but an offscreen sound changes its meaning | Keep an earned reaction cut when timing/viewpoint supports it; matching metadata does not mandate merging. |
 | Block then counterattack, adjacent silent beats | Prefer continuous readable action; keep an insert/reverse only for a concrete contact or geography need. |
 | Opposing OTS views have identical size and cast | Compare viewer/subject, axis, reveal and reaction; size/cast equality does not mean the same frame. |
 | Explicit time jump at the same location and with the same cast | Retain the time transition; do not merge on repeated identity. |
-| Continuous performance exceeds the selected adapter limit | Recompute overlapping action timing, then split only as much as actual capacity requires; retain line order and ends. |
+| Continuous performance exceeds the selected adapter limit | Recompute overlapping action timing, then report the limit with the requested duration. Keep an explicit one-take intact. |
 | Several short shots each fit, proposed merge has unknown timing | No merged-fit claim from adding separate `fits` results. |
 | Missing scene, cast, framing or timing | Read original scene and supply missing evidence; do not treat nulls as equality or a pass. |
 | B-roll inserted between two stored dialogue shots | Inspect actual three-way playback and audio timing; those dialogue shots are not adjacent. |

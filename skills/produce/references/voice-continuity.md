@@ -112,16 +112,15 @@ means imitation, `suppliedSpeech` means animation from supplied audio, and
 `exactAudioPreservation` is false for the installed video adapters. ASTRA audio2video
 re-encodes the track; other ASTRA operations do not inherit its audio input contract.
 
-Every adapter declares a voice lane, shown as `voice.lane` with `voice.dialogue:
-allowed|refused`: `reference` (`astra_genai_msr`, `seedance_reference`,
+Every adapter declares a voice lane, shown as `voice.lane` with `voice.dialogue`: `reference` (`astra_genai_msr`, `seedance_reference`,
 `fasth3_omni_reference` — a pinned per-character sample sets the speaker's timbre),
 `supplied` (`astra_audio2video`, `astra_genai_audio2video`,
-`astra_genai_desktop_audio2video` — the pinned TTS track drives the clip) or `none`
-(everything else). `video_plan` refuses a lane-`none` adapter with
+`astra_genai_desktop_audio2video` — the pinned TTS track drives the clip) or `conditional_reference` (distilled GenAI I2V with subject images). Other adapters use `none`
+(silent picture lanes). `video_plan` refuses a lane-`none` adapter with
 `voice_lane_required` when the shot has an `on_screen` line, or when the model would
 voice lines natively: audio on in a native slot (`visual.clip` or `type:'broll'`).
 Narration or voiceover over a non-speaking picture, an external TTS track, passes on
-any adapter; a `visual.clip` slot with lines sets `generateAudio:false` there. Veo, Gemini Omni and
+any adapter; a `visual.clip` slot with lines sets `generateAudio:false` there. Gemini Developer API Veo previews, Gemini Omni and
 Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference;
 their existing clips stay reusable through `visual.reuse`.
 

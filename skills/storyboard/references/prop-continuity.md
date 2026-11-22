@@ -39,8 +39,12 @@ after saving. Do not imply that a download saved the storyboard.
 ## Contract version 1
 
 `props[]`: stable `id`, optional `name`, `description`, `imageUrl`,
-`appearanceVersion`, `references: [{path,version,condition?}]`, and
-`tracking: appearance | continuity`. A physical duplicate has another id; damaged
+`appearanceVersion`, `references: [{path,version,condition?}]`,
+`research` and `tracking: appearance | continuity`. `research` is what the look is based
+on ([prop research](prop-research.md)): `{sources: [{url, title?, image?, license?}], observed}`
+— the pages opened, the saved picture of the real thing and, in English, what it shows —
+or `"none"` for a prop with nothing real to look up. A legacy `source` URL reads as one
+page without a saved picture. A physical duplicate has another id; damaged
 and intact references of the same object share its id. `characterId` is legacy
 ownership only; it never proves custody. Missing history stays unknown.
 
@@ -99,7 +103,10 @@ The shared `prop-continuity.js` validates MCP writes, `check-scenes.js`
 and prompt generation. It computes snapshots without mutating input.
 `check` warns about a registered prop that no shot links (`visual.props`,
 `frames.endProps` or an event's `shotIds`): link it to its shots, or drop it if the
-story does not need it.
+story does not need it. It also names, in one line, the props with no `research`
+decision and those looked up without a saved picture; every board write prints the same
+line and `shot_image` warns `prop_research_missing` for an undecided prop in its frame.
+These report and never refuse.
 
 `shot_image` reads the same snapshot for the props a frame shows. A prop hidden in
 the shot (`visible:false`) stays out of the picture. Each other prop sends one

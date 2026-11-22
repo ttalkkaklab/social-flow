@@ -105,3 +105,16 @@ test('a native line is timed from its syllables and pauses in its own language; 
     performance: [{kind: 'dialogue', character: 'a', group: 1}, {kind: 'action', text: 'He waits.', durationSeconds: 0.7}]};
   assert.equal(planScenePerformance(shot, line => estimateSpeechSeconds(line.tts)).durationSeconds, 1.51 + 0.5 + 0.7);
 });
+
+test('a beat says each thing once and gives voice direction only to a model that voices the line', () => {
+  const {performanceBeats} = require('../../skills/_shared/scene-acting.js');
+  const plan = [{kind:'action',character:'bin',text:'Bin points at the cafe.',withGroup:1,startSeconds:null,endSeconds:null},
+    {kind:'dialogue',group:1,speaker:'bin',to:'bo',delivery:'on_screen',text:'Look.',leadInSeconds:0,tailOutSeconds:0,
+      acting:{context:'Bin points at the cafe.',intent:'Get his attention.',vocal:'Bright and quick.',visual:'Bin points at the cafe.'}}];
+  const supplied = performanceBeats(plan, 'audio_conditioned').join(' ');
+  assert.equal((supplied.match(/Bin points at the cafe/g) || []).length, 1);
+  assert.match(supplied, /intent: Get his attention\./);
+  assert.doesNotMatch(supplied, /vocal:|Preserve the authored crop|Timing unresolved|Anticipation 0/);
+  assert.match(performanceBeats(plan, 'native').join(' '), /vocal: Bright and quick\./);
+  assert.doesNotMatch(performanceBeats(plan, 'native', true, {brief:true}).join(' '), /intent:|vocal:/);
+});

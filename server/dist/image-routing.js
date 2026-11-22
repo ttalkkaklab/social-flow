@@ -1,3 +1,4 @@
+import { requireReadyProject } from './project.js';
 import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { workflowEpisode } from './production-workflow.js';
@@ -82,6 +83,7 @@ function bindSelection(tool, input, selection) {
 export function planImage(raw) {
     gate('image_plan');
     const input = imagePlanSchema.parse(raw);
+    requireReadyProject(input.directory);
     const context = imageContext(input.directory, input.assetId);
     const { selection } = context;
     let tool = input.tool;
@@ -149,7 +151,9 @@ function imageExecutionResult(plan, status, receipt, output) {
 }
 export async function executeImage(raw, dispatch) {
     gate('image_execute');
-    const input = imageExecuteSchema.parse(raw), directory = fs.realpathSync(input.directory);
+    const input = imageExecuteSchema.parse(raw);
+    requireReadyProject(input.directory);
+    const directory = fs.realpathSync(input.directory);
     const plan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', input.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== input.planId || routingHash(body) !== id || plan.directory !== directory)

@@ -104,8 +104,8 @@ project's `.social-flow/models.json` defaults as an assistant decision
 (automation-guidance.md) rather than a new question.
 
 **Model adapter mapping:** follow [model settings](../../_shared/model-settings.md)
-as soon as the working directory is known. Select video type → video model → speech model → image model once if
-missing; otherwise reuse `.social-flow/models.json` without asking. Snapshot it into
+as soon as the working directory is known. Reuse the saved choices in `.social-flow/models.json`.
+Snapshot it into
 the episode and carry its models into `PRODUCTION.modelSettings` and its type into
 `PRODUCTION.videoType` before quotes and authoring. Follow [video types](../../_shared/video-types.md)
 for the selected type's speech and directing defaults. If only the type is missing,
@@ -1074,7 +1074,7 @@ Two generated forms count against the slot cap together:
   cuts roughly 8 seconds out of the time spent delivering information). Per slot write the
   **used length `duration` (4s by default) and the reason for it**, `after`, `src`, the camera
   slots and audio, and store the assembled final prompt in `visual.prompt` (§clip prompt —
-  `--clip --engine seedance`). Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
+  `--clip --engine seedance`). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
   because none takes a voice reference. Two slots using the same PNG means the same shot twice — specify a different
   source per slot.
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes

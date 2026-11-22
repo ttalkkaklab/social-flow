@@ -8,7 +8,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { config } from '../dist/config.js';
-import { ROUTES } from '../dist/handlers.js';
+import { dispatchVideo } from '../dist/handlers.js';
 import { checkSpeechSync } from '../dist/speech-sync-check.js';
 
 // Syllables at 3Hz, pauses on an aperiodic schedule — a periodic gate would let the
@@ -86,7 +86,7 @@ async function withAstra(t, results) {
 
 test('expectLipSync re-renders a clip that ignored the voice with a new seed and keeps the one that follows it', async (t) => {
   const { file, jobs, dir } = await withAstra(t, ['ignored.mp4', 'synced.mp4']);
-  const out = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, seed: 7, guidance: { a2vGuidanceScale: 4 }, expectLipSync: true, outputPath: dir, filename: 'line.mp4' });
+  const out = await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, seed: 7, guidance: { a2vGuidanceScale: 4 }, expectLipSync: true, outputPath: dir, filename: 'line.mp4' });
   const text = out.content[0].text;
   assert.equal(jobs.length, 2);
   assert.equal(jobs[0].seed, 7);
@@ -110,17 +110,17 @@ test('expectLipSync re-renders a clip that ignored the voice with a new seed and
 
 test('the attempt cap keeps the best clip with its finding instead of failing', async (t) => {
   const { file, jobs, dir } = await withAstra(t, ['ignored.mp4', 'ignored.mp4', 'ignored.mp4']);
-  const out = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, expectLipSync: true, maxAttempts: 1, outputPath: dir, filename: 'once.mp4' });
+  const out = await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, expectLipSync: true, maxAttempts: 1, outputPath: dir, filename: 'once.mp4' });
   assert.equal(jobs.length, 1);
   assert.equal(jobs[0].seed, undefined, 'the first attempt keeps the caller seed (none)');
   assert.match(out.content[0].text, /Still no_sync after 1 attempt/);
   assert.match(out.content[0].text, /lip_sync: no region of the picture moves with the speech/);
-  await assert.rejects(ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), expectLipSync: true, maxAttempts: 4 }));
+  await assert.rejects(dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: file('speech.wav'), expectLipSync: true, maxAttempts: 4 }));
 });
 
 test('a retry that fails on the server keeps the clip already rendered', async (t) => {
   const { file, jobs, dir } = await withAstra(t, ['ignored.mp4', 'fail']);
-  const out = await ROUTES.astra_audio2video({ prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, expectLipSync: true, outputPath: dir, filename: 'kept.mp4' });
+  const out = await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: file('speech.wav'), numFrames: 145, expectLipSync: true, outputPath: dir, filename: 'kept.mp4' });
   assert.equal(jobs.length, 2);
   assert.match(out.content[0].text, /File: .*kept\.mp4/);
   assert.match(out.content[0].text, /attempt 2 failed: .*generator rc=1/);

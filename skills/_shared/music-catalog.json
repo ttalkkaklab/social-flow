@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "2026-10-18",
+  "revision": "2026-11-21",
   "models": [
     {
       "engine": "lyria",
@@ -67,6 +67,9 @@
       "provider": "ElevenLabs official"
     }
   ],
+  "noGeneration": {
+    "engine": "none"
+  },
   "adapters": [
     {
       "tool": "music_generate_clip",
@@ -131,6 +134,10 @@
         "duration",
         "negativeTags",
         "vocalGender",
+        "styleWeight",
+        "weirdnessConstraint",
+        "audioWeight",
+        "variety",
         "personaId",
         "personaModel",
         "pickTrack",
@@ -141,9 +148,9 @@
     {
       "tool": "suno_generate_sound",
       "engine": "suno-api",
-      "fixedModel": "V5",
       "fields": [
         "prompt",
+        "model",
         "soundLoop",
         "soundTempo",
         "soundKey",
@@ -200,8 +207,8 @@
     }
   ],
   "sources": [
-    "https://ai.google.dev/gemini-api/docs/music-generation",
-    "https://ai.google.dev/gemini-api/docs/realtime-music-generation",
+    "https://aistudio.google.com/docs/music-generation",
+    "https://aistudio.google.com/docs/realtime-music-generation",
     "https://elevenlabs.io/docs/api-reference/music/compose",
     "https://docs.sunoapi.org/suno-api/generate-music"
   ]

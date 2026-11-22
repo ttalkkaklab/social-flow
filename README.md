@@ -56,6 +56,13 @@ window (Reels, 3 s), or on long-form the title and thumbnail first and a first 3
 confirms and widens them. `story_sequence` records it as `STORY.opening`, and every story-first
 board write prints a reading of it without refusing anything
 ([research](docs/research/2026-11-18-opening-hooks/index.html)).
+[Story intensity](skills/story-intensity/SKILL.md) uses ten researched kinds of pressure
+to plan how choices become harder. [Story catharsis](skills/story-catharsis/SKILL.md) uses
+fifteen ways to pay off a specific frustration. Storyboard applies both while writing
+story-led synopses and boards. Show the pressure, choice and consequence in the actual scenes.
+See the [130 pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
+[111 payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+
 [Cliché use](skills/storyboard/references/cliche-use.md) makes researched clichés story material.
 A drama, comedy or romance episode names what its story is missing, takes a few candidates for
 that need from `skills/storyboard/references/cliches.js pick`, moves one property of the one it
@@ -79,6 +86,11 @@ requests as prose and carries costly choices, secrets and their consequences int
 and shots. Research inspiration stays distinct from documented history; search volume is
 not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
 
+[Prop research](skills/storyboard/references/prop-research.md) precedes every prop's
+description and picture: the author looks up the real document or object, saves and views
+pictures of actual examples, records `research` on the prop sheet and draws the prop from
+them. Board writes, `shot_image` and the review page report a prop drawn from imagination.
+
 The [filmmaking guide](docs/guides/ai-film-four-elements/index.html) explains character references, camera direction, framing and shot timing. `storyboard_read` exposes the shared 45-entry technique catalogue; `shot.techniques` stores stable IDs with shot-specific reasons. The offline storyboard exports the same catalogue, with a distinct pictogram and explanation for every entry. Camera instructions reach the generic, speech-planning and ASTRA prompt paths. See [technique selection](skills/storyboard/references/film-techniques.md).
 
 Character video requests now compile [voice continuity](skills/produce/references/voice-continuity.md)
@@ -98,7 +110,12 @@ the listener stays silent. Silent shots and inner thoughts use image2video inste
 MSR; thoughts use pinned character TTS composed to the measured speech/action clock.
 See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 `shot_prompt` stores action separately; `video_plan` recompiles current icons and
-reports `directionBindings` for prompt, image, adapter and assembly inputs.
+reports `directionBindings` for prompt, image, adapter and assembly inputs. It compiles to
+the adapter's own prompt limit (2,000 characters on the GenAI image and MSR lanes), dropping
+design notes, the beats' acting fields and then expressions before the camera move, action or
+lines, and reports a hand-written or legacy prompt that drops, locks or reverses the board's move
+(`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
+`shot_icons` names video shots it leaves without one (`camera_move_unset`).
 
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
 selection reason, evidence, visual direction and timing intent. The shared
@@ -134,7 +151,11 @@ checks duration coverage and records the actual image hash;
 audio2video still conditions on one opening image, not the preceding clip or an entire board.
 
 Start a reusable video project with `/social-flow:project-init <directory>`.
-It saves SNS targets and connection records, video genre, video/speech/image
+A storyboard or video request asks for the project directory if the user has not selected
+one. Setup records that directory, then the video, music, image and separate speech choices.
+Music and speech each accept an explicit “none.” Authoring and production wait until
+`project_manage status` returns `ready` for the selected directory.
+It saves SNS targets and connection records, video genre, video/BGM/image/speech
 models, visual style, video ratio and output format together in
 `.social-flow/models.json`. It creates the channel profile, shared asset catalog
 and episode directory, preserves existing content, and asks only missing choices.
@@ -154,8 +175,10 @@ and episode creation over MCP; `skills/_shared/project-settings.js` is its CLI.
 Claude Code's read-only SessionStart hook reports missing settings. Other hosts
 use the skill's explicit preflight; neither path silently chooses preferences.
 
-At first setup in a working directory, choose the video type, then the video model
-and its credentials, then the image model and its credentials. Finally choose whether
+At first setup in a working directory, choose the video type and video model. After checking
+its credentials, choose a BGM model for music and audience-only drones, risers and stingers,
+or save `models.music:{engine:"none"}` to reuse music or leave scenes unscored. After the music
+provider check, choose the image model and its credentials. Finally choose whether
 separate TTS is needed; if yes, select its model and configure credentials, otherwise
 save `models.speech:{engine:"none"}`. Reuse configured keys, including shared provider
 keys. Host/local engines need their tools available, not a separate API key. The [type catalog](skills/_shared/video-types.md) covers
@@ -359,6 +382,10 @@ across the same space from the opposite side. Existing `imageUrl` sheets remain 
 for the default front view with a missing-view warning; a missing back panel is not substituted.
 Built sets use the same direction against their establishing camera and reject an opposing
 subject viewpoint before rendering. See [asset sheets](skills/storyboard/references/asset-sheets.md).
+
+## Scene video generation
+
+Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
 
 ## Persistent 3D locations
 
@@ -610,6 +637,18 @@ without writing. The channel's notes live in `production.musicDirection` (up to 
 existing defaults. See [timeline scoring](skills/storyboard/references/scenes-schema.md#music-cues-windowmusic-sound).
 Shot-relative music gain curves and configurable ducking shape dialogue and reveals; low
 speech-to-music separation is a review warning, not an assembly gate.
+
+Every scene on a new story-first board also gets a decision about sound heard only by the
+viewer. `story_scene` records `audienceSound` (`use` or `none` with a reason).
+A `use` decision can name whose experience the viewer follows (`perspective`), the change
+visible on screen (`shift`) and the moment the sound ends (`exit`). The scene card shows
+these notes beside the cue preview. For example, a contestant's confident smile can carry
+a short pitched cue that ends just before the start call.
+`storyboard_read.audienceSpotting` shows which decisions or cues still need attention.
+`storyboard_apply.audienceEffects` plans the sound and places it on the accepted cut, so a
+drone can start at a glance, carry over a cut and release before a line. Room tone and the
+music score have their own tracks. New audience drones, risers and stingers use the saved music model and play on the audience track. Physical sounds already heard in the video keep their original soundtrack. See [audience cue placement](skills/produce/references/video-sound.md#audience-effects).
+
 An unverified playback check is recorded as `not_reviewed`; it does not hold the episode from
 the publish queue. These are editorial checks; completion-rate improvements require audience
 measurements.
@@ -744,10 +783,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 158 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 164 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 158 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 164 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -822,7 +861,7 @@ visual style, video ratio and format live in the workspace's `.social-flow/model
 each episode snapshots them in `.work/model-settings.json`, and `profile.md` keeps the
 channel's tone, theme and pinned character voice IDs (the speech model itself is the saved `models.speech`).
 
-## MCP tool surface (158 tools)
+## MCP tool surface (164 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -853,23 +892,24 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Image generation | `image_local_generate` | Z-Image Turbo on-device via mflux (**no API key, no network, no billing — a $0 choice for the saved image model**; initial image setup recommends ASTRA GenAI; local mflux is an explicit alternative. Needs Apple Silicon + `uv tool install --python 3.12 mflux`; first call downloads 31GB of weights. No text inside images — Korean jamo break up) |
 | Image generation | `mlx_image_generate` / `mlx_image_edit` | MLX Core / mlx-serve on loopback (**no vendor bill**. Optional local lane — initial image setup recommends ASTRA GenAI. Inspect actual Hangul. Model-specific edit/variation/alpha contracts apply. Fail closed if :11234 is down; this plugin never launches the app. `brew install --cask mlx-core`) |
 | Image generation | `gpt_image_text2img` / `gpt_image_img2img` | OpenAI GPT Image (OPENAI_API_KEY — **saved selection takes precedence**: model-dependent sizes, up to 16 references, mask inpainting, usage receipts; GPT Image 2 transparent output is preview) |
-| Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each shot's plan runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference`, `minimax_reference`, `heygen_reference` take a per-character voice sample) or `supplied` (the audio2video tools, `ltx_api_audio2video` included, animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Veo, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
+| Video routing | `video_catalog` / `video_plan` / `video_approve` / `video_execute` / `video_status` | Saved model selection, adapter validation, atomic episode budget reservations and durable request receipts. Each scene plan (or an explicitly selected shot) runs only after the user's yes (`video_approve`), or their approval of every shot (`auto:true`). [Routing contract](skills/_shared/video-routing.md). A spoken cut needs a voice lane — `reference` (`astra_genai_msr`, `seedance_reference`, `fasth3_omni_reference`, `minimax_reference`, `heygen_reference` take a per-character voice sample) or `supplied` (the audio2video tools, `ltx_api_audio2video` included, animate a pinned TTS track); on any other adapter `video_plan` refuses it with `voice_lane_required`, while narration over a non-speaking picture runs anywhere. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31 because none takes a voice reference: a saved choice of one reports `migration_required`, and their existing clips stay reusable. |
 | Local video upscale | `video_upscale_catalog` / `video_upscale_start` / `video_upscale_job` | Adapter-based local Real-ESRGAN restoration or Lanczos resize, including 4K batches. Detached jobs expose progress/cancel/resume, preserve source frames and encoded audio, verify hashes and write per-clip receipts. No character settings, API calls or automatic downloads. Does not change storyboards or assemble the master; continue with produce when requested. [Setup and workflow](skills/upscale-video/SKILL.md). |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 480p–4k, **2–30s in 1-second steps** billed for what you request, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
+| Google Cloud Veo | `veo_text2video` / `veo_img2video` / `veo_reference` / `veo_extend` | Veo 3.1 Standard, Fast and Lite in us-central1. Supports native scene sound and external narration. [Model setup and examples](skills/_shared/video-routing.md#ltx-and-google-cloud-veo). |
 | Hosted video vendors | `ltx_api_img2video` / `ltx_api_audio2video` / `minimax_img2video` / `minimax_reference` / `heygen_img2video` / `heygen_reference` | One common layer (`vendor-video.ts`: one paid submit, a durable job ID, polling, download) with an adapter per vendor. Save `{engine:"ltx-api"\|"minimax"\|"heygen", model, resolution, operation}` and episodes plan with `video_plan` as usual: silent shots take the image lane, spoken shots the `reference` lane (MiniMax H3, HeyGen Video 1: the cast's panels, the start image as the last picture and the speaker's voice sample) or LTX audio-to-video (the pinned TTS track). Neither MiniMax nor HeyGen can pin a first frame beside voice samples. Keys: `LTX_API_KEY`, `MINIMAX_API_KEY`, `HEYGEN_API_KEY`. [API schemas](docs/research/2026-11-18-video-model-api-schemas/README.md) |
 | Video generation | `ltx_video_generate` | MLX Core / mlx-serve (24fps rgb8 muxed to mp4 with ffmpeg. Default 768×1280, RAM-capped at 800MB decoded RGB. Not the default path and not on the Seedance face-policy table. Pack install, request grid and measured render times: [LTX 2.5 runbook](docs/mlx-ltx-2.5.md)) |
 | Video generation | `astra_text2video` / `astra_img2video` / `astra_keyframe_video` / `astra_audio2video` / `astra_ic_lora` / `astra_video_upscale` / `astra_video_retake` | ASTRA video API (`ASTRA_VIDEO`, self-hosted LTX-2.5 — **our own box, so no per-call bill and no vendor policy**, but it renders ONE job at a time: 66–184s each plus queue, which makes it the batch lane rather than the interactive one. Seven tools over the server modes; `tier` picks generate·guided·guided_fast·guided_hq, and `astra_ic_lora` runs one reference still or clip through an IC-LoRA adapter (adapters, `guidance`, `conditioning_mask`, `skip_stage_2`, `{name, strength}` lora entries and `generateAudio` are live since the 2026-10-17 server change). The only lane with `lora` adapters (`cinemagraph` · `slow-motion`, generate only), with a keyframe mode that passes through 2–8 supplied stills at chosen frame indices, and with a retake mode that re-rolls one time span of an existing clip. `astra_video_upscale` doubles a clip through the `pixel-upscaler-x2` adapter, sizing the request from the clip and copying its soundtrack back; it is a generative re-render for sources up to about 512×896 ([upscale-video](skills/upscale-video/SKILL.md)). Length is frames (8k+1, 25–361 on every mode, the server's published ceiling); `duration` in seconds is converted to the nearest 8k+1 by the tool. `astra_video_capabilities` reads the live server's own limits; sizes sit on a 64-pixel grid with a 2,064,384-pixel ceiling, so 9:16 is **1024×1920** — 1088×1920 exceeds the area ceiling at every frame count, and 1080×1920 is off-grid. Clips carry 48kHz stereo AAC; `audio2video` carries the supplied sound re-encoded, rather than a newly generated track. Stereo (2-channel) input is required: mono is refused at upload because it fails in the engine audio encoder. With no duration, numFrames or audioMaxDuration, the client explicitly sends 121 frames (~5.04s) for compatibility because server omission metadata conflicts; `audioMaxDuration: 8` selects 185 frames (~7.71s) at 24fps. `generateAudio: false` strips the sound after generation (same GPU time). `expectLipSync: true` (on-screen speech only) measures with ffmpeg whether the picture moves with the supplied speech and re-renders with a new seed when it does not, up to `maxAttempts` (default 2); it never fails the call and leaves phoneme-level sync, the speaking person and voice identity `not_reviewed`. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
-| Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background (speech and effects rendered natively; subjects 1–2 take the speaker's pinned voice sample by default when the gateway supports it), and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Local edit/MSR references are supported; no LoRA or retake. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
-| ASTRA GenAI model-bound gateway | `astra_genai_catalog` / `astra_genai_image_generate` / `astra_genai_image_edit` / `tts_astra_genai` / `astra_genai_desktop_text2video` / `astra_genai_desktop_img2video` / `astra_genai_desktop_audio2video` / `astra_genai_desktop_extend` / `astra_genai_desktop_retake` / `astra_genai_desktop_keyframes` / `astra_genai_desktop_status` | Explicit `astra-genai-native` image, `astra-genai` speech and `astra-genai-desktop` video engines on the newer gateway (same `ASTRA_GENAI_URL` and `ASTRA_GENAI_API_KEY`; `ASTRA_GENAI_IMAGE_URL`/`ASTRA_GENAI_SPEECH_URL` with their `_API_KEY` send model-bound images or speech to another gateway). The catalog lists installed aliases and LoRAs; see `skills/_shared/astra-genai.md` (Model-bound gateway). |
+| Unified ASTRA GenAI | `astra_genai_text2video` / `astra_genai_img2video` / `astra_genai_text2img` / `astra_genai_edit` / `astra_genai_msr` / `astra_genai_audio2video` / `astra_genai_video_status` | Separate `astra-genai` engine and `ASTRA_GENAI_API_KEY` gateway token. LTX v2 text/image video, MSR with up to four subjects plus a background (speech and effects rendered natively; subjects 1–2 take the speaker's pinned voice sample by default when the gateway supports it), and Z-Image text/img2img/inpaint with optional prompt expansion. `astra_genai_audio2video` animates supplied speech: the clip is as long as the audio (up to 361 frames), mono or stereo input at a 7350–96000 Hz AAC standard rate, sent as a data URI of at most 15,000,000 base64 characters or an HTTPS URL. Distilled T2V and plain I2V accept LoRAs from the active backend catalog. I2V and A2V accept up to eight timed images including the endpoints when the gateway advertises them. Managed plans require an explicit cost reservation. [Configuration and recovery](skills/_shared/astra-genai.md). |
+| ASTRA GenAI model-bound gateway | `astra_genai_catalog` / `astra_genai_image_generate` / `astra_genai_image_edit` / `tts_astra_genai` / `astra_genai_desktop_text2video` / `astra_genai_desktop_img2video` / `astra_genai_desktop_audio2video` / `astra_genai_desktop_extend` / `astra_genai_desktop_retake` / `astra_genai_desktop_keyframes` / `astra_genai_desktop_status` | Explicit `astra-genai-native` image, `astra-genai` speech and `astra-genai-desktop` video engines on the newer gateway (same `ASTRA_GENAI_URL` and `ASTRA_GENAI_API_KEY`; `ASTRA_GENAI_IMAGE_URL`/`ASTRA_GENAI_SPEECH_URL` with their `_API_KEY` send model-bound images or speech to another gateway). Desktop can use its own `ASTRA_GENAI_DESKTOP_URL` and `ASTRA_GENAI_DESKTOP_API_KEY`. The catalog lists installed aliases and LoRAs; see `skills/_shared/astra-genai.md` (Model-bound gateway). |
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 200 files per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
 | Common speech routing | `tts_route` | Read capabilities, validate a plan, or execute with a stable request ID. Existing raw tools share model, payload, output and concurrency checks. [TTS layers and recovery](skills/_shared/tts-routing.md). |
 | Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production uses raw generators and records `not_reviewed`. |
 | Host media review | `host_review`, `acting_review`, `tts_review_acting`, `tts_review_final` | On request: prepare local media and record the executing host LLM’s actual observations; findings are evidence, not a delivery gate. No external evaluation API. Sampled frames support composition only; unsupported playback or listening stays unverified. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
 | Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
-| Character identity | `character_manage` | Creates or updates a shared character's `identity.md`: name, gender, species, age, role, summary and height are required arguments, every other field is optional, and the tts block and prose stay. Refreshes the sheets and reports the pending basics, missing face/front/back panels and an unselected voice. No paid calls. |
-| Character panels | `character_panel` | Makes one sheet panel — face close-up, headless front or back — from `identity.md`: the face from its appearance, the body panels from height, weight, relative scale, build, proportions and outfit, plus the project style and panel framing. Runs the saved image model, records `panels.json` and refreshes the sheets. |
+| Character identity | `character_manage` | Creates or updates a shared character's `identity.md`: name, gender, species, age, role, summary and height are required arguments, every other field is optional, and the tts block and prose stay. Refreshes the sheets and reports the pending basics, missing face/front/back panels, an unselected voice and a sheet whose proportions hold no head count (`missing.headCount`). No paid calls. |
+| Character panels | `character_panel` | Draws a face close-up or a headless front or rear view from `identity.md`. The body views use a fitted T-shirt and short mid-thigh shorts where practical so later shots can use the character's build and proportions. Use `wardrobe:"character"` for a sheet that needs the established costume. Runs the saved image model, records `panels.json` and refreshes the sheets. Warns `head_count_missing` when the sheet's proportions hold no head count ("7.5 heads tall", "3등신"), which `shot_image` needs to size the face panel's head against the headless body. |
 | Character voice auditions | `character_voice_audition` | On request: plan acoustic targets from character identity, compare real voice metadata, generate candidates with a stable Gemini voice baseline, and persist only the user-selected voice. |
 | Voice generation | `tts_generate` / `tts_multi_speaker` / `tts_gemini_38` / `tts_list_voices` | Gemini TTS (GEMINI_API_KEY — curated and live library voice lookup, automatic language detection, saves mono 24kHz wav). `tts_gemini_38` uses the Interactions API for turn-level style, inline vocal events, and two-speaker backchannels. |
 | Voice generation | `tts_elevenlabs_generate` / `tts_elevenlabs_dialogue` / `tts_elevenlabs_voices` | ElevenLabs (`ELEVENLABS_API_KEY`). Only `eleven_v4` is allowed for speech. Square-bracket acting tags, Stability/Similarity and timestamped output; no style/speed slider or SSML. Voice listing supports language/gender/accent filters, pagination and preview URLs. Supports /IPA/, documented 3-letter language codes, optional neighbor request IDs, PVC-as-IVC and Enterprise zero retention. Prefer ≤2,000 characters per Dialogue request; the 10,000 model ceiling is not a reliability promise. [v4 API contract](skills/_shared/elevenlabs-v4.md). Use current API pricing and save actual usage. |
@@ -878,7 +918,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Music routing | `music_catalog` / `music_plan` / `music_execute` / `music_status` | Saved model selection, native payload validation, budget/concurrency reservation, deduplication and verified 48 kHz stereo WAV. [Contract](skills/_shared/music-routing.md) |
 | Music generation | `music_generate_song` / `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Google Lyria Clip / 3.5 songs and RealTime control. `GEMINI_API_KEY` |
 | Music generation | `music_elevenlabs_generate` | Official Eleven Music v2 / v2.5; prompt or composition plan. `ELEVENLABS_API_KEY` |
-| Music generation | `suno_generate` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party V6 family, not Suno Platform. V5 `suno_generate_sound` is retired and rejected. `SUNO_API_KEY` |
+| Music generation | `suno_generate` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party V6 family, not Suno Platform. `suno_generate_sound` is refused: the provider documents no way to fetch a finished sounds task. `SUNO_API_KEY` |
 | Music generation | `mlx_music_generate` | Exact installed MLX Core music pack, local compute; default instrumental |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
 | 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
@@ -887,6 +927,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Existing subtitles | `facebook_captions` | List or add language tracks on an owned Facebook video/Reel without republishing; preserve existing locales and default language. |
 | Publish | `threads_publish` / `instagram_publish` / `facebook_publish` / `facebook_comment` / `youtube_publish` / `youtube_update` | Direct platform API calls — **exposed only for platforms with a credential file**, except `youtube_update`, which is always listed and errors without a token; it edits title/description/tags/visibility of an already-uploaded video and is the only way an upload goes public (`youtube_publish` starts `private`) |
 | Comment inbox | `sns_comment_inbox` / `sns_comment_reply` / `sns_comment_moderate` | Cross-platform normalized inbox · replies · hiding (no deletes). Inbox and replies cover all 4 platforms; hiding excludes YouTube (its API only offers held-for-review, which means something else) |
+| Story planning | `story_intensity_plan` / `story_catharsis_plan` | Read-only planning. Select pressure and intensity to get a question and escalation beats, or select a goal or named payoff pattern to get its setup, turn and visible outcome. The author fits the result to the premise, tone and format. |
 | Storyboard | `story_sequence` / `story_scene` / `story_shot` / `story_cliche` / `story_music` / `shot_characters` / `shot_dialogue` / `shot_icons` / `shot_image` / `shot_prompt` / `storyboard_read` / `storyboard_apply` / `storyboard_check` / `scenario_check` | A new board is written in order: sequences → scenes → one-sentence shot stories (`story_cliche` records the researched clichés the story uses, recommends or declines in `window.CLICHES`: applied by default on drama, comedy and romance, on other types only what the user picked), then each shot's characters (two at most, with a third cast member in view as a bystander and unnamed people as extras) → each character's lines, then each scene's music decision (`story_music`: score with a cue or none, each with its reason), then the icon-row attributes, then each shot's start (and first_last end) image composed from its sheet panels, place and props — a place whose sheet names a built set starts from that set rendered in Blender at the shot's size and angle — then its English video prompt (`story_order` refuses a layer before its parent). Inside an episode `story_sequence` starts the board, and `story_scene`/`story_shot` continue a story-first one, only once `storyboard/cast.json` names its characters, each with an existing `assets/characters/<id>/identity.md` and, unless `voiceOnly`, its face, front and back sheet panels (`cast_required` · `cast_source_missing` · `character_panel_missing`). `storyboard_read.boundaryReview` exposes every playback join as unverified editorial evidence; follow [shot boundary decisions](skills/storyboard/references/shot-boundaries.md) before images. It never merges or blocks production. The episode board as sequences → scenes → shots (`window.STRUCTURE` beside the flat `SCENES` produce reads), plus the scenario input contract. `read` returns the tree at four levels; `apply` writes or patches the board and refuses only an unreadable board or a story-order violation; `storyboard_check` runs the structure rules plus the full `check-scenes.js` contract; `scenario_check` runs S1–S12 on `candidates/` or `scenario.md` and returns the checker JSON. Local files only — the board rules live in [structure-contract.js](skills/storyboard/references/structure-contract.js), shared with the checker and approval page |
 | Episode cover | `episode_cover` | The cover and thumbnail platforms show in grids, search and channel pages ([generate-cover](skills/generate-cover/SKILL.md)). `set` records the moment (a clip or video frame, a shot's start image, or an image this episode generated), the copy and the reason in `storyboard/cover.json`; `render` makes `output/cover/` locally at $0 — `cover-9x16.jpg` or `thumbnail-16x9.jpg` (plus up to two Test & Compare variants on long-form), crop previews and `render.json` — with headless Chrome laying out code-drawn copy in a bundled font and ffmpeg cropping and encoding under each platform's byte limit; a story-first board also gets `output/video/cover.jpg`. `read` reports fresh or stale against the decision, source and template, and each platform's file. Crops, size, contrast and copy length are warnings; it refuses only unusable input (unknown shot, path outside the episode, copy no bundled font draws, a file over a platform limit). Platform crop values live in `formats.js` `cover`. |
 | Capability | `capability_status` | What this machine has configured, grouped by capability with an "N of M" count, plus the env var that would unlock each missing provider. Call it before planning anything that spends money — otherwise a missing key only surfaces when the call fails, after the plan was built around it. Reports configuration, not reachability |
@@ -981,6 +1022,9 @@ works.
 | `DATA_GO_KR_API_KEY` | datago_file_fetch · api_call | — | data.go.kr auth key (My Page on data.go.kr — beyond the key, each API needs a **per-API usage application**. Search/detail/download work without a key) |
 | `OPENAI_API_KEY` | gpt_image_* | — | OpenAI API key (platform.openai.com/api-keys — image generation) |
 | `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) | tts_generate · tts_multi_speaker · tts_gemini_38 · music_* | — | Gemini API key (aistudio.google.com/apikey — voice and music generation. ElevenLabs uses its own key) |
+| `GOOGLE_CLOUD_PROJECT` | veo_* | — | Use a project with the Vertex AI API enabled in us-central1. The server uses Application Default Credentials. For local setup, run `gcloud auth application-default login`. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | veo_* | ADC discovery | Optional path to a Google credential configuration on the server machine. A short-lived `GOOGLE_OAUTH_ACCESS_TOKEN` takes precedence when supplied. |
+| `LTX_API_KEY` | ltx_api_* | — | LTX API bearer key for hosted image-to-video and audio-to-video. |
 | `ARK_API_KEY` | seedance_* | — | BytePlus ModelArk API key (ai.byteplus.com/ark — Dreamina Seedance 2.x video. The models require **an account balance over $30 or a resource pack** to activate. The LTX lanes work without this key) |
 | `SUNO_API_KEY` | suno_* | — | sunoapi.org API key (https://sunoapi.org/api-key — third-party REST, not Gemini and not an official Suno Inc. API). Unset, `music_*(Lyria)` still works |
 | `SUNO_BASE_URL` | | `https://api.sunoapi.org` | Same-spec self-host or regional mirror. Other vendors use different auth/paths — do not point this there |
@@ -1157,6 +1201,10 @@ show front/back/face, additional images, identity and voice. Prop detail pages u
 same layout: reference images with their condition variants, identifying facts, continuity
 notes and the custody history from `propContinuity`. Episode pages use the
 same canonical review renderer; production inputs remain in `episodes/`.
+The storyboard list and the channel home use the authored episode title and display
+numbered episode names as `EP01 · Title`. Cards show the full rendered cover from
+`output/cover/` or a missing-thumbnail placeholder. Rendering a cover with
+`episode_cover` refreshes the offline library.
 `--check` detects stale/missing exports without writing. Character and storyboard
 skills refresh these views before delivery. The optional channel HTTP browser now
 opens this library; its previous API browser is at `/legacy`.
@@ -1186,7 +1234,9 @@ height), the face/front/back sheet panels and a selected voice; personality, spe
 acting, story, continuity and the other body fields are optional and may be omitted.
 `character_manage` writes the identity with the basics as required arguments, and
 `character_panel` draws each panel from that identity, so height, weight and build reach
-every image. The sheet warns about missing panels or voice, `shot_image` refuses a missing panel and the
+every image. The head count in `physical.proportions` ("7.5 heads tall") is what sizes the
+head against the body: `shot_image` states it in every shot that shows the body, since the
+face panel is a close-up and the body panels are headless. The sheet warns about missing panels or voice, `shot_image` refuses a missing panel and the
 compiler refuses a handoff without a voice for a character with lines. Follow [the character contract](skills/channel/references/character-identity.md).
 Existing sheets need explicit migration; legacy storyboards remain readable.
 
@@ -1206,6 +1256,15 @@ outputs are marked `not_reviewed`. File, voice and timing provenance remain requ
 See [the speech contract](skills/produce/references/shot-speech.md). Video models are
 replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
 routes; LTX is one adapter, not the common data model.
+
+### Stream a character live
+
+YouTube and TikTok play a moving performance of the sheet character throughout the show. Select a chest-up reference video and the character's registered voice. The MuseTalk renderer shapes the moving face to each spoken reply on Apple Silicon.
+
+Use [live-character](skills/live-character/SKILL.md) for a bounded YouTube or TikTok LIVE session.
+It animates a character's saved portrait and voice, answers chat, and writes the actual encoded
+broadcast and event receipts. YouTube supports unlisted setup, native chat and an end-to-end probe.
+TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
 
 ### Inspect existing content
 
@@ -1266,7 +1325,7 @@ episode goes cast (`storyboard/cast.json`: each character's `identity.md` and, u
 `voiceOnly`, its face, front and back panels) → story (`story_sequence` → `story_scene` → `story_shot`, the cliché decision with `story_cliche`) → each shot's characters and lines
 (`shot_characters`, with each one's expression → `shot_dialogue`) → each scene's music decision (`story_music`) → icon attributes (`shot_icons`) → props and
 backgrounds → each shot's start image, and the end image a first_last shot needs
-(`shot_image`, generate-cut-images) → video prompt (`shot_prompt`) → each shot's video
+(`shot_image`, generate-cut-images) → each scene’s opening positions and emotion (`story_scene.videoDirection`) → one request per scene
 after the user's yes (`video_plan` → `video_approve` → `video_execute`, generate-cut-videos).
 `video_approve {auto:true}` records the user's approval of every shot.
 

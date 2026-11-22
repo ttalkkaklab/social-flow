@@ -5,7 +5,7 @@
 > · recheck every 90 days, and when a vendor ships a model tier.
 
 The plugin keeps only video engines that can keep a character's voice, or that render a picture
-nobody speaks in (owner directive 2026-10-31). Veo, Gemini Omni and Seedance 1.x left the plugin
+nobody speaks in (owner directive 2026-10-31). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin
 on 2026-10-31 because none takes a voice reference.
 
 - **ASTRA GenAI** (`astra_genai_*`, `ASTRA_GENAI_API_KEY`) — LTX through the gateway:
@@ -17,6 +17,10 @@ on 2026-10-31 because none takes a voice reference.
 - **Local MLX** — `ltx_video_generate`, and `fasth3_omni_reference` (FastH3 Omni, a local
   MiniMax-style pack with a reference voice lane)
 - **ASTRA** (`astra_*`, below) and the **host** tool (§The host video tool comes first)
+
+For normal episode generation plan one scene with `video_plan {episode,sceneNo,requestId}`. Its ordered cards provide dialogue and duration. On distilled LTX the image adapter carries both the first frame and subject references. The shot recipes below also support explicit single-shot work.
+
+Google Cloud Veo 3.1 supports non-speaking scenes, native effects and external narration. [LTX and Google Cloud Veo setup](../../_shared/video-routing.md#ltx-and-google-cloud-veo).
 
 ## ASTRA — our own LTX box
 
@@ -240,11 +244,11 @@ So we don't reread the price sheet and arena rankings every time, the conclusion
 into four lines.
 
 **1. A spoken cut needs a voice lane.** Every adapter declares one, shown by `video_catalog` as
-`voice.lane` with `voice.dialogue: allowed|refused`: `reference` (`astra_genai_msr`,
+`voice.lane` with `voice.dialogue`: `reference` (`astra_genai_msr`,
 `seedance_reference`, `fasth3_omni_reference` — a pinned per-character voice sample sets the
 speaker's timbre; Seedance binds `@Image N`/`@Audio N` on 2.5 and `Image N`/`Audio N` on 2.0),
 `supplied` (`astra_audio2video`, `astra_genai_audio2video`, `astra_genai_desktop_audio2video` —
-the pinned TTS track drives the clip) or `none` (everything else). `video_plan` refuses a
+the pinned TTS track drives the clip) or `conditional_reference` (distilled GenAI I2V with subject images). Other adapters use `none` (silent picture lanes). `video_plan` refuses a
 lane-`none` adapter with `voice_lane_required` when the shot has an `on_screen` line, or when the
 model would voice lines natively (audio on in a `visual.clip` or `type:'broll'` slot). Narration
 over a non-speaking picture passes on any adapter; a `visual.clip` slot with lines sets
@@ -263,7 +267,7 @@ Once a model is saved it serves both slots.
 2.0 mini are on no public arena at all (§Quality). If you want one because it's cheap or
 feature-rich, run the same prompt on both once that episode and decide.
 
-A saved or override selection naming Veo, Omni or Seedance 1.x is refused by `video_plan`
+A saved or override selection naming Gemini Developer API Veo previews, Omni or Seedance 1.x is refused by `video_plan`
 (`video_engine_unsupported`); a `.social-flow/models.json` with such a video choice reads as
 `migration_required` with `retired:['models.video']`, and saving one is refused. Choose again
 with `project_manage`. Existing clips from those engines stay reusable through `visual.reuse`;
@@ -337,7 +341,7 @@ Reference/voice requirements cannot be dropped just to fit the cap.
 | Source contains a **live-action person** | An LTX lane (ASTRA GenAI, ASTRA). Seedance 2.x rejects face input |
 | You must **reproduce the composition** of a source picture | First/last frames (`sourceImagePath`+`lastImagePath`), not reference images. References carry look and style, not composition |
 | **Register a character once and keep calling it** | The Seedance asset library (`asset://`) |
-| **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images); MSR takes references for at most two characters plus the background |
+| **Character/product** consistency from several photos | `seedance_reference` · 2.5 (up to 30 images); MSR takes up to four subject images plus the background |
 | Transfer a **sketch/toon style** by reference | `seedance_reference` |
 | **Extend** a clip or re-roll one span | `astra_genai_desktop_extend` · `astra_genai_desktop_retake` · `astra_video_retake` |
 | A length past 15s in one call | Seedance 2.5 (4–30s); LTX lanes take frame counts ([video-duration.md](video-duration.md)) |
@@ -491,7 +495,7 @@ hand over the two or three the shot actually needs:
 data/<channel>/assets/characters/<id>/
   identity.md   # the canonical description — look, marks, expression, voice
   face.png      # face close-up — neutral, minimal shoulders, plain background. The headshot the vendor asks for
-  body.png      # the headless front panel (panels.json slot "front"): build, clothes and shoes
+  body.png      # the headless front panel (panels.json slot "front") shows the build
   costume.png   # optional wardrobe variant; baseline front/back already omit the head
   back.png      # matching headless rear mannequin (slot "back") — required for every new reference set
   panels.json   # registers the face, front and back slots and their files (character-panels.md)
@@ -501,8 +505,8 @@ data/<channel>/assets/characters/<id>/
 **Reference set: the registered face, front and back panels, in that order.** One character
 sends all three; two characters send each face, then each front (`character-panels.js`
 `canonicalReferences`, the same set on the image and video lanes). The face supplies the complete
-head; the headless front and back supply wardrobe and build, and the scene depicts a complete
-character. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
+head. The headless panels supply the build. Match the wardrobe in the opening
+picture, especially when the sheet uses fitting clothes. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
 picture.
 Keep body, back and face reference images locally. All three must be stored before
 a new character reference set is complete; optional extra images serve specific poses/details. Never build a combined sheet out of the panels — the moment two
@@ -539,8 +543,7 @@ real faces.
 
 **Engine routing** — a drawn character goes to the saved reference adapter:
 `seedance_reference` (1–30 images on 2.5, 1–9 on 2.0) or `astra_genai_msr` (one character uses
-its face close-up, headless front and headless back; at most two characters take references,
-`msr_character_limit`). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
+its face close-up, headless front and headless back; three or four use one face each). A photorealistic human face goes to an LTX lane; Seedance 2.x rejects
 real faces outright. On the image lane, the same panels go to
 the saved image adapter's edit tool as input images, same order, same reason.
 

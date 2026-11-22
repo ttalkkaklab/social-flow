@@ -5,11 +5,12 @@ const fs = require('fs'), path = require('path'), os = require('os'), crypto = r
 const cost = require('./cost-preview.js');
 const mode = require('../../storyboard/references/production-mode.js');
 const { DEFAULT_MODEL } = require('../../produce/references/seedance-route.js');
+const { hostedSelection } = require('../../_shared/hosted-video-forecast.js');
 const PRICES = path.join(__dirname, 'prices.tsv');
 const digest = value => crypto.createHash('sha256').update(value).digest('hex');
 
-function pricedRows(scenes) {
-  const rows = cost.forecastRows(cost.videoSlots(scenes));
+function pricedRows(scenes, production) {
+  const rows = cost.forecastRows(cost.videoSlots(scenes, production));
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'production-cost-'));
   try {
     const file = path.join(dir, 'quote.tsv');
@@ -39,9 +40,12 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
   const ownBox = hostVideo || astraVideo;
   const model = p.comparison?.model || DEFAULT_MODEL;
   const resolution = comparisonResolution(win);
-  const candidate = inputs.map(s => ({ type: 'points', duration: s.duration,
-    visual: { video: ownBox ? { engine: hostVideo ? 'host' : 'astra', resolution, generateAudio: false }
-      : { engine: 'seedance', model, modelReason: 'HITL comparison', realFaceInput: false, resolution, generateAudio: false } } }));
+  const candidate = inputs.map(s => {
+    const selected = hostedSelection(p, s);
+    if (selected) return { ...s, type: 'points', visual: { ...s.visual, video: { ...s.visual?.video, ...selected } } };
+    return { type: 'points', duration: s.duration, visual: { video: ownBox ? { engine: hostVideo ? 'host' : 'astra', resolution, generateAudio: false }
+      : { engine: 'seedance', model, modelReason: 'HITL comparison', realFaceInput: false, resolution, generateAudio: false } } };
+  });
   const selectedHybrid = p.comparison?.hybridShots || inputs.slice(0, 2).map((_, i) => i + 1);
   if (!Array.isArray(selectedHybrid) || selectedHybrid.length < (inputs.length ? 1 : 0) || selectedHybrid.length > 2 ||
       new Set(selectedHybrid).size !== selectedHybrid.length || selectedHybrid.some(n => !Number.isInteger(n) || n < 1 || n > inputs.length))
@@ -58,7 +62,7 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
       : key === 'hook_only' ? candidate.filter((_, i) => i === hookIndex)
       : cutIndexes.slice(0, Math.ceil(cutIndexes.length * mode.RATIOS[key])).concat(brollIndexes).map(i => candidate[i]);
     const scenes = provisional ? planned : win.SCENES;
-    const estimate = pricedRows(scenes);
+    const estimate = pricedRows(scenes, p);
     options[key] = { label: legacy ? ({full_video: '100% 이상', video_50: '50% 이상', video_30: '30% 이상', hook_only: '훅만 영상', hybrid: '혼합 제작 (기존 승인)'}[key]) : mode.MODES[key], provisional, clips: estimate.rows.length,
       ...(reusedClips ? { reusedClips } : {}),
       generatedSeconds: estimate.rows.reduce((sum, r) => sum + r.seconds, 0),
@@ -73,6 +77,11 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
     scope: 'Video API generation only; images, narration, music, editing, tax and payment fees excluded.',
     priceSource: 'skills/autoproduce/references/prices.tsv',
     vendorSource: 'https://docs.byteplus.com/docs/ModelArk/1099320', options };
+  const hostedEngines = new Set(Object.values(options).flatMap(option => option.rows.map(row => row.generation?.engine)).filter(engine => ['veo', 'ltx-api'].includes(engine)));
+  if (hostedEngines.size) {
+    result.videoProvider = hostedEngines.size === 1 ? [...hostedEngines][0] : 'mixed';
+    result.vendorSource = [...hostedEngines].map(engine => engine === 'veo' ? 'https://cloud.google.com/model-garden/pricing' : 'https://docs.ltx.io/pricing').join(' ');
+  }
   result.quoteFingerprint = digest(JSON.stringify(result));
   // Resume a pre-six-choice approval only when its original complete quote still matches.
   if (!legacy && p.renderRatioVersion === undefined && p.approval?.quoteFingerprint && p.approval.quoteFingerprint !== result.quoteFingerprint) {

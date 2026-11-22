@@ -10,6 +10,10 @@ test('Suno V6 validates native requirements and refuses retired models without s
   assert.throws(() => parse({ prompt: 'piano' }), /requires style or lyrics/);
   assert.throws(() => parse({ style: 'piano', duration: 30 }), /Custom-only/);
   assert.throws(() => parse({ style: 'piano', model: 'V5' }), /model_retired/);
+  assert.equal(parse({ style: 'piano', customMode: true, variety: 2, styleWeight: 0.6 }).variety, 2);
+  assert.throws(() => parse({ style: 'piano', variety: 2 }), /Custom-only/);
+  assert.throws(() => parse({ style: 'p'.repeat(1001) }));
+  assert.throws(() => parseMusicArgs('suno_generate_sound', { prompt: 'rain loop' }), /music_adapter_unverified/);
   assert.throws(() => parseMusicArgs('music_generate_advanced', { prompts: [{ text: 'piano' }], config: { unsupported: true } }));
 });
 test('routing tools are exposed once and do not produce duplicate ledger charges', () => {

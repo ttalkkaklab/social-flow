@@ -5,7 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -53,10 +53,9 @@ import { setupProject, png } from './workflow-fixture.mjs';
 import { manageProject } from '../dist/project.js';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
-const settings = createRequire(import.meta.url)('../../skills/_shared/model-settings.js');
 
 const dirs = [];
-const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); return d; };
+const tmp = () => { const d = mkdtempSync(join(tmpdir(), 'sb-')); dirs.push(d); setupProject(d); return d; };
 // storyboard/cast.json for these ids, each with identity.md and, unless voiceOnly, its face, front and back panels
 // under <root>/assets/characters/<id>/.
 const castFile = (dir, ids, { root = dir, voiceOnly = [] } = {}) => {
@@ -359,7 +358,7 @@ describe('story first, then characters and lines', () => {
     writeStorySequences({ path: dir, sequences });
     assert.equal(readBoard(dir).win.STORY.language, undefined);   // a board nobody named a language for reads as before
     writeStorySequences({ path: dir, language: 'ja', sequences });
-    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja' });
+    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja', audienceSoundVersion: 1 });
     const other = writeStorySequences({ path: dir, language: 'en', sequences });
     assert.equal(readBoard(dir).win.STORY.language, 'ja');
     assert.ok(other.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
@@ -417,6 +416,17 @@ describe('story first, then characters and lines', () => {
     const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
     writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
     assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
+    const direction = { openingPositions: [], emotion: 'The empty courtroom falls quiet.' };
+    writeStoryScenes(storySceneSchema.parse({path:dir,scenes:[{...scene,videoDirection:direction}]}));
+    writeStoryScenes({path:dir,scenes:[scene]});
+    assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].videoDirection,direction);
+    writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{...direction,oneTake:true}}]});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'Two people share the frame.'}]});
+    assert.throws(() => writeStoryShots({path:dir,shots:[{scene:1,summary:'A reverse.'}]}),/scene_one_take/);
+    castFile(dir,['mina','joon']);
+    writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['mina','joon']}]});
+    writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'mina',tts:'안녕'},{speaker:'joon',tts:'반가워'}]}]});
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line=>line.speaker),['mina','joon']);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
@@ -520,7 +530,7 @@ describe('music is decided scene by scene', () => {
     assert.deepEqual([first.time, first.music], ['밤', { decision: 'none', reason: '대사만 듣게 한다' }]);
   });
 
-  it('shows the channel\'s saved music direction and says when no music model is saved', () => {
+  it('shows the channel\'s saved music direction when new music is disabled', () => {
     const root = tmp(), dir = join(root, 'drafts/storyboard');
     const ready = setupProject(root);
     const note = '2026-11-08 user: music under every shot is too much; score the turns';
@@ -530,7 +540,7 @@ describe('music is decided scene by scene', () => {
     outline(dir);
     const r = writeStoryMusic({ path: dir, cues: [tension], spots: [{ scenes: [1, 2, 3], decision: 'score', cue: 'tension', reason: 'r' }] });
     assert.deepEqual(r.spotting.direction, [note]);
-    assert.ok(r.findings.some((f) => /no music model is saved \(models\.music\)/.test(f.what)));
+    assert.deepEqual(ready.config.models.music, { engine: 'none' });
   });
 });
 
@@ -856,15 +866,42 @@ describe('icon attributes come after every shot\'s characters', () => {
     rmSync(join(root, 'data/c/assets/characters/mina/face.png'));
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /character_panel_missing: mina has no face/);
   });
+  it('direct story writes wait for the target project even inside a ready parent workspace', () => {
+    const parent = tmp(), root = join(parent, 'another project');
+    const board = join(root, 'data/c/episodes/test/storyboard');
+    const write = () => writeStorySequences({ path: board, sequences: [{ id: 'opening', title: 'Opening', purpose: 'Introduce the guide' }] });
+    assert.throws(write, /project_setup_required: workspace/);
+    assert.throws(() => readFileSync(root), { code: 'ENOENT' });
+    mkdirSync(board, { recursive: true });
+    castFile(board, ['guide'], { root: join(root, 'data/c'), voiceOnly: ['guide'] });
+    assert.throws(write, /project_setup_required/);
+    const source = join(parent, 'scenes.js');
+    writeFileSync(source, 'window.SCENES = [];\n');
+    const link = join(board, 'scenes.js');
+    symlinkSync(source, link);
+    assert.throws(write, /project_setup_required/);
+    assert.throws(() => applyStoryboard({ path: link, draft: true, globals: { FORMAT: 'shorts-9x16' } }), /project_setup_required/);
+    rmSync(link);
+    manageProject({ action: 'select', workspace: root, request: 'Use another project' });
+    assert.throws(write, /models\.image/);
+    assert.throws(() => readFileSync(join(board, 'scenes.js')), { code: 'ENOENT' });
+    const ready = setupProject(root);
+    assert.equal(write().written, true);
+    const captured = JSON.parse(readFileSync(join(board, '../.work/model-settings.json')));
+    assert.equal(captured.config.workspace, ready.workspace);
+    assert.deepEqual(readBoard(board).win.PRODUCTION.modelSettings.models, captured.config.models);
+    const prior = readFileSync(join(board, 'scenes.js'));
+    rmSync(join(root, '.social-flow/models.json'));
+    assert.throws(write, /project_setup_required/);
+    assert.deepEqual(readFileSync(join(board, 'scenes.js')), prior);
+  });
   it('a story-first board inside an episode starts on the canvas and production its snapshot hands off', () => {
     const root = tmp();
-    setupProject(root);
+    const ready = setupProject(root);
+    const sns = { ...ready.config.sns, instagram: { ...ready.config.sns.instagram, enabled: true, status: 'pending' } };
+    manageProject({ action: 'update', workspace: root, expectedRevision: ready.revision, request: 'Plan Reels for this episode', settings: { sns } });
     const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
     castFile(dir, ['mina'], { root: join(root, 'data/c') });
-    // The opening reading names the windows of the platforms the snapshot enables, and only those.
-    const snapshot = join(dirname(dir), '.work/model-settings.json'), saved = JSON.parse(readFileSync(snapshot, 'utf8'));
-    saved.config.sns.instagram.enabled = true;
-    writeFileSync(snapshot, JSON.stringify(saved));
     const started = writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.match(started.board.find((l) => l.startsWith('opening (')), /^opening \(short-form · Reels: skip rate counts the first 3 s\): no plan/);
     const { win } = readBoard(dir);
@@ -884,7 +921,6 @@ describe('images and the video prompt follow the icon attributes', () => {
   const pictureBoard = () => {
     const root = tmp(), dir = join(root, 'data/c/episodes/e/storyboard'), sheet = join(root, 'data/c/assets/characters/mina');
     mkdirSync(sheet, { recursive: true }); mkdirSync(join(dir, 'places'), { recursive: true });
-    setupProject(root);
     for (const name of ['face', 'body', 'back']) writeFileSync(join(sheet, name + '.png'), png);
     writeFileSync(join(sheet, 'panels.json'), JSON.stringify({ panels: { face: { file: 'face.png' }, front: { file: 'body.png' }, back: { file: 'back.png' } } }));
     writeFileSync(join(sheet, 'identity.md'), '# mina\n');
@@ -899,6 +935,14 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: ['mina'] }] });
     writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '안녕' }] }] });
     return { root, dir };
+  };
+  const chooseEpisodeImage = (dir, image, request) => {
+    const production = readBoard(dir).win.PRODUCTION;
+    const models = production.modelSettings;
+    const changes = [...(models.overrides ?? []), { scope: 'episode', image, request }];
+    applyStoryboard({ path: dir, draft: true, globals: {
+      PRODUCTION: { ...production, modelSettings: { ...models, overrides: changes } },
+    } });
   };
   const icons = (dir) => writeShotIcons({ path: dir, shots: [
     { id: 's0001', render: { mode: 'generated_video', reason: 'r' }, size: 'ms', angle: 'eye', move: { id: 'camera.dolly-in', reason: 'r' }, frames: { mode: 'reference', reason: 'MSR' } },
@@ -938,7 +982,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: ['mina', 'ally'].map(id => ({ id, source: '../../../assets/characters/' + id + '/identity.md' })) }));
     const set = (shot) => writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'], ...shot }] });
     assert.throws(() => set({ bystanders: ['mina'] }), /shot_bystander_listed/);
-    assert.throws(() => set({ characters: ['mina', 'ally'], bystanders: ['x', 'y'] }), /character_limit/);
+    assert.throws(() => set({ characters: ['mina', 'ally', 'third'], bystanders: ['x', 'y'] }), /character_limit/);
     assert.throws(() => set({ extras: '아이들 넷' }), /image_prompt_language/);
     assert.throws(() => writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: ['ally'], bystanders: ['mina'] }] }), /shot_bystander_speaks/);
     set({ bystanders: ['ally'], extras: 'four children in orange bibs chase a ball', expression: { ally: 'arms folded, watching' } });
@@ -1171,6 +1215,13 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
   });
+  it('shot_icons names video shots it leaves without a camera move, and never refuses them', () => {
+    const { dir } = pictureBoard();
+    const unset = icons(dir).findings.filter((f) => /camera_move_unset/.test(f.what));
+    assert.deepEqual(unset.map((f) => f.what.split(' — ')[0]), ['camera_move_unset on s0002']);
+    writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'camera.static' } }] });
+    assert.equal(readBoard(dir).win.SCENES[1].visual.camera.movement, 'static');
+  });
   it('a shot_icons call with both why and view keeps both reasons', () => {
     const { dir } = pictureBoard();
     icons(dir);
@@ -1247,20 +1298,50 @@ describe('images and the video prompt follow the icon attributes', () => {
     const { root, dir } = pictureBoard();
     icons(dir);
     const board = readBoard(dir).win;
-    board.SB_DOC.characters[0].character = { physical: { appearance: { status: 'confirmed', value: 'distinctive amber eyes' } } };
+    board.SB_DOC.characters[0].character = { physical: { appearance: { status: 'confirmed', value: 'distinctive amber eyes' }, outfit: { status: 'confirmed', value: 'a long wool coat' } } };
+    const panels = join(root, 'data/c/assets/characters/mina/panels.json');
+    const manifest = JSON.parse(readFileSync(panels));
+    for (const view of ['front', 'back']) manifest.panels[view].wardrobe = 'fitting';
+    writeFileSync(panels, JSON.stringify(manifest));
     writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
     const normal = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.match(normal.prompt, /distinctive amber eyes/);
-    const current = settings.readSettings(root);
-    settings.saveSettings(root, { ...current.config.models, image: { engine: 'astra-genai-native', model: 'qwen-image-fast' } },
-      { expectedRevision: current.revision, request: 'Fixture: Qwen references' });
+    chooseEpisodeImage(dir, { engine: 'astra-genai-native', model: 'qwen-image-fast' }, 'Fixture: Qwen references');
     const qwen = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
     assert.doesNotMatch(qwen.prompt, /distinctive amber eyes/);
     assert.match(qwen.prompt, /mina's face and hair/);
+    assert.ok(qwen.warnings.some(w => w.code === 'head_count_missing'), 'a sheet without a head count is reported, never refused');
     assert.deepEqual(qwen.inputs, normal.inputs);
+    for (const request of [normal, qwen]) {
+      assert.match(request.prompt, /mina normally wears a long wool coat/);
+      assert.match(request.prompt, /Ignore the fitting clothes/);
+      assert.doesNotMatch(request.prompt, /including collar, tie and sleeve state/);
+    }
     const wire = buildNativeImageBody({ ...qwen.args, model: 'qwen-image-fast' }, true);
     assert.equal(wire.prompt, qwen.prompt);
     assert.equal(wire.size, '864x1536');
+    // A sheet can be newer than the board's cast snapshot.
+    writeFileSync(join(root, 'data/c/assets/characters/mina/identity.md'), readFileSync(new URL('../../skills/channel/references/character-identity-example.md', import.meta.url)));
+    delete board.SB_DOC.characters[0].character;
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
+    const olderBoard = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    const sheetOutfit = olderBoard.refs.find(r => r.wardrobe === 'fitting').defaultOutfit;
+    assert.ok(sheetOutfit);
+    assert.ok(olderBoard.prompt.includes('mina normally wears ' + sheetOutfit));
+  });
+  it('sizes the head against the body from the sheet head count, on the Qwen route too, wherever the crop shows a body', () => {
+    const { root, dir } = pictureBoard();
+    icons(dir);
+    const board = readBoard(dir).win;
+    board.SB_DOC.characters[0].character = { physical: { heightCm: { status: 'confirmed', value: 165 }, proportions: { status: 'confirmed', value: 'about 7.5 heads tall' } } };
+    writeFileSync(join(dir, 'scenes.js'), serializeBoard(board));
+    chooseEpisodeImage(dir, { engine: 'astra-genai-native', model: 'qwen-image-fast' }, 'Fixture: Qwen references');
+    const waist = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' });
+    assert.match(waist.prompt, /mina is 7\.5 heads tall: .*22 cm of the 165 cm standing height/);
+    assert.equal(waist.warnings.some(w => w.code === 'head_count_missing'), false);
+    // A close-up shows no body to size the head against.
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu' }] });
+    assert.doesNotMatch(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina waits.' }).prompt, /heads tall/);
   });
   it('sends canonical framing at delivery aspect and retains stale evidence across targeted edits', () => {
     const { root, dir } = pictureBoard();
@@ -1313,9 +1394,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     applyStoryboard({ path: dir, globals: { FORMAT: 'youtube-long-16x9' } });
     assert.equal(status().status, 'stale');
     assert.equal(shotImageRequest(args).args.size, '1536x864');
-    const current = settings.readSettings(root);
-    settings.saveSettings(root, { ...current.config.models, image: { engine: 'gpt-image', model: 'gpt-image-1.5' } },
-      { expectedRevision: current.revision, request: 'Fixture: fixed size model' });
+    chooseEpisodeImage(dir, { engine: 'gpt-image', model: 'gpt-image-1.5' }, 'Fixture: fixed size model');
     const fixed = shotImageRequest(args);
     assert.equal(fixed.args.size, '1536x1024');
     assert.ok(fixed.warnings.some(f => /image_aspect_mismatch/.test(f.what)));
@@ -1388,15 +1467,12 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(shot.visual.references.map((r) => [r.role, r.use]), [['character', 'both'], ['character', 'both'], ['character', 'both'], ['background', 'image']]);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'end', prompt: 'p' }), /story_order.*first_last/);
     assert.equal(make(dir, 's0001').requestId, 's0001-start-v2');
-    settings.saveSettings(root, { image: { engine: 'astra-genai', model: 'z-image-turbo' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: a one-picture image model' });
+    chooseEpisodeImage(dir, { engine: 'astra-genai', model: 'z-image-turbo' }, 'Fixture: a one-picture image model');
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }), /image_references_unsupported/);
-    settings.saveSettings(root, { image: { engine: 'mlx', model: 'FLUX.2-klein-4B' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with three references' });
+    chooseEpisodeImage(dir, { engine: 'mlx', model: 'FLUX.2-klein-4B' }, 'Fixture: an MLX edit pack with three references');
     assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room' }).inputs.length, 4);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }), /image_references_unsupported.*takes 4/);
-    settings.saveSettings(root, { image: { engine: 'mlx', model: 'Qwen-Image-2.1' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: an MLX edit pack with nine references' });
+    chooseEpisodeImage(dir, { engine: 'mlx', model: 'Qwen-Image-2.1' }, 'Fixture: an MLX edit pack with nine references');
     assert.equal(shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p', location: 'room', props: ['key'] }).inputs.length, 5);
     writeShotIcons({ path: dir, shots: [{ id: 's0002', render: { mode: 'motion_html', reason: 'a diagram' } }] });
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'start', prompt: 'p' }), /shot_image: s0002 is a motion_html cut/);
@@ -1458,7 +1534,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     const board = readBoard(dir), { win } = board;
     const watch = { id: 'watch', name: '시계', tracking: 'continuity', description: 'a silver pocket watch', appearanceVersion: 'v2', references: [
       { path: 'places/key.png', version: 'v1' }, { path: 'places/watch-cracked.png', version: 'v2', condition: 'cracked' }, { path: 'places/watch-intact.png', version: 'v2', condition: 'intact' }] };
-    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지' }, { id: 'cup', references: [{ path: 'places/key.png', version: 'v1', condition: 'full' }] }];
+    const props = [watch, { id: 'key', imageUrl: 'places/key.png' }, { id: 'note', description: '접힌 쪽지', research: { sources: [{ url: 'https://example.test/note' }], observed: 'a folded lined page' } },
+      { id: 'cup', references: [{ path: 'places/key.png', version: 'v1', condition: 'full' }] }];
     const continuity = { version: 1, timelineId: 'main', initial: [{ propId: 'watch', at: { day: 1, order: 0 }, state: { ownerId: 'mina', holderId: 'mina', location: 'left hand', condition: 'intact' } }],
       events: [{ id: 'drop', propId: 'watch', kind: 'damage', at: { day: 1, order: 2 }, from: { condition: 'intact' }, to: { condition: 'cracked' }, shotIds: ['s0002'],
         reason: 'Mina drops it', recordedAt: '2026-11-02T00:00:00Z', recordedBy: 'author' }] };
@@ -1472,7 +1549,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const first = shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' });
     assert.deepEqual(first.refs.filter((r) => r.role === 'prop').map((r) => [r.id, r.path]), [['s0001-prop-cup', 'places/key.png']]);
     assert.match(first.prompt, /Also show the note prop\./);
-    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ["the note prop's", 'the note prop']);
+    assert.deepEqual(first.warnings.map((w) => w.what.split(' ').slice(0, 3).join(' ')).filter((w) => /prop/.test(w)), ["the note prop's", 'the note prop', 'prop_research_missing: cup goes']);   // the hidden key is not drawn, so its missing look-up is not this frame's
     // The opening holds the intact watch of the current version; the closing, after the drop, the cracked one.
     const start = make(dir, 's0002', 'start', { location: 'room' });
     const prop = (request) => request.refs.find((r) => r.role === 'prop');
@@ -1511,12 +1588,14 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
     assert.match(msr, /Mina turns to the door\. Audio: no music\./);
     assert.match(msr, /Keep the entire video image text-free/);
-    writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', speakerBindings: [
+    writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', openingPositions: [{ character: 'mina', images: [1], position: 'by the door on the left' }], speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
     const bound = readBoard(dir).win.SCENES[0].visual.video;
     assert.deepEqual(bound.promptSource, { action: 'Mina turns to the door.' });
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
+    assert.equal(bound.openingPositions[0].position, 'by the door on the left');
+    assert.equal(bound.openingImageSha256, bound.speakerBindingImageSha256);
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
     const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
     assert.match(framed, /^Start from the given first frame\. Mina looks up\./);
@@ -1565,8 +1644,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=gray:s=16x16', '-frames:v', '1', join(dir, 'places/yard.jpg')]);
     const doc = readBoard(dir).win.SB_DOC;
     applyStoryboard({ path: dir, draft: true, globals: { SB_DOC: { ...doc, locations: [...doc.locations, { id: 'yard', name: '마당', imageUrl: 'places/yard.jpg' }] } } });
-    settings.saveSettings(root, { image: { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }, video: { engine: 'seedance', model: 'dreamina-seedance-2-0-260128', resolution: '720p' }, speech: { engine: 'none' } },
-      { expectedRevision: settings.readSettings(root).revision, request: 'Fixture: GPT Image' });
+    chooseEpisodeImage(dir, { engine: 'gpt-image', model: 'gpt-image-2', quality: 'low' }, 'Fixture: GPT Image');
     const ask = () => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'Mina in the yard.', location: 'yard' });
     const path = process.env.PATH;
     process.env.PATH = '';
@@ -1915,4 +1993,205 @@ describe('edit impact and uninterrupted scene evidence', () => {
     assert.equal(timed.durationSeconds, 1.51);
     assert.equal(timed.storedExcessSeconds, 2.49);
   });
+});
+
+it('keeps scene sound decisions through story and structure writes without marking old boards', () => {
+  const dir = tmp(), sequences = [{ id: 'q1', title: 'The visit', purpose: 'Find the letter' }];
+  const scenes = [1, 2].map(no => ({ ...scene(no), sequence: 'q1', summary: 'A hand reaches for the envelope.' }));
+  const use = { decision: 'use', reason: 'A sustained tone carries the suspicion.' };
+  const none = { decision: 'none', reason: 'Her answer lands in the room tone.' };
+  const read = () => readStoryboard({ path: dir, level: 'outline', includeTechniques: false }).audienceSpotting;
+  writeStorySequences({ path: dir, sequences });
+  const added = writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [scenes[0], { ...scenes[1], audienceSound: none }] }));
+  assert.equal(added.written, true);
+  assert.deepEqual(read().undecided, [1]);
+  assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes.map(s => s.audienceSound), [{ decision: 'undecided' }, none]);
+  assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scenes[0], audienceSound: { decision: 'use' } }] }).success, false);
+  writeStoryScenes({ path: dir, scenes: [{ ...scenes[0], audienceSound: use }] });
+  const pending = writeStoryScenes({ path: dir, scenes });
+  assert.ok(pending.board.some(line => line.includes('chosen but no cue')));
+  assert.deepEqual(read().needsCue, [1]);
+  const stripped = readBoard(dir).win.STRUCTURE;
+  stripped.scenes = stripped.scenes.map(({ audienceSound, ...rest }) => rest);
+  applyStoryboard({ path: dir, draft: true, structure: stripped });
+  assert.deepEqual(read().scenes.map(s => s.reason), [use.reason, none.reason]);
+
+  const old = tmp(), legacy = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: board() };
+  writeFileSync(join(old, 'scenes.js'), serializeBoard(legacy));
+  const update = applyStoryboard({ path: old, scenes: [scene(1, { time: 'night' })] });
+  assert.equal(update.written, true);
+  assert.equal(readBoard(old).win.STORY, undefined);
+  assert.equal(readBoard(old).win.STRUCTURE.scenes[0].audienceSound, undefined);
+  const report = readStoryboard({ path: old, level: 'outline', includeTechniques: false }).audienceSpotting;
+  assert.deepEqual(report.undecided, []);
+  assert.deepEqual(report.scenes.map(s => s.decision), ['unrecorded', 'unrecorded']);
+});
+
+it('round-trips perspective, shift and exit only while the scene uses audience sound', () => {
+  const dir = tmp(), story = { ...scene(1), sequence: 'q1', summary: 'She recognises the handwriting.' };
+  const use = { decision: 'use', reason: 'Share her growing suspicion.', perspective: 'The reader of the letter',
+    shift: 'Room tone thins as she reads her own name.', exit: 'The envelope slips from her hand.' };
+  const save = audienceSound => writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...story, audienceSound }] }));
+  const apply = audienceSound => applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, scenes: [scene(1, { summary: story.summary, audienceSound })] }));
+  const stored = () => readBoard(dir).win.STRUCTURE.scenes[0].audienceSound;
+  const spotted = level => readStoryboard({ path: dir, level, includeTechniques: false }).audienceSpotting.scenes[0];
+  writeFileSync(join(dir, 'scenes.js'), serializeBoard({ STRUCTURE: structure([scene(1), scene(2, { summary: 'She lays the letter down.' })]),
+    SCENES: board().map(shot => ({ ...shot, visual: { character: 'reader' }, narration: [], summary: 'She reads the letter.' })) }));
+  assert.equal(save({ ...use, perspective: '  ' + use.perspective + '  ' }).written, true);
+  assert.deepEqual(stored(), use);
+  assert.equal(apply().written, true);
+  for (const level of ['outline', 'shots', 'full'])
+    assert.deepEqual(spotted(level), { no: 1, ...use, cues: [], needsCue: true });
+
+  const none = { decision: 'none', reason: 'Leave the pause after the line clear.' };
+  for (const tool of ['story_scene', 'storyboard_apply']) {
+    const schema = TOOLS.find(t => t.name === tool).inputSchema.properties.scenes.items.properties.audienceSound;
+    const branch = schema.anyOf.find(option => option.properties.decision.const === 'use');
+    for (const field of ['perspective', 'shift', 'exit']) assert.equal(branch.properties[field].type, 'string');
+  }
+  assert.throws(() => save({ ...use, shift: '  ' }));
+  assert.throws(() => apply({ ...none, exit: 'Old cue' }));
+  assert.throws(() => save({ decision: 'undecided', perspective: 'Old point of view' }));
+  assert.deepEqual(stored(), use);
+  assert.equal(apply(none).written, true);
+  assert.deepEqual(stored(), none);
+  assert.deepEqual(spotted('outline'), { no: 1, ...none, cues: [], needsCue: false });
+
+  // A replacement use plan may supply just one of the three notes.
+  const newPlan = { decision: 'use', reason: use.reason, shift: use.shift };
+  assert.equal(apply(newPlan).written, true);
+  assert.equal(save(undefined).written, true);
+  assert.deepEqual(stored(), newPlan);
+  assert.deepEqual(spotted('outline'), { no: 1, ...newPlan, cues: [], needsCue: true });
+});
+
+it('adds music to one legacy event while an earlier catalog cue stays placed over the original soundtrack', () => {
+  const episode = tmp(), dir = join(episode, 'storyboard'), work = join(episode, '.work');
+  const catalog = join(episode, 'assets/audio/sfx');
+  mkdirSync(dir); mkdirSync(catalog, { recursive: true });
+  writeFileSync(join(catalog, 'hum.wav'), 'old catalog hum');
+  const native = { id: 'hinge', sfx: 'hinge', delivery: 'native', trigger: 'door opens', description: 'a squeak' };
+  const old = { id: 'prior', sfx: 'hum', delivery: 'post', trigger: 'door closes', description: 'air hiss',
+    audience: { intent: 'she feels alone' }, atSeconds: 1 };
+  const shots = board().map((s, i) => ({ ...s, id: 's000' + (i + 1) }));
+  shots[0].sound = { audioSource: 'video', effects: [native, old] };
+  const legacy = { STRUCTURE: structure([scene(1), scene(2)]), SCENES: shots };
+  const { boardClock } = createRequire(import.meta.url)('../../skills/storyboard/references/audience-effects.js');
+  old.audience.timingBasis = boardClock(legacy, dir).basis(shots[0].id, old);
+  writeFileSync(join(dir, 'scenes.js'), serializeBoard(legacy));
+  const apply = extra => applyStoryboard(storyboardApplySchema.parse({ path: dir, expectedSha256: readBoard(dir).sha256, ...extra }));
+  const read = () => readStoryboard(storyboardReadSchema.parse({ path: dir, level: 'shots', includeTechniques: false })).audienceEffects;
+  const plan = { op: 'plan', id: 'recognition', shotId: shots[0].id, sfx: 'hum', source: 'music',
+    description: 'low rising drone', trigger: 'a second name comes into view', intent: 'share her suspicion' };
+  assert.equal(apply({ scenes: [scene(1, { audienceSound: { decision: 'use', reason: 'She recognises the signature.' } })],
+    audienceEffects: [plan] }).written, true);
+  const previewFile = join(dir, 'audience-review-data.js');
+  assert.throws(() => readFileSync(previewFile), { code: 'ENOENT' });
+  writeFileSync(previewFile, '// Previously exported board.');
+  const preview = () => createRequire(import.meta.url)('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(previewFile, 'utf8'));
+  let [prior, added] = read();
+  assert.deepEqual([prior.status, prior.source.kind, added.status, added.source.kind], ['placed', 'catalog', 'planned', 'music']);
+  assert.equal(added.source.prompt, plan.description);
+  mkdirSync(join(work, 'music/audience'), { recursive: true });
+  execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=frequency=180:duration=0.5', added.source.path]);
+  const key = { shotId: plan.shotId, id: plan.id };
+  const place = { op: 'place', ...key, atSeconds: 1.5, timingBasis: read()[1].currentTimingBasis };
+  assert.throws(() => apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .4 }] }), /entrance fade/);
+  apply({ audienceEffects: [{ ...place, sourceStartSeconds: .25, fadeInSeconds: .12 }] });
+  const placedPreview = preview();
+  assert.equal(placedPreview.AUDIENCE_CUES.find(c => c.id === plan.id).status, 'placed');
+  assert.ok(Object.values(placedPreview.AUDIENCE_PREVIEWS).some(scene => scene.file && scene.entries.some(c => c.id === plan.id)));
+  assert.equal(placedPreview.AUDIENCE_PREVIEW_STAMP, createRequire(import.meta.url)('../../skills/storyboard/references/audience-spotting.js').previewStamp(readBoard(dir).win));
+  apply({ audienceEffects: [place] });
+  assert.equal(read()[1].sourceStartSeconds, .25);
+  assert.equal(read()[1].fadeInSeconds, .12);
+  const compiler = createRequire(import.meta.url).resolve('../../skills/produce/references/compile-sound-plan.js');
+  execFileSync(process.execPath, [compiler, join(dir, 'scenes.js'), work, episode], { stdio: 'pipe' });
+  const spans = JSON.parse(readFileSync(join(work, 'sfx-spans.json'))).spans;
+  assert.deepEqual(spans.map(s => [s.id, s.assetPath]), [[old.id, prior.source.path], [plan.id, added.source.path]]);
+  assert.equal(spans[1].sourceStartSeconds, .25);
+  assert.equal(spans[1].fadeInSeconds, .12);
+  apply({ audienceEffects: [{ ...place, sourceStartSeconds: null, fadeInSeconds: null }] });
+  assert.equal(read()[1].sourceStartSeconds, undefined);
+  assert.equal(read()[1].fadeInSeconds, undefined);
+  const result = readBoard(dir).win;
+  assert.equal(result.STORY, undefined);
+  assert.deepEqual(result.SCENES[0].sound.effects.slice(0, 2), [native, old]);
+  assert.equal(result.SCENES[0].sound.audioSource, 'video');
+  assert.equal(result.SCENES[0].sound.effects[2].audience.source, 'music');
+  apply({ audienceEffects: [{ op: 'plan', ...key, intent: 'recognition' }] });
+  assert.equal(read()[1].status, 'placed');
+  apply({ audienceEffects: [{ op: 'plan', ...key, source: null }] });
+  [prior, added] = read();
+  assert.deepEqual([prior.status, added.status, added.source.kind], ['placed', 'stale', 'catalog']);
+});
+
+it('plans, retimes and removes only the audience event; take bytes and end shots bind the placement', () => {
+  const dir = tmp(), shots = board();
+  shots[0].visual = {video:{clip:'selected.mp4'}};
+  shots[0].sound = {audioSource:'video',drop:true,effects:[{id:'door',sfx:'door'}]};
+  writeFileSync(join(dir,'selected.mp4'),'take 1');
+  applyStoryboard(storyboardApplySchema.parse({path:dir,set:{structure:structure([scene(1),scene(2, { audienceSound: { decision: 'none', reason: 'An unscored reply' } })]),shots}}));
+  assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].audienceSound, {decision:'undecided'});
+  const read = (extra = {}) => readStoryboard(storyboardReadSchema.parse({path:dir,includeTechniques:false,...extra}));
+  const apply = (extra) => applyStoryboard(storyboardApplySchema.parse({path:dir,expectedSha256:readBoard(dir).sha256,...extra}));
+  const source=readFileSync(new URL('../../skills/storyboard/references/audience-sound/comedy.md',import.meta.url),'utf8');
+  const example=source.split('\n').find(line=>line.startsWith('| 063 |'));
+  assert.match(example,/실수/);
+  const key = {shotId:'s0001',id:'late'}, plan = {...key,op:'plan',sfx:'bend',intent:'embarrassment',trigger:'smile falls',description:'dry descending pluck',caseId:'063'};
+  const raw = {...shots[0],sound:{effects:[{id:'late',audience:{intent:plan.intent},delivery:'auto'}]}};
+  assert.equal(shotSchema.parse(raw).sound.effects[0].delivery,'post');
+  raw.sound.effects[0].delivery='input';assert.throws(()=>shotSchema.parse(raw),/audience_delivery_conflict/);
+  const data = {sfxEntries:{bend:{asset:'bend'}},audienceEffects:[plan]};
+  const initial = readBoard(dir).sha256;
+  assert.equal(apply({...data,dryRun:true}).written,false);
+  assert.equal(readBoard(dir).sha256,initial);
+  assert.equal(apply(data).written,true);
+  assert.deepEqual(apply(data).changed,[]);
+  assert.equal(apply(data).written,false);
+  assert.throws(() => apply({...data,expectedSha256:initial}),/head_moved/);
+  assert.equal(read().audienceEffects[0].status,'planned');
+  const row=read({audienceEndFor:{...key,endShotId:'s0003'}}).audienceEffects[0];
+  const placement = {...key,op:'place',atSeconds:1.4,timingBasis:row.proposedTimingBasis,end:{shotId:'s0003',atSeconds:1},fadeOutSeconds:0.2};
+  apply({audienceEffects:[placement]});
+  assert.equal(read().audienceEffects[0].status,'placed');
+  assert.deepEqual(read().audienceSpotting.conflicts, [2]);
+  assert.equal(read().audienceSpotting.scenes[1].cues[0].status, 'placed');
+  assert.equal(read({level:'outline'}).audienceSpotting.scenes[1].cues[0].status, 'timing_unchecked');
+  apply({audienceEffects:[{...placement, end:{shotId:'s0003',atSeconds:0}}]});
+  assert.deepEqual(read().audienceSpotting.conflicts, []);
+  apply({audienceEffects:[placement]});
+  assert.equal(apply({audienceEffects:[placement]}).written,false);
+  const placed=readBoard(dir).win;
+  const timing=createRequire(import.meta.url)('../../skills/storyboard/references/audience-effects.js');
+  // The mixer derives the outgoing handle from the next incoming transition length.
+  placed.SCENES[1].edit={transitionSeconds:.48};
+  assert.equal(timing.read(placed,dir)[0].status,'stale');
+  writeFileSync(join(dir,'selected.mp4'),'take 2');
+  assert.equal(read().audienceEffects[0].status,'stale');
+  assert.throws(() => apply({audienceEffects:[placement]}),/audience_timing_stale/);
+  const fresh = read({audienceEndFor:{...key,endShotId:null}}).audienceEffects[0];
+  apply({audienceEffects:[{...placement,atSeconds:1.6,end:null,fadeOutSeconds:null,timingBasis:fresh.proposedTimingBasis}]});
+  assert.equal(read().audienceEffects[0].atSeconds,1.6);
+  const before = readBoard(dir).sha256;
+  assert.throws(() => apply({audienceEffects:[{...key,op:'remove'},{...key,id:'door',op:'remove'}]}),/audience_id_conflict/);
+  assert.equal(readBoard(dir).sha256,before);
+  assert.throws(() => apply({sfxEntries:{bend:{asset:'other'}}}),/audience_id_conflict/);
+  apply({audienceEffects:[{...key,op:'remove'}]});
+  assert.equal(apply({audienceEffects:[{...key,op:'remove'}]}).written,false);
+  assert.deepEqual(readBoard(dir).win.SCENES[0].sound,shots[0].sound);
+});
+
+it('ships 120 distinct audience situations, ten per linked category, with source definitions', () => {
+  const dir = new URL('../../skills/storyboard/references/audience-sound/',import.meta.url);
+  const index=readFileSync(new URL('index.md',dir),'utf8');
+  const files=[...index.matchAll(/\]\(([a-z]+\.md)\)/g)].map(m=>m[1]);
+  assert.equal(new Set(files).size,12);
+  const all=files.flatMap(name=>{
+    const text=readFileSync(new URL(name,dir),'utf8');
+    for(const [,source] of text.matchAll(/\]\[([a-z]+)\]/g)) assert.ok(text.includes('['+source+']: https://'));
+    const ids=[...text.matchAll(/^\| (\d{3}) \|/gm)].map(m=>Number(m[1]));
+    assert.equal(ids.length,10);return ids;
+  });
+  assert.deepEqual(all.sort((a,b)=>a-b),Array.from({length:120},(_,i)=>i+1));
 });

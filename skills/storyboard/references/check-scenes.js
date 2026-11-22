@@ -47,7 +47,7 @@ const FORMAT_RESOLVE = path.resolve(SELF_DIR, '..', '..', 'platform-guide', 'ref
    checker and the assembler can never disagree about what a seedance prompt may say. */
 const PROMPT = require(path.join(SELF_DIR, 'assemble-bg-prompt.js'));
 const { scenePlan } = require('../../produce/references/seedance-route.js');
-const { mixFindings, musicEnvelopeFindings } = require('../../produce/references/sound-mix-contract.js');
+const { mixFindings, musicEnvelopeFindings, hasClipSound } = require('../../produce/references/sound-mix-contract.js');
 const { timelineFindings } = require('../../produce/references/music-timeline.js');
 const { assemble: assembleSpatialPrompt } = require('./spatial-prompts.js');
 const { APPEARANCE_WORDS } = require('./cut-treatments.js');
@@ -214,10 +214,9 @@ function frontmatter(file) {
  * generation is produce's.
  */
 /*
- * The visual.audio sentence, read for the four ways it fights the mix (scenes-schema §clip audio):
+ * The visual.audio sentence, read for ways it fights the mix (scenes-schema §clip audio):
  * it asks the clip for music (the bed is the builder's), it puts a spoken line in a clip that is
- * not a quote (the TTS is already speaking there), it names the same sound sound.sfx lays on the
- * cut, or on a b-roll — the one slot whose clip audio survives the build — it never says what
+ * not a quote (the TTS is already speaking there), or on a b-roll it never says what
  * isn't there. Craft findings, so the caller files them as warnings.
  */
 function audioPromptFindings(scene, audio) {
@@ -240,10 +239,6 @@ function audioPromptFindings(scene, audio) {
     out.push('visual.audio puts a spoken line in the clip — a clip with speech is a quote shot; under narration it collides with the TTS');
   if (scene.type === 'broll' && !/\bno\s+(music|speech|voice|dialogue)\b/i.test(text))
     out.push('visual.audio on a b-roll never says what isn\'t there — its clip audio survives the build; "no music, no speech" is the established wording');
-  const sfx = scene.sound && scene.sound.sfx ? String(scene.sound.sfx) : '';
-  const family = sfx.split('-')[0];
-  if (family.length >= 3 && new RegExp('\\b' + family + '(?:es|s|ing)?\\b', 'i').test(text))
-    out.push(`visual.audio already asks the clip for the ${family} that sound.sfx "${sfx}" lays on the cut — one source per sound`);
   return out;
 }
 
@@ -441,8 +436,8 @@ function motionKind(scene) {
 }
 
 /** The planned route (scenes-schema §clip prompt) — `engine` overrides the default, seedance
-    (Veo left on 2026-10-31: no voice reference). The same routing as the check strip's engineOf. */
-const ENGINES = ['seedance', 'host', 'astra', 'astra-genai', 'astra-genai-desktop', 'mlx', 'ltx-api', 'minimax', 'heygen'];
+    for legacy boards. The same routing as the check strip's engineOf. */
+const { VIDEO_ENGINES: ENGINES } = require('../../_shared/model-settings.js');
 function engineOf(scene, win, snapshotVideo) {
   const v = (scene && scene.visual) || {};
   const named = (v.video && v.video.engine) || (v.clip && v.clip.engine) || v.engine;
@@ -522,16 +517,14 @@ function perShotLookFindings(win, { bad, machine, warn }) {
   const optIn = production.cast !== undefined || scenes.some((scene) => scene.shot?.cutType !== undefined);
   const own = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
-  // A shot references at most two principal characters (user directive 2026-10-31): MSR conditions
-  // two characters well, and anyone else on screen is an unreferenced extra the model draws.
   scenes.forEach((scene, index) => {
     const ids = castIds(scene.visual?.character);
-    if (ids.length > 2)
-      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); keep two as characters, a third of the cast as a bystander (shot_characters bystanders) and anyone else in extras`);
-    // A bystander is a cast member seen without a line or a video reference (user directive 2026-11-17): three of the cast at most.
+    if (ids.length > 4)
+      bad(`shot ${index + 1}`, `[character-limit] visual.character lists ${ids.length} principal characters (${ids.join(', ')}); use up to four subject images`);
+    // A bystander is a cast member seen without a line or a video reference (user directive 2026-11-17): four of the cast at most.
     const seen = Array.isArray(scene.visual?.bystanders) ? scene.visual.bystanders : [];
-    if (seen.some((id) => ids.includes(id)) || ids.length <= 2 && ids.length + seen.length > 3)
-      bad(`shot ${index + 1}`, `[character-limit] visual.bystanders (${seen.join(', ')}) with ${ids.length} character(s): list each person once, three of the cast at most`);
+    if (seen.some((id) => ids.includes(id)) || ids.length + seen.length > 4)
+      bad(`shot ${index + 1}`, `[character-limit] visual.bystanders (${seen.join(', ')}) with ${ids.length} character(s): list each person once, four of the cast at most`);
   });
 
   if (optIn) {
@@ -1425,26 +1418,7 @@ function check(win, fmt, opts) {
         bad(where, `sound.cue "${s.sound.cue}" is not in window.MUSIC — the bed stays where it was`);
     }
 
-    // An effect that names nothing has no file — the builder stops at sfx.tsv with "sfx file
-    // missing" after the narration and stills are already paid for. With window.SFX the id is
-    // a key there (produce generates or fetches it); without one it is a channel catalog id,
-    // checked against the files once the channel is known (main passes opts.channelDir).
-    if (s.sound && s.sound.sfx) {
-      const id = String(s.sound.sfx);
-      if (s.type === 'broll' || s.type === 'outro')
-        bad(where, `sound.sfx on a ${s.type} — not a card; a broll plays its own sound and the outro is spliced after the build`);
-      const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
-      if (book) {
-        if (!Object.prototype.hasOwnProperty.call(book, id))
-          bad(where, `sound.sfx "${id}" is not in window.SFX — the builder has no file to place`);
-      } else if (opts && opts.channelDir && !sfxAssetExists(opts.channelDir, id)) {
-        machine(where, `sound.sfx "${id}" is not in the channel catalog (assets/audio/sfx/${id}.wav) ` +
-                       'and there is no window.SFX entry to generate it from (scenes-schema §sound effects)');
-      }
-    }
-
-    // Timed effects extend the legacy one-effect-at-the-cut shorthand. Files stay behind logical
-    // ids; compile-sound-plan.js is the one place that turns those ids into catalog paths.
+    // The compiler resolves catalog paths for audience cues. Scene sounds use the clip soundtrack.
     if (s.sound && s.sound.effects !== undefined) {
       const effects = s.sound.effects;
       if (!Array.isArray(effects)) bad(where, 'sound.effects is an array of { sfx, atSeconds?, intensity?, separationLu? }');
@@ -1452,14 +1426,20 @@ function check(win, fmt, opts) {
         const at = `${where} sound.effects[${ei}]`;
         if (!effect || typeof effect !== 'object' || Array.isArray(effect)) { bad(at, 'an effect is { sfx, atSeconds?, intensity?, separationLu? }'); return; }
         if (effect.delivery !== undefined && !['auto', 'native', 'input', 'post'].includes(effect.delivery)) bad(at, 'delivery is auto | native | input | post');
-        if (['auto', 'native', 'input'].includes(effect.delivery)) {
-          if (!effect.description || !effect.trigger) bad(at, 'described effects need description and trigger');
-          if (effect.delivery !== 'auto' && s.sound.audioSource !== 'video') bad(at, 'native/input effects need sound.audioSource=video');
+        if (effect.audience) {
+          if (!effect.id || !effect.audience.intent || !effect.trigger || !effect.description) bad(at, 'audience effect needs id, intent, trigger and description');
+          if (['native','input'].includes(effect.delivery)) bad(at, 'audience_delivery_conflict: audience effects belong in post');
+        }
+        if (!effect.audience) {
+          if (['auto', 'native', 'input'].includes(effect.delivery)) {
+            if (!effect.description || !effect.trigger) bad(at, 'described effects need description and trigger');
+            if (effect.delivery !== 'auto' && s.sound.audioSource !== 'video') bad(at, 'native/input effects need sound.audioSource=video');
+          }
           return;
         }
         const id = typeof effect.sfx === 'string' ? effect.sfx.trim() : '';
         if (!id) bad(at, 'has no sfx');
-        else {
+        else if (!(effect.audience && (effect.audience.source === 'music' || win.STORY?.audienceSoundVersion === 1))) {
           const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
           if (book && !Object.prototype.hasOwnProperty.call(book, id))
             bad(at, `sfx "${id}" is not in window.SFX — the builder has no file to place`);
@@ -1515,7 +1495,7 @@ function check(win, fmt, opts) {
       const stops = a === null || a === '-' || a === 'none';
       if (s.type === 'broll' || s.type === 'outro')
         bad(where, `sound.ambience on a ${s.type} — not a card; the room tone runs across cards only`);
-      else if (!stops) {
+      else if (!stops && !hasClipSound(s)) {
         const id = String(a);
         const book = win.SFX && typeof win.SFX === 'object' && !Array.isArray(win.SFX) ? win.SFX : null;
         if (book) {
@@ -1563,13 +1543,9 @@ function check(win, fmt, opts) {
   // machine, and past one per ~10 s they read as decoration (scenes-schema §sound effects).
   {
     const cards = scenes.filter((s) => s.type !== 'broll' && s.type !== 'outro');
-    cards.forEach((s, i) => {
-      if (i > 0 && s.sound && s.sound.sfx && cards[i - 1].sound && cards[i - 1].sound.sfx)
-        warn('shot ' + (scenes.indexOf(s) + 1), `sound.sfx on this card and the one before it — effects on adjacent cuts tick; keep the one on the bigger change`);
-    });
     const total = cards.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
-    const n = cards.reduce((count, s) => count + (s.sound && s.sound.sfx ? 1 : 0) +
-      (s.sound && Array.isArray(s.sound.effects) ? s.sound.effects.length : 0), 0);
+    const n = cards.reduce((count, s) => count +
+      (Array.isArray(s.sound?.effects) ? s.sound.effects.filter(effect => effect?.audience).length : 0), 0);
     if (total > 0 && n > Math.ceil(total / 10))
       warn('sound', `${n} effects over ${total}s of cards — past one per 10 s they read as decoration; keep the ones on the cuts that changed most`);
   }
@@ -2512,9 +2488,9 @@ function selftest() {
 
   // sound effects
   const withSfx = (base, id) => Object.assign({}, base, { sound: { sfx: id } });
-  ok('an effect naming nothing in window.SFX is a violation',
-     has(bads(run([cover, withSfx(goodShot, 'whoosh'), ctaShot], { SFX: { hit: { prompt: 'low hit' } } })),
-         /not in window\.SFX/));
+  ok('legacy scene effects do not require a catalog asset',
+     !has(bads(run([cover, { ...goodShot, sound: { sfx: 'whoosh', effects: [{ sfx: 'door', delivery: 'post' }] } },
+       ctaShot], { SFX: {} })), /not in window\.SFX/));
   ok('an effect that exists in window.SFX passes',
      !has(bads(run([cover, withSfx(goodShot, 'whoosh'), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh', seconds: 0.8 } } })),
           /not in window\.SFX|window\.SFX/));
@@ -2530,21 +2506,21 @@ function selftest() {
      has(bads(run([cover, withSfx(goodShot, 'Big Hit'), ctaShot], { SFX: { 'Big Hit': { prompt: 'p' } } })), /lowercase letters/));
   ok('a declared effect no shot uses warns',
      has(warns(run([cover, goodShot, ctaShot], { SFX: { spare: { prompt: 'p' } } })), /declared but no shot uses it/));
-  ok('effects on adjacent cards warn',
-     has(warns(run([withSfx(cover, 'a'), withSfx(goodShot, 'b'), ctaShot], { SFX: { a: { prompt: 'p' }, b: { prompt: 'q' } } })),
-         /adjacent cuts/));
-  ok('an effect on a broll is a violation',
-     has(bads(run([cover, goodShot, Object.assign({}, broll, { sound: { sfx: 'a' } }), ctaShot], { SFX: { a: { prompt: 'p' } } })),
-         /sound\.sfx on a broll/));
+  const surprise = { id: 'surprise', sfx: 'whoosh', trigger: 'she looks up', description: 'short whoosh',
+    audience: { intent: 'share her surprise' } };
   ok('timed effects use the existing sfx id and measure atSeconds from the shot start',
      !has(bads(run([cover, Object.assign({}, goodShot, { sound: {
-       effects: [{ sfx: 'whoosh', atSeconds: 1.25, intensity: 'subtle' }]
+       effects: [{ ...surprise, atSeconds: 1.25, intensity: 'subtle' }]
      } }), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh', seconds: 0.8 } } })),
        /sound\.effects|outside this|not in window\.SFX/));
   ok('a timed effect outside its shot is a violation',
      has(bads(run([cover, Object.assign({}, goodShot, { sound: {
-       effects: [{ sfx: 'whoosh', atSeconds: 6 }]
+       effects: [{ ...surprise, atSeconds: 6 }]
      } }), ctaShot], { SFX: { whoosh: { prompt: 'short soft whoosh' } } })), /outside this 6s shot/));
+  const originalDrone = { id: 'pressure', sfx: 'drone', trigger: 'she looks up', description: 'low pulse',
+    delivery: 'post', audience: { intent: 'share her fear', source: 'music' } };
+  ok('an original audience cue can use its description as its music prompt on a legacy board',
+     !has(bads(run([cover, { ...goodShot, sound: { effects: [originalDrone] } }, ctaShot], { SFX: {} })), /not in window\.SFX/));
   ok('a music silence window passes while full-silence scope is refused',
      (() => {
        const pass = run([cover, Object.assign({}, goodShot, { sound: {
@@ -2561,9 +2537,10 @@ function selftest() {
        const ch = fs.mkdtempSync(path.join(os.tmpdir(), 'sfx-'));
        fs.mkdirSync(path.join(ch, 'assets', 'audio', 'sfx'), { recursive: true });
        fs.writeFileSync(path.join(ch, 'assets', 'audio', 'sfx', 'tick.wav'), 'x');
-       const missing = run([cover, withSfx(goodShot, 'whoosh'), ctaShot], null, { channelDir: ch });
-       const present = run([cover, withSfx(goodShot, 'tick'), ctaShot], null, { channelDir: ch });
-       const deferred = run([cover, withSfx(goodShot, 'whoosh'), ctaShot], null, { channelDir: ch, draft: true });
+       const withAudience = sfx => ({ ...goodShot, sound: { effects: [{ ...surprise, sfx }] } });
+       const missing = run([cover, withAudience('whoosh'), ctaShot], null, { channelDir: ch });
+       const present = run([cover, withAudience('tick'), ctaShot], null, { channelDir: ch });
+       const deferred = run([cover, withAudience('whoosh'), ctaShot], null, { channelDir: ch, draft: true });
        return has(bads(missing), /not in the channel catalog/) &&
               !has(bads(present), /not in the channel catalog/) &&
               !has(bads(deferred), /not in the channel catalog/) &&
@@ -2597,11 +2574,6 @@ function selftest() {
      has(warns(run([cover, goodShot, ctaShot, brollAudio('a man says "we have to go", no music')])), /spoken line/));
   ok('a b-roll audio that never says what isn\'t there warns',
      has(warns(run([cover, goodShot, ctaShot, brollAudio('city traffic and wind')])), /never says what isn't there/));
-  ok('the same sound in visual.audio and sound.sfx warns',
-     has(warns(run([cover, Object.assign({}, goodShot, { sound: { sfx: 'door-close' },
-                       visual: { video: { prompt: SEEDANCE_PROMPT }, audio: 'a door closes, no music, no speech',
-                                 camera: { movement: 'dolly in', speed: 'slow', framing: 'chest-up', end: 'centred' } } }), ctaShot],
-                   { SFX: { 'door-close': { prompt: 'a door closing' } } })), /one source per sound/));
 
   // ── sequence → scene → shot (structure-contract.js) ──
   {
@@ -3056,12 +3028,12 @@ function selftest() {
         !lookHas(findings, 'warn', /\[character-missing\]/);
     }) && !lookHas(perShot(perShotFixture()), 'bad', /\[character-missing\]/);
   })());
-  ok('character-limit rejects three principal characters in one shot and accepts two', (() => {
+  ok('character-limit allows up to four cast members in one shot', (() => {
     const three = perShotFixture(); three.SCENES[0].visual.character = ['yi', 'won', { id: 'kim', scope: 'background only' }];
     const two = perShotFixture(); two.SCENES[0].visual.character = ['yi', 'won'];
     const seen = perShotFixture(); seen.SCENES[0].visual.character = ['yi', 'won']; seen.SCENES[0].visual.bystanders = ['kim'];
-    const crowd = perShotFixture(); crowd.SCENES[0].visual.character = ['yi', 'won']; crowd.SCENES[0].visual.bystanders = ['kim', 'park'];
-    return lookHas(perShot(three), 'bad', /\[character-limit\].*3 principal/) &&
+    const crowd = perShotFixture(); crowd.SCENES[0].visual.character = ['yi', 'won', 'lee']; crowd.SCENES[0].visual.bystanders = ['kim', 'park'];
+    return !lookHas(perShot(three), 'bad', /\[character-limit\]/) &&
       !lookHas(perShot(two), 'bad', /\[character-limit\]/) && !lookHas(perShot(seen), 'bad', /\[character-limit\]/) &&
       lookHas(perShot(crowd), 'bad', /\[character-limit\].*bystanders/);
   })());

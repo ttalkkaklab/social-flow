@@ -1,13 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import { config } from '../dist/config.js';
-import { genaiUploadSettings, shrinkImageToFit, uploadGenaiFile } from '../dist/astra-genai-upload.js';
-import { imageMetadata } from '../dist/image-media.js';
+import { genaiUploadSettings, uploadGenaiFile } from '../dist/astra-genai-upload.js';
 
 function setup(t) {
   const fetch = globalThis.fetch, key = config.astraGenaiApiKey, delay = genaiUploadSettings.retryDelayMs;
@@ -79,17 +74,6 @@ test('a terminal chunk rejection stops at once; a gateway without the upload API
   assert.equal(putCount, 1);
   globalThis.fetch = async () => new Response('not found', { status: 404 });
   assert.equal(await uploadGenaiFile(Buffer.from('other'), 'image/png'), undefined);
-});
-
-test('pictures shrink to fit the render size without upscaling', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-shrink-test-'));
-  try {
-    const png = path.join(dir, 'wide.png');
-    execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=c=red:s=256x128', '-frames:v', '1', png]);
-    const bytes = fs.readFileSync(png), small = shrinkImageToFit(bytes, 64, 64), meta = imageMetadata(small);
-    assert.equal(meta.mimeType, 'image/png'); assert.deepEqual([meta.width, meta.height], [64, 32]);
-    assert.equal(shrinkImageToFit(bytes, 512, 512), bytes);
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('a create answer of 429 or 507, or a type the gateway does not take, keeps the data URI without retrying', async t => {
