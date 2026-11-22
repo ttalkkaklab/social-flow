@@ -2,6 +2,14 @@
 
 Channel-based short-form/long-form content pipeline Claude Code plugin.
 
+## Contribution language (user directive, 2026-11-22)
+
+Use English for repository contributions and GitHub communication, including
+documentation, code comments, commit messages, issue and discussion posts, pull
+request titles and descriptions, reviews, and replies. Follow
+[the contributor style guide](CONTRIBUTING.md#style) for language-specific materials.
+Use the user's language in direct conversations with them.
+
 ## Character live start (owner directive, 2026-11-22)
 
 Before broadcasting, ask whether to start when the spoken opening, first topic segment, two spoken welcomes and ten moving standby clips are ready, show a local preview first,
@@ -524,11 +532,9 @@ family. Wrapping a phenomenon up in a single verb is narration-style prose — a
 Name the subject and write concretely instead — "근거를 남긴다" → "근거를 적어 둔다",
 "추천이 갈린다" → "미용실마다 다른 색을 권한다", "둘로 나뉜다" → "두 갈래다".
 
-**The scope isn't just content copy** — skill docs, code comments, tool descriptions,
-published HTML, commit messages, user responses, all of it. `check-style.py` flags D8
-as an S1 finding on content copy; S1 findings are suggestions, never execution gates
-(2026-10-18). **No checker runs on docs and comments**, so the writer has to hold the
-line. Run this scan when writing or editing a doc:
+Apply D8 wherever this project calls for authored Korean prose, including content
+copy and replies to users. `check-style.py` flags D8 as an S1 finding on content copy.
+S1 findings are suggestions (2026-10-18). Run this scan when writing or editing a doc:
 
 ```bash
 python3 - <<'PY'
