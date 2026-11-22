@@ -120,12 +120,42 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    `--resume-from ROOM --out NEW_RUN --youtube --start ready` and the same config and title.
    Report the actual live transition separately.
 
-6. TikTok takes a channel-authorized complete ingest URL from `TIKTOK_LIVE_RTMPS_URL`. Pass
-   `--tiktok` alone or alongside YouTube. Confirm the intended LIVE room before starting.
-   An approved external chat source can feed lines such as
-   `{"source":"tiktok","id":"platform-event-id","text":"Viewer question"}` on stdin.
-   The upload OAuth credentials do not grant LIVE access. Without an event source the TikTok
-   destination carries the show, but its viewers' messages do not enter the queue.
+6. For TikTok, open the intended account in LIVE Center and select external encoder output.
+   Use `--platform tiktok` or the existing `--tiktok` alias. To simulcast, also pass
+   `--platform youtube` and the YouTube title. The encoder sends the same program to both
+   destinations. The greeting waits for each selected destination: YouTube must report live,
+   and the TikTok relay must connect. Verify actual picture and sound in the TikTok viewer.
+
+   In an interactive terminal, leave the ingest variables unset. After preparing the clips,
+   the runner asks for the server URL and stream key with terminal echo disabled. Obtain the
+   key for this broadcast at that point. For a noninteractive process, supply the complete
+   secure URL in `TIKTOK_LIVE_RTMPS_URL` or the pair `TIKTOK_LIVE_SERVER_URL` and
+   `TIKTOK_LIVE_STREAM_KEY` in the process environment. Use the exact protocol TikTok issued.
+   The pair supports RTMPS and plain RTMP. Plain RTMP transmits the key and media without TLS.
+   Keep the values out of commands, session configs and chat. The TikTok upload token does
+   not grant LIVE permissions. See [TikTok's encoder instructions](https://inapp.tiktokv.com/falcon/webcast_mt/page/obs_intro/index.html).
+
+   For automatic viewer questions, connect TikFinity Desktop to the intended room on the
+   broadcast host and set `"tiktokChat":"tikfinity"` in the session config. The adapter
+   reads chat events from `ws://localhost:21213/`. Set `TIKTOK_LIVE_TIKFINITY_URL` for a
+   different local port. Event IDs prevent duplicate replies after reconnecting. The bridge
+   must be available to report successful chat connectivity. A quiet room can have zero
+   questions. This is the [TikFinity Desktop API](https://tikfinity.zerody.one/tiktok/dapi).
+
+   The default `"tiktokChat":"stdin"` also accepts questions from an authorized external
+   source, one JSON object per line:
+   `{"source":"tiktok","id":"platform-event-id","text":"Viewer question"}`. Operator input
+   remains available in both modes. Viewer replies are spoken in the stream.
+
+   ```sh
+   node server/dist/character-live.bundle.js run --platform tiktok --start ready --config FILE --out NEW_SESSION --seconds 180
+   node server/dist/character-live.bundle.js status --platform tiktok --config FILE --out NEW_SESSION
+   ```
+
+   TikTok status reads the last local `tiktok.json` snapshot. It reports relay connection
+   and encoder completion separately from public playback, which stays unverified. End the
+   broadcast in TikTok as well as stopping the local encoder. Room reservation and API-driven
+   closure are available on YouTube. Specify one platform for status on a simulcast.
    Keep the operator present to monitor chat and stop with SIGINT/SIGTERM. The duration sets the chat intake window. A reply accepted inside that window may finish after it closes. On macOS, the runner keeps the broadcast host awake for the session.
 
 The archive is recording.flv, with chat and audio frame timestamps in events.jsonl. Treat run

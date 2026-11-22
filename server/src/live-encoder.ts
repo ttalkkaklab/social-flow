@@ -1,16 +1,24 @@
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { createWriteStream } from 'node:fs';
+import { createInterface } from 'node:readline';
 import { finished } from 'node:stream/promises';
 import { type Writable } from 'node:stream';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { FPS, HEIGHT, mouthLevel, RATE, SAMPLES, WIDTH } from './live-character.js';
 import type { MotionFrames } from './live-motion.js';
 
-export function splitIngest(value: string) {
+export interface RelayTarget {
+  platform: string;
+  url: string;
+  allowRtmp?: boolean;
+}
+
+export function splitIngest(value: string, allowRtmp = false) {
   const url = new URL(value);
   const slash = url.pathname.lastIndexOf('/');
   if (
-    url.protocol !== 'rtmps:' ||
+    (url.protocol !== 'rtmps:' && !(allowRtmp && url.protocol === 'rtmp:')) ||
+    !url.hostname || /[\s\x00-\x1f]/.test(value) ||
     url.username ||
     url.password ||
     url.hash ||
@@ -20,10 +28,7 @@ export function splitIngest(value: string) {
     throw Error('Expected an RTMPS server URL and stream key');
   }
   return {
-    base:
-      url.origin === 'null'
-        ? 'rtmps://' + url.host + url.pathname.slice(0, slash)
-        : url.origin + url.pathname.slice(0, slash),
+    base: url.protocol + '//' + url.host + url.pathname.slice(0, slash),
     key: url.pathname.slice(slash + 1) + url.search
   };
 }
@@ -115,7 +120,7 @@ export function checkLiveRelay() {
 export async function encode(
   frames: Buffer[],
   archive: string,
-  destinations: string[],
+  destinations: (string | RelayTarget)[],
   seconds: number,
   signal: AbortSignal,
   pull: () => Utterance | undefined,
@@ -129,7 +134,9 @@ export async function encode(
   },
   drain?: () => boolean
 ) {
-  for (const destination of destinations) splitIngest(destination);
+  const targets = destinations.map(target =>
+    typeof target === 'string' ? { url: target, platform: undefined, allowRtmp: false } : target);
+  for (const target of targets) splitIngest(target.url, target.allowRtmp);
   const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
   const encoder = spawn(
     'ffmpeg',
@@ -215,20 +222,24 @@ export async function encode(
   const recorded = finished(recording);
   recorded.catch(fail);
   encoder.stdout!.pipe(recording);
-  const relays = destinations.map((target) => {
+  const relays = targets.map((target) => {
+    const fields = target.platform ? { platform: target.platform } : {};
     const relay = spawn(relayPython(), ['-c', relayProgram], { stdio: ['pipe', 'ignore', 'pipe', 'pipe'] });
-    relay.stderr!.on('data', (chunk) => {
-      const line = String(chunk);
-      if (line.includes('relay_connected')) log('relay_connected', {});
-      const failure = /relay_failure (-?\d+)/.exec(line);
-      if (failure) log('relay_error', { code: Number(failure[1]) });
+    createInterface({ input: relay.stderr! }).on('line', (line) => {
+      try {
+        if (line === 'relay_connected') log('relay_connected', fields);
+        const failure = /^relay_failure (-?\d+)$/.exec(line);
+        if (failure) log('relay_error', { ...fields, code: Number(failure[1]) });
+      } catch (error) {
+        fail(error instanceof Error ? error : Error('Could not record relay state'));
+      }
     });
     const key = relay.stdio[3] as Writable;
     key.on('error', fail);
-    key.end(target);
+    key.end(target.url);
     relay.stdin!.on('error', fail);
     encoder.stdout!.pipe(relay.stdin!);
-    const done = completion(relay, 'RTMPS relay');
+    const done = completion(relay, (target.platform ?? 'RTMPS') + ' relay');
     done.catch(fail);
     return { relay, done };
   });

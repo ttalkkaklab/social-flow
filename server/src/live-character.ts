@@ -1,11 +1,13 @@
 import { mkdirSync, readFileSync, realpathSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
 import { z } from 'zod';
 import { requestGenai, requestGenaiMedia } from './astra-genai-client.js';
 import { validateSpeechAudio } from './tts-audio.js';
 
+import { livePlatformIds } from './live-platform.js';
 import type { LiveProgram } from './live-program.js';
 
 const point = z.number().finite().min(0).max(1);
@@ -16,6 +18,7 @@ export const liveConfig = z
     project: z.string().min(1),
     channel: slug,
     youtubeCredentialChannel: slug.optional(),
+    tiktokChat: z.enum(['stdin', 'tikfinity']).default('stdin'),
     speechLanguage: z
       .string()
       .regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/)
@@ -287,13 +290,47 @@ export async function preparedSpeech(
 }
 export const chatEvent = z
   .object({
-    source: z.enum(['youtube', 'tiktok', 'operator']),
+    source: z.enum([...livePlatformIds, 'operator']),
     speaker: z.string().max(100).optional(),
     id: z.string().min(1).max(200),
     text: z.string().trim().min(1).max(500)
   })
   .strict();
 export type ChatMessage = z.infer<typeof chatEvent>;
+export function listenChatInput(input: Readable, allowed: (source: unknown) => boolean, queue: Pick<ChatQueue, 'add'>) {
+  let partial = '',
+    discard = false;
+  function receive(bytes: string) {
+    for (const chunk of bytes.split(/(?<=\n)/)) {
+      if (!discard) {
+        partial += chunk;
+        if (partial.length > 1600) {
+          partial = '';
+          discard = true;
+        }
+      }
+      if (!chunk.endsWith('\n')) continue;
+      try {
+        if (!discard && partial.trim()) {
+          const e = JSON.parse(partial);
+          if (allowed(e?.source)) queue.add(e);
+        }
+      } catch {
+        /* Invalid external messages cannot interrupt the show. */
+      }
+      partial = '';
+      discard = false;
+    }
+  }
+  input.setEncoding('utf8');
+  input.on('data', receive);
+  input.resume(); // Closing a credential prompt explicitly pauses its input.
+  return () => {
+    input.off('data', receive);
+    input.pause();
+  };
+}
+
 export class ChatQueue {
   constructor(private accepted?: (event: ChatMessage) => void) {}
   private ids = new Set<string>();
