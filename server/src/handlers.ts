@@ -66,6 +66,7 @@ import { CHANNEL_SLUG_RE } from './config.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
+import { localDesktopCatalog } from './ltx-desktop-local.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -1725,7 +1726,10 @@ export const dispatchVideo = (name: string, args: Record<string, unknown>) => vi
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
-ROUTES.video_catalog = async () => text(JSON.stringify(videoCatalog(), null, 2));
+ROUTES.video_catalog = async args => {
+  const {engine} = z.object({engine:z.literal('ltx-desktop-local').optional()}).strict().parse(args ?? {});
+  return text(JSON.stringify(engine ? await localDesktopCatalog() : videoCatalog(), null, 2));
+};
 ROUTES.video_plan = async args => {
   const input = videoPlanSchema.parse(args);
   try { return text(JSON.stringify(await planManagedVideo(input), null, 2)); }

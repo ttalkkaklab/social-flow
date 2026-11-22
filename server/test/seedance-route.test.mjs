@@ -183,3 +183,16 @@ test('the episode cost comparison prices hosted LTX and Veo from the saved selec
   for (const row of rows) assert.equal(priceOf(row.generation.tool, row.generation).key, row.key);
   assert.equal(quote(win).options.video_50.rows[0].key, rows[0].key);
 });
+
+test('the production forecast follows the saved local Desktop selection and zero API rate', () => {
+  const { quote } = require('../../skills/autoproduce/references/production-cost.js');
+  const video = { engine: 'ltx-desktop-local', model: 'ltx-2.5-fast', resolution: '270p' };
+  const board = {
+    PRODUCTION: { mode: 'full_video', modelSettings: { models: { video } } },
+    SCENES: [{ id: 'a', type: 'points', duration: 2, visual: { video: { prompt: 'A boat drifts.' } } }],
+  };
+  const forecast = quote(board);
+  const [row] = forecast.options.full_video.rows;
+  assert.equal(forecast.videoProvider, video.engine);
+  assert.deepEqual([row.generation.tool, row.key, row.usd], ['ltx_desktop_text2video', 'video.ltx-desktop-local', 0]);
+});

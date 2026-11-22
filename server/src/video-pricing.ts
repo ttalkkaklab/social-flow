@@ -29,7 +29,7 @@ export function quoteVideo(tool: string, args: Record<string, unknown>): VideoQu
       throw new Error('genai_quote_required: supply an explicit reserveUsd; no published gateway price is assumed');
     return { reserveUsd: args.reserveUsd, estimatedUsd: args.reserveUsd, basis: 'Caller reservation; gateway pricing unverified, not a provider invoice cap', revision };
   }
-  if (tool.startsWith('astra_') || localVideoStrategy(tool)) return { reserveUsd: 0, estimatedUsd: 0, basis: 'Self-hosted: no API charge; infrastructure excluded', revision };
+  if (tool.startsWith('astra_') || tool.startsWith('ltx_desktop_') || localVideoStrategy(tool)) return { reserveUsd: 0, estimatedUsd: 0, basis: 'Self-hosted: no API charge; infrastructure excluded', revision };
   if (tool.startsWith('seedance_')) {
     const model = String(args.model), resolution = String(args.resolution);
     const spec = SEEDANCE_MODEL_SPECS[model as SeedanceModel];

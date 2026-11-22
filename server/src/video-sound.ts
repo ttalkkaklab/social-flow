@@ -50,7 +50,7 @@ export function prepareVideoSound(tool: string, input: Record<string, unknown>, 
   if (new Set(ids).size !== ids.length) throw new Error('Effect ids must be unique within the shot');
   if (sound.audioSource !== undefined && !['video', 'speech'].includes(String(sound.audioSource)))
     throw new Error('sound.audioSource must be video or speech');
-  const fixedInput = ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video', 'ltx_api_audio2video'].includes(tool);
+  const fixedInput = ['astra_audio2video', 'astra_genai_audio2video', 'astra_genai_desktop_audio2video', 'ltx_api_audio2video', 'ltx_desktop_audio2video'].includes(tool);
   // MSR dialogue lives only in MSR's own soundtrack; a TTS speech lane would replace it.
   if (['astra_genai_msr', 'minimax_reference', 'heygen_reference'].includes(tool) && sound.audioSource === 'speech') throw new Error(`${tool} keeps its own spoken soundtrack; sound.audioSource speech is not allowed`);
   let nativeAudio = !fixedInput && (tool !== 'astra_genai_desktop_keyframes' || input.audio === true);

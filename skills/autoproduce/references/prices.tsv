@@ -149,6 +149,7 @@ music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-d
 
 # ── Local video / 3D (MLX Core) ──────────────────────────────────
 # Same $0 ledger pattern as image.local — a missing key kills the report with exit 1.
+video.ltx-desktop-local	second	0.000	official	Direct LTX Desktop local queue on the plugin host.
 video.mlx	second	0.000	official	mlx_video_generate — MLX Core on-device. Quantity is numFrames / 24 (LTX is 24 fps)
 3d.mlx	mesh	0.000	official	mlx_3d_generate — MLX Core on-device. Pipeline has no GLB consumer; still logged so the tally is complete
 

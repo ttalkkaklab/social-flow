@@ -26,6 +26,7 @@ function storyboardInputs(members, scene) {
 
 const operationFor = {
   veo: input => input.frames ? 'image' : input.reference ? 'reference' : 'text',
+  'ltx-desktop-local': input => input.audio || input.spoken ? 'audio' : input.frames || input.opening ? 'image' : 'text',
   'ltx-api': input => input.audio || input.spoken ? 'audio' : 'image',
   'astra-genai': (input, model) => {
     if (input.audio) return input.audio.mode === 'mix' ? 'image' : 'audio';

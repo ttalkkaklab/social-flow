@@ -1,6 +1,7 @@
 import { config } from './config.js';
 import { buildLtxApiBody, generateLtxApiVideo, LTX_API_MODELS, LTX_API_RESOLUTIONS, ltxApiAudioMax, ltxApiAudio2VideoSchema, ltxApiImg2VideoSchema, ltxApiSeconds, pollLtxApi } from './ltx-api-video.js';
 import { buildVeoBody, generateVeo, pollVeo, VEO_CONSTRAINTS, veoSubjectIssue, veoExtendSchema, veoImageSchema, veoReferenceSchema, veoTextSchema } from './veo-video.js';
+import { DESKTOP_SECONDS, LOCAL_DESKTOP_ENGINE, generateLocalDesktop, localAudioSchema, localDesktopConfigured, localImageSchema, localTextSchema, pollLocalDesktop, validateDesktopFiles } from './ltx-desktop-local.js';
 function inputs(schema, build, generate) {
     return { schema, preflight: (args) => { build(schema.parse(args)); }, generate: (args) => generate(schema.parse(args)) };
 }
@@ -16,7 +17,21 @@ const veo = {
     modelConstraints: VEO_CONSTRAINTS, soundtrack: true,
     poll: (args, id) => pollVeo(String(args.model), id),
 };
+const desktop = {
+    engine: LOCAL_DESKTOP_ENGINE, deployment: 'native-desktop-loopback', configured: localDesktopConfigured,
+    modelConstraints: { discovery: 'video_catalog with engine ltx-desktop-local', note: 'Use a downloaded offering on this machine.' },
+    poll: (_, id) => pollLocalDesktop(id),
+};
 export const HOSTED_VIDEO_ROUTES = {
+    ltx_desktop_text2video: { ...desktop, ...inputs(localTextSchema, validateDesktopFiles, generateLocalDesktop),
+        operation: 'text', voice: 'none', seconds: () => DESKTOP_SECONDS, title: 'Generate a video in local LTX Desktop',
+        description: 'Render a prompt on the downloaded Desktop model. Select its model and resolution from the local catalog.' },
+    ltx_desktop_img2video: { ...desktop, ...inputs(localImageSchema, validateDesktopFiles, generateLocalDesktop),
+        operation: 'image', voice: 'none', frames: ['imagePath', 'lastFramePath'], seconds: () => DESKTOP_SECONDS,
+        title: 'Animate frames in local LTX Desktop', description: 'Animate a local start image with an optional last frame on this machine.' },
+    ltx_desktop_audio2video: { ...desktop, ...inputs(localAudioSchema, validateDesktopFiles, generateLocalDesktop),
+        operation: 'audio', voice: 'supplied', frames: ['imagePath'], title: 'Generate from audio in local LTX Desktop',
+        description: 'Condition video on a local audio track and optional start image. The track supplies the dialogue.' },
     ltx_api_img2video: { ...ltx, ...inputs(ltxApiImg2VideoSchema, buildLtxApiBody, generateLtxApiVideo), operation: 'image', voice: 'none', soundtrack: true,
         title: 'Generate an LTX API video from a start frame', description: 'Generate from a first and optional last frame using LTX_API_KEY. Use audio-to-video for supplied speech.',
         seconds: a => ltxApiSeconds(String(a.model ?? 'ltx-2-5-pro'), String(a.resolution ?? '1920x1080'), Number(a.fps ?? 24)),

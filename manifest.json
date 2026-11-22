@@ -37,7 +37,9 @@
         "SERPAPI_API_KEY": "${user_config.serpapi_api_key}",
         "SNS_TOKEN_DIR": "${user_config.sns_token_dir}",
         "GOOGLE_CLOUD_PROJECT": "${user_config.google_cloud_project}",
-        "LTX_API_KEY": "${user_config.ltx_api_key}"
+        "LTX_API_KEY": "${user_config.ltx_api_key}",
+        "LTX_DESKTOP_API_KEY": "${user_config.ltx_desktop_api_key}",
+        "LTX_DESKTOP_BASE_URL": "${user_config.ltx_desktop_base_url}"
       }
     }
   },
@@ -76,6 +78,17 @@
       "type": "string",
       "title": "Google Cloud project",
       "description": "Project for Veo 3.1 in us-central1. Uses Google Cloud Application Default Credentials."
+    },
+    "ltx_desktop_api_key": {
+      "type": "string",
+      "title": "Local LTX Desktop backend bearer",
+      "description": "Credential for LTX Desktop on this computer.",
+      "sensitive": true
+    },
+    "ltx_desktop_base_url": {
+      "type": "string",
+      "title": "Local LTX Desktop address",
+      "description": "Optional loopback origin. Defaults to http://127.0.0.1:41954."
     },
     "ltx_api_key": {
       "type": "string",

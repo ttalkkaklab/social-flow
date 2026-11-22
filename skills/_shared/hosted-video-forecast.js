@@ -8,6 +8,14 @@ function forecastHostedVideo({ scene, settings, engine, kind }) {
   const constraints = adapters.find(adapter => adapter.engine === engine).modelConstraints;
   const speech = (scene.narration || []).filter(line => line.tts?.trim());
   const dialogue = speech.some(line => line.delivery !== 'voiceover');
+  if (engine === 'ltx-desktop-local') {
+    const { framePlan } = require('../storyboard/references/render-routing.js');
+    const operation = settings.operation || (dialogue ? 'audio' : framePlan(scene).start ? 'image' : 'text');
+    const adapter = adapters.find(a => a.engine === engine && a.operation === operation);
+    if (!adapter || dialogue && adapter.voice.lane === 'none') throw new Error('Unsupported local Desktop operation for this shot');
+    return {kind, engine, model, resolution:settings.resolution, durationSeconds:settings.durationSeconds ?? scene.duration,
+      tool:adapter.tool, reason:'Local LTX Desktop GPU', priceKey:'video.ltx-desktop-local'};
+  }
   const operation = settings.operation || (scene.visual?.frames?.mode === 'reference' ? 'reference' : dialogue && engine === 'ltx-api' ? 'audio' : 'image');
   const adapter = adapters.find(adapter => adapter.engine === engine && adapter.operation === operation);
   if (!adapter) throw new Error('Unsupported ' + engine + ' operation: ' + operation);
@@ -40,7 +48,7 @@ function hostedSelection(production = {}, scene) {
   const visual = scene.visual || {};
   const cut = visual.video || (typeof visual.clip === 'object' && visual.clip) || visual;
   const relevant = [saved, production.videoModel, cut, ...(production.modelSettings?.overrides || []).map(change => change.video)]
-    .some(choice => choice && (['veo', 'ltx-api'].includes(choice.engine) || /^(veo-|ltx-2-5-(?:pro|fast)$)/.test(choice.model || '')));
+    .some(choice => choice && (['veo', 'ltx-api', 'ltx-desktop-local'].includes(choice.engine) || /^(veo-|ltx-2-5-(?:pro|fast)$)/.test(choice.model || '')));
   if (!relevant) return null;
   const { resolveVideoChoice } = require('../storyboard/references/production-mode.js');
   return resolveVideoChoice(production, { ...scene, visual: { ...visual, video: cut } }, saved).selection;
