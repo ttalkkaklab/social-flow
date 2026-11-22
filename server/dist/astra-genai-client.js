@@ -1,6 +1,7 @@
 /** Transport shared by the GenAI provider adapters, separate from legacy ASTRA jobs. */
 import { readFileSync, statSync } from 'node:fs';
 import { extname } from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Agent } from 'undici';
 import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
@@ -18,6 +19,8 @@ export function desktopGatewayKey() {
 }
 /** Model-bound images and speech may run on another gateway (e.g. a local Mac one); Desktop has its own optional gateway override. */
 function override(route) {
+    if (route === '/v1/chat/completions')
+        return { url: process.env.ASTRA_GENAI_CHAT_URL, key: process.env.ASTRA_GENAI_CHAT_API_KEY };
     if (route.startsWith('/v1/ltx/desktop/'))
         return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
     if (route.startsWith('/v1/images/'))
@@ -32,7 +35,7 @@ export function astraGenaiBaseUrl(route = '') {
 export function requireAstraGenaiKey(route = '') {
     const { url, key } = override(route);
     if (url) {
-        const lane = route.startsWith('/v1/images/') ? 'IMAGE' : route.startsWith('/v1/audio/') ? 'SPEECH' : 'DESKTOP';
+        const lane = route === '/v1/chat/completions' ? 'CHAT' : route.startsWith('/v1/images/') ? 'IMAGE' : route.startsWith('/v1/audio/') ? 'SPEECH' : 'DESKTOP';
         if (!key)
             throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
         return key;
@@ -89,11 +92,12 @@ export async function requestGenai(method, route, body, timeoutMs = 60_000, onRe
  * retried, and an HTTP error on the GET never counts as terminal job evidence; only a job the
  * gateway reports failed (thrown as GenaiRequestError with HTTP 200) does. Never wraps a POST.
  */
-export async function pollGenaiJob(check, pending) {
+export async function pollGenaiJob(check, pending, signal) {
     const deadline = Date.now() + 30 * 60_000;
     let retried = false;
     do {
         try {
+            signal?.throwIfAborted();
             const result = await check();
             if (result.downloaded)
                 return result;
@@ -106,7 +110,10 @@ export async function pollGenaiJob(check, pending) {
                 throw new Error(error.message);
             retried = true;
         }
-        await new Promise(resolve => setTimeout(resolve, 5000));
+        if (signal)
+            await sleep(5000, undefined, { signal });
+        else
+            await new Promise(resolve => setTimeout(resolve, 5000));
     } while (Date.now() < deadline);
     throw new Error(pending);
 }

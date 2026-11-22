@@ -48,7 +48,7 @@ export const liveConfig = z
 export const WIDTH = 360, HEIGHT = 640, FPS = 24, RATE = 24000;
 export const SAMPLES = RATE / FPS;
 const MAX_SPEECH_SECONDS = 30;
-export function loadCharacter(config) {
+export function loadCharacter(config, mode = 'legacy') {
     const root = realpathSync(config.project);
     const settings = JSON.parse(readFileSync(path.join(root, '.social-flow/models.json'), 'utf8'));
     const folder = realpathSync(path.join(root, 'data', config.channel, 'assets/characters', config.character));
@@ -62,21 +62,31 @@ export function loadCharacter(config) {
     const tts = saved.tts;
     if (!asset.startsWith(folder + path.sep) || !folder.startsWith(root + path.sep))
         throw Error('Panel outside character directory');
-    if (settings.models?.speech?.engine !== 'astra-genai' ||
+    if (mode === 'legacy' && (settings.models?.speech?.engine !== 'astra-genai' ||
         tts?.engine !== 'astra-genai' ||
         !tts.voiceId ||
         !settings.models.speech.model ||
-        settings.models.speech.model !== tts.model)
+        settings.models.speech.model !== tts.model))
         throw Error('Select a matching ASTRA character voice and project speech model');
     const language = config.speechLanguage ?? settings.languages?.speech;
     if (typeof language !== 'string' || !language.trim())
         throw Error('Project speech language missing');
+    const voiceSample = path.join(folder, 'voice.wav');
+    if (mode === 'native') {
+        if (!realpathSync(voiceSample).startsWith(folder + path.sep))
+            throw Error('Voice sample outside character directory');
+        const selectedHash = saved.voiceSelection?.audioSha256;
+        if (selectedHash && createHash('sha256').update(readFileSync(voiceSample)).digest('hex') !== selectedHash)
+            throw Error('The character voice sample differs from the selected audition');
+    }
     return {
         asset,
         language,
         identityHash: createHash('sha256').update(identity).digest('hex'),
-        voice: String(tts.voiceId),
-        model: String(tts.model),
+        voice: String(tts?.voiceId ?? ''),
+        model: String(tts?.model ?? ''),
+        voiceSample,
+        voiceDirection: String(tts?.voiceDirection ?? ''),
         persona: [
             JSON.stringify(saved.character?.identity ?? {}).slice(0, 1400),
             config.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)

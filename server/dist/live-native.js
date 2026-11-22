@@ -1,37 +1,37 @@
 import { execFile } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { promisify } from 'node:util';
-import { RATE, SAMPLES } from './live-character.js';
+import { RATE, SAMPLES, mouthLevel } from './live-character.js';
 import { IdleRotation, idleCount, idleFrameCounts, nativeWidth, nativeHeight, prepareIdleClips } from './live-idle.js';
 import { MotionFrames } from './live-motion.js';
-import { pcmToWav } from './media-utils.js';
+import { generateGenaiVideo } from './astra-genai-video.js';
+import { astraGenaiBaseUrl } from './astra-genai-client.js';
 const execute = promisify(execFile);
-const worker = fileURLToPath(new URL('../live-native-720.py', import.meta.url));
-export function nativeLauncher() {
-    if (process.env.SOCIAL_FLOW_LIVE_A2V_COMMAND)
-        return process.env.SOCIAL_FLOW_LIVE_A2V_COMMAND;
-    if (process.env.SOCIAL_FLOW_LIVE_GPU_HOST && process.env.SOCIAL_FLOW_LIVE_GPU_PYTHON)
-        return fileURLToPath(new URL('../live-native-ssh.py', import.meta.url));
-    throw Error('Configure the production CUDA launcher or the GPU SSH host and Python interpreter');
-}
-export const talkPrompt = 'A locked chest-up portrait of the same character in the reference, looking into the lens. The host speaks quietly in sync with the supplied voice. Relaxed shoulders and hands. Keep the camera, light and background fixed.';
-// Let the model move off its fixed reference pose before the first audible syllable.
-// Decode only the frames corresponding to the original PCM for playout.
-export function nativeSpeechTiming(pcm) {
-    const bytesPerFrame = SAMPLES * 2;
-    const speechFrames = Math.ceil(pcm.length / bytesPerFrame);
-    const leadFrames = 4;
-    const modelFrames = 1 + 8 * Math.ceil((leadFrames + speechFrames - 1) / 8);
-    const modelPcm = Buffer.alloc(modelFrames * bytesPerFrame);
-    pcm.copy(modelPcm, leadFrames * bytesPerFrame);
-    return { leadFrames, speechFrames, modelFrames, modelPcm };
+const { estimateSpeechSeconds } = createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
+export const talkPrompt = 'Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.';
+export function spokenVideoRequest(actor, direction, text) {
+    const language = new Intl.DisplayNames(['en'], { type: 'language' }).of(actor.language) ?? actor.language;
+    const seconds = estimateSpeechSeconds(text, actor.language) ?? Math.max(2, Array.from(text).length / 7);
+    const numFrames = Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+    if (numFrames > 361)
+        throw Error('Live dialogue exceeds one GenAI clip. Use a shorter line.');
+    return {
+        model: 'ltx-2.5-22b-distilled', resolution: '720x1280', fps: 24, numFrames, generateAudio: true,
+        imagePath: actor.asset, references: [{ imagePath: actor.asset, audioPath: actor.voiceSample }],
+        openingPositions: [{ character: 'Host', images: [1], position: 'Centered in the portrait, facing the viewer in the original framing.' }],
+        prompt: [direction, actor.voiceDirection, 'Use Image 1 and its voice sample for the same speaker and vocal timbre.',
+            'One continuous take, no music, other speakers or on-screen text. The host starts speaking immediately,'
+                + ' with natural lip movement and finishes the line before the shot ends.',
+            'The only words spoken, in ' + language + ', are ' + JSON.stringify(text) + '.'].filter(Boolean).join(' '),
+        reserveUsd: 0
+    };
 }
 export class NativeTalk {
-    image;
+    actor;
     project;
     prompt;
     log;
@@ -45,23 +45,19 @@ export class NativeTalk {
     idleIndex = 0;
     speechIndex = 0;
     onIdle;
-    constructor(image, project, prompt, log) {
-        this.image = image;
+    constructor(actor, project, prompt, log) {
+        this.actor = actor;
         this.project = project;
         this.prompt = prompt;
         this.log = log;
     }
-    async decode(clip, signal, timing, start = timing?.leadFrames ?? 0) {
+    async decode(clip, signal) {
         const info = await execute('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries',
-            'stream=width,height,r_frame_rate,nb_frames', '-of', 'json', clip], { signal });
+            'stream=width,height,r_frame_rate', '-of', 'json', clip], { signal });
         const stream = JSON.parse(info.stdout).streams?.[0];
-        if (stream?.width !== nativeWidth || stream.height !== nativeHeight || stream.r_frame_rate !== '24/1')
+        if (![this.width, nativeWidth].includes(stream?.width) || stream.height !== nativeHeight || stream.r_frame_rate !== '24/1')
             throw Error('Unexpected native video geometry or frame rate');
-        if (timing && Number(stream.nb_frames) !== timing.modelFrames)
-            throw Error('Native render and conditioning audio have different frame counts');
-        const filter = timing
-            ? `trim=start_frame=${start}:end_frame=${start + timing.speechFrames},crop=720:1280:8:0`
-            : 'crop=720:1280:8:0';
+        const filter = 'crop=720:1280';
         const rgb = join(this.dir, randomUUID() + '.rgb');
         try {
             await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', clip, '-an', '-vf', filter,
@@ -76,7 +72,7 @@ export class NativeTalk {
         }
     }
     async prepareIdle(concept, signal, log) {
-        const paths = await prepareIdleClips(this.image, this.project, concept, signal, (index) => log('idle_clip_prepared', { index, total: idleCount }));
+        const paths = await prepareIdleClips(this.actor.asset, this.project, concept, signal, (index) => log('idle_clip_prepared', { index, total: idleCount }));
         for (const [i, path] of paths.entries()) {
             const frames = await this.decode(path, signal);
             if (frames.count !== idleFrameCounts[i])
@@ -86,59 +82,36 @@ export class NativeTalk {
         this.onIdle = (index) => log('idle_clip_playing', { index: index + 1 });
         log('idle_pool_ready', { count: this.idle.length });
     }
-    async render(pcm, signal, words, cachePrepared = false) {
-        const launcher = nativeLauncher();
-        const timing = nativeSpeechTiming(pcm);
-        const wav = pcmToWav(timing.modelPcm, RATE, 1);
-        const prompt = this.prompt + ' The speaker says exactly ' + JSON.stringify(words)
-            + '. Match lip closures, vowels and pauses to the supplied recording. Keep the lips at rest during silence.';
-        const key = createHash('sha256').update(readFileSync(worker)).update(readFileSync(this.image))
-            .update(prompt).update(wav).digest('hex');
-        const cache = join(this.project, '.social-flow', 'live-openings');
-        const cached = join(cache, key + '.mp4');
-        const prefix = join(this.dir, randomUUID());
-        const clip = cachePrepared && existsSync(cached) ? cached : prefix + '.mp4';
-        const audio = prefix + '.wav';
-        writeFileSync(audio, wav, { mode: 0o600 });
-        try {
-            if (clip !== cached) {
-                await execute(launcher, [worker, '--audio', audio, '--image', resolve(this.image),
-                    '--output', clip, '--prompt', prompt], { signal, timeout: 1800000, maxBuffer: 2 * 1024 * 1024 });
-            }
-            let start = timing.leadFrames;
-            const model = process.env.SOCIAL_FLOW_LIVE_LANDMARKER || process.env.MUSETALK_LANDMARKER;
-            if (model) {
-                const python = process.env.SOCIAL_FLOW_AVATAR_PYTHON || 'python3';
-                const tracker = fileURLToPath(new URL('../live-mouth-timing.py', import.meta.url));
-                const result = await execute(python, [tracker, '--video', clip, '--audio', audio, '--model', model,
-                    '--lead', String(start), '--count', String(timing.speechFrames)], { signal, timeout: 120000 });
-                start = JSON.parse(result.stdout).start;
-                if (!Number.isInteger(start) || start < 0 || start + timing.speechFrames > timing.modelFrames)
-                    throw Error('Mouth timing exceeds the rendered frame handles');
-            }
-            this.log?.('native_speech_timing', { measured: !!model, videoOffsetFrames: start - timing.leadFrames,
-                frames: timing.speechFrames, samples: pcm.length / 2 });
-            const frames = await this.decode(clip, signal, timing, start);
-            if (frames.count !== timing.speechFrames)
-                throw Error('Native clip does not cover its voice track');
-            if (cachePrepared && clip !== cached) {
-                mkdirSync(cache, { recursive: true, mode: 0o700 });
-                const tmp = join(cache, key + '.' + randomUUID() + '.tmp');
-                try {
-                    writeFileSync(tmp, readFileSync(clip), { mode: 0o600 });
-                    renameSync(tmp, cached);
-                }
-                finally {
-                    rmSync(tmp, { force: true });
-                }
-            }
-            return frames;
+    async render(text, signal) {
+        const request = spokenVideoRequest(this.actor, this.prompt, text);
+        const key = createHash('sha256').update(astraGenaiBaseUrl()).update(JSON.stringify(request))
+            .update(readFileSync(this.actor.asset)).update(readFileSync(this.actor.voiceSample)).digest('hex');
+        const outputPath = join(this.project, '.social-flow', 'live-genai');
+        mkdirSync(outputPath, { recursive: true, mode: 0o700 });
+        const started = Date.now();
+        const result = await generateGenaiVideo('image-to-video', { ...request, outputPath, filename: key + '.mp4' }, signal);
+        signal.throwIfAborted();
+        if (!result.downloaded || !result.videoPath)
+            throw Error('GenAI dialogue video is still pending: ' + result.receiptPath);
+        const speech = await this.readSpeech(result.videoPath, signal);
+        this.log?.('genai_speech_ready', { jobId: result.jobId, receiptPath: result.receiptPath, elapsedMs: Date.now() - started,
+            frames: speech.motion.count, samples: speech.pcm.length / 2 });
+        return speech;
+    }
+    async readSpeech(file, signal) {
+        const { stdout: audio } = await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', file, '-map', '0:a:0',
+            '-vn', '-ac', '1', '-af', 'aresample=' + RATE + ':async=1:first_pts=0', '-f', 's16le', 'pipe:1'], { encoding: 'buffer', signal, maxBuffer: RATE * 2 * 20 });
+        if (!mouthLevel(audio))
+            throw Error('GenAI dialogue soundtrack is silent');
+        const motion = await this.decode(file, signal);
+        const bytes = motion.count * SAMPLES * 2;
+        // Preserve ending syllables. The encoder holds the final frame while trailing samples play.
+        if (Math.abs(audio.length - bytes) > RATE * 2 * 0.1) {
+            this.release(motion);
+            throw Error('GenAI speech and video durations differ');
         }
-        finally {
-            if (clip !== cached)
-                rmSync(clip, { force: true });
-            rmSync(audio, { force: true });
-        }
+        const pcm = audio.length < bytes ? Buffer.concat([audio, Buffer.alloc(bytes - audio.length)]) : audio;
+        return { pcm, motion };
     }
     startSpeech() { this.speechIndex = 0; this.shot = -1; }
     next(speech) {

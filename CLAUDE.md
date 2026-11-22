@@ -5,8 +5,8 @@ Channel-based short-form/long-form content pipeline Claude Code plugin.
 ## Character live start (owner directive, 2026-11-22)
 
 Before broadcasting, ask whether to start when the spoken opening, first topic segment and ten moving standby clips are ready, show a local preview first,
-or cancel. Honor the answer for that session. Use a calm fixed shot and generate each complete speaking
-frame with the supplied audio. Wait for the native 720 portrait render. Do not offer an upscale, a dance
+or cancel. Honor the answer for that session. Use a calm fixed shot. Send the host portrait, selected voice sample and exact dialogue
+to GenAI image-to-video with MSR conditioning. Play the generated voice and picture together at 720×1280. Do not offer an upscale, a dance
 loop or a separate mouth composite. A user who asks for the watch link while generation is running
 gets the reserved unlisted room and its actual status. Generate 3–5 second listening clips for the broadcast concept on the production GPU. Anchor both ends to the same shot. Shuffle the standby pool and avoid a repeat across shuffles. Interrupt standby on the first frame with ready speech. Play an on-air utterance through its last sample. Generate the next segment during playout from the current line, recent answers and real chat. Start selected viewer answers ahead of speculative host renders. Replace held standby shots before ingest. See [Character LIVE](skills/live-character/SKILL.md).
 

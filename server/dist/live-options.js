@@ -1,9 +1,9 @@
-import { nativeWidth, nativeHeight, idleCount } from './live-idle.js';
+import { nativeHeight, idleCount } from './live-idle.js';
 import { createInterface } from 'node:readline/promises';
 export const liveStartChoices = {
     format: 'locked-camera conversation',
-    generation: 'LTX 2.5 single-stage audio-to-video',
-    modelCanvas: [nativeWidth, nativeHeight],
+    generation: 'GenAI LTX 2.5 picture and native dialogue',
+    modelCanvas: [720, nativeHeight],
     standbyClips: idleCount,
     standbySeconds: [3, 5],
     output: [720, 1280],

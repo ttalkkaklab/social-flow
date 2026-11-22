@@ -6,6 +6,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
@@ -451,12 +452,15 @@ export async function getGenaiVideoStatus(input, planned, binding) {
     try {
         fs.writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 });
         checkOutput(temp, receipt.expected ?? planned, receipt.operation === 'msr' || receipt.operation === 'scene-to-video');
-        if (fs.existsSync(receipt.videoPath)) {
+        try {
+            fs.linkSync(temp, receipt.videoPath);
+        }
+        catch (error) {
+            if (error.code !== 'EEXIST')
+                throw error;
             if (createHash('sha256').update(fs.readFileSync(receipt.videoPath)).digest('hex') !== createHash('sha256').update(bytes).digest('hex'))
                 throw new Error('GenAI video output conflicts with download');
         }
-        else
-            fs.linkSync(temp, receipt.videoPath);
         atomicJson(input.receiptPath, { ...receipt, status: 'completed', sha256: createHash('sha256').update(bytes).digest('hex') });
     }
     finally {
@@ -583,7 +587,8 @@ export async function checkGenaiVideoOptions(tool, args) {
     if (missing.length)
         throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
-export async function generateGenaiVideo(operation, input) {
+export async function generateGenaiVideo(operation, input, signal) {
+    signal?.throwIfAborted();
     const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
         : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
     requireAstraGenaiKey();
@@ -593,14 +598,28 @@ export async function generateGenaiVideo(operation, input) {
     const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
     const receiptPath = videoPath + '.astra-genai.json';
-    if (fs.existsSync(receiptPath)) {
-        const previous = receiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
-        if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
-            throw new Error('GenAI output receipt conflicts with this request; use a distinct output path.');
-        if (!previous.jobId)
-            throw new Error('GenAI submission identity is unknown; inspect usage before retrying.');
-        recordVideoSubmission(previous.jobId);
+    const finish = async () => {
+        const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal);
+        return { ...result, receiptPath };
+    };
+    async function followSubmission() {
+        const deadline = Date.now() + 120_000;
+        for (;;) {
+            signal?.throwIfAborted();
+            const previous = receiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
+            if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
+                throw new Error('GenAI output receipt conflicts with this request; use a distinct output path.');
+            if (previous.jobId) {
+                recordVideoSubmission(previous.jobId);
+                return finish();
+            }
+            if (!signal || Date.now() >= deadline)
+                throw new Error('GenAI submission identity is unknown; inspect usage before retrying.');
+            await sleep(250, undefined, { signal });
+        }
     }
+    if (fs.existsSync(receiptPath))
+        return followSubmission();
     else {
         if (fs.existsSync(videoPath))
             throw new Error('GenAI output already exists');
@@ -637,7 +656,21 @@ export async function generateGenaiVideo(operation, input) {
         // The fingerprint stays on the request as written, so a resumed receipt still matches.
         const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body) : body;
         const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting' };
-        fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
+        signal?.throwIfAborted();
+        // Publish the complete claim atomically so another live session can follow it immediately.
+        const claim = receiptPath + '.' + randomUUID() + '.tmp';
+        try {
+            fs.writeFileSync(claim, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
+            fs.linkSync(claim, receiptPath);
+        }
+        catch (error) {
+            if (error.code !== 'EEXIST')
+                throw error;
+            return followSubmission();
+        }
+        finally {
+            fs.rmSync(claim, { force: true });
+        }
         let response;
         try {
             try {
@@ -669,6 +702,5 @@ export async function generateGenaiVideo(operation, input) {
         atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
         recordVideoSubmission(accepted.id);
     }
-    const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
-    return { ...result, receiptPath };
+    return finish();
 }

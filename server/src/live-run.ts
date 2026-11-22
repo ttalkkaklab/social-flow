@@ -10,18 +10,14 @@ import {
   continueBroadcast,
   liveConfig,
   loadCharacter,
-  poses,
-  preparedReply,
-  preparedSpeech,
-  synthesize
+  preparedReply
 } from './live-character.js';
-import { GenaiRequestError } from './astra-genai-client.js';
+import { GenaiRequestError, requestGenai } from './astra-genai-client.js';
 import { checkLiveRelay, encode, splitIngest } from './live-encoder.js';
 import { prepareIdleClips, idleCount } from './live-idle.js';
-import { NativeTalk, nativeLauncher, talkPrompt } from './live-native.js';
+import { NativeTalk, talkPrompt } from './live-native.js';
 import { liveStartChoice, liveStartChoices } from './live-options.js';
 import { LiveProgram, isReply } from './live-program.js';
-import { MotionAvatar } from './live-motion.js';
 import {
   youtubeApi,
   checkChannel,
@@ -65,7 +61,9 @@ async function main() {
       'Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]'
     );
   const destination = v.youtube || v.tiktok;
-  const start = (action === 'run' || action === 'reserve') && (destination || v.start) ? await liveStartChoice(v.start) : undefined;
+  const start = action === 'run' || action === 'reserve'
+    ? await liveStartChoice(v.start ?? (action === 'run' && !destination ? 'preview' : undefined))
+    : undefined;
   if (start === 'cancel') { console.log(JSON.stringify({ state: 'cancelled' })); return; }
   if (start === 'ready' && !destination) throw Error('Choose a live destination or --start preview');
   const cfg = liveConfig.parse(JSON.parse(readFileSync(v.config, 'utf8')));
@@ -114,7 +112,7 @@ async function main() {
     console.log(JSON.stringify({ id: receipt.broadcastId, privacy: 'unlisted', state: 'reserved' }));
     return;
   }
-  const actor = loadCharacter(cfg);
+  const actor = loadCharacter(cfg, action === 'prepare-idle' ? 'standby' : 'native');
   const concept = cfg.broadcastConcept ?? (cfg.talkPrompt ?? cfg.persona ?? talkPrompt).slice(0, 600);
   if (action === 'prepare-idle') {
     if (destination) throw Error('Prepare standby clips without a live destination');
@@ -135,6 +133,10 @@ async function main() {
   if (api || tiktok) checkLiveRelay();
   if (action === 'check') {
     if (api) await checkChannel(api, cfg.youtubeChannelId!);
+    const caps = await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15000) as {
+      image_conditioning?: boolean; voice_references?: boolean
+    };
+    if (!caps?.image_conditioning || !caps.voice_references) throw Error('GenAI needs image conditioning and subject voice references for live dialogue');
     console.log(
       JSON.stringify({
         localAssetsReady: true,
@@ -149,9 +151,14 @@ async function main() {
   }
   if (action === 'warm') {
     if (api || v.tiktok) throw Error('Warm runs locally');
-    for (const text of new Set([cfg.opening, ...cfg.hostLines, ...cfg.reactions.map((r) => r.answer)]))
-      await preparedSpeech(cfg, actor, text);
-    console.log(JSON.stringify({ warmed: true, character: cfg.character }));
+    const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
+    try {
+      for (const text of new Set([cfg.opening, ...cfg.reactions.map(r => r.answer)])) {
+        const {motion} = await renderer.render(text, new AbortController().signal);
+        renderer.release(motion);
+      }
+    } finally { renderer.close(); }
+    console.log(JSON.stringify({ warmed:true, character:cfg.character, provider:'astra-genai' }));
     return;
   }
   const seconds = Number(v.seconds);
@@ -194,8 +201,8 @@ async function main() {
   }
   let ownsRun = !prior;
   const save = () => writeReceipt(receipt);
-  let motion: MotionAvatar | NativeTalk | undefined;
-  const program = new LiveProgram(clip => { if (clip.motion) motion?.release(clip.motion); });
+  const motion = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
+  const program = new LiveProgram(clip => { if (clip.motion) motion.release(clip.motion); });
   const { ready } = program;
   const queue = new ChatQueue(event => {
     program.hear(event);
@@ -205,7 +212,7 @@ async function main() {
   let polling: Promise<void> | undefined, replying: Promise<void> | undefined, hosting: Promise<void> | undefined;
   let acceptingUntil = Infinity, renderingReply = false;
   let speculative: AbortController | undefined;
-  let hostLine = 0, playing = false, lastSpeech = Date.now();
+  let hostLine = 0;
   let received = 0,
     failedReplies = 0,
     unfinishedReplies = 0,
@@ -231,11 +238,6 @@ async function main() {
   };
   const onLog = (kind: string, fields: Record<string, unknown>) => {
     log(kind, fields);
-    if (kind === 'speech_start') playing = true;
-    if (kind === 'speech_end') {
-      lastSpeech = Date.now();
-      playing = false;
-    }
     if (kind === 'speech_interrupted' && isReply(String(fields.source))) unfinishedReplies++;
     if (kind === 'speech_end' && isReply(String(fields.source))) spokenReplies++;
     if (kind === 'speech_end' && probeId && fields.id === probeId && fields.source === 'youtube')
@@ -271,24 +273,13 @@ async function main() {
       : undefined;
   wake?.on('error', () => log('sleep_prevention_unavailable', {}));
   try {
-    if (start) {
-      nativeLauncher();
-      motion = new NativeTalk(actor.asset, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
-    }
-    else if (cfg.motionVideo) motion = new MotionAvatar(cfg);
-    const frames = motion ? [] : poses(actor.asset, cfg);
-    if (motion instanceof NativeTalk) {
-      log('idle_pool_preparing', { total: idleCount });
-      await motion.prepareIdle(concept, controller.signal, log);
-    }
+    log('idle_pool_preparing', { total: idleCount });
+    await motion.prepareIdle(concept, controller.signal, log);
     let renderInFlight: Promise<unknown> | undefined;
-    async function render(pcm: Buffer, text: string, cachePrepared = false, signal = controller.signal) {
-      // One production GPU. A viewer can plan and synthesize while a host render finishes.
+    async function performance(text: string, signal = controller.signal) {
       while (renderInFlight) await renderInFlight.catch(() => {});
       signal.throwIfAborted();
-      const job = motion instanceof NativeTalk
-        ? motion.render(pcm, signal, text, cachePrepared)
-        : motion?.render(pcm, signal);
+      const job = motion.render(text, signal);
       renderInFlight = job;
       try { return await job; }
       finally { if (renderInFlight === job) renderInFlight = undefined; }
@@ -303,24 +294,15 @@ async function main() {
       const previous = [...context.scheduledHost, ...context.onAir.map(turn => turn.host)];
       if (previous.some(line => line.trim() === text)) throw Error('Host repeated a recent line');
       if (stale()) return;
-      const pcm = await synthesize(actor, text, signal);
-      if (stale()) return;
-      const frames = await render(pcm, text, false, signal);
-      if (stale()) { if (frames) motion?.release(frames); return; }
-      ready.push({ source: 'host', id, text, pcm, motion: frames });
+      const clip = await performance(text, signal);
+      if (stale()) { motion.release(clip.motion); return; }
+      ready.push({ source:'host', id, text, ...clip });
       hostLine++;
       log('host_segment_ready', { id, preflight });
     }
-    const openingPcm = await preparedSpeech(cfg, actor, cfg.opening, controller.signal);
-    if (start) log('native_opening_preparing', liveStartChoices);
-    ready.push({
-      source: 'opening',
-      id: 'opening',
-      text: cfg.opening,
-      pcm: openingPcm,
-      motion: await render(openingPcm, cfg.opening, true)
-    });
-    if (start) await prepareHost(true);
+    log('native_opening_preparing', liveStartChoices);
+    ready.push({source:'opening', id:'opening', text:cfg.opening, ...await performance(cfg.opening)});
+    await prepareHost(true);
     if (controller.signal.aborted) return;
     let chat: YoutubeChat | undefined;
     const destinations: string[] = [];
@@ -346,16 +328,11 @@ async function main() {
     hosting = (async () => {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
         try {
-          if (start && program.canPlanHost && !queue.pending && !renderingReply) {
+          if (program.canPlanHost && !queue.pending && !renderingReply) {
             speculative = new AbortController();
             try { await prepareHost(false, AbortSignal.any([controller.signal, speculative.signal])); }
             catch (error) { if (!speculative.signal.aborted) throw error; }
             finally { speculative = undefined; }
-          } else if (!start && !playing && !ready.length && !queue.pending && !renderingReply &&
-            hostLine < cfg.hostLines.length && Date.now() - lastSpeech >= 9000 && acceptingUntil - Date.now() > 25000) {
-            const text = cfg.hostLines[hostLine++];
-            const pcm = await preparedSpeech(cfg, actor, text, controller.signal);
-            ready.push({ source: 'host', id: 'host-' + hostLine, text, pcm, motion: await render(pcm, text) });
           }
         } catch (error) {
           if (!controller.signal.aborted) {
@@ -374,10 +351,8 @@ async function main() {
         try {
           renderingReply = true;
           const prepared = preparedReply(cfg, event.text);
-          const selective = !!start && event.source !== 'operator' && event.text !== probe;
-          const text = start || !prepared
-            ? await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective)
-            : prepared;
+          const selective = event.source !== 'operator' && event.text !== probe;
+          const text = await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective);
           if (selective && text === '[SKIP]') {
             log('chat_skipped', { source: event.source, id: event.id });
             continue;
@@ -385,14 +360,9 @@ async function main() {
           speculative?.abort();
           log('reply_generated', { source: event.source, id: event.id, prepared: text === prepared });
           controller.signal.throwIfAborted();
-          stage = 'synthesizing';
-          const pcm = text === prepared
-            ? await preparedSpeech(cfg, actor, text, controller.signal)
-            : await synthesize(actor, text, controller.signal);
-          controller.signal.throwIfAborted();
-          stage = 'animating';
-          const performance = await render(pcm, text);
-          program.queueReply({ source: event.source, id: event.id, text, pcm, motion: performance,
+          stage = 'generating_av';
+          const clip = await performance(text);
+          program.queueReply({ source:event.source, id:event.id, text, ...clip,
             question: { speaker: event.speaker, text: event.text } });
         } catch (e) {
           if (controller.signal.aborted) {
@@ -481,7 +451,7 @@ async function main() {
       })();
     }
     await encode(
-      frames,
+      [],
       join(out, 'recording.flv'),
       destinations,
       seconds,
@@ -489,7 +459,7 @@ async function main() {
       take,
       onLog,
       motion,
-      start ? () => renderingReply || queue.pending > 0 || ready.some(e => isReply(e.source)) : undefined
+      () => renderingReply || queue.pending > 0 || ready.some(e => isReply(e.source))
     );
   } catch (e) {
     if (api && !receipt.broadcastId) {
@@ -526,7 +496,7 @@ async function main() {
     }
     await Promise.allSettled([polling, replying, hosting]);
     wake?.kill();
-    motion?.close();
+    motion.close();
     for (const event of ready) if (isReply(event.source)) unfinished(event.source, event.id, 'awaiting_playback');
     for (let event = queue.next(); event; event = queue.next()) unfinished(event.source, event.id, 'queued');
     process.removeListener('SIGINT', stop);

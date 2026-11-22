@@ -10,7 +10,7 @@ argument-hint: "[channel] [character] [platforms] [duration]"
 # Character LIVE
 
 Use the project, channel and character the user selected. The runner uses the channel's approved
-sheet, the character's saved ASTRA voice, and the project's speech language. Choose a text model
+sheet, the character’s selected voice.wav and the project’s speech language. Choose a text model
 served by the configured gateway. This renderer animates a character portrait and speaks generated
 answers. Its input is a portrait with a visible mouth. It needs Node 20+ and FFmpeg with libx264,
 AAC and Python 3 with FFmpeg shared libraries (avformat and avutil) for RTMPS output. Set `SOCIAL_FLOW_LIVE_PYTHON` when that interpreter is outside PATH. Use a local
@@ -52,24 +52,24 @@ reply takes priority over speculative host production. An on-air line always fin
 when the chat intake window closes. Standby fills only gaps between ready spoken segments.
 The event log records chat admission, skipped messages, generation, and the first frame and last
 audio sample sent. If YouTube exhausts the chat quota, tell the operator that new messages
-may be missed. The encoder trims eight columns per side of the model’s 736×1280 canvas.
+may be missed. Standby frames are center-cropped for 720×1280 playout.
 
-Use the production ASTRA video API (`ASTRA_VIDEO`, optional `ASTRA_VIDEO_URL`) for
-listening clips. For speaking frames set `SOCIAL_FLOW_LIVE_GPU_HOST` to the production
-SSH alias and `SOCIAL_FLOW_LIVE_GPU_PYTHON` to its absolute LTX Python path. The
-bundled launcher uses existing SSH credentials and known host keys, copies the
-portrait and voice to a private temporary directory and returns the whole shot.
-Sites with their own GPU scheduler can set `SOCIAL_FLOW_LIVE_A2V_COMMAND` to their launcher. It takes the shipped Python script as its first argument,
-followed by `--audio WAV --image IMAGE --output MP4 --prompt TEXT`. It must return
-after writing the result to the supplied path on the broadcast host. On a CUDA host
-with the LTX 2.5 dependencies and split weights, the launcher can be the LTX
-environment’s Python interpreter. Set `SOCIAL_FLOW_LTX_MODELS` on that GPU host
-when the models directory differs from `/data/ltx/models`. The renderer conditions
-the whole frame on the exact spoken words and recorded voice. It gives the reference pose a short silent lead-in and removes the lead-in from playout. Keep host lines brief. On a host with MediaPipe, OpenCV and a face landmarker, set `SOCIAL_FLOW_AVATAR_PYTHON`
-and `SOCIAL_FLOW_LIVE_LANDMARKER` (`MUSETALK_LANDMARKER` also works). The tracker compares mouth
-opening against the recording and can shift the whole shot by up to four frames within its
-generated handles. It leaves weak matches on the model clock. Check the recorded mouth closures
-and pauses against the sound when reviewing sync.
+Set `ASTRA_GENAI_URL` and `ASTRA_GENAI_API_KEY` for the production GenAI gateway.
+It generates listening shots and speaking clips. Existing verified standby clips can be reused.
+Each spoken turn uses GenAI image-to-video with the distilled LTX model and MSR conditioning.
+The host portrait anchors the first frame and pairs with the character’s approved
+`voice.wav` in subject slot 1. The sample guides timbre. Put the intended words in the
+dialogue, in the broadcast language. The model generates the picture and speech together.
+The encoder plays both tracks from that result. Store the voice sample in the character
+directory, at most 10 seconds long. Keep each spoken line short enough for a 15-second shot.
+Check pronunciation, timbre and mouth movement in the local preview.
+The renderer keeps completed clips and job receipts in the project’s `.social-flow/live-genai/`.
+If interrupted, use the same inputs to recover the same job. A receipt with an uncertain
+submission needs reconciliation before another submission. A submitted host job can stay
+in the provider queue after a viewer reply supersedes it.
+When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` and
+`ASTRA_GENAI_CHAT_API_KEY` for chat alone. The video gateway must advertise
+`image_conditioning` and `voice_references` on `/v1/ltx/msr/capabilities`.
 
 1. Read the channel profile and confirm the external destination. Make a session configuration
    outside the plugin, for example in the project's logs. Use the channel ID from its profile.
@@ -82,16 +82,16 @@ and pauses against the sound when reviewing sync.
    ```json
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
     "broadcastConcept":"Late-night radio in a softly lit studio.",
-    "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the supplied audio.",
+    "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the authored dialogue.",
     "chatModel":"gateway-text-model","opening":"Welcome to Night Radio. Tonight I brought the book I read before bed.",
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
 
 4. Optionally configure reactions as an array of objects with a questions array and a short spoken
    answer. The live planner treats an exact match as a suggested answer and considers the conversation. Use
-   `warm --config /path/to/config.json` to synthesize the opening and these responses with the
-   character's voice before going live. Other messages go to the language model and speech
-   gateway on demand. The cache stays under the project's .social-flow/live-voices directory.
+   `warm --config /path/to/config.json` to generate the opening and prepared response clips
+   before going live. For a new message the chat model writes the answer and GenAI renders
+   the spoken clip. Exact repeated requests reuse the saved clip and receipt.
 
    Run the shipped CLI with the plugin root as working directory. For a preview, feed an NDJSON
    operator message on standard input. Use a fresh directory under an existing parent for each
@@ -142,5 +142,4 @@ use `cancel-unstarted` only when the operator wants to remove that room. The com
 the session marker, channel, visibility, stream binding and start state before cancellation.
 Check Studio for an uncertain create
 before any new run. API liveStreamingNotEnabled means YouTube has not granted the channel access.
-Never send an ingest key in chat or put it in a config file. The gateway needs its existing
-/v1/chat/completions and /v1/audio/speech routes.
+Never send an ingest key in chat or put it in a config file. Chat uses /v1/chat/completions. Speaking clips use the GenAI LTX image-to-video route.
