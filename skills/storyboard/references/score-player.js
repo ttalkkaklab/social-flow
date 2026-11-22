@@ -2,8 +2,9 @@
 (function (root) {
   'use strict';
   function clock(seconds) {
-    const tenths = Math.floor((Math.max(0, seconds) + 0.00001) * 10);
-    return Math.floor(tenths / 600) + ':' + String(Math.floor(tenths / 10) % 60).padStart(2, '0') + '.' + tenths % 10;
+    const hundredths = Math.floor(Math.max(0, seconds) * 100 + 0.00001);
+    return Math.floor(hundredths / 6000) + ':' + String(Math.floor(hundredths / 100) % 60).padStart(2, '0') +
+      '.' + String(hundredths % 100).padStart(2, '0');
   }
   function mount(player, ko) {
     const audio = player.querySelector('audio'), play = player.querySelector('.score-play');

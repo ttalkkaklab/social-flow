@@ -5975,6 +5975,11 @@ window.STORYBOARD_READY = (async function () {
 
   app.innerHTML = h;
   app.querySelectorAll('.score-player').forEach(function (player) { window.ReviewScorePlayer.mount(player, LANG === "ko"); });
+  app.querySelectorAll('details.scene-band, details.seq').forEach(function (group) {
+    group.addEventListener('toggle', function () {
+      if (!group.open) group.querySelectorAll('.scene-workbench audio').forEach(function (audio) { audio.pause(); });
+    });
+  });
   app.querySelectorAll('audio, video').forEach(function (media) {
     media.addEventListener('play', function () {
       app.querySelectorAll('audio, video').forEach(function (other) { if (other !== media && !other.paused) other.pause(); });
