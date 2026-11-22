@@ -87,4 +87,8 @@ test('the digest counts video shots whose camera move was never chosen; a card h
   const shot = (id, mode, movement) => ({ id, scene: 1, shot: { size: 'ms', angle: 'eye', render: { mode } }, visual: movement ? { camera: { movement } } : {} });
   const win = { SCENES: [shot('s0001', 'generated_video', 'static'), shot('s0002', 'generated_video'), shot('s0003', 'generated_video'), shot('s0004', 'editorial_html')] };
   assert.equal(direction.digest(win)[0], 'sizes ms 4 — angles eye 4 — moves static 1 · not chosen 2');
+  win.STRUCTURE = {scenes:[{no:1,directionDefaults:{camera:'camera.dolly-in'}}]};
+  assert.deepEqual(direction.facts(win).moves, {static:1,'dolly-in':2,'-':1});
+  const warnings = require('../../skills/storyboard/references/production-mode.js').cameraDirectionWarnings(win.SCENES,win.STRUCTURE.scenes);
+  assert.ok(!warnings.some(w => /camera-plan-missing|camera-purpose-missing.*shot [23]/.test(w)));
 });

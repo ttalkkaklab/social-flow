@@ -2175,6 +2175,13 @@ function selftest() {
     { no: 1, place: '방', time: '낮', event: 'A가 B를 본다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' },
     { no: 2, place: '방', time: '낮', event: 'A와 B가 마주 선다', charge: { open: '-', close: '+' }, turn: '의심 → 안심', out: '가' }
   ], sequences: [{ id: 'q1', title: '대화', purpose: '둘 사이의 긴장을 푼다', scenes: [1, 2] }] };
+  const inheritedAxis = {...axisStructure, scenes:axisStructure.scenes.map(s => s.no === 2 ?
+    {...s, directionDefaults:{axis:'A left, B right'}} : s)};
+  const fromDefault = axis(undefined, 0);
+  const nextSide = axis('B left, A right', 40, {lineCrossing:{method:'camera_move',from:'A left, B right',to:'B left, A right',reason:'Follow the turn.'}});
+  ok('a scene axis establishes the first side and a declared crossing carries to the next shot',
+    !has(advice(run([cover, fromDefault, nextSide, axis(undefined, 85), ctaShot],{STRUCTURE:inheritedAxis})),
+      /lineCrossing|space\.line changes|no space\.line|later shot but not on shot|no shot of the scene writes space\.line/));
   ok('an unexplained line flip is advisory',
      has(advice(run([cover, axis('A left, B right', 0), axis('B left, A right', 40), ctaShot], { STRUCTURE: axisStructure })), /space\.line changes/));
   ok('a declared camera crossing with matching sides passes',

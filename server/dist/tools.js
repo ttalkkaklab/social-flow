@@ -1,4 +1,4 @@
-import { sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
+import { sceneDefaultsSchema, sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -4644,7 +4644,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
@@ -4663,6 +4663,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             event: { type: 'string', description: 'The one thing that happens in this scene' },
                             summary: { type: 'string', description: "The scene's story in one sentence" },
                             turn: { type: 'string', description: 'What flipped between the open and the close' },
+                            directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: 'none' }),
                             videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: 'none' }),
                             audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: 'none' }),
                             out: { type: 'string', description: 'The line or visible action the scene goes out on — it leaves the next thing wanted' },
@@ -4907,7 +4908,7 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
                             angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
                             view: shotViewInput,
                             backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view.' },
-                            move: { type: 'object', additionalProperties: false, required: ['id'], description: 'Camera move icon. A video shot left without one is named in the result (camera_move_unset: the video model then decides the camera), as is a call that holds every video shot it sets; neither is refused', properties: {
+                            move: { type: ['object', 'null'], additionalProperties: false, required: ['id'], description: 'Choose a shot move. On a video shot null clears the override and restores the scene camera default.', properties: {
                                     id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
                                     reason: { type: 'string', description: 'Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one' },
                                     target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },

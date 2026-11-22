@@ -1,0 +1,1 @@
+Reuse the acting fields and pause formatting from the shot prompt compiler in scene requests and the offline review. Preserve speech bindings and original lines, keep each cue in its shot and cover both single-shot and multi-shot adapter bodies.

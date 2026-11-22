@@ -915,7 +915,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load7;
+    exports.load = load8;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1051,7 +1051,7 @@ var require_browser = __commonJS({
       } catch (error) {
       }
     }
-    function load7() {
+    function load8() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1089,7 +1089,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load7;
+    exports.load = load8;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1231,7 +1231,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load7() {
+    function load8() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -44333,6 +44333,9 @@ var require_video_duration = __commonJS({
   }
 });
 
+// src/msr-opening.ts
+import { createRequire } from "node:module";
+
 // node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
@@ -48389,6 +48392,14 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var load = createRequire(import.meta.url);
+var sceneDefaultsSchema = external_exports.object({
+  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  axis: sceneText.optional(),
+  continuity: sceneText.optional(),
+  lighting: sceneText.optional(),
+  attention: sceneText.optional()
+}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
 var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
@@ -48487,15 +48498,15 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 // src/scene-video.ts
 import path6 from "node:path";
 import { existsSync as existsSync5, readFileSync as readFileSync7, realpathSync as realpathSync2, statSync as statSync5 } from "node:fs";
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire } from "node:module";
-var load = createRequire(import.meta.url);
+import { createRequire as createRequire2 } from "node:module";
+var load2 = createRequire2(import.meta.url);
 var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function planVideoPerformance(shot, options = {}) {
-  const acting = load("../../skills/_shared/scene-acting.js");
+  const acting = load2("../../skills/_shared/scene-acting.js");
   const timeline = acting.planScenePerformance(shot, options.measureAudio);
   return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
 }
@@ -48511,10 +48522,10 @@ function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
   if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load("../../skills/storyboard/references/film-techniques.js");
+  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
     const path8 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
@@ -48536,6 +48547,16 @@ var directedMoves = [
   /\btrack(?:s|ing)? backward\b/i,
   /\b(?:track|follow)(?:s|ing)? (?:\w+ )?(?:from )?behind\b/i
 ];
+function sceneVoiceDirection(acting, spoken, legacy = false) {
+  const cues = legacy ? [acting?.vocal || acting?.direction] : [acting?.direction, acting?.vocal];
+  const seen = /* @__PURE__ */ new Set();
+  return [...cues, ...acting?.tags || []].filter((v) => !!v).map((cue) => (spoken ? cue.split(spoken).join("the authored line") : cue).trim()).filter((cue) => {
+    const key = cue.toLowerCase().replace(/[.!?\s]+$/, "");
+    if (!key || seen.has(key) || nonEnglishOutsideQuotes(cue)) return false;
+    seen.add(key);
+    return true;
+  }).join(" ");
+}
 function cameraDrift(prompt, movement) {
   if (!movement.trim()) return null;
   const prose = prompt.replace(/"[^"]*"|“[^”]*”|「[^」]*」/g, " ");
@@ -48558,15 +48579,14 @@ function cameraDrift(prompt, movement) {
   if (moving.length) return null;
   return said.some(holds) ? "contradicted" : "missing";
 }
-function compileVideoPrompt(shot, source, names = {}, options = {}) {
-  const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
-  const msr = frames.mode === "reference";
-  const words = load("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load("../../skills/storyboard/references/shot-view.js");
+function shotVisualDirection(shot) {
+  const plan = object(shot.shot), camera = object(object(shot.visual).camera);
+  const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load2("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load("../../skills/storyboard/references/structure-contract.js");
+  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load2("../../skills/storyboard/references/structure-contract.js");
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -48581,13 +48601,61 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(", "));
   const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
+  const accentWords = other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction));
+  const openingView = [
+    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
+    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
+    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : ""
+  ].filter(Boolean);
+  return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
+}
+var directions = () => load2("../../skills/storyboard/references/scene-direction.js");
+function resolvedDirection(scene, cards) {
+  return directions().resolve(scene, cards);
+}
+function attributeWords(key, row, camera = {}) {
+  if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
+  return nonEnglishOutsideQuotes(row.value) ? "" : sentence(directions().labels[key][1] + ": " + row.value);
+}
+function sceneShotNotes(card) {
+  const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true);
+  const actions = notes.actions.map(english2).filter(Boolean);
+  return {
+    action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
+    sound: english2(notes.sound),
+    blocking: english2(notes.blocking),
+    end: english2(notes.end),
+    beats: [...notes.beats, ...notes.motion].map(english2).filter(Boolean)
+  };
+}
+function shotVisualWords(shot, rows, common6, end, framing) {
+  const dir = shotVisualDirection(shot), visual = object(shot.visual), camera = object(visual.camera);
+  const expression = expressionWords(shot);
+  return [...new Set([
+    framing,
+    dir.framing,
+    ...dir.openingView,
+    dir.focusWords,
+    dir.depthWords,
+    ...dir.accentWords,
+    ...Object.entries(rows).filter(([key]) => !common6[key]).map(([key, row]) => attributeWords(key, row, camera)),
+    dir.settle && sentence("Closing frame: " + dir.settle),
+    expression && sentence("Expressions: " + expression),
+    end && sentence("End on " + end)
+  ].filter((v) => !!v && !nonEnglishOutsideQuotes(v)))].join(" ");
+}
+function compileVideoPrompt(shot, source, names = {}, options = {}) {
+  const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
+  const msr = frames.mode === "reference";
+  const { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, accentWords, openingView } = shotVisualDirection(shot);
   const lines = (Array.isArray(shot.narration) ? shot.narration : []).map(object);
   const mode = options.mode ?? (lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen") ? "native" : "voiceover");
   const design = object(plan.videoDesign);
   const motion = object(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load("../../skills/_shared/scene-acting.js");
+  const acting = load2("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -48601,10 +48669,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     settle ? sentence(`Closing frame: ${settle}`) : "",
     focusWords,
     // A beat accent (speed ramp, impact shake) names the moment it fires on.
-    ...other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction)),
-    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
-    !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
-    !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : "",
+    ...accentWords,
+    ...openingView,
     actionInBeat ? "" : sentence(source.action),
     seen.length ? sentence(`The opening picture also shows ${seen.map(called).join(" and ")}, who ${seen.length > 1 ? "stay" : "stays"} in the frame and never speaks`) : "",
     extras ? sentence(`Unnamed people in the frame: ${extras}`) : "",
@@ -51650,10 +51716,10 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
 }
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 import { fileURLToPath } from "node:url";
-var load2 = createRequire2(import.meta.url);
-var imageRouting = () => load2(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var load3 = createRequire3(import.meta.url);
+var imageRouting = () => load3(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 function hasVideoSubjectReferences(shot) {
   return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
 }
@@ -51662,13 +51728,13 @@ function hasVideoSubjectReferences(shot) {
 import { createHash as createHash3 } from "node:crypto";
 import { existsSync as existsSync4, readFileSync as readFileSync6, realpathSync } from "node:fs";
 import path5 from "node:path";
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load3 = createRequire3(import.meta.url);
+var load4 = createRequire4(import.meta.url);
 var object2 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable = (value) => Array.isArray(value) ? value.map(stable) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable(v)])) : value;
@@ -51683,7 +51749,7 @@ function resolveCharacterVoice(character, context, warnings) {
   let resolved = character;
   if (!Object.keys(object2(character.tts)).length && existsSync4(identity)) {
     try {
-      const { handoff } = load3("../../skills/channel/references/character-sheet.js");
+      const { handoff } = load4("../../skills/channel/references/character-sheet.js");
       const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
       resolved = { ...current, ...character, tts: current.tts };
     } catch (error) {
@@ -51717,7 +51783,7 @@ function voiceReference(character, context, warnings) {
     const identity = path5.join(channel, "assets/characters", text2(character.id), "identity.md");
     const candidate = path5.join(path5.dirname(identity), "voice.wav");
     if (existsSync4(identity) && existsSync4(candidate)) {
-      const { identityVoice } = load3("../../skills/_shared/character-voice.js");
+      const { identityVoice } = load4("../../skills/_shared/character-voice.js");
       if (hash(identityVoice(readFileSync6(identity, "utf8"))) !== hash(character.tts)) {
         warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
         return void 0;
@@ -51734,11 +51800,15 @@ function voiceReference(character, context, warnings) {
 }
 
 // src/scene-video.ts
-var load4 = createRequire4(import.meta.url);
+var load5 = createRequire5(import.meta.url);
 var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
 var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
-function compileSceneTimeline(raw, scene, episode, board) {
-  const render = load4("../../skills/storyboard/references/render-routing.js");
+function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
+  const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
+  return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
+}
+function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false) {
+  const render = load5("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
   if (scene.oneTake && members.length !== 1) throw new Error("scene_one_take: an uninterrupted camera setup must have one shot");
@@ -51755,14 +51825,10 @@ function compileSceneTimeline(raw, scene, episode, board) {
     const transition = timeline?.transition ?? (index === 0 ? "open" : incoming);
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
-    const move = cameraMoveWords(visual?.camera ?? {});
-    const crop = visual?.camera?.view?.crop;
-    const landing = english(visual?.camera?.end);
-    const camera = timeline?.framing ?? [member.shot?.size, member.shot?.angle, english(crop)].filter(Boolean).join(" ");
-    const shotFraming = [camera, move, landing && "Closing frame: " + landing].filter(Boolean).join(" ");
-    const framing = members.length === 1 && !timeline && scene.camera ? scene.camera : shotFraming || (members.length === 1 ? scene.camera || "Hold the opening composition." : "");
-    const existingAction = [visual?.video?.promptSource?.action, member.shot?.videoDesign?.action, visual?.action, member.summary, visual?.video?.prompt].map(english).find(Boolean);
-    const action = timeline?.action ?? existingAction ?? (members.length === 1 ? scene.action || scene.emotion : "");
+    const notes = sceneShotNotes(raw[index]);
+    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing);
+    const framing = shotFraming || (coverage.common.camera ? attributeWords("camera", coverage.common.camera) : members.length === 1 ? "Use the opening composition." : "");
+    const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
@@ -51799,13 +51865,14 @@ function compileSceneTimeline(raw, scene, episode, board) {
     }
     for (const ref of references) if (!claimed.has(ref))
       add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
-    const scoped = members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
+    const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions && JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
     const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
-    const blocking = scoped && english(member.shot?.videoDesign?.before);
-    const sound = scoped && (english(visual?.video?.promptSource?.sound) || english(member.shot?.videoDesign?.sound));
-    const lines = scoped ? (member.narration ?? []).filter((line) => line.tts?.trim()) : [];
+    const blocking = notes.blocking;
+    const sound = notes.sound;
+    const ordered = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const lines = scoped ? ordered(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
@@ -51817,12 +51884,13 @@ function compileSceneTimeline(raw, scene, episode, board) {
       const context = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
       const voice = character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+      const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
         speaker: line.speaker,
         delivery: line.delivery,
         text: line.tts,
-        ...line.acting?.vocal || line.acting?.direction ? { direction: line.acting?.vocal || line.acting?.direction } : {},
+        ...direction ? { direction } : {},
         ...frame2 !== void 0 ? { frame: frame2 } : {},
         ...voice ? { voice } : {},
         ...warnings.length ? { warnings } : {}
@@ -51852,10 +51920,10 @@ function sceneTimelineWords(t2, scene, includeDialogue = true) {
     const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
     return [
       `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
-      ...[s2.framing, s2.action].filter((text3) => !wholeTake.has(text3)),
+      ...[s2.framing, s2.blocking, s2.action].filter((text3) => text3 && !wholeTake.has(text3)),
       ...cues,
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
   }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
 }
@@ -51971,7 +52039,7 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
 }
 
 // src/video-routing.ts
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/video-pricing.ts
@@ -52173,8 +52241,8 @@ function charUnits(args) {
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-review.ts
-import { createRequire as createRequire5 } from "node:module";
-var review = () => createRequire5(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire6 } from "node:module";
+var review = () => createRequire6(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function refreshVideoReview(episode) {
   try {
     review().write(episode);
@@ -52191,11 +52259,11 @@ var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname3(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/video-routing.ts
-var load5 = createRequire7(import.meta.url);
+var load6 = createRequire8(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 function routingContext(episode, shotId, sceneNo) {
-  const reader = load5(shared);
+  const reader = load6(shared);
   try {
     return reader.readVideoContext(episode, shotId, sceneNo);
   } catch (error) {
@@ -52289,7 +52357,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire8 } from "node:module";
+import { createRequire as createRequire9 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -52495,7 +52563,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load6 = createRequire8(import.meta.url);
+var load7 = createRequire9(import.meta.url);
 var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -52671,6 +52739,7 @@ var sceneSchema = external_exports.object({
   summary: external_exports.string().optional().describe("The scene's story in one sentence; the storyboard scene header shows it"),
   out: nonEmpty.optional().describe("The sentence the scene goes out on \u2014 the one that forces a \uADF8\uB7F0\uB370 or \uADF8\uB798\uC11C into the next scene"),
   music: external_exports.object({ decision: external_exports.enum(["score", "none"]), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional().describe("The music decision story_music records: score (with its $timeline span id) or none, and why"),
+  directionDefaults: sceneDefaultsSchema.optional(),
   videoDirection: sceneVideoDirectionSchema.optional(),
   videoOpeningSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   audienceSound: audienceDecisionSchema.optional()
@@ -52971,6 +53040,7 @@ var storySceneSchema = external_exports.object({
     summary: nonEmpty.describe("The scene's story in one sentence"),
     turn: nonEmpty.optional(),
     out: nonEmpty.optional(),
+    directionDefaults: sceneDefaultsSchema.optional(),
     videoDirection: sceneVideoDirectionSchema.optional(),
     audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
@@ -53064,7 +53134,7 @@ var shotIconsSchema = external_exports.object({
     angle: tuple(V.ANGLES).optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
     focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
     accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
@@ -53135,8 +53205,8 @@ function compileActing(text3, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire11 } from "node:module";
-var shared2 = () => createRequire11(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire12 } from "node:module";
+var shared2 = () => createRequire12(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }

@@ -1,4 +1,4 @@
-import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
+import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
@@ -33,7 +33,7 @@ import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, type Im
 import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
-import { cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
+import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
 
@@ -334,10 +334,10 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   let context = routingContext(input.episode, input.shotId, input.sceneNo);
   if (input.shotId && context.shot.scene !== undefined) {
     const sceneNo = Number(context.shot.scene);
-    const owner = (context.board.STRUCTURE as {scenes?: {no:number; videoDirection?: SceneVideoDirection}[]})?.scenes?.find(s => s.no === sceneNo);
+    const owner = (context.board.STRUCTURE as {scenes?: {no:number; videoDirection?: SceneVideoDirection; directionDefaults?: unknown}[]})?.scenes?.find(s => s.no === sceneNo);
     const members = (context.board.SCENES as {scene?: number; timeline?: unknown; visual?: {frames?: {storyboardKeyframes?: unknown; keyframes?: unknown}}}[])
       .filter(shot => shot.scene === sceneNo);
-    const timed = (owner?.videoDirection && members.length > 1) || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps ||
+    const timed = (owner?.videoDirection && (members.length > 1 || owner.directionDefaults)) || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps ||
       members.some(shot => shot.timeline || shot.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot.visual?.frames?.keyframes);
     if (timed) {
       if (members.length !== 1) throw new Error('scene_video_scope: plan the timed shot and its scene inputs with sceneNo ' + sceneNo);
@@ -375,7 +375,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
     const settings = z.object({reserveUsd:z.number().nonnegative().finite(), outputPath:z.string().optional(),
       filename:z.string().optional()}).strict().parse(input.args);
     const {request} = prepareSceneRequest(input.sceneNo,bindSceneCards(context.sceneMembers,input.shotBindings),scene,context.episode,lines,
-      {bindDialogue:false,bindOpening:false,suffix:''}, () => undefined, context.board);
+      {bindDialogue:false,bindOpening:false,suffix:'',shotScoped:true}, () => undefined, context.board);
     bindRegisteredPanels(request, context.episode, context.board);
     const missing: string[] = [];
 
@@ -474,7 +474,7 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   // prompts can discard a planned move, as in mochi_bo EP05 s0015.
   const promptLimit = tool === 'astra_genai_msr' || imageWithReferences ? genaiMsrPromptLimit()
     : tool === 'astra_genai_img2video' ? 2000 : tool ? videoPromptLimit(tool) : undefined;
-  const compileFor = (budget: number | undefined) => compileVideoPrompt(shot, video!.promptSource!, names, { mode, measureAudio, bindDialogueSeparately,
+  const compileFor = (budget: number | undefined) => compileVideoPrompt(withSceneCamera(shot, (context.board.STRUCTURE as {scenes?: unknown})?.scenes), video!.promptSource!, names, { mode, measureAudio, bindDialogueSeparately,
     ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
   let compiled = !scene && input.args.prompt === undefined && video?.promptSource ? compileFor(promptLimit) : undefined;
   const withPrompt = (prompt: unknown) => {
@@ -491,7 +491,9 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
   const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo!, members, scene, context.episode, lines,
     { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
   const sceneRequest = prepared?.request;
-  const sceneCamera = prepared?.camera ?? (scene && sceneCameraDirection(members, scene.camera));
+  const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
+  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
+    ? attributeWords('camera', legacyCoverage.common.camera) : undefined));
   const timedImages = prepared?.mapped.timedImages;
   if (scene) {
     if (prepared) {
@@ -499,7 +501,12 @@ export function planVideo(raw: unknown, persist = true): VideoPlan {
       callArgs = { ...withPrompt(''), ...prepared.mapped.args, prompt:prepared.providerPrompt };
     }
     else {
-      const sceneText = scenePromptText(scene, sceneCamera?.instruction, undefined, lines, bindTurns);
+      const coverage = legacyCoverage!;
+      const notes = sceneShotNotes(members[0]);
+      const details = [...Object.entries(coverage.common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)),
+        shotVisualWords(members[0], coverage.shots[0], coverage.common, notes.end), notes.blocking, notes.action, ...notes.beats,
+        notes.sound && 'Sound: ' + notes.sound].filter(Boolean);
+      const sceneText = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(' '), lines, bindTurns);
       callArgs = withPrompt(bindOpening ? sceneText : openingPrompt(sceneText, scene.openingPositions));
     }
     if (tool === 'seedance_reference' && !silentPicture) {

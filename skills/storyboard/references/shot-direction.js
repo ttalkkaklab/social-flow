@@ -183,7 +183,8 @@
     return { sizes, wideWithoutReason };
   }
   function facts(win) {
-    const scenes = win.SCENES || [];
+    const resolver = typeof module === 'object' && module.exports ? require('./scene-direction.js') : root.SCENE_DIRECTION;
+    const scenes = resolver ? resolver.withCameraDefaults(win.SCENES || [], win.STRUCTURE?.scenes) : win.SCENES || [];
     const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
       const camera = cameraOf(s, 'en');
       return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: s.shot?.size || '-', angle: s.shot?.angle || '-',

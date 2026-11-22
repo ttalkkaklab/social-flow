@@ -7,6 +7,7 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS, referenceLabel } from './video-registry.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { sceneVoiceDirection } from './video-prompt.js';
 import { z } from 'zod';
 /** Authored screen coordinates describe the opening image, never reference-array order. */
 export const speakerBindingSchema = z.object({
@@ -166,7 +167,8 @@ function afterImageBlock(prompt, lines) {
 /** Prepare provider arguments before schema validation and pricing. No synthesis or uploads. */
 export function prepareVideoVoice(tool, input, context) {
     const args = { ...input };
-    const lines = (Array.isArray(context.shot.narration) ? context.shot.narration : []).map(object).filter(line => text(line.tts));
+    const ordered = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech;
+    const lines = ordered(context.shot).map(object).filter(line => text(line.tts));
     const pinnedMsr = tool === 'astra_genai_img2video' && args.generateAudio !== false &&
         hasSubjectInput(args.references) && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
     if (pinnedMsr && lines.some(line => line.delivery === 'voiceover'))
@@ -315,6 +317,9 @@ export function prepareVideoVoice(tool, input, context) {
         if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
             throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
         const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
+        const owners = object(context.board.STRUCTURE).scenes;
+        const owner = Array.isArray(owners) && owners.find(scene => scene.no === context.shot.scene);
+        const legacyScene = !context.timed && !owner?.directionDefaults;
         const script = lines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
@@ -322,7 +327,7 @@ export function prepareVideoVoice(tool, input, context) {
             if (context.sceneDirection) {
                 const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
                 const imageSlot = image ?? owner?.images[0];
-                const deliveryCue = text(object(line.acting).vocal) || direction;
+                const deliveryCue = sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
                 const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
                 return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
             }

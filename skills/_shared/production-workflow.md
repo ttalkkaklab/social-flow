@@ -51,6 +51,7 @@ input validation stay. Work in this order:
    using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
+   Set shared camera, axis, continuity, lighting and attention with `story_scene.directionDefaults` before the shot images. Set a shot move only where it changes the default.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
    Before a prop's description or picture, look up the real thing — the rule or form that
    makes it genuine and saved pictures of actual examples — and record `research` on its

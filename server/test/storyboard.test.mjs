@@ -955,6 +955,31 @@ describe('images and the video prompt follow the icon attributes', () => {
     recordShotImage(args, request);
     return request;
   };
+  it('applies early scene staging to shot images and marks the image stale after the lighting changes', () => {
+    const {dir} = pictureBoard(); icons(dir);
+    const scene = readBoard(dir).win.STRUCTURE.scenes[0];
+    const input = {sequence:'q1', no:scene.no, place:scene.place, time:scene.time, event:scene.event, summary:scene.summary};
+    const defaults = {camera:'camera.static', axis:'Stay on the door side.', lighting:'Amber light from the window.'};
+    function write(directionDefaults) {
+      writeStoryScenes(storySceneSchema.parse({path:dir,scenes:[{...input,directionDefaults}]}));
+    }
+    assert.ok(TOOLS.find(t=>t.name==='story_scene').inputSchema.properties.scenes.items.properties.directionDefaults);
+    write(defaults);
+    writeShotIcons({path:dir,shots:[{id:'s0001',move:null}]});
+    const cleared = readBoard(dir).win.SCENES[0];
+    assert.equal(cleared.visual.camera?.movement,undefined);
+    assert.ok(!cleared.shot.techniques.some(t=>t.id==='camera.dolly-in'));
+    const request = make(dir, 's0001');
+    assert.match(request.prompt,/Amber light from the window/);
+    assert.match(request.prompt,/Stay on the door side/);
+    make(dir, 's0002'); make(dir, 's0002', 'end');
+    const authored = writeShotPrompt({path:dir, id:'s0001', action:'Press the signet into the wax.'});
+    assert.match(authored.prompt,/holds a static frame/);
+    assert.ok(!authored.findings.some(f=>f.what.includes('camera_move_unset')));
+    assert.equal(readBoard(dir).win.SCENES[0].visual.camera?.movement,undefined);
+    write({...defaults, lighting:'Cold blue moonlight.'});
+    assert.equal(readStoryboard({path:dir,level:'shot'}).imageFraming.find(r=>r.id==='s0001').status,'stale');
+  });
   it('separates face clothing from outfit references and describes confirmed relative height without flattening poses', () => {
     const { root, dir } = pictureBoard(); icons(dir);
     const sheet = join(root, 'data/c/assets/characters');

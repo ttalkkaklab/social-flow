@@ -43,6 +43,27 @@ function fixture(t, video = selection, auth = {}) {
  const state=()=>JSON.parse(fs.readFileSync(path.join(episode,'.work/video-routing/state.json')));
  return {root,episode,board,save,plan,execute,state};
 }
+test('single-shot scene keeps the performance and sound with and without frame-addressed planning', t => {
+  const f = fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'image',resolution:'576x1024'});
+  const shot = f.board.SCENES[0];
+  f.board.SCENES = [shot];
+  shot.scene = 1; shot.duration = 2;
+  shot.shot = {size:'cu',angle:'low',videoDesign:{before:'The envelope rests against the lamp.'}};
+  shot.visual.frames = {mode:'first',start:'start.png'};
+  shot.visual.video.promptSource = {action:'Flip the envelope.',sound:'Paper rustles.'};
+  shot.performance = [{kind:'action',text:'종을 친다.',videoDirection:'Tap the brass bell twice.',durationSeconds:1}];
+  fs.writeFileSync(path.join(f.episode,'storyboard/start.png'),png);
+  const sc = {no:1, directionDefaults:{camera:'camera.static', lighting:'Soft window light.'},
+    videoDirection:{openingPositions:[],emotion:'Doubt turns to hope.'}};
+  f.board.STRUCTURE = {scenes:[sc]};
+  for (const timed of [false,true]) {
+    if (timed) sc.videoDirection.fps = 24;
+    f.save();
+    const plan = planVideo({episode:f.episode,sceneNo:1,requestId:'single',args:{reserveUsd:0}},false);
+    for (const cue of ['Flip the envelope','Paper rustles','The envelope rests','Tap the brass bell twice','Soft window light','static frame','Close-up'])
+      assert.ok(plan.args.prompt.includes(cue), cue + ' timed=' + timed + ': ' + plan.args.prompt);
+  }
+});
 const result={content:[{type:'text',text:'fixture media'}]};
 test('managed voice guidance is sent once; changed dialogue or pinned voice invalidates the saved plan',async t=>{
  const f=fixture(t);const img=path.join(f.episode,'hero.png');fs.writeFileSync(img,'image');
@@ -775,6 +796,18 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  });
  await assert.rejects(f.execute(plan,async()=>assert.fail('duplicate scene submission')), /ENOENT/);
  assert.equal(calls,1);
+ first.performance=[{kind:'dialogue',group:2,character:first.narration[1].speaker},
+   {kind:'action',text:'Touch the latch.'},{kind:'dialogue',group:1,character:first.narration[0].speaker}];
+ f.save();
+ const reordered=planVideo({...input,requestId:'reordered'},false);
+ const prompt=reordered.args.prompt;
+ assert.ok(prompt.indexOf(words[1])>=0 && prompt.indexOf(words[1])<prompt.indexOf(words[0]));
+ assert.match(prompt,/Beat 1 with line 2[\s\S]*Touch the latch[\s\S]*Beat 3 with line 1/);
+ f.board.STRUCTURE.scenes[0].directionDefaults={camera:'camera.static'};
+ first.narration[0].acting={direction:'Stammer on the first syllable.',vocal:'Whisper the answer.',tags:['sighs']};
+ f.save();
+ const directed=planVideo({...input,requestId:'scene-direction'},false);
+ assert.match(directed.args.prompt,/Stammer on the first syllable\. Whisper the answer\. sighs/);
  f.board.SCENES[0].narration[1].tts='다른 대사'; f.save();
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);
  await assert.rejects(f.execute(plan,async()=>assert.fail('stale scene submitted')),/stale/);

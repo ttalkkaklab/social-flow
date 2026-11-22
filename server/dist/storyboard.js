@@ -1,4 +1,4 @@
-import { openingPositionsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
+import { openingPositionsSchema, sceneDefaultsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { readShotVideoTiming } from './video-routing.js';
 import { episodeHandoff, manageProject, requireReadyProject } from './project.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
@@ -8,7 +8,7 @@ import { imageContext } from './image-routing.js';
 import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
-import { compileVideoPrompt, expressionWords } from './video-prompt.js';
+import { attributeWords, resolvedDirection, withSceneCamera, compileVideoPrompt, expressionWords } from './video-prompt.js';
 import { refreshAudienceReview, refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
@@ -146,6 +146,7 @@ export const sceneSchema = z
     out: nonEmpty.optional().describe('The sentence the scene goes out on — the one that forces a 그런데 or 그래서 into the next scene'),
     music: z.object({ decision: z.enum(['score', 'none']), reason: nonEmpty, span: nonEmpty.optional() }).strict().optional()
         .describe('The music decision story_music records: score (with its $timeline span id) or none, and why'),
+    directionDefaults: sceneDefaultsSchema.optional(),
     videoDirection: sceneVideoDirectionSchema.optional(),
     videoOpeningSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     audienceSound: audienceDecisionSchema.optional(),
@@ -519,9 +520,9 @@ export function readStoryboard(args) {
         note: 'This response reads plans and recorded reviews only. Open referenced assets and verify current evidence before reporting visual quality or review validity.' };
     const continuity = loadFromHere(join(REFERENCES_DIR, 'shot-continuity.js'));
     result.continuityFindings = continuity.check(win, dirname(file));
-    result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES).map(what => ({ level: 'warn', where: 'camera direction', what }));
+    result.cameraDirectionFindings = cameraContract().cameraDirectionWarnings(win.SCENES, win.STRUCTURE?.scenes).map(what => ({ level: 'warn', where: 'camera direction', what }));
     result.imageFraming = (win.SCENES || []).filter(shot => shot.visual?.frames?.start)
-        .map(shot => imageFramingStatus(shot, win.FORMAT, dirname(file)));
+        .map(shot => imageFramingStatus(shot, win, dirname(file)));
     result.techniqueFindings = (win.SCENES || []).flatMap((scene, index) => techniqueContract().findings(scene).map(what => ({ level: 'warn', where: 'shot ' + (index + 1), what })));
     if (args.includeContext)
         result.reviewContext = {
@@ -1013,7 +1014,7 @@ function editImpact(before, after) {
                 warn('edit_action_removed', String(old.id), 'shot removed with performance/visual.action/videoDesign evidence; verify its required actions and physical states survive elsewhere or were deliberately omitted.');
             continue;
         }
-        const changed = startImageBasis(old, before.FORMAT) !== startImageBasis(current, after.FORMAT)
+        const changed = startImageBasis(old, before.FORMAT, sceneImageDirection(before, old)) !== startImageBasis(current, after.FORMAT, sceneImageDirection(after, current))
             || old.visual?.bgPrompt !== current.visual?.bgPrompt;
         if (changed) {
             warn('edit_staging_changed', String(current.id), 'staging/performance changed; reconcile performance, visual.action, camera endpoints, videoDesign and acting, then re-estimate duration and inspect both joins.');
@@ -1303,6 +1304,7 @@ export const storySceneSchema = z.object({
         event: nonEmpty.describe('The one thing that happens in this scene'),
         summary: nonEmpty.describe("The scene's story in one sentence"),
         turn: nonEmpty.optional(), out: nonEmpty.optional(),
+        directionDefaults: sceneDefaultsSchema.optional(),
         videoDirection: sceneVideoDirectionSchema.optional(),
         audienceSound: audienceDecisionSchema.optional(),
         // The same signs structure-contract.js reads: the value at the open and at the close.
@@ -1989,7 +1991,7 @@ export const shotIconsSchema = z.object({
         backgroundView: z.enum(['front', 'back']).optional().describe('Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front.'),
         view: shotViewSchema.optional().describe('Content-led opening subject, crop and viewpoint; saved as visual.camera.view'),
         move: z.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: z.enum(['very slow', 'slow', 'steady', 'fast', 'very fast']).optional() }).strict()
-            .refine((v) => v.id === 'camera.static' || !!v.reason, 'a camera move carries its reason; only camera.static may go without one').optional()
+            .refine((v) => v.id === 'camera.static' || !!v.reason, 'a camera move carries its reason; only camera.static may go without one').nullable().optional()
             .describe('A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold …)'),
         focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional()
             .describe('A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it'),
@@ -2086,7 +2088,14 @@ export function writeShotIcons(args) {
                 throw new Error(`video_prompt_language: shot_icons ${id} ${name} has "${foreign}"; write it in English, the image and video prompts quote it`);
         }
         let techniques = (Array.isArray(plan.techniques) ? plan.techniques : []);
-        if (move && routed.mode === 'still_camera') {
+        if (move === null) {
+            if (routed.mode === 'still_camera')
+                throw new Error('shot_icons: a still effect is authored on the shot');
+            techniques = techniques.filter(t => !field(t.id, 'movement'));
+            const { movement, speed, target, ...view } = (visual.camera ?? {});
+            visual.camera = Object.keys(view).length ? view : undefined;
+        }
+        else if (move && routed.mode === 'still_camera') {
             // A still cut moves the window over the picture (render-routing.js STILL_CAMERA_EFFECTS).
             if (!stillCameraEffectList().includes(move.id))
                 throw new Error(`shot_icons ${id}: a still_camera move is one of ${stillCameraEffectList().join(', ')}`);
@@ -2144,7 +2153,7 @@ export function writeShotIcons(args) {
             }
             techniques = [...techniques.filter((t) => !field(t.id, 'accent')), ...accents];
         }
-        if ((move && routed.mode !== 'still_camera') || focus !== undefined || accents !== undefined)
+        if ((move !== undefined && routed.mode !== 'still_camera') || focus !== undefined || accents !== undefined)
             plan.techniques = techniques;
         if (frames) {
             const old = (visual.frames ?? {}), next = { ...old, ...frames };
@@ -2203,7 +2212,7 @@ export function writeShotIcons(args) {
     // Both are named here; nothing is refused and no share of moving shots is asked for.
     const cameraOf = (s) => String(s.visual?.camera?.movement ?? '').trim();
     const videoSet = shots.filter((s) => touched.has(String(s.id)) && s.shot?.render?.mode === 'generated_video');
-    const unchosen = videoSet.filter((s) => !cameraOf(s)).map((s) => s.id);
+    const unchosen = videoSet.filter((s) => !cameraOf(s) && !resolvedDirection(st.scenes.find(sc => sc.no === s.scene), [s]).shots[0].camera).map((s) => s.id);
     if (unchosen.length)
         notes.push({ level: 'warn', where: 'shot_icons', what: `camera_move_unset on ${unchosen.join(', ')} — no move is chosen, so the video model decides the camera; set move (camera.static for a deliberate hold)` });
     if (videoSet.length >= 4 && videoSet.every((s) => /^(static|fixed|locked)/i.test(cameraOf(s))))
@@ -2235,9 +2244,18 @@ export const shotImageSchema = z.object({
     reserveUsd: z.number().finite().nonnegative().optional(),
 }).strict();
 // Evidence of the inputs used, not a claim that a model obeyed them. Exclude generated bindings.
-function startImageBasis(shot, format) {
+function sceneImageDirection(win, shot) {
+    const owner = win.STRUCTURE?.scenes.find(scene => scene.no === shot.scene);
+    if (!owner?.directionDefaults)
+        return '';
+    const sceneCards = (win.SCENES ?? []).filter(card => card.scene === shot.scene);
+    const spatial = resolvedDirection(owner, sceneCards).shots[sceneCards.indexOf(shot)];
+    return spatial ? ['axis', 'continuity', 'lighting'].filter(key => spatial[key])
+        .map(key => attributeWords(key, spatial[key])).filter(Boolean).join(' ') : '';
+}
+function startImageBasis(shot, format, imageContextWords) {
     const plan = shot.shot ?? {}, visual = (shot.visual ?? {});
-    return createHash('sha256').update(JSON.stringify({ format, size: plan.size, angle: plan.angle,
+    return createHash('sha256').update(JSON.stringify({ format, ...(imageContextWords ? { sceneStaging: imageContextWords } : {}), size: plan.size, angle: plan.angle,
         space: plan.space, composition: plan.composition, eyeline: plan.eyeline, depth: plan.depth,
         techniques: plan.techniques, render: plan.render, camera: visual.camera,
         cast: contract().castOf(shot), location: visual.locationId, locationBinding: plan.location, props: visual.props,
@@ -2248,12 +2266,12 @@ function startImageBasis(shot, format) {
         acting: shot.narration?.map(line => line.acting?.visual),
     })).digest('hex');
 }
-function imageFramingStatus(shot, format, boardDir) {
+function imageFramingStatus(shot, win, boardDir) {
     const visual = shot.visual;
     const frames = visual?.frames;
     const availability = !boardDir ? undefined : frames?.start && existsSync(resolve(boardDir, frames.start)) ? 'present' : 'missing';
     const promptHash = typeof visual?.bgPrompt === 'string' ? createHash('sha256').update(visual.bgPrompt).digest('hex') : null;
-    const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, format)
+    const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, win.FORMAT, sceneImageDirection(win, shot))
         || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
     return { id: shot.id, image: frames?.start, ...(availability ? { availability } : {}), status: changed ? 'stale' : !frames?.startBasis || !frames.startPromptSha256 ? 'unknown' : 'current',
         visualReview: 'not_reviewed', note: 'Current means saved staging and prompt inputs match, not that the image obeys them. Inspect the pixels before reuse.' };
@@ -2441,6 +2459,7 @@ function buildShotImageRequest(args) {
         throw new Error('image_edit_scope: reframe requires editExisting and frame:start');
     if (args.sourceCrop && !args.reframe)
         throw new Error('image_edit_scope: sourceCrop requires reframe');
+    const imageContextWords = sceneImageDirection(win, shot);
     if (args.editExisting) {
         if (args.location || args.props)
             throw new Error('image_edit_scope: update location and prop metadata before editing; omit location and props here');
@@ -2476,13 +2495,13 @@ function buildShotImageRequest(args) {
         const framing = args.reframe ? loadFromHere(join(REFERENCES_DIR, 'assemble-bg-prompt.js')) : undefined;
         const prompt = [args.sourceCrop ? 'Image 1 is already cropped to the required opening composition. Keep its exact frame boundaries and subject scale. Refine image detail and apply the opening action below without widening the view.'
                 : args.reframe ? 'Reframe Image 1 to the following opening composition. Zoom and crop the subject to these boundaries; the input image supplies identity, clothing, place and light, not the crop or expression.' : 'Edit Image 1. Change only: ' + args.prompt,
-            framing ? framing.assemble({ ...framing.frameOptions(shot, 'start'), scene: args.prompt, noPerson: !cast.length }).prompt : '',
+            framing ? framing.assemble({ ...framing.frameOptions(shot, 'start'), scene: [imageContextWords, args.prompt].filter(Boolean).join(' '), noPerson: !cast.length }).prompt : '',
             args.reframe ? 'Preserve the visible subject identity, clothing, environment and rendering style. Apply the authored opening state instead of copying a conflicting state from the input.' : 'Preserve all other visible details, identities, composition, lighting and rendering style unless the requested change requires otherwise.',
             args.preserve ? 'Preserve explicitly: ' + args.preserve : ''].filter(Boolean).join('\n');
         const call = imageCall({ directory: episode, assetId: args.id, inputs: [input], prompt,
             width: editWidth, height: editHeight, outDir: join(boardDir, 'images'), stem: `${args.id}-${args.frame}`, what: 'this frame edit' });
         const warnings = [];
-        if (imageFramingStatus(shot, win.FORMAT).status === 'stale')
+        if (imageFramingStatus(shot, win).status === 'stale')
             warnings.push({ level: 'warn', where: args.id, what: 'image_framing_stale: this edit inherits an image made from older shot inputs; normal generation rebuilds all current references and framing' });
         if (Math.abs(editWidth / editHeight - (wide ? 16 / 9 : 9 / 16)) > 0.001)
             warnings.push({ level: 'warn', where: args.id, what: `image_aspect_mismatch: ${editWidth}x${editHeight} differs from the delivery aspect; inspect its final crop` });
@@ -2572,7 +2591,7 @@ function buildShotImageRequest(args) {
             what: 'opening_translation_required: videoDesign.before is not English; preserve its physical state in the English shot_image prompt.' });
     const body = imagePrompts.assemble({ ...imagePrompts.frameOptions(shot, args.frame),
         ...(args.frame === 'end' && set?.endCamera && JSON.stringify(set.camera) !== JSON.stringify(set.endCamera) ? { omitFraming: true } : {}),
-        style: style.preset ? style : null, scene: [opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(' '), noPerson: !cast.length && !seen.length && !extras,
+        style: style.preset ? style : null, scene: [imageContextWords, opening && `Authored opening state: ${opening}`, args.prompt].filter(Boolean).join(' '), noPerson: !cast.length && !seen.length && !extras,
         ...(set ? { location: { prompt: args.frame === 'end' ? set.endPrompt : set.prompt, paths: [] } } : {}) }).prompt;
     const roles = ordered.map((ref, i) => {
         const character = refs.find(r => r.path === ref.path && (r.role === 'character' || r.role === 'bystander'));
@@ -2627,7 +2646,7 @@ function buildShotImageRequest(args) {
     const sent = refs.filter((ref) => ordered.includes(ref));
     const locationFrame = set && args.frame === 'start' ? { set: set.id, revision: set.revision, manifest: set.manifest, manifestSha256: set.manifestSha256, stateId: set.stateId,
         camera: set.camera, endCamera: set.endCamera, blocked: set.blocked, fingerprint: set.fingerprint, start: set.start, end: set.end } : undefined;
-    const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...(location ? { locationId: location } : {}), props } }, win.FORMAT);
+    const startBasis = startImageBasis({ ...shot, visual: { ...visual, ...(location ? { locationId: location } : {}), props } }, win.FORMAT, imageContextWords);
     return { episode, assetId: args.id, ...call, canonicalPanels: true, refs: sent, ...(location ? { location } : {}), ...(locationFrame ? { locationFrame } : {}), props, prompt, warnings, startBasis };
 }
 /**
@@ -2810,7 +2829,7 @@ export function writeShotPrompt(args) {
     const source = { action: args.action, ...(args.end ? { end: args.end } : {}), ...(args.sound ? { sound: args.sound } : {}) };
     const rawCast = win.SB_DOC?.characters;
     const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map(c => [c.id, String(c.name ?? '')]));
-    const compiled = compileVideoPrompt(shot, source, names), { prompt } = compiled;
+    const compiled = compileVideoPrompt(withSceneCamera(shot, st.scenes), source, names), { prompt } = compiled;
     const { openingPositions: oldPositions, openingImageSha256: oldHash, speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = (visual.video ?? {});
     const start = visual.frames?.start;
     const positions = args.openingPositions ?? oldPositions;

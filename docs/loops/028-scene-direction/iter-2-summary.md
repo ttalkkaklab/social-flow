@@ -1,0 +1,1 @@
+Resolve shot attention from the authored focus shift, shallow focus or opening subject. Resume the scene subject after that shot. Use one closing-state resolver for the prompt and offline card, including the authored final frame. Verify both with and without a separate shot view. Report the same inherited camera in the board's direction counts and findings.

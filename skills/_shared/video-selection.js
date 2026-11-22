@@ -102,7 +102,7 @@ function readVideoContext(episode, shotId, sceneNo) {
     }
     shotId = first.id;
     shot = { ...first, duration: members.reduce((seconds, s) => seconds + s.duration, 0),
-      narration: members.flatMap(s => s.narration ?? []), performance: undefined, edit: undefined,
+      narration: members.flatMap(require('../storyboard/references/scene-direction.js').orderedSpeech), performance: undefined, edit: undefined,
       visual: { ...visual, frames, references, lastImagePath: undefined, imagePair: undefined, video: { ...visual.video, lastImagePath: undefined, referenceImagePaths: undefined, promptSource: undefined, prompt: undefined,
         speakerBindings: undefined, openingPositions: positions, openingImageSha256: undefined } } };
   }
@@ -125,7 +125,7 @@ function readVideoContext(episode, shotId, sceneNo) {
   }
   return { episode: root, shotId, selection, source, snapshotRevision: snapshot?.revision || null,
     ...(scene ? {sceneNo, timed, shotIds: members.map(s => s.id), sceneDirection: scene.videoDirection, sceneMembers: members} : {}),
-    revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
+    revision: hash({ ...(scene ? {sceneNo, direction: scene.videoDirection, directionDefaults:scene.directionDefaults, members} : {}), selection, source, snapshotRevision: snapshot?.revision, overrides, imagePlan: { frames: shot.visual?.frames, references: shot.visual?.references, bg: shot.visual?.bg }, shotPrompt: shot.visual?.video?.prompt, shotLines: videoLines(shot), authorization: production.videoAuthorization,
       budget: production.videoBudgetUsd, approval: production.approval, maxAttempts: production.maxAttempts }),
     lines: videoLines(shot), production, board, shot };
 }

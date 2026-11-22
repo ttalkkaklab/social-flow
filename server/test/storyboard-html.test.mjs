@@ -68,6 +68,47 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   assert.match(render('shotBodyHtml(first, [], false)'), /Earlier single-shot prompt/);
 });
 
+test('offline direction icons identify inherited shots and show the middle override in both languages', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url),'utf8');
+  const source = template.slice(template.indexOf('  function directionAttributes'), template.indexOf('  function sceneVideoPromptHtml'));
+  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window <light>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
+  const cards = [{}, {visual:{camera:{movement:'dolly in',target:'the letter',speed:'slow'}, expression:{mina:'Narrowed eyes.'}}}, {}];
+  cards[1].shot = {techniques:[{id:'camera.rack-focus',from:'the ribbon',to:'the bell'}]};
+  cards[1].visual.frames = {mode:'first_last',endState:'The raven closes its claw.'};
+  cards[1].timeline = {action:'Inspect the parcel.'};
+  cards[1].visual.video = {promptSource:{action:'Press the signet into the wax.'}};
+  cards[1].shot.videoDesign = {motion:{beats:[{at:0.8,state:'A crack opens in the wax.'}]}};
+  cards[1].narration = [{id:'l1',speaker:'mina',delivery:'on_screen',tts:'Not yet.',acting:{
+    intent:'Hide the broken seal.',emotion:'Her fear subsides.',leadInSeconds:1.5,tailOutSeconds:0.75}}];
+  const direction = require('../../skills/storyboard/references/scene-direction.js'), film = require('../../skills/storyboard/references/film-techniques.js');
+  const rows = direction.resolve(sc,cards);
+  for (const lang of ['ko','en']) {
+    const context = {LANG:lang, sc, cards, rows, window:{SCENE_DIRECTION:direction,FILM_TECHNIQUES:film},
+      camIcon:id=>'<svg data-camera="'+id+'"></svg>', esc:s=>String(s).replaceAll('<','&lt;')};
+    const render = expr => runInNewContext(source+'\n'+expr,context);
+    const header = render('directionAttributes(sc,rows.defaults)');
+    assert.match(header,/data-camera="camera.static"/); assert.match(header,/Window &lt;light>/);
+    assert.match(header,/data-attribute="emotion"/);
+    const html = cards.map((_,i) => render('directionAttributes(sc,rows.shots['+i+'],cards['+i+'])'));
+    assert.equal(html.filter(value=>value.includes('camera.static')).length,2);
+    assert.match(html[1],/camera.dolly-in/); assert.match(html[1],/slow · the letter/);
+    assert.ok(html[1].includes(lang==='ko'?'샷 예외':'Shot override'));
+    assert.ok(html[2].includes(lang==='ko'?'씬 기본':'Scene default'));
+    assert.match(html[1],/data-attribute="expression"/);
+    assert.match(html[1],/data-attribute="end".*The raven closes its claw/);
+    assert.match(html[1],/data-attribute="action".*Inspect the parcel.*Press the signet/);
+    assert.match(html[1],/data-attribute="beats".*At 0.8 s into this shot: A crack/);
+    assert.match(html[1],/Hide the broken seal.*Her fear subsides.*Anticipation 1.5 seconds.*reaction 0.75 seconds/);
+    assert.match(html[1],/data-attribute="attention".*From the ribbon to the bell/);
+    assert.doesNotMatch(html[1],/The clerk/);
+    assert.match(html[2],/The clerk/);
+    assert.doesNotMatch(html[1],/camera.static/);
+    const still = render('directionAttributes(sc,rows.shots[0],cards[0],true)');
+    assert.match(still,/data-attribute="lighting"/);
+    assert.doesNotMatch(still,/data-attribute="camera"/);
+  }
+});
+
 test('a background export shows the saved scene prompt when the board matches and references are unchecked', t => {
   const episode = mkdtempSync(join(tmpdir(), 'scene-prompt-export-'));
   t.after(() => rmSync(episode, { recursive: true, force: true }));
@@ -354,7 +395,7 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 26 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 27 + FONT_ASSETS.length);
     assert.ok(existsSync(join(dir,'audience-review-data.js')));
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
@@ -383,7 +424,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 26 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 27 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');
