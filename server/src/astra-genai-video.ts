@@ -2,14 +2,14 @@
 import { openingPositionsSchema, openingPrompt, validateOpening, type OpeningPosition } from './msr-opening.js';
 import { z } from 'zod';
 import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri } from './astra-genai-client.js';
+import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
-import { GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, shrinkImageToFit, uploadGenaiFile } from './astra-genai-upload.js';
+import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'] as const;
@@ -203,8 +203,7 @@ export const genaiImageToVideoSchema = textVideoFields.extend({
   }
 });
 // Gateway contract (genai-gateway#13): four data URI MIME types, 15,000,000 base64 characters.
-export const GENAI_AUDIO_TYPES: Readonly<Record<string, string>> = { '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.opus': 'audio/ogg' };
-export const GENAI_AUDIO_DATA_URI_MAX = 15_000_000;
+export { GENAI_AUDIO_TYPES, GENAI_AUDIO_DATA_URI_MAX, genaiAudioUri } from './astra-genai-client.js';
 const oneOf = (a: unknown, b: unknown) => Number(a !== undefined) + Number(b !== undefined);
 export const genaiAudioToVideoSchema = z.object({
   ...genaiSampling,
@@ -230,21 +229,6 @@ export const genaiAudioToVideoSchema = z.object({
   if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue('Supply at most one lastFramePath or lastFrameUri');
   if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue('A last frame requires a first image');
 });
-/** Local audio becomes a data URI; HTTPS sources are fetched by the gateway. */
-export function genaiAudioUri(uri?: string, file?: string): string {
-  if (uri !== undefined) {
-    if (/^https:/.test(uri)) { const url = new URL(uri); if (url.username || url.password) throw new Error('GenAI audio URL must not carry credentials'); return uri; }
-    const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
-    if (!match || !Object.values(GENAI_AUDIO_TYPES).includes(match[1])) throw new Error('GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI');
-    if (match[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error('GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL');
-    return uri;
-  }
-  const type = GENAI_AUDIO_TYPES[path.extname(file!).toLowerCase()];
-  if (!type) throw new Error('GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus');
-  // base64 of n bytes is 4*ceil(n/3) characters; reject before reading a large file.
-  if (4 * Math.ceil(fs.statSync(file!).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error('GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS');
-  return `data:${type};base64,${fs.readFileSync(file!).toString('base64')}`;
-}
 export function buildGenaiAudioBody(args: z.infer<typeof genaiAudioToVideoSchema>) {
   const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : undefined;
   const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
@@ -351,8 +335,46 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
 
 const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
 type Operation = z.infer<typeof operationSchema>;
+const mediaContract = z.object({
+  width:z.number().positive(), height:z.number().positive(), fps:z.number().positive(),
+  frames:z.number().int().positive().optional(), audio:z.boolean(),
+});
+export function msrOutputContract(operation: string, args: Record<string,unknown>) {
+  const direct = operation === 'msr';
+  const scene = operation === 'scene-to-video';
+  if (!direct && !scene && !(operation === 'image-to-video' && Array.isArray(args.references) && args.references.length)) return;
+  const sides = direct ? [Number(args.width ?? 1536), Number(args.height ?? 1024)] : String(args.resolution).split('x').map(Number);
+  const scale = args.skipStage2 ? 2 : 1;
+  const fps = Number((direct ? args.frameRate : args.fps) ?? 24);
+  const duration = Number(args.duration);
+  const frames = args.numFrames != null ? Number(args.numFrames) : direct
+    ? (duration ? 1 + 8 * Math.ceil((duration * fps - 1) / 8 - 0.5 - 1e-9) : 121)
+    : duration ? Math.ceil(duration * fps - 1e-9) : undefined;
+  return mediaContract.parse({width:sides[0]/scale,height:sides[1]/scale,fps,frames,audio:args.generateAudio !== false});
+}
+
+function checkOutput(file:string, expected?:z.infer<typeof mediaContract>, legacyMsr = false) {
+  const probe = JSON.parse(execFileSync('ffprobe', ['-v','error', ...(expected || legacyMsr ? ['-count_frames'] : []),
+    '-show_entries','stream=codec_type,width,height,avg_frame_rate,nb_read_frames,duration:format=duration','-of','json',file],
+    {encoding:'utf8',timeout:120_000}));
+  const video = probe.streams?.find((s:{codec_type:string}) => s.codec_type === 'video');
+  if (!video?.width || !(Number(probe.format?.duration) > 0)) throw new Error('GenAI result has no usable video stream');
+  if (!expected && !legacyMsr) return;
+  const audio = probe.streams.filter((s:{codec_type:string}) => s.codec_type === 'audio');
+  const frames = Number(video.nb_read_frames);
+  const [n,d] = String(video.avg_frame_rate).split('/').map(Number);
+  const fps = n/d;
+  if (!(frames > 1 && fps > 0) || audio.length !== Number(expected?.audio ?? true) ||
+      expected && (video.width !== expected.width || video.height !== expected.height || Math.abs(fps - expected.fps) > 0.001 ||
+        expected.frames !== undefined && frames !== expected.frames) ||
+      !(Math.abs(Number(video.duration) - frames/fps) <= 0.5/fps) ||
+      audio.length && !(Math.abs(Number(audio[0].duration) - frames/fps) <= Math.max(0.1,1/fps)))
+    throw new Error('GenAI result does not match the requested video frames, rate, geometry or audio');
+}
+
 const receiptSchema = z.object({
-  version: z.literal(1), baseUrl: z.string(), operation: operationSchema, fingerprint: z.string(),
+  version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema,z.literal('scene-to-video')]), fingerprint: z.string(),
+  expected:mediaContract.optional(), requestId:z.string().optional(), sceneShots:z.array(z.unknown()).optional(),
   videoPath: z.string(), jobId: z.string().min(1).optional(),
   status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
 }).strict();
@@ -362,18 +384,40 @@ const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending'
 }).passthrough();
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
 
-export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema>) {
+export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema>, planned?:z.infer<typeof mediaContract>, binding?:{target:string; jobId?:string; fingerprint?:string}) {
   const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
+  if (binding && (path.resolve(receipt.videoPath) !== path.resolve(binding.target) ||
+      binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId ||
+      binding.fingerprint && receipt.fingerprint !== binding.fingerprint))
+    throw new Error('GenAI receipt does not belong to the approved output or job');
+  if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
+    throw new Error('GenAI receipt conflicts with the approved media contract');
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
+  if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
+    if (receipt.requestId !== 'scene-' + receipt.fingerprint)
+      throw new Error('Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.');
+    const found = statusSchema.extend({request_id:z.literal(receipt.requestId)}).parse(
+      await requestGenai('GET', '/v1/ltx/v2/scene-to-video/requests/' + encodeURIComponent(receipt.requestId)));
+    if (binding?.jobId && binding.jobId !== found.id) throw new Error('GenAI recovery job ID mismatch');
+    receipt.jobId = found.id;
+    receipt.status = 'submitted';
+    atomicJson(input.receiptPath, receipt);
+    recordVideoSubmission(found.id);
+  }
   if (!receipt.jobId) throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
   if (receipt.status === 'completed') {
     const bytes = fs.readFileSync(receipt.videoPath);
     if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256) throw new Error('GenAI cached output changed');
+    if (receipt.expected || planned || receipt.operation === 'msr' || receipt.operation === 'scene-to-video')
+      checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
     return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
   }
-  const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+  const route = `${receipt.operation === 'scene-to-video' ? '/v1/ltx/v2/scene-to-video' : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai('GET', route));
   if (job.id !== receipt.jobId) throw new Error('GenAI status job ID mismatch');
+  if (receipt.operation === 'scene-to-video' && Array.isArray(job.shots)) {
+    receipt.sceneShots = job.shots;
+  }
   // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
   if (job.status === 'failed' || job.status === 'cancelled') throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
   if (job.status !== 'completed' || !input.download)
@@ -389,11 +433,10 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
   } else bytes = await downloadGenaiResult(job.result.video_url);
   // Reject HTML/JSON and probe the actual container before recording completion.
   if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp') throw new Error('GenAI result is not MP4');
-  const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
+  const temp = `${receipt.videoPath}.${randomUUID()}.download.mp4`;
   try {
     fs.writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 });
-    const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:format=duration', '-of', 'json', temp], { encoding: 'utf8', timeout: 30_000 }));
-    if (!(probe.streams?.[0]?.width > 0) || !(Number(probe.format?.duration) > 0)) throw new Error('GenAI result has no usable video stream');
+    checkOutput(temp, receipt.expected ?? planned, receipt.operation === 'msr' || receipt.operation === 'scene-to-video');
     if (fs.existsSync(receipt.videoPath)) {
       if (createHash('sha256').update(fs.readFileSync(receipt.videoPath)).digest('hex') !== createHash('sha256').update(bytes).digest('hex'))
         throw new Error('GenAI video output conflicts with download');
@@ -404,13 +447,9 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
 }
 
 /** A fallback body above this is not sent: voice cannot be shrunk, and so large a body on a slow link meets the edge's 524 again. */
-export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
+export { GENAI_MSR_INLINE_MAX_BYTES } from './astra-genai-upload.js';
 
-/**
- * Shrink each inline picture to the render size and send inline pictures and voice samples as
- * chunked uploads, so the MSR body carries file ids instead of base64. HTTPS sources pass
- * untouched; a gateway without the upload API keeps the (shrunk) data URIs.
- */
+/** Upload original images and audio without changing their conditioning inputs. */
 interface GenaiReferenceBody {
   keyframes?: {image_uri: string; frame_idx: number}[];
   audio_uri?: string;
@@ -419,13 +458,11 @@ interface GenaiReferenceBody {
   image_uri?: string; last_frame_uri?: string | null;
 }
 export async function prepareGenaiMsrSources(body: GenaiReferenceBody) {
-  const size = /^(\d+)x(\d+)$/.exec(body.resolution ?? '');
-  const width = body.width ?? Number(size?.[1]), height = body.height ?? Number(size?.[2]);
   let supported = true;
-  const send = async (uri: string, shrink: boolean) => {
+  const send = async (uri: string) => {
     const match = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
     if (!match) return uri;
-    const bytes = shrink && width > 0 && height > 0 ? shrinkImageToFit(Buffer.from(match[2], 'base64'), width, height) : Buffer.from(match[2], 'base64');
+    const bytes = Buffer.from(match[2], 'base64');
     // Only a gateway answer (no upload API, a limit, a full disk) stops later uploads; a type it does not take goes inline alone.
     const uploadable = supported && genaiUploadable(bytes, match[1]);
     const id = uploadable ? await uploadGenaiFile(bytes, match[1]) : undefined;
@@ -433,13 +470,13 @@ export async function prepareGenaiMsrSources(body: GenaiReferenceBody) {
     return id ?? `data:${match[1]};base64,${bytes.toString('base64')}`;
   };
   const references = [];
-  for (const ref of body.references ?? []) references.push({ ...ref, image_uri: await send(ref.image_uri, true),
-    ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri, false) } : {}) });
+  for (const ref of body.references ?? []) references.push({ ...ref, image_uri: await send(ref.image_uri),
+    ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri) } : {}) });
   const keyframes = [];
-  for (const pin of body.keyframes ?? []) keyframes.push({ ...pin, image_uri: await send(pin.image_uri, false) });
+  for (const pin of body.keyframes ?? []) keyframes.push({ ...pin, image_uri: await send(pin.image_uri) });
   const prepared = { ...body, ...(body.references ? { references } : {}), ...(body.keyframes ? { keyframes } : {}),
-    ...(body.image_uri === undefined ? {} : { image_uri: await send(body.image_uri, false) }),
-    ...(body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri, false) }),
+    ...(body.image_uri === undefined ? {} : { image_uri: await send(body.image_uri) }),
+    ...(body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri) }),
   };
   const bytes = Buffer.byteLength(JSON.stringify(prepared));
   if (bytes - (body.audio_uri?.length ?? 0) > GENAI_MSR_INLINE_MAX_BYTES)
@@ -467,6 +504,27 @@ export async function checkGenaiVideoOptions(tool: string, args: Record<string, 
   const mode = genaiModes[tool as GenaiTool];
   if (!mode) return;
   if (mode === 'msr' || (mode === 'image2video' && args.references)) {
+    const controls = [
+      ['referenceStrength','reference_strength',1], ['referenceFrames','reference_frames',33],
+      ['guidanceScale','guidance_scale',1], ['nagScale','nag_scale',0],
+      ['nagAlpha','nag_alpha',0.25], ['nagTau','nag_tau',2.5],
+    ] as const;
+    const custom = controls.filter(([field,,fallback]) => args[field] !== undefined && args[field] !== fallback);
+    if (custom.length) {
+      const response = await requestGenai('GET', '/v1/ltx/v2/capabilities', undefined, 15_000);
+      const spec = z.object({min:z.number().optional(),max:z.number().optional(),enum:z.array(z.number()).optional()});
+      const catalog = z.object({pipelines:z.array(z.object({pipeline:z.string(), sampling_fields:z.array(z.string()),
+        settings:z.record(z.unknown()).optional()}))}).safeParse(response);
+      const msr = catalog.success && catalog.data.pipelines.find(row => row.pipeline === 'msr');
+      for (const [field,wire] of custom) {
+        const constraint = msr && spec.safeParse(msr.settings?.[wire]);
+        const range = constraint && constraint.success ? constraint.data : undefined;
+        const value = Number(args[field]);
+        if (!msr || !msr.sampling_fields.includes(wire) || wire === 'reference_strength' && (!range || range.min === undefined || range.max === undefined) ||
+            range && (value < (range.min ?? -Infinity) || value > (range.max ?? Infinity) || range.enum && !range.enum.includes(value)))
+          throw new GenaiRequestError('ltx_fields_unsupported: ' + wire + ' outside verified MSR settings', true, 422);
+      }
+    }
     const prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[] | undefined);
     const parts = [prompt];
     for (const [i, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
@@ -559,7 +617,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
     // The fingerprint stays on the request as written, so a resumed receipt still matches.
     const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body as GenaiReferenceBody) : body;
-    const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, status: 'submitting' as const };
+    const receipt = { version: 1 as const, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected:msrOutputContract(operation,args), status: 'submitting' as const };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     let response: unknown;
     try {
@@ -582,7 +640,7 @@ export async function generateGenaiVideo(operation: Operation, input: unknown) {
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
   }
-  const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }),
+  const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation,args)),
     `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
   return { ...result, receiptPath };
 }

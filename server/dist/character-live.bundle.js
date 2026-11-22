@@ -30126,14 +30126,14 @@ var GenaiRequestError = class extends Error {
   terminal;
   httpStatus;
 };
-async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal) {
+async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId) {
   const key = requireAstraGenaiKey(route);
   const response = await fetch(astraGenaiBaseUrl(route) + route, {
     method,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
     ...{ dispatcher: waitFor(timeoutMs) },
-    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
+    headers: { Authorization: `Bearer ${key}`, ...requestId ? { "X-Request-ID": requestId } : {}, ...body === void 0 ? {} : { "Content-Type": "application/json" } },
     ...body === void 0 ? {} : { body: JSON.stringify(body) }
   });
   const text = await response.text();
@@ -30783,7 +30783,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.125.1",
+  version: "0.126.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",

@@ -140,11 +140,11 @@ Example `image_plan` args for a local correction (operation `edit`):
 `astra_genai_msr` accepts `prompt` (1–2000 characters), `references` (1–5) and
 `reserveUsd`. Each reference has exactly one `imagePath` or `imageUri`, plus optional
 `background:true` (maximum one). Local paths are relative to the episode in managed
-plans. At execution each picture is shrunk to the render size, and pictures and voice
+plans. At execution the original pictures and voice
 samples go up to the gateway in chunks (`POST /v1/uploads`, each chunk resent on its
 own) and travel as `genai-file://` ids. A gateway without the upload API, or one that
 answers 429/507, gets PNG/JPEG data URIs instead; such an inline request above 8 MB is
-not sent (`msr_body_too_large`), because voice cannot be shrunk. Local paths are
+not sent (`msr_body_too_large`), to preserve the original media. Local paths are
 hash-bound to the plan. Backend upload IDs are not accepted.
 
 Optional MSR controls: `referenceStrength` 0–1 (default 1), `referenceFrames` 25 or

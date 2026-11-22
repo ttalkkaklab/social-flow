@@ -1,4 +1,4 @@
-import { sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
+import { sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -5192,6 +5192,9 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
     inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.',
     inputSchema: { ...videoContextSchema, required: ['episode', 'requestId'], oneOf: [{ required: ['sceneNo'] }, { required: ['shotId'] }], properties: { ...videoContextSchema.properties,
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
+            shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
+            sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native or supplied scene audio.' },
+            validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
             purpose: { type: 'string', enum: ['draft', 'final', 'revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
             basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },
             changeNote: { type: 'string', minLength: 1, maxLength: 1000, description: 'What changed for this candidate.' },

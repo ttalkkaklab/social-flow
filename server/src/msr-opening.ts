@@ -15,6 +15,10 @@ export const shotTimelineSchema = z.object({
   startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),
   transition: z.enum(['open', 'hard_cut', 'dissolve', 'fade']),
   framing: sceneText, action: sceneText,
+  openingPositions: openingPositionsSchema.optional().describe('Positions at this shot opening. Image numbers refer to this shot’s subject references.'),
+  dialogueCues: z.array(z.object({
+    lineId: z.string().trim().min(1), frame,
+  }).strict()).optional().describe('Exact speech onsets in scene frames for authored narration lines. Omit for model-paced speech.'),
   images: z.array(z.object({
     path: z.string().trim().min(1), frame, role: z.enum(['start', 'keyframe', 'end', 'face', 'outfit']),
     character: z.string().trim().min(1).optional(), cue: sceneText.optional(),
@@ -23,17 +27,34 @@ export const shotTimelineSchema = z.object({
 }).strict().superRefine((shot, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
   if (shot.startFrame >= shot.endFrame) issue('Shot needs a positive frame interval');
+  const lines = new Set<string>();
+  for (const cue of shot.dialogueCues ?? []) {
+    if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue('Dialogue cue outside its shot: ' + cue.lineId);
+    if (lines.has(cue.lineId)) issue('Repeated dialogue cue: ' + cue.lineId);
+    lines.add(cue.lineId);
+  }
   for (const image of shot.images ?? []) {
     if (image.frame < shot.startFrame || image.frame >= shot.endFrame) issue('Image frame outside its shot: ' + image.path);
     if (image.role === 'start' && image.frame !== shot.startFrame) issue('Start image must anchor the first frame of its shot');
     if (['face', 'outfit'].includes(image.role) && !image.character) issue('Identify the owner of a face or outfit reference');
   }
 });
+export const sceneShotBindingsSchema = z.array(z.object({
+  shotId:z.string().min(1), openingPositions:openingPositionsSchema.optional(),
+  framing:sceneText.optional(), action:sceneText.optional(),
+  keyframes:z.array(z.object({path:z.string().trim().min(1),frame,strength:z.number().min(0).max(1).optional()}).strict()).min(1).max(7).optional(),
+  guidance:z.object({negativePrompt:sceneText,guidanceScale:z.number().gt(1).max(10)}).strict().optional(),
+  motionPrefix:z.string().trim().min(1).optional().describe('Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion.'),
+  performanceAudio:z.string().trim().min(1).optional().describe('Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening.'),
+  dialogueCues:z.array(z.object({lineId:z.string().min(1),frame:z.number().int().nonnegative()}).strict()).optional(),
+  references:z.array(z.object({id:z.string().min(1),character:z.string().min(1),role:z.enum(['face','outfit','character'])}).strict()).optional(),
+}).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
   openingPositions: openingPositionsSchema,
   fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
   oneTake: z.boolean().optional().describe('True only for an explicitly requested uninterrupted shot.'),
   audio: z.object({
+    mode:z.enum(['conditioning','mix']).optional().describe('Condition generation by default, or mix this track once with native shot sound.'),
     path: z.string().trim().min(1).describe('Scene-length track from frame zero, including any lead-in silence.'),
     cues: z.array(z.object({ frame, action: sceneText }).strict()).optional(),
   }).strict().optional(),
