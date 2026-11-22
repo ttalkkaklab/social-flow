@@ -15,6 +15,10 @@ function setup(t) {
   t.after(() => { globalThis.fetch = fetch; config.astraGenaiApiKey = key; fs.rmSync(dir, { recursive: true, force: true }); });
   return dir;
 }
+const msrCatalog = () => Response.json({pipelines:[{pipeline:'msr',
+  sampling_fields:['guidance_scale','nag_scale','nag_alpha','nag_tau','reference_strength'],
+  settings:{reference_strength:{min:1,max:1}},
+}]});
 const heroOpening = [{ character: 'hero', images: [1], position: 'standing on the left by the desk' }];
 const pairOpening = [...heroOpening, { character: 'witness', images: [2], position: 'seated in the right foreground' }];
 
@@ -131,6 +135,7 @@ test('v2 negatives travel only when set and only where the gateway has a negativ
   const dir = setup(t), args = { ...refs, nagScale: 11, nagTau: 3, outputPath: dir, filename: 'negative.mp4' };
   let nag = false, posts = 0, fields = [];
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
     if (String(url).endsWith('/v1/models')) return Response.json({ data: [{ id: base.model, parameters_by_mode: { image2video: fields } }] });
     if (String(url).endsWith('/msr/capabilities')) return Response.json({ image_conditioning: true, negative_prompt: true, nag });
     if (options.method === 'POST') {
@@ -170,6 +175,7 @@ test('completed LTX result downloads verified video and cached recovery needs no
   execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'color=s=64x64:d=0.1', '-c:v', 'libx264', '-pix_fmt', 'yuv420p', source]);
   const bytes = fs.readFileSync(source); let posts = 0, privateResult = false;
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
     if (options.method === 'POST') { posts++; return Response.json({ id: 'job-2' }); }
     if (String(url).includes('/image-to-video/job-2')) return Response.json({ id: 'job-2', status: 'completed', result: { video_url: privateResult ? new URL('/v1/ltx/desktop/assets/video-id/bytes', astraGenaiBaseUrl()).href : 'https://results.example/out.mp4', ...(privateResult ? { authentication: 'same GatewayToken required' } : {}) } });
     if (privateResult) assert.equal(options.headers.Authorization, 'Bearer fixture');
@@ -220,6 +226,7 @@ test('MSR preserves positive prompts and only sends effective negatives to an ad
     assert.equal(genaiMsrSchema.safeParse({ ...negative, ...extra }).success, false);
   for (const capability of [false, undefined]) {
     globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
       assert.equal(options.method, 'GET');
       assert.ok(String(url).endsWith('/v1/ltx/msr/capabilities'));
       return Response.json({ negative_prompt: capability });
@@ -229,6 +236,7 @@ test('MSR preserves positive prompts and only sends effective negatives to an ad
   }
   let posts = 0;
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
     if (String(url).endsWith('/capabilities')) return Response.json({ negative_prompt: true });
     if (options.method === 'POST') {
       posts++;
@@ -262,6 +270,7 @@ test('MSR NAG validates controls, checks support and preserves recovery identity
   for (const field of ['nag_scale', 'nag_alpha', 'nag_tau']) assert.equal(disabled[field], undefined);
   for (const nag of [false, undefined]) {
     globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
       assert.equal(options.method, 'GET'); assert.ok(String(url).endsWith('/capabilities'));
       return Response.json({ negative_prompt: true, nag });
     };
@@ -270,6 +279,7 @@ test('MSR NAG validates controls, checks support and preserves recovery identity
   }
   let posts = 0;
   globalThis.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/capabilities')) return msrCatalog();
     if (String(url).endsWith('/capabilities')) return Response.json({ negative_prompt: true, nag: true });
     if (options.method === 'POST') {
       posts++; assert.deepEqual(JSON.parse(options.body), body);
@@ -313,10 +323,10 @@ test('MSR recovery uses the MSR route and never submits twice', async t => {
 
 test('MSR sends local sources as chunked file ids, leaves HTTPS alone and resumes without uploading again', async t => {
   const dir = setup(t), source = path.join(dir, 'reference.png'), wav = path.join(dir, 'voice.wav');
-  fs.writeFileSync(source, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','color=s=256x128','-frames:v','1',source]);
   fs.writeFileSync(wav, Buffer.alloc(64, 1));
   const args = { prompt: 'The person says hello.', openingPositions: heroOpening, references: [{ imagePath: source, audioPath: wav }, { imageUri: 'https://example.com/place.png', background: true }],
-    reserveUsd: 0, outputPath: dir, filename: 'msr.mp4' };
+    width:64,height:64,reserveUsd: 0, outputPath: dir, filename: 'msr.mp4' };
   const uploads = [];
   let submitted;
   globalThis.fetch = async (url, options) => {
@@ -325,6 +335,7 @@ test('MSR sends local sources as chunked file ids, leaves HTTPS alone and resume
     if (route.startsWith('/v1/uploads')) {
       uploads.push(`${options.method} ${route}`);
       const id = `u${uploads.filter(call => call.endsWith('/v1/uploads')).length}`;
+      if (route === '/v1/uploads' && id === 'u1') assert.equal(JSON.parse(options.body).size,fs.statSync(source).size);
       if (route === '/v1/uploads') return Response.json({ upload_id: id, chunk_size: 5 * 1024 * 1024, chunks: 1 });
       if (route.endsWith('/complete')) return Response.json({ file_id: route.split('/')[3], uri: `genai-file://${route.split('/')[3]}`, expires_at: '2099-01-01T00:00:00Z' });
       return new Response(null, { status: 204 });
@@ -528,4 +539,28 @@ test('v2 text and image bodies preserve untimed shot descriptions, and A2V refus
     assert.equal(schema.safeParse({...inputs,shots:[shots[0],{...shots[1],frame:42}]}).success,false);
   }
   assert.throws(()=>parseVideoArgs('astra_genai_audio2video',{...base,audioPath:'scene.wav',shots}),/Unsupported/);
+});
+
+test('MSR verifies requested media on first download and cached recovery', async t => {
+  const {msrOutputContract,checkGenaiVideoOptions} = await import('../dist/astra-genai-video.js');
+  const {createHash} = await import('node:crypto');
+  const dir=setup(t), file=path.join(dir,'wrong.mp4'), receiptPath=path.join(dir,'receipt.json');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=64x64:r=24','-frames:v','1',file]);
+  const bytes=fs.readFileSync(file), target=path.join(dir,'result.mp4');
+  const expected=msrOutputContract('msr',{width:128,height:128,skipStage2:true,duration:5,frameRate:24});
+  assert.deepEqual(expected,{width:64,height:64,fps:24,frames:121,audio:true});
+  const receipt={version:1,baseUrl:astraGenaiBaseUrl(),operation:'msr',jobId:'job',fingerprint:'a',videoPath:target,status:'submitted',expected};
+  fs.writeFileSync(receiptPath,JSON.stringify(receipt));
+  globalThis.fetch=async url=>String(url).includes('/v1/ltx/msr/job')
+    ? Response.json({id:'job',status:'completed',result:{video_url:'https://example.org/result.mp4'}})
+    : new Response(bytes);
+  await assert.rejects(getGenaiVideoStatus({receiptPath,download:true}),/requested video/);
+  assert.equal(fs.existsSync(target),false);
+  assert.equal(JSON.parse(fs.readFileSync(receiptPath)).status,'submitted');
+  fs.writeFileSync(target,bytes);
+  fs.writeFileSync(receiptPath,JSON.stringify({...receipt,status:'completed',sha256:createHash('sha256').update(bytes).digest('hex')}));
+  globalThis.fetch=()=>assert.fail('no network on cached recovery');
+  await assert.rejects(getGenaiVideoStatus({receiptPath,download:true}),/requested video/);
+  globalThis.fetch=msrCatalog;
+  await assert.rejects(checkGenaiVideoOptions('astra_genai_msr',{referenceStrength:0.5}),/reference_strength/);
 });

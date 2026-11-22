@@ -6,7 +6,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
-import { cameraMoveWords, sceneCameraDirection, scenePromptText } from './video-prompt.js';
+import { videoTextPolicy, cameraMoveWords, sceneCameraDirection, scenePromptText } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
 import { VEO_CONSTRAINTS } from './veo-video.js';
@@ -159,7 +159,7 @@ export function compileSceneTimeline(raw, scene, episode, board) {
             ...(sound ? { sound } : {}), ...(dialogue.length ? { dialogue } : {}) };
     });
     const cuts = shots.slice(1).map(({ shotId, startFrame: frame, transition }, i) => ({ from: shots[i].shotId, to: shotId, frame, transition }));
-    const audio = scene.audio && { path: realpathSync(path.resolve(episode, 'storyboard', scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
+    const audio = scene.audio && { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), path: realpathSync(path.resolve(episode, 'storyboard', scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
     if (audio?.cues.some(c => c.frame >= cursor))
         throw new Error('scene_audio_timing: cue outside the scene');
     return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...(audio ? { audio } : {}) };
@@ -294,7 +294,7 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
         return { shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
             ...(guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {}),
             ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
-            description: [shot.framing, shot.action].join(' '), opening_positions: shot.openingPositions,
+            description: [shot.framing, shot.action, videoTextPolicy()].join(' '), opening_positions: shot.openingPositions,
             blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
             dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
                 direction: line.direction, frame: line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
@@ -304,7 +304,7 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
     const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(' ') : '';
     const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
         image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
-        ...(scene.audio ? { scene_audio: { audio_uri: genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
+        ...(scene.audio ? { scene_audio: { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), audio_uri: genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
                 end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
     let wire = JSON.stringify(body);
     if (stageFiles || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
@@ -353,6 +353,8 @@ async function validateScenePayload(endpoint, scene, model, resolution, requestI
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */
 export function mapSceneInputs(request, tool, model, missing = [], resolution) {
     const caps = sceneInputCapabilities(tool);
+    if (request.audio?.mode === 'mix')
+        missing.push({ input: 'audio', frame: 0, reason: 'Mixing with native sound requires per-shot scene rendering' });
     if (!caps.frameAccurateCuts)
         missing.push(...request.cuts.map(c => ({ input: 'transition', shotId: c.to, frame: c.frame, role: c.transition, reason: 'No frame-addressed ' + c.transition + ' boundary' })));
     for (const shot of request.shots) {
@@ -378,6 +380,9 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
                 reason: 'No timed native sound cue for this shot on a single scene soundtrack' });
     }
     const pins = request.images.filter(temporal), refs = request.images.filter(p => !temporal(p));
+    for (const ref of refs)
+        if (ref.strength !== undefined && ref.strength !== 1)
+            missing.push({ input: 'reference', role: ref.role, shotId: ref.shotId, frame: ref.frame, path: ref.path, reason: 'Individual subject strength is unsupported' });
     const opening = pins.some(p => p.role === 'start' && p.frame === 0);
     const timedLimit = tool === 'astra_genai_desktop_keyframes' ? 10 : 8;
     for (const [index, p] of pins.entries()) {
@@ -504,7 +509,7 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
     } : undefined;
     const visual = shot.visual;
     const positions = shot.visual?.video?.openingPositions ?? [];
-    const subjects = refs.filter(p => p.role !== 'background');
+    const subjects = refs.filter(p => !['background', 'location'].includes(p.role));
     for (const owner of positions) {
         for (const slot of owner.images) {
             if (!subjects[slot - 1])

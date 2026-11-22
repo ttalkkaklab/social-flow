@@ -29,7 +29,7 @@ A speaking character needs a voice-capable route such as LTX supplied audio or r
 
 A scene shares one soundtrack from frame zero, including its lead-in. Check each cut and beat against the requested scene frames. Subject panels establish identity and outfit. The shot action controls when the person enters. See the [scene input contract](../_shared/video-routing.md).
 
-When the user approves rendering each camera setup separately, set `sceneRendering:"per_shot"` on the scene’s `video_plan`. The GenAI scene endpoint validates the actual files, renders each interval with the selected distilled LTX model, then returns one video under the scene request ID. Keep the existing budget and approval. Use `shotBindings` to identify existing cast panels, opening positions or a reply cue on a protected board. Inspect both frames beside each cut and listen for the first word, the end of each line and repeated effects.
+When the user approves rendering each camera setup separately, set `sceneRendering:"per_shot"` on the scene’s `video_plan`. The GenAI scene endpoint validates the actual files, renders each interval with the saved model (distilled I2V for native sound or a continuous mix, dev A2V for a conditioning track), then returns one video under the scene request ID. Keep the existing budget and approval. Use `shotBindings` to identify existing cast panels, opening positions or a reply cue on a protected board. Inspect both frames beside each cut and listen for the first word, the end of each line and repeated effects.
 
 ## When the user requests one shot
 

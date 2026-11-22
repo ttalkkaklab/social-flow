@@ -27,7 +27,7 @@ import { quoteVideo } from './video-pricing.js';
 import { atomicJson, videoTransaction } from './video-state.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { recordVideoSubmission, videoEvents } from './video-events.js';
-import { genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
+import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages } from './video-image-inputs.js';
 import { prepareVideoVoice } from './video-voice.js';
@@ -272,9 +272,32 @@ function saveVideoPlan(plan) {
     return plan;
 }
 const sceneRoute = '/v1/ltx/v2/scene-to-video';
+function planOutputContract(plan) {
+    if (plan.sceneRendering && plan.sceneRequest)
+        return msrOutputContract('scene-to-video', {
+            resolution: plan.selection.resolution, fps: plan.sceneRequest.fps, numFrames: plan.sceneRequest.frameCount,
+        });
+    const operation = plan.tool === 'astra_genai_msr' ? 'msr' : plan.tool === 'astra_genai_img2video' ? 'image-to-video' : '';
+    return msrOutputContract(operation, plan.args);
+}
+async function checkCompletedMedia(plan) {
+    const expected = planOutputContract(plan);
+    if (!expected)
+        return;
+    const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
+    const result = await getGenaiVideoStatus({ receiptPath: target + '.astra-genai.json', download: true }, expected);
+    if (!result.downloaded)
+        throw new Error('Completed video has no verified local output');
+}
 async function validateShotRenderPlan(plan) {
     const capabilities = await requestGenai('GET', sceneRoute + '/capabilities', undefined, 15_000);
     z.object({ version: z.literal(1), execution: z.literal('per_shot'), transitions: z.array(z.string()).refine(values => values.includes('hard_cut')) }).parse(capabilities);
+    if (plan.sceneRequest?.audio) {
+        const mode = plan.sceneRequest.audio.mode ?? 'conditioning';
+        const contract = z.object({ scene_audio_modes: z.record(z.string()) }).safeParse(capabilities);
+        if (!contract.success || contract.data.scene_audio_modes[mode] !== plan.selection.model)
+            throw new Error('scene_audio@0: gateway does not advertise ' + mode + ' for the selected model');
+    }
     const prepared = await buildSceneWire(plan.sceneRequest, String(plan.selection.model), String(plan.selection.resolution), true, plan.shotBindings);
     const validation = await requestGenai('POST', sceneRoute + '/validate', prepared.body, 120000, undefined, undefined, plan.requestId);
     z.object({ schema_valid: z.literal(true), model: z.literal(String(plan.selection.model)), shots: z.literal(plan.shotIds.length) }).parse(validation);
@@ -286,7 +309,7 @@ async function executeShotRenderPlan(plan) {
     const prepared = await validateShotRenderPlan(plan);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const receipt = { version: 1, operation: 'scene-to-video', baseUrl: astraGenaiBaseUrl(),
-        fingerprint: plan.id, videoPath: target, requestId: plan.requestId, status: 'submitting' };
+        fingerprint: plan.id, expected: planOutputContract(plan), videoPath: target, requestId: plan.requestId, status: 'submitting' };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     atomicJson(target + '.scene-request.json', prepared);
     const response = await requestGenai('POST', sceneRoute, prepared.body, 120000, undefined, undefined, plan.requestId);
@@ -348,25 +371,28 @@ export function planVideo(raw, persist = true) {
     if (input.shotBindings && !input.sceneRendering)
         throw new Error('scene_render_bindings: select per_shot rendering');
     if (input.sceneRendering) {
-        const tool = 'astra_genai_img2video';
+        const conditioned = scene?.audio && scene.audio.mode !== 'mix';
+        const tool = conditioned ? 'astra_genai_audio2video' : 'astra_genai_img2video';
         if (!scene || !context.sceneMembers || !input.sceneNo || selection.engine !== 'astra-genai' ||
-            selection.model !== 'ltx-2.5-22b-distilled' || !selection.resolution || selectedVideoTool(selection) !== tool ||
-            input.tool && input.tool !== tool || input.operation && input.operation !== 'image')
-            throw new Error('scene_render_selection: per-shot rendering requires a saved distilled I2V scene');
+            selection.model !== (conditioned ? 'ltx-2.5-22b-dev' : 'ltx-2.5-22b-distilled') || !selection.resolution || selectedVideoTool(selection) !== tool ||
+            input.tool && input.tool !== tool || input.operation && input.operation !== (conditioned ? 'audio' : 'image'))
+            throw new Error('scene_render_selection: use saved dev audio-to-video for conditioning or distilled I2V for native or mixed sound');
         const settings = z.object({ reserveUsd: z.number().nonnegative().finite(), outputPath: z.string().optional(),
             filename: z.string().optional() }).strict().parse(input.args);
         const { request } = prepareSceneRequest(input.sceneNo, bindSceneCards(context.sceneMembers, input.shotBindings), scene, context.episode, lines, { bindDialogue: false, bindOpening: false, suffix: '' }, () => undefined, context.board);
         bindRegisteredPanels(request, context.episode, context.board);
         const missing = [];
-        if (request.audio)
-            missing.push('scene_audio@0: this renderer accepts native shot audio only');
         for (const shot of request.shots) {
             const at = shot.shotId + '@' + shot.startFrame;
             if (!shot.framing || !shot.action)
                 missing.push(at + ' direction: supply framing and action');
             if (shot.transition !== 'open' && shot.transition !== 'hard_cut')
                 missing.push(at + ' transition: ' + shot.transition);
-            const subjects = request.images.filter(p => p.shotId === shot.shotId && (p.reference || ['face', 'outfit'].includes(p.role)));
+            const refs = request.images.filter(p => p.shotId === shot.shotId && (p.reference || ['face', 'outfit'].includes(p.role)));
+            const subjects = refs.filter(p => !['location', 'background'].includes(p.role));
+            for (const p of refs)
+                if (conditioned || p.strength !== undefined && p.strength !== 1)
+                    missing.push(at + ' ' + p.role + ': ' + (conditioned ? 'A2V cannot bind subject references' : 'individual reference strength is unsupported'));
             for (const line of shot.dialogue ?? []) {
                 const label = shot.shotId + '@' + (line.frame ?? shot.startFrame) + ' ' + line.lineId + ' ' + line.speaker;
                 if (line.warnings?.length || line.delivery === 'voiceover')
@@ -377,7 +403,7 @@ export function planVideo(raw, persist = true) {
         }
         if (missing.length)
             throw new Error('scene_render_inputs_unsupported:\n' + missing.join('\n'));
-        const files = [...request.images.map(p => p.path), ...request.shots.flatMap(s => (s.dialogue ?? []).flatMap(d => d.voice ? [d.voice.path] : []))];
+        const files = [...(request.audio ? [request.audio.path] : []), ...request.images.map(p => p.path), ...request.shots.flatMap(s => (s.dialogue ?? []).flatMap(d => d.voice ? [d.voice.path] : []))];
         const inputs = Object.fromEntries(files.map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
         const outputPath = canonical(path.resolve(context.episode, settings.outputPath ?? '.work/video'));
         if (!within(context.episode, outputPath))
@@ -769,8 +795,10 @@ export async function executeVideo(raw, dispatch) {
             status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
         return undefined;
     }, auth.openingSpendUsd);
-    if (cached)
+    if (cached) {
+        await checkCompletedMedia(plan);
         return cached;
+    }
     const update = (patch) => videoTransaction(episode, state => {
         Object.assign(state.jobs[plan.requestId], patch, { updatedAt: new Date().toISOString() });
     });
@@ -914,7 +942,7 @@ export async function videoStatus(raw) {
     if (input.action === 'refresh' && job) {
         if (job.status === 'failed')
             throw new Error('video_request_failed: nothing to recover; plan a new requestId');
-        if (job.status === 'completed')
+        if (job.status === 'completed' && !['astra_genai_msr', 'astra_genai_img2video', 'astra_genai_audio2video'].includes(job.tool))
             return job;
         const hosted = HOSTED_VIDEO_ROUTES[job.tool];
         if (!hosted && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
@@ -923,6 +951,10 @@ export async function videoStatus(raw) {
         const { id, ...body } = plan;
         if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool)
             throw new Error('Invalid recovery plan');
+        if (job.status === 'completed') {
+            await checkCompletedMedia(plan);
+            return job;
+        }
         checkVideoEnvironment(plan.tool);
         if (hosted) {
             if (!job.providerId)
@@ -948,7 +980,7 @@ export async function videoStatus(raw) {
         const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
         let result;
         try {
-            result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true });
+            result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true }, planOutputContract(plan));
         }
         catch (error) {
             if (!plan.sceneRendering || !(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200))

@@ -5193,7 +5193,7 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
     inputSchema: { ...videoContextSchema, required: ['episode', 'requestId'], oneOf: [{ required: ['sceneNo'] }, { required: ['shotId'] }], properties: { ...videoContextSchema.properties,
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
-            sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native audio.' },
+            sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native or supplied scene audio.' },
             validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
             purpose: { type: 'string', enum: ['draft', 'final', 'revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
             basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },

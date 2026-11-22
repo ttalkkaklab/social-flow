@@ -723,7 +723,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
   shot.scene=1; shot.duration=4+i; shot.visual.frames={mode:'first',start:'opening.png'};
   shot.visual.character=[positions[i].character];
   shot.visual.references=[{id:'p'+i,path:positions[i].character+'.png',use:'both',role:'character',purpose:'Face and clothing.'}];
-  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Walk over to the witness.'}}];
+  shot.narration=[{id:'l'+i,speaker:positions[1-i].character,tts:words[i],delivery:'on_screen',acting:{direction:'Whisper the answer.'}}];
  }
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'whole-scene',args:{reserveUsd:0.1}};
@@ -761,6 +761,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  assert.ok(plan.args.prompt.startsWith('Opening frame'));
  assert.match(plan.args.prompt,/heir \(Image 2, Audio 2\): "왜 그랬어요\?"[\s\S]+witness \(Image 1, Audio 1\): "제가 찢었습니다\."/);
  assert.equal(plan.args.prompt.split(words[0]).length,2);
+ assert.match(plan.args.prompt,/Whisper the answer/);
  assert.doesNotMatch(plan.args.prompt,/hard cut|camera holds|tripod|gets to his feet|walk over/i);
  assert.throws(()=>planVideo({...input,shotId:'s1'}),/sceneNo or shotId/);
  assert.throws(()=>planVideo({...input,args:{duration:3}}),/video_duration_short/);
@@ -772,7 +773,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
   assert.equal(args.references[1].audioPath,path.join(dir,'heir.wav'));
   return result;
  });
- await f.execute(plan,async()=>assert.fail('duplicate scene submission'));
+ await assert.rejects(f.execute(plan,async()=>assert.fail('duplicate scene submission')), /ENOENT/);
  assert.equal(calls,1);
  f.board.SCENES[0].narration[1].tts='다른 대사'; f.save();
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[plan.id],request:'old'}),/stale/);

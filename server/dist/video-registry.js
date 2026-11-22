@@ -98,8 +98,9 @@ export function sceneInputCapabilities(tool) {
         fpsField: schemaFields.includes('frameRate') ? 'frameRate' : schemaFields.includes('fps') ? 'fps' : null,
         frameAccurateCuts: false, timedImages: ['astra_keyframe_video', 'astra_genai_desktop_keyframes', 'astra_genai_img2video', 'astra_genai_audio2video'].includes(tool),
         shotScopedReferences: false, frameAddressedNativeDialogue: false,
-        ...(tool === 'astra_genai_img2video' ? { sceneRenderer: {
-                model: 'ltx-2.5-22b-distilled', sceneRendering: 'per_shot', requiresUserChoice: true,
+        ...(['astra_genai_img2video', 'astra_genai_audio2video'].includes(tool) ? { sceneRenderer: {
+                model: tool === 'astra_genai_img2video' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev',
+                sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: true,
                 capabilities: '/v1/ltx/v2/scene-to-video/capabilities', validation: '/v1/ltx/v2/scene-to-video/validate',
             } } : {}),
         openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),

@@ -5,13 +5,8 @@
  * carries the returned `genai-file://` id.
  */
 import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import * as fs from 'node:fs';
-import * as os from 'node:os';
-import * as path from 'node:path';
 import { z } from 'zod';
 import { GenaiRequestError, astraGenaiBaseUrl, requireAstraGenaiKey } from './astra-genai-client.js';
-import { imageMetadata } from './image-media.js';
 export const GENAI_FILE_SCHEME = 'genai-file://';
 export const GENAI_MSR_INLINE_MAX_BYTES = 8 * 1000 * 1000;
 /** Tests set retryDelayMs to 0; a chunk of 5 MiB at 0.4 MB/s takes about 13 s, well inside chunkTimeoutMs. */
@@ -143,28 +138,4 @@ async function uploadOnce(bytes, contentType, sha256, cacheKey) {
     if (Number.isFinite(expiresAt))
         uploaded.set(cacheKey, { uri: file.uri, expiresAt });
     return file.uri;
-}
-/** Fit a PNG/JPEG inside width x height without upscaling; on any ffmpeg failure the original bytes stay. */
-export function shrinkImageToFit(bytes, width, height) {
-    const meta = imageMetadata(bytes);
-    if (meta.width <= width && meta.height <= height)
-        return bytes;
-    const ext = meta.mimeType === 'image/png' ? '.png' : meta.mimeType === 'image/jpeg' ? '.jpg' : undefined;
-    if (!ext)
-        return bytes;
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-shrink-'));
-    try {
-        const input = path.join(dir, `in${ext}`), output = path.join(dir, `out${ext}`);
-        fs.writeFileSync(input, bytes);
-        execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', input, '-vf', `scale=${width}:${height}:force_original_aspect_ratio=decrease:flags=lanczos`,
-            '-frames:v', '1', ...(ext === '.jpg' ? ['-q:v', '2'] : []), output], { timeout: 60_000, stdio: 'pipe' });
-        const shrunk = fs.readFileSync(output), out = imageMetadata(shrunk);
-        return out.mimeType === meta.mimeType && out.width <= width && out.height <= height ? shrunk : bytes;
-    }
-    catch {
-        return bytes;
-    }
-    finally {
-        fs.rmSync(dir, { recursive: true, force: true });
-    }
 }

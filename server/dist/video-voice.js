@@ -269,6 +269,8 @@ export function prepareVideoVoice(tool, input, context) {
                 speaker.audioIndex = slot;
                 msrAudio.push(`Audio ${slot}: ${label}'s voice, belongs only to Image ${index + 1}.`);
                 const seconds = sampleSeconds(speaker.reference.path);
+                if (seconds !== undefined && seconds > 10)
+                    throw new Error(id + ': MSR voice samples must be at most 10 seconds');
                 if (seconds !== undefined && seconds > 5)
                     warnings.push(`${id}: the voice sample runs ${seconds.toFixed(1)} s; MSR conditions on the first 5 seconds and cuts the rest.`);
             }
@@ -321,7 +323,7 @@ export function prepareVideoVoice(tool, input, context) {
                 const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
                 const imageSlot = image ?? owner?.images[0];
                 const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
-                return `${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
+                return `${direction ? direction + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
             }
             if (line.delivery !== 'on_screen') {
                 const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;

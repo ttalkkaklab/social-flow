@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
 const load = createRequire(import.meta.url);
+export const videoTextPolicy = () => String(load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY);
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : '';
 export interface VideoPromptSource { action: string; end?: string; sound?: string }
@@ -106,7 +107,7 @@ export function scenePromptText(scene: SceneVideoDirection, camera: string | und
   lines: { speaker?: string; delivery?: string; tts?: string }[], bindTurns: boolean) {
   const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
     .map(l => l.speaker + ' (' + l.delivery + '): "' + l.tts + '"');
-  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue]
+  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue, videoTextPolicy()]
     .filter(Boolean).join('\n');
 }
 

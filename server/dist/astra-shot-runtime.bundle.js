@@ -48439,6 +48439,7 @@ var sceneVideoDirectionSchema = external_exports.object({
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
   oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
   audio: external_exports.object({
+    mode: external_exports.enum(["conditioning", "mix"]).optional().describe("Condition generation by default, or mix this track once with native shot sound."),
     path: external_exports.string().trim().min(1).describe("Scene-length track from frame zero, including any lead-in silence."),
     cues: external_exports.array(external_exports.object({ frame, action: sceneText }).strict()).optional()
   }).strict().optional(),
@@ -49947,7 +49948,7 @@ import * as path4 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.125.1",
+  version: "0.126.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -51283,11 +51284,19 @@ var genaiMsrSchema = external_exports.object({
   }
 });
 var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var mediaContract = external_exports.object({
+  width: external_exports.number().positive(),
+  height: external_exports.number().positive(),
+  fps: external_exports.number().positive(),
+  frames: external_exports.number().int().positive().optional(),
+  audio: external_exports.boolean()
+});
 var receiptSchema2 = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
   operation: external_exports.union([operationSchema, external_exports.literal("scene-to-video")]),
   fingerprint: external_exports.string(),
+  expected: mediaContract.optional(),
   requestId: external_exports.string().optional(),
   sceneShots: external_exports.array(external_exports.unknown()).optional(),
   videoPath: external_exports.string(),
@@ -51593,8 +51602,9 @@ function sceneInputCapabilities(tool) {
     timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes", "astra_genai_img2video", "astra_genai_audio2video"].includes(tool),
     shotScopedReferences: false,
     frameAddressedNativeDialogue: false,
-    ...tool === "astra_genai_img2video" ? { sceneRenderer: {
-      model: "ltx-2.5-22b-distilled",
+    ...["astra_genai_img2video", "astra_genai_audio2video"].includes(tool) ? { sceneRenderer: {
+      model: tool === "astra_genai_img2video" ? "ltx-2.5-22b-distilled" : "ltx-2.5-22b-dev",
+      sceneAudioModes: tool === "astra_genai_img2video" ? ["native", "mix"] : ["conditioning"],
       sceneRendering: "per_shot",
       requiresUserChoice: true,
       capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
@@ -51813,7 +51823,7 @@ function compileSceneTimeline(raw, scene, episode, board) {
     };
   });
   const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
-  const audio = scene.audio && { path: realpathSync2(path6.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
+  const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync2(path6.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...audio ? { audio } : {} };
 }
@@ -51847,6 +51857,7 @@ var SceneInputError = class extends Error {
 };
 function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
   const caps = sceneInputCapabilities(tool);
+  if (request.audio?.mode === "mix") missing.push({ input: "audio", frame: 0, reason: "Mixing with native sound requires per-shot scene rendering" });
   if (!caps.frameAccurateCuts) missing.push(...request.cuts.map((c) => ({ input: "transition", shotId: c.to, frame: c.frame, role: c.transition, reason: "No frame-addressed " + c.transition + " boundary" })));
   for (const shot of request.shots) {
     if (!shot.framing || !shot.action) missing.push({
@@ -51887,6 +51898,8 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
       });
   }
   const pins = request.images.filter(temporal), refs = request.images.filter((p) => !temporal(p));
+  for (const ref of refs) if (ref.strength !== void 0 && ref.strength !== 1)
+    missing.push({ input: "reference", role: ref.role, shotId: ref.shotId, frame: ref.frame, path: ref.path, reason: "Individual subject strength is unsupported" });
   const opening = pins.some((p) => p.role === "start" && p.frame === 0);
   const timedLimit = tool === "astra_genai_desktop_keyframes" ? 10 : 8;
   for (const [index, p] of pins.entries()) {

@@ -55,6 +55,7 @@ export const sceneVideoDirectionSchema = z.object({
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
     oneTake: z.boolean().optional().describe('True only for an explicitly requested uninterrupted shot.'),
     audio: z.object({
+        mode: z.enum(['conditioning', 'mix']).optional().describe('Condition generation by default, or mix this track once with native shot sound.'),
         path: z.string().trim().min(1).describe('Scene-length track from frame zero, including any lead-in silence.'),
         cues: z.array(z.object({ frame, action: sceneText }).strict()).optional(),
     }).strict().optional(),

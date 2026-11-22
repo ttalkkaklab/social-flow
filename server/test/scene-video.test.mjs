@@ -402,6 +402,9 @@ test('a distilled I2V subject panel belongs to an off-screen dancer, separately 
  assert.deepEqual(plan.args.references.map(p=>path.basename(p.imagePath)),['duo.png']);
  assert.equal(plan.imageBindings.find(i=>i.id==='start').path,path.join(f.dir,'images/opening.png'));
  assert.match(plan.args.prompt,/mai-an \(Image 1\): Off screen/);
+ assert.match(plan.args.prompt,/no subtitles/);
+ m.timeline.images.at(-1).strength=0.25; f.save();
+ assert.throws(()=>planVideo(f.input), e=>e.missing.some(i=>i.role==='outfit' && i.frame===0 && i.shotId));
 });
 
 test('a 25-frame scene retains its length for three I2V face references and for T2V', t => {
@@ -453,4 +456,21 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
   f.scene.openingPositions[1].images=[];
   f.save();
   assert.throws(()=>planVideo({...f.input,args:{durationSeconds:4}}),/scene_video_timing/);
+});
+
+
+test('supplied scene audio binds the selected model and original file to per-shot plans', t => {
+  for (const mode of ['mix','conditioning']) {
+    const f=busking(t);
+    f.scene.audio.mode=mode;
+    for (const shot of f.members) {
+      shot.visual.video.operation=mode==='mix' ? 'image' : 'audio';
+      shot.visual.video.model=mode==='mix' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev';
+    }
+    f.save();
+    const plan=planVideo({...f.input,sceneRendering:'per_shot'},false);
+    const track=plan.sceneRequest.audio;
+    assert.equal(plan.inputs[track.path],createHash('sha256').update(fs.readFileSync(track.path)).digest('hex'));
+    assert.equal(track.mode,mode);
+  }
 });
