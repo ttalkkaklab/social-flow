@@ -194,6 +194,8 @@ const visualSchema = z.object({
     characterInputs: z.array(z.object({
         character: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
         bodyView: z.enum(['front', 'back']).optional().describe('Body panel for this actor when the camera view is ambiguous'),
+        visibility: z.enum(['face_visible', 'body_only', 'hands_only']).optional().describe('Seedance appearance for this character in this shot'),
+        faceReviewPath: nonEmpty.optional().describe('Storyboard-relative cast continuity review of the selected original'),
         faceTaskId: z.string().regex(/^cgt-[A-Za-z0-9_-]{1,120}$/).optional().describe('Eligible same-account Seedance original selected for this actor’s face'),
     }).strict()).nonempty().optional(),
 }).passthrough();

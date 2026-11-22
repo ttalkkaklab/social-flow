@@ -407,7 +407,7 @@ naming a retired engine reads `migration_required` in settings and fails `video_
 `video_engine_unsupported`. Their existing clips stay reusable through `visual.reuse`; never
 regenerate solely to migrate. MSR keeps the contract above. Seedance binds each speaker's
 image and sample in the prompt (`@Image N`/`@Audio N` on 2.5, `Image N`/`Audio N` on 2.0) and
-rejects real human faces, so photoreal people go to the LTX lanes.
+uses a reviewed private portrait asset for a visible photoreal sheet face. Keep the saved model and casting. Follow the [Seedance character contract](skills/_shared/video-routing.md) before approval.
 
 ## One storyboard template (user directive, 2026-10-31)
 

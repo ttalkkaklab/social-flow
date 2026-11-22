@@ -1009,12 +1009,16 @@ export const ROUTES = {
     },
     seedance_reference: async (args) => {
         const result = await seedance.generateWithReferences(parseArgs(seedance.seedanceReferenceSchema, args));
+        if (result.inputProblem)
+            return seedancePreflightError(result.inputProblem);
         if (result.originalProblem)
             return seedancePreflightError(result.originalProblem);
         if (result.portraitProblem)
             return seedancePreflightError(result.portraitProblem);
         if (!result.success)
-            return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true };
+            return { ...text(`Seedance video generation with references failed: ${result.error}`, true), terminal: result.terminal === true,
+                structuredContent: { stage: 'seedance_generation', submission: result.taskId ? 'accepted' : result.terminal ? 'rejected' : 'unknown',
+                    taskId: result.taskId, message: result.error } };
         const refImagesInfo = result.referenceImages?.length
             ? `\nReference Images (${result.referenceImages.length}):\n  - ${result.referenceImages.join('\n  - ')}`
             : '';
@@ -1617,6 +1621,9 @@ ROUTES.video_plan = async (args) => {
         return text(JSON.stringify(await planManagedVideo(input), null, 2));
     }
     catch (error) {
+        const report = error?.report;
+        if (report?.videoSubmitted === false)
+            return seedancePreflightError({ ...report, executable: false, requestId: input.requestId });
         if (!(error instanceof SceneInputError))
             throw error;
         return { ...text(JSON.stringify({ code: 'scene_inputs_unsupported', executable: false, requestId: input.requestId, tool: error.tool,

@@ -102,7 +102,7 @@ export function resolveCharacterVoice(character: Record<string, unknown>, contex
     }
   }
   const reference = object(resolved.voiceReference);
-  if (required) return {...resolved, voiceReference:{...reference, imagePaths:[required.face.path,required.bodyPath].filter(Boolean)}};
+  if (required) return {...resolved, voiceReference:{...reference, imagePaths:[required.face?.path,required.bodyPath].filter(Boolean)}};
   // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
   if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
     const root = realpathSync(folder) + path.sep;
