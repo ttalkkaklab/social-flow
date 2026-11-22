@@ -4,6 +4,15 @@
 
 If you work on video or speech adapters and want to tackle a larger change, [open an issue](https://github.com/ttalkkaklab/social-flow/issues) with the model name, a link to its API contract and one input/output example with credentials removed. Zeans maintains the plugin at [Ttalkkak Lab](https://github.com/ttalkkaklab).
 
+## Help with model integrations
+
+We welcome contributions that make it easier to add a provider or model. Each issue links to the current implementation and gives examples you can verify locally.
+
+- [Text-to-speech adapters](https://github.com/ttalkkaklab/social-flow/issues/680) — group voice capabilities, request validation and generation by provider.
+- [Image generation and editing adapters](https://github.com/ttalkkaklab/social-flow/issues/681) — use the same provider registration for discovery, validation and execution.
+- [MiniMax H3 video support](https://github.com/ttalkkaklab/social-flow/issues/682) — extend the existing adapter with a documented operation such as prompt-only generation or video-clip references.
+- [Music model adapters](https://github.com/ttalkkaklab/social-flow/issues/683) — keep model capabilities, supported inputs and execution together for each provider.
+
 ## Getting set up
 
 ```bash

@@ -81,7 +81,7 @@ body:
     attributes:
       label: Before filing
       options:
-        - label: I read [Getting started](https://github.com/ttalkkaklab/social-flow/blob/main/docs/getting-started.md) and [Costs & API keys](https://github.com/ttalkkaklab/social-flow/blob/main/docs/configuration.md)
+        - label: I read [Getting started](https://ttalkkaklab.github.io/social-flow/index.html#getting-started) and [Costs & API keys](https://ttalkkaklab.github.io/social-flow/index.html#configuration)
           required: true
         - label: There are no API keys, tokens, or contents of `~/.config/social-flow/` anywhere in this issue
           required: true

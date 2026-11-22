@@ -31,4 +31,4 @@ For the browser edition, open `docs/index.html` from a checkout. It includes eve
 - [MCP tool contracts](tool-contracts.md) and the [pipeline manifest](pipeline-manifest.md)
 - [Offline review pages](design-system/DESIGN.md), [motion graphics](design-system/MOTION.md) and [bundled fonts](design-system/FONTS.md)
 
-For changes to the plugin, see the [contributing guide](../CONTRIBUTING.md) or [choose a first issue](https://github.com/ttalkkaklab/social-flow/contribute). Report a vulnerability using the [security policy](../SECURITY.md). The plugin is distributed under the [Apache License 2.0](../LICENSE).
+For TTS, image, music and MiniMax H3 work, see the [open model integration requests](../CONTRIBUTING.md#help-with-model-integrations). For other changes, see the [contributing guide](../CONTRIBUTING.md) or [choose a first issue](https://github.com/ttalkkaklab/social-flow/contribute). Report a vulnerability using the [security policy](../SECURITY.md). The plugin is distributed under the [Apache License 2.0](../LICENSE).
