@@ -77937,10 +77937,10 @@ var init_values = __esm({
 });
 
 // node_modules/openai/internal/utils/sleep.mjs
-var sleep5;
+var sleep6;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep5 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
+    sleep6 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
   }
 });
 
@@ -85972,7 +85972,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep6(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -86711,7 +86711,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep5(pollInterval);
+          await sleep6(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -88651,7 +88651,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep6(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -88801,7 +88801,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep5(sleepInterval);
+              await sleep6(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -89719,7 +89719,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep5(timeoutMillis);
+        await sleep6(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -112548,6 +112548,7 @@ import { createHash as createHash6 } from "node:crypto";
 var import_undici = __toESM(require_undici(), 1);
 import { readFileSync as readFileSync7, statSync as statSync4 } from "node:fs";
 import { extname as extname4 } from "node:path";
+import { setTimeout as sleep3 } from "node:timers/promises";
 function desktopGatewayKey() {
   const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, "");
   if (!url) return config.astraGenaiApiKey;
@@ -112556,6 +112557,7 @@ function desktopGatewayKey() {
   return void 0;
 }
 function override(route) {
+  if (route === "/v1/chat/completions") return { url: process.env.ASTRA_GENAI_CHAT_URL, key: process.env.ASTRA_GENAI_CHAT_API_KEY };
   if (route.startsWith("/v1/ltx/desktop/")) return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
   if (route.startsWith("/v1/images/")) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
   if (route.startsWith("/v1/audio/")) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
@@ -112567,7 +112569,7 @@ function astraGenaiBaseUrl(route = "") {
 function requireAstraGenaiKey(route = "") {
   const { url, key } = override(route);
   if (url) {
-    const lane = route.startsWith("/v1/images/") ? "IMAGE" : route.startsWith("/v1/audio/") ? "SPEECH" : "DESKTOP";
+    const lane = route === "/v1/chat/completions" ? "CHAT" : route.startsWith("/v1/images/") ? "IMAGE" : route.startsWith("/v1/audio/") ? "SPEECH" : "DESKTOP";
     if (!key) throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
     return key;
   }
@@ -112613,11 +112615,12 @@ async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, si
     throw new Error("ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.");
   }
 }
-async function pollGenaiJob(check2, pending2) {
+async function pollGenaiJob(check2, pending2, signal) {
   const deadline = Date.now() + 30 * 6e4;
   let retried2 = false;
   do {
     try {
+      signal?.throwIfAborted();
       const result = await check2();
       if (result.downloaded) return result;
       retried2 = false;
@@ -112626,7 +112629,8 @@ async function pollGenaiJob(check2, pending2) {
       if (error2.httpStatus < 500 || retried2) throw new Error(error2.message);
       retried2 = true;
     }
-    await new Promise((resolve15) => setTimeout(resolve15, 5e3));
+    if (signal) await sleep3(5e3, void 0, { signal });
+    else await new Promise((resolve15) => setTimeout(resolve15, 5e3));
   } while (Date.now() < deadline);
   throw new Error(pending2);
 }
@@ -112873,7 +112877,7 @@ function dataUri(file, allowed, maxBytes) {
   if (size > maxBytes) throw new Error(`${path7.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs8.readFileSync(file).toString("base64")}`;
 }
-var sleep3 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
+var sleep4 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
 async function runVendorJob(job) {
   let target;
   try {
@@ -112895,7 +112899,7 @@ async function runVendorJob(job) {
   const maxPolls = job.maxPolls ?? 180, interval = job.intervalMs ?? 1e4;
   let retried2 = false;
   for (let poll = 1; poll <= maxPolls; poll += 1) {
-    await sleep3(interval);
+    await sleep4(interval);
     let status;
     try {
       status = await job.poll(id);
@@ -114734,7 +114738,7 @@ function buildJobBody(mode, args) {
   }
   return body;
 }
-function sleep4(ms) {
+function sleep5(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 var submitTimestamps = [];
@@ -114749,7 +114753,7 @@ async function waitForSubmitSlot() {
     }
     const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
     const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep4(Math.max(minuteWait, hourWait) + 250);
+    await sleep5(Math.max(minuteWait, hourWait) + 250);
   }
 }
 var uploadTimestamps = [];
@@ -114761,7 +114765,7 @@ async function waitForUploadSlot() {
       uploadTimestamps.push(now);
       return;
     }
-    await sleep4(6e4 - (now - uploadTimestamps[0]) + 250);
+    await sleep5(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -114790,7 +114794,7 @@ async function withBackoff(what, call2, baseDelayMs = 2e3) {
     const result = await call2();
     if (result.ok || result.status !== 429 && result.status !== 503) return result;
     last = result;
-    await sleep4(delay2);
+    await sleep5(delay2);
     delay2 *= 2;
   }
   return last;
@@ -114885,7 +114889,7 @@ async function awaitResult(jobId, signal) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep4(POLL_INTERVAL_MS2);
+      await sleep5(POLL_INTERVAL_MS2);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -114910,7 +114914,7 @@ async function awaitResult(jobId, signal) {
         }
       });
       if (download.status === 409) {
-        await sleep4(POLL_INTERVAL_MS2);
+        await sleep5(POLL_INTERVAL_MS2);
         continue;
       }
       if (!download.ok) {
@@ -114922,7 +114926,7 @@ async function awaitResult(jobId, signal) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep4(POLL_INTERVAL_MS2);
+    await sleep5(POLL_INTERVAL_MS2);
   }
 }
 function atomicVideoFile(file, contents) {
@@ -115772,7 +115776,8 @@ async function checkGenaiVideoOptions(tool2, args) {
   }
   if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model2?.id ?? args.model} does not advertise ${missing.join(", ")}`, true, 422);
 }
-async function generateGenaiVideo(operation, input) {
+async function generateGenaiVideo(operation, input, signal) {
+  signal?.throwIfAborted();
   const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
   const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
@@ -115814,6 +115819,7 @@ async function generateGenaiVideo(operation, input) {
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const submitted = usesReferences || "keyframes" in body ? await prepareGenaiMsrSources(body) : body;
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: "submitting" };
+    signal?.throwIfAborted();
     fs12.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
     let response;
     try {
@@ -115841,7 +115847,8 @@ async function generateGenaiVideo(operation, input) {
   }
   const result = await pollGenaiJob(
     () => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }, msrOutputContract(operation, args)),
-    `GenAI video is still pending; recover using receiptPath ${receiptPath2}, never resubmit.`
+    `GenAI video is still pending; recover using receiptPath ${receiptPath2}, never resubmit.`,
+    signal
   );
   return { ...result, receiptPath: receiptPath2 };
 }
@@ -117078,7 +117085,7 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
-function sleep6(ms) {
+function sleep7(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 function describeHttpError(status, body) {
@@ -117120,7 +117127,7 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
   let retried2 = false;
   for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
-    await sleep6(POLL_INTERVAL_MS3);
+    await sleep7(POLL_INTERVAL_MS3);
     let task;
     try {
       task = await getTask(apiKey, taskId);
@@ -125426,7 +125433,7 @@ function describeElevenLabsError(httpStatus, bodyText) {
 function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
-function sleep7(ms) {
+function sleep8(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 function timeoutFor(textLength) {
@@ -125446,7 +125453,7 @@ async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPT
     const bodyText = await response.text();
     lastError = Object.assign(new Error(describeElevenLabsError(response.status, bodyText)), { httpStatus: response.status });
     if (!isRetryable(response.status) || attempt === attempts - 1) break;
-    await sleep7(RETRY_BASE_DELAY_MS * (attempt + 1));
+    await sleep8(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
   throw lastError ?? new Error("ElevenLabs request failed");
 }
@@ -138113,7 +138120,7 @@ var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
 var REELS_POLL = { pollIntervalMs: 1e4, pollMaxTries: 30 };
-var sleep8 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
+var sleep9 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -138182,7 +138189,7 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
       const detail = body?.[detailField] ? ` \u2014 ${String(body[detailField])}` : "";
       return fail2(502, `Media container ${containerId} failed: ${status}${detail}`);
     }
-    await sleep8(interval);
+    await sleep9(interval);
   }
   return fail2(504, `Media container ${containerId} not FINISHED after ${maxTries} tries`);
 }
@@ -138629,7 +138636,7 @@ async function publishFacebookReel(pageId, token, input, opts) {
       }
       last = `video_status=${videoStatus2 || "?"}, publishing=${String(publishing.status ?? "?")}`;
     }
-    await sleep8(opts.pollIntervalMs);
+    await sleep9(opts.pollIntervalMs);
   }
   return { videoId, postId, processing: `Reel accepted but still processing (${last}); check the Page before doing anything \u2014 do not publish again` };
 }
@@ -139029,7 +139036,7 @@ async function waitForYoutubeProcessing(token, videoId, opts) {
     const status = String(details?.processingStatus ?? "");
     if (status === "succeeded") return null;
     if (status === "failed" || status === "terminated") return `YouTube processing ${status} \u2014 check the video in Studio`;
-    await sleep8(opts.pollIntervalMs);
+    await sleep9(opts.pollIntervalMs);
   }
   return `processing not finished after ${Math.round(opts.pollMaxTries * opts.pollIntervalMs / 1e3)}s \u2014 thumbnail set anyway; on a Short it may not apply, so set it again in Studio if the cover is wrong`;
 }

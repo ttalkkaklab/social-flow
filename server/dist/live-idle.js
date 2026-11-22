@@ -1,12 +1,12 @@
 import { randomInt, randomUUID, createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { setTimeout as sleep } from 'node:timers/promises';
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 const execute = promisify(execFile);
+import { generateGenaiVideo } from './astra-genai-video.js';
+import { astraGenaiBaseUrl } from './astra-genai-client.js';
 import { astraVideoBaseUrl } from './config.js';
-import { generateFromImage, resumeVideoResult } from './astra-video-client.js';
 const gestures = [
     'Blink once slowly, then rest.',
     'Breathe gently with relaxed shoulders.',
@@ -57,7 +57,8 @@ export async function prepareIdleClips(image, project, concept, signal, progress
     for (const { firstFramePath, lastFramePath, ...request } of requests)
         hash.update(JSON.stringify(request));
     const directory = join(project, '.social-flow', 'live-idle', hash.digest('hex'));
-    mkdirSync(directory, { recursive: true, mode: 0o700 });
+    const gatewayDir = join(directory, createHash('sha256').update(astraGenaiBaseUrl()).digest('hex'));
+    mkdirSync(gatewayDir, { recursive: true, mode: 0o700 });
     const paths = [];
     let reference;
     for (const [index, request] of requests.entries()) {
@@ -67,8 +68,8 @@ export async function prepareIdleClips(image, project, concept, signal, progress
             const candidate = attempt === 0 ? request : idleRetake(request, index, concept, attempt);
             const variant = attempt ? '-moving-' + createHash('sha256').update(JSON.stringify([candidate.seed, candidate.prompt, candidate.strength, ...(returning ? [candidate.numFrames] : [])])).digest('hex').slice(0, 12) : '';
             const filename = `listen-${index + 1}${variant}.mp4`;
-            const source = await fetchIdle(candidate, directory, returning ? 'outward-' + filename : filename, signal);
-            const path = returning ? await returnToAnchor(source, join(directory, filename), request.numFrames, signal) : source;
+            const source = await fetchIdle(candidate, directory, gatewayDir, returning ? 'outward-' + filename : filename, signal);
+            const path = returning ? await returnToAnchor(source, join(gatewayDir, filename), request.numFrames, signal) : source;
             const { stdout } = await execute('ffmpeg', ['-v', 'error', '-nostdin', '-i', path, '-an',
                 '-vf', 'crop=720:1280:8:0,scale=24:40:flags=area', '-pix_fmt', 'rgb24', '-f', 'rawvideo', 'pipe:1'], { signal, encoding: 'buffer', maxBuffer: 512 * 1024 });
             try {
@@ -104,46 +105,28 @@ async function returnToAnchor(source, path, count, signal) {
         rmSync(tmp, { force: true });
     }
 }
-async function fetchIdle(request, directory, filename, signal) {
-    const path = join(directory, filename);
-    const claim = path + '.generating';
-    // A persistent claim covers a transport failure between POST and its receipt.
-    // A second preview or live session can follow the first accepted job.
-    if (!(await resumeVideoResult(path, signal))) {
-        try {
-            writeFileSync(claim, String(process.pid), { flag: 'wx', mode: 0o600 });
-        }
-        catch (e) {
-            if (e.code !== 'EEXIST')
-                throw e;
-            const until = Date.now() + 120000;
-            while (!existsSync(path + '.astra-job.json')) {
-                if (Date.now() >= until)
-                    throw Error('Standby submission is unconfirmed: ' + filename);
-                const pid = Number(readFileSync(claim, 'utf8'));
-                try {
-                    process.kill(pid, 0);
-                }
-                catch {
-                    throw Error('Standby generation stopped before its receipt. Inspect the production queue before retrying ' + filename);
-                }
-                await sleep(500, undefined, { signal });
-            }
-        }
-        if (!existsSync(path + '.astra-job.json')) {
-            try {
-                await generateFromImage({ ...request, outputPath: directory, filename }, signal);
-            }
-            finally {
-                if (existsSync(path + '.astra-job.json'))
-                    rmSync(claim, { force: true });
-            }
-        }
-        else if (!(await resumeVideoResult(path, signal))) {
-            throw Error('Concurrent standby preparation failed for ' + filename);
-        }
+async function fetchIdle(request, legacy, outputPath, filename, signal) {
+    const path = join(legacy, filename);
+    const receipt = path + '.astra-job.json';
+    if (existsSync(receipt)) {
+        const previous = JSON.parse(readFileSync(receipt, 'utf8'));
+        if (previous.status === 'completed' && existsSync(path) &&
+            createHash('sha256').update(readFileSync(path)).digest('hex') === previous.sha256)
+            return path;
+        if (previous.status !== 'failed')
+            throw Error('Inspect the previous standby job before replacing it: ' + receipt);
     }
-    return path;
+    else if (existsSync(path + '.generating'))
+        throw Error('Inspect the unconfirmed standby submission: ' + path);
+    const result = await generateGenaiVideo('image-to-video', {
+        model: 'ltx-2.5-22b-dev', imagePath: request.firstFramePath, lastFramePath: request.lastFramePath,
+        resolution: nativeWidth + 'x' + nativeHeight, fps: nativeFps, numFrames: request.numFrames,
+        prompt: request.prompt, negativePrompt: request.negativePrompt, numInferenceSteps: request.numInferenceSteps,
+        seed: request.seed, generateAudio: false, outputPath, filename, reserveUsd: 0
+    }, signal);
+    if (!result.videoPath || !result.downloaded)
+        throw Error('GenAI standby pending: ' + result.receiptPath);
+    return result.videoPath;
 }
 class StandbyQualityError extends Error {
 }

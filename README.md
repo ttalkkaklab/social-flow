@@ -1269,8 +1269,9 @@ Before ingest, prepare the spoken greeting, the first topic segment and ten movi
 The producer uses the current line, recent exchanges and incoming chat to generate speech while the
 encoder plays. Selected viewer replies take priority. Standby yields on the next frame and each
 spoken segment plays through its last sample. Held standby shots are regenerated with the shared
-framing, light and background. LTX generates the whole 736×1280 frame and the encoder trims
-eight columns per side for 720×1280 playout. YouTube supports unlisted rooms and native chat.
+framing, light and background. GenAI image-to-video generates each 720×1280 speaking clip with
+its soundtrack. The host portrait pins the opening frame. An MSR subject reference pairs the
+portrait with the character’s saved voice sample. The encoder plays the model’s audio. YouTube supports unlisted rooms and native chat.
 See [Character LIVE](skills/live-character/SKILL.md) for configuration and recovery.
 TikTok takes a separately approved RTMPS destination and can receive events from an authorized input.
 

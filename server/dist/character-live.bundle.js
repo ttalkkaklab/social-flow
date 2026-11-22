@@ -1147,14 +1147,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path4 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path6 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path4 && path4[0] !== "/") {
-          path4 = `/${path4}`;
+        if (path6 && path6[0] !== "/") {
+          path6 = `/${path6}`;
         }
-        return new URL(`${origin}${path4}`);
+        return new URL(`${origin}${path6}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1975,9 +1975,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path4, origin }
+            request: { method, path: path6, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path4);
+          debugLog("sending request to %s %s%s", method, origin, path6);
         }
       );
     }
@@ -1995,14 +1995,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path4, origin },
+            request: { method, path: path6, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path4,
+            path6,
             statusCode
           );
         }
@@ -2011,23 +2011,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path4, origin }
+            request: { method, path: path6, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path4);
+          debugLog("trailers received from %s %s%s", method, origin, path6);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path4, origin },
+            request: { method, path: path6, origin },
             error
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path4,
+            path6,
             error.message
           );
         }
@@ -2142,7 +2142,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path4,
+        path: path6,
         method,
         body,
         headers,
@@ -2159,11 +2159,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path4 !== "string") {
+        if (typeof path6 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path4[0] !== "/" && !(path4.startsWith("http://") || path4.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path6[0] !== "/" && !(path6.startsWith("http://") || path6.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path4)) {
+        } else if (invalidPathRegex.test(path6)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -2238,7 +2238,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path4, query) : path4;
+        this.path = query ? serializePathWithQuery(path6, query) : path6;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -2742,9 +2742,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve6, reject) => {
+          return new Promise((resolve5, reject) => {
             this.close((err, data) => {
-              return err ? reject(err) : resolve6(data);
+              return err ? reject(err) : resolve5(data);
             });
           });
         }
@@ -2782,9 +2782,9 @@ var require_dispatcher_base = __commonJS({
           err = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve6, reject) => {
+          return new Promise((resolve5, reject) => {
             this.destroy(err, (err2, data) => {
-              return err2 ? reject(err2) : resolve6(data);
+              return err2 ? reject(err2) : resolve5(data);
             });
           });
         }
@@ -6281,8 +6281,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise = new Promise((resolve6, reject) => {
-        res = resolve6;
+      const promise = new Promise((resolve5, reject) => {
+        res = resolve5;
         rej = reject;
       });
       return { promise, resolve: res, reject: rej };
@@ -7420,7 +7420,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path4, host, upgrade, blocking, reset } = request;
+      const { method, path: path6, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -7498,7 +7498,7 @@ var require_client_h1 = __commonJS({
       if (socket.setTypeOfService) {
         socket.setTypeOfService(request.typeOfService);
       }
-      let header = `${method} ${path4} HTTP/1.1\r
+      let header = `${method} ${path6} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -7685,12 +7685,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve6, reject) => {
+      const waitForDrain = () => new Promise((resolve5, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve6;
+          callback = resolve5;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -8177,7 +8177,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path4, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path6, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util2.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -8246,7 +8246,7 @@ var require_client_h2 = __commonJS({
           }
           headers[HTTP2_HEADER_METHOD] = "CONNECT";
           headers[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers[HTTP2_HEADER_PATH] = path4;
+          headers[HTTP2_HEADER_PATH] = path6;
           if (protocol === "ws:" || protocol === "wss:") {
             headers[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -8288,7 +8288,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path4;
+      headers[HTTP2_HEADER_PATH] = path6;
       headers[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -8566,12 +8566,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve6, reject) => {
+      const waitForDrain = () => new Promise((resolve5, reject) => {
         assert(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve6;
+          callback = resolve5;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -8887,16 +8887,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve6) => {
+        return new Promise((resolve5) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve6;
+            this[kClosedResolve] = resolve5;
           } else {
-            resolve6(null);
+            resolve5(null);
           }
         });
       }
       [kDestroy](err) {
-        return new Promise((resolve6) => {
+        return new Promise((resolve5) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i = 0; i < requests.length; i++) {
             const request = requests[i];
@@ -8909,7 +8909,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve6(null);
+            resolve5(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err, callback);
@@ -9316,8 +9316,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve6) => {
-            this[kClosedResolve] = resolve6;
+          return new Promise((resolve5) => {
+            this[kClosedResolve] = resolve5;
           });
         }
       }
@@ -10436,7 +10436,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve6, reject) => {
+        const socket = await new Promise((resolve5, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -10446,7 +10446,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err) {
               reject(err);
             } else {
-              resolve6(socket2);
+              resolve5(socket2);
             }
           });
         });
@@ -10456,14 +10456,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve6, reject) => {
+        await new Promise((resolve5, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve6();
+            resolve5();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10472,14 +10472,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve6();
+            resolve5();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve6, reject) => {
+        await new Promise((resolve5, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -10487,7 +10487,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve6();
+            resolve5();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10530,8 +10530,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve6, reject) => {
-                      finalSocket.once("secureConnect", resolve6);
+                    await new Promise((resolve5, reject) => {
+                      finalSocket.once("secureConnect", resolve5);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -10640,10 +10640,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path4 = "/",
+          path: path6 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path4;
+        opts.path = origin + path6;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL(origin);
           headers.host = host;
@@ -11613,7 +11613,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve5, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit || this[kBytesRead] > limit) {
             this.destroy(new AbortError());
           }
@@ -11627,11 +11627,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError());
               } else {
-                resolve6(null);
+                resolve5(null);
               }
             });
           } else {
-            this.on("close", resolve6);
+            this.on("close", resolve5);
           }
           this.on("error", noop).on("data", () => {
             if (this[kBytesRead] > limit) {
@@ -11659,7 +11659,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert(!stream[kConsume]);
-      return new Promise((resolve6, reject) => {
+      return new Promise((resolve5, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -11674,7 +11674,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve: resolve6,
+              resolve: resolve5,
               reject,
               length: 0,
               body: []
@@ -11748,18 +11748,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve: resolve6, stream, length } = consume2;
+      const { type, body, resolve: resolve5, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve6(chunksDecode(body, length, encoding));
+          resolve5(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve6(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve5(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve6(chunksConcat(body, length).buffer);
+          resolve5(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve6(new Blob(body, { type: stream[kContentType] }));
+          resolve5(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve6(chunksConcat(body, length));
+          resolve5(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err) {
@@ -11949,9 +11949,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve5, reject) => {
           request.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve6(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12163,9 +12163,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve5, reject) => {
           stream.call(this, opts, factory, (err, data) => {
-            return err ? reject(err) : resolve6(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12453,9 +12453,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve5, reject) => {
           upgrade.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve6(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12548,9 +12548,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve6, reject) => {
+        return new Promise((resolve5, reject) => {
           connect.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve6(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12752,20 +12752,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path4) {
-      if (typeof path4 !== "string") {
-        return path4;
+    function safeUrl(path6) {
+      if (typeof path6 !== "string") {
+        return path6;
       }
-      const pathSegments = path4.split("?", 3);
+      const pathSegments = path6.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path4;
+        return path6;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path4, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path4);
+    function matchKey(mockDispatch2, { path: path6, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path6);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -12790,8 +12790,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path4, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path4)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path4), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path6, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path6)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path6), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -12830,19 +12830,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path4) {
-      while (path4.endsWith("/")) {
-        path4 = path4.slice(0, -1);
+    function removeTrailingSlash(path6) {
+      while (path6.endsWith("/")) {
+        path6 = path6.slice(0, -1);
       }
-      if (path4.length === 0) {
-        path4 = "/";
+      if (path6.length === 0) {
+        path6 = "/";
       }
-      return path4;
+      return path6;
     }
     function buildKey(opts) {
-      const { path: path4, method, body, headers, query } = opts;
+      const { path: path6, method, body, headers, query } = opts;
       return {
-        path: path4,
+        path: path6,
         method,
         body,
         headers,
@@ -13532,10 +13532,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path4, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path6, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path4,
+            Path: path6,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -13617,9 +13617,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path4, searchParams] = dispatchOpts.path.split("?");
+          const [path6, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path4}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path6}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -13824,7 +13824,7 @@ var require_snapshot_recorder = __commonJS({
   "node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile, readFile: readFile2, mkdir } = __require("node:fs/promises");
-    var { dirname: dirname4, resolve: resolve6 } = __require("node:path");
+    var { dirname: dirname4, resolve: resolve5 } = __require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = __require("node:timers");
     var { InvalidArgumentError, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -14020,12 +14020,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path4 = filePath || this.#snapshotPath;
-        if (!path4) {
+        const path6 = filePath || this.#snapshotPath;
+        if (!path6) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile2(resolve6(path4), "utf8");
+          const data = await readFile2(resolve5(path6), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -14039,7 +14039,7 @@ var require_snapshot_recorder = __commonJS({
           if (error.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path4}`, { cause: error });
+            throw new UndiciError(`Failed to load snapshots from ${path6}`, { cause: error });
           }
         }
       }
@@ -14050,11 +14050,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path4 = filePath || this.#snapshotPath;
-        if (!path4) {
+        const path6 = filePath || this.#snapshotPath;
+        if (!path6) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve6(path4);
+        const resolvedPath = resolve5(path6);
         await mkdir(dirname4(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash, snapshot]) => ({
           hash,
@@ -14686,15 +14686,15 @@ var require_redirect_handler = __commonJS({
           return;
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path4 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path4}`;
+        const path6 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path6}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path4;
+        this.opts.path = path6;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -16454,10 +16454,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path4) {
+    function deleteCachedUri(store, cacheKey, path6) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path4
+        path: path6
       });
       for (let i = 0; i < util2.safeHTTPMethods.length; i++) {
         const method = util2.safeHTTPMethods[i];
@@ -16465,7 +16465,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path4
+            path: path6
           });
         }
       }
@@ -16476,9 +16476,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i = 0; i < values.length; i++) {
-        const path4 = getSameOriginPath(cacheKey, values[i]);
-        if (path4 !== void 0) {
-          deleteCachedUri(store, cacheKey, path4);
+        const path6 = getSameOriginPath(cacheKey, values[i]);
+        if (path6 !== void 0) {
+          deleteCachedUri(store, cacheKey, path6);
         }
       }
     }
@@ -21478,11 +21478,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path4 = url.pathname + url.search;
+        const path6 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
-        return new Promise((resolve6, reject) => agent.dispatch(
+        return new Promise((resolve5, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path4}?` : path4,
+            path: hasTrailingQuestionMark ? `${path6}?` : path6,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -21568,7 +21568,7 @@ var require_fetch = __commonJS({
                 }
               }
               const onError = this.onError.bind(this);
-              resolve6({
+              resolve5({
                 status,
                 statusText,
                 headersList,
@@ -21621,7 +21621,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve6({
+              resolve5({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -21645,7 +21645,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve6({
+              resolve5({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -22429,9 +22429,9 @@ var require_util4 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path4) {
-      for (let i = 0; i < path4.length; ++i) {
-        const code = path4.charCodeAt(i);
+    function validateCookiePath(path6) {
+      for (let i = 0; i < path6.length; ++i) {
+        const code = path6.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -23566,24 +23566,24 @@ var require_connection = __commonJS({
         failWebsocketConnection(object);
         object.readyState = states.CLOSING;
       } else if (!object.closeState.has(sentCloseFrameState.SENT) && !object.closeState.has(sentCloseFrameState.RECEIVED)) {
-        const frame = new WebsocketFrameSend();
+        const frame2 = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
         }
         assert(code === null || Number.isInteger(code));
         if (code === null && reason.length === 0) {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         } else if (code !== null && reason === null) {
-          frame.frameData = Buffer.allocUnsafe(2);
-          frame.frameData.writeUInt16BE(code, 0);
+          frame2.frameData = Buffer.allocUnsafe(2);
+          frame2.frameData.writeUInt16BE(code, 0);
         } else if (code !== null && reason !== null) {
-          frame.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
-          frame.frameData.writeUInt16BE(code, 0);
-          frame.frameData.write(reason, 2, "utf-8");
+          frame2.frameData = Buffer.allocUnsafe(2 + Buffer.byteLength(reason));
+          frame2.frameData.writeUInt16BE(code, 0);
+          frame2.frameData.write(reason, 2, "utf-8");
         } else {
-          frame.frameData = emptyBuffer;
+          frame2.frameData = emptyBuffer;
         }
-        object.socket.write(frame.createFrame(opcodes.CLOSE));
+        object.socket.write(frame2.createFrame(opcodes.CLOSE));
         object.closeState.add(sentCloseFrameState.SENT);
         object.readyState = states.CLOSING;
       } else {
@@ -24031,8 +24031,8 @@ var require_receiver = __commonJS({
           return false;
         } else if (opcode === opcodes.PING) {
           if (!this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-            const frame = new WebsocketFrameSend(body);
-            this.#handler.socket.write(frame.createFrame(opcodes.PONG));
+            const frame2 = new WebsocketFrameSend(body);
+            this.#handler.socket.write(frame2.createFrame(opcodes.PONG));
             this.#handler.onPing(body);
           }
         } else if (opcode === opcodes.PONG) {
@@ -24537,8 +24537,8 @@ var require_websocket = __commonJS({
         }
         const readyState = ws.#handler.readyState;
         if (isEstablished(readyState) && !isClosing(readyState) && !isClosed(readyState)) {
-          const frame = new WebsocketFrameSend(buffer);
-          ws.#handler.socket.write(frame.createFrame(opcodes.PING));
+          const frame2 = new WebsocketFrameSend(buffer);
+          ws.#handler.socket.write(frame2.createFrame(opcodes.PING));
         }
       }
     };
@@ -24867,8 +24867,8 @@ var require_websocketstream = __commonJS({
           opcode = opcodes.TEXT;
         }
         if (!this.#handler.closeState.has(sentCloseFrameState.SENT) && !this.#handler.closeState.has(sentCloseFrameState.RECEIVED)) {
-          const frame = new WebsocketFrameSend(data);
-          this.#handler.socket.write(frame.createFrame(opcode), () => {
+          const frame2 = new WebsocketFrameSend(data);
+          this.#handler.socket.write(frame2.createFrame(opcode), () => {
             promise.resolve(void 0);
           });
         }
@@ -25779,11 +25779,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path4 = opts.path;
+          let path6 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path4 = `/${path4}`;
+            path6 = `/${path6}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path4);
+          url = new URL(util2.parseOrigin(url).origin + path6);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -25894,17 +25894,16 @@ ${captureLines}` : capture.stack;
 
 // src/live-run.ts
 import { parseArgs } from "node:util";
-import { spawn as spawn3 } from "node:child_process";
-import { resolve as resolve5, join as join8 } from "node:path";
-import { mkdirSync as mkdirSync5, readFileSync as readFileSync6, writeFileSync as writeFileSync8, appendFileSync, renameSync as renameSync5 } from "node:fs";
+import { spawn as spawn2 } from "node:child_process";
+import { resolve as resolve4, join as join6 } from "node:path";
+import { mkdirSync as mkdirSync6, readFileSync as readFileSync7, writeFileSync as writeFileSync6, appendFileSync, renameSync as renameSync4 } from "node:fs";
 import { randomUUID as randomUUID6 } from "node:crypto";
-import { setTimeout as sleep4 } from "node:timers/promises";
+import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/live-character.ts
-import { mkdirSync, readFileSync as readFileSync2, realpathSync, renameSync, writeFileSync as writeFileSync2 } from "node:fs";
+import { mkdirSync, readFileSync as readFileSync3, realpathSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { createHash as createHash2, randomUUID } from "node:crypto";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -26384,8 +26383,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path4, errorMaps, issueData } = params;
-  const fullPath = [...path4, ...issueData.path || []];
+  const { data, path: path6, errorMaps, issueData } = params;
+  const fullPath = [...path6, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -26501,11 +26500,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path4, key) {
+  constructor(parent, value, path6, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path4;
+    this._path = path6;
     this._key = key;
   }
   get path() {
@@ -29949,6 +29948,57 @@ var NEVER = INVALID;
 
 // src/astra-genai-client.ts
 var import_undici = __toESM(require_undici(), 1);
+import { readFileSync as readFileSync2, statSync as statSync2 } from "node:fs";
+import { extname } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
+
+// src/image-media.ts
+import { createHash } from "node:crypto";
+function imageMetadata(bytes) {
+  let width = 0, height = 0, mimeType = "";
+  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
+    width = bytes.readUInt32BE(16);
+    height = bytes.readUInt32BE(20);
+    mimeType = "image/png";
+  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
+    mimeType = "image/jpeg";
+    for (let i = 2; i + 8 < bytes.length; ) {
+      if (bytes[i] !== 255) break;
+      const marker = bytes[i + 1];
+      if (marker === 255) {
+        i++;
+        continue;
+      }
+      if (marker === 217 || marker === 218) break;
+      const length = bytes.readUInt16BE(i + 2);
+      if (length < 2 || i + 2 + length > bytes.length) break;
+      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
+        height = bytes.readUInt16BE(i + 5);
+        width = bytes.readUInt16BE(i + 7);
+        break;
+      }
+      i += 2 + length;
+    }
+  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    mimeType = "image/webp";
+    const kind = bytes.toString("ascii", 12, 16);
+    if (kind === "VP8X") {
+      width = bytes.readUIntLE(24, 3) + 1;
+      height = bytes.readUIntLE(27, 3) + 1;
+    }
+    if (kind === "VP8L" && bytes[20] === 47) {
+      const bits = bytes.readUInt32LE(21);
+      width = (bits & 16383) + 1;
+      height = (bits >>> 14 & 16383) + 1;
+    }
+    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
+      width = bytes.readUInt16LE(26) & 16383;
+      height = bytes.readUInt16LE(28) & 16383;
+    }
+  }
+  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
+  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
 
 // src/config.ts
 import { accessSync, constants, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -30079,14 +30129,6 @@ var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
-function requireAstraVideoKey() {
-  if (!config.astraVideoApiKey) {
-    throw new Error(
-      "ASTRA_VIDEO is not set. astra_* video generation tools talk to the self-hosted ASTRA video API (https://video.astravision.co.kr) and it rejects every route but /healthz without a key. Ask the server operator for a key and export ASTRA_VIDEO; point ASTRA_VIDEO_URL at another host only if you run a second box of the same server. Without it, astra_genai_* (ASTRA_GENAI_API_KEY), seedance_* (ARK_API_KEY) and ltx_video_generate (on-device) still work."
-    );
-  }
-  return config.astraVideoApiKey;
-}
 
 // src/astra-genai-client.ts
 function desktopGatewayKey() {
@@ -30097,6 +30139,7 @@ function desktopGatewayKey() {
   return void 0;
 }
 function override(route) {
+  if (route === "/v1/chat/completions") return { url: process.env.ASTRA_GENAI_CHAT_URL, key: process.env.ASTRA_GENAI_CHAT_API_KEY };
   if (route.startsWith("/v1/ltx/desktop/")) return { url: process.env.ASTRA_GENAI_DESKTOP_URL, key: desktopGatewayKey() };
   if (route.startsWith("/v1/images/")) return { url: process.env.ASTRA_GENAI_IMAGE_URL, key: process.env.ASTRA_GENAI_IMAGE_API_KEY };
   if (route.startsWith("/v1/audio/")) return { url: process.env.ASTRA_GENAI_SPEECH_URL, key: process.env.ASTRA_GENAI_SPEECH_API_KEY };
@@ -30108,7 +30151,7 @@ function astraGenaiBaseUrl(route = "") {
 function requireAstraGenaiKey(route = "") {
   const { url, key } = override(route);
   if (url) {
-    const lane = route.startsWith("/v1/images/") ? "IMAGE" : route.startsWith("/v1/audio/") ? "SPEECH" : "DESKTOP";
+    const lane = route === "/v1/chat/completions" ? "CHAT" : route.startsWith("/v1/images/") ? "IMAGE" : route.startsWith("/v1/audio/") ? "SPEECH" : "DESKTOP";
     if (!key) throw new Error(`ASTRA_GENAI_${lane}_API_KEY is required with its gateway URL override.`);
     return key;
   }
@@ -30154,6 +30197,32 @@ async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, si
     throw new Error("ASTRA GenAI returned a non-JSON response; inspect the existing request before retrying.");
   }
 }
+async function pollGenaiJob(check, pending, signal) {
+  const deadline = Date.now() + 30 * 6e4;
+  let retried2 = false;
+  do {
+    try {
+      signal?.throwIfAborted();
+      const result = await check();
+      if (result.downloaded) return result;
+      retried2 = false;
+    } catch (error) {
+      if (!(error instanceof GenaiRequestError) || error.httpStatus === 200) throw error;
+      if (error.httpStatus < 500 || retried2) throw new Error(error.message);
+      retried2 = true;
+    }
+    if (signal) await sleep(5e3, void 0, { signal });
+    else await new Promise((resolve5) => setTimeout(resolve5, 5e3));
+  } while (Date.now() < deadline);
+  throw new Error(pending);
+}
+async function downloadGenaiResult(uri) {
+  const url = new URL(uri, astraGenaiBaseUrl() + "/");
+  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password) throw new Error("Invalid GenAI result URL");
+  const response = await fetch(url, { redirect: "error", signal: AbortSignal.timeout(12e4) });
+  if (!response.ok) throw new Error(`ASTRA GenAI result download failed (HTTP ${response.status}); reuse the existing job, do not regenerate.`);
+  return Buffer.from(await response.arrayBuffer());
+}
 var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
   if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
   try {
@@ -30163,6 +30232,37 @@ var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
     return false;
   }
 }, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+function genaiSourceUri(uri, file) {
+  if (uri !== void 0) {
+    genaiImageUriSchema.parse(uri);
+    if (uri.startsWith("https:")) return uri;
+  }
+  if (!uri && !file) throw new Error("GenAI source requires an image URI or local path");
+  const bytes = uri ? Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64") : readFileSync2(file), meta = imageMetadata(bytes);
+  if (uri && !uri.startsWith(`data:${meta.mimeType};base64,`)) throw new Error("GenAI data URI MIME does not match image");
+  if (!["image/png", "image/jpeg"].includes(meta.mimeType) || meta.bytes > 32 * 1024 * 1024 || meta.width > 4096 || meta.height > 4096)
+    throw new Error("GenAI source must be PNG/JPEG, at most 32 MiB and 4096 pixels per side");
+  return `data:${meta.mimeType};base64,${bytes.toString("base64")}`;
+}
+var GENAI_AUDIO_TYPES = { ".wav": "audio/wav", ".mp3": "audio/mpeg", ".m4a": "audio/mp4", ".ogg": "audio/ogg", ".opus": "audio/ogg" };
+var GENAI_AUDIO_DATA_URI_MAX = 15e6;
+function genaiAudioUri(uri, file) {
+  if (uri !== void 0) {
+    if (/^https:/.test(uri)) {
+      const url = new URL(uri);
+      if (url.username || url.password) throw new Error("GenAI audio URL must not carry credentials");
+      return uri;
+    }
+    const match = /^data:([^;,]+);base64,([A-Za-z0-9+/]+=*)$/.exec(uri);
+    if (!match || !Object.values(GENAI_AUDIO_TYPES).includes(match[1])) throw new Error("GenAI audio must be HTTPS or an audio/wav, audio/mpeg, audio/mp4 or audio/ogg data URI");
+    if (match[2].length > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audio data URI exceeds 15,000,000 base64 characters; use an HTTPS URL");
+    return uri;
+  }
+  const type = GENAI_AUDIO_TYPES[extname(file).toLowerCase()];
+  if (!type) throw new Error("GenAI audioPath must be .wav, .mp3, .m4a, .ogg or .opus");
+  if (4 * Math.ceil(statSync2(file).size / 3) > GENAI_AUDIO_DATA_URI_MAX) throw new Error("GenAI audioPath exceeds the 15,000,000-character data URI limit (about 11.25 MB); use audioUri with HTTPS");
+  return `data:${type};base64,${readFileSync2(file).toString("base64")}`;
+}
 async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
   if (!/^\/v1\/(audio\/speech|ltx\/desktop\/assets(?:\/[A-Za-z0-9_-]+\/bytes)?)$/.test(route))
     throw new Error("Unsupported private gateway media route");
@@ -30182,90 +30282,6 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
     response.status
   );
   return Buffer.from(await response.arrayBuffer());
-}
-
-// src/tts-audio.ts
-import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join2 } from "node:path";
-function validateSpeechAudio(bytes, extension) {
-  extension = extension.toLowerCase();
-  if (!bytes.length) throw new Error("Empty speech audio");
-  if (extension === "wav") {
-    if (bytes.length < 44 || bytes.toString("ascii", 0, 4) !== "RIFF" || bytes.toString("ascii", 8, 12) !== "WAVE" || bytes.readUInt32LE(4) + 8 !== bytes.length) {
-      throw new Error("Invalid or truncated speech WAV");
-    }
-    let byteRate = 0, blockAlign = 0, dataSize = 0, offset = 12;
-    for (; offset + 8 <= bytes.length; ) {
-      const size = bytes.readUInt32LE(offset + 4), start = offset + 8;
-      if (start + size > bytes.length) throw new Error("Truncated speech WAV chunk");
-      const id = bytes.toString("ascii", offset, offset + 4);
-      if (id === "fmt ") {
-        if (size < 16 || byteRate) throw new Error("Invalid speech WAV format");
-        const format = bytes.readUInt16LE(start), channels = bytes.readUInt16LE(start + 2);
-        const rate = bytes.readUInt32LE(start + 4), bits = bytes.readUInt16LE(start + 14);
-        byteRate = bytes.readUInt32LE(start + 8);
-        blockAlign = bytes.readUInt16LE(start + 12);
-        if (![1, 3].includes(format) || channels < 1 || channels > 8 || rate < 8e3 || rate > 192e3 || !(format === 3 ? [32, 64] : [8, 16, 24, 32]).includes(bits) || blockAlign !== channels * bits / 8 || byteRate !== rate * blockAlign) {
-          throw new Error("Invalid speech WAV encoding");
-        }
-      }
-      if (id === "data") dataSize += size;
-      offset = start + size + (size & 1);
-    }
-    if (offset !== bytes.length || !byteRate || !dataSize || dataSize % blockAlign !== 0) throw new Error("Invalid speech WAV data");
-    return dataSize / byteRate;
-  }
-  const dir = mkdtempSync(join2(tmpdir(), "speech-probe-"));
-  try {
-    const file = join2(dir, `audio.${extension}`);
-    writeFileSync(file, bytes);
-    const result = JSON.parse(execFileSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-show_entries",
-        "stream=codec_type:format=duration,format_name",
-        "-of",
-        "json",
-        file
-      ],
-      { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "pipe"] }
-    ));
-    const duration = Number(result.format?.duration);
-    const names = { mp3: "mp3", ogg: "ogg", webm: "webm", aac: "aac", flac: "flac" };
-    if (!names[extension] || !String(result.format?.format_name).split(",").includes(names[extension]) || !result.streams?.some((s) => s.codec_type === "audio") || !Number.isFinite(duration) || duration <= 0) {
-      throw new Error("Invalid speech audio format or duration");
-    }
-    const decoded = execFileSync(
-      "ffmpeg",
-      [
-        "-v",
-        "error",
-        "-xerror",
-        "-err_detect",
-        "explode",
-        "-i",
-        file,
-        "-map",
-        "0:a:0",
-        "-progress",
-        "pipe:1",
-        "-nostats",
-        "-f",
-        "null",
-        "-"
-      ],
-      { encoding: "utf8", timeout: 3e4, stdio: ["ignore", "pipe", "pipe"] }
-    );
-    const decodedTimes = [...decoded.matchAll(/^out_time_us=(\d+)$/gm)].map((match) => Number(match[1]));
-    if (!decodedTimes.some((time) => Number.isFinite(time) && time > 0)) throw new Error("Speech audio decoded no samples");
-    return duration;
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
-  }
 }
 
 // src/live-character.ts
@@ -30303,112 +30319,49 @@ var HEIGHT = 640;
 var FPS = 24;
 var RATE = 24e3;
 var SAMPLES = RATE / FPS;
-var MAX_SPEECH_SECONDS = 30;
-function loadCharacter(config2) {
+function loadCharacter(config2, mode = "legacy") {
   const root = realpathSync(config2.project);
-  const settings = JSON.parse(readFileSync2(path.join(root, ".social-flow/models.json"), "utf8"));
+  const settings = JSON.parse(readFileSync3(path.join(root, ".social-flow/models.json"), "utf8"));
   const folder = realpathSync(path.join(root, "data", config2.channel, "assets/characters", config2.character));
-  const identity = readFileSync2(path.join(folder, "identity.md"), "utf8");
+  const identity = readFileSync3(path.join(folder, "identity.md"), "utf8");
   const block = identity.match(/\x60\x60\x60json\s*([\s\S]*?)\x60\x60\x60/);
   if (!block) throw Error("Missing character identity JSON");
   const saved = JSON.parse(block[1]);
-  const panels = JSON.parse(readFileSync2(path.join(folder, "panels.json"), "utf8")).panels;
+  const panels = JSON.parse(readFileSync3(path.join(folder, "panels.json"), "utf8")).panels;
   const asset = realpathSync(path.resolve(folder, panels[config2.panel]?.file ?? "missing-panel"));
   const tts = saved.tts;
   if (!asset.startsWith(folder + path.sep) || !folder.startsWith(root + path.sep))
     throw Error("Panel outside character directory");
-  if (settings.models?.speech?.engine !== "astra-genai" || tts?.engine !== "astra-genai" || !tts.voiceId || !settings.models.speech.model || settings.models.speech.model !== tts.model)
+  if (mode === "legacy" && (settings.models?.speech?.engine !== "astra-genai" || tts?.engine !== "astra-genai" || !tts.voiceId || !settings.models.speech.model || settings.models.speech.model !== tts.model))
     throw Error("Select a matching ASTRA character voice and project speech model");
   const language = config2.speechLanguage ?? settings.languages?.speech;
   if (typeof language !== "string" || !language.trim()) throw Error("Project speech language missing");
+  const voiceSample = path.join(folder, "voice.wav");
+  if (mode === "native") {
+    if (!realpathSync(voiceSample).startsWith(folder + path.sep)) throw Error("Voice sample outside character directory");
+    const selectedHash = saved.voiceSelection?.audioSha256;
+    if (selectedHash && createHash2("sha256").update(readFileSync3(voiceSample)).digest("hex") !== selectedHash)
+      throw Error("The character voice sample differs from the selected audition");
+  }
   return {
     asset,
     language,
-    identityHash: createHash("sha256").update(identity).digest("hex"),
-    voice: String(tts.voiceId),
-    model: String(tts.model),
+    identityHash: createHash2("sha256").update(identity).digest("hex"),
+    voice: String(tts?.voiceId ?? ""),
+    model: String(tts?.model ?? ""),
+    voiceSample,
+    voiceDirection: String(tts?.voiceDirection ?? ""),
     persona: [
       JSON.stringify(saved.character?.identity ?? {}).slice(0, 1400),
       config2.persona ?? JSON.stringify(saved.character?.personality ?? {}).slice(0, 1500)
     ].join(" ")
   };
 }
-function ffmpeg(input, bytes, limit = 16 * 1024 * 1024) {
-  const p = spawnSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", ...input], {
-    input: bytes,
-    maxBuffer: limit,
-    timeout: 2e4
-  });
-  if (p.status !== 0)
-    throw Error("FFmpeg media conversion failed: " + String(p.stderr ?? p.error).slice(-400));
-  return p.stdout;
-}
-function poses(asset, config2) {
-  if (!config2.mouth) throw Error("Legacy portrait preview requires mouth calibration");
-  const base = ffmpeg([
-    "-i",
-    asset,
-    "-vf",
-    `scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,crop=${WIDTH}:${HEIGHT}`,
-    "-frames:v",
-    "1",
-    "-pix_fmt",
-    "rgb24",
-    "-f",
-    "rawvideo",
-    "pipe:1"
-  ]);
-  const frames = [];
-  for (let blink = 0; blink <= 1; blink++)
-    for (let open = 0; open <= 3; open++) {
-      const frame = Buffer.from(base);
-      const features = [
-        { rect: config2.mouth, eye: false },
-        ...blink ? (config2.eyes ?? []).map((rect) => ({ rect, eye: true })) : []
-      ];
-      for (const { rect, eye } of features) {
-        if (!eye && !open) continue;
-        const cx = rect.x * WIDTH, cy = rect.y * HEIGHT, rx = rect.width * WIDTH / 2, ry = rect.height * HEIGHT / 2;
-        for (let y = Math.max(0, Math.floor(cy - ry)); y < Math.min(HEIGHT, cy + ry); y++) {
-          for (let x = Math.max(0, Math.floor(cx - rx)); x < Math.min(WIDTH, cx + rx); x++) {
-            const dx = (x - cx) / rx, dy = (y - cy) / ry, radius = dx * dx + dy * dy;
-            if (radius >= 1) continue;
-            const offset = (y * WIDTH + x) * 3;
-            const displacement = eye ? -Math.sign(dy || 1) * (1 - Math.abs(dy)) * ry * 0.86 : -dy * ry * open * 0.19;
-            const sy = Math.max(0, Math.min(HEIGHT - 1, Math.round(y + displacement * (1 - radius))));
-            base.copy(frame, offset, (sy * WIDTH + x) * 3, (sy * WIDTH + x) * 3 + 3);
-            if (!eye) {
-              const oval = dx * dx / 0.56 + dy * dy / (0.14 * open) ** 2;
-              const alpha = Math.min(1, Math.max(0, (1 - oval) * 5));
-              const color = dy > 0.16 ? [173, 92, 90] : [89, 44, 45];
-              for (let k = 0; k < 3; k++)
-                frame[offset + k] = Math.round(frame[offset + k] * (1 - alpha) + color[k] * alpha);
-            }
-          }
-        }
-      }
-      frames.push(frame);
-    }
-  return frames;
-}
 function mouthLevel(pcm) {
   let energy = 0;
   for (let i = 0; i + 1 < pcm.length; i += 2) energy += (pcm.readInt16LE(i) / 32768) ** 2;
   const rms = Math.sqrt(energy / Math.max(1, pcm.length / 2));
   return rms < 0.012 ? 0 : rms < 0.045 ? 1 : rms < 0.11 ? 2 : 3;
-}
-async function synthesize(character, text, signal) {
-  const wav = await requestGenaiMedia(
-    "/v1/audio/speech",
-    { model: character.model, voice: character.voice, input: text, response_format: "wav", speed: 1 },
-    "/v1/audio/speech",
-    signal
-  );
-  if (validateSpeechAudio(wav, "wav") > MAX_SPEECH_SECONDS)
-    throw Error("Live speech exceeds the 30-second utterance limit");
-  const pcm = ffmpeg(["-i", "pipe:0", "-ac", "1", "-ar", String(RATE), "-f", "s16le", "pipe:1"], wav);
-  if (!mouthLevel(pcm) || !pcm.length) throw Error("Speech has no audible signal");
-  return pcm;
 }
 function answer(config2, character, question, signal, context, speaker, selective = false) {
   return spokenLine(
@@ -30460,37 +30413,6 @@ function preparedReply(config2, question) {
   const key = normalize(question);
   return config2.reactions.find((r) => r.questions.some((q) => normalize(q) === key))?.answer;
 }
-async function preparedSpeech(config2, actor, text, signal) {
-  const dir = path.join(realpathSync(config2.project), ".social-flow/live-voices");
-  mkdirSync(dir, { recursive: true, mode: 448 });
-  const hash = (b) => createHash("sha256").update(b).digest("hex");
-  const key = hash(
-    JSON.stringify([
-      2,
-      config2.channel,
-      config2.character,
-      actor.identityHash,
-      actor.language,
-      actor.voice,
-      actor.model,
-      text
-    ])
-  );
-  const file = path.join(dir, key + ".pcm");
-  try {
-    const data = readFileSync2(file);
-    const pcm2 = data.subarray(64);
-    if (pcm2.length > 0 && pcm2.length <= RATE * 2 * MAX_SPEECH_SECONDS && hash(pcm2) === data.subarray(0, 64).toString())
-      return pcm2;
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-  }
-  const pcm = await synthesize(actor, text, signal);
-  const tmp = file + "." + randomUUID() + ".tmp";
-  writeFileSync2(tmp, Buffer.concat([Buffer.from(hash(pcm)), pcm]), { mode: 384, flag: "wx" });
-  renameSync(tmp, file);
-  return pcm;
-}
 var chatEvent = external_exports.object({
   source: external_exports.enum(["youtube", "tiktok", "operator"]),
   speaker: external_exports.string().max(100).optional(),
@@ -30524,10 +30446,10 @@ var ChatQueue = class {
 };
 
 // src/live-encoder.ts
-import { spawn, spawnSync as spawnSync2 } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { finished } from "node:stream/promises";
-import { setTimeout as sleep } from "node:timers/promises";
+import { setTimeout as sleep2 } from "node:timers/promises";
 function splitIngest(value) {
   const url = new URL(value);
   const slash = url.pathname.lastIndexOf("/");
@@ -30540,9 +30462,9 @@ function splitIngest(value) {
   };
 }
 function completion(proc, label) {
-  const result = new Promise((resolve6, reject) => {
+  const result = new Promise((resolve5, reject) => {
     proc.once("error", () => reject(Error(label + " could not start")));
-    proc.once("close", (code) => code === 0 ? resolve6() : reject(Error(label + " exited " + code)));
+    proc.once("close", (code) => code === 0 ? resolve5() : reject(Error(label + " exited " + code)));
   });
   result.catch(() => {
   });
@@ -30606,7 +30528,7 @@ if status < 0:
 `;
 var relayPython = () => process.env.SOCIAL_FLOW_LIVE_PYTHON || "python3";
 function checkLiveRelay() {
-  const check = spawnSync2(relayPython(), ["-c", relayProgram, "check"], {
+  const check = spawnSync(relayPython(), ["-c", relayProgram, "check"], {
     stdio: "ignore",
     timeout: 1e4
   });
@@ -30719,14 +30641,14 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
     return { relay, done };
   });
   const silence = Buffer.alloc(SAMPLES * 2);
-  let active, offset = 0, frame = 0, lastProgress = Date.now();
+  let active, offset = 0, frame2 = 0, lastProgress = Date.now();
   const start = performance.now();
   try {
-    while (!signal.aborted && (frame < Math.ceil(seconds * FPS) || drain && (active || drain()))) {
+    while (!signal.aborted && (frame2 < Math.ceil(seconds * FPS) || drain && (active || drain()))) {
       if (fault) throw fault;
       if (video.writableLength > width * height * 3 * 10 || audio.writableLength > RATE * 4) {
         if (Date.now() - lastProgress > 12e3) throw Error("Encoder backpressure timeout");
-        await sleep(12);
+        await sleep2(12);
         continue;
       }
       lastProgress = Date.now();
@@ -30735,7 +30657,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
         offset = 0;
         if (active) {
           motion?.startSpeech();
-          log("speech_start", { source: active.source, id: active.id, text: active.text, frame });
+          log("speech_start", { source: active.source, id: active.id, text: active.text, frame: frame2 });
         }
       }
       let pcm = silence;
@@ -30743,17 +30665,17 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
         pcm = Buffer.alloc(SAMPLES * 2);
         offset += active.pcm.copy(pcm, 0, offset, offset + pcm.length);
       }
-      const blink = frame % (FPS * 4) < 3;
+      const blink = frame2 % (FPS * 4) < 3;
       audio.write(pcm);
       video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
       if (active && offset >= active.pcm.length) {
-        log("speech_end", { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
+        log("speech_end", { source: active.source, id: active.id, frame: frame2, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
         if (active.motion) motion?.release(active.motion);
         active = void 0;
       }
-      frame++;
-      const wait = start + frame * 1e3 / FPS - performance.now();
-      if (wait > 0) await sleep(wait);
+      frame2++;
+      const wait = start + frame2 * 1e3 / FPS - performance.now();
+      if (wait > 0) await sleep2(wait);
     }
     audio.end();
     video.end();
@@ -30767,7 +30689,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
       clearTimeout(timer);
     }
     if (fault) throw fault;
-    log("encoded", { frames: frame, seconds: frame / FPS });
+    log("encoded", { frames: frame2, seconds: frame2 / FPS });
   } finally {
     encoder.kill("SIGKILL");
     for (const { relay } of relays) relay.kill("SIGKILL");
@@ -30776,7 +30698,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
       log("speech_interrupted", {
         source: active.source,
         id: active.id,
-        frame,
+        frame: frame2,
         samplesSent: offset / 2,
         totalSamples: active.pcm.length / 2
       });
@@ -30784,12 +30706,132 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
 }
 
 // src/live-idle.ts
-import { randomInt as randomInt2, randomUUID as randomUUID3, createHash as createHash3 } from "node:crypto";
-import { existsSync as existsSync3, mkdirSync as mkdirSync3, readFileSync as readFileSync4, renameSync as renameSync3, rmSync as rmSync3, writeFileSync as writeFileSync5 } from "node:fs";
-import { setTimeout as sleep3 } from "node:timers/promises";
-import { join as join4 } from "node:path";
+import { randomInt, randomUUID as randomUUID4, createHash as createHash6 } from "node:crypto";
+import { existsSync as existsSync4, mkdirSync as mkdirSync4, readFileSync as readFileSync5, renameSync as renameSync3, rmSync as rmSync2 } from "node:fs";
+import { join as join3 } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+
+// src/msr-opening.ts
+import { createRequire } from "node:module";
+
+// src/prompt-language.ts
+var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
+function nonEnglishOutsideQuotes(prompt) {
+  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+  return match ? match[0] : null;
+}
+
+// src/msr-opening.ts
+var openingPositionsSchema = external_exports.array(external_exports.object({
+  character: external_exports.string().trim().min(1).describe("Cast ID, or an English character name for a standalone render."),
+  images: external_exports.array(external_exports.number().int().min(1).max(4)).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
+  position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
+}).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
+var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
+var load = createRequire(import.meta.url);
+var sceneDefaultsSchema = external_exports.object({
+  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  axis: sceneText.optional(),
+  continuity: sceneText.optional(),
+  lighting: sceneText.optional(),
+  attention: sceneText.optional()
+}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
+var frame = external_exports.number().int().nonnegative();
+var shotTimelineSchema = external_exports.object({
+  startFrame: frame,
+  endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  framing: sceneText,
+  action: sceneText,
+  openingPositions: openingPositionsSchema.optional().describe("Positions at this shot opening. Image numbers refer to this shot\u2019s subject references."),
+  dialogueCues: external_exports.array(external_exports.object({
+    lineId: external_exports.string().trim().min(1),
+    frame
+  }).strict()).optional().describe("Exact speech onsets in scene frames for authored narration lines. Omit for model-paced speech."),
+  images: external_exports.array(external_exports.object({
+    path: external_exports.string().trim().min(1),
+    frame,
+    role: external_exports.enum(["start", "keyframe", "end", "face", "outfit"]),
+    character: external_exports.string().trim().min(1).optional(),
+    cue: sceneText.optional(),
+    strength: external_exports.number().min(0).max(1).optional()
+  }).strict()).optional()
+}).strict().superRefine((shot, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: "custom", message });
+  if (shot.startFrame >= shot.endFrame) issue("Shot needs a positive frame interval");
+  const lines = /* @__PURE__ */ new Set();
+  for (const cue of shot.dialogueCues ?? []) {
+    if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue("Dialogue cue outside its shot: " + cue.lineId);
+    if (lines.has(cue.lineId)) issue("Repeated dialogue cue: " + cue.lineId);
+    lines.add(cue.lineId);
+  }
+  for (const image of shot.images ?? []) {
+    if (image.frame < shot.startFrame || image.frame >= shot.endFrame) issue("Image frame outside its shot: " + image.path);
+    if (image.role === "start" && image.frame !== shot.startFrame) issue("Start image must anchor the first frame of its shot");
+    if (["face", "outfit"].includes(image.role) && !image.character) issue("Identify the owner of a face or outfit reference");
+  }
+});
+var sceneShotBindingsSchema = external_exports.array(external_exports.object({
+  shotId: external_exports.string().min(1),
+  openingPositions: openingPositionsSchema.optional(),
+  framing: sceneText.optional(),
+  action: sceneText.optional(),
+  keyframes: external_exports.array(external_exports.object({ path: external_exports.string().trim().min(1), frame, strength: external_exports.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
+  guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
+  motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
+  performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
+  references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
+}).strict()).min(1);
+var sceneVideoDirectionSchema = external_exports.object({
+  openingPositions: openingPositionsSchema,
+  fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
+  audio: external_exports.object({
+    mode: external_exports.enum(["conditioning", "mix"]).optional().describe("Condition generation by default, or mix this track once with native shot sound."),
+    path: external_exports.string().trim().min(1).describe("Scene-length track from frame zero, including any lead-in silence."),
+    cues: external_exports.array(external_exports.object({ frame, action: sceneText }).strict()).optional()
+  }).strict().optional(),
+  emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
+  action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
+  sound: sceneText.optional().describe("Room tone or sound from an essential action."),
+  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
+}).strict();
+function openingPrompt(prompt, positions = []) {
+  if (!positions.length) return prompt;
+  const header = positions.map(({ character, images, position }) => {
+    const refs = images.map((index) => "Image " + index).join(", ");
+    return character + (refs ? " (" + refs + ")" : "") + ": " + position;
+  });
+  const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
+  return prompt.startsWith(prefix) ? prompt : prefix + prompt;
+}
+function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
+  if (!positions) {
+    issue("openingPositions required: match each character to the opening frame and their subject images");
+    return;
+  }
+  const subjects = references.filter((ref) => !ref.background);
+  const mapped = /* @__PURE__ */ new Set();
+  const names = /* @__PURE__ */ new Set();
+  for (const { character, images } of positions) {
+    if (names.has(character)) issue("openingPositions: list each character once");
+    names.add(character);
+    for (const index of images) {
+      if (!subjects[index - 1] || subjects[index - 1].nonCharacter || mapped.has(index))
+        issue("openingPositions: invalid, non-character or repeated subject Image " + index);
+      mapped.add(index);
+    }
+  }
+  subjects.forEach((ref, i) => {
+    if (!mapped.has(i + 1) && (!ref.nonCharacter || ref.audioPath || ref.audioUri))
+      issue("openingPositions: identify the character in Image " + (i + 1) + " or mark an object reference nonCharacter:true");
+  });
+  if ([...openingPrompt(prompt, positions)].length > maxChars)
+    issue("The prompt including openingPositions exceeds " + maxChars + " characters; shorten the action or placement descriptions");
+}
 
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
@@ -30799,8 +30841,6 @@ function recordVideoSubmission(id) {
 }
 
 // src/astra-video-client.ts
-import { createHash as createHash2, randomInt, randomUUID as randomUUID2 } from "node:crypto";
-import * as fs2 from "node:fs";
 import * as path3 from "node:path";
 
 // package.json
@@ -30850,30 +30890,6 @@ var package_default = {
   ]
 };
 
-// src/http.ts
-async function requestRaw(method, url, headers, body, timeoutMs) {
-  const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
-  try {
-    const res = await fetch(url, {
-      method: method.toUpperCase(),
-      headers: {
-        ...body !== void 0 ? { "Content-Type": "application/json" } : {},
-        ...headers
-      },
-      body: body !== void 0 ? JSON.stringify(body) : void 0,
-      signal: AbortSignal.timeout(effectiveTimeoutMs)
-    });
-    const text = await res.text();
-    return { ok: res.ok, status: res.status, body: text };
-  } catch (error) {
-    if (error instanceof Error && error.name === "TimeoutError") {
-      return { ok: false, status: 504, body: `Request timed out after ${effectiveTimeoutMs}ms: ${url}` };
-    }
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, status: 502, body: `Upstream unreachable (${url}): ${message}` };
-  }
-}
-
 // src/media-utils.ts
 import * as fs from "node:fs";
 import * as path2 from "node:path";
@@ -30897,27 +30913,6 @@ function validateFilePath(filePath, options) {
       );
     }
   }
-}
-function pcmToWav(pcmData, sampleRate, numChannels) {
-  const bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcmData.length;
-  const header = Buffer.alloc(44);
-  header.write("RIFF", 0);
-  header.writeUInt32LE(36 + dataSize, 4);
-  header.write("WAVE", 8);
-  header.write("fmt ", 12);
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(numChannels, 22);
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(byteRate, 28);
-  header.writeUInt16LE(blockAlign, 32);
-  header.writeUInt16LE(bitsPerSample, 34);
-  header.write("data", 36);
-  header.writeUInt32LE(dataSize, 40);
-  return Buffer.concat([header, pcmData]);
 }
 function resolveOutputFile(outputDir, filename, kind) {
   if (/[/\\]/.test(filename) || filename.includes("..")) {
@@ -31029,16 +31024,8 @@ var ASTRA_VIDEO_UPLOAD_LIMITS = {
   video: 100 * 1024 * 1024,
   audio: 32 * 1024 * 1024
 };
-var ASTRA_VIDEO_SUBMITS_PER_MINUTE = 5;
-var ASTRA_VIDEO_SUBMITS_PER_HOUR = 60;
-var ASTRA_VIDEO_UPLOADS_PER_MINUTE = 10;
 var ASTRA_VIDEO_MAX_JOB_BODY_BYTES = 1024 * 1024;
 var ASTRA_VIDEO_USER_AGENT = `social-flow/${package_default.version}`;
-var ASTRA_VIDEO_MAX_WAIT_MS = 18e5;
-var POLL_INTERVAL_MS = 5e3;
-var SUBMIT_TIMEOUT_MS = 6e4;
-var STATUS_TIMEOUT_MS = 3e4;
-var TRANSFER_TIMEOUT_MS = 6e5;
 var astraVideoListUploadsSchema = external_exports.object({}).strict();
 var astraVideoCapabilitiesSchema = external_exports.object({}).strict();
 var astraVideoDeleteUploadSchema = external_exports.object({
@@ -31422,133 +31409,6 @@ var astraVideoUpscaleSchema = external_exports.object({
   seed: seedSchema,
   ...outputFields
 }).strict();
-function put(body, key, value) {
-  if (value !== void 0) body[key] = value;
-}
-function buildJobBody(mode, args) {
-  const allowed = ASTRA_VIDEO_ALLOWED_FIELDS[mode];
-  if (!allowed) throw new Error(`Unknown ASTRA video mode: ${mode}`);
-  const body = { mode, prompt: args.prompt };
-  if (args.numFrames !== void 0 && args.autoDuration !== void 0) {
-    throw new Error("autoDuration and numFrames are mutually exclusive");
-  }
-  if (args.hdr && (args.images?.length || args.references?.length || args.conditioningMask || args.videoUploadId)) {
-    throw new Error("hdr cannot be combined with visual inputs");
-  }
-  put(body, "hdr", args.hdr);
-  put(body, "num_frames", args.numFrames);
-  if (args.autoDuration) {
-    body.auto_duration = { min_seconds: args.autoDuration.minSeconds, max_seconds: args.autoDuration.maxSeconds };
-  }
-  put(body, "width", args.width);
-  put(body, "height", args.height);
-  put(body, "frame_rate", args.frameRate);
-  put(body, "seed", args.seed);
-  if (args.lora?.length) body.lora = args.lora.map((entry) => typeof entry === "string" ? entry : { name: entry.name, strength: entry.strength });
-  if (args.guidance && Object.keys(args.guidance).length) {
-    body.guidance = Object.fromEntries(Object.entries(args.guidance).map(([key, value]) => [guidanceWireKey(key), value]));
-  }
-  put(body, "adapter", args.adapter);
-  if (args.references?.length) {
-    body.references = args.references.map((reference) => {
-      const entry = { upload_id: reference.uploadId };
-      put(entry, "strength", reference.strength);
-      return entry;
-    });
-  }
-  if (args.conditioningMask) {
-    const mask = { upload_id: args.conditioningMask.uploadId };
-    put(mask, "strength", args.conditioningMask.strength);
-    body.conditioning_mask = mask;
-  }
-  if (args.skipStage2) body.skip_stage_2 = true;
-  if (args.generateAudio === false) body.generate_audio = false;
-  put(body, "negative_prompt", args.negativePrompt);
-  put(body, "num_inference_steps", args.numInferenceSteps);
-  put(body, "num_generated_keyframes", args.numGeneratedKeyframes);
-  if (args.images?.length) {
-    body.images = args.images.map((image) => {
-      const entry = { upload_id: image.uploadId, frame_idx: image.frameIdx };
-      put(entry, "strength", image.strength);
-      put(entry, "crf", image.crf);
-      return entry;
-    });
-  }
-  put(body, "audio_upload_id", args.audioUploadId);
-  put(body, "audio_start_time", args.audioStartTime);
-  put(body, "audio_max_duration", args.audioMaxDuration);
-  put(body, "video_upload_id", args.videoUploadId);
-  put(body, "start_time", args.startTime);
-  put(body, "end_time", args.endTime);
-  const rejected = Object.keys(body).filter((key) => !allowed.includes(key));
-  if (rejected.length) {
-    throw new Error(
-      `mode ${mode} does not accept ${rejected.join(", ")} \u2014 it accepts ${allowed.join(", ")}. Drop the field or pick the mode that owns it.`
-    );
-  }
-  return body;
-}
-function sleep2(ms) {
-  return new Promise((resolve6) => setTimeout(resolve6, ms));
-}
-var submitTimestamps = [];
-async function waitForSubmitSlot() {
-  for (; ; ) {
-    const now = Date.now();
-    while (submitTimestamps.length && now - submitTimestamps[0] >= 36e5) submitTimestamps.shift();
-    const recentMinute = submitTimestamps.filter((timestamp) => now - timestamp < 6e4);
-    if (recentMinute.length < ASTRA_VIDEO_SUBMITS_PER_MINUTE && submitTimestamps.length < ASTRA_VIDEO_SUBMITS_PER_HOUR) {
-      submitTimestamps.push(now);
-      return;
-    }
-    const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
-    const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep2(Math.max(minuteWait, hourWait) + 250);
-  }
-}
-var uploadTimestamps = [];
-async function waitForUploadSlot() {
-  for (; ; ) {
-    const now = Date.now();
-    while (uploadTimestamps.length && now - uploadTimestamps[0] >= 6e4) uploadTimestamps.shift();
-    if (uploadTimestamps.length < ASTRA_VIDEO_UPLOADS_PER_MINUTE) {
-      uploadTimestamps.push(now);
-      return;
-    }
-    await sleep2(6e4 - (now - uploadTimestamps[0]) + 250);
-  }
-}
-function redactedFailure(what, status, body) {
-  const trimmed = body.length > 600 ? `${body.slice(0, 600)}\u2026` : body;
-  return new Error(`ASTRA video ${what} failed (HTTP ${status}): ${trimmed}`);
-}
-function isTerminalStatus(status) {
-  return status === 400 || status === 401 || status === 403 || status === 404 || status === 413 || status === 415;
-}
-function astraVideoHeaders(key) {
-  return {
-    Authorization: `Bearer ${key}`,
-    "User-Agent": ASTRA_VIDEO_USER_AGENT
-  };
-}
-function authHeaders() {
-  return astraVideoHeaders(requireAstraVideoKey());
-}
-function jobsUrl(suffix = "") {
-  return `${astraVideoBaseUrl()}/v1/jobs${suffix}`;
-}
-async function withBackoff(what, call, baseDelayMs = 2e3) {
-  let delay = baseDelayMs;
-  let last;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    const result = await call();
-    if (result.ok || result.status !== 429 && result.status !== 503) return result;
-    last = result;
-    await sleep2(delay);
-    delay *= 2;
-  }
-  return last;
-}
 var CONTENT_TYPE_BY_EXTENSION = {
   ".png": { contentType: "image/png", kind: "image" },
   ".jpg": { contentType: "image/jpeg", kind: "image" },
@@ -31567,191 +31427,801 @@ function uploadContentType(filePath) {
   }
   return found;
 }
-async function uploadFile(filePath) {
-  const resolved = path3.resolve(filePath);
-  if (!fs2.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
-  const { contentType, kind } = uploadContentType(resolved);
-  const bytes = fs2.statSync(resolved).size;
-  const limit = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
-  if (bytes > limit) {
-    throw new Error(`${path3.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
-  }
-  await waitForUploadSlot();
-  const headers = authHeaders();
-  const result = await withBackoff("upload", async () => {
-    try {
-      const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": contentType },
-        body: fs2.readFileSync(resolved),
-        signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
-      });
-      return { ok: response.ok, status: response.status, body: await response.text() };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return { ok: false, status: 502, body: `Upload unreachable: ${message}` };
-    }
-  });
-  if (!result.ok) throw redactedFailure(`upload of ${path3.basename(resolved)}`, result.status, result.body);
-  const parsed = JSON.parse(result.body);
-  return {
-    uploadId: parsed.upload_id,
-    bytes: parsed.bytes,
-    kind: parsed.kind,
-    ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
-    ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
-    ...parsed.width !== void 0 ? { width: parsed.width } : {},
-    ...parsed.height !== void 0 ? { height: parsed.height } : {},
-    ...parsed.frames !== void 0 ? { frames: parsed.frames } : {},
-    ...parsed.fps !== void 0 ? { fps: parsed.fps } : {}
-  };
-}
-async function submitJob(body) {
-  const bodyBytes = Buffer.byteLength(JSON.stringify(body));
-  if (bodyBytes > ASTRA_VIDEO_MAX_JOB_BODY_BYTES) {
-    throw new Error(`ASTRA video job body is ${bodyBytes} bytes; the ceiling is ${ASTRA_VIDEO_MAX_JOB_BODY_BYTES} bytes.`);
-  }
-  await waitForSubmitSlot();
-  const result = await withBackoff(
-    "submit",
-    () => requestRaw("post", jobsUrl(), authHeaders(), body, SUBMIT_TIMEOUT_MS),
-    15e3
-  );
-  if (!result.ok) throw redactedFailure("job submission", result.status, result.body);
-  const parsed = JSON.parse(result.body);
-  if (!parsed.job_id) throw new Error(`ASTRA video accepted the job but returned no job_id: ${result.body}`);
-  return parsed.job_id;
-}
-var FailedVideoJob = class extends Error {
-};
-async function awaitResult(jobId, signal) {
-  const startedAt = Date.now();
-  for (; ; ) {
-    signal?.throwIfAborted();
-    if (Date.now() - startedAt > ASTRA_VIDEO_MAX_WAIT_MS) {
-      throw new Error(
-        `ASTRA video job ${jobId} did not finish within ${ASTRA_VIDEO_MAX_WAIT_MS / 1e3}s. It may still be running \u2014 check GET /v1/jobs/${jobId}.`
-      );
-    }
-    const status = await withBackoff(
-      "status",
-      () => requestRaw("get", jobsUrl(`/${jobId}`), authHeaders(), void 0, STATUS_TIMEOUT_MS)
-    );
-    if (!status.ok) {
-      if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep2(POLL_INTERVAL_MS);
-      continue;
-    }
-    const job = JSON.parse(status.body);
-    if (job.status === "failed") {
-      throw new FailedVideoJob(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
-    }
-    if (job.status === "succeeded") {
-      const download = await withBackoff("result download", async () => {
-        try {
-          const response = await fetch(jobsUrl(`/${jobId}/result`), {
-            headers: authHeaders(),
-            signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
-          });
-          return {
-            ok: response.ok,
-            status: response.status,
-            bytes: Buffer.from(await response.arrayBuffer())
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
-          return { ok: false, status: 502, bytes: Buffer.from(message) };
-        }
-      });
-      if (download.status === 409) {
-        await sleep2(POLL_INTERVAL_MS);
-        continue;
-      }
-      if (!download.ok) {
-        throw redactedFailure(`result download of job ${jobId}`, download.status, download.bytes.toString("utf8"));
-      }
-      return {
-        bytes: download.bytes,
-        request: job.request,
-        elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
-      };
-    }
-    await sleep2(POLL_INTERVAL_MS);
-  }
-}
-function atomicVideoFile(file, contents) {
-  const temp = file + "." + randomUUID2() + ".tmp";
+
+// src/astra-genai-video.ts
+import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
+import * as fs3 from "node:fs";
+import * as path5 from "node:path";
+import { execFileSync } from "node:child_process";
+
+// src/routing-files.ts
+import * as fs2 from "node:fs";
+import path4 from "node:path";
+import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
+function atomicJson(file, value) {
+  fs2.mkdirSync(path4.dirname(file), { recursive: true });
+  const temporary = file + "." + randomUUID2() + ".tmp";
   try {
-    fs2.writeFileSync(temp, contents, { mode: 384 });
-    fs2.renameSync(temp, file);
+    const fd = fs2.openSync(temporary, "wx", 384);
+    try {
+      fs2.writeFileSync(fd, JSON.stringify(value, null, 2) + "\n");
+      fs2.fsyncSync(fd);
+    } finally {
+      fs2.closeSync(fd);
+    }
+    fs2.renameSync(temporary, file);
   } finally {
-    fs2.rmSync(temp, { force: true });
+    if (fs2.existsSync(temporary)) fs2.unlinkSync(temporary);
   }
 }
-async function resumeVideoResult(videoPath, signal) {
-  const file = videoPath + ".astra-job.json";
-  if (!fs2.existsSync(file)) {
-    if (fs2.existsSync(videoPath)) throw Error("Video has no generation receipt: " + videoPath);
-    return false;
-  }
-  const receipt = JSON.parse(fs2.readFileSync(file, "utf8"));
-  if (!/^[a-f0-9]{32}$/.test(receipt.jobId) || !["failed", "completed", "submitted"].includes(receipt.status))
-    throw Error("Invalid video generation receipt: " + file);
-  if (receipt.status === "failed") {
-    fs2.renameSync(file, videoPath + "." + receipt.jobId + ".failed.json");
-    return false;
-  }
-  if (receipt.status === "completed" && fs2.existsSync(videoPath) && receipt.sha256 === createHash2("sha256").update(fs2.readFileSync(videoPath)).digest("hex")) return true;
-  const result = await awaitResult(receipt.jobId, signal).catch((error) => {
-    if (error instanceof FailedVideoJob)
-      atomicVideoFile(file, JSON.stringify({ ...receipt, status: "failed", error: error.message }) + "\n");
-    throw error;
+
+// src/astra-genai-upload.ts
+import { createHash as createHash4 } from "node:crypto";
+var GENAI_FILE_SCHEME = "genai-file://";
+var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
+var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
+var UPLOAD_TYPES = /* @__PURE__ */ new Set(["image/png", "image/jpeg", "audio/wav", "audio/mpeg", "audio/mp4", "audio/ogg", "video/mp4"]);
+var UPLOAD_MAX_BYTES = 32 * 1024 * 1024;
+var GENAI_FILE_GONE = /genai-file not found or expired/;
+var sessionSchema = external_exports.object({
+  upload_id: external_exports.string().min(1),
+  chunk_size: external_exports.number().int().positive().max(5 * 1024 * 1024),
+  chunks: external_exports.number().int().positive()
+}).passthrough();
+var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
+var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
+async function call(method, route, body, headers = {}, timeoutMs = 6e4) {
+  const key = requireAstraGenaiKey(route);
+  const raw = Buffer.isBuffer(body);
+  const response = await fetch(astraGenaiBaseUrl(route) + route, {
+    method,
+    redirect: "error",
+    signal: AbortSignal.timeout(timeoutMs),
+    headers: { Authorization: `Bearer ${key}`, ...body === void 0 ? {} : { "Content-Type": raw ? "application/octet-stream" : "application/json" }, ...headers },
+    ...body === void 0 ? {} : { body: raw ? new Uint8Array(body) : JSON.stringify(body) }
   });
-  atomicVideoFile(videoPath, result.bytes);
-  const completed = {
-    ...receipt,
-    videoPath,
-    request: result.request ?? receipt.request,
-    status: "completed",
-    bytes: result.bytes.length,
-    sha256: createHash2("sha256").update(result.bytes).digest("hex"),
-    completedAt: (/* @__PURE__ */ new Date()).toISOString()
-  };
-  atomicVideoFile(file, JSON.stringify(completed, null, 2) + "\n");
-  return true;
-}
-async function runJob(mode, prompt, body, outputPath, filename, signal) {
-  const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
-  const receiptPath = `${videoPath}.astra-job.json`;
-  const writeReceipt = (value) => {
-    atomicVideoFile(receiptPath, JSON.stringify(value, null, 2) + "\n");
-  };
-  signal?.throwIfAborted();
-  const jobId = await submitJob(body);
-  recordVideoSubmission(jobId);
-  const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
-  writeReceipt({ ...submitted, status: "submitted" });
-  const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error) => {
-    if (error instanceof FailedVideoJob) writeReceipt({ ...submitted, status: "failed", error: error.message });
-    throw error;
-  });
-  atomicVideoFile(videoPath, bytes);
-  const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt({ ...submitted, ...response, sha256: createHash2("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
-  return response;
-}
-async function generateFromImage(args, signal) {
-  signal?.throwIfAborted();
-  const first = await uploadFile(args.firstFramePath);
-  const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
-  if (args.lastFramePath) {
-    const last = await uploadFile(args.lastFramePath);
-    images.push({ uploadId: last.uploadId, frameIdx: (args.numFrames ?? 121) - 1, strength: args.strength ?? 1 });
+  const text = await response.text();
+  if (!response.ok) throw new GenaiRequestError(
+    `ASTRA GenAI HTTP ${response.status}: ${text.replaceAll(key, "[redacted]").slice(0, 2e3)}`,
+    response.status >= 400 && response.status < 500 && ![408, 409, 425, 429].includes(response.status),
+    response.status
+  );
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`ASTRA GenAI ${route} returned a non-JSON response`);
   }
-  const mode = ASTRA_VIDEO_TIERS[args.tier];
-  const dimensions = mode === "guided" || mode === "guided_hq" ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
-  const body = buildJobBody(mode, { ...args, ...dimensions, images });
-  return runJob(mode, args.prompt, body, args.outputPath, args.filename, signal);
+}
+async function retried(step, final = []) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await step();
+    } catch (error) {
+      const transient = !(error instanceof GenaiRequestError) || !final.includes(error.httpStatus) && (error.httpStatus >= 500 || [408, 425, 429].includes(error.httpStatus));
+      if (!transient || attempt >= genaiUploadSettings.attempts) throw error;
+      await new Promise((resolve5) => setTimeout(resolve5, genaiUploadSettings.retryDelayMs * attempt));
+    }
+  }
+}
+var uploaded = /* @__PURE__ */ new Map();
+function forgetGenaiUploads() {
+  uploaded.clear();
+}
+function genaiUploadable(bytes, contentType) {
+  return UPLOAD_TYPES.has(contentType) && bytes.length <= UPLOAD_MAX_BYTES;
+}
+var FALL_BACK = [404, 405, 429, 507];
+async function uploadGenaiFile(bytes, contentType) {
+  if (!genaiUploadable(bytes, contentType)) return void 0;
+  const sha256 = createHash4("sha256").update(bytes).digest("hex");
+  const cacheKey = `${astraGenaiBaseUrl()} ${sha256}`, cached = uploaded.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now() + 60 * 6e4) return cached.uri;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await uploadOnce(bytes, contentType, sha256, cacheKey);
+    } catch (error) {
+      if (error instanceof Restart && attempt < 2) continue;
+      throw error instanceof Restart ? error.original : error;
+    }
+  }
+}
+var Restart = class extends Error {
+  constructor(original) {
+    super("restart upload");
+    this.original = original;
+  }
+  original;
+};
+async function uploadOnce(bytes, contentType, sha256, cacheKey) {
+  let session;
+  try {
+    session = sessionSchema.parse(await retried(() => call("POST", "/v1/uploads", { size: bytes.length, sha256, content_type: contentType }), FALL_BACK));
+  } catch (error) {
+    if (error instanceof GenaiRequestError && FALL_BACK.includes(error.httpStatus)) return void 0;
+    throw error;
+  }
+  if (session.chunks !== Math.ceil(bytes.length / session.chunk_size)) throw new Error("GenAI upload session chunk count does not match the file size");
+  const route = `/v1/uploads/${encodeURIComponent(session.upload_id)}`;
+  const put = (n) => retried(() => {
+    const chunk = bytes.subarray(n * session.chunk_size, (n + 1) * session.chunk_size);
+    return call("PUT", `${route}/chunks/${n}`, chunk, { "X-Chunk-SHA256": createHash4("sha256").update(chunk).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
+  });
+  for (let n = 0; n < session.chunks; n++) await put(n);
+  const complete = async () => {
+    try {
+      return await retried(() => call("POST", `${route}/complete`));
+    } catch (error) {
+      throw error instanceof GenaiRequestError && error.httpStatus === 422 ? new Restart(error) : error;
+    }
+  };
+  let done;
+  try {
+    done = await complete();
+  } catch (error) {
+    if (!(error instanceof GenaiRequestError) || error.httpStatus !== 409) throw error;
+    for (const n of statusSchema.parse(await retried(() => call("GET", route))).missing) await put(n);
+    done = await complete();
+  }
+  const file = fileSchema.parse(done);
+  const expiresAt = file.expires_at ? Date.parse(file.expires_at) : NaN;
+  if (Number.isFinite(expiresAt)) uploaded.set(cacheKey, { uri: file.uri, expiresAt });
+  return file.uri;
+}
+
+// src/astra-genai-video.ts
+var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
+var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
+  return Number.isSafeInteger(w) && Number.isSafeInteger(h) && Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var msrGuidanceFields = {
+  guidanceScale: external_exports.number().finite().min(1).max(10).optional(),
+  nagScale: external_exports.number().finite().min(0).max(100).optional(),
+  nagAlpha: external_exports.number().finite().min(0).max(1).optional(),
+  nagTau: external_exports.number().finite().min(0).max(10).optional()
+};
+function msrNegativeRule(args, issue) {
+  if ((args.nagAlpha !== void 0 || args.nagTau !== void 0) && args.nagScale === void 0)
+    issue("MSR nagAlpha and nagTau require an explicit nagScale");
+  if ((args.nagScale ?? 0) > 0 && args.negativePrompt === void 0)
+    issue("MSR nagScale > 0 requires negativePrompt");
+  if (args.negativePrompt !== void 0 && (args.guidanceScale ?? 1) <= 1 && (args.nagScale ?? 0) === 0)
+    issue("MSR negativePrompt requires guidanceScale > 1 or nagScale > 0");
+}
+function negativeBody(args) {
+  return {
+    ...args.negativePrompt === void 0 ? {} : { negative_prompt: args.negativePrompt },
+    ...args.guidanceScale === void 0 ? {} : { guidance_scale: args.guidanceScale },
+    ...(args.nagScale ?? 0) > 0 ? {
+      nag_scale: args.nagScale,
+      ...args.nagAlpha === void 0 ? {} : { nag_alpha: args.nagAlpha },
+      ...args.nagTau === void 0 ? {} : { nag_tau: args.nagTau }
+    } : {}
+  };
+}
+function devNegativeRule(args, ctx) {
+  if (args.negativePrompt === void 0) return;
+  const issue = (message) => ctx.addIssue({ code: "custom", path: ["negativePrompt"], message });
+  if (args.model !== "ltx-2.5-22b-dev") issue("negativePrompt requires ltx-2.5-22b-dev, or image-to-video references with guidanceScale > 1 or nagScale > 0");
+  if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
+}
+var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
+var genaiShotsSchema = external_exports.array(external_exports.object({
+  description: external_exports.string().trim().min(1).max(2e3),
+  audio: external_exports.string().trim().min(1).max(2e3).optional(),
+  transition: external_exports.literal("hard_cut").optional()
+}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
+var temporalImages = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  frameIdx: external_exports.number().int().min(0).max(360),
+  strength: external_exports.number().min(0).max(1).optional(),
+  crf: external_exports.number().int().min(0).max(51).optional()
+}).strict().refine((pin) => !!pin.imageUri !== !!pin.imagePath, "Supply exactly one imageUri or imagePath")).min(1).max(8);
+function temporalBody(pins) {
+  if (!pins) return {};
+  return { keyframes: pins.map((pin) => ({
+    image_uri: genaiSourceUri(pin.imageUri, pin.imagePath),
+    frame_idx: pin.frameIdx,
+    ...pin.strength === void 0 ? {} : { strength: pin.strength },
+    ...pin.crf === void 0 ? {} : { crf: pin.crf }
+  })) };
+}
+function validatePins(pins, start, end, length, ctx) {
+  if (!pins) return;
+  const indices = pins.map((pin) => pin.frameIdx);
+  if (indices.length + Number(start) + Number(end) > 8 || new Set(indices).size !== indices.length || indices.some((i) => start && i === 0 || length !== void 0 && i >= length - Number(end)))
+    ctx.addIssue({ code: "custom", path: ["keyframes"], message: "Use up to eight distinct frame indices inside the delivered clip, including its pinned endpoints" });
+}
+var genaiSampling = {
+  seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  numInferenceSteps: external_exports.number().int().min(1).max(50).optional(),
+  guidance: guidanceSchema
+};
+var loraName = external_exports.string().trim().min(1).max(128);
+var genaiVisualSampling = {
+  numGeneratedKeyframes: external_exports.number().int().min(0).max(16).optional(),
+  lora: external_exports.array(external_exports.union([loraName, external_exports.object({ name: loraName, strength: external_exports.number().min(0).max(2).optional() }).strict()])).min(1).max(2).optional()
+};
+function samplingBody(args) {
+  return {
+    ...args.seed === void 0 ? {} : { seed: args.seed },
+    ...args.numInferenceSteps === void 0 ? {} : { num_inference_steps: args.numInferenceSteps },
+    ...args.numGeneratedKeyframes === void 0 ? {} : { num_generated_keyframes: args.numGeneratedKeyframes },
+    ...args.guidance === void 0 ? {} : { guidance: Object.fromEntries(Object.entries(args.guidance).map(([k, v]) => [guidanceWireKey(k), v])) },
+    ...args.lora === void 0 ? {} : { lora: args.lora }
+  };
+}
+var textVideoFields = external_exports.object({
+  ...genaiSampling,
+  ...genaiVisualSampling,
+  prompt: external_exports.string().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  model: external_exports.enum(GENAI_VIDEO_MODELS),
+  duration: external_exports.number().int().min(1).nullable().optional(),
+  numFrames: exactFrames.optional(),
+  resolution: localResolution,
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  generateAudio: external_exports.boolean().default(true),
+  shots: genaiShotsSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict();
+function localVideoTiming(args, ctx) {
+  const refs = "references" in args && !!args.references;
+  const promptLimit = refs ? 5e3 : 2e3;
+  if ([...openingPrompt(args.prompt, args.openingPositions)].length > promptLimit)
+    ctx.addIssue({ code: "custom", path: ["prompt"], message: "Prompt exceeds " + promptLimit + " characters" });
+  if (args.model !== "ltx-2.5-22b-dev" && (args.guidance || args.numInferenceSteps !== void 0))
+    ctx.addIssue({ code: "custom", message: "guidance and numInferenceSteps require dev" });
+  if (args.lora && (args.model !== "ltx-2.5-22b-distilled" || refs))
+    ctx.addIssue({ code: "custom", message: "LoRA selection requires plain distilled T2V or I2V" });
+  if (refs && args.numGeneratedKeyframes !== void 0)
+    ctx.addIssue({ code: "custom", message: "MSR does not accept numGeneratedKeyframes" });
+  if (args.duration != null && args.numFrames !== void 0)
+    ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
+  if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
+    ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
+  if (args.shots) {
+    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
+    const parts = [openingPrompt(args.prompt, args.openingPositions)];
+    args.shots.forEach((shot, i) => {
+      parts.push((i === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
+      if (shot.audio) parts.push("Audio: " + shot.audio);
+    });
+    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
+  }
+}
+var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
+  localVideoTiming(args, ctx);
+  devNegativeRule(args, ctx);
+});
+var msrReferences = external_exports.array(external_exports.object({
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  background: external_exports.boolean().default(false),
+  nonCharacter: external_exports.boolean().optional(),
+  // Voice sample for this subject; the gateway pairs it with the same picture slot.
+  audioUri: external_exports.string().min(1).optional(),
+  audioPath: external_exports.string().min(1).optional()
+}).strict().refine(
+  (ref) => Number(!!ref.imageUri) + Number(!!ref.imagePath) === 1,
+  "Supply exactly one imageUri or imagePath"
+).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
+function validateVoiceSlots(references, issue) {
+  let subject = 0;
+  for (const ref of references) {
+    subject += Number(!ref.background);
+    if (!oneOf(ref.audioUri, ref.audioPath)) continue;
+    if (ref.background) issue("MSR voice samples belong to subjects, not the background");
+    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+  }
+}
+var genaiImageToVideoSchema = textVideoFields.extend({
+  prompt: external_exports.string().min(1).max(5e3),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.nullable().optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  keyframes: temporalImages.optional(),
+  referenceStrength: external_exports.number().finite().min(0).max(1).optional(),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).optional(),
+  skipStage2: external_exports.boolean().optional(),
+  references: msrReferences.optional(),
+  openingPositions: openingPositionsSchema.optional(),
+  ...msrGuidanceFields
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  localVideoTiming(args, ctx);
+  const length = args.numFrames ?? (args.duration == null ? void 0 : args.duration * args.fps);
+  const end = args.lastFrameUri != null || args.lastFramePath !== void 0;
+  if (length === void 0 && (end || args.keyframes)) issue("Temporal pins require duration or numFrames");
+  validatePins(args.keyframes, true, end, length, ctx);
+  if (Number(args.imageUri !== void 0) + Number(args.imagePath !== void 0) !== 1) issue("Supply exactly one imageUri or imagePath");
+  if (args.lastFrameUri != null && args.lastFramePath !== void 0) issue("Supply at most one lastFrameUri or lastFramePath");
+  if (args.skipStage2 && args.resolution.split("x").some((side) => Number(side) % 4))
+    issue("skipStage2 requires sides divisible by four for an even half-size output");
+  if (!args.references) {
+    if (args.referenceStrength !== void 0 || args.referenceFrames !== void 0 || args.skipStage2 !== void 0)
+      issue("referenceStrength, referenceFrames and skipStage2 require references");
+    if (args.openingPositions !== void 0) issue("openingPositions requires MSR references");
+    if (Object.keys(msrGuidanceFields).some((key) => args[key] !== void 0))
+      issue("guidanceScale and NAG require references (MSR conditioning); ltx-2.5-22b-dev already runs guided");
+    devNegativeRule(args, ctx);
+  } else {
+    validateOpening(args.prompt, args.openingPositions, args.references, issue, 5e3);
+    validateVoiceSlots(args.references, issue);
+    msrNegativeRule(args, issue);
+    if (args.model !== "ltx-2.5-22b-distilled") issue("Additional references require ltx-2.5-22b-distilled (MSR conditioning)");
+    if (length === void 0) issue("Additional references require duration or numFrames");
+    const backgrounds = args.references.filter((ref) => ref.background).length;
+    if (backgrounds > 1 || args.references.length - backgrounds > 4 || backgrounds === args.references.length)
+      issue("References require 1..4 subjects and at most one background");
+  }
+});
+var oneOf = (a, b) => Number(a !== void 0) + Number(b !== void 0);
+var genaiAudioToVideoSchema = external_exports.object({
+  ...genaiSampling,
+  prompt: external_exports.string().trim().min(1).max(2e3),
+  negativePrompt: external_exports.string().trim().min(1).max(2e3).optional(),
+  model: external_exports.enum(["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"]),
+  resolution: localResolution,
+  keyframes: temporalImages.optional(),
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  audioPath: external_exports.string().min(1).optional(),
+  audioUri: external_exports.string().min(1).optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  lastFramePath: external_exports.string().min(1).optional(),
+  lastFrameUri: genaiImageUriSchema.optional(),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validatePins(args.keyframes, !!(args.imagePath || args.imageUri), !!(args.lastFramePath || args.lastFrameUri), void 0, ctx);
+  if (args.model === "ltx-2.5-22b-distilled" && (args.negativePrompt || args.guidance || args.numInferenceSteps !== void 0))
+    issue("The distilled ComfyUI A2V pipeline uses fixed unguided sampling");
+  if (oneOf(args.audioPath, args.audioUri) !== 1) issue("Supply exactly one audioPath or audioUri");
+  if (oneOf(args.imagePath, args.imageUri) > 1) issue("Supply at most one imagePath or imageUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) > 1) issue("Supply at most one lastFramePath or lastFrameUri");
+  if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri)) issue("A last frame requires a first image");
+});
+function buildGenaiAudioBody(args) {
+  const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : void 0;
+  const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : void 0;
+  return {
+    audio_uri: genaiAudioUri(args.audioUri, args.audioPath),
+    prompt: args.prompt,
+    model: args.model,
+    resolution: args.resolution,
+    fps: args.fps,
+    ...image === void 0 ? {} : { image_uri: image },
+    ...last === void 0 ? {} : { last_frame_uri: last },
+    ...samplingBody(args),
+    ...temporalBody(args.keyframes),
+    ...negativeBody({ negativePrompt: args.negativePrompt })
+  };
+}
+var GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
+var genaiMsrSchema = external_exports.object({
+  prompt: external_exports.string().trim().min(1).max(5e3),
+  negativePrompt: external_exports.string().trim().min(1).max(5e3).optional(),
+  ...msrGuidanceFields,
+  skipStage2: external_exports.boolean().optional(),
+  references: msrReferences,
+  openingPositions: openingPositionsSchema,
+  referenceStrength: external_exports.number().finite().min(0).max(1).default(1),
+  referenceFrames: external_exports.union([external_exports.literal(25), external_exports.literal(33)]).default(33),
+  width: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1536),
+  height: external_exports.number().int().min(64).max(1920).multipleOf(64).default(1024),
+  numFrames: external_exports.number().int().min(GENAI_MSR_FRAMES.min).max(GENAI_MSR_FRAMES.max).refine((n) => (n - 1) % GENAI_MSR_FRAMES.step === 0).optional(),
+  duration: external_exports.number().finite().gt(0).max(360).optional(),
+  frameRate: external_exports.number().finite().min(1).max(60).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).default(42),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use a .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  validateOpening(args.prompt, args.openingPositions, args.references, issue, 5e3);
+  msrNegativeRule(args, issue);
+  const backgrounds = args.references.filter((ref) => ref.background).length;
+  if (backgrounds === args.references.length || backgrounds > 1 || args.references.length - backgrounds > 4) issue("MSR requires 1..4 subjects and at most one background");
+  validateVoiceSlots(args.references, issue);
+  if (args.width * args.height > 2064384) issue("MSR maximum is 2,064,384 pixels");
+  if (args.duration !== void 0) {
+    if (args.numFrames !== void 0) issue("Omit numFrames when using duration");
+    const frames = 1 + 8 * Math.ceil((args.duration * args.frameRate - 1) / 8 - 0.5 - 1e-9);
+    if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max) issue("MSR duration must round to 25..361 frames");
+  }
+});
+function referenceBody(ref) {
+  return {
+    image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
+    background: ref.background,
+    ...ref.audioUri || ref.audioPath ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}
+  };
+}
+function buildGenaiMsrBody(args) {
+  return {
+    prompt: openingPrompt(args.prompt, args.openingPositions),
+    ...negativeBody(args),
+    references: args.references.map(referenceBody),
+    ...args.skipStage2 === void 0 ? {} : { skip_stage_2: args.skipStage2 },
+    reference_strength: args.referenceStrength,
+    reference_frames: args.referenceFrames,
+    width: args.width,
+    height: args.height,
+    frame_rate: args.frameRate,
+    seed: args.seed,
+    ...args.duration === void 0 ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }
+  };
+}
+var msrVoiceCache;
+async function refreshGenaiMsrVoice(force = false) {
+  const origin = astraGenaiBaseUrl();
+  if (!force && msrVoiceCache?.origin === origin && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl) return msrVoiceCache.value;
+  let value = false, ttl = 6e4, promptLimit = 2e3;
+  try {
+    const body = external_exports.object({ voice_references: external_exports.boolean(), prompt_max_chars: external_exports.number().int().positive().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+    value = body.voice_references;
+    ttl = 6e5;
+    promptLimit = Math.min(5e3, body.prompt_max_chars ?? 2e3);
+  } catch {
+  }
+  msrVoiceCache = { origin, value, promptLimit, at: Date.now(), ttl };
+  return value;
+}
+function buildGenaiVideoBody(args) {
+  return {
+    prompt: openingPrompt(args.prompt, args.openingPositions),
+    model: args.model,
+    ...args.numFrames === void 0 ? { duration: args.duration ?? null } : { num_frames: args.numFrames },
+    resolution: args.resolution,
+    fps: args.fps,
+    generate_audio: args.generateAudio,
+    ...args.shots ? { shots: args.shots } : {},
+    ...samplingBody(args),
+    ...temporalBody(args.keyframes),
+    // Local frames travel as checked data URIs, like MSR and audio-to-video.
+    ...args.imageUri === void 0 && args.imagePath === void 0 ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) },
+    ...args.lastFramePath !== void 0 ? { last_frame_uri: genaiSourceUri(void 0, args.lastFramePath) } : args.lastFrameUri === void 0 ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) },
+    ...args.references === void 0 ? {} : { references: args.references.map(referenceBody) },
+    ...args.referenceStrength === void 0 ? {} : { reference_strength: args.referenceStrength },
+    ...args.referenceFrames === void 0 ? {} : { reference_frames: args.referenceFrames },
+    ...args.skipStage2 === void 0 ? {} : { skip_stage_2: args.skipStage2 },
+    ...negativeBody(args)
+  };
+}
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var mediaContract = external_exports.object({
+  width: external_exports.number().positive(),
+  height: external_exports.number().positive(),
+  fps: external_exports.number().positive(),
+  frames: external_exports.number().int().positive().optional(),
+  audio: external_exports.boolean()
+});
+function msrOutputContract(operation, args) {
+  const direct = operation === "msr";
+  const scene = operation === "scene-to-video";
+  if (!direct && !scene && !(operation === "image-to-video" && Array.isArray(args.references) && args.references.length)) return;
+  const sides = direct ? [Number(args.width ?? 1536), Number(args.height ?? 1024)] : String(args.resolution).split("x").map(Number);
+  const scale = args.skipStage2 ? 2 : 1;
+  const fps = Number((direct ? args.frameRate : args.fps) ?? 24);
+  const duration = Number(args.duration);
+  const frames = args.numFrames != null ? Number(args.numFrames) : direct ? duration ? 1 + 8 * Math.ceil((duration * fps - 1) / 8 - 0.5 - 1e-9) : 121 : duration ? Math.ceil(duration * fps - 1e-9) : void 0;
+  return mediaContract.parse({ width: sides[0] / scale, height: sides[1] / scale, fps, frames, audio: args.generateAudio !== false });
+}
+function checkOutput(file, expected, legacyMsr = false) {
+  const probe = JSON.parse(execFileSync(
+    "ffprobe",
+    [
+      "-v",
+      "error",
+      ...expected || legacyMsr ? ["-count_frames"] : [],
+      "-show_entries",
+      "stream=codec_type,width,height,avg_frame_rate,nb_read_frames,duration:format=duration",
+      "-of",
+      "json",
+      file
+    ],
+    { encoding: "utf8", timeout: 12e4 }
+  ));
+  const video = probe.streams?.find((s) => s.codec_type === "video");
+  if (!video?.width || !(Number(probe.format?.duration) > 0)) throw new Error("GenAI result has no usable video stream");
+  if (!expected && !legacyMsr) return;
+  const audio = probe.streams.filter((s) => s.codec_type === "audio");
+  const frames = Number(video.nb_read_frames);
+  const [n, d] = String(video.avg_frame_rate).split("/").map(Number);
+  const fps = n / d;
+  if (!(frames > 1 && fps > 0) || audio.length !== Number(expected?.audio ?? true) || expected && (video.width !== expected.width || video.height !== expected.height || Math.abs(fps - expected.fps) > 1e-3 || expected.frames !== void 0 && frames !== expected.frames) || !(Math.abs(Number(video.duration) - frames / fps) <= 0.5 / fps) || audio.length && !(Math.abs(Number(audio[0].duration) - frames / fps) <= Math.max(0.1, 1 / fps)))
+    throw new Error("GenAI result does not match the requested video frames, rate, geometry or audio");
+}
+var receiptSchema = external_exports.object({
+  version: external_exports.literal(1),
+  baseUrl: external_exports.string(),
+  operation: external_exports.union([operationSchema, external_exports.literal("scene-to-video")]),
+  fingerprint: external_exports.string(),
+  expected: mediaContract.optional(),
+  requestId: external_exports.string().optional(),
+  sceneShots: external_exports.array(external_exports.unknown()).optional(),
+  videoPath: external_exports.string(),
+  jobId: external_exports.string().min(1).optional(),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  sha256: external_exports.string().optional()
+}).strict();
+var statusSchema2 = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
+  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
+  error: external_exports.unknown().optional()
+}).passthrough();
+var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
+async function getGenaiVideoStatus(input, planned, binding) {
+  const receipt = receiptSchema.parse(JSON.parse(fs3.readFileSync(input.receiptPath, "utf8")));
+  if (binding && (path5.resolve(receipt.videoPath) !== path5.resolve(binding.target) || binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId || binding.fingerprint && receipt.fingerprint !== binding.fingerprint))
+    throw new Error("GenAI receipt does not belong to the approved output or job");
+  if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
+    throw new Error("GenAI receipt conflicts with the approved media contract");
+  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.");
+  if (!receipt.jobId && receipt.operation === "scene-to-video" && receipt.requestId) {
+    if (receipt.requestId !== "scene-" + receipt.fingerprint)
+      throw new Error("Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.");
+    const found = statusSchema2.extend({ request_id: external_exports.literal(receipt.requestId) }).parse(
+      await requestGenai("GET", "/v1/ltx/v2/scene-to-video/requests/" + encodeURIComponent(receipt.requestId))
+    );
+    if (binding?.jobId && binding.jobId !== found.id) throw new Error("GenAI recovery job ID mismatch");
+    receipt.jobId = found.id;
+    receipt.status = "submitted";
+    atomicJson(input.receiptPath, receipt);
+    recordVideoSubmission(found.id);
+  }
+  if (!receipt.jobId) throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
+  if (receipt.status === "completed") {
+    const bytes2 = fs3.readFileSync(receipt.videoPath);
+    if (createHash5("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    if (receipt.expected || planned || receipt.operation === "msr" || receipt.operation === "scene-to-video")
+      checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
+    return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+  }
+  const route = `${receipt.operation === "scene-to-video" ? "/v1/ltx/v2/scene-to-video" : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+  const job = statusSchema2.parse(await requestGenai("GET", route));
+  if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
+  if (receipt.operation === "scene-to-video" && Array.isArray(job.shots)) {
+    receipt.sceneShots = job.shots;
+  }
+  if (job.status === "failed" || job.status === "cancelled") throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? "No details").slice(0, 1e3)}`, true, 200);
+  if (job.status !== "completed" || !input.download)
+    return { jobId: receipt.jobId, status: job.status, downloaded: false, review: "not_reviewed" };
+  if (!job.result?.video_url) throw new Error("GenAI completed without result.video_url; retain the receipt, do not resubmit.");
+  let bytes;
+  if (job.result.authentication === "same GatewayToken required") {
+    const url = new URL(job.result.video_url, astraGenaiBaseUrl() + "/");
+    if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash || !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
+      throw new Error("Invalid private GenAI video URL; retain receipt");
+    bytes = await requestGenaiMedia(url.pathname, void 0, route);
+  } else bytes = await downloadGenaiResult(job.result.video_url);
+  if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") throw new Error("GenAI result is not MP4");
+  const temp = `${receipt.videoPath}.${randomUUID3()}.download.mp4`;
+  try {
+    fs3.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    checkOutput(temp, receipt.expected ?? planned, receipt.operation === "msr" || receipt.operation === "scene-to-video");
+    if (fs3.existsSync(receipt.videoPath)) {
+      if (createHash5("sha256").update(fs3.readFileSync(receipt.videoPath)).digest("hex") !== createHash5("sha256").update(bytes).digest("hex"))
+        throw new Error("GenAI video output conflicts with download");
+    } else fs3.linkSync(temp, receipt.videoPath);
+    atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash5("sha256").update(bytes).digest("hex") });
+  } finally {
+    fs3.rmSync(temp, { force: true });
+  }
+  return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+}
+async function prepareGenaiMsrSources(body) {
+  let supported = true;
+  const send = async (uri) => {
+    const match = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
+    if (!match) return uri;
+    const bytes2 = Buffer.from(match[2], "base64");
+    const uploadable = supported && genaiUploadable(bytes2, match[1]);
+    const id = uploadable ? await uploadGenaiFile(bytes2, match[1]) : void 0;
+    if (uploadable && id === void 0) supported = false;
+    return id ?? `data:${match[1]};base64,${bytes2.toString("base64")}`;
+  };
+  const references = [];
+  for (const ref of body.references ?? []) references.push({
+    ...ref,
+    image_uri: await send(ref.image_uri),
+    ..."audio_uri" in ref && typeof ref.audio_uri === "string" ? { audio_uri: await send(ref.audio_uri) } : {}
+  });
+  const keyframes = [];
+  for (const pin of body.keyframes ?? []) keyframes.push({ ...pin, image_uri: await send(pin.image_uri) });
+  const prepared = {
+    ...body,
+    ...body.references ? { references } : {},
+    ...body.keyframes ? { keyframes } : {},
+    ...body.image_uri === void 0 ? {} : { image_uri: await send(body.image_uri) },
+    ...body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri) }
+  };
+  const bytes = Buffer.byteLength(JSON.stringify(prepared));
+  if (bytes - (body.audio_uri?.length ?? 0) > GENAI_MSR_INLINE_MAX_BYTES)
+    throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
+  return prepared;
+}
+var SUBMIT_TIMEOUT_MS = 15 * 6e4;
+function genaiVideoRoute(operation) {
+  return operation === "msr" ? "/v1/ltx/msr" : `/v1/ltx/v2/${operation}`;
+}
+var genaiModes = {
+  astra_genai_text2video: "text2video",
+  astra_genai_img2video: "image2video",
+  astra_genai_audio2video: "audio2video",
+  astra_genai_msr: "msr"
+};
+var deployedModel = external_exports.object({
+  id: external_exports.string(),
+  parameters_by_mode: external_exports.record(external_exports.array(external_exports.string())).optional(),
+  limits: external_exports.record(external_exports.unknown()).optional()
+});
+async function checkGenaiVideoOptions(tool, args) {
+  const mode = genaiModes[tool];
+  if (!mode) return;
+  if (mode === "msr" || mode === "image2video" && args.references) {
+    const controls = [
+      ["referenceStrength", "reference_strength", 1],
+      ["referenceFrames", "reference_frames", 33],
+      ["guidanceScale", "guidance_scale", 1],
+      ["nagScale", "nag_scale", 0],
+      ["nagAlpha", "nag_alpha", 0.25],
+      ["nagTau", "nag_tau", 2.5]
+    ];
+    const custom2 = controls.filter(([field, , fallback]) => args[field] !== void 0 && args[field] !== fallback);
+    if (custom2.length) {
+      const response = await requestGenai("GET", "/v1/ltx/v2/capabilities", void 0, 15e3);
+      const spec = external_exports.object({ min: external_exports.number().optional(), max: external_exports.number().optional(), enum: external_exports.array(external_exports.number()).optional() });
+      const catalog = external_exports.object({ pipelines: external_exports.array(external_exports.object({
+        pipeline: external_exports.string(),
+        sampling_fields: external_exports.array(external_exports.string()),
+        settings: external_exports.record(external_exports.unknown()).optional()
+      })) }).safeParse(response);
+      const msr = catalog.success && catalog.data.pipelines.find((row) => row.pipeline === "msr");
+      for (const [field, wire] of custom2) {
+        const constraint = msr && spec.safeParse(msr.settings?.[wire]);
+        const range = constraint && constraint.success ? constraint.data : void 0;
+        const value = Number(args[field]);
+        if (!msr || !msr.sampling_fields.includes(wire) || wire === "reference_strength" && (!range || range.min === void 0 || range.max === void 0) || range && (value < (range.min ?? -Infinity) || value > (range.max ?? Infinity) || range.enum && !range.enum.includes(value)))
+          throw new GenaiRequestError("ltx_fields_unsupported: " + wire + " outside verified MSR settings", true, 422);
+      }
+    }
+    const prompt = openingPrompt(String(args.prompt), args.openingPositions);
+    const parts = [prompt];
+    for (const [i, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
+      parts.push((i === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
+      if (shot.audio) parts.push("Audio: " + shot.audio);
+    }
+    const chars = Math.max([...parts.join("\n\n")].length, [...String(args.negativePrompt ?? "")].length);
+    if (chars > 2e3) {
+      const caps = external_exports.object({ prompt_max_chars: external_exports.number().int().optional() }).parse(
+        await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3)
+      );
+      if (chars > (caps.prompt_max_chars ?? 2e3)) throw new GenaiRequestError("msr_prompt_limit: prompt exceeds the deployed backend limit", true, 422);
+    }
+  }
+  const wireFields = {
+    seed: "seed",
+    numInferenceSteps: "num_inference_steps",
+    guidance: "guidance",
+    lora: "lora",
+    numGeneratedKeyframes: "num_generated_keyframes",
+    numFrames: "num_frames",
+    shots: "shots",
+    negativePrompt: "negative_prompt",
+    guidanceScale: "guidance_scale",
+    referenceStrength: "reference_strength",
+    referenceFrames: "reference_frames",
+    nagScale: "nag_scale",
+    nagAlpha: "nag_alpha",
+    nagTau: "nag_tau",
+    skipStage2: "skip_stage_2"
+  };
+  const requested = Object.entries(wireFields).filter(([key]) => args[key] !== void 0 && (mode !== "msr" || key === "skipStage2"));
+  const needsAudioModel = mode === "audio2video" && args.model === "ltx-2.5-22b-distilled";
+  if (!requested.length && !args.keyframes && !needsAudioModel) return;
+  let models;
+  try {
+    const response = await requestGenai("GET", "/v1/models", void 0, 15e3);
+    models = external_exports.object({ data: external_exports.array(deployedModel) }).parse(response).data;
+  } catch {
+    throw new GenaiRequestError("ltx_capabilities_unavailable: cannot verify the requested gateway fields before submission", true, 503);
+  }
+  const model = models.find((entry) => entry.id === (mode === "msr" ? "ltx-msr" : args.model));
+  const fields = model?.parameters_by_mode?.[mode] ?? [];
+  if (needsAudioModel && !model?.parameters_by_mode?.audio2video)
+    throw new GenaiRequestError("ltx_fields_unsupported: this gateway does not advertise distilled audio2video", true, 422);
+  const missing = requested.filter(([, wire]) => !fields.includes(wire)).map(([key]) => key);
+  if (Array.isArray(args.keyframes)) {
+    const limit = external_exports.object({ temporal_images_including_endpoints: external_exports.number().int() }).safeParse(model?.limits?.[mode]);
+    const count = args.keyframes.length + Number(!!(args.imagePath || args.imageUri)) + Number(!!(args.lastFramePath || args.lastFrameUri));
+    if (!limit.success || count > limit.data.temporal_images_including_endpoints) missing.push("keyframes");
+  }
+  if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(", ")}`, true, 422);
+}
+async function generateGenaiVideo(operation, input, signal) {
+  signal?.throwIfAborted();
+  const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
+  requireAstraGenaiKey();
+  const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
+  const usesReferences = "references" in body && Array.isArray(body.references) && body.references.length > 0;
+  const fingerprint = createHash5("sha256").update(JSON.stringify(body)).digest("hex");
+  const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
+  const receiptPath = videoPath + ".astra-genai.json";
+  if (fs3.existsSync(receiptPath)) {
+    const previous = receiptSchema.parse(JSON.parse(fs3.readFileSync(receiptPath, "utf8")));
+    if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
+      throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
+    if (!previous.jobId) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
+    recordVideoSubmission(previous.jobId);
+  } else {
+    if (fs3.existsSync(videoPath)) throw new Error("GenAI output already exists");
+    const tools = { "text-to-video": "astra_genai_text2video", "image-to-video": "astra_genai_img2video", "audio-to-video": "astra_genai_audio2video", msr: "astra_genai_msr" };
+    await checkGenaiVideoOptions(tools[operation], args);
+    if (operation === "image-to-video" && usesReferences) {
+      let capabilities;
+      try {
+        capabilities = external_exports.object({ image_conditioning: external_exports.boolean().optional(), voice_references: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      } catch {
+        throw new GenaiRequestError("image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested", true, 503);
+      }
+      if (capabilities.image_conditioning !== true)
+        throw new GenaiRequestError("image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted", true, 422);
+      if (body.references?.some((ref) => ref.audio_uri) && capabilities.voice_references !== true)
+        throw new GenaiRequestError("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples", true, 422);
+    }
+    const msrArgs = operation === "msr" || usesReferences ? args : void 0;
+    if (msrArgs && (msrArgs.negativePrompt !== void 0 || (msrArgs.guidanceScale ?? 1) > 1)) {
+      const capabilities = external_exports.object({ negative_prompt: external_exports.boolean().optional(), nag: external_exports.boolean().optional() }).passthrough().parse(await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3));
+      if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
+        throw new GenaiRequestError("msr_nag_unsupported: the GenAI MSR backend does not advertise NAG", true, 422);
+      if (capabilities.negative_prompt !== true)
+        throw new GenaiRequestError("msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning", true, 422);
+    }
+    if (operation === "msr" && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
+      throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
+    const submitted = usesReferences || "keyframes" in body ? await prepareGenaiMsrSources(body) : body;
+    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: "submitting" };
+    signal?.throwIfAborted();
+    fs3.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    let response;
+    try {
+      try {
+        response = await requestGenai("POST", genaiVideoRoute(operation), submitted, SUBMIT_TIMEOUT_MS);
+      } catch (error) {
+        if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error instanceof GenaiRequestError && error.httpStatus === 400 && GENAI_FILE_GONE.test(error.message))) throw error;
+        forgetGenaiUploads();
+        let again;
+        try {
+          again = await prepareGenaiMsrSources(body);
+        } catch (uploadError) {
+          fs3.rmSync(receiptPath, { force: true });
+          throw uploadError;
+        }
+        response = await requestGenai("POST", genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
+      }
+    } catch (error) {
+      if (error instanceof GenaiRequestError && error.terminal) fs3.rmSync(receiptPath, { force: true });
+      throw error;
+    }
+    const accepted = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
+    atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: "submitted" });
+    recordVideoSubmission(accepted.id);
+  }
+  const result = await pollGenaiJob(
+    () => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)),
+    `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`,
+    signal
+  );
+  return { ...result, receiptPath };
 }
 
 // src/live-idle.ts
@@ -31811,10 +32281,11 @@ function idleRetake(request, index, concept, attempt) {
 }
 async function prepareIdleClips(image, project, concept, signal, progress) {
   const requests = idleRequests(image, concept);
-  const hash = createHash3("sha256").update(readFileSync4(image)).update(astraVideoBaseUrl());
+  const hash = createHash6("sha256").update(readFileSync5(image)).update(astraVideoBaseUrl());
   for (const { firstFramePath, lastFramePath, ...request } of requests) hash.update(JSON.stringify(request));
-  const directory = join4(project, ".social-flow", "live-idle", hash.digest("hex"));
-  mkdirSync3(directory, { recursive: true, mode: 448 });
+  const directory = join3(project, ".social-flow", "live-idle", hash.digest("hex"));
+  const gatewayDir = join3(directory, createHash6("sha256").update(astraGenaiBaseUrl()).digest("hex"));
+  mkdirSync4(gatewayDir, { recursive: true, mode: 448 });
   const paths = [];
   let reference;
   for (const [index, request] of requests.entries()) {
@@ -31822,12 +32293,12 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
       signal.throwIfAborted();
       const returning = attempt >= 2;
       const candidate = attempt === 0 ? request : idleRetake(request, index, concept, attempt);
-      const variant = attempt ? "-moving-" + createHash3("sha256").update(JSON.stringify(
+      const variant = attempt ? "-moving-" + createHash6("sha256").update(JSON.stringify(
         [candidate.seed, candidate.prompt, candidate.strength, ...returning ? [candidate.numFrames] : []]
       )).digest("hex").slice(0, 12) : "";
       const filename = `listen-${index + 1}${variant}.mp4`;
-      const source = await fetchIdle(candidate, directory, returning ? "outward-" + filename : filename, signal);
-      const path4 = returning ? await returnToAnchor(source, join4(directory, filename), request.numFrames, signal) : source;
+      const source = await fetchIdle(candidate, directory, gatewayDir, returning ? "outward-" + filename : filename, signal);
+      const path6 = returning ? await returnToAnchor(source, join3(gatewayDir, filename), request.numFrames, signal) : source;
       const { stdout } = await execute(
         "ffmpeg",
         [
@@ -31835,7 +32306,7 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
           "error",
           "-nostdin",
           "-i",
-          path4,
+          path6,
           "-an",
           "-vf",
           "crop=720:1280:8:0,scale=24:40:flags=area",
@@ -31854,18 +32325,18 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
         if (!(error instanceof StandbyQualityError) || attempt >= lastStandbyAttempt) throw error;
         continue;
       }
-      paths.push(path4);
-      progress(index + 1, path4);
+      paths.push(path6);
+      progress(index + 1, path6);
       break;
     }
   }
   return paths;
 }
-async function returnToAnchor(source, path4, count, signal) {
-  if (existsSync3(path4)) return path4;
+async function returnToAnchor(source, path6, count, signal) {
+  if (existsSync4(path6)) return path6;
   const half = (count + 1) / 2;
   const filter = `[0:v]split[a][b];[a]trim=end_frame=${half},setpts=PTS-STARTPTS[f];[b]trim=end_frame=${half - 1},reverse,setpts=PTS-STARTPTS[r];[f][r]concat=n=2:v=1:a=0`;
-  const tmp = path4 + "." + randomUUID3() + ".mp4";
+  const tmp = path6 + "." + randomUUID4() + ".mp4";
   try {
     await execute("ffmpeg", [
       "-v",
@@ -31884,43 +32355,38 @@ async function returnToAnchor(source, path4, count, signal) {
       "yuv420p",
       tmp
     ], { signal });
-    renameSync3(tmp, path4);
-    return path4;
+    renameSync3(tmp, path6);
+    return path6;
   } finally {
-    rmSync3(tmp, { force: true });
+    rmSync2(tmp, { force: true });
   }
 }
-async function fetchIdle(request, directory, filename, signal) {
-  const path4 = join4(directory, filename);
-  const claim = path4 + ".generating";
-  if (!await resumeVideoResult(path4, signal)) {
-    try {
-      writeFileSync5(claim, String(process.pid), { flag: "wx", mode: 384 });
-    } catch (e) {
-      if (e.code !== "EEXIST") throw e;
-      const until = Date.now() + 12e4;
-      while (!existsSync3(path4 + ".astra-job.json")) {
-        if (Date.now() >= until) throw Error("Standby submission is unconfirmed: " + filename);
-        const pid = Number(readFileSync4(claim, "utf8"));
-        try {
-          process.kill(pid, 0);
-        } catch {
-          throw Error("Standby generation stopped before its receipt. Inspect the production queue before retrying " + filename);
-        }
-        await sleep3(500, void 0, { signal });
-      }
-    }
-    if (!existsSync3(path4 + ".astra-job.json")) {
-      try {
-        await generateFromImage({ ...request, outputPath: directory, filename }, signal);
-      } finally {
-        if (existsSync3(path4 + ".astra-job.json")) rmSync3(claim, { force: true });
-      }
-    } else if (!await resumeVideoResult(path4, signal)) {
-      throw Error("Concurrent standby preparation failed for " + filename);
-    }
-  }
-  return path4;
+async function fetchIdle(request, legacy, outputPath, filename, signal) {
+  const path6 = join3(legacy, filename);
+  const receipt = path6 + ".astra-job.json";
+  if (existsSync4(receipt)) {
+    const previous = JSON.parse(readFileSync5(receipt, "utf8"));
+    if (previous.status === "completed" && existsSync4(path6) && createHash6("sha256").update(readFileSync5(path6)).digest("hex") === previous.sha256) return path6;
+    if (previous.status !== "failed") throw Error("Inspect the previous standby job before replacing it: " + receipt);
+  } else if (existsSync4(path6 + ".generating")) throw Error("Inspect the unconfirmed standby submission: " + path6);
+  const result = await generateGenaiVideo("image-to-video", {
+    model: "ltx-2.5-22b-dev",
+    imagePath: request.firstFramePath,
+    lastFramePath: request.lastFramePath,
+    resolution: nativeWidth + "x" + nativeHeight,
+    fps: nativeFps,
+    numFrames: request.numFrames,
+    prompt: request.prompt,
+    negativePrompt: request.negativePrompt,
+    numInferenceSteps: request.numInferenceSteps,
+    seed: request.seed,
+    generateAudio: false,
+    outputPath,
+    filename,
+    reserveUsd: 0
+  }, signal);
+  if (!result.videoPath || !result.downloaded) throw Error("GenAI standby pending: " + result.receiptPath);
+  return result.videoPath;
 }
 var StandbyQualityError = class extends Error {
 };
@@ -31938,25 +32404,25 @@ function checkStandbyFraming(samples, reference) {
   let previous = first;
   let anchor = first;
   for (let offset = size; offset < samples.length; offset += size) {
-    const frame = samples.subarray(offset, offset + size);
-    maximum = Math.max(maximum, distance(first, frame));
+    const frame2 = samples.subarray(offset, offset + size);
+    maximum = Math.max(maximum, distance(first, frame2));
     let corners = 0;
     for (let y = 0; y < 8; y++) for (const x of [0, 1, 2, 21, 22, 23]) {
       const i = (y * 24 + x) * 3;
-      for (let c = 0; c < 3; c++) corners += Math.abs(first[i + c] - frame[i + c]);
+      for (let c = 0; c < 3; c++) corners += Math.abs(first[i + c] - frame2[i + c]);
     }
-    if (corners / (8 * 6 * 3) > 18 || distance(previous, frame) > 24)
+    if (corners / (8 * 6 * 3) > 18 || distance(previous, frame2) > 24)
       throw new StandbyQualityError("Standby clip cuts away from the shared camera framing");
-    previous = frame;
+    previous = frame2;
     let moved = 0;
     for (let y = 4; y < 35 && moved < 12; y++) {
       for (let x = 3; x < 21; x++) {
         const i = (y * 24 + x) * 3;
-        if (Math.abs(anchor[i] - frame[i]) + Math.abs(anchor[i + 1] - frame[i + 1]) + Math.abs(anchor[i + 2] - frame[i + 2]) >= 12) moved++;
+        if (Math.abs(anchor[i] - frame2[i]) + Math.abs(anchor[i + 1] - frame2[i + 1]) + Math.abs(anchor[i + 2] - frame2[i + 2]) >= 12) moved++;
       }
     }
     if (moved >= 12) {
-      anchor = frame;
+      anchor = frame2;
       stillFrames = 0;
     } else if (++stillFrames >= nativeFps) throw new StandbyQualityError("Standby host stays still for a second");
   }
@@ -31977,11 +32443,11 @@ var IdleRotation = class {
     if (!this.bag.length) {
       this.bag = Array.from({ length: this.count }, (_, i) => i);
       for (let i = this.count - 1; i > 0; i--) {
-        const j = randomInt2(i + 1);
+        const j = randomInt(i + 1);
         [this.bag[i], this.bag[j]] = [this.bag[j], this.bag[i]];
       }
       if (this.bag[this.count - 1] === this.last) {
-        const j = randomInt2(this.count - 1);
+        const j = randomInt(this.count - 1);
         [this.bag[j], this.bag[this.count - 1]] = [this.bag[this.count - 1], this.bag[j]];
       }
     }
@@ -31991,52 +32457,33 @@ var IdleRotation = class {
 
 // src/live-native.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash as createHash4, randomUUID as randomUUID5 } from "node:crypto";
-import { existsSync as existsSync4, mkdirSync as mkdirSync4, mkdtempSync as mkdtempSync3, readFileSync as readFileSync5, renameSync as renameSync4, rmSync as rmSync5, writeFileSync as writeFileSync7 } from "node:fs";
-import { tmpdir as tmpdir3 } from "node:os";
-import { join as join6, resolve as resolve4 } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createHash as createHash7, randomUUID as randomUUID5 } from "node:crypto";
+import { mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync4 } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join4 } from "node:path";
+import { createRequire as createRequire2 } from "node:module";
 import { promisify as promisify2 } from "node:util";
 
 // src/live-motion.ts
-import { spawn as spawn2, spawnSync as spawnSync3 } from "node:child_process";
-import { once } from "node:events";
-import { createInterface } from "node:readline";
 import {
-  mkdtempSync as mkdtempSync2,
-  openSync,
-  closeSync,
+  mkdtempSync,
+  openSync as openSync2,
+  closeSync as closeSync2,
   readSync,
   statSync as statSync3,
-  writeFileSync as writeFileSync6,
-  rmSync as rmSync4,
-  realpathSync as realpathSync2
+  writeFileSync as writeFileSync5,
+  rmSync as rmSync3,
+  realpathSync as realpathSync3
 } from "node:fs";
-import { join as join5, resolve as resolve3, sep } from "node:path";
-import { randomUUID as randomUUID4 } from "node:crypto";
-import { tmpdir as tmpdir2 } from "node:os";
-var AVATAR_FPS = 25;
 var FRAME_BYTES = WIDTH * HEIGHT * 3;
-function differentPixels(a, b) {
-  let changed = 0;
-  for (let offset = 0; offset < FRAME_BYTES; offset += 3 * 97)
-    if (Math.abs(a[offset] - b[offset]) + Math.abs(a[offset + 1] - b[offset + 1]) + Math.abs(a[offset + 2] - b[offset + 2]) > 27)
-      changed++;
-  return changed;
-}
-function cycleFrame(step, count) {
-  const period = 2 * count - 2;
-  const phase = step % period;
-  return phase < count ? phase : period - phase;
-}
 var MotionFrames = class {
-  constructor(path4, remove = false, frameBytes = FRAME_BYTES) {
-    this.path = path4;
+  constructor(path6, remove = false, frameBytes = FRAME_BYTES) {
+    this.path = path6;
     this.remove = remove;
     this.frameBytes = frameBytes;
-    this.count = statSync3(path4).size / this.frameBytes;
+    this.count = statSync3(path6).size / this.frameBytes;
     if (!Number.isInteger(this.count) || this.count < 1) throw Error("Incomplete motion frame data");
-    this.file = openSync(path4, "r");
+    this.file = openSync2(path6, "r");
   }
   path;
   remove;
@@ -32044,198 +32491,61 @@ var MotionFrames = class {
   count;
   file;
   at(index) {
-    const frame = Buffer.allocUnsafe(this.frameBytes);
-    if (readSync(this.file, frame, 0, frame.length, index * this.frameBytes) !== frame.length)
+    const frame2 = Buffer.allocUnsafe(this.frameBytes);
+    if (readSync(this.file, frame2, 0, frame2.length, index * this.frameBytes) !== frame2.length)
       throw Error("Motion frame unavailable");
-    return frame;
+    return frame2;
   }
   close() {
     if (this.file < 0) return;
-    closeSync(this.file);
+    closeSync2(this.file);
     this.file = -1;
-    if (this.remove) rmSync4(this.path, { force: true });
-  }
-};
-var workerCode = `
-import json, os, sys
-from musetalk_avatar_core.avatar import VideoAvatar
-avatar = VideoAvatar(sys.argv[1])
-for line in sys.stdin:
-    request = json.loads(line)
-    try:
-        count = 0
-        with open(request["output"], "xb") as target:
-            for frame in avatar.stream_frames(request["audio"]):
-                if frame.shape != (640, 360, 3):
-                    raise ValueError("Unexpected frame size")
-                target.write(frame.tobytes())
-                count += 1
-        print(json.dumps({"frames": count}), flush=True)
-    except Exception as e:
-        print(json.dumps({"error": type(e).__name__}), flush=True)
-`;
-var MotionAvatar = class {
-  worker;
-  directory = mkdtempSync2(join5(tmpdir2(), "social-flow-avatar-"));
-  cursor = 0;
-  shots = [];
-  shot = 0;
-  captured = /* @__PURE__ */ new Set();
-  constructor(config2) {
-    try {
-      const root = realpathSync2(config2.project);
-      const video = join5(this.directory, "performance.mp4");
-      const convert = (args) => {
-        const r = spawnSync3("ffmpeg", ["-v", "error", "-nostdin", ...args], { timeout: 9e4 });
-        if (r.status !== 0) throw Error("Cannot prepare character performance video");
-      };
-      for (const [i, clip] of [config2.motionVideo, ...config2.idleVideos].entries()) {
-        const source = realpathSync2(resolve3(root, clip));
-        if (!source.startsWith(root + sep)) throw Error("Motion video outside character project");
-        const normalized = i === 0 ? video : join5(this.directory, "camera-" + i + ".mp4");
-        const idle = join5(this.directory, "camera-" + i + ".rgb");
-        convert([
-          "-i",
-          source,
-          "-t",
-          "30",
-          "-an",
-          "-vf",
-          `scale=${WIDTH}:${HEIGHT}:force_original_aspect_ratio=increase,crop=${WIDTH}:${HEIGHT},fps=${AVATAR_FPS},setsar=1`,
-          "-c:v",
-          "libx264",
-          "-crf",
-          "14",
-          normalized
-        ]);
-        convert(["-i", normalized, "-an", "-pix_fmt", "rgb24", "-f", "rawvideo", idle]);
-        const shot = new MotionFrames(idle);
-        this.shots.push(shot);
-        if (shot.count < AVATAR_FPS) throw Error("Provide at least one second of moving performance footage");
-        let reference = shot.at(0), lastChange = 0;
-        for (let frame = 5; frame < shot.count; frame += 5) {
-          const sample = shot.at(frame);
-          if (differentPixels(sample, reference) > 14) {
-            reference = sample;
-            lastChange = frame;
-          } else if (frame - lastChange >= AVATAR_FPS)
-            throw Error("The driving video holds a still frame for a second");
-        }
-        if (!lastChange) throw Error("The driving video contains only a still frame");
-      }
-      this.worker = spawn2(
-        process.env.SOCIAL_FLOW_AVATAR_PYTHON || "python3",
-        ["-u", "-c", workerCode, video],
-        { stdio: "pipe" }
-      );
-      this.worker.on("error", () => {
-      });
-      this.worker.stdin.on("error", () => {
-      });
-      this.worker.stderr.resume();
-    } catch (e) {
-      this.close();
-      throw e;
-    }
-  }
-  startSpeech() {
-    this.cursor = 0;
-    this.shot = 0;
-  }
-  next(speech) {
-    let step = Math.floor(this.cursor++ * AVATAR_FPS / FPS);
-    if (speech) return speech.at(Math.min(step, speech.count - 1));
-    if (this.shots.length > 1 && step >= this.shots[this.shot].count) {
-      this.shot = (this.shot + 1) % this.shots.length;
-      this.cursor = 1;
-      step = 0;
-    }
-    const shot = this.shots[this.shot];
-    return shot.at(cycleFrame(step, shot.count));
-  }
-  async render(pcm, signal) {
-    const worker2 = this.worker;
-    signal.throwIfAborted();
-    if (worker2.exitCode !== null || worker2.signalCode) throw Error("Motion renderer is unavailable");
-    const prefix = join5(this.directory, randomUUID4());
-    const audio = prefix + ".wav", output = prefix + ".rgb";
-    writeFileSync6(audio, pcmToWav(pcm, RATE, 1), { mode: 384 });
-    const lines = createInterface({ input: worker2.stdout });
-    const timeout = AbortSignal.timeout(18e4);
-    const end = AbortSignal.any([signal, timeout]);
-    const listeners = new AbortController();
-    try {
-      const result = Promise.race([
-        once(lines, "line", { signal: listeners.signal }).then(([s]) => JSON.parse(s)),
-        once(worker2, "close", { signal: listeners.signal }).then(() => {
-          throw Error("Motion renderer exited; check its Python packages and model files");
-        }),
-        once(end, "abort", { signal: listeners.signal }).then(() => {
-          throw Error("Motion rendering interrupted");
-        })
-      ]);
-      worker2.stdin.write(JSON.stringify({ audio, output }) + "\n");
-      const row = await result;
-      if (row.error || !row.frames) throw Error("Motion rendering failed: " + (row.error || "empty video"));
-      const frames = new MotionFrames(output, true);
-      this.captured.add(frames);
-      if (Math.abs(frames.count - pcm.length / (2 * RATE) * AVATAR_FPS) > 3)
-        throw Error("Rendered lips and speech duration differ");
-      return frames;
-    } catch (e) {
-      worker2.kill();
-      throw e;
-    } finally {
-      listeners.abort();
-      lines.close();
-      rmSync4(audio, { force: true });
-    }
-  }
-  release(frames) {
-    frames.close();
-    this.captured.delete(frames);
-  }
-  close() {
-    this.worker?.kill();
-    for (const shot of this.shots) shot.close();
-    for (const f of this.captured) f.close();
-    rmSync4(this.directory, { recursive: true, force: true });
+    if (this.remove) rmSync3(this.path, { force: true });
   }
 };
 
 // src/live-native.ts
 var execute2 = promisify2(execFile2);
-var worker = fileURLToPath(new URL("../live-native-720.py", import.meta.url));
-function nativeLauncher() {
-  if (process.env.SOCIAL_FLOW_LIVE_A2V_COMMAND) return process.env.SOCIAL_FLOW_LIVE_A2V_COMMAND;
-  if (process.env.SOCIAL_FLOW_LIVE_GPU_HOST && process.env.SOCIAL_FLOW_LIVE_GPU_PYTHON)
-    return fileURLToPath(new URL("../live-native-ssh.py", import.meta.url));
-  throw Error("Configure the production CUDA launcher or the GPU SSH host and Python interpreter");
-}
-var talkPrompt = "A locked chest-up portrait of the same character in the reference, looking into the lens. The host speaks quietly in sync with the supplied voice. Relaxed shoulders and hands. Keep the camera, light and background fixed.";
-function nativeSpeechTiming(pcm) {
-  const bytesPerFrame = SAMPLES * 2;
-  const speechFrames = Math.ceil(pcm.length / bytesPerFrame);
-  const leadFrames = 4;
-  const modelFrames = 1 + 8 * Math.ceil((leadFrames + speechFrames - 1) / 8);
-  const modelPcm = Buffer.alloc(modelFrames * bytesPerFrame);
-  pcm.copy(modelPcm, leadFrames * bytesPerFrame);
-  return { leadFrames, speechFrames, modelFrames, modelPcm };
+var { estimateSpeechSeconds } = createRequire2(import.meta.url)("../../skills/_shared/scene-acting.js");
+var talkPrompt = "Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.";
+function spokenVideoRequest(actor, direction, text) {
+  const language = new Intl.DisplayNames(["en"], { type: "language" }).of(actor.language) ?? actor.language;
+  const seconds = estimateSpeechSeconds(text, actor.language) ?? Math.max(2, Array.from(text).length / 7);
+  const numFrames = Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
+  if (numFrames > 361) throw Error("Live dialogue exceeds one GenAI clip. Use a shorter line.");
+  return {
+    model: "ltx-2.5-22b-distilled",
+    resolution: "720x1280",
+    fps: 24,
+    numFrames,
+    generateAudio: true,
+    imagePath: actor.asset,
+    references: [{ imagePath: actor.asset, audioPath: actor.voiceSample }],
+    openingPositions: [{ character: "Host", images: [1], position: "Centered in the portrait, facing the viewer in the original framing." }],
+    prompt: [
+      direction,
+      actor.voiceDirection,
+      "Use Image 1 and its voice sample for the same speaker and vocal timbre.",
+      "One continuous take, no music, other speakers or on-screen text. The host starts speaking immediately, with natural lip movement and finishes the line before the shot ends.",
+      "The only words spoken, in " + language + ", are " + JSON.stringify(text) + "."
+    ].filter(Boolean).join(" "),
+    reserveUsd: 0
+  };
 }
 var NativeTalk = class {
-  constructor(image, project, prompt, log) {
-    this.image = image;
+  constructor(actor, project, prompt, log) {
+    this.actor = actor;
     this.project = project;
     this.prompt = prompt;
     this.log = log;
   }
-  image;
+  actor;
   project;
   prompt;
   log;
   width = 720;
   height = nativeHeight;
-  dir = mkdtempSync3(join6(tmpdir3(), "native-talk-"));
+  dir = mkdtempSync2(join4(tmpdir(), "native-talk-"));
   frames = /* @__PURE__ */ new Set();
   idle = [];
   rotation = new IdleRotation();
@@ -32243,25 +32553,23 @@ var NativeTalk = class {
   idleIndex = 0;
   speechIndex = 0;
   onIdle;
-  async decode(clip, signal, timing, start = timing?.leadFrames ?? 0) {
+  async decode(clip, signal) {
     const info = await execute2("ffprobe", [
       "-v",
       "error",
       "-select_streams",
       "v:0",
       "-show_entries",
-      "stream=width,height,r_frame_rate,nb_frames",
+      "stream=width,height,r_frame_rate",
       "-of",
       "json",
       clip
     ], { signal });
     const stream = JSON.parse(info.stdout).streams?.[0];
-    if (stream?.width !== nativeWidth || stream.height !== nativeHeight || stream.r_frame_rate !== "24/1")
+    if (![this.width, nativeWidth].includes(stream?.width) || stream.height !== nativeHeight || stream.r_frame_rate !== "24/1")
       throw Error("Unexpected native video geometry or frame rate");
-    if (timing && Number(stream.nb_frames) !== timing.modelFrames)
-      throw Error("Native render and conditioning audio have different frame counts");
-    const filter = timing ? `trim=start_frame=${start}:end_frame=${start + timing.speechFrames},crop=720:1280:8:0` : "crop=720:1280:8:0";
-    const rgb = join6(this.dir, randomUUID5() + ".rgb");
+    const filter = "crop=720:1280";
+    const rgb = join4(this.dir, randomUUID5() + ".rgb");
     try {
       await execute2("ffmpeg", [
         "-v",
@@ -32282,97 +32590,73 @@ var NativeTalk = class {
       this.frames.add(frames);
       return frames;
     } catch (error) {
-      rmSync5(rgb, { force: true });
+      rmSync4(rgb, { force: true });
       throw error;
     }
   }
   async prepareIdle(concept, signal, log) {
     const paths = await prepareIdleClips(
-      this.image,
+      this.actor.asset,
       this.project,
       concept,
       signal,
       (index) => log("idle_clip_prepared", { index, total: idleCount })
     );
-    for (const [i, path4] of paths.entries()) {
-      const frames = await this.decode(path4, signal);
+    for (const [i, path6] of paths.entries()) {
+      const frames = await this.decode(path6, signal);
       if (frames.count !== idleFrameCounts[i]) throw Error("Standby clip has an unexpected frame count");
       this.idle.push(frames);
     }
     this.onIdle = (index) => log("idle_clip_playing", { index: index + 1 });
     log("idle_pool_ready", { count: this.idle.length });
   }
-  async render(pcm, signal, words, cachePrepared = false) {
-    const launcher = nativeLauncher();
-    const timing = nativeSpeechTiming(pcm);
-    const wav = pcmToWav(timing.modelPcm, RATE, 1);
-    const prompt = this.prompt + " The speaker says exactly " + JSON.stringify(words) + ". Match lip closures, vowels and pauses to the supplied recording. Keep the lips at rest during silence.";
-    const key = createHash4("sha256").update(readFileSync5(worker)).update(readFileSync5(this.image)).update(prompt).update(wav).digest("hex");
-    const cache = join6(this.project, ".social-flow", "live-openings");
-    const cached = join6(cache, key + ".mp4");
-    const prefix = join6(this.dir, randomUUID5());
-    const clip = cachePrepared && existsSync4(cached) ? cached : prefix + ".mp4";
-    const audio = prefix + ".wav";
-    writeFileSync7(audio, wav, { mode: 384 });
-    try {
-      if (clip !== cached) {
-        await execute2(launcher, [
-          worker,
-          "--audio",
-          audio,
-          "--image",
-          resolve4(this.image),
-          "--output",
-          clip,
-          "--prompt",
-          prompt
-        ], { signal, timeout: 18e5, maxBuffer: 2 * 1024 * 1024 });
-      }
-      let start = timing.leadFrames;
-      const model = process.env.SOCIAL_FLOW_LIVE_LANDMARKER || process.env.MUSETALK_LANDMARKER;
-      if (model) {
-        const python = process.env.SOCIAL_FLOW_AVATAR_PYTHON || "python3";
-        const tracker = fileURLToPath(new URL("../live-mouth-timing.py", import.meta.url));
-        const result = await execute2(python, [
-          tracker,
-          "--video",
-          clip,
-          "--audio",
-          audio,
-          "--model",
-          model,
-          "--lead",
-          String(start),
-          "--count",
-          String(timing.speechFrames)
-        ], { signal, timeout: 12e4 });
-        start = JSON.parse(result.stdout).start;
-        if (!Number.isInteger(start) || start < 0 || start + timing.speechFrames > timing.modelFrames)
-          throw Error("Mouth timing exceeds the rendered frame handles");
-      }
-      this.log?.("native_speech_timing", {
-        measured: !!model,
-        videoOffsetFrames: start - timing.leadFrames,
-        frames: timing.speechFrames,
-        samples: pcm.length / 2
-      });
-      const frames = await this.decode(clip, signal, timing, start);
-      if (frames.count !== timing.speechFrames) throw Error("Native clip does not cover its voice track");
-      if (cachePrepared && clip !== cached) {
-        mkdirSync4(cache, { recursive: true, mode: 448 });
-        const tmp = join6(cache, key + "." + randomUUID5() + ".tmp");
-        try {
-          writeFileSync7(tmp, readFileSync5(clip), { mode: 384 });
-          renameSync4(tmp, cached);
-        } finally {
-          rmSync5(tmp, { force: true });
-        }
-      }
-      return frames;
-    } finally {
-      if (clip !== cached) rmSync5(clip, { force: true });
-      rmSync5(audio, { force: true });
+  async render(text, signal) {
+    const request = spokenVideoRequest(this.actor, this.prompt, text);
+    const key = createHash7("sha256").update(astraGenaiBaseUrl()).update(JSON.stringify(request)).update(readFileSync6(this.actor.asset)).update(readFileSync6(this.actor.voiceSample)).digest("hex");
+    const outputPath = join4(this.project, ".social-flow", "live-genai");
+    mkdirSync5(outputPath, { recursive: true, mode: 448 });
+    const started = Date.now();
+    const result = await generateGenaiVideo("image-to-video", { ...request, outputPath, filename: key + ".mp4" }, signal);
+    signal.throwIfAborted();
+    if (!result.downloaded || !result.videoPath) throw Error("GenAI dialogue video is still pending: " + result.receiptPath);
+    const speech = await this.readSpeech(result.videoPath, signal);
+    this.log?.("genai_speech_ready", {
+      jobId: result.jobId,
+      receiptPath: result.receiptPath,
+      elapsedMs: Date.now() - started,
+      frames: speech.motion.count,
+      samples: speech.pcm.length / 2
+    });
+    return speech;
+  }
+  async readSpeech(file, signal) {
+    const { stdout: audio } = await execute2("ffmpeg", [
+      "-v",
+      "error",
+      "-nostdin",
+      "-i",
+      file,
+      "-map",
+      "0:a:0",
+      "-vn",
+      "-ac",
+      "1",
+      "-af",
+      "aresample=" + RATE + ":async=1:first_pts=0",
+      "-f",
+      "s16le",
+      "pipe:1"
+    ], { encoding: "buffer", signal, maxBuffer: RATE * 2 * 20 });
+    if (!mouthLevel(audio)) throw Error("GenAI dialogue soundtrack is silent");
+    const motion = await this.decode(file, signal);
+    const bytes = motion.count * SAMPLES * 2;
+    if (Math.abs(audio.length - bytes) > RATE * 2 * 0.1) {
+      this.release(motion);
+      throw Error("GenAI speech and video durations differ");
     }
+    const pcm = Buffer.alloc(bytes);
+    audio.copy(pcm, 0, 0, Math.min(bytes, audio.length));
+    return { pcm, motion };
   }
   startSpeech() {
     this.speechIndex = 0;
@@ -32394,16 +32678,16 @@ var NativeTalk = class {
   }
   close() {
     for (const frames of this.frames) frames.close();
-    rmSync5(this.dir, { recursive: true, force: true });
+    rmSync4(this.dir, { recursive: true, force: true });
   }
 };
 
 // src/live-options.ts
-import { createInterface as createInterface2 } from "node:readline/promises";
+import { createInterface } from "node:readline/promises";
 var liveStartChoices = {
   format: "locked-camera conversation",
-  generation: "LTX 2.5 single-stage audio-to-video",
-  modelCanvas: [nativeWidth, nativeHeight],
+  generation: "GenAI LTX 2.5 picture and native dialogue",
+  modelCanvas: [720, nativeHeight],
   standbyClips: idleCount,
   standbySeconds: [3, 5],
   output: [720, 1280],
@@ -32417,7 +32701,7 @@ var liveStartChoices = {
 };
 async function liveStartChoice(value) {
   if (!value && process.stdin.isTTY && process.stderr.isTTY) {
-    const rl = createInterface2({ input: process.stdin, output: process.stderr });
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
     try {
       const options = liveStartChoices.choices.map((o, i) => `${i + 1}. ${o.label}`).join("\n");
       const answer2 = (await rl.question(`\uACE0\uC815 \uD654\uBA74 \uB300\uD654 \xB7 720\xD71280 \xB7 \uBAA8\uB378 \uC0DD\uC131 \uB300\uAE30
@@ -32484,10 +32768,10 @@ var LiveProgram = class {
 };
 
 // src/live-youtube.ts
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 
 // src/tiktok-client.ts
-import { dirname as dirname3, extname as extname3, isAbsolute, join as join7 } from "node:path";
+import { dirname as dirname3, extname as extname4, isAbsolute, join as join5 } from "node:path";
 var channelSchema = external_exports.string().regex(CHANNEL_SLUG_RE).describe("Channel slug, e.g. mochi-bo. Never falls back to another channel.");
 var handleSchema = external_exports.string().regex(/^[a-zA-Z0-9_.]{1,24}$/);
 var clientSchema = external_exports.object({
@@ -32843,7 +33127,7 @@ var YoutubeChat = class {
           source: "youtube",
           id: message.id,
           text: message.snippet.displayMessage,
-          ...author && { speaker: "yt-" + createHash5("sha256").update(this.id).update(author).digest("hex").slice(0, 12) }
+          ...author && { speaker: "yt-" + createHash8("sha256").update(this.id).update(author).digest("hex").slice(0, 12) }
         });
       }
     }
@@ -32889,13 +33173,13 @@ async function main() {
       "Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]"
     );
   const destination = v.youtube || v.tiktok;
-  const start = (action === "run" || action === "reserve") && (destination || v.start) ? await liveStartChoice(v.start) : void 0;
+  const start = action === "run" || action === "reserve" ? await liveStartChoice(v.start ?? (action === "run" && !destination ? "preview" : void 0)) : void 0;
   if (start === "cancel") {
     console.log(JSON.stringify({ state: "cancelled" }));
     return;
   }
   if (start === "ready" && !destination) throw Error("Choose a live destination or --start preview");
-  const cfg = liveConfig.parse(JSON.parse(readFileSync6(v.config, "utf8")));
+  const cfg = liveConfig.parse(JSON.parse(readFileSync7(v.config, "utf8")));
   if (v["resume-from"] && (action !== "run" || !v.youtube || start !== "ready" || cfg.madeForKids !== false))
     throw Error("Resume requires a YouTube run with live chat enabled");
   const api = v.youtube && start !== "preview" || recovery ? await youtubeApi(cfg.youtubeCredentialChannel ?? cfg.channel) : void 0;
@@ -32905,21 +33189,21 @@ async function main() {
   if (tiktok) splitIngest(tiktok);
   if (!v.out && !["warm", "check", "prepare-idle"].includes(action))
     throw Error("Set --out to a unique session directory");
-  const out = resolve5(v.out ?? "."), receiptFile = join8(out, "youtube.json");
+  const out = resolve4(v.out ?? "."), receiptFile = join6(out, "youtube.json");
   const writeReceipt = (r) => {
     const tmp = receiptFile + "." + randomUUID6() + ".tmp";
-    writeFileSync8(tmp, JSON.stringify(r, null, 2), { mode: 384, flag: "wx" });
-    renameSync5(tmp, receiptFile);
+    writeFileSync6(tmp, JSON.stringify(r, null, 2), { mode: 384, flag: "wx" });
+    renameSync4(tmp, receiptFile);
   };
   if (recovery) {
-    const r = JSON.parse(readFileSync6(receiptFile, "utf8"));
+    const r = JSON.parse(readFileSync7(receiptFile, "utf8"));
     if (r.channelId !== cfg.youtubeChannelId || !r.broadcastId) throw Error("No owned broadcast receipt");
     let state;
     if (action === "end") state = await endBroadcast(api, r);
     else if (action === "cancel-unstarted") {
       state = await cancelUnstarted(api, r, () => {
         if (r.cancellation === "requested")
-          writeFileSync8(join8(out, "cancel-requested"), r.broadcastId, { mode: 384, flag: "wx" });
+          writeFileSync6(join6(out, "cancel-requested"), r.broadcastId, { mode: 384, flag: "wx" });
         writeReceipt(r);
       });
     } else state = await broadcastStatus(api, r);
@@ -32929,11 +33213,11 @@ async function main() {
   if (action === "reserve") {
     if (!api || !v.youtube || v.tiktok || start !== "ready" || !v.title?.trim() || v.title.length > 100)
       throw Error("Reserve needs --youtube, --start ready and a YouTube title of 1\u2013100 characters");
-    mkdirSync5(out, { mode: 448 });
+    mkdirSync6(out, { mode: 448 });
     const receipt2 = { channelId: cfg.youtubeChannelId, marker: randomUUID6() };
     writeReceipt(receipt2);
     await prepareYoutube(api, cfg, v.title, receipt2, () => writeReceipt(receipt2));
-    appendFileSync(join8(out, "events.jsonl"), JSON.stringify({
+    appendFileSync(join6(out, "events.jsonl"), JSON.stringify({
       at: (/* @__PURE__ */ new Date()).toISOString(),
       event: "youtube_reserved",
       id: receipt2.broadcastId
@@ -32941,7 +33225,7 @@ async function main() {
     console.log(JSON.stringify({ id: receipt2.broadcastId, privacy: "unlisted", state: "reserved" }));
     return;
   }
-  const actor = loadCharacter(cfg);
+  const actor = loadCharacter(cfg, action === "prepare-idle" ? "standby" : "native");
   const concept = cfg.broadcastConcept ?? (cfg.talkPrompt ?? cfg.persona ?? talkPrompt).slice(0, 600);
   if (action === "prepare-idle") {
     if (destination) throw Error("Prepare standby clips without a live destination");
@@ -32967,6 +33251,8 @@ async function main() {
   if (api || tiktok) checkLiveRelay();
   if (action === "check") {
     if (api) await checkChannel(api, cfg.youtubeChannelId);
+    const caps = await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3);
+    if (!caps?.image_conditioning || !caps.voice_references) throw Error("GenAI needs image conditioning and subject voice references for live dialogue");
     console.log(
       JSON.stringify({
         localAssetsReady: true,
@@ -32981,9 +33267,16 @@ async function main() {
   }
   if (action === "warm") {
     if (api || v.tiktok) throw Error("Warm runs locally");
-    for (const text of /* @__PURE__ */ new Set([cfg.opening, ...cfg.hostLines, ...cfg.reactions.map((r) => r.answer)]))
-      await preparedSpeech(cfg, actor, text);
-    console.log(JSON.stringify({ warmed: true, character: cfg.character }));
+    const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
+    try {
+      for (const text of /* @__PURE__ */ new Set([cfg.opening, ...cfg.reactions.map((r) => r.answer)])) {
+        const { motion: motion2 } = await renderer.render(text, new AbortController().signal);
+        renderer.release(motion2);
+      }
+    } finally {
+      renderer.close();
+    }
+    console.log(JSON.stringify({ warmed: true, character: cfg.character, provider: "astra-genai" }));
     return;
   }
   const seconds = Number(v.seconds);
@@ -32995,24 +33288,24 @@ async function main() {
   if (v["youtube-probe"] !== void 0 && (!api || !probe || probe.length > 200))
     throw Error("Invalid YouTube test message");
   if (api) await checkChannel(api, cfg.youtubeChannelId);
-  mkdirSync5(out, { mode: 448 });
+  mkdirSync6(out, { mode: 448 });
   const controller = new AbortController();
   const stop = () => controller.abort();
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
   const log = (event, fields = {}) => {
     appendFileSync(
-      join8(out, "events.jsonl"),
+      join6(out, "events.jsonl"),
       JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), event, ...fields }) + "\n",
       { mode: 384 }
     );
   };
-  const prior = v["resume-from"] ? resolve5(v["resume-from"]) : void 0;
-  const receipt = prior ? JSON.parse(readFileSync6(join8(prior, "youtube.json"), "utf8")) : { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID6() };
+  const prior = v["resume-from"] ? resolve4(v["resume-from"]) : void 0;
+  const receipt = prior ? JSON.parse(readFileSync7(join6(prior, "youtube.json"), "utf8")) : { channelId: cfg.youtubeChannelId ?? "", marker: randomUUID6() };
   if (prior && (receipt.channelId !== cfg.youtubeChannelId || !receipt.broadcastId))
     throw Error("Resume receipt does not belong to this channel");
   if (prior) {
-    const journal = readFileSync6(join8(prior, "events.jsonl"), "utf8").trim().split("\n");
+    const journal = readFileSync7(join6(prior, "events.jsonl"), "utf8").trim().split("\n");
     const closed = journal.some((line) => {
       const e = JSON.parse(line);
       return e.id === receipt.broadcastId && (e.event === "youtube_reserved" || e.event === "youtube_final" && e.state === "ready" && e.ingestLive === false);
@@ -33021,9 +33314,9 @@ async function main() {
   }
   let ownsRun = !prior;
   const save = () => writeReceipt(receipt);
-  let motion;
+  const motion = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
   const program = new LiveProgram((clip) => {
-    if (clip.motion) motion?.release(clip.motion);
+    if (clip.motion) motion.release(clip.motion);
   });
   const { ready } = program;
   const queue = new ChatQueue((event) => {
@@ -33034,7 +33327,7 @@ async function main() {
   let polling, replying, hosting;
   let acceptingUntil = Infinity, renderingReply = false;
   let speculative;
-  let hostLine = 0, playing = false, lastSpeech = Date.now();
+  let hostLine = 0;
   let received = 0, failedReplies = 0, unfinishedReplies = 0, spokenReplies = 0;
   const unfinished = (source, id, stage) => {
     if (isReply(source)) unfinishedReplies++;
@@ -33048,16 +33341,11 @@ async function main() {
     return program.take(roomLive, Date.now() < acceptingUntil);
   };
   const wait = async (ms) => {
-    await sleep4(ms, void 0, { signal: controller.signal }).catch(() => {
+    await sleep3(ms, void 0, { signal: controller.signal }).catch(() => {
     });
   };
   const onLog = (kind, fields) => {
     log(kind, fields);
-    if (kind === "speech_start") playing = true;
-    if (kind === "speech_end") {
-      lastSpeech = Date.now();
-      playing = false;
-    }
     if (kind === "speech_interrupted" && isReply(String(fields.source))) unfinishedReplies++;
     if (kind === "speech_end" && isReply(String(fields.source))) spokenReplies++;
     if (kind === "speech_end" && probeId && fields.id === probeId && fields.source === "youtube")
@@ -33085,24 +33373,17 @@ async function main() {
       discard = false;
     }
   }
-  const wake = (api || tiktok) && process.platform === "darwin" ? spawn3("/usr/bin/caffeinate", ["-dis", "-w", String(process.pid)], { stdio: "ignore" }) : void 0;
+  const wake = (api || tiktok) && process.platform === "darwin" ? spawn2("/usr/bin/caffeinate", ["-dis", "-w", String(process.pid)], { stdio: "ignore" }) : void 0;
   wake?.on("error", () => log("sleep_prevention_unavailable", {}));
   try {
-    if (start) {
-      nativeLauncher();
-      motion = new NativeTalk(actor.asset, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
-    } else if (cfg.motionVideo) motion = new MotionAvatar(cfg);
-    const frames = motion ? [] : poses(actor.asset, cfg);
-    if (motion instanceof NativeTalk) {
-      log("idle_pool_preparing", { total: idleCount });
-      await motion.prepareIdle(concept, controller.signal, log);
-    }
+    log("idle_pool_preparing", { total: idleCount });
+    await motion.prepareIdle(concept, controller.signal, log);
     let renderInFlight;
-    async function render(pcm, text, cachePrepared = false, signal = controller.signal) {
+    async function performance2(text, signal = controller.signal) {
       while (renderInFlight) await renderInFlight.catch(() => {
       });
       signal.throwIfAborted();
-      const job = motion instanceof NativeTalk ? motion.render(pcm, signal, text, cachePrepared) : motion?.render(pcm, signal);
+      const job = motion.render(text, signal);
       renderInFlight = job;
       try {
         return await job;
@@ -33120,27 +33401,18 @@ async function main() {
       const previous = [...context.scheduledHost, ...context.onAir.map((turn) => turn.host)];
       if (previous.some((line) => line.trim() === text)) throw Error("Host repeated a recent line");
       if (stale()) return;
-      const pcm = await synthesize(actor, text, signal);
-      if (stale()) return;
-      const frames2 = await render(pcm, text, false, signal);
+      const clip = await performance2(text, signal);
       if (stale()) {
-        if (frames2) motion?.release(frames2);
+        motion.release(clip.motion);
         return;
       }
-      ready.push({ source: "host", id, text, pcm, motion: frames2 });
+      ready.push({ source: "host", id, text, ...clip });
       hostLine++;
       log("host_segment_ready", { id, preflight });
     }
-    const openingPcm = await preparedSpeech(cfg, actor, cfg.opening, controller.signal);
-    if (start) log("native_opening_preparing", liveStartChoices);
-    ready.push({
-      source: "opening",
-      id: "opening",
-      text: cfg.opening,
-      pcm: openingPcm,
-      motion: await render(openingPcm, cfg.opening, true)
-    });
-    if (start) await prepareHost(true);
+    log("native_opening_preparing", liveStartChoices);
+    ready.push({ source: "opening", id: "opening", text: cfg.opening, ...await performance2(cfg.opening) });
+    await prepareHost(true);
     if (controller.signal.aborted) return;
     let chat;
     const destinations = [];
@@ -33148,7 +33420,7 @@ async function main() {
       let target;
       if (prior) {
         target = await resumeUnstarted(api, receipt);
-        writeFileSync8(join8(prior, "resume-claimed"), out, { flag: "wx", mode: 384 });
+        writeFileSync6(join6(prior, "resume-claimed"), out, { flag: "wx", mode: 384 });
         ownsRun = true;
         save();
       } else {
@@ -33166,7 +33438,7 @@ async function main() {
     hosting = (async () => {
       while (!controller.signal.aborted && Date.now() < acceptingUntil) {
         try {
-          if (start && program.canPlanHost && !queue.pending && !renderingReply) {
+          if (program.canPlanHost && !queue.pending && !renderingReply) {
             speculative = new AbortController();
             try {
               await prepareHost(false, AbortSignal.any([controller.signal, speculative.signal]));
@@ -33175,10 +33447,6 @@ async function main() {
             } finally {
               speculative = void 0;
             }
-          } else if (!start && !playing && !ready.length && !queue.pending && !renderingReply && hostLine < cfg.hostLines.length && Date.now() - lastSpeech >= 9e3 && acceptingUntil - Date.now() > 25e3) {
-            const text = cfg.hostLines[hostLine++];
-            const pcm = await preparedSpeech(cfg, actor, text, controller.signal);
-            ready.push({ source: "host", id: "host-" + hostLine, text, pcm, motion: await render(pcm, text) });
           }
         } catch (error) {
           if (!controller.signal.aborted) {
@@ -33200,8 +33468,8 @@ async function main() {
         try {
           renderingReply = true;
           const prepared = preparedReply(cfg, event.text);
-          const selective = !!start && event.source !== "operator" && event.text !== probe;
-          const text = start || !prepared ? await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective) : prepared;
+          const selective = event.source !== "operator" && event.text !== probe;
+          const text = await answer(cfg, actor, event.text, controller.signal, program.context(), event.speaker, selective);
           if (selective && text === "[SKIP]") {
             log("chat_skipped", { source: event.source, id: event.id });
             continue;
@@ -33209,17 +33477,13 @@ async function main() {
           speculative?.abort();
           log("reply_generated", { source: event.source, id: event.id, prepared: text === prepared });
           controller.signal.throwIfAborted();
-          stage = "synthesizing";
-          const pcm = text === prepared ? await preparedSpeech(cfg, actor, text, controller.signal) : await synthesize(actor, text, controller.signal);
-          controller.signal.throwIfAborted();
-          stage = "animating";
-          const performance2 = await render(pcm, text);
+          stage = "generating_av";
+          const clip = await performance2(text);
           program.queueReply({
             source: event.source,
             id: event.id,
             text,
-            pcm,
-            motion: performance2,
+            ...clip,
             question: { speaker: event.speaker, text: event.text }
           });
         } catch (e) {
@@ -33302,15 +33566,15 @@ async function main() {
       })();
     }
     await encode(
-      frames,
-      join8(out, "recording.flv"),
+      [],
+      join6(out, "recording.flv"),
       destinations,
       seconds,
       controller.signal,
       take,
       onLog,
       motion,
-      start ? () => renderingReply || queue.pending > 0 || ready.some((e) => isReply(e.source)) : void 0
+      () => renderingReply || queue.pending > 0 || ready.some((e) => isReply(e.source))
     );
   } catch (e) {
     if (api && !receipt.broadcastId) {
@@ -33332,7 +33596,7 @@ async function main() {
         for (let i = 0; i < 8; i++) {
           finalState = await closeBroadcast(api, receipt);
           if (finalState === "complete" || ["created", "ready"].includes(finalState) && !ingestLive) break;
-          await sleep4(2500);
+          await sleep3(2500);
         }
         log("youtube_final", {
           id: receipt.broadcastId,
@@ -33347,7 +33611,7 @@ async function main() {
     }
     await Promise.allSettled([polling, replying, hosting]);
     wake?.kill();
-    motion?.close();
+    motion.close();
     for (const event of ready) if (isReply(event.source)) unfinished(event.source, event.id, "awaiting_playback");
     for (let event = queue.next(); event; event = queue.next()) unfinished(event.source, event.id, "queued");
     process.removeListener("SIGINT", stop);

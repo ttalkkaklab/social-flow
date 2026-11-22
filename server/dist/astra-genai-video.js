@@ -583,7 +583,8 @@ export async function checkGenaiVideoOptions(tool, args) {
     if (missing.length)
         throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
-export async function generateGenaiVideo(operation, input) {
+export async function generateGenaiVideo(operation, input, signal) {
+    signal?.throwIfAborted();
     const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
         : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
     requireAstraGenaiKey();
@@ -637,6 +638,7 @@ export async function generateGenaiVideo(operation, input) {
         // The fingerprint stays on the request as written, so a resumed receipt still matches.
         const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body) : body;
         const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting' };
+        signal?.throwIfAborted();
         fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
         let response;
         try {
@@ -669,6 +671,6 @@ export async function generateGenaiVideo(operation, input) {
         atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
         recordVideoSubmission(accepted.id);
     }
-    const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`);
+    const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }, msrOutputContract(operation, args)), `GenAI video is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal);
     return { ...result, receiptPath };
 }
