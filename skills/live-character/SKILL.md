@@ -18,43 +18,56 @@ preview before sending video. Set `speechLanguage` for a session in a different 
 and write the opening and any prepared answers in that language. A guest character can
 use `youtubeCredentialChannel` to select the destination channel's OAuth connection.
 
-For a person hosting a show, set `motionVideo` to an approved video of that character
-inside the project. Frame it from the chest up and keep the whole face visible. Set
-`idleVideos` to additional moving shots of the same host to vary the camera while
-listening. The encoder continuously plays the performance at 24 fps. It renders each
-spoken turn with MuseTalk on the registered voice and cuts to the speaking camera as soon as the reply is ready.
-Set `SOCIAL_FLOW_AVATAR_PYTHON` to the Apple Silicon interpreter with
-`musetalk-avatar-core` and `musetalk-mlx`, `MUSETALK_MODEL_DIR` to the downloaded
-MuseTalk 1.5 MLX weights and `MUSETALK_LANDMARKER` to MediaPipe's face model.
-The tested Python 3.12 environment installs the MLX engine and avatar core together:
+Before each broadcast, run `node server/dist/character-live.bundle.js choices` and
+present the returned choices in the user's language using the host's human-input
+control (or ask in chat). Wait for the answer. An explicit choice for this
+broadcast in the user's request counts. A previous broadcast, a saved config,
+an unattended schedule or silence cannot choose for the user.
 
-```sh
-uv venv --python 3.12 .avatar-venv
-uv pip install --python .avatar-venv/bin/python \
-  'git+https://github.com/xocialize/musetalk-mlx.git@c6eb30ebd1ed4d043983209813370153de9346bf' \
-  'git+https://github.com/hazelwolf/talking-avatars-mlx.git@9e689f363329e491578fe558f8d819fd6de5fc8c#subdirectory=packages/musetalk-avatar-core'
-```
+- **Start when ready** (`--start ready`): prepare ten listening clips and the spoken opening on the production GPU before ingest. Send the watch link as soon as YouTube reports live.
+- **Preview first** (`--start preview`): produce a local recording with sound and stop.
+  Show it and wait for a start decision. When the user selects start, use a fresh run
+  directory. The renderer can reuse the same generated opening.
+- **Cancel** (`--start cancel`): leave the broadcast unopened.
 
-Download the [MuseTalk MLX weights](https://huggingface.co/mlx-community/MuseTalk-1.5-q4) and
-the [MediaPipe face model](https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task).
-The motion renderer prepares the opening before opening a YouTube room. A failed
-answer keeps the moving performance on screen and the session reports a failure.
-Use `hostLines` for short, in-character remarks when chat is quiet. Preview the
-speaking and listening parts separately. The legacy portrait preview is available locally. YouTube and TikTok broadcasts require a moving performance. When only a sheet is available, use its approved face panel as the start frame for a short image-to-video shot and review the face and framing before broadcasting.
+Use a calm chest-up portrait with a complete face. Set `broadcastConcept` to the
+setting and mood for this show. Use `talkPrompt` for speaking directions. The plugin
+prepares ten silent listening clips, each 3–5 seconds at 24 fps. It pins the same
+portrait to both ends of every shot. While a reply renders, the encoder plays each
+clip once in shuffled order and changes to speech at a clip boundary. A new shuffle
+starts with a different clip from the last one played. A concept or reference
+change prepares a new set. Matching assets can be reused for the same show.
+To prepare these assets earlier and list their paths, run
+`node server/dist/character-live.bundle.js prepare-idle --config FILE`. This command
+needs no streaming destination. The normal broadcast start also prepares the set.
+The encoder opens the destination after validating all ten clips and the opening.
+It trims eight columns from each side of the model’s 736×1280 canvas for 720×1280 playout.
+
+Use the production ASTRA video API (`ASTRA_VIDEO`, optional `ASTRA_VIDEO_URL`) for
+listening clips. For speaking frames set `SOCIAL_FLOW_LIVE_GPU_HOST` to the production
+SSH alias and `SOCIAL_FLOW_LIVE_GPU_PYTHON` to its absolute LTX Python path. The
+bundled launcher uses existing SSH credentials and known host keys, copies the
+portrait and voice to a private temporary directory and returns the whole shot.
+Sites with their own GPU scheduler can set `SOCIAL_FLOW_LIVE_A2V_COMMAND` to their launcher. It takes the shipped Python script as its first argument,
+followed by `--audio WAV --image IMAGE --output MP4 --prompt TEXT`. It must return
+after writing the result to the supplied path on the broadcast host. On a CUDA host
+with the LTX 2.5 dependencies and split weights, the launcher can be the LTX
+environment’s Python interpreter. Set `SOCIAL_FLOW_LTX_MODELS` on that GPU host
+when the models directory differs from `/data/ltx/models`. The renderer conditions
+the whole frame on the character’s registered voice. Keep host lines brief.
 
 1. Read the channel profile and confirm the external destination. Make a session configuration
    outside the plugin, for example in the project's logs. Use the channel ID from its profile.
    Set the correct audience designation. YouTube disables chat for children's content.
 2. Choose a panel key from the character's panels.json. Use front-facing artwork with a complete
    face, such as a full-body reference (msr) or face panel. View the portrait cropped to 9:16.
-   Calibrate the mouth and optional eyes in this **cropped** image, with x/y denoting the
-   center and width/height denoting full extents, all normalized from 0 to 1.
+   Choose a quiet portrait with the full face visible in the vertical crop.
 3. Example config (replace the illustrative values from actual channel settings):
 
    ```json
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
-    "mouth":{"x":0.50,"y":0.63,"width":0.14,"height":0.06},
-    "motionVideo":"data/my-channel/assets/characters/host/performance.mp4",
+    "broadcastConcept":"Late-night radio in a softly lit studio.",
+    "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the supplied audio.",
     "chatModel":"gateway-text-model","opening":"Hello! What would you like to talk about?",
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
@@ -71,7 +84,7 @@ speaking and listening parts separately. The legacy portrait preview is availabl
 
    ```sh
    echo '{"source":"operator","id":"preview-1","text":"What color is your hoodie?"}' |
-     node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-preview --seconds 90
+     node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-preview --seconds 90 --start preview
    ```
 
 5. On a user-requested broadcast, add the requested destinations. YouTube creates a dedicated
@@ -83,8 +96,14 @@ speaking and listening parts separately. The legacy portrait preview is availabl
 
    ```sh
    node server/dist/character-live.bundle.js check --config /path/to/config.json --youtube
-   node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-run --seconds 180 --youtube --title 'AI character · live test'
+   node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-run --seconds 180 --youtube --start ready --title 'AI character · live test'
    ```
+
+   If the user wants a link during generation, reserve the unlisted room once after the
+   start choice. Use `reserve --youtube --start ready --config FILE --out ROOM --title TITLE`,
+   share the returned video ID as an upcoming watch link, then run with
+   `--resume-from ROOM --out NEW_RUN --youtube --start ready` and the same config and title.
+   Report the actual live transition separately.
 
 6. TikTok takes a channel-authorized complete ingest URL from `TIKTOK_LIVE_RTMPS_URL`. Pass
    `--tiktok` alone or alongside YouTube. Confirm the intended LIVE room before starting.
@@ -92,8 +111,7 @@ speaking and listening parts separately. The legacy portrait preview is availabl
    `{"source":"tiktok","id":"platform-event-id","text":"Viewer question"}` on stdin.
    The upload OAuth credentials do not grant LIVE access. Without an event source the TikTok
    destination carries the show, but its viewers' messages do not enter the queue.
-   Keep the operator present to monitor chat and stop with SIGINT/SIGTERM. The duration is
-   bounded even with no terminal attached. On macOS, the runner keeps the broadcast host awake for the session.
+   Keep the operator present to monitor chat and stop with SIGINT/SIGTERM. The duration sets the chat intake window. A reply accepted inside that window may finish after it closes. On macOS, the runner keeps the broadcast host awake for the session.
 
 The archive is recording.flv, with chat and audio frame timestamps in events.jsonl. Treat run
 directories as private. Each unique platform message is considered once within a bounded window.
@@ -103,7 +121,7 @@ Use the saved youtube.json receipt after an interruption: run `status` or `end` 
 `--config` and `--out` pointing to the existing session. `status` also inspects an owned
 broadcast whose stream binding failed. If `end` reports that the session is still unstarted,
 an encoder that logged a final `ready` state may use `run --youtube --resume-from <previous-run>`
-with a fresh output directory to send to the same verified room without creating another one.
+with `--start ready` and a fresh output directory to send to the same verified room without creating another one.
 For a room the operator wants to discard,
 use `cancel-unstarted` only when the operator wants to remove that room. The command checks
 the session marker, channel, visibility, stream binding and start state before cancellation.

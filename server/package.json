@@ -38,6 +38,8 @@
     "social-flow-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "live-native-720.py",
+    "live-native-ssh.py"
   ]
 }

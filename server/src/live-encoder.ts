@@ -4,7 +4,7 @@ import { finished } from 'node:stream/promises';
 import { type Writable } from 'node:stream';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { FPS, HEIGHT, mouthLevel, RATE, SAMPLES, WIDTH } from './live-character.js';
-import type { MotionAvatar, MotionFrames } from './live-motion.js';
+import type { MotionFrames } from './live-motion.js';
 
 export function splitIngest(value: string) {
   const url = new URL(value);
@@ -119,9 +119,18 @@ export async function encode(
   signal: AbortSignal,
   pull: () => Utterance | undefined,
   log: (kind: string, info: Record<string, unknown>) => void,
-  motion?: MotionAvatar
+  motion?: {
+    width?: number;
+    height?: number;
+    readyToSpeak?(): boolean;
+    startSpeech(): void;
+    next(speech?: MotionFrames): Buffer;
+    release(speech: MotionFrames): void;
+  },
+  drain?: () => boolean
 ) {
   for (const destination of destinations) splitIngest(destination);
+  const width = motion?.width ?? WIDTH, height = motion?.height ?? HEIGHT;
   const encoder = spawn(
     'ffmpeg',
     [
@@ -141,7 +150,7 @@ export async function encode(
       '-pix_fmt',
       'rgb24',
       '-s',
-      WIDTH + 'x' + HEIGHT,
+      width + 'x' + height,
       '-r',
       String(FPS),
       '-i',
@@ -160,8 +169,7 @@ export async function encode(
       '1',
       '-i',
       'pipe:3',
-      '-vf',
-      motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`,
+      ...(width === 720 && height === 1280 ? [] : ['-vf', motion ? 'scale=720:1280' : `scale=740:1316,crop=720:1280:x='10+4*sin(t*0.43)':y='18+5*sin(t*0.71)'`]),
       '-c:v',
       'libx264',
       '-preset',
@@ -173,11 +181,11 @@ export async function encode(
       '-g',
       String(FPS * 2),
       '-b:v',
-      '1700k',
+      width === 720 ? '4500k' : '1700k',
       '-maxrate',
-      '2400k',
+      width === 720 ? '5000k' : '2400k',
       '-bufsize',
-      '3400k',
+      width === 720 ? '9000k' : '3400k',
       '-c:a',
       'aac',
       '-ar',
@@ -231,18 +239,22 @@ export async function encode(
     lastProgress = Date.now();
   const start = performance.now();
   try {
-    while (frame < Math.ceil(seconds * FPS) && !signal.aborted) {
+    while (!signal.aborted && (frame < Math.ceil(seconds * FPS) || (drain && (active || drain())))) {
       if (fault) throw fault;
-      if (video.writableLength > WIDTH * HEIGHT * 3 * 10 || audio.writableLength > RATE * 4) {
+      if (video.writableLength > width * height * 3 * 10 || audio.writableLength > RATE * 4) {
         if (Date.now() - lastProgress > 12000) throw Error('Encoder backpressure timeout');
         await sleep(12);
         continue;
       }
       lastProgress = Date.now();
-      if (!active) {
+      if (!active && (motion?.readyToSpeak?.() ?? true)) {
         active = pull();
         offset = 0;
         if (active) {
+          if (motion?.readyToSpeak && active.motion) {
+            const padding = active.motion.count * SAMPLES * 2 - active.pcm.length;
+            if (padding > 0) active.pcm = Buffer.concat([active.pcm, Buffer.alloc(padding)]);
+          }
           motion?.startSpeech();
           log('speech_start', { source: active.source, id: active.id, text: active.text, frame });
         }

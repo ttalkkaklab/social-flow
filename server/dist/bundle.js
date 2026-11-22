@@ -8548,7 +8548,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry3();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID15 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID16 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -8821,7 +8821,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID15();
+          const boundary = await randomUUID16();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -113480,7 +113480,7 @@ var NATIVE_GENAI_TOOLS = [
 
 // src/astra-video-client.ts
 import { execFileSync as execFileSync7 } from "node:child_process";
-import { createHash as createHash9, randomInt } from "node:crypto";
+import { createHash as createHash9, randomInt, randomUUID as randomUUID5 } from "node:crypto";
 import * as fs11 from "node:fs";
 import * as path10 from "node:path";
 
@@ -113525,7 +113525,9 @@ var package_default = {
     "social-flow-mcp": "dist/index.js"
   },
   files: [
-    "dist"
+    "dist",
+    "live-native-720.py",
+    "live-native-ssh.py"
   ]
 };
 
@@ -114050,7 +114052,7 @@ var astraText2VideoSchema = external_exports.object({
 }).transform(resolveDuration);
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
-  tier: external_exports.enum(["default", "guided", "hq"]).optional().default("default"),
+  tier: external_exports.enum(["default", "guided", "fast", "hq"]).optional().default("default"),
   firstFramePath: external_exports.string().min(1, "firstFramePath is required"),
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
@@ -114080,7 +114082,7 @@ var astraImg2VideoSchema = external_exports.object({
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: [key],
-          message: `${key} is accepted only on tier "guided" or "hq"; mode generate has no such field.`
+          message: `${key} is accepted only on tier "guided", "fast" or "hq"; mode generate has no such field.`
         });
       }
     }
@@ -114572,9 +114574,12 @@ async function submitJob(body) {
   if (!parsed.job_id) throw new Error(`ASTRA video accepted the job but returned no job_id: ${result.body}`);
   return parsed.job_id;
 }
-async function awaitResult(jobId) {
+var FailedVideoJob = class extends Error {
+};
+async function awaitResult(jobId, signal) {
   const startedAt = Date.now();
   for (; ; ) {
+    signal?.throwIfAborted();
     if (Date.now() - startedAt > ASTRA_VIDEO_MAX_WAIT_MS) {
       throw new Error(
         `ASTRA video job ${jobId} did not finish within ${ASTRA_VIDEO_MAX_WAIT_MS / 1e3}s. It may still be running \u2014 check GET /v1/jobs/${jobId}.`
@@ -114591,7 +114596,7 @@ async function awaitResult(jobId) {
     }
     const job = JSON.parse(status.body);
     if (job.status === "failed") {
-      throw new Error(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
+      throw new FailedVideoJob(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
     }
     if (job.status === "succeeded") {
       const download = await withBackoff("result download", async () => {
@@ -114626,20 +114631,31 @@ async function awaitResult(jobId) {
     await sleep4(POLL_INTERVAL_MS2);
   }
 }
-async function runJob(mode, prompt, body, outputPath, filename) {
+function atomicVideoFile(file, contents) {
+  const temp = file + "." + randomUUID5() + ".tmp";
+  try {
+    fs11.writeFileSync(temp, contents, { mode: 384 });
+    fs11.renameSync(temp, file);
+  } finally {
+    fs11.rmSync(temp, { force: true });
+  }
+}
+async function runJob(mode, prompt, body, outputPath, filename, signal) {
   const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const writeReceipt2 = (value) => {
-    const temp = `${receiptPath2}.${process.pid}.tmp`;
-    fs11.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
-    fs11.renameSync(temp, receiptPath2);
+    atomicVideoFile(receiptPath2, JSON.stringify(value, null, 2) + "\n");
   };
+  signal?.throwIfAborted();
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt2({ ...submitted, status: "submitted" });
-  const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  fs11.writeFileSync(videoPath, bytes);
+  const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error2) => {
+    if (error2 instanceof FailedVideoJob) writeReceipt2({ ...submitted, status: "failed", error: error2.message });
+    throw error2;
+  });
+  atomicVideoFile(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
   writeReceipt2({ ...submitted, ...response, sha256: createHash9("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
@@ -114649,7 +114665,8 @@ async function generateFromText(args) {
   const body = buildJobBody(mode, args);
   return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
-async function generateFromImage(args) {
+async function generateFromImage(args, signal) {
+  signal?.throwIfAborted();
   const first = await uploadFile(args.firstFramePath);
   const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
   if (args.lastFramePath) {
@@ -114659,7 +114676,7 @@ async function generateFromImage(args) {
   const mode = ASTRA_VIDEO_TIERS[args.tier];
   const dimensions = mode === "guided" || mode === "guided_hq" ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
-  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename, signal);
 }
 async function generateFromKeyframes(args) {
   const images = [];
@@ -120695,7 +120712,7 @@ async function refreshGenaiImage(directory2, requestId) {
 }
 
 // src/storyboard.ts
-import { createHash as createHash17, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash17, randomUUID as randomUUID6 } from "node:crypto";
 import { execFileSync as execFileSync16 } from "node:child_process";
 
 // src/scenes-vm.ts
@@ -122938,7 +122955,7 @@ function buildShotImageRequest(args) {
       const stamp = createHash17("sha256").update(JSON.stringify({ source: metadata.sha256, crop, width: editWidth, height: editHeight })).digest("hex");
       const prepared = join12(boardDir, "images", "inputs", `crop-${stamp}.png`);
       mkdirSync11(dirname6(prepared), { recursive: true });
-      const temporary = prepared + "." + randomUUID5() + ".png";
+      const temporary = prepared + "." + randomUUID6() + ".png";
       try {
         execFileSync16("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
         renameSync4(temporary, prepared);
@@ -124203,8 +124220,8 @@ async function generateGemini38Speech(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash19, randomUUID as randomUUID6 } from "node:crypto";
-import { closeSync as closeSync5, existsSync as existsSync26, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync28, renameSync as renameSync5, rmSync as rmSync12, writeFileSync as writeFileSync20 } from "node:fs";
+import { createHash as createHash19, randomUUID as randomUUID7 } from "node:crypto";
+import { closeSync as closeSync5, existsSync as existsSync26, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync28, renameSync as renameSync5, rmSync as rmSync13, writeFileSync as writeFileSync20 } from "node:fs";
 import path27 from "node:path";
 import { promisify as promisify3 } from "node:util";
 
@@ -125193,13 +125210,13 @@ var sentencesPathFor = (wav) => wav + ".sentences.json";
 async function applySentenceSpacing(output2, request, align) {
   (0, import_tts_speed_policy.authorizeSpeed)(request.outputPath, "final", request.playbackSpeed);
   const alignmentPath = output2.replace(/\.wav$/i, "") + ".alignment.json";
-  rmSync12(sentencesPathFor(output2), { force: true });
+  rmSync13(sentencesPathFor(output2), { force: true });
   try {
     if (existsSync26(alignmentPath)) {
       try {
-        if (JSON.parse(readFileSync28(alignmentPath, "utf8")).engine === "asr-aligner") rmSync12(alignmentPath, { force: true });
+        if (JSON.parse(readFileSync28(alignmentPath, "utf8")).engine === "asr-aligner") rmSync13(alignmentPath, { force: true });
       } catch {
-        rmSync12(alignmentPath, { force: true });
+        rmSync13(alignmentPath, { force: true });
       }
     }
     if (!existsSync26(alignmentPath)) {
@@ -125281,7 +125298,7 @@ async function generateCheckedSpeech(input, dependencies) {
   };
   function save3(status, extra = {}) {
     const report = { ...base, status, attempts, checkedAt: (/* @__PURE__ */ new Date()).toISOString(), ...extra };
-    const temporary = proofFile + "." + randomUUID6() + ".tmp";
+    const temporary = proofFile + "." + randomUUID7() + ".tmp";
     writeFileSync20(temporary, JSON.stringify(report, null, 2) + "\n");
     renameSync5(temporary, proofFile);
     return { success: status === "pass", status, audioPath: output2, proofPath: proofFile, attempts: attempts.length, ...extra };
@@ -125361,7 +125378,7 @@ async function generateCheckedSpeech(input, dependencies) {
         if (!generated.success || path27.resolve(generated.audioPath || generated.path || "") !== output2) throw new Error(generated.error || "Generator did not return the requested audio path");
         if (prepared.spacing) take.spacing = await applySentenceSpacing(output2, request, deps.align);
         else {
-          rmSync12(sentencesPathFor(output2), { force: true });
+          rmSync13(sentencesPathFor(output2), { force: true });
           take.spacing = { skipped: "engine has no alignment" };
         }
         take.audioSha256 = sha256(readFileSync28(output2));
@@ -125401,13 +125418,13 @@ async function generateCheckedSpeech(input, dependencies) {
     return save3("unverified", { error: error2 instanceof Error ? error2.message : String(error2) });
   } finally {
     closeSync5(lock2);
-    rmSync12(lockFile, { force: true });
+    rmSync13(lockFile, { force: true });
   }
 }
 
 // src/qwen3-asr-client.ts
 import { execFile as execFile6 } from "node:child_process";
-import { existsSync as existsSync27, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync6, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync13 } from "node:fs";
+import { existsSync as existsSync27, mkdirSync as mkdirSync13, mkdtempSync as mkdtempSync6, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync14 } from "node:fs";
 import { homedir as homedir3 } from "node:os";
 import { basename as basename9, extname as extname10, join as join14 } from "node:path";
 var QWEN3_ASR_MODELS = ["Qwen/Qwen3-ASR-1.7B", "Qwen/Qwen3-ASR-0.6B"];
@@ -125629,26 +125646,26 @@ ${tail}` : ""}`));
       );
     });
   } catch (error2) {
-    rmSync13(scratchDir, { recursive: true, force: true });
+    rmSync14(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     console.error(`[Qwen3-ASR] Error: ${message.split("\n")[0]}`);
     return { success: false, error: message };
   }
   const cliJsonPath = join14(scratchDir, `${basename9(request.audioPath, extname10(request.audioPath))}.json`);
   if (!existsSync27(cliJsonPath)) {
-    rmSync13(scratchDir, { recursive: true, force: true });
+    rmSync14(scratchDir, { recursive: true, force: true });
     return { success: false, error: `mlx-qwen3-asr exited without producing JSON (looked for ${cliJsonPath})` };
   }
   let parsed;
   try {
     parsed = parseCliJson(readFileSync29(cliJsonPath, "utf8"));
   } catch (error2) {
-    rmSync13(scratchDir, { recursive: true, force: true });
+    rmSync14(scratchDir, { recursive: true, force: true });
     const message = error2 instanceof Error ? error2.message : String(error2);
     return { success: false, error: `Failed to parse CLI JSON: ${message}` };
   }
   renameSync6(cliJsonPath, outFile);
-  rmSync13(scratchDir, { recursive: true, force: true });
+  rmSync14(scratchDir, { recursive: true, force: true });
   const segments = normalizeSegments(parsed);
   const text4 = (parsed.text ?? segments.map((s2) => s2.text).join("")).trim();
   const elapsed = Math.round((Date.now() - startedAt) / 100) / 10;
@@ -125666,7 +125683,7 @@ ${tail}` : ""}`));
 
 // src/blender-bridge.ts
 import { execFile as execFile7 } from "node:child_process";
-import { existsSync as existsSync28, mkdtempSync as mkdtempSync7, readFileSync as readFileSync30, rmSync as rmSync14, writeFileSync as writeFileSync21 } from "node:fs";
+import { existsSync as existsSync28, mkdtempSync as mkdtempSync7, readFileSync as readFileSync30, rmSync as rmSync15, writeFileSync as writeFileSync21 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { dirname as dirname7, extname as extname11, join as join15, resolve as resolve7 } from "node:path";
 var BLENDER_PROXY_KINDS = ["person", "dog", "car", "box", "cylinder", "sphere"];
@@ -126004,7 +126021,7 @@ ${raw.trace}` : ""}` };
     return { success: false, error: `Blender exited with code ${run.code ?? "unknown"} before writing a result:
 ${run.tail}` };
   } finally {
-    rmSync14(dir, { recursive: true, force: true });
+    rmSync15(dir, { recursive: true, force: true });
   }
 }
 async function readScene(request) {
@@ -129299,7 +129316,7 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
 
 Use when a generated background or photo has to move and nobody is waiting on it \u2014 same trade as astra_text2video: free, ours, one job at a time. Give firstFramePath alone to animate from that frame, or add lastFramePath and the clip lands on it. The tool uploads the files itself; pass local paths, not ids.
 Do NOT use for more than two stills \u2014 that is astra_keyframe_video, which pins each image to a frame index.
-tier accepts default (generate), guided, or hq (guided_hq \u2014 quality unmeasured). guided and hq images use the 64-pixel grid and pixel ceiling (omitted dimensions default to 1536x1024); fast images are not enabled. lora is default-only; negativePrompt and numInferenceSteps are guided-only, and with guidance also hq. Passing one to the wrong tier is refused before the call.
+tier accepts default, guided, fast and hq. Fast generates in one stage on a 32-pixel grid. Guided and hq use a 64-pixel grid and default to 1536x1024. Only default accepts lora. Guided, fast and hq accept negativePrompt, numInferenceSteps and guidance. Passing one to the wrong tier is refused before the call.
 The last frame is pinned to numFrames-1, so a 121-frame clip ends on frame 120. autoDuration lets the server choose at most 121 frames from a first still alone; it is refused with lastFramePath or numFrames. png, jpg and jpeg are accepted, up to 32 MiB each.
 Warning: image-conditioned generate (width 1280, measured at heights 704/768) failure frames: {121,129,137}; guided (width 1280, measured at height 704) failure frames: {121}. Guided 129/137 succeeded at 1280x704 in server probes (the only guided size probed). Guided and hq sizes follow the server grid and pixel ceiling; unmeasured sizes are not quality guarantees. Within current client limits use generate 113/145 (measured at 1280x704); generate 1536x704 and 1536x1024 at 121 frames also succeeded. Text-only 1280x704 at 121 frames succeeded. An upstream defect is a hypothesis, not a confirmed cause. The server owns the failure-band acceptance gate; this warning adds no client-side block.
 ${ASTRA_LIMITS_LINE}
@@ -129315,9 +129332,9 @@ Returns: a text block with the saved .mp4 path, the job id, elapsed seconds, and
         },
         tier: {
           type: "string",
-          enum: ["default", "guided", "hq"],
+          enum: ["default", "guided", "fast", "hq"],
           default: "default",
-          description: "default (generate), guided, or hq (guided_hq, quality unmeasured); all follow the 64-pixel grid and pixel ceiling. fast images are unmeasured and not enabled."
+          description: "Use fast for native single-stage image conditioning on a 32-pixel grid. Default, guided and hq use a 64-pixel grid."
         },
         firstFramePath: {
           type: "string",
@@ -132981,7 +132998,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 // src/music-media.ts
 import * as fs24 from "node:fs";
 import path29 from "node:path";
-import { createHash as createHash20, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash20, randomUUID as randomUUID8 } from "node:crypto";
 import { execFileSync as execFileSync17 } from "node:child_process";
 function readMusicMetadata(file) {
   const result = JSON.parse(execFileSync17(
@@ -133010,7 +133027,7 @@ function readMusicMetadata(file) {
 }
 function normalizeMusicFile(source, target) {
   fs24.mkdirSync(path29.dirname(target), { recursive: true });
-  const temporary = target + "." + randomUUID7() + ".wav";
+  const temporary = target + "." + randomUUID8() + ".wav";
   try {
     execFileSync17(
       "ffmpeg",
@@ -133386,7 +133403,7 @@ async function routeSpeech(input) {
 // src/host-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { promisify as promisify4 } from "node:util";
-import { createHash as createHash21, randomUUID as randomUUID8 } from "node:crypto";
+import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
 import { createReadStream as createReadStream4, mkdirSync as mkdirSync16, realpathSync as realpathSync10, statSync as statSync17, writeFileSync as writeFileSync22 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path31 from "node:path";
@@ -133444,7 +133461,7 @@ async function hostReview(input) {
   if (r2.action === "prepare") {
     const frames = [];
     if (r2.mode !== "audio") {
-      const directory3 = path31.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID8());
+      const directory3 = path31.join(homedir4(), ".cache", "social-flow", "host-reviews", "evidence", mediaSha256, randomUUID9());
       mkdirSync16(directory3, { recursive: true, mode: 448 });
       const timing = await exec2("ffprobe", [
         "-v",
@@ -133511,7 +133528,7 @@ async function hostReview(input) {
   if (await digest3(file) !== mediaSha256) throw new Error("Media changed while recording observations");
   const directory2 = path31.join(homedir4(), ".cache", "social-flow", "host-reviews");
   mkdirSync16(directory2, { recursive: true, mode: 448 });
-  const receiptPath2 = path31.join(directory2, `${mediaSha256}-${randomUUID8()}.json`);
+  const receiptPath2 = path31.join(directory2, `${mediaSha256}-${randomUUID9()}.json`);
   const result = {
     ...base,
     status: r2.observations.some((o) => o.score !== null) ? "observed" : "unverified",
@@ -133696,7 +133713,7 @@ async function reviewActing(input) {
 }
 
 // src/voice-audition.ts
-import { createHash as createHash23, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash23, randomUUID as randomUUID10 } from "node:crypto";
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync32, mkdirSync as mkdirSync18, readFileSync as readFileSync34, writeFileSync as writeFileSync24, renameSync as renameSync7 } from "node:fs";
 import { basename as basename10, dirname as dirname8, join as join16, resolve as resolve9 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -133840,7 +133857,7 @@ function refreshSheet(identityPath) {
   }
 }
 function save(file, value) {
-  const temporary = file + "." + randomUUID9() + ".tmp";
+  const temporary = file + "." + randomUUID10() + ".tmp";
   writeFileSync24(temporary, JSON.stringify(value, null, 2));
   renameSync7(temporary, file);
 }
@@ -133872,7 +133889,7 @@ async function manageVoiceAudition(args) {
     const resumed = args.auditionPath ? JSON.parse(readFileSync34(resolve9(args.auditionPath), "utf8")) : void 0;
     if (resumed && !(resumed.status === "failed" && resumed.identityPath === identityPath && resumed.identitySha256 === hash3(source) && resumed.sampleText === args.sampleText && isDeepStrictEqual(resumed.acting, args.acting) && isDeepStrictEqual(resumed.sampleTurns, args.sampleTurns) && resumed.candidates.every((c, i2) => isDeepStrictEqual(c.tts, planned[i2]?.tts) && existsSync32(c.audioPath) && hash3(readFileSync34(c.audioPath)) === c.audioSha256)))
       throw new Error("audition_resume_mismatch: continue only a failed audition with the same identity, sample, acting and candidate voices; create a new audition otherwise");
-    const outputPath = resumed ? dirname8(resolve9(args.auditionPath)) : join16(dirname8(identityPath), "voice-auditions", randomUUID9());
+    const outputPath = resumed ? dirname8(resolve9(args.auditionPath)) : join16(dirname8(identityPath), "voice-auditions", randomUUID10());
     mkdirSync18(outputPath, { recursive: true });
     const auditionPath2 = join16(outputPath, "audition.json");
     const audition2 = resumed ? { ...resumed, status: "generating" } : { version: 1, status: "generating", identityPath, identitySha256: hash3(source), sampleText: args.sampleText, candidates: [], target, ...args.acting ? { acting: args.acting } : {}, ...args.sampleTurns ? { sampleTurns: args.sampleTurns } : {}, previewPath: join16(outputPath, "index.html") };
@@ -133954,10 +133971,10 @@ function bindRegisteredVoice(args) {
     at: (/* @__PURE__ */ new Date()).toISOString()
   };
   const next = source.replace(block[0], "```json\n" + JSON.stringify({ ...value, tts, voiceSelection: { ...selection, registration } }, null, 2) + "\n```");
-  const backup = join16(dirname8(selection.auditionPath), "identity-before-registration-" + randomUUID9() + ".md");
+  const backup = join16(dirname8(selection.auditionPath), "identity-before-registration-" + randomUUID10() + ".md");
   writeFileSync24(backup, source, { flag: "wx" });
   if (hash3(readFileSync34(identityPath)) !== args.expectedIdentitySha256) throw new Error("voice_registration_stale: identity changed during registration binding");
-  const temporary = identityPath + "." + randomUUID9() + ".tmp";
+  const temporary = identityPath + "." + randomUUID10() + ".tmp";
   writeFileSync24(temporary, next);
   renameSync7(temporary, identityPath);
   return {
@@ -134000,7 +134017,7 @@ function selectCandidate(auditionPath, candidateId, userSelection) {
   });
   if (!replaced) throw new Error("Missing identity JSON");
   writeFileSync24(join16(dirname8(auditionPath), "identity-before-selection.md"), source, { flag: "wx" });
-  const temporary = audition.identityPath + "." + randomUUID9() + ".tmp";
+  const temporary = audition.identityPath + "." + randomUUID10() + ".tmp";
   writeFileSync24(temporary, next);
   renameSync7(temporary, audition.identityPath);
   audition.status = "selected";
@@ -134084,7 +134101,7 @@ async function manageLocation(args) {
 // src/cover.ts
 import { createHash as createHash24 } from "node:crypto";
 import { execFileSync as execFileSync19, spawn as spawn3 } from "node:child_process";
-import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync35, realpathSync as realpathSync11, renameSync as renameSync8, rmSync as rmSync17, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
+import { copyFileSync as copyFileSync2, existsSync as existsSync33, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync35, realpathSync as realpathSync11, renameSync as renameSync8, rmSync as rmSync18, statSync as statSync18, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir8 } from "node:os";
 import { basename as basename11, dirname as dirname9, isAbsolute as isAbsolute2, join as join18, relative as relative2, resolve as resolve10, sep as sep2 } from "node:path";
 import { createRequire as createRequire19 } from "node:module";
@@ -134201,7 +134218,7 @@ function resolveSource(ep, input, warnings) {
       }
       if (!existsSync33(still)) throw new Error(`cover_frame_outside: no frame at ${input.seconds}s in ${input.video}`);
     } finally {
-      rmSync17(probeDir, { recursive: true, force: true });
+      rmSync18(probeDir, { recursive: true, force: true });
     }
     return { ...input, video: relative2(ep.episode, file2), path: relative2(ep.episode, file2), sha256: sha256File(file2) };
   }
@@ -134391,7 +134408,7 @@ function chrome(args, until) {
       clearInterval(poll);
       clearTimeout(timer);
       if (child.exitCode === null) child.kill("SIGKILL");
-      rmSync17(profile, { recursive: true, force: true });
+      rmSync18(profile, { recursive: true, force: true });
       if (error2) reject(error2);
       else resolveRun(out);
     };
@@ -134427,7 +134444,7 @@ function encodeJpeg(png, out, limit2) {
     const bytes = statSync18(out).size;
     if (bytes <= limit2) return { bytes, quality: q };
   }
-  rmSync17(out, { force: true });
+  rmSync18(out, { force: true });
   throw new Error(`cover_file_too_large: ${out} stays over ${limit2} bytes at every JPEG quality`);
 }
 function luminance([r2, g, b]) {
@@ -134585,7 +134602,7 @@ async function renderCover(path36) {
       }
     }
     const made = /* @__PURE__ */ new Set([...files3.map((f3) => f3.name), ...previews]);
-    for (const name of previous) if (!made.has(name)) rmSync17(join18(dir, name), { force: true });
+    for (const name of previous) if (!made.has(name)) rmSync18(join18(dir, name), { force: true });
     const render = {
       version: 1,
       renderVersion: RENDER_VERSION,
@@ -134613,7 +134630,7 @@ async function renderCover(path36) {
     }
     return { dir, render };
   } finally {
-    rmSync17(work, { recursive: true, force: true });
+    rmSync18(work, { recursive: true, force: true });
   }
 }
 function previousOutputs(dir) {
@@ -134731,7 +134748,7 @@ function readCover(path36) {
 }
 
 // src/speech.ts
-import { createHash as createHash25, randomUUID as randomUUID10 } from "node:crypto";
+import { createHash as createHash25, randomUUID as randomUUID11 } from "node:crypto";
 import { readFileSync as readFileSync36, writeFileSync as writeFileSync26, renameSync as renameSync9, mkdirSync as mkdirSync20, existsSync as existsSync34 } from "node:fs";
 import { dirname as dirname10, resolve as resolve11, join as join19, relative as relative3 } from "node:path";
 import * as nodeModule7 from "node:module";
@@ -134920,7 +134937,7 @@ function manageSpeech(args) {
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
       for (const line of scene.narration || []) {
-        line.id ||= "d-" + randomUUID10();
+        line.id ||= "d-" + randomUUID11();
         line.speaker ||= doc.narratorCharacterId;
         line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
       }
@@ -135180,7 +135197,7 @@ function manageSpeech(args) {
     if (!existsSync34(backup)) writeFileSync26(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash4(readFileSync36(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID10() + ".tmp";
+    const tmp = file + "." + randomUUID11() + ".tmp";
     writeFileSync26(tmp, nextSource);
     renameSync9(tmp, file);
     refreshVideoReview(dirname10(dirname10(file)));
@@ -135197,8 +135214,8 @@ function manageSpeech(args) {
 
 // src/acting-review.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash26, randomUUID as randomUUID11 } from "node:crypto";
-import { existsSync as existsSync35, mkdirSync as mkdirSync21, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync10, rmSync as rmSync18, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
+import { createHash as createHash26, randomUUID as randomUUID12 } from "node:crypto";
+import { existsSync as existsSync35, mkdirSync as mkdirSync21, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync10, rmSync as rmSync19, statSync as statSync19, writeFileSync as writeFileSync27 } from "node:fs";
 import path32 from "node:path";
 import { homedir as homedir5 } from "node:os";
 import { promisify as promisify5 } from "node:util";
@@ -135629,20 +135646,20 @@ async function reviewActing2(input, deps) {
     currentMediaSha256,
     ...retryOf ? { retryOf } : {}
   };
-  const temporary = `${receiptPath2}.${randomUUID11()}.tmp`;
+  const temporary = `${receiptPath2}.${randomUUID12()}.tmp`;
   try {
     writeFileSync27(lock2, JSON.stringify({ phase: "evaluated", receipt }), { flag: "w" });
     writeFileSync27(temporary, JSON.stringify(receipt, null, 2) + "\n", { flag: "wx" });
     renameSync10(temporary, receiptPath2);
   } catch (error2) {
     try {
-      rmSync18(temporary, { force: true });
+      rmSync19(temporary, { force: true });
     } catch {
     }
     throw new Error(`Could not persist paid acting review; preserved lock at ${lock2}: ${error2 instanceof Error ? error2.message : String(error2)}`);
   }
   try {
-    rmSync18(lock2, { force: true });
+    rmSync19(lock2, { force: true });
   } catch {
     console.error(`[acting_review] Receipt saved; stale lock can be removed: ${lock2}`);
   }
@@ -135650,7 +135667,7 @@ async function reviewActing2(input, deps) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash27, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash27, randomUUID as randomUUID13 } from "node:crypto";
 import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync38, realpathSync as realpathSync13, renameSync as renameSync11, statSync as statSync20, writeFileSync as writeFileSync28 } from "node:fs";
 import { dirname as dirname11, join as join20, resolve as resolve12 } from "node:path";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
@@ -135705,7 +135722,7 @@ function audit(channel, tool2, result, details = {}) {
 function save2(draft) {
   const { file } = draftLocation(draft.draftId);
   mkdirSync22(dirname11(file), { recursive: true });
-  const temp = `${file}.${randomUUID12()}.tmp`;
+  const temp = `${file}.${randomUUID13()}.tmp`;
   writeFileSync28(temp, JSON.stringify(draft), { mode: 384 });
   renameSync11(temp, file);
 }
@@ -135740,7 +135757,7 @@ function createThreadsDraft(args) {
     const input = draftSchema.strict().parse(args);
     if (input.surface === "reply" !== Boolean(input.replyToId)) throw new Error("Reply drafts require replyToId; post drafts must omit it");
     if (input.purposeEvidence && !whitespace(input.body).includes(whitespace(input.purposeEvidence))) throw new Error("Purpose evidence quote not present in draft body");
-    const draftId = `${input.channel}.${randomUUID12()}`;
+    const draftId = `${input.channel}.${randomUUID13()}`;
     const bodyHash = threadsBodyHash(input.body, input.selfReply);
     save2({ ...input, draftId, bodyHash, reviews: {} });
     audit(input.channel, "threads_draft_create", "created", { draftId, bodyHash, submitter: input.submitter ?? null, submitterContext: input.submitterContext ?? null });
@@ -137118,7 +137135,7 @@ async function stockSearch(input) {
 
 // src/sns-client.ts
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash28, randomUUID as randomUUID13 } from "node:crypto";
+import { createHash as createHash28, randomUUID as randomUUID14 } from "node:crypto";
 import { promisify as promisify6 } from "node:util";
 import {
   existsSync as existsSync37,
@@ -137892,7 +137909,7 @@ async function readCaptionFile(path36, maxBytes) {
   return { bytes };
 }
 async function uploadYoutubeCaption(token, videoId, caption) {
-  const boundary = `sfcap${randomUUID13().replace(/-/g, "")}`;
+  const boundary = `sfcap${randomUUID14().replace(/-/g, "")}`;
   const meta = JSON.stringify({
     snippet: { videoId, language: caption.language, name: "", isDraft: false }
   });
@@ -139229,7 +139246,7 @@ async function checkAccounts(channel) {
 
 // src/tts-final-quality.ts
 import { execFile as execFile11 } from "node:child_process";
-import { existsSync as existsSync38, mkdtempSync as mkdtempSync9, readFileSync as readFileSync39, rmSync as rmSync19, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
+import { existsSync as existsSync38, mkdtempSync as mkdtempSync9, readFileSync as readFileSync39, rmSync as rmSync20, writeFileSync as writeFileSync29, renameSync as renameSync12, openSync as openSync8, closeSync as closeSync8 } from "node:fs";
 import { tmpdir as tmpdir10 } from "node:os";
 import path33 from "node:path";
 import { promisify as promisify7 } from "node:util";
@@ -139315,9 +139332,9 @@ async function reviewFinalSpeech(input, deps) {
     const failure2 = { error: error2 instanceof Error ? error2.message : String(error2) };
     return singleReviewStarted ? save3("unverified", failure2) : { success: false, status: "unverified", proofPath, ...failure2 };
   } finally {
-    rmSync19(temp, { recursive: true, force: true });
+    rmSync20(temp, { recursive: true, force: true });
     closeSync8(lock2);
-    rmSync19(lockPath, { force: true });
+    rmSync20(lockPath, { force: true });
   }
 }
 async function reviewChapters(request, media, wav, temp, base, proofPath, save3, deps) {
@@ -139382,7 +139399,7 @@ async function reviewChapters(request, media, wav, temp, base, proofPath, save3,
 }
 
 // src/handlers.ts
-import { randomUUID as randomUUID14 } from "node:crypto";
+import { randomUUID as randomUUID15 } from "node:crypto";
 
 // src/content-feedback.ts
 import { mkdirSync as mkdirSync23, writeFileSync as writeFileSync30 } from "node:fs";
@@ -142114,7 +142131,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
     const result = await routeSpeech({
       action: "execute",
       generator: "tts_astra_genai",
-      requestId: generation2.requestId || randomUUID14(),
+      requestId: generation2.requestId || randomUUID15(),
       generation: { ...generation2, outputPath: generation2.outputPath || process.cwd() }
     });
     return text3(JSON.stringify(result), "success" in result && result.success === false);

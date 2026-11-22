@@ -16,6 +16,9 @@ import {
 } from './live-character.js';
 import { GenaiRequestError } from './astra-genai-client.js';
 import { checkLiveRelay, encode, splitIngest, type Utterance } from './live-encoder.js';
+import { prepareIdleClips, idleCount } from './live-idle.js';
+import { NativeTalk, nativeLauncher, talkPrompt } from './live-native.js';
+import { liveStartChoice, liveStartChoices } from './live-options.js';
 import { MotionAvatar } from './live-motion.js';
 import {
   youtubeApi,
@@ -44,28 +47,35 @@ async function main() {
       youtube: { type: 'boolean' },
       tiktok: { type: 'boolean' },
       title: { type: 'string' },
+      start: { type: 'string' },
       'youtube-probe': { type: 'string' },
       'resume-from': { type: 'string' }
     }
   });
   const [action] = positionals;
+  if (action === 'choices' && positionals.length === 1) {
+    console.log(JSON.stringify(liveStartChoices));
+    return;
+  }
   const recovery = ['status', 'end', 'cancel-unstarted'].includes(action);
-  if ((!['check', 'warm', 'run'].includes(action) && !recovery) || !v.config || positionals.length !== 1)
+  if ((!['check', 'warm', 'prepare-idle', 'run', 'reserve'].includes(action) && !recovery) || !v.config || positionals.length !== 1)
     throw Error(
-      'Use check|warm|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]'
+      'Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--youtube] [--tiktok]'
     );
+  const destination = v.youtube || v.tiktok;
+  const start = (action === 'run' || action === 'reserve') && (destination || v.start) ? await liveStartChoice(v.start) : undefined;
+  if (start === 'cancel') { console.log(JSON.stringify({ state: 'cancelled' })); return; }
+  if (start === 'ready' && !destination) throw Error('Choose a live destination or --start preview');
   const cfg = liveConfig.parse(JSON.parse(readFileSync(v.config, 'utf8')));
-  if ((action === 'run' || action === 'check') && (v.youtube || v.tiktok) && !cfg.motionVideo)
-    throw Error('Set motionVideo to an approved moving performance before streaming');
-  if (v['resume-from'] && (action !== 'run' || !v.youtube || cfg.madeForKids !== false))
+  if (v['resume-from'] && (action !== 'run' || !v.youtube || start !== 'ready' || cfg.madeForKids !== false))
     throw Error('Resume requires a YouTube run with live chat enabled');
   const api =
-    v.youtube || recovery ? await youtubeApi(cfg.youtubeCredentialChannel ?? cfg.channel) : undefined;
+    (v.youtube && start !== 'preview') || recovery ? await youtubeApi(cfg.youtubeCredentialChannel ?? cfg.channel) : undefined;
   if (api && !cfg.youtubeChannelId) throw Error('Set youtubeChannelId before connecting');
-  const tiktok = v.tiktok ? process.env.TIKTOK_LIVE_RTMPS_URL : undefined;
-  if (v.tiktok && !tiktok) throw Error('An account-authorized TikTok RTMPS URL is required');
+  const tiktok = v.tiktok && start !== 'preview' ? process.env.TIKTOK_LIVE_RTMPS_URL : undefined;
+  if (v.tiktok && start !== 'preview' && !tiktok) throw Error('An account-authorized TikTok RTMPS URL is required');
   if (tiktok) splitIngest(tiktok);
-  if (!v.out && action !== 'warm' && action !== 'check')
+  if (!v.out && !['warm', 'check', 'prepare-idle'].includes(action))
     throw Error('Set --out to a unique session directory');
   const out = resolve(v.out ?? '.'),
     receiptFile = join(out, 'youtube.json');
@@ -89,13 +99,44 @@ async function main() {
     console.log(JSON.stringify({ id: r.broadcastId, state }));
     return;
   }
+  if (action === 'reserve') {
+    if (!api || !v.youtube || v.tiktok || start !== 'ready' || !v.title?.trim() || v.title.length > 100)
+      throw Error('Reserve needs --youtube, --start ready and a YouTube title of 1–100 characters');
+    mkdirSync(out, { mode: 0o700 });
+    const receipt: YoutubeReceipt = { channelId: cfg.youtubeChannelId!, marker: randomUUID() };
+    writeReceipt(receipt);
+    await prepareYoutube(api, cfg, v.title, receipt, () => writeReceipt(receipt));
+    appendFileSync(join(out, 'events.jsonl'), JSON.stringify({
+      at: new Date().toISOString(), event: 'youtube_reserved', id: receipt.broadcastId
+    }) + '\n', { mode: 0o600 });
+    console.log(JSON.stringify({ id: receipt.broadcastId, privacy: 'unlisted', state: 'reserved' }));
+    return;
+  }
   const actor = loadCharacter(cfg);
+  const concept = cfg.broadcastConcept ?? (cfg.talkPrompt ?? cfg.persona ?? talkPrompt).slice(0, 600);
+  if (action === 'prepare-idle') {
+    if (destination) throw Error('Prepare standby clips without a live destination');
+    const controller = new AbortController();
+    const stop = () => controller.abort();
+    process.once('SIGTERM', stop);
+    process.once('SIGINT', stop);
+    try {
+      const paths = await prepareIdleClips(actor.asset, cfg.project, concept, controller.signal,
+        index => console.error(`Standby clips ready: ${index}/${idleCount}`));
+      console.log(JSON.stringify({ count: paths.length, paths }));
+    } finally {
+      process.removeListener('SIGTERM', stop);
+      process.removeListener('SIGINT', stop);
+    }
+    return;
+  }
   if (api || tiktok) checkLiveRelay();
   if (action === 'check') {
     if (api) await checkChannel(api, cfg.youtubeChannelId!);
     console.log(
       JSON.stringify({
         localAssetsReady: true,
+        liveStart: liveStartChoices,
         character: cfg.character,
         language: actor.language,
         youtubeLiveReadAccess: !!api,
@@ -143,10 +184,8 @@ async function main() {
     const closed = journal.some((line) => {
       const e = JSON.parse(line);
       return (
-        e.event === 'youtube_final' &&
-        e.id === receipt.broadcastId &&
-        e.state === 'ready' &&
-        e.ingestLive === false
+        e.id === receipt.broadcastId && (e.event === 'youtube_reserved' ||
+          (e.event === 'youtube_final' && e.state === 'ready' && e.ingestLive === false))
       );
     });
     if (!closed) throw Error('The prior encoder has not confirmed an unstarted shutdown');
@@ -156,7 +195,8 @@ async function main() {
   const queue = new ChatQueue(),
     ready: Utterance[] = [];
   let polling: Promise<void> | undefined, replying: Promise<void> | undefined;
-  let motion: MotionAvatar | undefined;
+  let motion: MotionAvatar | NativeTalk | undefined;
+  let acceptingUntil = Infinity, renderingReply = false;
   let hostLine = 0,
     playing = false,
     lastSpeech = Date.now();
@@ -211,7 +251,7 @@ async function main() {
       try {
         if (!discard && partial.trim()) {
           const e = JSON.parse(partial);
-          if (e.source === 'operator' || (v.tiktok && e.source === 'tiktok')) queue.add(e);
+          if (Date.now() < acceptingUntil && (e.source === 'operator' || (tiktok && e.source === 'tiktok'))) queue.add(e);
         }
       } catch {
         /* Invalid external messages cannot interrupt the show. */
@@ -226,15 +266,24 @@ async function main() {
       : undefined;
   wake?.on('error', () => log('sleep_prevention_unavailable', {}));
   try {
-    if (cfg.motionVideo) motion = new MotionAvatar(cfg);
+    if (start) {
+      nativeLauncher();
+      motion = new NativeTalk(actor.asset, cfg.project, cfg.talkPrompt ?? talkPrompt);
+    }
+    else if (cfg.motionVideo) motion = new MotionAvatar(cfg);
     const frames = motion ? [] : poses(actor.asset, cfg);
+    if (motion instanceof NativeTalk) {
+      log('idle_pool_preparing', { total: idleCount });
+      await motion.prepareIdle(concept, controller.signal, log);
+    }
     const openingPcm = await preparedSpeech(cfg, actor, cfg.opening, controller.signal);
+    if (start) log('native_opening_preparing', liveStartChoices);
     ready.push({
       source: 'opening',
       id: 'opening',
       text: cfg.opening,
       pcm: openingPcm,
-      motion: await motion?.render(openingPcm, controller.signal)
+      motion: motion instanceof NativeTalk ? await motion.render(openingPcm, controller.signal, true) : await motion?.render(openingPcm, controller.signal)
     });
     if (controller.signal.aborted) return;
     let chat: YoutubeChat | undefined;
@@ -242,8 +291,8 @@ async function main() {
     if (api) {
       let target;
       if (prior) {
-        writeFileSync(join(prior, 'resume-claimed'), out, { flag: 'wx', mode: 0o600 });
         target = await resumeUnstarted(api, receipt);
+        writeFileSync(join(prior, 'resume-claimed'), out, { flag: 'wx', mode: 0o600 });
         ownsRun = true;
         save();
       } else {
@@ -257,6 +306,7 @@ async function main() {
     if (tiktok) destinations.push(tiktok);
     process.stdin.setEncoding('utf8');
     process.stdin.on('data', receive);
+    acceptingUntil = Date.now() + seconds * 1000;
     replying = (async () => {
       const deadline = Date.now() + seconds * 1000;
       while (!controller.signal.aborted) {
@@ -283,6 +333,7 @@ async function main() {
         }
         let stage = 'generating';
         try {
+          renderingReply = true;
           received++;
           log('chat_received', { source: event.source, id: event.id, text: event.text });
           const prepared = preparedReply(cfg, event.text);
@@ -313,7 +364,7 @@ async function main() {
                   ? e.name
                   : 'error'
           });
-        }
+        } finally { renderingReply = false; }
       }
     })();
     if (api) {
@@ -340,7 +391,7 @@ async function main() {
                 canonical = true;
               }
             }
-            if (ingestLive && liveChat && !controller.signal.aborted) {
+            if (ingestLive && liveChat && Date.now() < acceptingUntil && !controller.signal.aborted) {
               delay = await liveChat.poll(queue, (id, text, author) => {
                 if (probe && !probeId && text === probe && author === receipt.channelId) {
                   probeId = id;
@@ -385,7 +436,8 @@ async function main() {
       controller.signal,
       take,
       onLog,
-      motion
+      motion,
+      start ? () => renderingReply || queue.pending > 0 || ready.some(e => countsAsReply(e.source)) : undefined
     );
   } catch (e) {
     if (api && !receipt.broadcastId) {

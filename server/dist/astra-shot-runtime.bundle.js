@@ -8240,7 +8240,7 @@ var require_gaxios = __commonJS({
     var retry_js_1 = require_retry();
     var stream_1 = __require("stream");
     var interceptor_js_1 = require_interceptor();
-    var randomUUID4 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
+    var randomUUID5 = async () => globalThis.crypto?.randomUUID() || (await import("crypto")).randomUUID();
     var HTTP_STATUS_NO_CONTENT = 204;
     var Gaxios = class {
       agentCache = /* @__PURE__ */ new Map();
@@ -8513,7 +8513,7 @@ var require_gaxios = __commonJS({
          */
         ["Blob", "File", "FormData"].includes(opts.data?.constructor?.name || "");
         if (opts.multipart?.length) {
-          const boundary = await randomUUID4();
+          const boundary = await randomUUID5();
           preparedHeaders.set("content-type", `multipart/related; boundary=${boundary}`);
           opts.body = stream_1.Readable.from(this.getMultipartRequest(opts.multipart, boundary));
         } else if (shouldDirectlyPassData) {
@@ -49917,7 +49917,7 @@ var seedanceReferenceSchema = external_exports.object({
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? DEFAULT_SEEDANCE_DURATION }));
 
 // src/astra-video-client.ts
-import { createHash as createHash2, randomInt } from "node:crypto";
+import { createHash as createHash2, randomInt, randomUUID as randomUUID2 } from "node:crypto";
 import * as fs5 from "node:fs";
 import * as path4 from "node:path";
 
@@ -49962,7 +49962,9 @@ var package_default = {
     "social-flow-mcp": "dist/index.js"
   },
   files: [
-    "dist"
+    "dist",
+    "live-native-720.py",
+    "live-native-ssh.py"
   ]
 };
 
@@ -50442,7 +50444,7 @@ var astraText2VideoSchema = external_exports.object({
 }).transform(resolveDuration);
 var astraImg2VideoSchema = external_exports.object({
   prompt: promptSchema,
-  tier: external_exports.enum(["default", "guided", "hq"]).optional().default("default"),
+  tier: external_exports.enum(["default", "guided", "fast", "hq"]).optional().default("default"),
   firstFramePath: external_exports.string().min(1, "firstFramePath is required"),
   lastFramePath: external_exports.string().optional(),
   strength: external_exports.number().min(0).max(1).optional(),
@@ -50472,7 +50474,7 @@ var astraImg2VideoSchema = external_exports.object({
         ctx.addIssue({
           code: external_exports.ZodIssueCode.custom,
           path: [key],
-          message: `${key} is accepted only on tier "guided" or "hq"; mode generate has no such field.`
+          message: `${key} is accepted only on tier "guided", "fast" or "hq"; mode generate has no such field.`
         });
       }
     }
@@ -50874,9 +50876,12 @@ async function submitJob(body) {
   if (!parsed.job_id) throw new Error(`ASTRA video accepted the job but returned no job_id: ${result.body}`);
   return parsed.job_id;
 }
-async function awaitResult(jobId) {
+var FailedVideoJob = class extends Error {
+};
+async function awaitResult(jobId, signal) {
   const startedAt = Date.now();
   for (; ; ) {
+    signal?.throwIfAborted();
     if (Date.now() - startedAt > ASTRA_VIDEO_MAX_WAIT_MS) {
       throw new Error(
         `ASTRA video job ${jobId} did not finish within ${ASTRA_VIDEO_MAX_WAIT_MS / 1e3}s. It may still be running \u2014 check GET /v1/jobs/${jobId}.`
@@ -50893,7 +50898,7 @@ async function awaitResult(jobId) {
     }
     const job = JSON.parse(status.body);
     if (job.status === "failed") {
-      throw new Error(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
+      throw new FailedVideoJob(`ASTRA video job ${jobId} failed: ${job.error || "the server gave no reason"}`);
     }
     if (job.status === "succeeded") {
       const download = await withBackoff("result download", async () => {
@@ -50928,25 +50933,37 @@ async function awaitResult(jobId) {
     await sleep2(POLL_INTERVAL_MS);
   }
 }
-async function runJob(mode, prompt, body, outputPath, filename) {
+function atomicVideoFile(file, contents) {
+  const temp = file + "." + randomUUID2() + ".tmp";
+  try {
+    fs5.writeFileSync(temp, contents, { mode: 384 });
+    fs5.renameSync(temp, file);
+  } finally {
+    fs5.rmSync(temp, { force: true });
+  }
+}
+async function runJob(mode, prompt, body, outputPath, filename, signal) {
   const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
   const receiptPath = `${videoPath}.astra-job.json`;
   const writeReceipt = (value) => {
-    const temp = `${receiptPath}.${process.pid}.tmp`;
-    fs5.writeFileSync(temp, JSON.stringify(value, null, 2) + "\n", { mode: 384 });
-    fs5.renameSync(temp, receiptPath);
+    atomicVideoFile(receiptPath, JSON.stringify(value, null, 2) + "\n");
   };
+  signal?.throwIfAborted();
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
   const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
   writeReceipt({ ...submitted, status: "submitted" });
-  const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-  fs5.writeFileSync(videoPath, bytes);
+  const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error) => {
+    if (error instanceof FailedVideoJob) writeReceipt({ ...submitted, status: "failed", error: error.message });
+    throw error;
+  });
+  atomicVideoFile(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
   writeReceipt({ ...submitted, ...response, sha256: createHash2("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
-async function generateFromImage(args) {
+async function generateFromImage(args, signal) {
+  signal?.throwIfAborted();
   const first = await uploadFile(args.firstFramePath);
   const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1 }];
   if (args.lastFramePath) {
@@ -50956,7 +50973,7 @@ async function generateFromImage(args) {
   const mode = ASTRA_VIDEO_TIERS[args.tier];
   const dimensions = mode === "guided" || mode === "guided_hq" ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
   const body = buildJobBody(mode, { ...args, ...dimensions, images });
-  return runJob(mode, args.prompt, body, args.outputPath, args.filename);
+  return runJob(mode, args.prompt, body, args.outputPath, args.filename, signal);
 }
 async function generateFromKeyframes(args) {
   const images = [];
@@ -52144,7 +52161,7 @@ var authorizationSchema = external_exports.object({
 }).strict();
 
 // src/storyboard.ts
-import { createHash as createHash3, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash3, randomUUID as randomUUID3 } from "node:crypto";
 
 // src/scenes-vm.ts
 import vm from "node:vm";
@@ -52736,7 +52753,7 @@ var scenarioCheckResultSchema = external_exports.object({
 });
 
 // src/speech.ts
-import { createHash as createHash4, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash4, randomUUID as randomUUID4 } from "node:crypto";
 import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
@@ -52953,7 +52970,7 @@ function manageSpeech(args) {
     for (const scene of scenes) {
       scene.id ||= "s" + String(++next).padStart(4, "0");
       for (const line of scene.narration || []) {
-        line.id ||= "d-" + randomUUID3();
+        line.id ||= "d-" + randomUUID4();
         line.speaker ||= doc.narratorCharacterId;
         line.delivery ||= line.speaker === doc.narratorCharacterId ? "voiceover" : "on_screen";
       }
@@ -53213,7 +53230,7 @@ function manageSpeech(args) {
     if (!existsSync6(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID3() + ".tmp";
+    const tmp = file + "." + randomUUID4() + ".tmp";
     writeFileSync5(tmp, nextSource);
     renameSync3(tmp, file);
     refreshVideoReview(dirname5(dirname5(file)));

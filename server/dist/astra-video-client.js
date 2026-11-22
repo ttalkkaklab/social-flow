@@ -36,7 +36,7 @@ import { recordVideoSubmission } from './video-events.js';
  *   never the request headers — see redactedFailure().
  */
 import { execFileSync } from 'node:child_process';
-import { createHash, randomInt } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { z } from 'zod';
@@ -503,7 +503,7 @@ export const astraText2VideoSchema = z
 export const astraImg2VideoSchema = z
     .object({
     prompt: promptSchema,
-    tier: z.enum(['default', 'guided', 'hq']).optional().default('default'),
+    tier: z.enum(['default', 'guided', 'fast', 'hq']).optional().default('default'),
     firstFramePath: z.string().min(1, 'firstFramePath is required'),
     lastFramePath: z.string().optional(),
     strength: z.number().min(0).max(1).optional(),
@@ -534,7 +534,7 @@ export const astraImg2VideoSchema = z
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
                     path: [key],
-                    message: `${key} is accepted only on tier "guided" or "hq"; mode generate has no such field.`,
+                    message: `${key} is accepted only on tier "guided", "fast" or "hq"; mode generate has no such field.`,
                 });
             }
         }
@@ -1139,9 +1139,12 @@ async function submitJob(body) {
  * Three things end the loop: `succeeded` (download), `failed` (throw with the server's
  * `error`), and the 1800s wall the server itself enforces on a single job.
  */
-async function awaitResult(jobId) {
+class FailedVideoJob extends Error {
+}
+async function awaitResult(jobId, signal) {
     const startedAt = Date.now();
     for (;;) {
+        signal?.throwIfAborted();
         if (Date.now() - startedAt > ASTRA_VIDEO_MAX_WAIT_MS) {
             throw new Error(`ASTRA video job ${jobId} did not finish within ${ASTRA_VIDEO_MAX_WAIT_MS / 1000}s. ` +
                 `It may still be running — check GET /v1/jobs/${jobId}.`);
@@ -1155,7 +1158,7 @@ async function awaitResult(jobId) {
         }
         const job = JSON.parse(status.body);
         if (job.status === 'failed') {
-            throw new Error(`ASTRA video job ${jobId} failed: ${job.error || 'the server gave no reason'}`);
+            throw new FailedVideoJob(`ASTRA video job ${jobId} failed: ${job.error || 'the server gave no reason'}`);
         }
         if (job.status === 'succeeded') {
             const download = await withBackoff('result download', async () => {
@@ -1192,22 +1195,66 @@ async function awaitResult(jobId) {
         await sleep(POLL_INTERVAL_MS);
     }
 }
-async function runJob(mode, prompt, body, outputPath, filename) {
+function atomicVideoFile(file, contents) {
+    const temp = file + '.' + randomUUID() + '.tmp';
+    try {
+        fs.writeFileSync(temp, contents, { mode: 0o600 });
+        fs.renameSync(temp, file);
+    }
+    finally {
+        fs.rmSync(temp, { force: true });
+    }
+}
+/** Recover a submitted job from its receipt and authenticate cached bytes. */
+export async function resumeVideoResult(videoPath, signal) {
+    const file = videoPath + '.astra-job.json';
+    if (!fs.existsSync(file)) {
+        if (fs.existsSync(videoPath))
+            throw Error('Video has no generation receipt: ' + videoPath);
+        return false;
+    }
+    const receipt = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!/^[a-f0-9]{32}$/.test(receipt.jobId) || !['failed', 'completed', 'submitted'].includes(receipt.status))
+        throw Error('Invalid video generation receipt: ' + file);
+    if (receipt.status === 'failed') {
+        // Preserve terminal evidence. A new prepare command may submit this slot again.
+        fs.renameSync(file, videoPath + '.' + receipt.jobId + '.failed.json');
+        return false;
+    }
+    if (receipt.status === 'completed' && fs.existsSync(videoPath) &&
+        receipt.sha256 === createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex'))
+        return true;
+    const result = await awaitResult(receipt.jobId, signal).catch((error) => {
+        if (error instanceof FailedVideoJob)
+            atomicVideoFile(file, JSON.stringify({ ...receipt, status: 'failed', error: error.message }) + '\n');
+        throw error;
+    });
+    atomicVideoFile(videoPath, result.bytes);
+    const completed = { ...receipt, videoPath, request: result.request ?? receipt.request, status: 'completed',
+        bytes: result.bytes.length, sha256: createHash('sha256').update(result.bytes).digest('hex'),
+        completedAt: new Date().toISOString() };
+    atomicVideoFile(file, JSON.stringify(completed, null, 2) + '\n');
+    return true;
+}
+async function runJob(mode, prompt, body, outputPath, filename, signal) {
     // The host may stop waiting before this worker finishes. Keep the job identity and
     // completed response on disk so a transport timeout never requires blind resubmission.
     const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, 'video');
     const receiptPath = `${videoPath}.astra-job.json`;
     const writeReceipt = (value) => {
-        const temp = `${receiptPath}.${process.pid}.tmp`;
-        fs.writeFileSync(temp, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
-        fs.renameSync(temp, receiptPath);
+        atomicVideoFile(receiptPath, JSON.stringify(value, null, 2) + '\n');
     };
+    signal?.throwIfAborted();
     const jobId = await submitJob(body);
     recordVideoSubmission(jobId);
     const submitted = { jobId, mode, prompt, videoPath, submittedAt: new Date().toISOString(), submittedRequest: body };
     writeReceipt({ ...submitted, status: 'submitted' });
-    const { bytes, request, elapsedSeconds } = await awaitResult(jobId);
-    fs.writeFileSync(videoPath, bytes);
+    const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error) => {
+        if (error instanceof FailedVideoJob)
+            writeReceipt({ ...submitted, status: 'failed', error: error.message });
+        throw error;
+    });
+    atomicVideoFile(videoPath, bytes);
     const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...(request ? { request } : {}) };
     writeReceipt({ ...submitted, ...response, sha256: createHash('sha256').update(bytes).digest('hex'), status: 'completed', completedAt: new Date().toISOString() });
     return response;
@@ -1218,7 +1265,8 @@ export async function generateFromText(args) {
     const body = buildJobBody(mode, args);
     return runJob(mode, args.prompt, body, args.outputPath, args.filename);
 }
-export async function generateFromImage(args) {
+export async function generateFromImage(args, signal) {
+    signal?.throwIfAborted();
     const first = await uploadFile(args.firstFramePath);
     const images = [{ uploadId: first.uploadId, frameIdx: 0, strength: args.strength ?? 1.0 }];
     if (args.lastFramePath) {
@@ -1228,7 +1276,7 @@ export async function generateFromImage(args) {
     const mode = ASTRA_VIDEO_TIERS[args.tier];
     const dimensions = mode === 'guided' || mode === 'guided_hq' ? { width: args.width ?? 1536, height: args.height ?? 1024 } : {};
     const body = buildJobBody(mode, { ...args, ...dimensions, images });
-    return runJob(mode, args.prompt, body, args.outputPath, args.filename);
+    return runJob(mode, args.prompt, body, args.outputPath, args.filename, signal);
 }
 export async function generateFromKeyframes(args) {
     const images = [];

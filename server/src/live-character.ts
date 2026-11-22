@@ -18,13 +18,15 @@ export const liveConfig = z
       .string()
       .regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/)
       .optional(),
+    broadcastConcept: z.string().trim().min(1).max(600).optional(),
+    talkPrompt: z.string().trim().min(1).max(2000).optional(),
     motionVideo: z.string().min(1).optional(),
     idleVideos: z.array(z.string().min(1)).max(6).default([]),
     hostLines: z.array(z.string().trim().min(1).max(300)).max(40).default([]),
     character: slug,
     chatModel: z.string().min(1),
     panel: z.string().default('face'),
-    mouth: feature,
+    mouth: feature.optional(),
     eyes: z.array(feature).length(2).optional(),
     opening: z.string().trim().min(1).max(300),
     persona: z.string().max(1500).optional(),
@@ -102,6 +104,7 @@ export function ffmpeg(input: string[], bytes?: Buffer, limit = 16 * 1024 * 1024
 
 // Warp only the calibrated eyelids and lips. Coordinates refer to the cropped vertical canvas.
 export function poses(asset: string, config: LiveConfig) {
+  if (!config.mouth) throw Error('Legacy portrait preview requires mouth calibration');
   const base = ffmpeg([
     '-i',
     asset,
@@ -278,6 +281,7 @@ export class ChatQueue {
     this.queue.push(parsed.data);
     return true;
   }
+  get pending() { return this.queue.length; }
   next() {
     return this.queue.shift();
   }
