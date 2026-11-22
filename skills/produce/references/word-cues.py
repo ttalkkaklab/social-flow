@@ -34,7 +34,7 @@ first word's onset.
 `--accent RRGGBB` colours the words that carry a date or a name — a year (1592년 · 16세기 ·
 1950-06-25), or any word listed in `--accent-words` ("이순신 원균") — with an inline ASS
 override; everything else stays the style's white. This is the history-short subtitle
-grammar (docs/research/2026-09-10-history-shorts-storytelling): the whole line stays big and
+grammar (1eabc4fb:docs/research/2026-09-10-history-shorts-storytelling): the whole line stays big and
 plain, and only the year and the name change colour.
 
 Either way the first cue is pulled back to the cue start and the last one held to the cue

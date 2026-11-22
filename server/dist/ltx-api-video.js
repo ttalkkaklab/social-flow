@@ -1,5 +1,5 @@
 /**
- * The official hosted LTX API (docs/research/2026-11-18-video-model-api-schemas/ltx-2.5-pro.md),
+ * The official hosted LTX API (1eabc4fb:docs/research/2026-11-18-video-model-api-schemas/ltx-2.5-pro.md),
  * not the self-hosted ASTRA box or local MLX. LTX-2.5 has no voice reference: image-to-video
  * renders silent cuts, audio-to-video takes the pinned TTS track (the supplied voice lane).
  */

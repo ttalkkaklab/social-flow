@@ -63,6 +63,19 @@ source of truth and `check-style.py` is its machine half. They cross-reference b
 rule ID (D8, D9, C7 …), so a change to one needs the matching change in the other,
 plus a self-test fixture that fails before your fix and passes after.
 
+## Updating the user manual
+
+Edit the Markdown chapters under `docs/`. Regenerate the offline HTML edition
+from the repository root with [uv](https://docs.astral.sh/uv/):
+
+```sh
+uv run tools/build-user-manual.py
+```
+
+Open `docs/index.html` to check navigation, command examples and tables. Include
+the generated page with the source change. New chapters also need an entry in
+the manual index and in the builder's chapter list.
+
 ## Style
 
 Write all new or revised contribution text in English. This includes documentation,

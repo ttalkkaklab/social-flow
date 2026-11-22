@@ -372,7 +372,7 @@ pick an arc** — hook → drip → cta (scenes-schema §playback order).
   `naver_search` (the larger quota).
 - For **reference images**, `serp_image_search` or `naver_search(type: "image")`. A searched
   image used as-is needs `license` — unspecified results have no rights check. **Screens you
-  make yourself get generated, not searched** (engine split in §5). **Real footage or a real photograph of the subject** comes from `stock_search` (Pexels · Pixabay · NASA · Commons, each item with its `visual.license` block) or the Korean archives in [docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/index.html).
+  make yourself get generated, not searched** (engine split in §5). **Real footage or a real photograph of the subject** comes from `stock_search` (Pexels · Pixabay · NASA · Commons, each item with its `visual.license` block) or the Korean archives in [stock media sources](../../../docs/stock-media.md).
 - **Government-origin evidence** (statistics, policy, regional status) comes from
   `datago_search` (data.go.kr). One official origin satisfies the cross-check. Collection,
   attribution, and the data-as-of-date trap: the **datago skill**.
@@ -519,7 +519,7 @@ Core rules:
   with matching materials and purposeful gestures. Otherwise omit the character. Follow
   [illustrated-scenes.md](illustrated-scenes.md); image warping is not 3D acting.
   New physical subjects use `renderer:"mesh"`, with `illustration3d` or `photoreal3d` styling. The
-  quality bar is `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`.
+  quality bar is `skills/storyboard/examples/reference-slide.html`.
   **Before approval, read [object-state-quality.md](object-state-quality.md).**
   Every editorial diagram must declare `quality:"object-state-v1"` and a `subject` with
   observable before/after states for every narration group. Physical subjects require
@@ -653,7 +653,7 @@ Core rules:
   viewer as the subject, **don't unpack** the answer, and be **short** (1–3 shots · 20–60s,
   with the result or the build inside the first 60s). Don't fill it with greetings,
   self-introduction, or a "today we'll look at ~" trailer. The source of truth is
-  scenes-schema §hooking; the evidence is [hooking research](../../../docs/research/2026-08-18-hooking-beat).
+  scenes-schema §hooking; the evidence is [hooking research](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-18-hooking-beat).
 - **On a short the cover is a gap or the result.** A gap cover's first frame and segment ① open a
   question and do not speak `COMPREHENSION.answer`; a `spoiler` cover states the result outright and is expected to speak it, and the drips then carry the evidence, the how and the consequence. What the cover states on screen does not travel to the metadata — playbook §2 still governs the platform title and description. Greetings, background, tool definitions,
   and "I tried it" get cut either way. **On long-form answer-first the result is in the first second**:

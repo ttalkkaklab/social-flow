@@ -1,5 +1,5 @@
 /**
- * HeyGen Video 1 (docs/research/2026-11-18-video-model-api-schemas/heygen-video-1.md).
+ * HeyGen Video 1 (1eabc4fb:docs/research/2026-11-18-video-model-api-schemas/heygen-video-1.md).
  * POST /v3/models/videos with mode image_to_video or reference_to_video. Local files go up
  * through POST /v3/assets first (base64 images cap at 5 MB). Prompt enhancement is disabled so
  * compiled speaker bindings reach the model as written; that caps duration at 15 s.

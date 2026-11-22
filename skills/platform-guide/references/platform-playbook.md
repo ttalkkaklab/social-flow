@@ -5,7 +5,7 @@
 > starts failing on a limit. The §6 title and description contract was researched 2026-09-03
 > (YouTube Help · Google's clickbait policy post · two peer-reviewed headline studies). §3's
 > style rules were re-measured 2026-09-19 against 61 popular posts by other people, Meta's
-> ranking card and two third-party datasets (`docs/research/2026-09-19-threads-post-styles/`).
+> ranking card and two third-party datasets ([threads post styles study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-19-threads-post-styles)).
 
 Generalized from rules field-tested in fect-persona publish-social·make-reels
 operations. produce's per-platform text authoring, publish's approval review,
@@ -113,7 +113,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
 - **Decide the intent before the draft: is this post going far, or opening a
   conversation?** Reach and replies come from different posts, and a post
   reaching for both usually misses both. Measured on 61 popular Korean posts
-  (2026-09-19, `docs/research/2026-09-19-threads-post-styles/`): the 19 posts
+  (2026-09-19, [threads post styles study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-19-threads-post-styles)): the 19 posts
   carrying a question had a median 46 replies against 21 for the 42 without
   one, and their response rate ran the other way — 0.51% against 0.70%. A
   question buys conversation and sells likes. Pick which one you want.
@@ -363,7 +363,7 @@ five read — so it now sits here, in `check-meta.js` (verbatim copies of
     the UI covers directly. Until that measurement exists, the numbers above
     are a **reference ceiling** and `video-template.html`'s `--zone-*` is the
     source of truth.
-  - Grounds: [camera technique research §06](../../../docs/research/2026-08-15-ai-video-camera-technique/index.html#vertical)
+  - Grounds: [camera technique research §06](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-ai-video-camera-technique/index.html#vertical)
 - Field-tested font minimums: cover title 108px · news title 74px · bullet
   title 44px · body 34px — smaller than this is
   unreadable on a phone.

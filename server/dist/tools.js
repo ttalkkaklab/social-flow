@@ -74,7 +74,7 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * destructiveHint in particular translates "a call is immediately public" —
  * the nature of this server — into a form **the client can read**: the
  * description prose reaches only the model, never the approval UI.
- * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 /**
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
@@ -345,7 +345,7 @@ const SEARCH_ARG_LINE = 'Shared search-tool arguments: query (search terms) · l
  * call is public the moment it happens — stating that only in description
  * prose reaches the model but never the client.
  *
- * The verdict table in docs/api-reference/mcp-tools.html is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 const HINT = {
     /** External lookup — no side effects */

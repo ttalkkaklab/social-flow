@@ -11,8 +11,7 @@ allowed-tools: ["Read", "Bash", "mcp__social-flow__episode_cover", "mcp__plugin_
 The cover is a still that never enters the video: platforms show it in profile grids, search,
 channel pages and link previews, while the feeds autoplay the first frame instead. Long-form is
 the one surface where the thumbnail decides the click. Evidence and its limits:
-[thumbnail research](../../docs/research/2026-11-18-thumbnail-best-practices/reports/SNS%20플랫폼별%20썸네일%20베스트%20프랙티스.md);
-design: [episode cover](../../docs/superpowers/specs/2026-11-18-episode-cover-design.md).
+[thumbnail research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-thumbnail-best-practices/reports/SNS%20%ED%94%8C%EB%9E%AB%ED%8F%BC%EB%B3%84%20%EC%8D%B8%EB%84%A4%EC%9D%BC%20%EB%B2%A0%EC%8A%A4%ED%8A%B8%20%ED%94%84%EB%9E%99%ED%8B%B0%EC%8A%A4.md).
 
 The strongest rule in that research is the plainest: the cover promises only what the episode
 shows. Faces, saturation and contrast measured close to noise; short copy and a promise the

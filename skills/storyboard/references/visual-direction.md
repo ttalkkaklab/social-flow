@@ -41,7 +41,7 @@ the character/object action, or the chart beat; do not create another parallel m
   archive clip with its license record (scenes-schema §stock material) — where a generated or
   drawn version would be a guess. Ask `stock_search` first for `archive`, `live_action`,
   `atmosphere` and `place` cuts; the survey in
-  [docs/research/2026-09-07-free-stock-sources](../../../docs/research/2026-09-07-free-stock-sources/index.html)
+  [stock media sources](../../../docs/stock-media.md)
   lists the sources the tool does not reach. A stock clip carries no marks, its own sound is
   dropped, and it never stands in for a mechanism or a chart.
 

@@ -241,7 +241,7 @@ trade: exact camera and timing from the clip, a close first frame from the still
   one camera move per shot. One idea per move: the camera moves or the subject moves, both
   only when the cut needs both — a 12 s clip with a dolly, a walk and a pan made the model pick
   a random part each take, a 6 s dolly alone landed every time
-  (docs/research/2026-09-11-previz-mandatory §7.5–7.6).
+  (https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-11-previz-mandatory §7.5–7.6).
 - **Hold in, hold out.** A travelling move (pan, tilt, truck, pedestal, crane, dolly, zoom,
   dolly zoom) keys the opening camera twice — frame 1 and about half a second in — and the
   closing camera twice — about half a second before the end and the last frame — so the clip
@@ -338,7 +338,7 @@ route, ahead of the camera span, so a full-video board never types them by hand.
 two disagreeing, because a prompt that says `static camera` under a clip that pushes in
 produces a shake, not a choice. Keep the style adjectives few — past three, the model drops the
 movement for the look — and when a retake drifts, change one thing at a time so the cause is
-known (docs/research/2026-09-11-blender-to-video-ai-handoff).
+known (https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-11-blender-to-video-ai-handoff).
 
 ### 6.4 The call and the check
 
