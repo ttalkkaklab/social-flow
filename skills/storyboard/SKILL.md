@@ -48,6 +48,13 @@ new story material and [story interest](references/story-interest.md) from the s
 onward. A scenario develops complete scenes; a storyboard additionally delivers the shared
 review HTML. Keep that scope distinction when the user asks to make a story more gripping.
 
+After drafting or revising a synopsis, complete the **required
+[reality check](references/synopsis-reality-check.md)** before presenting it or developing
+scenes. Apply the findings to the prose and show the sources and any unresolved points.
+For a synopsis-only request, deliver the checked prose and brief findings. If the central
+event still depends on an unverified assumption, present it as provisional and stop before
+detailed scenes or production.
+
 For every new or substantially revised synopsis and board, apply
 [episode anticipation](references/episode-anticipation.md). Build a specific opening promise,
 changing expectations, an earned payoff and an observable response into the actual story.
@@ -77,8 +84,8 @@ for the mode, the needs, the half step, what stays out by default and the record
 valid decision; this is writing guidance, not a score.
 
 **Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md).
-Only the story order is enforced; context, camera, image and video reviews and Blender
-compositions run only when the user asks. This skill writes the story, each shot's
+The story tools enforce story order and cast readiness. Context, camera, image and video
+reviews and Blender compositions run only when the user asks. This skill writes the story, each shot's
 characters and lines and its icon attributes; [generate-cut-images](../generate-cut-images/SKILL.md)
 and [generate-cut-videos](../generate-cut-videos/SKILL.md) make the images, prompts and
 approved videos.
@@ -135,8 +142,9 @@ any HTML review still uses the shared template.
 
 When delegating writing, pass the resolved path of this SKILL.md, the episode directory,
 user scope, saved choices and this required order to the author. Require it to read this
-skill and its sheet/design references before writing, return the scenario preview before
-shot authoring, and return sheet paths and the board path.
+skill and its sheet/design references before writing. When it writes or revises the
+synopsis, require the reality-check findings with the scenario preview before shot
+authoring. Require sheet paths and the board path at handoff.
 The coordinator relays the preview to the user before detailed work continues and verifies
 the deliverables. `storyboard-reviewer` is read-only; it is not the author.
 
@@ -261,7 +269,7 @@ two keep meeting, what stands between them, how the hidden thing comes out — a
 `node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/cliches.js" pick --need <needs> --seed <topic>`
 for candidates. Keep what earns its place and move one property of it: who does it, what it
 costs, when it happens or who knows. Say in the synopsis which clichés it uses and what each
-changes; a synopsis-only request stops there. On other types recommend one where it would
+changes. On other types recommend one where it would
 help and apply only what the user picks. A cliché's name never answers `necessity`.
 For a claim-led synopsis the same trace reads: the result promised, the proof and where it
 is shown, the limit or cost the middle reaches, and the use it ends on. List the spoken
@@ -271,6 +279,9 @@ For a tension-led revision, change a consequential choice, the cost of an availa
 alternative or who can use a secret. Carry the same mechanism from synopsis to performed
 scenes to visible shot evidence using that reference's handoff table. Stronger adjectives,
 unmotivated violence and a surprise with no prior cause do not revise the story.
+
+Finish the [reality check](references/synopsis-reality-check.md) on the written synopsis
+before moving to complete scenes. Carry the verified details and constraints into the scenario.
 
 ## 3. Write complete scenes before cutting them into shots
 

@@ -46,6 +46,16 @@ synopsis into acted scenes and visible storyboard evidence. Use `story-interest.
 guidance, without new score gates or compulsory twists. Synopsis-only requests stop at prose;
 they do not create episode assets. Existing cast, calendar, narrator and ending rules hold.
 
+## Synopsis reality check (user directive, 2026-11-22)
+
+After writing or revising a synopsis, always run the
+[synopsis reality check](skills/storyboard/references/synopsis-reality-check.md) before
+delivery or scene development, including synopsis-only and unattended work. Verify the
+facts and practical conditions the plot depends on for its place and period. Check invented
+mechanisms against the established world. Apply corrections to the synopsis itself and
+record the evidence and any remaining uncertainty. If a central event still depends on an
+unverified assumption, keep the synopsis provisional and pause its downstream production.
+
 ## Story language (user directive, 2026-11-18)
 
 Nothing said which language a story is written in, and every default and example was Korean.

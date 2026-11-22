@@ -36,7 +36,11 @@ another writing recipe. Use their current contracts. For new episodes follow sto
 new story material: reuse the case collection, verify missing decisions and consequences,
 compare candidate conflicts and distinguish evidence from invention. In unattended work,
 save the selected sources, adaptation limits and choice reason with the scenario; research
-failures stay visible and never become fabricated evidence. Then use the
+failures stay visible and never become fabricated evidence. After writing or revising the
+synopsis, complete the required [reality check](../storyboard/references/synopsis-reality-check.md),
+apply corrections and save the evidence with the scenario. If the central event still depends
+on an unverified assumption, save the provisional draft and stop before scene authoring or
+generation. Then use the
 single `scenario-v2` → `story-v2` flow: causal alternatives, complete acted scenes, blind
 comprehension, shot planning, then content-derived timing. Read
 [character-led scenarios](../storyboard/references/character-scenarios.md).
@@ -96,7 +100,8 @@ not inherit a publishing schedule or automatic queue authorization.
 ## Coordinate the steps
 
 Read [the production order](../_shared/production-workflow.md) (user directive 2026-10-31).
-Only the story order is enforced; checks come back once the quality is known.
+The story tools enforce story order and cast readiness. The author completes the synopsis
+reality check before opening new scenes.
 
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
    characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
@@ -127,7 +132,7 @@ Publishing remains a separate authorization. Preserve actual costs and failed re
 
 ## Reviews and explicit improvement loops
 
-Reviews run only when the user asks, and none of them gates a step. Do not manufacture
+Independent storyboard and media reviews run only when the user asks. Do not manufacture
 scores, freeze stamps or media reviews. Do not invent a passing result to fill a growth queue. Readability, usable files, supported payloads, finite execution timing, concurrency,
 spending and publication authority remain real requirements.
 

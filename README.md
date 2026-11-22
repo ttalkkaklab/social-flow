@@ -86,6 +86,11 @@ requests as prose and carries costly choices, secrets and their consequences int
 and shots. Research inspiration stays distinct from documented history; search volume is
 not a quality score. SerpApi setup verifies the MCP process with an actual fresh search.
 
+Every new or revised synopsis goes through a [reality check](skills/storyboard/references/synopsis-reality-check.md)
+before delivery or scene development. Storyboard and autoproduce verify the plot's material
+facts for its place and period, revise the prose, and record the sources and unresolved
+assumptions. A synopsis whose central event still depends on an unverified claim stays provisional.
+
 [Prop research](skills/storyboard/references/prop-research.md) precedes every prop's
 description and picture: the author looks up the real document or object, saves and views
 pictures of actual examples, records `research` on the prop sheet and draws the prop from

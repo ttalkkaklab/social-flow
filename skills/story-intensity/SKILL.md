@@ -31,7 +31,9 @@ allowed-tools: ["mcp__social-flow__story_intensity_plan", "mcp__plugin_social-fl
    only documented stakes, facts and reactions. Treat an explicitly requested fictional
    adaptation as fiction.
 
-For a standalone request deliver the requested premise, synopsis or revised passage.
+For a standalone request deliver the requested premise, synopsis or revised passage. If
+writing or revising a synopsis, follow [storyboard](../storyboard/SKILL.md) for its required
+[reality check](../storyboard/references/synopsis-reality-check.md) before delivery.
 During storyboard authoring carry the choice into acted beats and the scene turn. Apply
 [story-catharsis](../story-catharsis/SKILL.md) when an obstacle has built an expectation of
 release. Follow [story interest](../storyboard/references/story-interest.md) for withheld
