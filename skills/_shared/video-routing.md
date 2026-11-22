@@ -51,10 +51,13 @@ succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
+For a protected storyboard, pass `shotBindings` with the exact shot IDs. Each entry can name existing reference IDs with their cast IDs and roles, opening positions and dialogue cues. A revision can also supply shorter framing and action directions, additional within-shot keyframes, or explicit MSR negative guidance. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
+
 **LTX contracts checked 2026-11-22**
 
 | Operation | Images and cuts | Audio accepted in the same request |
 |---|---|---|
+| GenAI v2 scene-to-video, distilled | With explicit consent, `sceneRendering:"per_shot"` stages the original files and validates the complete scene against the running renderer. Each card has its own temporal pins and cast references. The worker trims each shot and joins the frames at the authored hard cuts. | A single native soundtrack in shot order. Each shot carries its speakers, lines, voice samples and sound direction. For a single line cued on the incoming cut, the renderer aligns the detected speech onset. Review the words and timing in the output. |
 | GenAI v2 T2V | Prompt plus 2–4 optional shot descriptions. Later shots can request a hard cut in text. No per-shot frame address or image. | Generated sound or mute. |
 | GenAI v2 I2V, dev | Up to eight temporal images including endpoints. Shot descriptions go into the prompt. | Generated sound or mute. |
 | GenAI v2 I2V, distilled | Up to eight temporal images including endpoints. With explicit length and MSR image conditioning the same generation can use four subject references and one background. The two leading subjects can carry voice samples with backend support. Each subject slot spans the scene. | Generated sound or mute. Voice samples condition identity. |

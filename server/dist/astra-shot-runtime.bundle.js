@@ -48424,6 +48424,16 @@ var shotTimelineSchema = external_exports.object({
     if (["face", "outfit"].includes(image2.role) && !image2.character) issue("Identify the owner of a face or outfit reference");
   }
 });
+var sceneShotBindingsSchema = external_exports.array(external_exports.object({
+  shotId: external_exports.string().min(1),
+  openingPositions: openingPositionsSchema.optional(),
+  framing: sceneText.optional(),
+  action: sceneText.optional(),
+  keyframes: external_exports.array(external_exports.object({ path: external_exports.string().trim().min(1), frame, strength: external_exports.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
+  guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
+  references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
+}).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -48473,7 +48483,7 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 
 // src/scene-video.ts
 import path6 from "node:path";
-import { realpathSync as realpathSync2 } from "node:fs";
+import { existsSync as existsSync5, realpathSync as realpathSync2 } from "node:fs";
 import { createRequire as createRequire4 } from "node:module";
 
 // src/video-prompt.ts
@@ -51275,8 +51285,10 @@ var operationSchema = external_exports.enum(["text-to-video", "image-to-video", 
 var receiptSchema2 = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
-  operation: operationSchema,
+  operation: external_exports.union([operationSchema, external_exports.literal("scene-to-video")]),
   fingerprint: external_exports.string(),
+  requestId: external_exports.string().optional(),
+  sceneShots: external_exports.array(external_exports.unknown()).optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
@@ -51580,6 +51592,13 @@ function sceneInputCapabilities(tool) {
     timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes", "astra_genai_img2video", "astra_genai_audio2video"].includes(tool),
     shotScopedReferences: false,
     frameAddressedNativeDialogue: false,
+    ...tool === "astra_genai_img2video" ? { sceneRenderer: {
+      model: "ltx-2.5-22b-distilled",
+      sceneRendering: "per_shot",
+      requiresUserChoice: true,
+      capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
+      validation: "/v1/ltx/v2/scene-to-video/validate"
+    } } : {},
     openingImage: Boolean(fields),
     endingImage: Boolean(fields?.[1]),
     shotDescriptions: ["astra_genai_text2video", "astra_genai_img2video"].includes(tool) ? "gateway_prompt_only" : "prompt",
@@ -52169,6 +52188,8 @@ var videoPlanSchema = external_exports.object({
   sceneNo: external_exports.number().int().positive().optional(),
   requestId: idSchema,
   validateScenePayload: external_exports.boolean().optional(),
+  sceneRendering: external_exports.literal("per_shot").optional(),
+  shotBindings: sceneShotBindingsSchema.optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
@@ -52515,7 +52536,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/storyboard.ts
-import { existsSync as existsSync5, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
+import { existsSync as existsSync6, mkdirSync as mkdirSync2, readFileSync as readFileSync7, renameSync as renameSync2, statSync as statSync5, unlinkSync, writeFileSync as writeFileSync4 } from "node:fs";
 import * as nodeModule2 from "node:module";
 import { basename as basename4, dirname as dirname4, join as join5, relative, resolve as resolve4 } from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
@@ -52854,7 +52875,7 @@ function scenesPath(target) {
 }
 function readBoard(target, source) {
   const file = scenesPath(target);
-  if (!existsSync5(file)) throw new Error(`no scenes.js at ${file}`);
+  if (!existsSync6(file)) throw new Error(`no scenes.js at ${file}`);
   if (!statSync5(file).isFile()) throw new Error(`${file} is not a file`);
   const src = source ?? readFileSync7(file, "utf8");
   const header = [];
@@ -53056,7 +53077,7 @@ var scenarioCheckResultSchema = external_exports.object({
 
 // src/speech.ts
 import { createHash as createHash5, randomUUID as randomUUID3 } from "node:crypto";
-import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync6 } from "node:fs";
+import { readFileSync as readFileSync8, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync7 } from "node:fs";
 import { dirname as dirname5, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync5 } from "node:child_process";
@@ -53164,7 +53185,7 @@ function speechRevision(line, character) {
 function currentAudio(line, character) {
   try {
     if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
-    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync6(line.audio.path) && hash2(readFileSync8(line.audio.path)) === line.audio.sha256;
+    return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync7(line.audio.path) && hash2(readFileSync8(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
   }
@@ -53202,7 +53223,7 @@ function audioProvenanceStatus(line, character) {
   return "stale_or_missing";
 }
 function measuredDuration(line) {
-  if (!line.audio || !existsSync6(line.audio.path)) return null;
+  if (!line.audio || !existsSync7(line.audio.path)) return null;
   try {
     const value = Number(execFileSync5("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -53384,7 +53405,7 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname5(dirname5(file));
-    if (existsSync6(join6(episode, ".work/model-settings.json"))) {
+    if (existsSync7(join6(episode, ".work/model-settings.json"))) {
       const { selection } = routingContext(episode, args.shotId);
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
@@ -53529,7 +53550,7 @@ function manageSpeech(args) {
     const work = resolve5(dirname5(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
     const backup = join6(work, revision + ".js");
-    if (!existsSync6(backup)) writeFileSync5(backup, before);
+    if (!existsSync7(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
     if (hash2(readFileSync8(file)) !== revision) throw new Error("Storyboard changed during speech edit");
     const tmp = file + "." + randomUUID3() + ".tmp";

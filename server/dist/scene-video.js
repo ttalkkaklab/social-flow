@@ -2,7 +2,7 @@
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
@@ -17,6 +17,41 @@ import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-uploa
 const load = createRequire(import.meta.url);
 const temporal = (image) => ['start', 'keyframe', 'end'].includes(image.role) && !image.reference;
 const english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : '';
+/** Apply an approved plan's reference and casting choices to copied shot cards. */
+export function bindSceneCards(members, bindings) {
+    if (!bindings)
+        return members;
+    const cards = structuredClone(members), seen = new Set();
+    for (const binding of bindings) {
+        const raw = cards.find(card => card.id === binding.shotId);
+        if (!raw || seen.has(binding.shotId))
+            throw new Error('scene_render_bindings: duplicate or unknown shot ' + binding.shotId);
+        seen.add(binding.shotId);
+        const timeline = shotTimelineSchema.parse(raw.timeline);
+        if (binding.framing)
+            timeline.framing = binding.framing;
+        if (binding.action)
+            timeline.action = binding.action;
+        if (binding.keyframes)
+            timeline.images = [...(timeline.images ?? []), ...binding.keyframes.map(pin => ({ ...pin, role: 'keyframe' }))];
+        if (binding.openingPositions)
+            timeline.openingPositions = binding.openingPositions;
+        if (binding.dialogueCues)
+            timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter(c => !binding.dialogueCues.some(b => b.lineId === c.lineId)), ...binding.dialogueCues];
+        const visual = raw.visual;
+        for (const ref of binding.references ?? []) {
+            const source = visual?.references?.find(r => r.id === ref.id);
+            if (!source)
+                throw new Error('scene_render_bindings: unknown reference ' + binding.shotId + ' ' + ref.id);
+            if (source.use === 'image')
+                source.use = 'both';
+            const pin = { role: ref.role === 'character' ? 'face' : ref.role, character: ref.character, path: source.path, frame: timeline.startFrame };
+            timeline.images = [...(timeline.images ?? []).filter(p => !(p.path === source.path && ['face', 'outfit'].includes(p.role))), pin];
+        }
+        raw.timeline = timeline;
+    }
+    return cards;
+}
 export function compileSceneTimeline(raw, scene, episode, board) {
     const render = load('../../skills/storyboard/references/render-routing.js');
     const members = raw;
@@ -129,6 +164,31 @@ export function compileSceneTimeline(raw, scene, episode, board) {
         throw new Error('scene_audio_timing: cue outside the scene');
     return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...(audio ? { audio } : {}) };
 }
+/** Older video references point to a registered cast panel but carry no cast ID. */
+export function bindRegisteredPanels(scene, episode, board) {
+    const cast = board.SB_DOC?.characters ?? [];
+    const owners = new Map();
+    for (const actor of cast) {
+        for (const file of Object.values(actor.panels ?? {})) {
+            if (typeof file !== 'string')
+                continue;
+            const local = path.resolve(episode, 'storyboard', file);
+            if (!existsSync(local))
+                continue;
+            const panel = realpathSync(local);
+            const ids = owners.get(panel) ?? new Set();
+            ids.add(actor.id);
+            owners.set(panel, ids);
+        }
+    }
+    for (const image of scene.images) {
+        if (image.role !== 'character' || image.character)
+            continue;
+        const ids = owners.get(image.path);
+        if (ids?.size === 1)
+            image.character = [...ids][0];
+    }
+}
 export function sceneTimelineWords(t, scene, includeDialogue = true) {
     const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
     return [`Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
@@ -222,67 +282,72 @@ export async function inspectSceneInputContract(error, validation) {
         return { ...deployment, status: 'unverified' };
     }
 }
+export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings) {
+    const attachments = [];
+    const shots = scene.shots.map(shot => {
+        const guidance = bindings?.find(binding => binding.shotId === shot.shotId)?.guidance;
+        const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
+            frame: image.frame, role: image.role, character: image.character, cue: image.cue, strength: image.strength,
+            ...(image.reference ? { reference_id: image.reference.id, purpose: image.reference.purpose } : {}),
+            image_uri: genaiSourceUri(undefined, image.path),
+        }));
+        return { shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
+            ...(guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {}),
+            ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
+            description: [shot.framing, shot.action].join(' '), opening_positions: shot.openingPositions,
+            blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
+            dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
+                direction: line.direction, frame: line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
+        };
+    });
+    const direction = scene.sceneDirection;
+    const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(' ') : '';
+    const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
+        image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
+        ...(scene.audio ? { scene_audio: { audio_uri: genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
+                end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
+    let wire = JSON.stringify(body);
+    if (stageFiles || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
+        const staged = new Map();
+        const stage = async (uri, role, frame, shotId) => {
+            const comma = uri.indexOf(',');
+            const bytes = Buffer.from(uri.slice(comma + 1), 'base64');
+            const sha256 = createHash('sha256').update(bytes).digest('hex');
+            const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, uri.slice(5, uri.indexOf(';')));
+            if (!id)
+                throw new Error('Gateway could not stage the original ' + role + ' file for validation');
+            staged.set(sha256, id);
+            attachments.push({ shotId, role, frame, sha256, bytes: bytes.length });
+            return id;
+        };
+        for (const shot of shots) {
+            for (const image of shot.images)
+                image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
+            for (const line of shot.dialogue ?? [])
+                if (line.voice_uri)
+                    line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
+        }
+        body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
+        if (body.scene_audio)
+            body.scene_audio.audio_uri = await stage(body.scene_audio.audio_uri, 'scene_audio', 0);
+        wire = JSON.stringify(body);
+    }
+    return { body, attachments, bodySha256: createHash('sha256').update(wire).digest('hex'), bytes: Buffer.byteLength(wire) };
+}
 /** Send the full scene to the authenticated validation-only route. A schema pass never authorizes execution. */
 async function validateScenePayload(endpoint, scene, model, resolution, requestId) {
-    const attachments = [];
     let sent;
     try {
-        const shots = scene.shots.map(shot => {
-            const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
-                frame: image.frame, role: image.role, character: image.character, cue: image.cue, strength: image.strength,
-                ...(image.reference ? { reference_id: image.reference.id, purpose: image.reference.purpose } : {}),
-                image_uri: genaiSourceUri(undefined, image.path),
-            }));
-            return { shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
-                ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
-                description: [shot.framing, shot.action].join(' '), opening_positions: shot.openingPositions,
-                blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
-                dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
-                    direction: line.direction, frame: line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
-            };
-        });
-        const direction = scene.sceneDirection;
-        const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.sound].filter(Boolean).join(' ') : '';
-        const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
-            image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
-            ...(scene.audio ? { scene_audio: { audio_uri: genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
-                    end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
-        let wire = JSON.stringify(body);
-        if (Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
-            const staged = new Map();
-            const stage = async (uri, role, frame, shotId) => {
-                const comma = uri.indexOf(',');
-                const bytes = Buffer.from(uri.slice(comma + 1), 'base64');
-                const sha256 = createHash('sha256').update(bytes).digest('hex');
-                const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, uri.slice(5, uri.indexOf(';')));
-                if (!id)
-                    throw new Error('Gateway could not stage the original ' + role + ' file for validation');
-                staged.set(sha256, id);
-                attachments.push({ shotId, role, frame, sha256, bytes: bytes.length });
-                return id;
-            };
-            for (const shot of shots) {
-                for (const image of shot.images)
-                    image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
-                for (const line of shot.dialogue ?? [])
-                    if (line.voice_uri)
-                        line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
-            }
-            body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
-            if (body.scene_audio)
-                body.scene_audio.audio_uri = await stage(body.scene_audio.audio_uri, 'scene_audio', 0);
-            wire = JSON.stringify(body);
-        }
-        sent = { bodySha256: createHash('sha256').update(wire).digest('hex'), bytes: Buffer.byteLength(wire),
-            ...(attachments.length ? { requestBody: body } : {}) };
+        const { body, attachments, bytes, bodySha256 } = await buildSceneWire(scene, model, resolution);
+        sent = { bodySha256, bytes, ...(attachments.length ? { requestBody: body, attachments } : {}) };
         const result = await requestGenai('POST', endpoint, body, 120000, undefined, requestId);
         const accepted = z.object({ schema_valid: z.literal(true), model: z.literal(model) }).safeParse(result);
-        return { endpoint, requestId, ...sent, ...(attachments.length ? { attachments } : {}), status: accepted.success ? 'schema_accepted' : 'unverified', result: accepted.data };
+        return { endpoint, requestId, ...sent, status: accepted.success ? 'schema_accepted' : 'unverified', result: accepted.data };
     }
     catch (error) {
         if (error instanceof GenaiRequestError && [400, 422].includes(error.httpStatus))
-            return { endpoint, requestId, ...sent, ...(attachments.length ? { attachments } : {}), status: 'schema_rejected', httpStatus: error.httpStatus, detail: error.message };
-        return { endpoint, requestId, ...sent, ...(attachments.length ? { attachments } : {}), status: 'unverified', detail: error instanceof Error ? error.message : String(error) };
+            return { endpoint, requestId, ...sent, status: 'schema_rejected', httpStatus: error.httpStatus, detail: error.message };
+        return { endpoint, requestId, ...sent, status: 'unverified', detail: error instanceof Error ? error.message : String(error) };
     }
 }
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */

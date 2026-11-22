@@ -2,7 +2,7 @@
 import { openingPositionsSchema, openingPrompt, validateOpening } from './msr-opening.js';
 import { z } from 'zod';
 import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
@@ -341,7 +341,8 @@ export function buildGenaiVideoBody(args) {
 }
 const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
 const receiptSchema = z.object({
-    version: z.literal(1), baseUrl: z.string(), operation: operationSchema, fingerprint: z.string(),
+    version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema, z.literal('scene-to-video')]), fingerprint: z.string(),
+    requestId: z.string().optional(), sceneShots: z.array(z.unknown()).optional(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
 }).strict();
@@ -354,6 +355,13 @@ export async function getGenaiVideoStatus(input) {
     const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
     if (receipt.baseUrl !== astraGenaiBaseUrl())
         throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
+    if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
+        const found = statusSchema.extend({ request_id: z.literal(receipt.requestId) }).parse(await requestGenai('GET', '/v1/ltx/v2/scene-to-video/requests/' + encodeURIComponent(receipt.requestId)));
+        receipt.jobId = found.id;
+        receipt.status = 'submitted';
+        atomicJson(input.receiptPath, receipt);
+        recordVideoSubmission(found.id);
+    }
     if (!receipt.jobId)
         throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
     if (receipt.status === 'completed') {
@@ -362,10 +370,13 @@ export async function getGenaiVideoStatus(input) {
             throw new Error('GenAI cached output changed');
         return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
     }
-    const route = `${genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+    const route = `${receipt.operation === 'scene-to-video' ? '/v1/ltx/v2/scene-to-video' : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
     const job = statusSchema.parse(await requestGenai('GET', route));
     if (job.id !== receipt.jobId)
         throw new Error('GenAI status job ID mismatch');
+    if (receipt.operation === 'scene-to-video' && Array.isArray(job.shots)) {
+        receipt.sceneShots = job.shots;
+    }
     // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
     if (job.status === 'failed' || job.status === 'cancelled')
         throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
@@ -386,7 +397,7 @@ export async function getGenaiVideoStatus(input) {
     // Reject HTML/JSON and probe the actual container before recording completion.
     if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp')
         throw new Error('GenAI result is not MP4');
-    const temp = `${receipt.videoPath}.${process.pid}.download.mp4`;
+    const temp = `${receipt.videoPath}.${randomUUID()}.download.mp4`;
     try {
         fs.writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 });
         const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=width,height:format=duration', '-of', 'json', temp], { encoding: 'utf8', timeout: 30_000 }));

@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
-import { inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
+import { bindRegisteredPanels, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
-import { planManagedVideo, planVideo } from '../dist/video-routing.js';
+import { approveVideo, executeVideo, planManagedVideo, planVideo, videoStatus } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
 import { ROUTES } from '../dist/handlers.js';
 import { buildGenaiAudioBody } from '../dist/astra-genai-video.js';
@@ -156,6 +156,69 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     return true;
   });
   assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
+  const board = path.join(f.dir,'scenes.js');
+  fs.appendFileSync(board, '\nwindow.PRODUCTION='+JSON.stringify({videoAuthorization:{
+    reference:'Fixture scene spending approval', maxUsd:0, maxConcurrent:1, maxAttempts:1}})+';');
+  const before = fs.readFileSync(board);
+  const key = config.astraGenaiApiKey, originalFetch = globalThis.fetch;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(()=>{globalThis.fetch=originalFetch;config.astraGenaiApiKey=key});
+  const route = '/v1/ltx/v2/scene-to-video', submitted = [], validated = [];
+  const requestId = f.input.requestId;
+  const file = '11'.repeat(16), jobId = '22'.repeat(16);
+  let providerStatus = 'processing';
+  globalThis.fetch = async (url,options) => {
+    const pathname = new URL(url).pathname;
+    if (pathname === '/v1/uploads') return Response.json({upload_id:file,chunk_size:1048576,chunks:1});
+    if (options.method === 'PUT') return Response.json({});
+    if (pathname.endsWith('/complete')) return Response.json({file_id:file,uri:'genai-file://'+file});
+    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut']});
+    if (pathname === route+'/validate') {
+      validated.push(JSON.parse(options.body));
+      return Response.json({schema_valid:true, model:'ltx-2.5-22b-distilled', shots:2});
+    }
+    if (pathname === route) {
+      assert.equal(options.headers['X-Request-ID'],requestId);
+      submitted.push(JSON.parse(options.body));
+      throw new Error('Lost the response after acceptance');
+    }
+    assert.equal(options.method,'GET');
+    assert.ok([route+'/requests/'+requestId,route+'/'+jobId].includes(pathname));
+    return Response.json({request_id:requestId,id:jobId,status:providerStatus});
+  };
+  const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
+    shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
+  }]});
+  approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
+  const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
+  await assert.rejects(run(), /Lost the response/);
+  assert.equal(submitted.length,1);
+  assert.deepEqual(validated,[submitted[0],submitted[0]]);
+  assert.deepEqual(submitted[0].shots.map(s=>[s.shot_id,s.start_frame,s.end_frame,s.dialogue[0].speaker]),
+    [['s0002',0,171,'nephew'],['s0001',171,276,'miran']]);
+  assert.equal(submitted[0].shots[1].dialogue[0].frame,171);
+  assert.equal(submitted[0].shots[1].transition,'hard_cut');
+  assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','face','keyframe','end'],['start','face']]);
+  assert.equal(submitted[0].shots[0].images[2].frame,48);
+  assert.deepEqual(submitted[0].shots.map(s=>s.negative_prompt),['captions',undefined]);
+  assert.deepEqual(submitted[0].shots.map(s=>s.opening_positions),setups.map(s=>s[8]));
+  await videoStatus({episode:f.episode,requestId,action:'refresh'});
+  assert.equal((await videoStatus({episode:f.episode,requestId})).providerId,jobId);
+  providerStatus = 'failed';
+  assert.equal((await videoStatus({episode:f.episode,requestId,action:'refresh'})).status,'failed');
+  assert.equal(submitted.length,1);
+  assert.deepEqual(fs.readFileSync(board),before);
+  const legacy = structuredClone(request);
+  const panel = legacy.images.find(i=>i.role==='face');
+  delete panel.character;
+  panel.role = 'character';
+  const cast = {SB_DOC:{characters:[{id:'nephew',panels:{face:panel.path}}]}};
+  bindRegisteredPanels(legacy,f.episode,cast);
+  assert.equal(panel.character,'nephew');
+  delete panel.character;
+  cast.SB_DOC.characters.push({id:'other',panels:{face:panel.path}});
+  bindRegisteredPanels(legacy,f.episode,cast);
+  assert.equal(panel.character,undefined);
   answer.timeline.dialogueCues[0].lineId='missing-line'; f.save();
   assert.throws(()=>planVideo(f.input),/scene_dialogue_timing/);
 });

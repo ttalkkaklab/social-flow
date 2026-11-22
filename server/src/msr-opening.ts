@@ -39,6 +39,14 @@ export const shotTimelineSchema = z.object({
     if (['face', 'outfit'].includes(image.role) && !image.character) issue('Identify the owner of a face or outfit reference');
   }
 });
+export const sceneShotBindingsSchema = z.array(z.object({
+  shotId:z.string().min(1), openingPositions:openingPositionsSchema.optional(),
+  framing:sceneText.optional(), action:sceneText.optional(),
+  keyframes:z.array(z.object({path:z.string().trim().min(1),frame,strength:z.number().min(0).max(1).optional()}).strict()).min(1).max(7).optional(),
+  guidance:z.object({negativePrompt:sceneText,guidanceScale:z.number().gt(1).max(10)}).strict().optional(),
+  dialogueCues:z.array(z.object({lineId:z.string().min(1),frame:z.number().int().nonnegative()}).strict()).optional(),
+  references:z.array(z.object({id:z.string().min(1),character:z.string().min(1),role:z.enum(['face','outfit','character'])}).strict()).optional(),
+}).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
   openingPositions: openingPositionsSchema,
   fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
