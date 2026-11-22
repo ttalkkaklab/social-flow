@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Did the image provider get the request? · social-flow</title>
+  <meta name="description" content="Reproduce a provider timeout locally and see how social-flow keeps an uncertain image request from running twice.">
+  <link rel="stylesheet" href="../../assets/reference.css">
+</head>
+<body>
+<main class="wrap">
+  <nav class="crumbs" aria-label="Breadcrumb"><a href="../../index.en.html">social-flow docs</a> / Engineering notes</nav>
+  <header class="hero">
+    <h1>Did the image provider get the request?</h1>
+    <p class="sub">A timeout leaves a video producer with an awkward choice. Submitting the same shot again might buy a second image. Waiting might mean waiting for a job that never started.</p>
+    <p class="meta">From the social-flow project · Maintained by Zeans at <a href="https://github.com/ttalkkaklab">Ttalkkak Lab</a></p>
+  </header>
+
+  <section>
+    <h2>One missing frame, two possible bills</h2>
+    <p>Imagine a storyboard with one image left to generate. The provider accepts the request, but the connection closes before the response reaches the editor. From the editor's side this looks much like a request that never reached the provider. An empty output directory fits both stories.</p>
+    <p>In social-flow's managed image path, the editor saves a plan and a request ID. Before calling the adapter, the server writes a receipt and reserves capacity. If the adapter loses the response, the server can still say which request it tried. An ambiguous error leaves that request in <code>submission_unknown</code>.</p>
+  </section>
+
+  <section>
+    <h2>Count the calls yourself</h2>
+    <p>With Git and Node.js 20 or newer, run the two regression cases below. The fake adapter either writes a one-pixel PNG or throws a timeout. The tests use a temporary episode directory and require no provider credentials.</p>
+    <pre><code>git clone https://github.com/ttalkkaklab/social-flow.git
+cd social-flow/server &amp;&amp; npm ci
+node --import ./test/isolate.mjs --test --test-name-pattern='managed success|ambiguous failure' test/image-routing.test.mjs</code></pre>
+    <p>In the success case, calling the same plan twice returns the saved result. The dispatch counter stays at one. If the saved file changes, the hash check catches it. In the timeout case, a second call with the same request ID stops before dispatch. With the fixture's single slot occupied, giving the request a new name also stops before dispatch.</p>
+  </section>
+
+  <section>
+    <h2>What it costs to wait</h2>
+    <p>An unresolved request can hold up another shot. Reading <code>image_status</code> returns the recorded state. A supported adapter can refresh provider status. To close out an uncertain request manually, the operator records evidence and the amount spent. In the test, the local child exited without output and the spend is zero. A real provider needs its own evidence.</p>
+    <p>The same distinction matters when a job succeeds. A decoded image with the expected hash can still show the wrong character. The generation receipt marks it <code>not_reviewed</code>. Someone still has to inspect the picture.</p>
+    <p><a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/image-routing.ts">Read the routing code</a> · <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/test/image-routing.test.mjs">Read the assertions</a></p>
+  </section>
+
+  <section>
+    <h2>Work on this with us</h2>
+    <p>If you've integrated an image provider, what evidence does its API give you after a lost response? A link to the provider's status endpoint and a redacted example response would help us evaluate another recovery path. You can also pick a small change with a local check already described.</p>
+    <p><a href="https://github.com/ttalkkaklab/social-flow/issues">Discuss an adapter</a> · <a href="https://github.com/ttalkkaklab/social-flow/contribute">Choose a first issue</a> · <a href="https://www.youtube.com/shorts/cO9SNY7vQRs">Watch a finished episode</a></p>
+  </section>
+</main>
+</body>
+</html>
