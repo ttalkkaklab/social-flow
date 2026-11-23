@@ -1050,6 +1050,69 @@ test('Veo matches submitted references to registered subjects across shots, time
     args:{referenceImagePaths:['storyboard/clock.png','storyboard/phone.png']}}), /same subject/);
 });
 
+test('Veo puts model-voiced dialogue and silent reactions inside one timestamped request', t => {
+  const f = fixture(t, {engine:'veo', model:'veo-3.1-lite-generate-001', resolution:'720p', operation:'image'});
+  const board = path.join(f.episode, 'storyboard');
+  fs.writeFileSync(path.join(board, 'open.png'), png);
+  const scene = {no:1, speakers:['guest'], frames:{start:'open.png'}, videoDirection:{
+    openingPositions:[{character:'guest', images:[], position:'Behind the counter.'}], emotion:'The guest recognizes a friend.',
+  }};
+  f.board.STRUCTURE = {scenes:[scene]};
+  for (const [index, card] of f.board.SCENES.entries()) {
+    Object.assign(card, {scene:1, duration:2, shot:{size:'ms',angle:'eye'},
+      visual:{action:index ? 'The friend nods.' : 'The guest raises a hand.'},
+      narration:index ? [] : [{speaker:'guest',delivery:'off_screen',tts:'Come in.'}]});
+  }
+  const plan = (args={}) => planVideo({episode:f.episode, sceneNo:1, requestId:'veo-dialogue', args}, false);
+  f.save();
+  assert.throws(plan, /voice_lane_required/);
+  scene.videoDirection.dialogueVoice = 'model_generated';
+  f.save();
+  assert.throws(() => plan({generateAudio:false}), /scene_dialogue_audio_required/);
+  const accepted = plan();
+  const body = buildVeoBody(accepted.args);
+  assert.equal(body.instances.length, 1);
+  assert.equal(body.parameters.generateAudio, true);
+  assert.equal(accepted.voiceContinuity.strategy, 'model_generated');
+  assert.equal(accepted.promptProfile.cutTiming, 'time_ranges');
+  const prompt = body.instances[0].prompt;
+  assert.match(prompt, /\[0–2s\][^\n]+Visible mouths stay closed[^\n]+"Come in\."/);
+  assert.match(prompt, /\[2–4s\][^\n]+The friend nods[^\n]+No foreground dialogue/);
+  assert.equal(prompt.split('"Come in."').length, 2);
+  scene.speakerReferences = [{character:'guest',path:'open.png'}];
+  f.save();
+  assert.throws(plan, /scene_inputs_unsupported/);
+});
+
+test('Seedance Mini can speak from a scene opening when the author selects a generated voice', t => {
+  const f = fixture(t, {engine:'seedance',model:'dreamina-seedance-2-0-mini-260615',resolution:'480p'});
+  const dir = path.join(f.episode,'storyboard');
+  fs.writeFileSync(path.join(dir,'open.png'),png);
+  const scene = {no:1, speakers:['guest'], frames:{start:'open.png'}, videoDirection:{dialogueVoice:'model_generated',
+    openingPositions:[{character:'guest',images:[],position:'Wearing blue behind the counter.'}], emotion:'The guest hesitates.'}};
+  f.board.STRUCTURE = {scenes:[scene]};
+  f.board.SB_DOC = {characters:[{id:'guest',name:'Guest',voiceReference:{path:'old-missing.wav'}}]};
+  for (const [i, card] of f.board.SCENES.entries()) {
+    Object.assign(card, {scene:1,duration:2,shot:{size:'ms',angle:'eye'},
+      visual:{character:i ? [] : ['guest'],action:i ? 'The door closes.' : 'The guest waves.'},
+      narration:i ? [] : [{speaker:'guest',delivery:'on_screen',tts:'Wait.'}]});
+  }
+  const plan = () => planVideo({episode:f.episode,sceneNo:1,requestId:'mini-frames'},false);
+  f.save();
+  const result = plan();
+  assert.equal(result.tool,'seedance_img2video');
+  assert.equal(result.promptProfile.cutTiming,'action_beats');
+  assert.equal(result.args.sourceImagePath,path.join(dir,'open.png'));
+  assert.ok(result.args.generateAudio);
+  assert.equal(result.voiceContinuity.strategy,'model_generated');
+  assert.equal(result.sceneRequest.shots[0].dialogue[0].voice,undefined);
+  assert.match(result.args.prompt, /"Wait\."[\s\S]+Then cut directly\.[^\n]+No foreground dialogue/);
+  assert.doesNotMatch(result.args.prompt,/Audio 1|Hold this view for about/);
+  delete scene.videoDirection.dialogueVoice;
+  f.save();
+  assert.throws(plan,/character_input_required/);
+});
+
 test('Google Cloud Veo uses saved settings, model-specific budgets, voice policy and polling recovery', async t => {
   const video = { engine: 'veo', model: 'veo-3.1-fast-generate-001', resolution: '720p', operation: 'text' };
   const f = fixture(t, video);
@@ -1662,6 +1725,13 @@ test('one Seedance scene binds the original on each speaking card, including the
   f.board.SCENES[1].referenceImage = 'guide.png';
   f.save();
   const plan=planVideo({episode:f.episode,sceneNo:1,requestId:'two-originals'},false);
+  const shots = plan.args.prompt.split('Then cut directly.');
+  assert.equal(shots.length, 2);
+  assert.match(shots[0], /ada[^"\n]*Audio 1[^"\n]*"Wait\."/);
+  assert.doesNotMatch(shots[0], /"Go\."/);
+  assert.match(shots[1], /bo[^"\n]*Audio 2[^"\n]*"Go\."/);
+  assert.doesNotMatch(shots[1], /"Wait\."/);
+  assert.doesNotMatch(plan.args.prompt, /Hold this view for about|\[\d+–\d+s\]/);
   assert.equal(plan.characterBindings.find(binding=>binding.role==='composition').shotId,'s2');
   assert.deepEqual(plan.args.referenceVideoTaskIds,['cgt-ada','cgt-bo']);
   assert.deepEqual(plan.args.referenceImagePaths.map(file=>path.basename(file)),['front.png','front.png','guide.png']);
@@ -1750,6 +1820,7 @@ test('an optional guide cannot prevent silent distilled I2V when the background 
   const [guide]=plan.sceneRequest.shotReferenceImages;
   assert.equal(guide.submitted,false);
   assert.match(guide.reason,/requires a separate subject/);
+  assert.ok(plan.directionWarnings.some(message => message.startsWith('shot_reference_omitted: ' + guide.shotId)));
 });
 
 

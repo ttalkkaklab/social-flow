@@ -250,6 +250,12 @@ staging before regeneration. Keep the original file. Dubbing native dialogue can
 lip sync; do not apply it automatically. Unknown submissions retain their original
 request ID and reservation; the review view supplies the same-request status command.
 
+## Model-specific scene prompts
+
+`video_plan` returns the ordered storyboard shots in `sceneRequest` and the selected writing rules in `promptProfile`. The profile gives the cut timing style and reference labels for the selected operation and model version. The compiled prompt in `args.prompt` contains the actual directions. For ordinary cuts Veo gets time ranges, Seedance gets action beats, and voiced LTX MSR scenes get approximate holds. The planner retains the storyboard frame clock for review. A short prompt limit can remove a hold while keeping its speaker and line together.
+
+Keep each physical action's starting state, performer, movement and ending state on its own card. Write who lets go, whose hands stay clear and what moves next when that order matters. A generated take can show the correct four views and reverse one of those actions. Check the original video before selecting a take or changing a model default. A comparison can keep the model, prompt, opening picture and settings fixed while changing one supported input.
+
 ## LTX and Google Cloud Veo
 
 Select the engine, model and resolution in the project's video settings. The operation is optional. Use the same managed call across the gateway LTX, hosted LTX and Google Cloud Veo deployments:
@@ -264,7 +270,7 @@ The planner reads the saved choice and the storyboard. Each provider adapter ser
 | --- | --- | --- | --- |
 | First and optional last frame | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image` and `lastFrame` |
 | Character references | Distilled I2V combines the opening with subject images when supported. Spoken MSR accepts subject images and a background. | The image endpoint requires an opening and has no subject slots. | Standard/Fast accept 1–3 images of one subject for eight seconds. A timeline pin cannot accompany the assets. |
-| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | The managed planner reports unsupported dialogue or supplied scene audio. |
+| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | Veo accepts generated dialogue when the scene explicitly sets `videoDirection.dialogueVoice:"model_generated"`. Supplied voice samples and scene audio have no input slot. |
 
 Explicit operations and existing per-shot settings remain available. The planner reports inputs that the selected deployment cannot represent before approval. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
 

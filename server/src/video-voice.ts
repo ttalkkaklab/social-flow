@@ -29,6 +29,7 @@ const fileHash = (file: string) => createHash('sha256').update(readFileSync(file
 interface VoiceContext {
   bindSceneTurns?: (prompt:string, turns:string[]) => string;
   timed?: boolean;
+  modelVoice?: boolean;
   sceneDirection?: { openingPositions: { character: string; position: string; images: number[] }[] };
   episode: string;
   board: Record<string, unknown>;
@@ -48,7 +49,7 @@ interface SpeakerVoice {
 }
 export interface VoiceContinuity {
   version: 1;
-  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice';
+  strategy: 'external_tts' | 'supplied_audio' | 'reference_voice' | 'model_generated';
   revision: string;
   speakers: SpeakerVoice[];
   warnings: string[];
@@ -245,11 +246,11 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
   const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
   // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
   // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
-  if (lane === 'none' && (native || onScreen))
+  if (!context.modelVoice && lane === 'none' && (native || onScreen))
     throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
       `(astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
   const reference = native && lane === 'reference';
-  const strategy = supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
+  const strategy = context.modelVoice ? 'model_generated' : supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
   const warnings: string[] = [];
   const speakers: SpeakerVoice[] = [];
   const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter(line => line.delivery === 'on_screen');
@@ -287,7 +288,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       continue;
     }
     const character = resolveCharacterVoice(matches[0], context, warnings);
-    if (!Object.keys(object(character.tts)).length) {
+    if (!context.modelVoice && !Object.keys(object(character.tts)).length) {
       warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
       continue;
     }
@@ -339,7 +340,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
-    if (native && !text(object(character.tts).voiceDirection) && !text(object(character.tts).stylePrompt) && !text(object(object(object(character.character).speech).timbre).value))
+    if (native && !context.modelVoice && !text(object(character.tts).voiceDirection) && !text(object(character.tts).stylePrompt) && !text(object(object(object(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
   /** Every turn with its speaker's picture and sample, in order; the prompt holds the only copy of each line. */
@@ -384,8 +385,8 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
         `${audio ? `${aud(audio)} (${who})` : who}: "${text(line.tts)}"`;
     });
     if (screenBindings.length) prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
-    if (speakers.length > 1) prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
-    if (msr && context.bindSceneTurns) args.prompt = context.bindSceneTurns(String(args.prompt),script);
+    if (speakers.length > 1) prompt.push('Speak the turns in order, with a brief pause between speakers and no overlapping speech.');
+    if (context.bindSceneTurns) args.prompt = context.bindSceneTurns(String(args.prompt),script);
     else prompt.push(...script);
   };
   if (reference && msr) {
@@ -397,7 +398,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     if (speakers.some(speaker => speaker.audioIndex)) warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
   } else if (reference) {
     args.referenceAudioPaths = audioPaths;
-    if (vendor || tool === 'seedance_reference') turnScript();
+    if (vendor || tool === 'seedance_reference' || context.bindSceneTurns) turnScript();
     const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
     if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
     if (speakers.some(speaker => speaker.reference)) {
@@ -406,10 +407,11 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     }
   }
   if (native) {
+    if (context.modelVoice) warnings.push('The selected model synthesizes dialogue from the scene prompt. No character voice sample is submitted.');
     if (!msr) prompt.push('Keep these speaker identities unchanged. Apply each line\'s authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.');
     if (speakers.length > 1) warnings.push('Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.');
     if (msr || vendor) warnings.push(`${msr ? 'MSR' : tool} renders speech and effects into its own soundtrack; assembly uses it as the cut's audio.`);
-    else if (!nativeSlot) warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
+    else if (!nativeSlot && !context.modelVoice) warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
   }
   if (strategy === 'supplied_audio') warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');
   if (prompt.length && typeof args.prompt === 'string') args.prompt += (msr ? '\n\n' : '\n\nVoice continuity guidance:\n') + prompt.join('\n');

@@ -59,6 +59,7 @@ export const sceneShotBindingsSchema = z.array(z.object({
 }).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
     openingPositions: openingPositionsSchema,
+    dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
     keyframes: z.array(z.object({
         frame: frame.positive(), path: z.string().trim().min(1), strength: z.number().gt(0).max(1).optional(),
@@ -88,11 +89,11 @@ export function sceneCastProse(prompt, positions, speakers) {
     const display = (value) => value.replace(/"[^"]*"|“[^”]*”|「[^」]*」|[\p{L}\p{M}\d_-]+/gu, token => aliases.get(token) ?? token);
     return { prompt: display(prompt), positions: positions.map(p => ({ ...p, character: aliases.get(p.character) ?? p.character, position: display(p.position) })) };
 }
-export function openingPrompt(prompt, positions = []) {
+export function openingPrompt(prompt, positions = [], imageLabel = (index) => 'Image ' + index) {
     if (!positions.length)
         return prompt;
     const header = positions.map(({ character, images, position }) => {
-        const refs = images.map(index => 'Image ' + index).join(', ');
+        const refs = images.map(imageLabel).join(', ');
         return character + (refs ? ' (' + refs + ')' : '') + ': ' + position;
     });
     const prefix = 'Opening frame, from the viewer’s perspective:\n' + header.join('\n') + '\n\n';

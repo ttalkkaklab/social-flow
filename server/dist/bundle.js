@@ -73606,7 +73606,7 @@ var require_cache3 = __commonJS({
         }
         const p = Promise.all(responsePromises);
         const responses = await p;
-        const operations = [];
+        const operations2 = [];
         let index = 0;
         for (const response of responses) {
           const operation = {
@@ -73617,13 +73617,13 @@ var require_cache3 = __commonJS({
             response
             // 7.3.4
           };
-          operations.push(operation);
+          operations2.push(operation);
           index++;
         }
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         try {
-          this.#batchCacheOperations(operations);
+          this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -73687,7 +73687,7 @@ var require_cache3 = __commonJS({
         } else {
           bodyReadPromise.resolve(void 0);
         }
-        const operations = [];
+        const operations2 = [];
         const operation = {
           type: "put",
           // 14.
@@ -73696,7 +73696,7 @@ var require_cache3 = __commonJS({
           response: clonedResponse
           // 16.
         };
-        operations.push(operation);
+        operations2.push(operation);
         const bytes = await bodyReadPromise.promise;
         if (clonedResponse.body != null) {
           clonedResponse.body.source = bytes;
@@ -73704,7 +73704,7 @@ var require_cache3 = __commonJS({
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         try {
-          this.#batchCacheOperations(operations);
+          this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -73733,18 +73733,18 @@ var require_cache3 = __commonJS({
           assert2(typeof request === "string");
           r2 = getRequestState(new Request3(request));
         }
-        const operations = [];
+        const operations2 = [];
         const operation = {
           type: "delete",
           request: r2,
           options
         };
-        operations.push(operation);
+        operations2.push(operation);
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         let requestResponses;
         try {
-          requestResponses = this.#batchCacheOperations(operations);
+          requestResponses = this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -73811,13 +73811,13 @@ var require_cache3 = __commonJS({
        * @param {CacheBatchOperation[]} operations
        * @returns {requestResponseList}
        */
-      #batchCacheOperations(operations) {
+      #batchCacheOperations(operations2) {
         const cache = this.#relevantRequestResponseList;
         const backupCache = [...cache];
         const addedItems = [];
         const resultList = [];
         try {
-          for (const operation of operations) {
+          for (const operation of operations2) {
             if (operation.type !== "delete" && operation.type !== "put") {
               throw webidl.errors.exception({
                 header: "Cache.#batchCacheOperations",
@@ -91858,6 +91858,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92095,9 +92096,10 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "none",
-            dialogue: "refused",
+            dialogue: "requires_model_generated_scene_voice",
             voiceReference: "unsupported",
             suppliedSpeech: "unsupported",
             exactAudioPreservation: false,
@@ -92335,6 +92337,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -92579,6 +92582,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92623,6 +92627,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92668,6 +92673,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: true
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -92721,6 +92727,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92762,6 +92769,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92804,6 +92812,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92850,6 +92859,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "gateway_prompt_only",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -92912,6 +92922,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "gateway_prompt_only",
             sceneAudio: false
           },
+          sceneCutTiming: "approximate_holds",
           voice: {
             lane: "conditional_reference",
             dialogue: "requires_subject_references",
@@ -92998,6 +93009,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: true
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -93050,6 +93062,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "approximate_holds",
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -93100,6 +93113,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93148,6 +93162,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93198,6 +93213,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93242,6 +93258,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: true
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -93294,6 +93311,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93340,6 +93358,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93378,6 +93397,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93427,6 +93447,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -93478,6 +93499,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93529,6 +93551,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93569,6 +93592,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93611,6 +93635,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: true
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -93652,6 +93677,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -93847,6 +93873,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: true
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "supplied",
             dialogue: "allowed",
@@ -94041,9 +94068,10 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "time_ranges",
           voice: {
             lane: "none",
-            dialogue: "refused",
+            dialogue: "requires_model_generated_scene_voice",
             voiceReference: "unsupported",
             suppliedSpeech: "unsupported",
             exactAudioPreservation: false,
@@ -94164,9 +94192,10 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "time_ranges",
           voice: {
             lane: "none",
-            dialogue: "refused",
+            dialogue: "requires_model_generated_scene_voice",
             voiceReference: "unsupported",
             suppliedSpeech: "unsupported",
             exactAudioPreservation: false,
@@ -94289,9 +94318,10 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "time_ranges",
           voice: {
             lane: "none",
-            dialogue: "refused",
+            dialogue: "requires_model_generated_scene_voice",
             voiceReference: "unsupported",
             suppliedSpeech: "unsupported",
             exactAudioPreservation: false,
@@ -94413,6 +94443,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "time_ranges",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -94536,6 +94567,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -94580,6 +94612,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -94625,6 +94658,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "cut_order",
           voice: {
             lane: "none",
             dialogue: "refused",
@@ -94667,6 +94701,7 @@ var require_video_catalog = __commonJS({
             shotDescriptions: "prompt",
             sceneAudio: false
           },
+          sceneCutTiming: "action_beats",
           voice: {
             lane: "reference",
             dialogue: "allowed",
@@ -96882,15 +96917,15 @@ var require_story_contract = __commonJS({
     function storySpeech(win) {
       const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
-      const ordered = [];
+      const ordered2 = [];
       scenes.forEach((s2, i2) => {
         if (!object6(s2) || s2.type === "outro" || s2.type === "broll") return;
-        ordered.push({ s: s2, shot: i2 + 1 });
+        ordered2.push({ s: s2, shot: i2 + 1 });
         scenes.forEach((b, j) => {
-          if (object6(b) && b.type === "broll" && Number(b.after) === i2) ordered.push({ s: b, shot: j + 1 });
+          if (object6(b) && b.type === "broll" && Number(b.after) === i2) ordered2.push({ s: b, shot: j + 1 });
         });
       });
-      return ordered.flatMap(({ s: s2, shot }) => {
+      return ordered2.flatMap(({ s: s2, shot }) => {
         const live = transcripts.find((t2) => t2?.shot === shot);
         const groups = Array.isArray(s2.narration) && s2.narration.length ? s2.narration : Array.isArray(live?.groups) ? live.groups.map((g) => ({ tts: g?.text, sub: g?.text })) : [];
         return groups.map((n, i2) => ({ shot, group: i2 + 1, n })).filter((x2) => text4(x2.n?.tts) || text4(x2.n?.sub));
@@ -112748,6 +112783,7 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
+  dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
   keyframes: external_exports.array(external_exports.object({
     frame: frame.positive(),
@@ -112775,10 +112811,10 @@ function sceneCastProse(prompt, positions, speakers) {
   const display = (value) => value.replace(/"[^"]*"|“[^”]*”|「[^」]*」|[\p{L}\p{M}\d_-]+/gu, (token) => aliases.get(token) ?? token);
   return { prompt: display(prompt), positions: positions.map((p) => ({ ...p, character: aliases.get(p.character) ?? p.character, position: display(p.position) })) };
 }
-function openingPrompt(prompt, positions = []) {
+function openingPrompt(prompt, positions = [], imageLabel = (index) => "Image " + index) {
   if (!positions.length) return prompt;
   const header = positions.map(({ character, images, position }) => {
-    const refs = images.map((index) => "Image " + index).join(", ");
+    const refs = images.map(imageLabel).join(", ");
     return character + (refs ? " (" + refs + ")" : "") + ": " + position;
   });
   const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
@@ -119974,6 +120010,45 @@ function resolveVideoDuration(tool2, input) {
   return { args, timing };
 }
 
+// src/scene-prompt-profile.ts
+var ordered = {
+  cutTiming: "cut_order",
+  referenceLabels: "indexed",
+  allowsGeneratedVoice: false
+};
+var holds = { ...ordered, cutTiming: "approximate_holds" };
+var veo2 = { ...ordered, cutTiming: "time_ranges", allowsGeneratedVoice: true };
+var seedance = { ...ordered, cutTiming: "action_beats" };
+var pictureTags = { ...seedance, referenceLabels: "picture_audio_tags" };
+var operations = {
+  veo_text2video: veo2,
+  veo_img2video: veo2,
+  veo_reference: veo2,
+  veo_extend: { ...veo2, allowsGeneratedVoice: false },
+  seedance_text2video: seedance,
+  seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
+  seedance_reference: seedance,
+  astra_genai_img2video: holds,
+  astra_genai_msr: holds,
+  minimax_reference: { ...ordered, cutTiming: "action_beats", referenceLabels: "reference_indexed" },
+  fasth3_omni_reference: pictureTags,
+  heygen_reference: pictureTags
+};
+function scenePromptProfile(tool2, model2) {
+  const profile = operations[tool2 ?? ""] ?? ordered;
+  if (tool2 === "seedance_reference" && typeof model2 === "string" && model2.startsWith("dreamina-seedance-2-5-"))
+    return { ...profile, referenceLabels: "at_indexed" };
+  return profile;
+}
+function referenceLabel(tool2, kind, index, model2) {
+  return formatReferenceLabel(scenePromptProfile(tool2, model2).referenceLabels, kind, index);
+}
+function formatReferenceLabel(style, kind, index) {
+  if (style === "picture_audio_tags") return "<" + (kind === "image" ? "Picture" : "Audio") + " " + index + ">";
+  if (style === "reference_indexed") return "reference " + kind + " " + index;
+  return (style === "at_indexed" ? "@" : "") + (kind === "image" ? "Image" : "Audio") + " " + index;
+}
+
 // src/video-registry.ts
 function requiredCharacters(shot) {
   const inputs2 = shot.visual?.characterInputs;
@@ -120036,11 +120111,6 @@ var VIDEO_ADAPTERS = Object.freeze({
   heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
 });
 var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
-function referenceLabel(tool2, kind, n, model2) {
-  if (tool2 === "minimax_reference") return `reference ${kind} ${n}`;
-  if (tool2 === "fasth3_omni_reference" || tool2 === "heygen_reference") return kind === "image" ? `<Picture ${n}>` : `<Audio ${n}>`;
-  return `${String(model2).includes("2-5") ? "@" : ""}${kind === "image" ? "Image" : "Audio"} ${n}`;
-}
 function keys(schema2) {
   if (schema2 instanceof external_exports.ZodEffects) return keys(schema2.innerType());
   if (schema2 instanceof external_exports.ZodObject) return Object.keys(schema2.shape);
@@ -120108,6 +120178,7 @@ function videoCatalog() {
       deployment: a.deployment,
       operation: a.operation,
       sceneInputs: sceneInputCapabilities(tool2),
+      sceneCutTiming: scenePromptProfile(tool2).cutTiming,
       voice: videoVoiceCapabilities(tool2),
       ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
@@ -120122,7 +120193,7 @@ function videoVoiceCapabilities(tool2) {
   if (!adapter2) throw new Error("Unsupported video tool: " + tool2);
   return {
     lane: tool2 === "astra_genai_img2video" ? "conditional_reference" : adapter2.voice,
-    dialogue: tool2 === "astra_genai_img2video" ? "requires_subject_references" : adapter2.voice === "none" ? "refused" : "allowed",
+    dialogue: scenePromptProfile(tool2).allowsGeneratedVoice ? "requires_model_generated_scene_voice" : tool2 === "astra_genai_img2video" ? "requires_subject_references" : adapter2.voice === "none" ? "refused" : "allowed",
     voiceReference: tool2 === "astra_genai_img2video" ? "backend_dependent_with_subject_references" : adapter2.voice !== "reference" ? "unsupported" : ["astra_genai_msr", "heygen_reference"].includes(tool2) ? "backend_dependent" : "supported",
     suppliedSpeech: adapter2.voice === "supplied" ? "audio_conditioned_reencoded" : "unsupported",
     exactAudioPreservation: false,
@@ -120381,17 +120452,17 @@ function cameraDrift(prompt, movement) {
     const predicate = imperative.test(s2) ? s2 : camera ? s2.slice(camera.index) : "";
     return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
   }).filter(Boolean);
-  const holds = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
+  const holds2 = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
   const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
   const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
-  const moving = said.filter((s2) => moves.test(s2) && !holds(s2) && !negated.test(s2));
+  const moving = said.filter((s2) => moves.test(s2) && !holds2(s2) && !negated.test(s2));
   if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
   const expected = directedMoves.find((re) => re.test(movement));
   if (expected && !moving.some((s2) => expected.test(s2)) && (moving.some((s2) => directedMoves.some((re) => re.test(s2))) || said.some((s2) => negated.test(s2) && expected.test(s2)))) return "contradicted";
   const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
   if (clauses.some((s2) => fixedFrame.test(s2) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s2))) return "contradicted";
   if (moving.length) return null;
-  return said.some(holds) ? "contradicted" : "missing";
+  return said.some(holds2) ? "contradicted" : "missing";
 }
 function shotVisualDirection(shot, concise = false) {
   const plan2 = object3(shot.shot), camera = object3(object3(shot.visual).camera);
@@ -120535,6 +120606,74 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
+}
+
+// src/scene-prompt.ts
+var transitions = {
+  hard_cut: "cut directly",
+  dissolve: "dissolve to the next view",
+  fade: "fade to the next view"
+};
+function shotHeading(shot, fps, options) {
+  const transition = shot.transition.replaceAll("_", " ");
+  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}\u2013${shot.endFrame - 1}] ${transition}.`;
+  const cut = transitions[shot.transition] ?? transition;
+  if (!options.modelPacedCuts)
+    return shot.transition === "open" ? "" : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+  const order = shot.transition === "open" ? "" : `Then ${cut}.`;
+  if (options.cutTiming !== "time_ranges") return order;
+  const seconds2 = (frame2) => Number((frame2 / fps).toFixed(2));
+  return [`[${seconds2(shot.startFrame)}\u2013${seconds2(shot.endFrame)}s]`, order].filter(Boolean).join(" ");
+}
+function deliveryDirection(lines) {
+  const physical = lines.filter((line) => line.delivery !== "voiceover");
+  if (!physical.length) return "No foreground dialogue.";
+  if (physical.every((line) => line.delivery === "off_screen")) return "The voice stays off screen. Visible mouths stay closed.";
+  if (physical.some((line) => line.delivery === "off_screen")) return "Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.";
+  return "Only the named on-screen speaker mouths each line. Listeners stay quiet.";
+}
+function sceneTimelineWords(timeline, scene, options = {}) {
+  const { boundTurns, describeDelivery, modelFacing } = options;
+  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / timeline.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
+  const wholeTake = new Set(timeline.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
+  const rows = [];
+  if (!modelFacing) rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
+  let turnIndex = 0;
+  for (const shot of timeline.shots) {
+    const images = timeline.images.filter((image2) => image2.shotId === shot.shotId);
+    const cues = images.filter((image2) => image2.cue).map((image2) => `${timing(image2.frame)}: ${image2.cue}`);
+    const guides = images.flatMap((image2) => image2.reference?.scope === "shot_guide" ? [image2.reference.purpose] : []);
+    const lines = shot.dialogue ?? [];
+    const spoken = [];
+    for (const line of lines) {
+      if (boundTurns) spoken.push(boundTurns[turnIndex++]);
+      else if (options.includeDialogue !== false && line.delivery !== "voiceover") {
+        spoken.push([
+          line.frame !== void 0 && timing(line.frame) + ":",
+          line.direction,
+          `${line.speaker} (${line.delivery}): "${line.text}"`
+        ].filter(Boolean).join(" "));
+      }
+    }
+    const duration5 = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
+    const hold = describeDelivery && options.cutTiming === "approximate_holds" && `Hold this view for about ${duration5} ${duration5 === 1 ? "second" : "seconds"}.`;
+    rows.push([
+      shotHeading(shot, timeline.fps, options),
+      hold,
+      ...[shot.framing, shot.blocking, shot.action].filter((value) => value && !wholeTake.has(value)),
+      ...cues,
+      ...guides,
+      shot.sound && shot.sound !== scene.sound && "Sound: " + shot.sound,
+      describeDelivery && deliveryDirection(lines),
+      ...spoken,
+      shot.closingState && "End on " + shot.closingState
+    ].filter(Boolean).join(" "));
+  }
+  if (timeline.audio) {
+    rows.push(modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.");
+    for (const cue of timeline.audio.cues) rows.push(`${timing(cue.frame)}: ${cue.action}`);
+  }
+  return rows.filter(Boolean).join("\n");
 }
 
 // src/video-image-inputs.ts
@@ -120822,7 +120961,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
         String(args.prompt ?? "")
       ].join("\n");
     } else {
-      const label = (i2) => vendor || tool2 === "fasth3_omni_reference" ? referenceLabel(tool2, "image", i2) : "Image " + i2;
+      const label = (i2) => referenceLabel(tool2, "image", i2, args.model);
       const guidance = [
         ...sent.map((ref, i2) => `${label(i2 + 1)} (${ref.scope === "shot_guide" ? ref.role : ref.id + ", " + ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : []
@@ -120888,14 +121027,14 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
       put2("keyframes", pins);
     }
     if (tool2 === "astra_genai_img2video" && videoRefs.length) {
-      const ordered = [...videoRefs].sort((a, b) => Number(a.role === "background") - Number(b.role === "background"));
-      const paths3 = ordered.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
-      if (ordered.filter((ref) => ref.role !== "background").length > 4)
+      const ordered2 = [...videoRefs].sort((a, b) => Number(a.role === "background") - Number(b.role === "background"));
+      const paths3 = ordered2.map((ref) => bind(ref.id, ref.path, ref.role, ref.use, ref.purpose, true));
+      if (ordered2.filter((ref) => ref.role !== "background").length > 4)
         throw new Error("msr_subject_limit: at most four subject images plus one background");
-      put2("references", paths3.map((file, i2) => msrReference(file, ordered[i2].role)));
+      put2("references", paths3.map((file, i2) => msrReference(file, ordered2[i2].role)));
       args.prompt = [
-        ...ordered.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
-        msrPanelBinding(paths3, ordered),
+        ...ordered2.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+        msrPanelBinding(paths3, ordered2),
         "",
         String(args.prompt ?? "")
       ].filter(Boolean).join("\n");
@@ -121072,8 +121211,8 @@ function afterImageBlock(prompt, lines) {
 }
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
-  const ordered = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
-  const lines = ordered(context2.shot).map(object4).filter((line) => text2(line.tts));
+  const ordered2 = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+  const lines = ordered2(context2.shot).map(object4).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots");
@@ -121095,10 +121234,10 @@ function prepareVideoVoice(tool2, input, context2) {
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const sceneDialogue = context2.sceneDirection && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
-  if (lane === "none" && (native || onScreen))
+  if (!context2.modelVoice && lane === "none" && (native || onScreen))
     throw new Error(`voice_lane_required: ${tool2} cannot keep a character's voice. Render this spoken cut with a reference adapter (astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? "" : ", or set generateAudio:false and keep the lines as TTS voiceover"}.`);
   const reference2 = native && lane === "reference";
-  const strategy = supplied ? "supplied_audio" : reference2 ? "reference_voice" : "external_tts";
+  const strategy = context2.modelVoice ? "model_generated" : supplied ? "supplied_audio" : reference2 ? "reference_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
   const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter((line) => line.delivery === "on_screen");
@@ -121135,7 +121274,7 @@ function prepareVideoVoice(tool2, input, context2) {
       continue;
     }
     const character = resolveCharacterVoice(matches[0], context2, warnings);
-    if (!Object.keys(object4(character.tts)).length) {
+    if (!context2.modelVoice && !Object.keys(object4(character.tts)).length) {
       warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
       continue;
     }
@@ -121183,7 +121322,7 @@ function prepareVideoVoice(tool2, input, context2) {
       if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
-    if (native && !text2(object4(character.tts).voiceDirection) && !text2(object4(character.tts).stylePrompt) && !text2(object4(object4(object4(character.character).speech).timbre).value))
+    if (native && !context2.modelVoice && !text2(object4(character.tts).voiceDirection) && !text2(object4(character.tts).stylePrompt) && !text2(object4(object4(object4(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
   const turnScript = () => {
@@ -121221,8 +121360,8 @@ function prepareVideoVoice(tool2, input, context2) {
       return `Turn ${turn + 1}: ${identity} speaks${direction ? ` (${direction})` : ""}${audio ? ` using ${aud(audio)}` : ""}. Only this speaker's mouth moves; other visible mouths stay closed. ${audio ? `${aud(audio)} (${who})` : who}: "${text2(line.tts)}"`;
     });
     if (screenBindings.length) prompt.push("Screen positions use the viewer's left and right in the opening image. Preserve these positions and each character's appearance.");
-    if (speakers.length > 1) prompt.push("Speak the following turns in order, with a brief pause between speakers and no overlapping speech.");
-    if (msr && context2.bindSceneTurns) args.prompt = context2.bindSceneTurns(String(args.prompt), script);
+    if (speakers.length > 1) prompt.push("Speak the turns in order, with a brief pause between speakers and no overlapping speech.");
+    if (context2.bindSceneTurns) args.prompt = context2.bindSceneTurns(String(args.prompt), script);
     else prompt.push(...script);
   };
   if (reference2 && msr) {
@@ -121234,7 +121373,7 @@ function prepareVideoVoice(tool2, input, context2) {
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference2) {
     args.referenceAudioPaths = audioPaths;
-    if (vendor || tool2 === "seedance_reference") turnScript();
+    if (vendor || tool2 === "seedance_reference" || context2.bindSceneTurns) turnScript();
     const mapped = new Set(speakers.map((speaker) => speaker.audioIndex));
     if (audioPaths.some((_, i2) => !mapped.has(i2 + 1 + audioOffset))) warnings.push("Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.");
     if (speakers.some((speaker) => speaker.reference)) {
@@ -121243,10 +121382,11 @@ function prepareVideoVoice(tool2, input, context2) {
     }
   }
   if (native) {
+    if (context2.modelVoice) warnings.push("The selected model synthesizes dialogue from the scene prompt. No character voice sample is submitted.");
     if (!msr) prompt.push("Keep these speaker identities unchanged. Apply each line's authored emotion separately from stable timbre and accent. Keep non-speaking listeners silent; do not invent dialogue or voiceover.");
     if (speakers.length > 1) warnings.push("Multiple speakers: check assignment and turn-taking separately from timbre; short turns reduce ambiguity but are not a guarantee.");
     if (msr || vendor) warnings.push(`${msr ? "MSR" : tool2} renders speech and effects into its own soundtrack; assembly uses it as the cut's audio.`);
-    else if (!nativeSlot) warnings.push("visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.");
+    else if (!nativeSlot && !context2.modelVoice) warnings.push("visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.");
   }
   if (strategy === "supplied_audio") warnings.push("Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.");
   if (prompt.length && typeof args.prompt === "string") args.prompt += (msr ? "\n\n" : "\n\nVoice continuity guidance:\n") + prompt.join("\n");
@@ -121310,7 +121450,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
     const notes = sceneShotNotes(raw[index], concise);
-    const shotFraming = shotVisualWords(raw[index], coverage2.shots[index], coverage2.common, notes.end, timeline?.framing, concise);
+    const shotFraming = shotVisualWords(raw[index], coverage2.shots[index], coverage2.common, concise ? "" : notes.end, timeline?.framing, concise);
     const framing = shotFraming || (coverage2.common.camera ? attributeWords("camera", coverage2.common.camera) : members.length === 1 ? "Use the opening composition." : "");
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
@@ -121378,8 +121518,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
     const sound = notes.sound;
-    const ordered = load6("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
-    const lines = scoped ? ordered(member).filter((line) => line.tts?.trim()) : [];
+    const ordered2 = load6("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const lines = scoped ? ordered2(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
@@ -121390,7 +121530,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       const character = cast?.find((c) => c.id === line.speaker);
       const context2 = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
-      const voice = character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
+      const voice = scene.dialogueVoice !== "model_generated" && character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
@@ -121410,6 +121550,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       transition,
       framing,
       action,
+      ...concise && notes.end ? { closingState: notes.end } : {},
       ...positions?.length ? { openingPositions: positions } : {},
       ...blocking ? { blocking } : {},
       ...sound ? { sound } : {},
@@ -121443,59 +121584,26 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns, describeDelivery = false } = {}) {
-  let turnIndex = 0;
-  const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
-  const transitions = {
-    hard_cut: "cut directly",
-    dissolve: "dissolve to the next view",
-    fade: "fade to the next view"
-  };
-  return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
-    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
-    const transition = s2.transition.replaceAll("_", " ");
-    const cut = transitions[s2.transition] ?? transition;
-    let heading = `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
-    if (modelFacing) {
-      heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
-    }
-    const lines = s2.dialogue ?? [];
-    const spoken = boundTurns ? lines.map(() => boundTurns[turnIndex++]) : [];
-    if (!boundTurns && includeDialogue) for (const line of lines) {
-      if (line.delivery !== "voiceover") spoken.push((line.frame === void 0 ? "" : timing(line.frame) + ": ") + (line.direction ? line.direction + " " : "") + line.speaker + " (" + line.delivery + '): "' + line.text + '"');
-    }
-    let pacing = "";
-    let delivery2 = "";
-    if (describeDelivery) {
-      const seconds2 = Number(((s2.endFrame - s2.startFrame) / t2.fps).toFixed(2));
-      pacing = "Hold this view for about " + seconds2 + (seconds2 === 1 ? " second." : " seconds.");
-      if (!lines.length) delivery2 = "No foreground dialogue.";
-      else if (lines.every((line) => line.delivery === "off_screen")) delivery2 = "The voice stays off screen. Visible mouths stay closed.";
-      else if (lines.some((line) => line.delivery === "off_screen")) delivery2 = "Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.";
-      else delivery2 = "Only the named on-screen speaker mouths each line. Listeners stay quiet.";
-    }
-    return [
-      heading,
-      pacing,
-      ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
-      ...cues,
-      ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
-      s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      delivery2,
-      ...spoken
-    ].filter(Boolean).join(" ");
-  }), ...t2.audio ? [
-    modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
-    ...t2.audio.cues.map((c) => `${timing(c.frame)}: ${c.action}`)
-  ] : []].filter(Boolean).join("\n");
-}
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
   const coverage2 = sceneCoverage(members, scene, board, sceneNo);
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
   load6("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
-  const modelPacedCuts = owner?.frames !== void 0 && !options.shotScoped && members.length > 1 && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut"));
-  const timeline = compileSceneTimeline(members, scene, episode, board, coverage2, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && options.bindDialogue);
+  const ownsFrames = owner?.frames !== void 0 || owner?.speakers !== void 0;
+  const modelPacedCuts = ownsFrames && !options.shotScoped && members.length > 1 && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut"));
+  const cutTiming = options.profile?.cutTiming;
+  const directedCuts = cutTiming === "time_ranges" || cutTiming === "action_beats";
+  const timeline = compileSceneTimeline(
+    members,
+    scene,
+    episode,
+    board,
+    coverage2,
+    options.shotScoped,
+    options.namedReferencesOnly,
+    options.guideMode,
+    options.guideLimit,
+    modelPacedCuts && (options.bindDialogue || directedCuts)
+  );
   const common7 = coverage2.common;
   const camera = sceneCameraDirection([], common7.camera && attributeWords("camera", common7.camera));
   const staging = Object.entries(common7).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(" ");
@@ -121505,9 +121613,14 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTimeline = sceneTimelineWords(timeline, scene, { includeDialogue: !options.bindDialogue, modelFacing: true, modelPacedCuts });
+  const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming };
+  const providerTimeline = sceneTimelineWords(timeline, scene, {
+    ...providerTiming,
+    includeDialogue: !options.bindDialogue,
+    describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue
+  });
   const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
-  const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
+  const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions, (index) => formatReferenceLabel(options.profile?.referenceLabels ?? "indexed", "image", index)));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, sceneDirection: {
     emotion: scene.emotion,
     ...scene.action ? { action: scene.action } : {},
@@ -121519,7 +121632,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const bindSceneTurns = (prompt2, turns, describeDelivery = true) => {
     if (!prompt2.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
       throw new Error("scene_dialogue_binding: the dialogue no longer matches the planned shot sequence");
-    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns, describeDelivery }));
+    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { ...providerTiming, boundTurns: turns, describeDelivery }));
   };
   return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }
@@ -122945,8 +123058,16 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const lines = (context2.shot.narration ?? []).filter((line) => line.tts?.trim());
   if (!scene && new Set(lines.map((line) => line.speaker)).size > 1)
     throw new Error("shot_speaker_limit: split speaker changes into separate shots, then set each shot's framing and camera angle");
-  if (selection.engine === "veo" && lines.some((line) => line.delivery !== "voiceover"))
-    throw new Error("voice_lane_required: Veo generates scene sound but cannot condition dialogue on a character voice. Use the selected LTX audio or reference route for spoken cuts.");
+  const promptProfile = scenePromptProfile(tool2, selection.model);
+  const physicalSpeech = lines.some((line) => line.delivery !== "voiceover");
+  const veoDialogue = selection.engine === "veo" && physicalSpeech;
+  const modelVoice = scene?.dialogueVoice === "model_generated" && physicalSpeech;
+  if (modelVoice && (!promptProfile.allowsGeneratedVoice || tool2 === "seedance_img2video" && !context2.sceneOwnsFrames))
+    throw new Error("voice_lane_required: model-generated dialogue needs Veo or Seedance image-to-video with scene frames");
+  if (veoDialogue && !modelVoice)
+    throw new Error("voice_lane_required: Veo cannot condition dialogue on a character voice. If a generated voice is acceptable, set videoDirection.dialogueVoice to model_generated for this scene.");
+  if (modelVoice && input.args.generateAudio === false)
+    throw new Error("scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue");
   if (input.shotBindings && !input.sceneRendering) throw new Error("scene_render_bindings: select per_shot rendering");
   if (input.sceneRendering) {
     const conditioned = scene?.audio && scene.audio.mode !== "mix";
@@ -123099,7 +123220,8 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (scene && (input.args.prompt !== void 0 || input.args.shots !== void 0))
     throw new Error("scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene");
   const members = context2.sceneMembers ?? [];
-  const bindTurns = Boolean(bindDialogueSeparately || tool2 === "astra_genai_msr" || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2));
+  const bindFastH3 = tool2 === "fasth3_omni_reference" && context2.sceneOwnsFrames && members.length > 1 && !silentPicture;
+  const bindTurns = Boolean(bindDialogueSeparately || tool2 === "astra_genai_msr" || bindFastH3 || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2));
   const bindOpening = tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && subjectReferences;
   const guideMode = tool2 === "seedance_reference" ? "composition" : tool2 === "astra_genai_img2video" && selection.model === "ltx-2.5-22b-distilled" && members.length === 1 ? "background" : void 0;
   const guideLimit = tool2 === "seedance_reference" ? SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.referenceImages[1] : void 0;
@@ -123109,7 +123231,15 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     scene,
     context2.episode,
     lines,
-    { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix, guideMode, guideLimit, namedReferencesOnly: tool2 === "seedance_reference" || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.subjectAssets) },
+    {
+      bindDialogue: bindTurns,
+      bindOpening,
+      suffix: silentSuffix,
+      guideMode,
+      guideLimit,
+      profile: promptProfile,
+      namedReferencesOnly: tool2 === "seedance_reference" || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.subjectAssets)
+    },
     (request) => bindSceneAdapter(request, tool2 ?? "host_external", selection.model, shot, input.args, context2.episode, selection.resolution),
     context2.board
   ) : void 0;
@@ -123133,7 +123263,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
         notes.sound && "Sound: " + notes.sound
       ].filter(Boolean);
       const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(" "), lines, bindTurns);
-      callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions));
+      callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions, (index) => formatReferenceLabel(promptProfile.referenceLabels, "image", index)));
     }
   }
   if (scene && selection.engine === "seedance" && members.length === 1) {
@@ -123153,6 +123283,9 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
   const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
+  for (const guide of sceneRequest?.shotReferenceImages ?? []) {
+    if (!guide.submitted) cutWarnings.push("shot_reference_omitted: " + guide.shotId + " receives no composition image. " + guide.reason);
+  }
   let direction = sceneCamera ? {
     sourcePrompt,
     directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
@@ -123163,6 +123296,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode, context2.sceneMembers);
     const body2 = {
       ...take,
+      ...prepared ? { promptProfile } : {},
       version: 1,
       episode: context2.episode,
       shotId: context2.shotId,
@@ -123222,12 +123356,14 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!extra) return images2;
     return { args: { ...images2.args, ...extra.args }, imageBindings: [...images2.imageBindings ?? [], ...extra.imageBindings] };
   };
+  if (modelVoice) bound.generateAudio = true;
   let images = bindImages(bound);
   const voiceContext = {
     ...context2,
     shot,
     msrVoice: genaiMsrVoiceReferences(),
-    bindSceneTurns: tool2 === "astra_genai_img2video" && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : void 0
+    modelVoice,
+    bindSceneTurns: bindTurns && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : void 0
   };
   let voice = prepareVideoVoice(tool2, images.args, voiceContext);
   const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
@@ -123268,6 +123404,8 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       args.prompt = prose.prompt;
     } else args.prompt = opening;
   }
+  if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
+    args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
   if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
     const sourceSeconds = ltxApiAudioSeconds(path26.resolve(context2.episode, args.audioPath));
     const fps = Number(args.fps ?? args.frameRate ?? 24);
@@ -123339,6 +123477,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const quote = quoteFor(tool2, args);
   const body = {
     ...take,
+    ...prepared ? { promptProfile } : {},
     ...characterBindings ? { characterBindings } : {},
     ...cast.length ? { characterInputs: cast } : {},
     ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
@@ -123699,15 +123838,15 @@ async function videoStatus(raw) {
   const job = state.jobs?.[input.requestId];
   if (input.action === "refresh" && job) {
     if (job.status === "failed") throw new Error("video_request_failed: nothing to recover; plan a new requestId");
-    const seedance = job.tool.startsWith("seedance_");
-    if (job.status === "completed" && !seedance && !["astra_genai_msr", "astra_genai_img2video", "astra_genai_audio2video"].includes(job.tool)) return job;
+    const seedance2 = job.tool.startsWith("seedance_");
+    if (job.status === "completed" && !seedance2 && !["astra_genai_msr", "astra_genai_img2video", "astra_genai_audio2video"].includes(job.tool)) return job;
     const hosted = HOSTED_VIDEO_ROUTES[job.tool];
-    if (!hosted && !seedance && !job.tool.startsWith("astra_genai_desktop_") && !["astra_genai_text2video", "astra_genai_img2video", "astra_genai_audio2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
+    if (!hosted && !seedance2 && !job.tool.startsWith("astra_genai_desktop_") && !["astra_genai_text2video", "astra_genai_img2video", "astra_genai_audio2video", "astra_genai_msr"].includes(job.tool)) throw new Error("video_refresh_unsupported: use provider-specific recovery");
     const plan2 = JSON.parse(fs19.readFileSync(path26.join(episode, ".work/video-routing/plans", job.planId + ".json"), "utf8"));
     const { id, ...body } = plan2;
     if (id !== job.planId || hash2(body) !== id || plan2.episode !== episode || plan2.tool !== job.tool) throw new Error("Invalid recovery plan");
     if (job.status === "completed") {
-      if (!seedance) {
+      if (!seedance2) {
         await checkCompletedMedia(plan2, job.providerId);
         return job;
       }
@@ -123728,12 +123867,12 @@ async function videoStatus(raw) {
       }
     }
     checkVideoEnvironment(plan2.tool);
-    if (hosted || seedance) {
+    if (hosted || seedance2) {
       if (!job.providerId) return { ...job, recovery: "No provider job ID is recorded. Reconcile with the provider before retrying." };
-      const observed = seedance ? await pollSeedanceTask(job.providerId) : await hosted.poll(plan2.args, job.providerId);
+      const observed = seedance2 ? await pollSeedanceTask(job.providerId) : await hosted.poll(plan2.args, job.providerId);
       if (observed.state === "running") return { ...job, providerStatus: "running" };
       const target = resolveOutputFile(String(plan2.args.outputPath), String(plan2.args.filename), "video");
-      if (seedance) {
+      if (seedance2) {
         const tokens = observed.state === "failed" ? 0 : observed.meta?.completionTokens;
         if (typeof tokens === "number" && Number.isFinite(tokens) && tokens >= 0 && plan2.quote.tokenRate !== void 0) {
           const settledUsd = tokens * plan2.quote.tokenRate / 1e6;
@@ -123743,7 +123882,7 @@ async function videoStatus(raw) {
           });
         }
       }
-      const output2 = observed.state === "done" ? await saveVendorOutput(observed, target, job.providerId, seedance ? verifySeedanceVideo : void 0) : null;
+      const output2 = observed.state === "done" ? await saveVendorOutput(observed, target, job.providerId, seedance2 ? verifySeedanceVideo : void 0) : null;
       if (output2 && !output2.success) return { ...await videoStatus({ episode, requestId }), recovery: output2.error };
       const durationError = output2 && await adaptiveSeedanceOutputError(plan2);
       videoTransaction(episode, (current) => {
@@ -126374,7 +126513,7 @@ function headRatioSentence(win, ids) {
 function heightSentence(win, ids) {
   const heights = ids.map((id) => [id, castEntry(win, id)?.character?.physical?.heightCm]).filter(([, field2]) => field2?.status === "confirmed" && typeof field2.value === "number" && Number.isFinite(field2.value) && field2.value > 0).map(([id, field2]) => ({ id, cm: field2.value }));
   if (heights.length < 2) return "";
-  const ordered = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered[0], short = ordered.at(-1);
+  const ordered2 = [...heights].sort((a, b) => b.cm - a.cm), tall = ordered2[0], short = ordered2.at(-1);
   return `Keep their real heights: ${heights.map((h2) => `${h2.id} is ${h2.cm} cm tall`).join(" and ")}. ${tall.id} is ${Number((tall.cm - short.cm).toFixed(2))} cm taller than ${short.id} (height ratio ${(tall.cm / short.cm).toFixed(3)}). For upright figures at equal camera distance on the same ground plane, preserve that relative scale. Follow the authored depth and pose; do not equalize head levels or compare seated and standing head heights. Independently framed sheet panels do not establish relative scale.`;
 }
 function castEntry(win, id) {
@@ -126663,18 +126802,18 @@ function buildShotImageRequest(args) {
   }
   const look = refs.filter((ref) => ref.role === "background"), others = refs.filter((ref) => ref.role !== "background" && ref.role !== "composition");
   const head = args.frame === "end" && frames.start ? [{ path: frames.start, purpose: args.role === "scene_end" ? "the opening picture of this scene" : "the opening picture of this shot" }, ...composition] : composition.length ? composition : look;
-  let ordered = [...head, ...others, ...composition.length && (args.frame === "start" || independentEnd) ? look : []];
+  let ordered2 = [...head, ...others, ...composition.length && (args.frame === "start" || independentEnd) ? look : []];
   for (const view2 of ["-front", "-face"]) {
-    const spare = ordered.filter((ref) => ref.role === "bystander" && ref.id.endsWith(view2));
-    if (ordered.length <= imageInputLimit(episode, args.id) || !spare.length) continue;
-    ordered = ordered.filter((ref) => !spare.includes(ref));
+    const spare = ordered2.filter((ref) => ref.role === "bystander" && ref.id.endsWith(view2));
+    if (ordered2.length <= imageInputLimit(episode, args.id) || !spare.length) continue;
+    ordered2 = ordered2.filter((ref) => !spare.includes(ref));
     warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the bystander ${view2.slice(1)} panel(s), so ${view2 === "-face" ? "the prompt alone draws them \u2014 describe them in prompt" : "their outfit comes from the prompt"}` });
   }
-  if (set && look.length && ordered.length > imageInputLimit(episode, args.id)) {
-    ordered = ordered.filter((ref) => !look.includes(ref));
+  if (set && look.length && ordered2.length > imageInputLimit(episode, args.id)) {
+    ordered2 = ordered2.filter((ref) => !look.includes(ref));
     warnings.push({ level: "warn", where: args.id, what: `the saved image model has no room for the ${location} sheet picture beside the set render, so the look comes from the style and prompt alone` });
   }
-  const inputs2 = ordered.map((ref) => resolve6(boardDir, ref.path));
+  const inputs2 = ordered2.map((ref) => resolve6(boardDir, ref.path));
   for (const file of inputs2) if (!existsSync26(file)) throw new Error(`image_input_missing: ${file}`);
   const imagePrompts = loadFromHere2(join11(REFERENCES_DIR, "assemble-bg-prompt.js"));
   const style = loadFromHere2(join11(REFERENCES_DIR, "production-mode.js")).shotStyle(win, shots.indexOf(shot));
@@ -126695,13 +126834,13 @@ function buildShotImageRequest(args) {
     noPerson: !cast.length && !seen.length && !extras,
     ...set ? { location: { prompt: args.frame === "end" ? set.endPrompt : set.prompt, paths: [] } } : {}
   }).prompt;
-  const roles = ordered.map((ref, i2) => {
+  const roles = ordered2.map((ref, i2) => {
     const character = refs.find((r2) => r2.path === ref.path && (r2.role === "character" || r2.role === "bystander"));
     const role = !character || character.wardrobe === "fitting" ? "" : character.id.endsWith("-face") ? " Use only the head and hair above the collar; ignore clothing in this panel." : /-(front|back)$/.test(character.id) ? " Match the build and costume details, including collar, tie and sleeve state, unless the scene changes the outfit." : "";
     const constraints = loadFromHere2(join11(REFERENCES_DIR, "render-routing.js")).referenceConstraints(ref);
     return `Image ${i2 + 1} shows ${ref.purpose}.${role} ${constraints}`;
   }).join(" ");
-  const at = (ref) => ordered.indexOf(ref) + 1;
+  const at = (ref) => ordered2.indexOf(ref) + 1;
   const faces = args.frame === "start" && cast.length > 0 && !["object", "detail"].includes(view?.subjectType ?? "") && view?.mode !== "rear";
   const worn = faces ? expressionWords(shot) : "";
   const blank = faces ? cast.filter((id) => !visual.expression?.[id]) : [];
@@ -126728,15 +126867,15 @@ function buildShotImageRequest(args) {
     where: args.id,
     what: `head_count_missing: ${heads.missing.join(", ")} ${heads.missing.length > 1 ? "have" : "has"} no head count on the sheet, so nothing sizes the face panel's head against the headless body \u2014 write it in physical.proportions with character_manage, e.g. "7.5 heads tall"`
   });
-  const lock2 = independentEnd ? composition.length ? "Follow the closing camera, framing and final positions in the set render." : "Compose the closing view from the final action, camera direction and scene lighting." : !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1.${set.blocked ? " Its coloured figures mark position, facing and height only; their head size and build are placeholders." : ""} The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
+  const lock2 = independentEnd ? composition.length ? "Follow the closing camera, framing and final positions in the set render." : "Compose the closing view from the final action, camera direction and scene lighting." : !set ? selected && args.frame === "start" ? `Preserve the selected background's ${backgroundView} directional geography and the spatial relationships of visible landmarks. The authored crop, camera height and subject viewpoint control the output; do not copy the background sheet's wide framing. Landmarks outside that crop stay outside the frame. The character sheets supply appearance and identity only; their panel poses do not constrain this shot.` : view ? `The location and character sheets supply appearance and identity only. Recompose them to the authored ${args.frame === "end" ? "closing" : "opening"} crop and viewpoint; the sheet pose and camera do not constrain this shot.` : "" : args.frame === "end" ? composition.length ? `Use Image ${at(composition[0])}'s closing camera, lens, framing and final object and figure positions. Image 1 supplies the look and every identity; its opening camera does not constrain this closing view.` : `Image 1 supplies the opening appearance and identities. Follow the closing camera direction below while preserving the set's world layout.` : `Keep Image 1's camera position, ${lens}${dutch ? "" : ", horizon"} and world layout, and keep every object${set.blocked ? " and figure" : ""} at its world position in Image 1.${set.blocked ? " Its coloured figures mark position, facing and height only; their head size and build are placeholders." : ""} The authored composition below controls the final crop, headroom and subject screen placement. Paint its plain unpainted surfaces as the real place, and continue the place into any flat dark area past the set's edge.` + (dutch ? " Image 1 is level; tilt the whole picture to the dutch angle described below." : "") + (look.some((ref) => ordered2.includes(ref)) ? ` Take only materials, colours and light from Image ${at(look[0])}.` : "");
   const prompt = [
-    args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered.length ? "Compose one picture from these images." : "",
+    args.frame === "start" && view ? `Create one opening image with this required crop: ${view.crop}.` : ordered2.length ? "Compose one picture from these images." : "",
     roles,
     lock2,
     heightSentence(win, figures),
     heads.text,
     ...outfits,
-    seen.length ? `Also in this frame, without a line: ${seen.join(" and ")}, ${ordered.some((ref) => ref.role === "bystander") ? "drawn from the reference images that name them" : "drawn as described below"} and placed as the description below says.` : "",
+    seen.length ? `Also in this frame, without a line: ${seen.join(" and ")}, ${ordered2.some((ref) => ref.role === "bystander") ? "drawn from the reference images that name them" : "drawn as described below"} and placed as the description below says.` : "",
     extras ? `Unnamed people in the frame, drawn without a reference: ${extras.replace(/[.\s]+$/, "")}.` : "",
     view ? "Character panels identify the subject; include only the body regions named by the crop. A face reference does not require a face in the output." : "",
     cast.length || seen.length ? `The face panels give identity only; each expression and gaze comes from the ${args.frame === "end" ? "closing" : "opening"} moment described below.` : "",
@@ -126747,7 +126886,7 @@ function buildShotImageRequest(args) {
     args.frame === "start" && view ? `Final frame boundaries: ${view.crop}.` : ""
   ].filter(Boolean).join(" ");
   const call2 = imageCall({ directory: episode, assetId: args.id, inputs: inputs2, prompt, width, height, outDir: join11(boardDir, "images"), stem: `${args.id}-${args.role ?? args.frame}`, what: "this frame" });
-  const sent = refs.filter((ref) => ordered.includes(ref));
+  const sent = refs.filter((ref) => ordered2.includes(ref));
   const locationFrame = set && args.frame === "start" ? {
     set: set.id,
     revision: set.revision,
@@ -144750,7 +144889,7 @@ function capabilityStatus() {
           provider: "seedance (BytePlus ModelArk)",
           configured: has2(config.arkApiKey),
           needs: "ARK_API_KEY",
-          note: "seedance_text2video \xB7 seedance_img2video \xB7 seedance_reference (Seedance 2.x; spoken cuts need seedance_reference with voice samples)"
+          note: "seedance_text2video \xB7 seedance_img2video \xB7 seedance_reference (Seedance 2.x; use reference for selected voices or image for an explicitly model-voiced scene)"
         },
         {
           provider: "veo (Google Cloud)",

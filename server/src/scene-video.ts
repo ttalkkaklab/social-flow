@@ -8,6 +8,9 @@ import { z } from 'zod';
 import { openingPrompt, sceneShotBindingsSchema, shotTimelineSchema, type OpeningPosition, type SceneVideoDirection } from './msr-opening.js';
 import { videoTextPolicy, resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { sceneTimelineWords } from './scene-prompt.js';
+import { formatReferenceLabel, type ScenePromptProfile } from './scene-prompt-profile.js';
+export { sceneTimelineWords } from './scene-prompt.js';
 import type { ImageBinding } from './video-image-inputs.js';
 import { verifyImageFile } from './image-media.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
@@ -82,7 +85,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
         (transition === 'open') !== (index === 0)) throw new Error('scene_video_timing: inconsistent frame range or transition on ' + shotId);
     cursor = endFrame;
     const notes = sceneShotNotes(raw[index], concise);
-    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing, concise);
+    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, concise ? '' : notes.end, timeline?.framing, concise);
     const framing = shotFraming || (coverage.common.camera ? attributeWords('camera', coverage.common.camera)
       : members.length === 1 ? 'Use the opening composition.' : '');
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ''), ...notes.beats].filter(Boolean).join(' ');
@@ -170,7 +173,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       const character = cast?.find(c => c.id === line.speaker);
       const context = { episode, board:board ?? {}, shot:raw[index] };
       const warnings: string[] = [];
-      const voice = character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+      const voice = scene.dialogueVoice !== 'model_generated' && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return { lineId:line.id, speaker:line.speaker, delivery:line.delivery, text:line.tts!,
         ...(direction ? {direction} : {}),
@@ -178,6 +181,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
         ...(warnings.length ? {warnings} : {}) };
     });
     return { shotId, startFrame, endFrame, transition, framing, action,
+      ...(concise && notes.end ? {closingState:notes.end} : {}),
       ...(positions?.length ? {openingPositions:positions} : {}), ...(blocking ? {blocking} : {}),
       ...(sound ? {sound} : {}), ...(dialogue.length ? {dialogue} : {}) };
   });
@@ -212,63 +216,24 @@ export function bindRegisteredPanels(scene: SceneRequest, episode: string, board
     if (ids?.size === 1) image.character = [...ids][0];
   }
 }
-export function sceneTimelineWords(t: SceneTimeline, scene: Partial<SceneVideoDirection>,
-  {includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns, describeDelivery = false}: {
-    includeDialogue?:boolean; modelFacing?:boolean; modelPacedCuts?:boolean; boundTurns?:readonly string[]; describeDelivery?:boolean;
-  } = {}) {
-  let turnIndex = 0;
-  const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  const timing = (frame: number) => modelFacing ? `At ${Number((frame / t.fps).toFixed(3))} seconds` : `Frame ${frame}`;
-  const transitions: Record<string, string> = {
-    hard_cut: 'cut directly', dissolve: 'dissolve to the next view', fade: 'fade to the next view',
-  };
-  return [!modelFacing && `Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
-    const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `${timing(p.frame)}: ${p.cue}`);
-    const transition = s.transition.replaceAll('_',' ');
-    const cut = transitions[s.transition] ?? transition;
-    let heading = `${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${transition}.`;
-    if (modelFacing) {
-      // The model can paint numeric cut cues onto the picture. The scene manifest retains the cut clock.
-      heading = s.transition === 'open' ? '' : modelPacedCuts ? `Then ${cut}.` : `${timing(s.startFrame)}, ${cut}.`;
-    }
-    const lines = s.dialogue ?? [];
-    const spoken = boundTurns ? lines.map(() => boundTurns[turnIndex++]) : [];
-    if (!boundTurns && includeDialogue) for (const line of lines) {
-      if (line.delivery !== 'voiceover') spoken.push((line.frame === undefined ? '' : timing(line.frame) + ': ') +
-        (line.direction ? line.direction + ' ' : '') + line.speaker + ' (' + line.delivery + '): "' + line.text + '"');
-    }
-    let pacing = '';
-    let delivery = '';
-    if (describeDelivery) {
-      const seconds = Number(((s.endFrame - s.startFrame) / t.fps).toFixed(2));
-      pacing = 'Hold this view for about ' + seconds + (seconds === 1 ? ' second.' : ' seconds.');
-      if (!lines.length) delivery = 'No foreground dialogue.';
-      else if (lines.every(line => line.delivery === 'off_screen')) delivery = 'The voice stays off screen. Visible mouths stay closed.';
-      else if (lines.some(line => line.delivery === 'off_screen')) delivery = 'Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.';
-      else delivery = 'Only the named on-screen speaker mouths each line. Listeners stay quiet.';
-    }
-    return [heading, pacing,
-      ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p=>p.shotId===s.shotId && p.reference?.scope==='shot_guide').map(p=>p.reference!.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-      delivery, ...spoken,
-    ].filter(Boolean).join(' ');
-  }), ...(t.audio ? [modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.',
-    ...t.audio.cues.map(c => `${timing(c.frame)}: ${c.action}`)] : [])].filter(Boolean).join('\n');
-}
-
 /** Compile once, then present the complete scene to the selected adapter's input mapper. */
 export function prepareSceneRequest<T>(
   sceneNo: number, members: Record<string, unknown>[], scene: SceneVideoDirection, episode: string,
   dialogue: { speaker?: string; delivery?: string; tts?: string }[],
-  options: { bindDialogue: boolean; bindOpening: boolean; suffix: string; shotScoped?: boolean; namedReferencesOnly?: boolean; guideMode?:'composition'|'background'; guideLimit?:number },
+  options: { bindDialogue: boolean; bindOpening: boolean; suffix: string; shotScoped?: boolean; namedReferencesOnly?: boolean; guideMode?:'composition'|'background'; guideLimit?:number; profile?: Readonly<ScenePromptProfile> },
   mapInputs: (request: SceneRequest) => T,
   board?: Record<string, unknown>,
 ) {
   const coverage = sceneCoverage(members, scene, board, sceneNo);
   const owner = (board?.STRUCTURE as {scenes?: {no:number; speakers?:string[]; frames?:unknown}[]} | undefined)?.scenes?.find(s => s.no === sceneNo);
   load('../../skills/_shared/scene-cast.js').sceneCast(owner ?? {no:sceneNo},members);
-  const modelPacedCuts = owner?.frames !== undefined && !options.shotScoped && members.length > 1 &&
+  const ownsFrames = owner?.frames !== undefined || owner?.speakers !== undefined;
+  const modelPacedCuts = ownsFrames && !options.shotScoped && members.length > 1 &&
     !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut'));
-  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && options.bindDialogue);
+  const cutTiming = options.profile?.cutTiming;
+  const directedCuts = cutTiming === 'time_ranges' || cutTiming === 'action_beats';
+  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped,
+    options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && (options.bindDialogue || directedCuts));
   const common = coverage.common;
   const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
   const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)).filter(Boolean).join(' ');
@@ -278,16 +243,20 @@ export function prepareSceneRequest<T>(
   const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
   const suffix = (value: string) => [value, options.suffix].filter(Boolean).join(' ');
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTimeline = sceneTimelineWords(timeline, scene, {includeDialogue:!options.bindDialogue, modelFacing:true, modelPacedCuts});
+  const providerTiming = {modelFacing:true, modelPacedCuts, cutTiming};
+  const providerTimeline = sceneTimelineWords(timeline, scene, {
+    ...providerTiming, includeDialogue:!options.bindDialogue,
+    describeDelivery:modelPacedCuts && directedCuts && !options.bindDialogue,
+  });
   const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
-  const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
+  const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
   const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? {modelPacedCuts:true} : {}), sceneDirection:{emotion:scene.emotion, ...(scene.action ? {action:scene.action} : {}),
     ...(camera.instruction ? {camera:camera.instruction} : {}), ...(staging ? {staging} : {}), ...(scene.oneTake ? {oneTake:true} : {}), ...(scene.sound ? {sound:scene.sound} : {})} };
   // The image and voice binders add reference labels around this timeline after planning.
   const bindSceneTurns = (prompt:string, turns:string[], describeDelivery = true) => {
     if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
       throw new Error('scene_dialogue_binding: the dialogue no longer matches the planned shot sequence');
-    return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, {modelFacing:true, modelPacedCuts, boundTurns:turns, describeDelivery}));
+    return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, {...providerTiming, boundTurns:turns, describeDelivery}));
   };
   return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }

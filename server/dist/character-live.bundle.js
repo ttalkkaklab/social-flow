@@ -34530,6 +34530,7 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
+  dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
   keyframes: external_exports.array(external_exports.object({
     frame: frame.positive(),
@@ -34547,10 +34548,10 @@ var sceneVideoDirectionSchema = external_exports.object({
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
   camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
 }).strict();
-function openingPrompt(prompt, positions = []) {
+function openingPrompt(prompt, positions = [], imageLabel = (index) => "Image " + index) {
   if (!positions.length) return prompt;
   const header = positions.map(({ character, images, position }) => {
-    const refs = images.map((index) => "Image " + index).join(", ");
+    const refs = images.map(imageLabel).join(", ");
     return character + (refs ? " (" + refs + ")" : "") + ": " + position;
   });
   const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";

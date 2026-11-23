@@ -31,6 +31,7 @@ import { recordVideoSubmission, videoEvents } from './video-events.js';
 import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects, type ImageBinding } from './video-image-inputs.js';
+import { formatReferenceLabel, scenePromptProfile, type ScenePromptProfile } from './scene-prompt-profile.js';
 import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
@@ -171,6 +172,7 @@ export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z
   operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export interface VideoPlan {
+  promptProfile?: Readonly<ScenePromptProfile>;
   sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number; sceneRendering?: 'per_shot'; shotBindings?: z.infer<typeof sceneShotBindingsSchema>;
   purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   characterInputs?: CharacterVideoInput[];
@@ -448,8 +450,16 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     .filter(line => line.tts?.trim());
   if (!scene && new Set(lines.map(line => line.speaker)).size > 1)
     throw new Error('shot_speaker_limit: split speaker changes into separate shots, then set each shot\'s framing and camera angle');
-  if (selection.engine === 'veo' && lines.some(line => line.delivery !== 'voiceover'))
-    throw new Error('voice_lane_required: Veo generates scene sound but cannot condition dialogue on a character voice. Use the selected LTX audio or reference route for spoken cuts.');
+  const promptProfile = scenePromptProfile(tool, selection.model);
+  const physicalSpeech = lines.some(line => line.delivery !== 'voiceover');
+  const veoDialogue = selection.engine === 'veo' && physicalSpeech;
+  const modelVoice = scene?.dialogueVoice === 'model_generated' && physicalSpeech;
+  if (modelVoice && (!promptProfile.allowsGeneratedVoice || tool === 'seedance_img2video' && !context.sceneOwnsFrames))
+    throw new Error('voice_lane_required: model-generated dialogue needs Veo or Seedance image-to-video with scene frames');
+  if (veoDialogue && !modelVoice)
+    throw new Error('voice_lane_required: Veo cannot condition dialogue on a character voice. If a generated voice is acceptable, set videoDirection.dialogueVoice to model_generated for this scene.');
+  if (modelVoice && input.args.generateAudio === false)
+    throw new Error('scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue');
   if (input.shotBindings && !input.sceneRendering) throw new Error('scene_render_bindings: select per_shot rendering');
   if (input.sceneRendering) {
     const conditioned = scene?.audio && scene.audio.mode !== 'mix';
@@ -579,14 +589,17 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   if (scene && (input.args.prompt !== undefined || input.args.shots !== undefined))
     throw new Error('scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene');
   const members = context.sceneMembers ?? [];
-  const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
+  const bindFastH3 = tool === 'fasth3_omni_reference' && context.sceneOwnsFrames && members.length > 1 && !silentPicture;
+  const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || bindFastH3 || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
   const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
   const guideMode = tool === 'seedance_reference' ? 'composition' :
     tool === 'astra_genai_img2video' && selection.model === 'ltx-2.5-22b-distilled' && members.length === 1 ? 'background' : undefined;
   const guideLimit = tool === 'seedance_reference'
     ? SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL) as SeedanceModel]?.referenceImages[1] : undefined;
   const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo!, members, scene, context.episode, lines,
-    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit, namedReferencesOnly:tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
+    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit,
+      profile:promptProfile,
+      namedReferencesOnly:tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
   const sceneRequest = prepared?.request;
   const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
   const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
@@ -604,7 +617,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
         shotVisualWords(members[0], coverage.shots[0], coverage.common, notes.end), notes.blocking, notes.action, ...notes.beats,
         notes.sound && 'Sound: ' + notes.sound].filter(Boolean);
       const sceneText = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(' '), lines, bindTurns);
-      callArgs = withPrompt(bindOpening ? sceneText : openingPrompt(sceneText, scene.openingPositions));
+      callArgs = withPrompt(bindOpening ? sceneText : openingPrompt(sceneText, scene.openingPositions, index => formatReferenceLabel(promptProfile.referenceLabels, 'image', index)));
     }
   }
   // Scene notes describe staging. The authored provider prompt carries reference indices
@@ -630,12 +643,15 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   const cutWarnings = sceneRequest?.modelPacedCuts
     ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
     : [];
+  for (const guide of sceneRequest?.shotReferenceImages ?? []) {
+    if (!guide.submitted) cutWarnings.push('shot_reference_omitted: ' + guide.shotId + ' receives no composition image. ' + guide.reason);
+  }
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
     ...(sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
   if (selection.engine === 'host') {
     if (input.tool) throw new Error('model_selection_mismatch: host has no server adapter');
     const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode, context.sceneMembers);
-    const body = { ...take, version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
+    const body = { ...take, ...(prepared ? {promptProfile} : {}), version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
       tool: 'host_external', args: callArgs, ...(sceneRequest ? {sceneRequest} : {}), ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
       inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' as const };
     const plan = { ...body, id: hash(body) };
@@ -686,9 +702,10 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (!extra) return images;
     return { args: { ...images.args, ...extra.args }, imageBindings: [...(images.imageBindings ?? []), ...extra.imageBindings] };
   };
+  if (modelVoice) bound.generateAudio = true;
   let images = bindImages(bound);
-  const voiceContext = { ...context, shot, msrVoice: genaiMsrVoiceReferences(),
-    bindSceneTurns: tool === 'astra_genai_img2video' && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : undefined };
+  const voiceContext = { ...context, shot, msrVoice: genaiMsrVoiceReferences(), modelVoice,
+    bindSceneTurns: bindTurns && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : undefined };
   let voice = prepareVideoVoice(tool, images.args, voiceContext);
   // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
   // the board prompt is compiled once more into the room they leave.
@@ -732,6 +749,8 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       args.prompt = prose.prompt;
     } else args.prompt = opening;
   }
+  if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
+    args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
   if (VIDEO_ADAPTERS[tool].voice === 'supplied' && typeof args.audioPath === 'string' && durationPlan.requiredSeconds !== undefined) {
     const sourceSeconds = ltxApiAudioSeconds(path.resolve(context.episode, args.audioPath));
     const fps = Number(args.fps ?? args.frameRate ?? 24);
@@ -801,7 +820,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       sceneRequest?.images.filter(pin => pin.role === 'face' && pin.reference?.scope === 'scene'))
     : undefined;
   const quote = quoteFor(tool, args);
-  const body = { ...take, ...(characterBindings ? {characterBindings} : {}), ...(cast.length ? {characterInputs:cast} : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt:String(args.prompt) } } : {}),
+  const body = { ...take, ...(prepared ? {promptProfile} : {}), ...(characterBindings ? {characterBindings} : {}), ...(cast.length ? {characterInputs:cast} : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt:String(args.prompt) } } : {}),
     version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
     ...(imageBindings ? {imageBindings} : {}),
     sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
