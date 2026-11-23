@@ -468,6 +468,13 @@ export function manageSpeech(args, options = {}) {
             if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model))
                 throw new Error('Adapter does not match the selected shot model');
             const priorBinding = object(video.speechBinding);
+            const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+            if (native || plan.mode === 'audio_conditioned') {
+                // Replacing a native clip clears trims measured on its predecessor.
+                const candidate = { id: scene.id, edit: native && replacement ? {} : scene.edit,
+                    visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } } };
+                speechContract().assertVideoPerformanceOwnership(scenes, dirname(file), candidate);
+            }
             const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
             const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
             const retiming = nodeModule.createRequire(import.meta.url)('../../skills/_shared/performance-retiming.js');
@@ -496,7 +503,7 @@ export function manageSpeech(args, options = {}) {
                     boundSeconds = syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
                 // edit.in / edit.out were measured on the clip they trimmed; on other bytes they would cut somewhere else, perhaps into the line.
                 const trim = object(scene.edit);
-                if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== undefined || trim.out !== undefined)) {
+                if (native && replacement && (trim.in !== undefined || trim.out !== undefined)) {
                     const { in: sourceIn, out: sourceOut, ...kept } = trim;
                     scene.edit = kept;
                     clearedTrim = { ...(sourceIn !== undefined ? { in: sourceIn } : {}), ...(sourceOut !== undefined ? { out: sourceOut } : {}),

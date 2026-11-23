@@ -55389,6 +55389,15 @@ function manageSpeech(args, options = {}) {
       const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object3(video.speechBinding);
+      const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+      if (native || plan.mode === "audio_conditioned") {
+        const candidate = {
+          id: scene.id,
+          edit: native && replacement ? {} : scene.edit,
+          visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } }
+        };
+        speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate);
+      }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
       const retiming = nodeModule4.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
@@ -55410,7 +55419,7 @@ function manageSpeech(args, options = {}) {
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file), videoPath, video.clip, plan.warnings);
         const trim = object3(scene.edit);
-        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+        if (native && replacement && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
           scene.edit = kept;
           clearedTrim = {

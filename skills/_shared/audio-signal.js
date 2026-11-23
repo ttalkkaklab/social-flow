@@ -34,4 +34,10 @@ function covers(spans, start, seconds, tolerance = 0) {
   return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds - tolerance);
 }
 
-module.exports = { inspect, covers, SILENCE_DB };
+// Decode to a fixed PCM format so a renamed or remuxed file retains its performance identity.
+function decodedAudioHash(file) {
+  return execFileSync('ffmpeg', ['-nostdin','-v','error','-xerror','-i',file,'-map','0:a:0',
+    '-ac','2','-ar','16000','-c:a','pcm_s16le','-f','hash','-hash','sha256','-'], {encoding:'utf8',timeout:30000}).trim();
+}
+
+module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash };

@@ -367,9 +367,7 @@ function verifyDistinctSamples(samples: {speaker:string;path:string}[]) {
     }
     seen.set(file,speaker);
     requireSpeechSignal(file, 'scene_speech_references');
-    // Hash canonical decoded samples so a container or metadata edit cannot create a second voice.
-    const digest = execFileSync('ffmpeg', ['-nostdin','-v','error','-xerror','-i',file,'-map','0:a:0',
-      '-ac','2','-ar','16000','-c:a','pcm_s16le','-f','hash','-hash','sha256','-'], {encoding:'utf8',timeout:30000}).trim();
+    const digest = load('../../skills/_shared/audio-signal.js').decodedAudioHash(file);
     if (owners.has(digest) && owners.get(digest) !== speaker)
       throw new Error('scene_speech_references: different characters need distinct decoded voice samples');
     owners.set(digest,speaker);

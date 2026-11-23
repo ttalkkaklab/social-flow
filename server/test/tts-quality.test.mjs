@@ -142,7 +142,8 @@ test('historical native voice bindings must fit each selected render at assembly
       const narration=speakers.map((speaker,line)=>({id:'line-'+index+'-'+line,speaker,delivery:'on_screen',tts:speaker+' speaks.'}));
       const audio=narration.map(n=>({lineId:n.id,revision:speechRevision(n,actors.find(a=>a.id===n.speaker))}));
       const binding={mode:'native',provider:recorded.engine,model:recorded.model,operation:recorded.operation,videoPath:picture,videoSha256:sha(picture),audio};
-      return {id:'shot-'+index,scene:1,type:'points',narration,visual:{video:{clip:picture,speechStatus:'current',speechBinding:binding,...video}},sound:{audioSource:'video'}};
+      const edit={in:index*0.25/groups.length,out:(index+1)*0.25/groups.length};
+      return {id:'shot-'+index,scene:1,type:'points',narration,edit,visual:{video:{clip:picture,speechStatus:'current',speechBinding:binding,...video}},sound:{audioSource:'video'}};
     });
     const win={SB_DOC:{characters:actors},SCENES:shots,STRUCTURE:{scenes:[owner]},PRODUCTION:{videoModel:selected}};
     writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));

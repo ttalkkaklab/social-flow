@@ -8,14 +8,21 @@ const { createHash } = require('crypto');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const speechSpan = require('../../_shared/speech-span.js');
 
-function checkAssemblyRoutes(win) {
-  const {assertNoPostLipSync} = require('../../_shared/speech-contract.js');
+function checkAssemblyRoutes(win,board) {
+  const {assertNoPostLipSync,assertVideoSpeechProvenance} = require('../../_shared/speech-contract.js');
   for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync(scene.videoDirection);
   for (const shot of win.SCENES ?? []) {
     const video = shot.visual?.video ?? {};
     assertNoPostLipSync({mode:video.mode, operation:video.operation, tool:video.tool, strategy:video.strategy, route:video.route,
       postLipSync:video.postLipSync, post_lipsync:video.post_lipsync, capabilities:video.capabilities, speechBinding:video.speechBinding,
       soundtrackRepair:video.soundtrackRepair, reuse:shot.visual?.reuse, sound:shot.sound});
+    for (const file of new Set([video.clip, video.speechBinding?.videoPath, video.soundtrackRepair?.videoPath])) {
+      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,video.speechBinding);
+    }
+    for (const source of video.soundtrackRepair?.sources ?? []) {
+      if (source.kind === 'native_video' && typeof source.path === 'string')
+        assertVideoSpeechProvenance(path.resolve(board,source.path),null);
+    }
   }
 }
 
@@ -37,7 +44,7 @@ function usesConditioningTrack(scene, board, audio) {
 function prepare(work, board) {
   work = path.resolve(work); board = path.resolve(board);
   const win = evaluateWindowScript(fs.readFileSync(path.join(board, 'scenes.js'), 'utf8'));
-  checkAssemblyRoutes(win);
+  checkAssemblyRoutes(win,board);
   const cards = path.join(work, 'cards.tsv');
   const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/);
   const receiptFile = path.join(work, 'source-audio.json');

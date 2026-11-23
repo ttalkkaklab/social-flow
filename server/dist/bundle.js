@@ -96768,6 +96768,91 @@ var require_character_voice = __commonJS({
   }
 });
 
+// ../skills/_shared/audio-signal.js
+var require_audio_signal = __commonJS({
+  "../skills/_shared/audio-signal.js"(exports, module) {
+    "use strict";
+    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
+    var SILENCE_DB = -60;
+    function inspect(file) {
+      const streams = JSON.parse(execFileSync20("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration:format=duration",
+        "-of",
+        "json",
+        file
+      ], { encoding: "utf8" }));
+      if (!streams.streams?.length) return { status: "missing", spans: [] };
+      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
+      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
+      const result = spawnSync4(
+        "ffmpeg",
+        [
+          "-hide_banner",
+          "-nostdin",
+          "-nostats",
+          "-xerror",
+          "-progress",
+          "pipe:1",
+          "-i",
+          file,
+          "-map",
+          "0:a:0",
+          "-af",
+          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
+          "-f",
+          "null",
+          "-"
+        ],
+        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
+      );
+      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
+        throw new Error("cannot decode audio signal");
+      const spans = [];
+      let start = 0;
+      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
+        if (event === "start") start = Number(time3);
+        else spans.push([start, Number(time3)]);
+      }
+      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
+      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
+      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
+      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
+    }
+    function covers(spans, start, seconds2, tolerance = 0) {
+      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
+    }
+    function decodedAudioHash(file) {
+      return execFileSync20("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-ac",
+        "2",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        "-f",
+        "hash",
+        "-hash",
+        "sha256",
+        "-"
+      ], { encoding: "utf8", timeout: 3e4 }).trim();
+    }
+    module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash };
+  }
+});
+
 // ../skills/_shared/speech-contract.js
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
@@ -96837,24 +96922,27 @@ var require_speech_contract = __commonJS({
       if (!value || typeof value !== "object") return false;
       return Object.entries(value).some(([key, entry2]) => {
         if ((key === "postLipSync" || key === "post_lipsync") && entry2 === true) return true;
-        if (typeof entry2 === "string" && ["mode", "operation", "strategy", "route", "tool"].includes(key))
-          return /^post[-_ ]?lip[-_ ]?sync$/i.test(entry2);
+        if (typeof entry2 === "string" && ["mode", "operation", "strategy", "route", "tool", "provider", "model"].includes(key))
+          return /^(?:post[-_ ]?lip[-_ ]?sync|musetalk|wav2lip)$/i.test(entry2);
         return hasPostLipSync(entry2);
       });
     }
     function assertNoPostLipSync2(value) {
       if (hasPostLipSync(value)) throw new Error("post_lipsync_forbidden: generate a new speaking take from the approved inputs");
     }
-    function assertVideoSpeechProvenance(videoPath, sha2563, plan2) {
+    function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}) {
       const fs26 = __require("node:fs");
       for (const suffix of [".astra-job.json", ".astra-genai.json"]) {
         let receipt;
         try {
           receipt = JSON.parse(fs26.readFileSync(videoPath + suffix, "utf8"));
-        } catch {
-          continue;
+          if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) throw new Error("Invalid receipt");
+        } catch (error2) {
+          if (error2.code === "ENOENT") continue;
+          throw new Error("speech_video_receipt_invalid: cannot verify the generation receipt for " + videoPath);
         }
-        if (!receipt || (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath)) continue;
+        sha2563 ??= createHash33("sha256").update(fs26.readFileSync(videoPath)).digest("hex");
+        if (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath) continue;
         assertNoPostLipSync2(receipt);
         if (receipt.sha256 !== sha2563 || !["native", "audio_conditioned"].includes(plan2.mode)) continue;
         const operation = receipt.operation ?? receipt.mode;
@@ -96866,7 +96954,49 @@ var require_speech_contract = __commonJS({
           throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
       }
     }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance };
+    function assertVideoPerformanceOwnership(shots, boardDir, candidate2) {
+      const fs26 = __require("node:fs"), path39 = __require("node:path");
+      const decoded = /* @__PURE__ */ new Map();
+      function source(shot) {
+        const binding = shot.visual?.video?.speechBinding;
+        if (!["native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256 || !binding.audio?.length) return;
+        const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
+        if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
+          throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
+        return { id: shot.id, start, end, binding, revisions: JSON.stringify(binding.audio.map((line) => line.revision)) };
+      }
+      function soundtrack(entry2) {
+        const { videoPath, videoSha256, conditioningAudioSha256 } = entry2.binding;
+        if (conditioningAudioSha256) return;
+        if (!decoded.has(videoSha256)) {
+          const file = typeof videoPath === "string" && path39.resolve(boardDir, videoPath);
+          if (!file || !fs26.existsSync(file) || createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") !== videoSha256) return;
+          decoded.set(videoSha256, require_audio_signal().decodedAudioHash(file));
+        }
+        return decoded.get(videoSha256);
+      }
+      function check2(left, right) {
+        if (left.end <= right.start || right.end <= left.start) return;
+        if (left.binding.mode === right.binding.mode && left.revisions === right.revisions) return;
+        const sameFile = left.binding.videoSha256 === right.binding.videoSha256;
+        const leftAudio = !sameFile && soundtrack(left);
+        if (sameFile || leftAudio && leftAudio === soundtrack(right))
+          throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign different dialogue to overlapping source audio; generate the changed take or select its own source interval");
+      }
+      const prior = [];
+      const next = candidate2 && source(candidate2);
+      for (const shot of shots) {
+        const entry2 = source(shot);
+        if (!entry2) continue;
+        if (candidate2) {
+          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next);
+        } else {
+          for (const earlier of prior) check2(earlier, entry2);
+          prior.push(entry2);
+        }
+      }
+    }
+    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, assertVideoPerformanceOwnership };
   }
 });
 
@@ -104720,68 +104850,6 @@ var require_character_speech = __commonJS({
   }
 });
 
-// ../skills/_shared/audio-signal.js
-var require_audio_signal = __commonJS({
-  "../skills/_shared/audio-signal.js"(exports, module) {
-    "use strict";
-    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
-    var SILENCE_DB = -60;
-    function inspect(file) {
-      const streams = JSON.parse(execFileSync20("ffprobe", [
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=duration:format=duration",
-        "-of",
-        "json",
-        file
-      ], { encoding: "utf8" }));
-      if (!streams.streams?.length) return { status: "missing", spans: [] };
-      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
-      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
-      const result = spawnSync4(
-        "ffmpeg",
-        [
-          "-hide_banner",
-          "-nostdin",
-          "-nostats",
-          "-xerror",
-          "-progress",
-          "pipe:1",
-          "-i",
-          file,
-          "-map",
-          "0:a:0",
-          "-af",
-          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
-          "-f",
-          "null",
-          "-"
-        ],
-        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
-      );
-      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
-        throw new Error("cannot decode audio signal");
-      const spans = [];
-      let start = 0;
-      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
-        if (event === "start") start = Number(time3);
-        else spans.push([start, Number(time3)]);
-      }
-      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
-      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
-      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
-      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
-    }
-    function covers(spans, start, seconds2, tolerance = 0) {
-      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
-    }
-    module.exports = { inspect, covers, SILENCE_DB };
-  }
-});
-
 // ../skills/produce/references/prepare-source-audio.js
 var require_prepare_source_audio = __commonJS({
   "../skills/produce/references/prepare-source-audio.js"(exports, module) {
@@ -104792,8 +104860,8 @@ var require_prepare_source_audio = __commonJS({
     var { createHash: createHash33 } = __require("crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var speechSpan = require_speech_span();
-    function checkAssemblyRoutes(win) {
-      const { assertNoPostLipSync: assertNoPostLipSync2 } = require_speech_contract();
+    function checkAssemblyRoutes(win, board) {
+      const { assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance } = require_speech_contract();
       for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync2(scene.videoDirection);
       for (const shot of win.SCENES ?? []) {
         const video2 = shot.visual?.video ?? {};
@@ -104811,6 +104879,13 @@ var require_prepare_source_audio = __commonJS({
           reuse: shot.visual?.reuse,
           sound: shot.sound
         });
+        for (const file of /* @__PURE__ */ new Set([video2.clip, video2.speechBinding?.videoPath, video2.soundtrackRepair?.videoPath])) {
+          if (typeof file === "string") assertVideoSpeechProvenance(path39.resolve(board, file), null, video2.speechBinding);
+        }
+        for (const source of video2.soundtrackRepair?.sources ?? []) {
+          if (source.kind === "native_video" && typeof source.path === "string")
+            assertVideoSpeechProvenance(path39.resolve(board, source.path), null);
+        }
       }
     }
     function usesConditioningTrack(scene, board, audio) {
@@ -104829,7 +104904,7 @@ var require_prepare_source_audio = __commonJS({
       work = path39.resolve(work);
       board = path39.resolve(board);
       const win = evaluateWindowScript2(fs26.readFileSync(path39.join(board, "scenes.js"), "utf8"));
-      checkAssemblyRoutes(win);
+      checkAssemblyRoutes(win, board);
       const cards = path39.join(work, "cards.tsv");
       const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
       const receiptFile = path39.join(work, "source-audio.json");
@@ -105466,7 +105541,7 @@ var require_check_tts_quality = __commonJS({
     var path39 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { createHash: createHash33 } = __require("node:crypto");
-    var { speechRevision: speechRevision2 } = require_speech_contract();
+    var { speechRevision: speechRevision2, assertVideoPerformanceOwnership } = require_speech_contract();
     var { usesConditioningTrack, checkAssemblyRoutes } = require_prepare_source_audio();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
     var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
@@ -105661,7 +105736,7 @@ var require_check_tts_quality = __commonJS({
       board = path39.resolve(board);
       const file = path39.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
-      checkAssemblyRoutes(win);
+      checkAssemblyRoutes(win, board);
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
       const rows = fs26.readFileSync(path39.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
@@ -105751,6 +105826,7 @@ var require_check_tts_quality = __commonJS({
           authorizeSpeed2(work, "final", receipt.playbackSpeed ?? 1);
         }
       }
+      assertVideoPerformanceOwnership(win.SCENES, board);
       fs26.writeFileSync(path39.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, actedIntervals, approved: false }, null, 2) + "\n");
       return media;
     }
@@ -131180,27 +131256,7 @@ function verifyDistinctSamples(samples) {
     }
     seen.set(file, speaker);
     requireSpeechSignal(file, "scene_speech_references");
-    const digest5 = execFileSync14("ffmpeg", [
-      "-nostdin",
-      "-v",
-      "error",
-      "-xerror",
-      "-i",
-      file,
-      "-map",
-      "0:a:0",
-      "-ac",
-      "2",
-      "-ar",
-      "16000",
-      "-c:a",
-      "pcm_s16le",
-      "-f",
-      "hash",
-      "-hash",
-      "sha256",
-      "-"
-    ], { encoding: "utf8", timeout: 3e4 }).trim();
+    const digest5 = load7("../../skills/_shared/audio-signal.js").decodedAudioHash(file);
     if (owners.has(digest5) && owners.get(digest5) !== speaker)
       throw new Error("scene_speech_references: different characters need distinct decoded voice samples");
     owners.set(digest5, speaker);
@@ -147335,6 +147391,15 @@ function manageSpeech(args, options = {}) {
       const video2 = object5(visual.video);
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object5(video2.speechBinding);
+      const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+      if (native || plan2.mode === "audio_conditioned") {
+        const candidate2 = {
+          id: scene.id,
+          edit: native && replacement ? {} : scene.edit,
+          visual: { video: { speechBinding: { mode: plan2.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } }
+        };
+        speechContract().assertVideoPerformanceOwnership(scenes, dirname11(file), candidate2);
+      }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan2.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
       const retiming = nodeModule7.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
@@ -147356,7 +147421,7 @@ function manageSpeech(args, options = {}) {
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname11(file), videoPath, video2.clip, plan2.warnings);
         const trim = object5(scene.edit);
-        if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== void 0 || trim.out !== void 0)) {
+        if (native && replacement && (trim.in !== void 0 || trim.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim;
           scene.edit = kept;
           clearedTrim = {

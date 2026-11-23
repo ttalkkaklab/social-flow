@@ -317,6 +317,11 @@ For the selected provider/model, resolve and record capabilities with evidence:
 footage is prohibited, including plans saved with an older version of the plugin.
 Choose the production route from the selected adapter and the authored speech delivery.
 
+An existing native clip can serve several cards with different dialogue when their source
+intervals are disjoint. Set `edit.in` and `edit.out` on the cards to select the lines from the
+original scene. An overlapping interval with different bound speech requires a new take.
+Attachment and assembly check this ownership and any matching local generation receipt.
+
 | Speech | Route | When speech changes |
 |---|---|---|
 | Authored physical dialogue within the native render’s current voice limit | native | Regenerate the speaking take from the edited lines |

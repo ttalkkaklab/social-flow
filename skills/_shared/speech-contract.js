@@ -59,8 +59,8 @@ function hasPostLipSync(value) {
   if (!value || typeof value !== 'object') return false;
   return Object.entries(value).some(([key, entry]) => {
     if ((key === 'postLipSync' || key === 'post_lipsync') && entry === true) return true;
-    if (typeof entry === 'string' && ['mode', 'operation', 'strategy', 'route', 'tool'].includes(key))
-      return /^post[-_ ]?lip[-_ ]?sync$/i.test(entry);
+    if (typeof entry === 'string' && ['mode', 'operation', 'strategy', 'route', 'tool', 'provider', 'model'].includes(key))
+      return /^(?:post[-_ ]?lip[-_ ]?sync|musetalk|wav2lip)$/i.test(entry);
     return hasPostLipSync(entry);
   });
 }
@@ -70,12 +70,19 @@ function assertNoPostLipSync(value) {
 
 // Imported native clips may have no local receipt. When a receipt identifies the bytes,
 // its recorded generation operation takes precedence over an attachment label.
-function assertVideoSpeechProvenance(videoPath, sha256, plan) {
+function assertVideoSpeechProvenance(videoPath, sha256, plan = {}) {
   const fs = require('node:fs');
   for (const suffix of ['.astra-job.json','.astra-genai.json']) {
     let receipt;
-    try { receipt = JSON.parse(fs.readFileSync(videoPath + suffix, 'utf8')); } catch { continue; }
-    if (!receipt || (receipt.sha256 ? receipt.sha256 !== sha256 : receipt.videoPath !== videoPath)) continue;
+    try {
+      receipt = JSON.parse(fs.readFileSync(videoPath + suffix, 'utf8'));
+      if (!receipt || typeof receipt !== 'object' || Array.isArray(receipt)) throw new Error('Invalid receipt');
+    } catch (error) {
+      if (error.code === 'ENOENT') continue;
+      throw new Error('speech_video_receipt_invalid: cannot verify the generation receipt for ' + videoPath);
+    }
+    sha256 ??= createHash('sha256').update(fs.readFileSync(videoPath)).digest('hex');
+    if (receipt.sha256 ? receipt.sha256 !== sha256 : receipt.videoPath !== videoPath) continue;
     assertNoPostLipSync(receipt);
     if (receipt.sha256 !== sha256 || !['native','audio_conditioned'].includes(plan.mode)) continue;
     const operation = receipt.operation ?? receipt.mode;
@@ -90,4 +97,52 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan) {
   }
 }
 
-module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance };
+// One source interval can only carry one spoken performance. Adjacent authored
+// trims may share the same scene render. Keep checks local to an episode.
+function assertVideoPerformanceOwnership(shots, boardDir, candidate) {
+  const fs = require('node:fs'), path = require('node:path');
+  const decoded = new Map();
+  function source(shot) {
+    const binding = shot.visual?.video?.speechBinding;
+    if (!['native','audio_conditioned'].includes(binding?.mode) || !binding.videoSha256 || !binding.audio?.length) return;
+    const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
+    if (!Number.isFinite(start) || start < 0 || !(end > start) || (end !== Infinity && !Number.isFinite(end)))
+      throw new Error('speech_video_performance_conflict: invalid dialogue source interval for ' + shot.id);
+    return {id:shot.id, start, end, binding, revisions:JSON.stringify(binding.audio.map(line => line.revision))};
+  }
+  function soundtrack(entry) {
+    const {videoPath,videoSha256,conditioningAudioSha256} = entry.binding;
+    // A receipt-bound silent A2V picture carries no embedded performance to compare.
+    if (conditioningAudioSha256) return;
+    if (!decoded.has(videoSha256)) {
+      const file = typeof videoPath === 'string' && path.resolve(boardDir,videoPath);
+      // A missing or replaced historical file cannot identify a remux by its audio.
+      if (!file || !fs.existsSync(file) || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== videoSha256) return;
+      decoded.set(videoSha256,require('./audio-signal.js').decodedAudioHash(file));
+    }
+    return decoded.get(videoSha256);
+  }
+  function check(left,right) {
+    if (left.end <= right.start || right.end <= left.start) return;
+    if (left.binding.mode === right.binding.mode && left.revisions === right.revisions) return;
+    const sameFile = left.binding.videoSha256 === right.binding.videoSha256;
+    const leftAudio = !sameFile && soundtrack(left);
+    if (sameFile || (leftAudio && leftAudio === soundtrack(right)))
+      throw new Error('speech_video_performance_conflict: ' + left.id + ' and ' + right.id +
+        ' assign different dialogue to overlapping source audio; generate the changed take or select its own source interval');
+  }
+  const prior = [];
+  const next = candidate && source(candidate);
+  for (const shot of shots) {
+    const entry = source(shot);
+    if (!entry) continue;
+    if (candidate) {
+      if (next && (entry.id !== next.id || entry.binding.videoSha256 !== next.binding.videoSha256)) check(entry,next);
+    } else {
+      for (const earlier of prior) check(earlier,entry);
+      prior.push(entry);
+    }
+  }
+}
+
+module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance, assertVideoPerformanceOwnership };
