@@ -1380,3 +1380,7 @@ French, German, Vietnamese and Korean (only the Korean rate is measured). Option
 `languages.subtitles` and `review` name the other languages. The shared review template reads `review-localization.json` and shows
 a floating story/dialogue language selector while production keeps its source text.
 See [review translations](skills/storyboard/references/review-localization.md).
+
+### Scene video requests
+
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.

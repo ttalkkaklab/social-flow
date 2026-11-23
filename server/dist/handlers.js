@@ -1543,7 +1543,7 @@ export const ROUTES = {
     },
     story_scene: async (args) => {
         storyboard.contract();
-        const r = storyboard.writeStoryScenes(parseArgs(storyboard.storySceneSchema, args));
+        const r = storyboard.writeStoryScenes(parseArgs(storyboard.storySceneSchema, args), true);
         return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
     },
     story_shot: async (args) => {

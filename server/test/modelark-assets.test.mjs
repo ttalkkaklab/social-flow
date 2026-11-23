@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { test } from 'node:test';
 import { setupProject } from './workflow-fixture.mjs';
 import modelSettings from '../../skills/_shared/model-settings.js';
@@ -90,7 +91,7 @@ function fixture(t) {
         return result({ Id: 'asset-first' });
       }
       if (action === 'GetAsset')
-        return result({ Id: 'asset-first', GroupId: 'group-one', Status: settings.status, AssetType: 'Image' });
+        return result({ Id: 'asset-first', Name:'sf-'+createHash('sha256').update(fs.readFileSync(image)).digest('hex').slice(0,48), GroupId: 'group-one', Status: settings.status, AssetType: 'Image' });
     }
     if (u.hostname === 'host.invalid')
       return opts.method === 'HEAD'
@@ -304,7 +305,7 @@ test('registered face and ordinary headless fitting are submitted in their autho
   assert.equal(f.counters.CreateAsset, 1);
 });
 
-test('managed portrait ambiguity releases the same approval until the cast copy has one owner', async (t) => {
+test('a managed scene rejects an ambiguous copied portrait and accepts its registered speaker', async (t) => {
   const f = fixture(t),
     video = {
       engine: 'seedance',
@@ -326,8 +327,12 @@ test('managed portrait ambiguity releases the same approval until the cast copy 
       source: path.relative(board, path.join(d, 'identity.md')),
     }));
   fs.writeFileSync(cast, JSON.stringify({ characters }));
+  const tts = {engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
+  const voice = path.join(board,'iris.wav');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=440:duration=2','-ar','16000',voice]);
+  const doc = {characters:[{id:'iris',tts,voiceReference:{path:voice,tts,sha256:createHash('sha256').update(fs.readFileSync(voice)).digest('hex')}}]};
   const shot = {
-    id: 's1',
+    id: 's1', scene:1, narration:[{speaker:'iris',delivery:'off_screen',tts:'Wait.'}],
     visual: {
       frames: { mode: 'reference' },
       references: [{ id: 'iris', role: 'character', use: 'video', path: 'shot.png', purpose: 'The dancer.' }],
@@ -337,26 +342,36 @@ test('managed portrait ambiguity releases the same approval until the cast copy 
   const auth = {
     videoAuthorization: { reference: 'Fixture approval', maxUsd: 1, maxAttempts: 1, maxConcurrent: 1 },
   };
-  fs.writeFileSync(
+  const save = () => fs.writeFileSync(
     path.join(board, 'scenes.js'),
-    'window.PRODUCTION=' + JSON.stringify(auth) + ';\nwindow.SCENES=' + JSON.stringify([shot]) + ';',
+    'window.SB_DOC='+ JSON.stringify(doc) + ';window.PRODUCTION=' + JSON.stringify(auth) + ';\nwindow.STRUCTURE={scenes:[{no:1}]};window.SCENES=' + JSON.stringify([shot]) + ';',
   );
-  const planned = await ROUTES.video_plan({
+  save();
+  const plan = () => ROUTES.video_plan({
     episode,
-    shotId: 's1',
+    sceneNo: 1,
     requestId: 'ambiguous',
     args: { durationSeconds: 4 },
   });
-  const planId = JSON.parse(planned.content[0].text).id;
-  await ROUTES.video_approve({ episode, planIds: [planId], request: 'Fixture single plan approval' });
-  const blocked = await ROUTES.video_execute({ episode, planId });
-  assert.equal(blocked.structuredContent.code, 'modelark_asset_ambiguous');
-  assert.equal(blocked.structuredContent.videoSubmitted, false);
-  assert.deepEqual(f.counters, {});
-  const ledger = path.join(episode, '.work/video-routing/state.json');
-  assert.deepEqual(JSON.parse(fs.readFileSync(ledger)).jobs, {});
-  fs.writeFileSync(cast, JSON.stringify({ characters: characters.slice(0, 1) }));
+  const refusal = await plan();
+  assert.equal(refusal.structuredContent.code,'modelark_asset_ambiguous');
+  assert.equal(refusal.structuredContent.videoSubmitted,false);
+  assert.deepEqual(f.counters,{});
+  const ledger = path.join(episode,'.work/video-routing/state.json');
+  assert.equal(fs.existsSync(ledger),false);
+  fs.writeFileSync(cast, JSON.stringify({characters:characters.slice(0,1)}));
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=320x320','-frames:v','1',path.join(f.folder,'body.png')]);
+  fs.writeFileSync(path.join(f.folder,'panels.json'),JSON.stringify({panels:{face:{file:'face.png'},front:{file:'body.png'}}}));
+  shot.visual.character = 'iris';
+  shot.visual.characterInputs = [{character:'iris',bodyView:'front'}];
+  shot.visual.references = [];
+  shot.narration[0].delivery = 'on_screen';
+  save();
   await f.run();
+  const planned = await plan();
+  assert.ok(!planned.isError,planned.content[0].text);
+  const planId = JSON.parse(planned.content[0].text).id;
+  await ROUTES.video_approve({episode,planIds:[planId],request:'Approve the registered cast for this scene'});
   const executed = await ROUTES.video_execute({ episode, planId });
   assert.match(executed.content[0].text, /mock stop after inspecting/);
   assert.equal(JSON.parse(fs.readFileSync(ledger)).jobs.ambiguous.providerId, 'cgt-mock');

@@ -633,7 +633,7 @@
   }
   .scene-missing-title { margin: 16px 16px 0; font-size: 1rem; }
   .scene-tab-bar { display: flex; padding: 10px clamp(12px, 2vw, 20px); border-bottom: 1px solid var(--hair); }
-  .scene-tab-list { display: inline-flex; max-width: 100%; padding: 3px; gap: 2px; border-radius: 12px; background: var(--sunk); }
+  .scene-tab-list { display: inline-flex; flex-wrap: wrap; max-width: 100%; padding: 3px; gap: 2px; border-radius: 12px; background: var(--sunk); }
   .scene-tab-list button {
     min-width: 0; min-height: 44px; padding: 5px 14px; border: 0; border-radius: 9px;
     color: var(--muted); background: transparent; font: inherit; font-size: var(--t-aux); font-weight: 650; cursor: pointer;
@@ -642,6 +642,14 @@
   .scene-tab-list button:focus-visible, .scene-workbench [role="tabpanel"]:focus-visible {
     outline: 2px solid var(--accent-ink); outline-offset: -2px;
   }
+  .scene-settings { padding: clamp(12px, 2vw, 20px); }
+  .generation-counts { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-block: 8px; }
+  .generation-count { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+  .scene-settings-controls { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px; }
+  .scene-settings .scene-direction-icons { margin-block: 0; }
+  .scene-cast { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 12px; padding-top: 12px; font-size: var(--t-cap); }
+  .scene-cast ul { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; padding: 0; list-style: none; }
+  .scene-cast small { margin-inline-start: 5px; color: var(--muted); }
   .scene-notes-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .scene-notes-grid > .scene-note + .scene-note { border-inline-start: 1px solid var(--hair); }
   .scene-note { min-width: 0; padding: clamp(16px, 2vw, 24px); overflow-wrap: anywhere; }
@@ -814,7 +822,7 @@
   .panel { margin: 0; width: var(--fw); }
 
   .cut { min-width: 0; max-width: 560px; }
-  /* Shot body — the video's inputs on the left, the lines on the right */
+  /* A compact detail bar sits above the available shot media. */
   .shot-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--s5); margin-top: var(--s4); align-items: start; }
   .shot-media { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
   .shot-frames { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
@@ -843,7 +851,6 @@
   .ref-off-tile svg { width: 34%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
   .ref-over { position: absolute; top: 4px; left: 4px; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; color: #fff; background: var(--warn, #d9480f); }
   .shot-refs-none { margin: 0; font-size: var(--t-cap); color: var(--muted); }
-  .shot-lines { min-width: 0; }
   /* Production video — a dark stage under the shot body; the cut label is the tooltip */
   .production-cut-review { margin: var(--s5) 0 0; }
   .production-cut-review .production-cut-grid { display: grid; grid-template-columns: 1fr; gap: var(--s3); }
@@ -862,17 +869,6 @@
     display: grid; place-items: center; margin-top: var(--s5); padding: 28px 16px; border: 1.5px dashed var(--line); border-radius: 18px;
     font-size: var(--t-cap); color: var(--faint);
   }
-  .shot-tabs > input { position: absolute; opacity: 0; pointer-events: none; }
-  .shot-tab-nav { display: flex; gap: 2px; margin-bottom: var(--s3); padding: 3px; border-radius: 10px; background: var(--sunk); width: max-content; }
-  .shot-tab-nav label { padding: 5px 14px; border-radius: 8px; font-size: var(--t-cap); font-weight: 600; color: var(--muted); cursor: pointer; }
-  .shot-tab-panel { display: none; }
-  .shot-tabs > input:nth-of-type(1):checked ~ .shot-tab-nav label:nth-child(1),
-  .shot-tabs > input:nth-of-type(2):checked ~ .shot-tab-nav label:nth-child(2),
-  .shot-tabs > input:nth-of-type(3):checked ~ .shot-tab-nav label:nth-child(3) { background: var(--card); color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
-  .shot-tabs > input:nth-of-type(1):checked ~ .shot-tab-panels > :nth-child(1),
-  .shot-tabs > input:nth-of-type(2):checked ~ .shot-tab-panels > :nth-child(2),
-  .shot-tabs > input:nth-of-type(3):checked ~ .shot-tab-panels > :nth-child(3) { display: block; }
-  .shot-tabs > input:focus-visible ~ .shot-tab-nav { outline: 2px solid var(--accent, #3b6cf6); outline-offset: 2px; }
   .shot-story { margin: 0; font-size: 15px; line-height: 1.7; color: var(--text); }
   .shot-setting { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
   .shot-frame-plan { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
@@ -947,48 +943,15 @@
   .shot-size .sz b { font-size: var(--t-cap); font-weight: 700; color: var(--text); }
   .shot-size .sz small { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); letter-spacing: .04em; }
   .shot-size.unknown .sz b { color: var(--warn-ink, var(--accent-ink)); }
-  /* Pictogram tiles — one rule for every icon on the page: a soft gradient squircle per family
-     and a white line glyph, 2px, round caps, no faces, no dark accents. A filled shape marks only
-     the small solids (the camera dot, a lens, a figure far away). */
+  /* The legend and shot cards share each pictogram's stroke and category color. */
   .size-ico {
-    width: 22px; height: 22px; flex: none; border-radius: 24%; overflow: hidden; color: #fff;
+    width: 22px; height: 22px; flex: none; border-radius: 24%; overflow: hidden;
+    color: var(--tone, #4a596a); background: var(--tint, #edf0f4);
     fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
-    background: linear-gradient(150deg, #a8a8ae, #6a6a72);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 1px 2px rgba(0, 0, 0, .16);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 19%, transparent);
   }
   .size-ico .ico-fill { fill: currentColor; stroke: none; }
   .size-ico .ico-dim { opacity: .55; }
-  .size-ico.f-wide { background: linear-gradient(150deg, #5eb4ff, #2d6fe6); }
-  .size-ico.f-body { background: linear-gradient(150deg, #43d17d, #1a9a55); }
-  .size-ico.f-face { background: linear-gradient(150deg, #ff9a62, #ef4a6e); }
-  .size-ico.f-thing { background: linear-gradient(150deg, #ffc94d, #f08a12); }
-  .size-ico.f-group { background: linear-gradient(150deg, #b48cff, #6f4fe0); }
-  .size-ico.f-view { background: linear-gradient(150deg, #4fd6c9, #148fa3); }
-  /* Render-route tiles (render-routing.md) — three families the eye must tell apart at a glance:
-     generated video, an HTML animation, a photo with a camera move. */
-  .size-ico.r-video { background: linear-gradient(150deg, #ff7aa8, #d1286c); }
-  .size-ico.r-msr { background: linear-gradient(150deg, #ffb347, #e0661b); }
-  .size-ico.r-html { background: linear-gradient(150deg, #3fd1a0, #128a6c); }
-  .size-ico.r-photo { background: linear-gradient(150deg, #6d7ea3, #33405e); }
-  .size-ico.r-asset { background: linear-gradient(150deg, #b0b0b8, #6e6e78); }
-  .size-ico.a-cam { background: linear-gradient(150deg, #8e9dff, #4a50c9); }
-  .size-ico.s-look { background: linear-gradient(150deg, #e2ad6b, #9a5a2c); }
-  .size-ico.d-depth { background: linear-gradient(150deg, #6fc8ef, #2b6fa3); }
-  .size-ico.d-unset { background: linear-gradient(150deg, #c4c4ca, #8a8a92); }
-  /* Camera-move families — one move per shot, so each family gets its own hue */
-  .size-ico.c-fix { background: linear-gradient(150deg, #a3afc2, #5b6678); }
-  .size-ico.c-travel { background: linear-gradient(150deg, #ffb066, #e8692a); }
-  .size-ico.c-lens { background: linear-gradient(150deg, #c38bff, #7d45d6); }
-  .size-ico.c-turn { background: linear-gradient(150deg, #5fd0e0, #1b8aa8); }
-  .size-ico.c-follow { background: linear-gradient(150deg, #6fd88a, #23995a); }
-  .size-ico.c-rise { background: linear-gradient(150deg, #ffd25e, #e0901a); }
-  .size-ico.c-body { background: linear-gradient(150deg, #ff8a8a, #d63c5a); }
-  /* Beat accents ride on a move, so a shot can show one beside its move chip */
-  .size-ico.c-accent { background: linear-gradient(150deg, #f29be0, #b0379a); }
-  /* Transition families — a hard change, a blend through or over the old picture, a moving wipe */
-  .size-ico.t-cut { background: linear-gradient(150deg, #9aa6b8, #4b5566); }
-  .size-ico.t-blend { background: linear-gradient(150deg, #f29ad8, #a83fa0); }
-  .size-ico.t-move { background: linear-gradient(150deg, #7fb2ff, #2f5fd0); }
   .size-key {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(66px, 1fr)); gap: var(--s3) var(--s1);
     margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk);
@@ -1002,16 +965,45 @@
     font-size: 10.5px; line-height: 1.2; text-align: center; color: var(--muted); cursor: default; word-break: keep-all;
   }
   .size-key .k .kk { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px; color: var(--faint); }
-  .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), 0 2px 4px rgba(0, 0, 0, .18); }
+  .size-key .size-ico { width: 38px; height: 38px; border-radius: 22.5%; }
   /* Route keys are long snake_case words — wider cells, and the key may break mid-word */
   .cam-keys { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0; padding: var(--s3) var(--s4); border-radius: 12px; background: var(--sunk); }
   .cam-keys > .kt { flex-basis: 100%; font-size: var(--t-micro); color: var(--faint); font-weight: 700; letter-spacing: .06em; }
   /* The shot's plan row under its head — the legend tiles alone; each name is in the tooltip */
-  .direction-attributes { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0 14px; }
-  .direction-attribute { display: grid; place-items: center; padding: 4px; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
-  .direction-attribute svg { width: 32px; height: 32px; }
-  .direction-attribute[aria-expanded="true"] { background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
-  @media (pointer: coarse) { .direction-attribute { min-width: 44px; min-height: 44px; } }
+  .direction-attributes, .shot-detail-bar { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px; }
+  .scene-direction-icons { margin: 8px 0 14px; }
+  .shot-detail-bar { grid-column: 1 / -1; }
+  .scene-media { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--s4); margin-block: var(--s3); }
+  .scene-media figure { width: 112px; max-width: 100%; margin: 0; }
+  .scene-media img { display: block; width: 100%; height: 112px; object-fit: contain; border-radius: 8px; background: var(--sunk); }
+  .scene-media figcaption { font-size: var(--t-cap); margin-top: 4px; }
+  .shot-body.lines-only { grid-template-columns: 1fr; }
+  .scene-direction-icon {
+    --tone: #4a596a; --tint: #edf0f4;
+    display: inline-grid; place-items: center; width: 40px; height: 40px; padding: 6px;
+    color: var(--tone); background: var(--tint); border: 1px solid color-mix(in srgb, var(--tone) 19%, var(--tint));
+    border-radius: 10px; cursor: pointer;
+  }
+  .scene-direction-icon:is([data-attribute="camera"],[data-attribute="axis"],[data-attribute="view"],[data-attribute="framing"],[data-attribute="landing"],[data-attribute="I2V"]),
+  .size-ico:is(.f-wide,.a-cam,.r-photo,.d-depth,.c-turn,.t-move) { --tone: #295e83; --tint: #e2eff6; }
+  .scene-direction-icon:is([data-attribute="speakers"],[data-attribute="positions"],[data-attribute="blocking"],[data-attribute="MSR"],[data-attribute="reference"]),
+  .size-ico:is(.f-group,.c-lens,.t-blend) { --tone: #634f80; --tint: #eee9f5; }
+  .scene-direction-icon:is([data-attribute="emotion"],[data-attribute="expression"],[data-attribute="attention"]),
+  .size-ico:is(.f-face,.r-video,.c-body,.c-accent) { --tone: #87455b; --tint: #f6e8ed; }
+  .scene-direction-icon:is([data-attribute="sound"],[data-attribute="audio"],[data-attribute="lines"],[data-attribute="A2V"]),
+  .size-ico:is(.f-body,.f-view,.c-follow,.r-html) { --tone: #28675c; --tint: #e1f0ea; }
+  .scene-direction-icon:is([data-attribute="action"],[data-attribute="beats"],[data-attribute="lighting"]),
+  .size-ico:is(.f-thing,.c-rise) { --tone: #805b22; --tint: #f6eedc; }
+  .scene-direction-icon:is([data-attribute="story"],[data-attribute="end"],[data-attribute="continuity"],[data-attribute="T2V"]),
+  .size-ico:is(.s-look,.c-travel) { --tone: #8a5039; --tint: #f6e9e2; }
+  .scene-direction-icon > svg.size-ico { width: 24px; height: 24px; padding: 0; color: inherit; background: none; box-shadow: none; border-radius: 0; }
+  .scene-direction-icon:hover, .scene-direction-icon[aria-expanded="true"] { background: color-mix(in srgb, var(--tone) 12%, var(--tint)); border-color: var(--tone); }
+  .scene-direction-icon:focus-visible { outline: 2px solid var(--tone); outline-offset: 2px; }
+  .scene-direction-detail { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: max-content; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; overflow-wrap: anywhere; padding: 10px 13px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 5px 18px #0002; font-size: var(--t-cap); }
+  .scene-direction-detail > b { display: block; margin-bottom: 4px; }
+  .scene-direction-detail.shot-content-detail { width: min(400px, calc(100vw - 16px)); max-width: none; }
+  .scene-direction-detail .speech-turn + .speech-turn { margin-top: var(--s3); }
+
   .shot-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: var(--s3) 0 var(--s2); }
   .shot-chip { display: inline-flex; border-radius: 10px; cursor: default; font-size: var(--t-cap); color: var(--muted); }
   .shot-chip .size-ico, .shot-chip svg { width: 36px; height: 36px; border-radius: 10px; flex: none; }
@@ -2710,8 +2702,7 @@ window.STORYBOARD_READY = (async function () {
     for (var i = 0; i < CAST.length; i++) if (CAST[i].id === id) return CAST[i].name || id;
     return id;
   }
-  /* Shot body — left: what the video call takes (start image, end image, and the reference
-     images its lane accepts, slot for slot); right: the shot's lines, speaker by speaker.
+  /* Shot media and detail controls use the inputs supported by the selected generation route.
      Image-only references conditioned the start still and stay out of this view. */
   var REF_LANES = {
     astra_genai_msr: { name: "MSR", slots: 5, note: { ko: "피사체 최대 4 + 시작 이미지 1", en: "up to 4 subjects + 1 start image" } },
@@ -2737,10 +2728,6 @@ window.STORYBOARD_READY = (async function () {
     if (fp.mode === "reference" && !selection) return REF_LANES.astra_genai_msr;
     return { name: selection && selection.engine || (LANG === "ko" ? "이미지→영상" : "Image to video"), slots: 0 };
   }
-  // The MSR icon belongs to a generated_video cut whose video call goes to MSR
-  function msrLane(s, rmode) {
-    return rmode === "generated_video" && !!window.RENDER_ROUTING && refLane(s, window.RENDER_ROUTING.framePlan(s)) === REF_LANES.astra_genai_msr;
-  }
   var REF_ROLE = { character: ["캐릭터", "Character"], prop: ["소품", "Prop"], background: ["배경", "Background"],
                    style: ["화풍", "Style"], composition: ["구도", "Composition"], continuity: ["연속성", "Continuity"] };
   var REF_PANEL = { face: ["얼굴", "face"], body: ["전신", "full body"], front: ["전신", "full body"], back: ["뒷모습", "back"] };
@@ -2754,6 +2741,60 @@ window.STORYBOARD_READY = (async function () {
   // The shared "off" tile: an input this lane does not take
   var OFF_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg>';
   function safeSrc(src) { return typeof src === "string" && src && !/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src) ? src : ""; }
+  ;(function sceneDirectionPopovers() {
+    var active, panel, pinned = false, timer;
+    function close() {
+      clearTimeout(timer);
+      if (panel && panel.matches(':popover-open')) panel.hidePopover();
+      if (active) active.setAttribute('aria-expanded', 'false');
+      active = panel = null;
+      pinned = false;
+    }
+    function place() {
+      if (!active) return;
+      if (!active.isConnected) { close(); return; }
+      var r = active.getBoundingClientRect(), box = panel.getBoundingClientRect();
+      panel.style.left = Math.max(8, Math.min(r.left, document.documentElement.clientWidth - box.width - 8)) + 'px';
+      panel.style.top = (r.bottom + box.height <= innerHeight - 8 ? r.bottom : Math.max(8, r.top - box.height)) + 'px';
+    }
+    function show(button) {
+      clearTimeout(timer);
+      if (button === active) return;
+      close();
+      panel = document.getElementById(button.getAttribute('aria-controls'));
+      if (!panel) return;
+      active = button;
+      panel.showPopover();
+      active.setAttribute('aria-expanded', 'true');
+      place();
+    }
+    function inside(node) { return node && (node === active || active && active.contains(node) || panel && panel.contains(node)); }
+    document.addEventListener('pointerover', function(e) {
+      if (e.pointerType === 'touch') return;
+      var button = e.target.closest('.scene-direction-icon');
+      if (button) show(button); else if (inside(e.target)) clearTimeout(timer);
+    });
+    document.addEventListener('pointerout', function(e) {
+      if (active && !pinned && inside(e.target) && !inside(e.relatedTarget)) timer = setTimeout(close, 140);
+    });
+    document.addEventListener('focusin', function(e) {
+      if (e.target.matches('.scene-direction-icon')) show(e.target); else if (!inside(e.target)) close();
+    });
+    document.addEventListener('focusout', function(e) { if (!pinned && inside(e.target) && !inside(e.relatedTarget)) close(); });
+    document.addEventListener('click', function(e) {
+      var button = e.target.closest('.scene-direction-icon');
+      if (button) {
+        if (pinned && button === active) close(); else { show(button); pinned = true; }
+      } else if (!inside(e.target)) close();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key !== 'Escape' || !active) return;
+      if (panel.contains(document.activeElement)) active.focus({preventScroll:true});
+      close();
+    });
+    window.addEventListener('resize', place);
+    document.addEventListener('scroll', place, true);
+  })();
   function sceneNoteHead(kind, title, status) {
     var paths = {
       music: '<path d="M9 17V6l11-2v11M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
@@ -2764,10 +2805,35 @@ window.STORYBOARD_READY = (async function () {
       paths[kind] + '</svg></span><h3>' + esc(title) + '</h3>' +
       (status ? '<span class="scene-note-status">' + esc(status) + '</span>' : '') + '</header>';
   }
-  function directionAttributes(sc, rows, shot, still) {
+  function detailControl(id, key, label, icon, body, rich) {
+    id = esc(id);
+    var attributes = rich ? 'role="region" tabindex="0" aria-label="' + esc(label) + '"' : 'role="tooltip"';
+    return '<button type="button" class="scene-direction-icon" data-attribute="' + esc(key) + '" aria-label="' + esc(label) +
+      '" aria-expanded="false" aria-controls="' + id + '"' + (rich ? '' : ' aria-describedby="' + id + '"') + '>' + icon +
+      '</button><div class="scene-direction-detail' + (rich ? ' shot-content-detail' : '') + '" popover="manual" ' + attributes +
+      ' id="' + id + '"><b>' + esc(label) + '</b>' + body + '</div>';
+  }
+  function generationIcon(mode, id, source) {
+    var routes = {
+      MSR: ['M3 18v-2a4 4 0 0 1 8 0v2M7 6a3 3 0 1 0 .01 0M13 13a3 3 0 0 1 3 3v2M12 5a3 3 0 0 1 1 6M18 8l5 4-5 4z', '인물·피사체 참조로 영상 생성', 'Video from subject references'],
+      I2V: ['M2 4h15v16H2zM3 16l4-5 3 3 3-4 3 4M6 8h.1M19 8l4 4-4 4z', '이미지로 영상 생성', 'Image to video'],
+      A2V: ['M2 10v4m3-7v10m3-13v16m3-12v8m3-6v4M17 7l6 5-6 5z', '오디오로 영상 생성', 'Audio to video'],
+      T2V: ['M2 5h13M2 10h10M2 15h8M2 20h6M16 7l7 5-7 5z', '텍스트로 영상 생성', 'Text to video'],
+      reference: ['M2 3h12v12H2zM6 19h12V7M19 12l4 3-4 3z', '참조 자료로 영상 생성', 'Reference to video']
+    };
+    var route = routes[mode];
+    if (!route) return '';
+    var ko = LANG === 'ko', label = mode === 'reference' ? (ko ? '참조 영상 생성' : 'Reference to video') : mode;
+    var sourceLabel = source === 'total' ? (ko ? '씬 합계' : 'Scene total') :
+      source === 'plan' ? (ko ? '저장된 요청 계획' : 'Saved request') : (ko ? '스토리보드 설정' : 'Storyboard setting');
+    var detail = route[ko ? 1 : 2] + ' · ' + sourceLabel;
+    var icon = '<svg class="size-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="' + route[0] + '"/></svg>';
+    return detailControl(id, mode, label, icon, esc(detail));
+  }
+  function directionAttributes(sc, rows, shot, still, shotNo) {
     var ko = LANG === 'ko', at = ko ? 0 : 1, content = [];
     var labels = Object.assign({}, window.SCENE_DIRECTION.labels, {
-      positions:['시작 위치','Opening positions'], emotion:['감정 변화','Emotion'], action:['행동','Action'],
+      speakers:['대사 인물','Scene speakers'], positions:['시작 위치','Opening positions'], emotion:['감정 변화','Emotion'], action:['행동','Action'],
       sound:['현장음','Scene sound'], audio:['연속 오디오','Continuous audio'], oneTake:['원테이크','One take'],
       fps:['프레임률','Frame rate'], view:['시점·구도','View and crop'], expression:['표정','Expression'],
       blocking:['시작 자세','Opening blocking'], beats:['연기 순서','Performance beats'], end:['종료 상태','Closing state'], landing:['무빙 도착점','Camera landing'], framing:['프레이밍','Framing']
@@ -2776,7 +2842,7 @@ window.STORYBOARD_READY = (async function () {
       axis:'M4 17h24M7 8v18m18-18v18', continuity:'M5 10h9v11H5zM18 10h9v11h-9zM11 16h10',
       lighting:'M10 13a6 6 0 1 1 12 0c0 4-3 5-3 9h-6c0-4-3-5-3-9zM13 26h6',
       attention:'M3 16q13-17 26 0-13 17-26 0zM13 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
-      positions:'M7 27v-7h6v7m-6-15a3 3 0 1 0 6 0a3 3 0 1 0-6 0M21 24V9m-4 5 4-5 4 5',
+      speakers:'M3 18h5l3-9 5 17 5-20 4 12h5', positions:'M7 27v-7h6v7m-6-15a3 3 0 1 0 6 0a3 3 0 1 0-6 0M21 24V9m-4 5 4-5 4 5',
       emotion:'M5 15q4-5 8 0m6 0q4-5 8 0M9 20q7 9 14 0',
       action:'M9 5l17 11-17 11z', sound:'M3 17h5l3-9 5 17 5-21 3 13h5',
       audio:'M8 5v22m5-18v14m6-18v22m5-16v10', oneTake:'M5 12h17l5 4-5 4H5z',
@@ -2790,9 +2856,8 @@ window.STORYBOARD_READY = (async function () {
       var label = labels[key][at], icon = id && camIcon(id);
       if (!icon) icon = '<svg class="size-ico f-group" viewBox="0 0 32 32" aria-hidden="true"><path d="' + paths[key] + '"/></svg>';
       var caption = origin ? origin + ' · ' + label : label;
-      content.push('<button type="button" class="direction-attribute" data-attribute="' + key +
-        '" aria-label="' + esc(caption) + '" data-tip="' + esc(value) +
-        '" aria-controls="storyboard-tip" aria-expanded="false">' + icon + '</button>');
+      var detailId = (shot ? 'shot-dir-' + shotNo : 'scene-dir-' + sc.no) + '-' + key;
+      content.push(detailControl(detailId, key, caption, icon, esc(value)));
     }
     Object.keys(rows).forEach(function (key) {
       if (still && !['axis','lighting','continuity'].includes(key)) return;
@@ -2816,6 +2881,7 @@ window.STORYBOARD_READY = (async function () {
     var positions = shot ? tl.openingPositions || video.openingPositions : dir.openingPositions;
     if (positions) add('positions', positions.map(function (p) { return p.character + ' · ' + p.position; }).join(' / '));
     if (!shot) {
+      if (sc.speakers) add('speakers', sc.speakers.map(castName).join(' · ') || (ko ? '대사 없음' : 'No dialogue'));
       add('emotion', dir.emotion); add('action', dir.action); add('sound', dir.sound);
       if (dir.audio) add('audio', [dir.audio.path].concat((dir.audio.cues || []).map(function (cue) { return cue.frame + 'f · ' + cue.action; })).join(' / '));
       if (dir.oneTake) add('oneTake', ko ? '컷 없이 촬영' : 'Uninterrupted');
@@ -2829,18 +2895,17 @@ window.STORYBOARD_READY = (async function () {
       if (vis.expression) add('expression', Object.keys(vis.expression).map(function (id) { return id + ' · ' + vis.expression[id]; }).join(' / '));
       add('landing', cam.end); add('end', notes.end);
     }
-    return content.length ? '<div class="direction-attributes" role="group" aria-label="' +
+    return content.length ? '<div class="direction-attributes' + (shot ? '' : ' scene-direction-icons') + '" role="group" aria-label="' +
       (shot ? (ko ? '샷 연출' : 'Shot direction') : (ko ? '씬 연출' : 'Scene direction')) + '">' + content.join('') + '</div>' : '';
+  }
+  function currentScenePlan(grp) {
+    if (!window.VIDEO_PRODUCTION_REVIEW || !window.VIDEO_PRODUCTION_REVIEW.currentPlan) return;
+    return window.VIDEO_PRODUCTION_REVIEW.currentPlan((window.VIDEO_PRODUCTION || {}).candidates, grp.scene,
+      grp.items.map(function (item) { return item.s.id; }));
   }
   function sceneVideoPromptHtml(sc, grp) {
     var ko = LANG === "ko", dir = sc && sc.videoDirection || {}, members = grp.items.map(function (item) { return item.s; });
-    var ids = members.map(function (s) { return s.id; });
-    var matches = ((window.VIDEO_PRODUCTION || {}).candidates || []).filter(function (c) {
-      return c.sceneNo === grp.scene && (c.stale === false || (c.stale === null && c.boardMatches === true)) && c.prompt && Array.isArray(c.shotIds) &&
-        c.shotIds.length === ids.length && c.shotIds.every(function (id, i) { return id === ids[i]; });
-    });
-    var verified = matches.filter(function (c) { return c.stale === false; });
-    var plan = matches.filter(function (c) { return c.selected; }).pop() || verified.pop() || matches.pop();
+    var plan = currentScenePlan(grp);
     var approved = ((window.VIDEO_APPROVALS || {}).scenes || {})[grp.scene];
     var full = "", status = ko ? "스토리보드 초안" : "Storyboard draft";
     if (plan) {
@@ -2909,14 +2974,52 @@ window.STORYBOARD_READY = (async function () {
       (approved && plan && plan.requestId === approved.requestId ? '<p>' +
         esc((ko ? "승인 기록 · " : "Approval record · ") + approved.requestId + " · " + String(approved.at).slice(0,10)) + '</p>' : '') + '</section>';
   }
-  function sceneNotesHtml(grp, audio, prompt) {
-    var sound = '<div class="scene-notes-grid">' + audio + '</div>';
-    if (!prompt) return '<div class="scene-workbench">' + sound + '</div>';
+  function sceneSettingsHtml(sc, grp, defaults) {
+    var ko = LANG === 'ko', settings = '', controls = sc ? directionAttributes(sc, defaults) : '';
+    var speakers = new Set(sc && sc.speakers || []), visible = new Set(), extras = new Set();
+    grp.items.forEach(function (item) {
+      var shot = item.s, vis = shot.visual || {};
+      (shot.narration || []).forEach(function (line) { if (line.speaker && line.tts) speakers.add(line.speaker); });
+      charsOf(shot).concat((Array.isArray(vis.characters) ? vis.characters : []).map(function (person) { return person && (person.id || person); }), vis.bystanders || []).forEach(function (id) {
+        if (typeof id === 'string' && id) visible.add(id);
+      });
+      if (typeof vis.extras === 'string' && vis.extras.trim()) extras.add(vis.extras.trim());
+    });
+    var cast = Array.from(new Set([...speakers, ...visible])).map(function (id) {
+      var label = speakers.has(id) ? (ko ? '화자' : 'Speaker') : (ko ? '무대사' : 'Non-speaking');
+      return '<li>' + esc(castName(id)) + ' <small>' + label + '</small></li>';
+    });
+    extras.forEach(function (name) { cast.push('<li>' + esc(name) + ' <small>' + (ko ? '엑스트라' : 'Extra') + '</small></li>'); });
+    if (cast.length) settings += '<div class="scene-cast"><b>' + (ko ? '등장인물' : 'Cast') +
+      '</b><ul>' + cast.join('') + '</ul></div>';
+    if (sc && (sc.frames || sc.speakerReferences)) {
+      var media = [];
+      function addSceneImage(file, label) {
+        if (!safeSrc(file)) return;
+        media.push('<figure><a href="' + esc(file) + '" target="_blank" rel="noopener"><img loading="lazy" src="' +
+          esc(file) + '" alt="' + esc(label) + '"></a><figcaption>' + esc(label) + '</figcaption></figure>');
+      }
+      var frames = sc.frames || {};
+      addSceneImage(frames.start, LANG === 'ko' ? '씬 시작 이미지' : 'Scene opening');
+      addSceneImage(frames.end, LANG === 'ko' ? '씬 종료 이미지' : 'Scene ending');
+      (sc.speakerReferences || []).forEach(function (ref) {
+        addSceneImage(ref.path, (LANG === 'ko' ? '화자 참조 · ' : 'Speaker reference · ') + castName(ref.character));
+      });
+      if (media.length) settings += '<div class="scene-media">' + media.join('') + '</div>';
+    }
+    var report = window.VIDEO_PRODUCTION || {}, plan = currentScenePlan(grp);
+    var mode = plan && plan.generationMode || (report.sceneModes || {})[grp.scene];
+    if (mode) controls = generationIcon(mode, 'scene-mode-' + grp.scene, plan && plan.generationMode ? 'plan' : 'settings') + controls;
+    if (controls) settings = '<div class="scene-settings-controls">' + controls + '</div>' + settings;
+    return '<div class="scene-settings">' + (settings || (ko ? '기록된 설정이 없습니다.' : 'No settings recorded.')) + '</div>';
+  }
+  function sceneNotesHtml(grp, settings, audio, prompt) {
     var ko = LANG === "ko", prefix = "scene-notes-" + (grp.items[0].i + 1);
     var tabs = [
-      { key: "sound", title: ko ? "음악·심리음" : "Music & audience sound", body: sound },
-      { key: "prompt", title: ko ? "영상 프롬프트" : "Video prompt", body: prompt }
+      { key: "settings", title: ko ? "설정정보" : "Settings", body: settings },
+      { key: "sound", title: ko ? "음악·심리음" : "Music & audience sound", body: '<div class="scene-notes-grid">' + audio + '</div>' }
     ];
+    if (prompt) tabs.push({ key: "prompt", title: ko ? "영상 프롬프트" : "Video prompt", body: prompt });
     var buttons = "", panels = "";
     tabs.forEach(function (tab, i) {
       var panelId = prefix + "-" + tab.key, tabId = panelId + "-tab";
@@ -2928,7 +3031,7 @@ window.STORYBOARD_READY = (async function () {
     return '<div class="scene-workbench"><div class="scene-tab-bar"><div class="scene-tab-list" role="tablist" aria-label="' +
       esc(T.sceneNamed(grp.scene)) + '">' + buttons + '</div></div>' + panels + '</div>';
   }
-  function shotBodyHtml(s, narr, grouped) {
+  function shotBodyHtml(s, narr, grouped, shotNo, directionIcons) {
     var RR = window.RENDER_ROUTING, ko = LANG === "ko", fp = RR ? RR.framePlan(s) : { mode: "first" }, lane = refLane(s, fp);
     var refs = (RR ? RR.imageReferences(s) : []).filter(function (r) { return r && r.use !== "image"; });
     function frameBox(src, label, flag, emptyText) {
@@ -2941,37 +3044,44 @@ window.STORYBOARD_READY = (async function () {
              : emptyText === null ? '<div class="shot-frame-empty ref-off-tile">' + OFF_GLYPH + "</div>"
              : '<div class="shot-frame-empty">' + esc(emptyText) + "</div>") + "</figure>";
     }
-    // MSR flow: four character subjects, and the background slot carries the start image
-    // (characters, background and props composed by the image tool); the plain background is off
-    var msr = lane === REF_LANES.astra_genai_msr;
-    var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
-    var left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
-      frameBox(lane.assetsOnly ? "" : fp.start, ko ? "시작 이미지" : "Start image", startFlag, lane.assetsOnly ? null : T.framePending) +
-      frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image",
-               fp.mode === "first_last" && fp.endState ? [ko ? "끝 상태" : "End state", fp.endState] : null,
-               fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
-    // The frame plan shot_icons wrote (visual.frames.mode · reason)
-    var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: [lane.name + " 참조 이미지", lane.name + " reference images"] };
-    if (s.visual && s.visual.frames && FRAME_PLAN[fp.mode])
-      left += '<p class="shot-frame-plan"><b>' + esc(FRAME_PLAN[fp.mode][ko ? 0 : 1]) + "</b>" + (fp.reason ? " · " + esc(fp.reason) : "") + "</p>";
-    var n = Math.max(lane.slots, refs.length), slots = "";
-    for (var k = 0; k < n; k++) {
-      var ref = refs[k], over = k >= lane.slots, src = ref ? safeSrc(ref.path) : "", off = msr && ref && ref.role === "background";
-      if (!ref) { slots += '<div class="ref-slot empty"><span>' + (k + 1) + "</span></div>"; continue; }
-      var name = ref.path === fp.start ? (ko ? "시작 이미지" : "Start image") : refName(ref), role = (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
-      var tip = (k + 1) + ". " + name + " · " + role + (over ? (ko ? " · 지원 개수 초과" : " · over the limit") : "") +
-        (off ? (ko ? "\n비활성 — 이 칸에는 시작 이미지를 보냅니다." : "\nOff — this slot carries the start image.") : "") + (ref.purpose ? "\n" + ref.purpose : "");
-      slots += '<figure class="ref-slot' + (over ? " over" : "") + (off ? " off" : "") + '" tabindex="0" data-tip="' + esc(tip) + '">' +
-        (off ? '<div class="ref-off-tile">' + OFF_GLYPH + "</div>"
-             : src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<div class="ref-missing">?</div>') +
-        '<figcaption>' + (off ? (ko ? "비활성" : "Off") : esc(name)) + "</figcaption>" + (over ? '<span class="ref-over">' + (ko ? "초과" : "over") + "</span>" : "") + "</figure>";
+    var owner = (window.STRUCTURE && window.STRUCTURE.scenes || []).find(function (scene) { return scene.no === s.scene; });
+    var sceneFrames = owner && (owner.frames || owner.speakers) && s.shot && s.shot.render && s.shot.render.mode === 'generated_video';
+    var left = '';
+    if (sceneFrames) {
+      if (s.referenceImage) left = '<div class="shot-frames">' + frameBox(s.referenceImage, ko ? "샷 참조 이미지" : "Shot reference", null, "") + '</div>';
+    } else {
+      // MSR flow: four character subjects, and the background slot carries the start image
+      // (characters, background and props composed by the image tool); the plain background is off
+      var msr = lane === REF_LANES.astra_genai_msr;
+      var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
+      left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
+        frameBox(lane.assetsOnly ? "" : fp.start, ko ? "시작 이미지" : "Start image", startFlag, lane.assetsOnly ? null : T.framePending) +
+        frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image",
+                 fp.mode === "first_last" && fp.endState ? [ko ? "끝 상태" : "End state", fp.endState] : null,
+                 fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
+      // The frame plan shot_icons wrote (visual.frames.mode · reason)
+      var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: [lane.name + " 참조 이미지", lane.name + " reference images"] };
+      if (s.visual && s.visual.frames && FRAME_PLAN[fp.mode])
+        left += '<p class="shot-frame-plan"><b>' + esc(FRAME_PLAN[fp.mode][ko ? 0 : 1]) + "</b>" + (fp.reason ? " · " + esc(fp.reason) : "") + "</p>";
+      var n = Math.max(lane.slots, refs.length), slots = "";
+      for (var k = 0; k < n; k++) {
+        var ref = refs[k], over = k >= lane.slots, src = ref ? safeSrc(ref.path) : "", off = msr && ref && ref.role === "background";
+        if (!ref) { slots += '<div class="ref-slot empty"><span>' + (k + 1) + "</span></div>"; continue; }
+        var name = ref.path === fp.start ? (ko ? "시작 이미지" : "Start image") : refName(ref), role = (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
+        var tip = (k + 1) + ". " + name + " · " + role + (over ? (ko ? " · 지원 개수 초과" : " · over the limit") : "") +
+          (off ? (ko ? "\n비활성 — 이 칸에는 시작 이미지를 보냅니다." : "\nOff — this slot carries the start image.") : "") + (ref.purpose ? "\n" + ref.purpose : "");
+        slots += '<figure class="ref-slot' + (over ? " over" : "") + (off ? " off" : "") + '" tabindex="0" data-tip="' + esc(tip) + '">' +
+          (off ? '<div class="ref-off-tile">' + OFF_GLYPH + "</div>"
+               : src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<div class="ref-missing">?</div>') +
+          '<figcaption>' + (off ? (ko ? "비활성" : "Off") : esc(name)) + "</figcaption>" + (over ? '<span class="ref-over">' + (ko ? "초과" : "over") + "</span>" : "") + "</figure>";
+      }
+      left += '<div class="shot-refs' + (msr ? " msr" : "") + '"><div class="shot-refs-head"><b>' + (ko ? "참조 이미지" : "Reference images") + "</b><span>" +
+        esc(lane.name) + (lane.slots ? (ko ? " · 최대 " + lane.slots + "장" : " · up to " + lane.slots) + (lane.note ? " · " + lane.note[ko ? "ko" : "en"] : "") : "") +
+        "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
+        : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
+        (slots ? '<div class="ref-slots">' + slots + "</div>"
+               : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
     }
-    left += '<div class="shot-refs' + (msr ? " msr" : "") + '"><div class="shot-refs-head"><b>' + (ko ? "참조 이미지" : "Reference images") + "</b><span>" +
-      esc(lane.name) + (lane.slots ? (ko ? " · 최대 " + lane.slots + "장" : " · up to " + lane.slots) + (lane.note ? " · " + lane.note[ko ? "ko" : "en"] : "") : "") +
-      "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
-      : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
-      (slots ? '<div class="ref-slots">' + slots + "</div>"
-             : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
     // Shot cards carry story, lines and camera direction. Image prompts stay with their frames.
     var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)
@@ -2994,7 +3104,7 @@ window.STORYBOARD_READY = (async function () {
       [vis.frames && vis.frames.start && vis.frames.start === vis.bg ? (ko ? "시작 이미지 프롬프트" : "Start image prompt") : (ko ? "배경 프롬프트" : "Background prompt"), vis.bgPrompt],
       [ko ? "종료 이미지 프롬프트" : "End image prompt", vis.endPrompt]
     ]);
-    if (images) left += '<details class="production-review"><summary>' + (ko ? "이미지 제작 정보" : "Image generation details") + "</summary>" + images + "</details>";
+    if (images && !sceneFrames) left += '<details class="production-review"><summary>' + (ko ? "이미지 제작 정보" : "Image generation details") + "</summary>" + images + "</details>";
     var lines = narr.length ? narr.map(function (line, j) { return speechHtml(line, j); }).join("") : '<div class="speech-silent">' + esc(T.speechSilent) + "</div>";
     var bindings = Array.isArray(video.speakerBindings) ? video.speakerBindings : [];
     if (bindings.length) lines += fields([[ko ? "MSR 화자 위치" : "MSR speaker positions", bindings.map(function (b) {
@@ -3005,15 +3115,18 @@ window.STORYBOARD_READY = (async function () {
       [ko ? "화면 전환" : "Transition", tl.transition || s.transition]]);
     var legacy = grouped ? "" : fields([[ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
       [ko ? "말하는 클립 프롬프트" : "Speech-clip prompt", (vis.clip || {}).prompt]]);
-    var tabs = [[ko ? "스토리" : "Story", story || none(ko ? "스토리 없음" : "No story")], [ko ? "대사" : "Lines", lines],
-      [ko ? "샷 연출" : "Shot direction", direction + legacy || none(ko ? "기록된 샷 연출 없음" : "No shot direction recorded")]];
-    var tabName = "shot-tab-" + esc(String(s.id));
-    var right = '<div class="shot-tabs">' + tabs.map(function (t, k) {
-      return '<input type="radio" name="' + tabName + '" id="' + tabName + "-" + k + '"' + (k ? "" : " checked") + ">";
-    }).join("") + '<div class="shot-tab-nav" role="tablist">' + tabs.map(function (t, k) {
-      return '<label for="' + tabName + "-" + k + '">' + t[0] + "</label>";
-    }).join("") + '</div><div class="shot-tab-panels">' + tabs.map(function (t) { return '<div class="shot-tab-panel">' + t[1] + "</div>"; }).join("") + "</div></div>";
-    return '<div class="shot-body"><div class="shot-media">' + left + '</div><div class="shot-lines">' + right + "</div></div>";
+    function shotControl(key, label, drawing, body) {
+      var icon = '<svg class="size-ico f-group" viewBox="0 0 24 24" aria-hidden="true"><path d="' + drawing + '"/></svg>';
+      return detailControl('shot-content-' + shotNo + '-' + key, key, label, icon, body, true);
+    }
+    var storyButton = shotControl('story', ko ? "스토리" : "Story", 'M12 6c-3-2-6-2-10-1v14c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1zm0 0v14',
+      story || none(ko ? "스토리 없음" : "No story"));
+    var linesButton = shotControl('lines', ko ? "대사" : "Lines", 'M4 3h16a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1h-8l-6 5v-5H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM7 8h10M7 12h7', lines);
+    var directionButton = shotControl('direction', ko ? "샷 연출" : "Shot direction", 'M3 6h5m4 0h9M3 17h10m4 0h4M8 3h4v6H8zM13 14h4v6h-4z',
+      direction + legacy || none(ko ? "기록된 샷 연출 없음" : "No shot direction recorded"));
+    return '<div class="shot-body' + (left ? '' : ' lines-only') + '"><div class="shot-detail-bar" role="group" aria-label="' +
+      (ko ? '샷 상세' : 'Shot details') + '">' + (directionIcons || '') + storyButton + linesButton + directionButton + '</div>' +
+      (left ? '<div class="shot-media">' + left + '</div>' : '') + '</div>';
   }
   /* The user's yes to a generated_video shot's video (video_approve → video-approvals.js). A prompt or
      frame changed after the yes makes a new plan, and video_execute asks for a new yes unless auto is on. */
@@ -5533,7 +5646,7 @@ window.STORYBOARD_READY = (async function () {
     if (choice.reason) body += '<p>' + copy(choice.reason) + '</p>';
     return '<section class="scene-note scene-score">' + sceneNoteHead("music", T.cMusic, status) + body + '</section>';
   }
-  if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG);
+  if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG, CONTENT.language, generationIcon);
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
     var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
@@ -5582,10 +5695,9 @@ window.STORYBOARD_READY = (async function () {
         var vis = it.s.visual || {};
         return vis.video || vis.clip && vis.clip.prompt || renderModeOf(it.s, it.g) === "generated_video";
       });
-      if (sc) h += directionAttributes(sc, coverage.defaults);
-      h += sceneNotesHtml(grp, musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow),
+      h += sceneNotesHtml(grp, sceneSettingsHtml(sc, grp, coverage.defaults), musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow),
         hasPrompt ? sceneVideoPromptHtml(sc, grp) : "");
-      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene);
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene, CONTENT.language);
     }
     grp.items.forEach(function (item, memberIndex) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
@@ -5734,9 +5846,12 @@ window.STORYBOARD_READY = (async function () {
       chips += chip(camIcon(t.id), t.entry.label[LANG], camTitle(t.id) + (t.on ? "\n" + t.on : "") + (t.reason ? "\n\n" + t.reason : ""));
     });
     chips += chip(depthIcon(dmode), dlabel || T.depth.unset, dtip || T.depth.unset);
-    if (msrLane(s, rmode))
-      chips += chip('<svg class="size-ico r-msr" viewBox="0 0 32 32" aria-hidden="true"><text x="16" y="19.5" text-anchor="middle" font-size="10" font-weight="800" letter-spacing="-.3" class="ico-fill">MSR</text></svg>',
-        "MSR", LANG === "ko" ? "MSR — 캐릭터 이미지 최대 4장(한 명이면 얼굴·앞·뒤 3장)과 시작 이미지 1장(배경 칸)을 받아 영상을 그립니다. 첫 프레임은 고정하지 않습니다." : "MSR — renders from up to four character images (three for one character: face, front, back) and the start image in the background slot; no frame is pinned.");
+    if (!hasSceneField && window.VIDEO_PRODUCTION_REVIEW && rmode === 'generated_video') {
+      var report = window.VIDEO_PRODUCTION || {}, review = window.VIDEO_PRODUCTION_REVIEW;
+      var plan = review.currentPlan(report.candidates, undefined, [s.id]);
+      var mode = plan && plan.generationMode || (report.shotModes || {})[s.id];
+      if (mode) chips += generationIcon(mode, 'shot-mode-' + no, plan && plan.generationMode ? 'plan' : 'settings');
+    }
     // The join into the next shot — stored on the next shot's transition, which assembly reads (edit-plan.js).
     var nextShot = SCENES[i + 1];
     if (s.type !== "broll" && s.type !== "outro" && nextShot && nextShot.type !== "broll" && nextShot.type !== "outro") {
@@ -5753,10 +5868,12 @@ window.STORYBOARD_READY = (async function () {
       return '<div class="shot-chips">' + chips + (cast ? '<span class="shot-cast">' + cast + "</span>" : "") + "</div>";
     });
 
-    if (scopedRows) h += directionAttributes(sc, scopedRows, s);
+    var directionIcons = '';
+    if (scopedRows) directionIcons = directionAttributes(sc, scopedRows, s, false, no);
     else if (sc && coverage && rmode === 'still_camera' && sc.directionDefaults)
-      h += directionAttributes(sc, coverage.shots[memberIndex], s, true);
+      directionIcons = directionAttributes(sc, coverage.shots[memberIndex], s, true, no);
     if (s.type === "broll") {
+      h += directionIcons;
       var v = s.visual || {};
       h += '<div class="clip">' +
         (v.src ? '<img src="' + esc(v.src) + '" alt="b-roll source" onerror="this.remove()">' : "") +
@@ -5775,7 +5892,7 @@ window.STORYBOARD_READY = (async function () {
       var vis = s.visual || {};
       var states = revealsOf(s);
 
-      h += shotBodyHtml(s, narr, hasSceneField);
+      h += shotBodyHtml(s, narr, hasSceneField, no, directionIcons);
       if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, s.id, LANG);
 
       h += '<div id="image-references-' + esc(s.id || '') + '"></div>';

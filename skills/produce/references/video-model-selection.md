@@ -303,7 +303,7 @@ Store the selection fields beside the prompt: `visual.video` for motion backgrou
 
 For a photoreal portrait, keep its authored framing and register the corresponding character sheet. A managed face reference needs an active registration on the selected account before approval. Read the returned stage and asset status before retrying.
 
-Use each Seedance row’s `generation` object to review the forecast. Call `video_plan` with the episode, scene or shot, and request ID. The managed planner reads the prompt, selected model, character panels, voice samples and previz from the storyboard. Compare its actual image, video and audio slots to the authored direction before approval. Set `maxCostUsd` when the user has specified a cap. For a shot that needs a duration override, use `requiredSeconds` from `plan-video-duration.js` or the exact duration field by itself.
+Use each Seedance row’s `generation` object to review the forecast. Call `video_plan` with the episode, scene number and request ID. The managed planner reads the prompt, selected model, character panels, voice samples and previz from the storyboard. Compare its actual image, video and audio slots to the authored direction before approval. Set `maxCostUsd` when the user has specified a cap. Set the duration from the complete scene clock.
 
 The forecast bills the model's minimum duration and rounds fractional used seconds up;
 a 3-second scene therefore pays for 4 seconds. It rejects overlong scenes. Changing

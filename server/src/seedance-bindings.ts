@@ -31,7 +31,7 @@ export async function checkRegisteredBindings(bindings?: SeedanceBinding[]) {
 }
 
 export function seedanceBindings(episode: string, members: Record<string, unknown>[], args: Record<string, unknown>,
-  inputs: Record<string, string>, images: ImageBinding[] = [], voice?: VoiceContinuity): SeedanceBinding[] | undefined {
+  inputs: Record<string, string>, images: (ImageBinding & {shotId?:string; parameter?:string})[] = [], voice?: VoiceContinuity, sceneFaces: {path:string; shotId:string; character?:string}[] = []): SeedanceBinding[] | undefined {
 
   const board = path.join(episode, 'storyboard');
   const output = String(args.outputPath);
@@ -95,10 +95,18 @@ export function seedanceBindings(episode: string, members: Record<string, unknow
   // Keep set and prop slots visible alongside the people they frame.
   for (const [index, file] of files.entries()) {
     if (bindings.some(b => b.media === 'Image' && b.slot === index + 1)) continue;
-    const image = images.find(b => b.path === file && b.submitted);
+    const image = images.find(b => b.parameter === 'referenceImagePaths[' + index + ']' && b.path === file)
+      ?? images.find(b => b.path === file && b.submitted);
     const portrait = portraitForImage(file, output, args.realFaceInput === true);
+    const face = sceneFaces.find(reference => reference.path === file && reference.character);
+    if (portrait && face?.character && path.basename(path.dirname(portrait.identityPath)) === face.character &&
+        portraitImage(portrait.identityPath,'face') === file) {
+      bindings.push({shotId:face.shotId,character:face.character,role:'face',media:'Image',slot:index+1,sha256:inputs[file],
+        asset:approvedPortrait(portrait.identityPath,'face',inputs[file])});
+      continue;
+    }
     if (portrait) throw new PortraitError(new Error('modelark_asset_ambiguous: assign this additional portrait to its visible character'));
-    bindings.push({shotId:String(members[0].id), role:image?.role ?? 'reference', media:'Image', slot:index + 1, sha256:inputs[file]});
+    bindings.push({shotId:image?.shotId ?? String(members[0].id), role:image?.role ?? 'reference', media:'Image', slot:index + 1, sha256:inputs[file]});
   }
   for (const binding of bindings) {
     if (!binding.character || binding.role !== 'face') continue;

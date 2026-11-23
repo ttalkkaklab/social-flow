@@ -34,7 +34,7 @@
     lines.forEach((_, index) => groups.add(index));
     return Array.from(groups, index => lines[index]);
   }
-  function notes(card, accept = Boolean, visualOnly = false) {
+  function notes(card, accept = Boolean, visualOnly = false, concise = false) {
     const visual = card.visual || {}, video = visual.video || {}, source = video.promptSource || {};
     const design = card.shot?.videoDesign || {}, lines = card.narration || [];
     const spoken = lines.map(line => text(line.tts)).filter(Boolean);
@@ -51,11 +51,12 @@
       const fields = actingFields(acting, line.delivery !== 'voiceover', new Set(), redact, accept);
       const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
       const to = text(event.to) || text(line.to);
-      if (to && accept(redact(to))) fields.unshift('Addressed to ' + redact(to) + '.');
+      if (to && accept(redact(to))) fields.unshift((concise ? 'to ' : 'Addressed to ') + redact(to) + '.');
       if (pauses) fields.push(pauses);
       if (fields.length || card.performance?.length) {
         const who = [line.speaker, line.id].filter(Boolean).join(', ');
-        beats.push(prefix + 'line ' + group + (who ? ' (' + who + ')' : '') + (fields.length ? ': ' + fields.join(' ') : '.'));
+        const label = concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
+        beats.push(label + (fields.length ? ': ' + fields.join(' ') : '.'));
       }
       groups.add(group);
     }
@@ -65,7 +66,9 @@
       if (!cue || !accept(cue)) return;
       const duration = event.durationSeconds ? ' for ' + event.durationSeconds + ' s' : '';
       const withLine = event.withGroup ? ' with speech group ' + event.withGroup : '';
-      beats.push('Beat ' + (i+1) + (event.character ? ' (' + event.character + ')' : '') + duration + withLine + ': ' + cue);
+      const label = concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :
+        'Beat ' + (i+1) + (event.character ? ' (' + event.character + ')' : '') + duration;
+      beats.push((label || withLine ? label + withLine + ': ' : '') + cue);
     });
     lines.forEach((line,i) => { if (!groups.has(i+1)) addLine(line, i+1, 'With '); });
     const seen = new Set();

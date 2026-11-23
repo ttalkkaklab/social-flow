@@ -14,6 +14,23 @@ function changes(before, after) {
  if (!before) return [];
  return ['prompt','selection','settings','inputs','performance'].filter(key=>JSON.stringify(before[key])!==JSON.stringify(after[key]));
 }
+// Use the actual adapter when a saved request overrides the board operation.
+function generationMode(selection, tool, references, adapters) {
+ const adapter=tool && adapters?.find(row=>row.tool===tool);
+ const engine=adapter?.engine || selection?.engine, operation=adapter?.operation || selection?.operation;
+ if(tool==='astra_genai_msr' || engine==='astra-genai' && operation==='reference')return 'MSR';
+ if(engine==='astra-genai' && operation==='image' && Array.isArray(references) && references.some(ref=>
+  ref && (ref.role ? ref.role!=='background' && ['video','both'].includes(ref.use) : !ref.background)))return 'MSR';
+ return ({image:'I2V',audio:'A2V',text:'T2V',reference:'reference'})[operation] || null;
+}
+function currentPlan(candidates, sceneNo, ids) {
+ const matches=(candidates || []).filter(c=>{
+  if(!c.prompt || c.stale!==false && !(c.stale===null && c.boardMatches===true))return false;
+  if(sceneNo===undefined)return c.sceneNo===undefined && c.shotId===ids[0];
+  return c.sceneNo===sceneNo && Array.isArray(c.shotIds) && c.shotIds.length===ids.length && c.shotIds.every((id,i)=>id===ids[i]);
+ });
+ return matches.filter(c=>c.selected).pop() || matches.filter(c=>c.stale===false).pop() || matches.pop();
+}
 function read(directory, board, {verifyInputs=true} = {}) {
  const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
  const dir=path.resolve(directory),episode=path.dirname(dir),store=path.join(episode,'.work/video-routing');
@@ -32,10 +49,14 @@ function read(directory, board, {verifyInputs=true} = {}) {
   const real=path.relative(fs.realpathSync(episode),fs.realpathSync(absolute));
   return real==='..'||real.startsWith('..'+path.sep)||path.isAbsolute(real)?null:relative;
  };
+ const adapters=require('../../_shared/video-catalog.json').adapters;
  const current=(shotId,sceneNo)=>{
   const id=JSON.stringify([shotId,sceneNo]);
   if(!contexts.has(id)) {
-   try {contexts.set(id,require('../../_shared/video-selection.js').readVideoContext(episode,shotId,sceneNo).revision);}catch{contexts.set(id,null);}
+   try {
+    const context=require('../../_shared/video-selection.js').readVideoContext(episode,shotId,sceneNo);
+    contexts.set(id,{revision:context.revision,mode:generationMode(context.selection,null,context.shot?.visual?.references,adapters)});
+   }catch{contexts.set(id,null);}
   }
   return contexts.get(id);
  };
@@ -59,7 +80,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(receipt?.baseUrl) {try{const u=new URL(receipt.baseUrl);if(['http:','https:'].includes(u.protocol))endpoint=u.origin;}catch{/* Unusable endpoint is not evidence. */}}
   const settings=Object.fromEntries(['durationSeconds','duration','numFrames','frameRate','resolution','width','height','generateAudio'].filter(k=>args[k]!==undefined).map(k=>[k,args[k]]));
   const inputs=Object.entries(obj(plan.inputs)).map(([file,sha256])=>({path:path.relative(dir,file).split(path.sep).join('/'),sha256,changed:verifyInputs?hash(file)!==sha256:null}));
-  const revision=current(plan.shotId,plan.sceneNo);
+  const revision=current(plan.shotId,plan.sceneNo)?.revision ?? null;
   const boardMatches=revision===null?null:revision===plan.contextRevision;
   const stale=boardMatches===false||inputs.some(i=>i.changed===true)?true:boardMatches===null||inputs.some(i=>i.changed===null)?null:false;
   const attached=typeof video.clip==='string'?video.clip:typeof shot?.visual?.clip==='string'?shot.visual.clip:null;
@@ -68,10 +89,10 @@ function read(directory, board, {verifyInputs=true} = {}) {
     const member=shots.find(s=>s.id===id), file=member?.visual?.video?.clip || member?.visual?.clip;
     return typeof file==='string' && path.resolve(dir,file)===path.resolve(dir,clip);
    })));
-  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds,boardMatches} : {}),planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
+  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
    createdAt:fs.statSync(path.join(store,'plans',file)).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
    status:job?.status||'planned',providerStatus:job?.providerStatus||null,observedAt:job?.observedAt||null,providerId:job?.providerId||receipt?.jobId||null,endpoint,
-   selection:plan.selection,settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',
+   selection:plan.selection,generationMode:generationMode(plan.selection,plan.tool,args.references,adapters),settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',
    inputs,imageBindings:(plan.imageBindings||[]).map(b=>({id:b.id,path:path.relative(dir,b.path).split(path.sep).join('/'),role:b.role,purpose:b.purpose,preserve:b.preserve,avoid:b.avoid,submitted:b.submitted})),
    characterBindings:job?.characterBindings||plan.characterBindings,
    directionBindings:plan.directionBindings||[],voiceContinuity:plan.voiceContinuity?{strategy:plan.voiceContinuity.strategy,speakers:(plan.voiceContinuity.speakers||[]).map(s=>({speaker:s.speaker,audioIndex:s.audioIndex,imageIndices:s.imageIndices,screenBinding:s.screenBinding,reference:s.reference?{path:path.relative(dir,s.reference.path).split(path.sep).join('/'),sha256:s.reference.sha256}:null})),warnings:plan.voiceContinuity.warnings}:null,
@@ -88,7 +109,21 @@ function read(directory, board, {verifyInputs=true} = {}) {
  }
  const unique=status=>new Set(candidates.filter(status).flatMap(c=>c.shotIds||[c.shotId])).size;
  const jobList=Object.values(jobs);
- return {version:1,storyboardPath:dir,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
+ const sceneModes={},shotModes={};
+ for(const scene of win.STRUCTURE?.scenes || []) {
+  const members=shots.filter(shot=>shot.scene===scene.no);
+  if(!members.length)continue;
+  const plan=currentPlan(candidates,scene.no,members.map(shot=>shot.id));
+  if(!plan && !members.some(shot=>shot.shot?.render?.mode==='generated_video'))continue;
+  const mode=plan?.generationMode || current(members[0].id,scene.no)?.mode;
+  if(mode)sceneModes[scene.no]=mode;
+ }
+ for(const shot of shots) {
+  if(!shot.id || shot.scene!=null || !(shot.shot?.render?.mode==='generated_video' || shot.visual?.video || shot.type==='broll' || shot.type==='quote' && shot.visual?.clip))continue;
+  const mode=currentPlan(candidates,undefined,[shot.id])?.generationMode || current(shot.id)?.mode;
+  if(mode)shotModes[shot.id]=mode;
+ }
+ return {version:1,storyboardPath:dir,sceneModes,shotModes,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
   summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:unique(c=>c.selected),reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
    pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,blocked,warnings,repairs};
@@ -134,6 +169,6 @@ function renderSummary(report,language) {
      :'Generated '+s.completedShots+' shots · Attached '+s.attachedShots+' · Reviewed '+(s.reviewedShots===null?'unverified':s.reviewedShots)+' · Pending '+s.pendingRequests+' requests · Unknown '+s.unknownRequests)+
   '</p><p>'+(ko?'저장된 상태 기준: ':'Snapshot: ')+esc(report.asOf||'—')+'</p>'+report.warnings.map(w=>'<p>'+esc(w)+'</p>').join('')+'</section>';
 }
-const api={read,write,render,renderSummary,changes,repairs};
+const api={read,write,render,renderSummary,changes,repairs,generationMode,currentPlan};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.VIDEO_PRODUCTION_REVIEW=api;
 })(typeof window==='object'?window:globalThis);

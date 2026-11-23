@@ -147,8 +147,8 @@ function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardD
     return [id, { folder, paths: panels, entries: manifest.panels }];
   }));
 }
-function sheetPanels(boardDir, ids) {
-  return new Map([...readPanelSheets(boardDir, ids)].map(([id, sheet]) => [id, sheet.paths]));
+function sheetPanels(boardDir, ids, views) {
+  return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
 }
 function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
   if (ids.length > 4) throw new Error('msr_subject_limit: at most four subject images');
@@ -195,7 +195,7 @@ function missingAppearance(shot, character, role, message) {
     executable:false, videoSubmitted:false, message:error.message};
   return error;
 }
-function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters) {
+function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters, sceneSpeakers) {
   const visual = shot.visual || {}, view = visual.camera?.view;
   const cast = [].concat(visual.character || []).map(c => typeof c === 'string' ? c : c.id);
   const lines = require('../../storyboard/references/scene-direction.js').orderedSpeech(shot);
@@ -211,7 +211,7 @@ function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters
     }
     if (view?.subjectType === 'person') people.push(view.subjectId);
     if (view?.mode === 'ots') people.push(view.viewerId);
-    for (const id of people) if (id && !cast.includes(id)) cast.push(id);
+    for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
   }
   const bodyForView = id => {
     if (view?.mode === 'ots' && view.viewerId === id) return 'back';

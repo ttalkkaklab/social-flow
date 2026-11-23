@@ -28,6 +28,8 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+
 **Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story
 sentences, summaries and lines in one language: the one the user names for this episode,
 else the saved `languages.speech`, else the language the channel already works in
@@ -121,7 +123,7 @@ First complete project setup and follow [production order](../_shared/production
 Prepare characters with text (`character_manage`) and images (`character_panel`) → present the scenario → write the story
 (sequences → scenes → shot stories) → set each shot's characters and each character's lines →
 set each shot's icon attributes → prepare prop and background text/images → make each
-shot's start image, and the end image a first_last shot needs (`shot_image`) → save the opening positions and emotion in each scene's `videoDirection`. Set `story_scene.directionDefaults` before the shot images so their camera axis and lighting agree. A change of camera setup starts a new shot. A pan, tilt, dolly, zoom or an entrance during continuous filming stays on its shot. Record each shot’s frame span, incoming transition, framing, action and timed visual inputs with `story_shot.timeline`. Only an explicit one-take direction sets `videoDirection.oneTake`. A 15-second generation can contain several shots. Export the bundled review template. Each scene's video waits
+scene’s opening and any ending image (`shot_image`) → save the opening positions and emotion in the scene’s `videoDirection`. Set `story_scene.directionDefaults` before the shot images so their camera axis and lighting agree. A change of camera setup starts a new shot. A pan, tilt, dolly, zoom or an entrance during continuous filming stays on its shot. For model-paced cuts, give each shot its duration, framing and action. Use `story_shot.timeline` for an exact frame boundary or timed visual cue. Only an explicit one-take direction sets `videoDirection.oneTake`. A 15-second generation can contain several shots. Export the bundled review template. Each scene's video waits
 for the user's approval (`video_approve`); do not jump from a text plan directly to video.
 Scenario presentation is a progress update, not an approval request. In an interactive
 session, show the premise, characters, causal sequence, ending and selection reason before

@@ -61,11 +61,9 @@ input validation stay. Work in this order:
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before
    `shot_image` selects its matching panel (front by default).
-6. Each shot's start image (`shot_image`), composed from its characters' sheet panels,
-   its place and props; then the end image (`frame:"end"`) only for a `first_last` shot.
-   A place whose sheet names a built set is rendered from the shot's own camera first (below).
+6. Generate the scene's chosen opening and ending images from the first and last cards using `shot_image.role` values `scene_start` and `scene_end`. Optionally compose one `shot_reference` per card. A still-camera shot keeps its own source image.
 7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
-8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. A specifically requested single-shot render uses `shot_prompt` and `shotId`.
+8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. Replan the complete scene after a shot correction.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
    and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 

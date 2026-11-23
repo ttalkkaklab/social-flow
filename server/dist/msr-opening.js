@@ -56,7 +56,6 @@ export const sceneShotBindingsSchema = z.array(z.object({
     motionPrefix: z.string().trim().min(1).optional().describe('Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion.'),
     performanceAudio: z.string().trim().min(1).optional().describe('Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening.'),
     dialogueCues: z.array(z.object({ lineId: z.string().min(1), frame: z.number().int().nonnegative() }).strict()).optional(),
-    references: z.array(z.object({ id: z.string().min(1), character: z.string().min(1), role: z.enum(['face', 'outfit', 'character']) }).strict()).optional(),
 }).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
     openingPositions: openingPositionsSchema,

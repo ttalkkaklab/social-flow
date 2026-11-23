@@ -1,5 +1,9 @@
 # Video routing contract
 
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+
+Seedance 2.0 reference mode binds composition images by shot ID and numbered image within one scene request. Its image limit includes other reference images. A pinned first or last frame uses a different operation. Distilled LTX combined I2V takes its start and end frames separately from up to four scene-wide subject references and one background. A single character leaves three subject slots for other subjects or objects. These slots carry no shot index. The single-shot route may use its background slot for a composition guide when a subject is present. Inspect `sceneRequest.shotReferenceImages` for the disposition of each guide.
+
 Use `video_catalog` → `video_plan` → `video_approve` (the user's yes to that scene or a standing `auto:true`) → `video_execute` for episode video. The registry
 contains installed adapter contracts, not a vendor availability claim. The hosted LTX API and Google Cloud Veo register their operations in `server/src/hosted-video-routes.ts`. ASTRA deployments and local MLX use their existing adapter contracts.
 
@@ -24,7 +28,7 @@ window.PRODUCTION.modelSettings = { overrides: [
 ] };
 ```
 
-`video_plan` accepts `episode`, `sceneNo` (or `shotId` for an explicit single shot), a stable `requestId`, `operation` (text,
+`video_plan` accepts `episode`, `sceneNo`, a stable `requestId`, `operation` (text,
 image, reference, audio, keyframe, control, extend, edit, retake) and adapter `args`.
 Alternatively specify an exact `tool`. Conflicting tool/operation/model/resolution
 or unknown arguments fail. Local input contents and prices are pinned in a saved plan.
@@ -51,7 +55,7 @@ succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
-For a protected storyboard, pass `shotBindings` with the exact shot IDs. Each entry can name existing reference IDs with their cast IDs and roles, opening positions and dialogue cues. A revision can also supply shorter framing and action directions, within-shot keyframes, or MSR negative guidance. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, set `performanceAudio` to the timed stereo 48 kHz PCM WAV containing the line and its room sound. Include the selected voice sample as a separate identity reference. Fit the recording to the native frame count, including its short tail. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
+For a protected storyboard, pass `shotBindings` with the exact shot IDs. Set scene identity images in `story_scene.speakerReferences` and positions in `story_scene.videoDirection`. Each binding can supply a dialogue cue, revised framing or action, or MSR negative guidance. Legacy boards with frame-addressed shot inputs can also revise their keyframes and shot opening positions. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, set `performanceAudio` to the timed stereo 48 kHz PCM WAV containing the line and its room sound. Include the selected voice sample as a separate identity reference. Fit the recording to the native frame count, including its short tail. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
 
 **LTX contracts checked 2026-11-22**
 
@@ -132,10 +136,7 @@ A stable `requestId` identifies one logical attempt. Completed requests return t
 cached result. Pending or ambiguous requests never submit again. Managed ASTRA audio requests bind
 `maxAttempts: 1`; explicit multi-generation adapter retries are rejected. Use the
 episode attempt limit for separately tracked attempts after a terminal result.
-The one documented exception to the plan route is the ASTRA audio-conditioned shot
-(`skills/produce/references/render-astra-shot.js`, owner directive 2026-10-17): it submits
-through the ASTRA runtime with the composed speech WAV and records a provisional candidate;
-its reseed count is that script's own setting, and each reseed is a separately recorded request.
+The retired [shot-render CLI](../produce/references/render-astra-shot.js) directs existing callers to the scene planner.
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`
 reads the original provider ID, reserved cost, tokens and result without network I/O.
@@ -156,7 +157,7 @@ hashes live under the episode's `.work/video-routing/` and are local artifacts.
 
 ## Compatibility and boundaries
 
-Existing video tools accept `videoContext: {episode, shotId, requestId}` and use the
+Existing video tools accept `videoContext: {episode, sceneNo, requestId}` and use the
 same service. Video plans, approvals and execution require the destination's selected
 workspace to be ready. A direct adapter call needs episode context or a channel asset
 under that ready workspace. Calls without a selected project stop before generation.
@@ -168,7 +169,7 @@ capabilities from the registry and rejects conflicting caller claims. Capabiliti
 adapter input contracts, not a guarantee that generated lip movement is correct.
 
 Migration: preserve snapshots and existing choices, obtain the installed catalog,
-plan a single shot, then move callers to plan/execute or add `videoContext`. Confirm
+plan a complete scene, then move callers to plan/execute or add `videoContext`. Confirm
 historical spend before the first managed call. Add a new provider by implementing
 its adapter/schema and registering its deployment; update pricing and behavioral
 tests, regenerate the catalog/bundle, then expose it in settings. Research alone
