@@ -3,7 +3,7 @@ name: generate-cover
 description: >
   Makes the episode cover and thumbnail from a moment the episode shows, with code-drawn copy and per-platform crops; stops before publishing. Use for "썸네일 만들어", "커버 만들어", "make a thumbnail", "cover image", or when produce, autoproduce or publish reaches the cover.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Bash", "mcp__social-flow__episode_cover", "mcp__plugin_social-flow_social-flow__episode_cover", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status"]
+allowed-tools: ["Read", "Bash", "mcp__social-flow__episode_cover", "mcp__plugin_social-flow_social-flow__episode_cover", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs"]
 ---
 
 # Generate Cover

@@ -55,7 +55,7 @@ import { generateNativeImage } from './astra-genai-native-image.js';
 import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
 import { randomUUID } from 'node:crypto';
-import { genaiCatalog } from './astra-genai-client.js';
+import { genaiCatalog, genaiJobs } from './astra-genai-client.js';
 import { generateGenaiImage } from './astra-genai-image.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
@@ -969,6 +969,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
   astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','ltx_video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  astra_genai_jobs: async args => text(JSON.stringify(await genaiJobs(args))),
   tts_astra_genai: async args => {
     const generation = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),
