@@ -121,7 +121,7 @@ function speechHistory(board) {
 function episodeVideoReceipts(shots,board,extra) {
   const fs = require('node:fs'), path = require('node:path');
   const dirs = new Set([path.resolve(board,'../.work/video'),path.resolve(board,'../output/video/scenes')]);
-  const hashes = new Map(), forbidden = [];
+  const hashes = new Map(), forbidden = [], renders = [];
   function directory(file) {
     if (typeof file === 'string' && file) dirs.add(path.dirname(path.resolve(board,file)));
   }
@@ -152,11 +152,14 @@ function episodeVideoReceipts(shots,board,extra) {
         sha = createHash('sha256').update(fs.readFileSync(file)).digest('hex');
       if (!/^[a-f0-9]{64}$/.test(sha)) continue;
       if (!hashes.has(sha)) hashes.set(sha,[]);
-      hashes.get(sha).push({receipt,suffix});
+      const source = {receipt,suffix,sha,file};
+      hashes.get(sha).push(source);
+      if (receipt.status === 'completed' && receipt.jobId && typeof receipt.videoPath === 'string' &&
+          !hasPostLipSync(receipt)) renders.push(source);
       if (hasPostLipSync(receipt)) forbidden.push({sha,file});
     }
   }
-  return {hashes,forbidden,history};
+  return {hashes,forbidden,history,renders,drivers:new Map()};
 }
 
 // Imported native clips may have no local receipt. A matching recorded operation
@@ -164,6 +167,14 @@ function episodeVideoReceipts(shots,board,extra) {
 function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
   const fs = require('node:fs');
   const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  let driver;
+  function verify(receipt,suffix,hashBound) {
+    verifyReceiptOperation(receipt,suffix,plan,hashBound);
+    const original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
+    if (!original) return;
+    if (driver && original !== driver) throw new Error('conditioning_audio_unverified: conflicting drivers for the same video');
+    driver = original;
+  }
   for (const suffix of receiptSuffixes) {
     let receipt;
     try {
@@ -175,11 +186,11 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
     }
     sha256 ??= digest(videoPath);
     if (receipt.sha256 ? receipt.sha256 !== sha256 : receipt.videoPath !== videoPath) continue;
-    verifyReceiptOperation(receipt,suffix,plan,receipt.sha256 === sha256);
+    verify(receipt,suffix,receipt.sha256 === sha256);
   }
-  if (!index || !(index.hashes.size || index.forbidden.length) || !fs.existsSync(videoPath)) return;
+  if (!index || !(index.hashes.size || index.forbidden.length) || !fs.existsSync(videoPath)) return driver;
   sha256 ??= digest(videoPath);
-  for (const {receipt,suffix} of index.hashes.get(sha256) ?? []) verifyReceiptOperation(receipt,suffix,plan,true);
+  for (const {receipt,suffix} of index.hashes.get(sha256) ?? []) verify(receipt,suffix,true);
   let frames;
   for (const source of index.forbidden) {
     if (source.sha === sha256) throw new Error('post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source');
@@ -190,6 +201,31 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
     if (sameVideoFrames(source.frames,frames))
       throw new Error('post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source');
   }
+  if (['native','audio_conditioned'].includes(plan.mode)) {
+    let sound;
+    const audio = file => {
+      const signal = require('./audio-signal.js');
+      return signal.inspect(file).status === 'signal' ? signal.decodedAudioHash(file) : 'silent';
+    };
+    for (const source of index.renders) {
+      if (source.sha === sha256 || !fs.existsSync(source.file)) continue;
+      if (source.intact === undefined) source.intact = digest(source.file) === source.sha;
+      if (!source.intact) continue;
+      if (!source.frames) {
+        try { source.frames = videoPerformanceSource(source.file,true); }
+        catch { source.intact = false; continue; } // An unreadable sibling cannot identify frames in another file.
+      }
+      frames ??= videoPerformanceSource(videoPath,true);
+      if (!sameVideoFrames(source.frames,frames)) continue;
+      verify(source.receipt,source.suffix,true);
+      source.sound ??= audio(source.file);
+      sound ??= audio(videoPath);
+      if (source.sound !== sound)
+        throw new Error('post_lipsync_forbidden: an existing render cannot acquire a replacement dialogue soundtrack');
+    }
+  }
+  if (driver) index.drivers.set(videoPath,driver);
+  return driver;
 }
 
 // Keep the stream identities even when an editor saves new bytes over the same path.
@@ -201,6 +237,15 @@ function videoPerformanceSource(file, silentConditioned = false) {
   const picture = hash(['-fps_mode','passthrough','-c:v','rawvideo','-pix_fmt','yuv420p']);
   const encodedPicture = hash(['-c:v','copy']);
   return {version:2,picture,encodedPicture,...(!silentConditioned && {audio:require('./audio-signal.js').decodedAudioHash(file)})};
+}
+
+function externalPictureSource(file) {
+  let source;
+  try { source = videoPerformanceSource(file,true); }
+  catch { return; } // Historical voiceover cards could bind a placeholder before picture delivery.
+  const signal = require('./audio-signal.js');
+  if (signal.inspect(file).status === 'signal') source.audio = signal.decodedAudioHash(file);
+  return source;
 }
 
 function sameVideoFrames(left,right) {
@@ -219,12 +264,13 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
   const media = new Map();
   function source(shot) {
     const binding = shot.visual?.video?.speechBinding;
-    if (!['native','audio_conditioned'].includes(binding?.mode) || !binding.videoSha256 || !binding.audio?.length) return;
+    if (!['voiceover','native','audio_conditioned'].includes(binding?.mode) || !binding.videoSha256) return;
+    if (binding.mode !== 'voiceover' && !binding.audio?.length) return;
     const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
     if (!Number.isFinite(start) || start < 0 || !(end > start) || (end !== Infinity && !Number.isFinite(end)))
       throw new Error('speech_video_performance_conflict: invalid dialogue source interval for ' + shot.id);
     const visible = shot.narration?.some(line => line.delivery === 'on_screen' && line.tts?.trim());
-    return {id:shot.id, start, end, visible, binding, revisions:JSON.stringify(binding.audio.map(line => [line.revision,line.sha256]))};
+    return {id:shot.id, start, end, visible, binding, revisions:JSON.stringify((binding.audio ?? []).map(line => [line.revision,line.sha256]))};
   }
   function identity(entry) {
     const {videoPath,videoSha256,performanceSource,conditioningAudioSha256} = entry.binding;
@@ -233,12 +279,15 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
       const original = file && fs.existsSync(file) && createHash('sha256').update(fs.readFileSync(file)).digest('hex') === videoSha256;
       // New bindings retain the original streams when an editor has replaced the file.
       // Recompute historical or assembled claims whenever the bound bytes are present.
-      media.set(videoSha256,original ? videoPerformanceSource(file,Boolean(conditioningAudioSha256)) : performanceSource);
+      const measured = original && (entry.binding.mode === 'voiceover' ? externalPictureSource(file) :
+        videoPerformanceSource(file,Boolean(conditioningAudioSha256)));
+      media.set(videoSha256,measured || performanceSource);
     }
     return media.get(videoSha256);
   }
   function check(left,right,active = false) {
     if (left.end <= right.start || right.end <= left.start) return;
+    if (left.binding.mode === 'voiceover' && right.binding.mode === 'voiceover') return;
     const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions &&
       left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
     if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
@@ -255,7 +304,8 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
     const samePicture = (left.visible || right.visible) && sameVideoFrames(a,b);
     const changedSoundtrack = samePicture && a.audio !== b.audio;
     const sameMedia = samePicture || (a?.audio && a.audio === b?.audio) || left.binding.videoSha256 === right.binding.videoSha256;
-    if (changedSoundtrack || (!samePlan && sameMedia))
+    const external = left.binding.mode === 'voiceover' || right.binding.mode === 'voiceover';
+    if (changedSoundtrack || (!external && !samePlan && sameMedia))
       throw new Error('speech_video_performance_conflict: ' + left.id + ' and ' + right.id +
         ' assign a different recording or performance to the same footage or soundtrack over an overlapping source interval');
   }
@@ -285,4 +335,4 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
   }
 }
 
-module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource };
+module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };

@@ -413,6 +413,14 @@ function a2vFixture(t){
  const bind=videoPath=>call({action:'attach_video',shotId:line.shotId,videoPath});
  return {dir,target,file,line,first,retake,original,remux,overdub,record,bind};
 }
+function buildOneLineReel(work,target,win){
+ const shot=win.SCENES[0],line=shot.narration[0];
+ writeFileSync(join(target,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ writeFileSync(join(work,'cards.tsv'),'0\tplaceholder.wav\t0\tnone\n');
+ writeFileSync(join(work,'segs.tsv'),[0,0,shot.visual.video.clip,line.tts,line.tts].join('\t')+'\n');
+ return spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
+   {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
+}
 test('public A2V binding keeps the original driver for a line when its words stay the same',async t=>{
  const {dir,file,first,retake,original,remux,overdub,record,bind}=a2vFixture(t);
  await record(first);
@@ -496,13 +504,7 @@ test('a replaced A2V take retains its recording history for public attachment an
  binding.videoPath=overdub;
  binding.videoSha256=createHash('sha256').update(readFileSync(overdub)).digest('hex');
  binding.performanceSource=require('../../skills/_shared/speech-contract.js').videoPerformanceSource(overdub);
- function build(win){
-   save(win);
-   writeFileSync(join(work,'cards.tsv'),'0\tplaceholder.wav\t0\tnone\n');
-   writeFileSync(join(work,'segs.tsv'),[0,0,win.SCENES[0].visual.video.clip,line.tts,line.tts].join('\t')+'\n');
-   return spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
-     {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
- }
+ const build=win=>buildOneLineReel(work,target,win);
  await t.test('an archived board cannot export the earlier picture with the later recording',()=>{
    const blocked=build(archived);
    assert.notEqual(blocked.status,0);
@@ -541,6 +543,71 @@ test('a narrowed active native trim takes precedence over the earlier full-card 
  save(narrowed);
  assert.equal((await attach(win.SCENES[1].id)).changed,true);
  assert.deepEqual(read().SCENES.map(shot=>shot.edit),[{in:0,out:0.125},{in:0.125,out:0.25}]);
+});
+
+for(const operation of ['image-to-video','audio-to-video'])test('the known '+operation+' receipt governs A2V imports and archived assembly',async t=>{
+ const {dir,target,file,first,retake,original,remux,overdub,record,bind}=a2vFixture(t);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const sha=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
+ const win=read();win.SB_DOC.speechPlanVersion=1;win.MUSIC={$timeline:[]};win.SCENES[0].duration=0.25;save(win);
+ const work=join(dir,'.work'),sources=join(work,'video');mkdirSync(sources);
+ const originalRender=join(sources,'render.mov'),conditioned=operation==='audio-to-video';
+ if(conditioned)writeFileSync(originalRender,readFileSync(original));
+ else execFileSync('ffmpeg',['-v','error','-i',original,'-map','0:v','-c','copy',originalRender]);
+ const candidate=conditioned?originalRender:overdub;
+ await record(retake);
+ const pending=readFileSync(file);
+ // Recreate an archived bind made before the original job receipt was recovered.
+ await bind(candidate);
+ const archive=read(),receipt={version:1,status:'completed',jobId:'render',fingerprint:'3'.repeat(64),
+   operation,model:'ltx-2.5-22b-distilled',videoPath:originalRender,sha256:sha(originalRender),
+   ...(conditioned&&{conditioningAudioSha256:sha(first)})};
+ writeFileSync(originalRender+'.astra-genai.json',JSON.stringify(receipt));
+ const error=conditioned?/conditioning_audio_unverified/:/speech_video_source_mismatch/;
+ await t.test('public attachment refuses the incompatible original generation',async()=>{
+   writeFileSync(file,pending);
+   for(const path of (conditioned?[originalRender,remux,overdub]:[originalRender,overdub])){
+     await assert.rejects(bind(path),conditioned && path===overdub?/post_lipsync_forbidden/:error);
+     assert.deepEqual(readFileSync(file),pending);
+   }
+ });
+ await t.test('an archived speaking binding still checks the recovered receipt',()=>{
+   const build=buildOneLineReel(work,target,archive);
+   assert.notEqual(build.status,0);
+   assert.match(build.stderr,error);
+ });
+ if(conditioned){
+   writeFileSync(file,pending);
+   await record(first);
+   assert.equal((await bind(remux)).changed,true);
+   const valid=read();
+   assert.equal(valid.SCENES[0].sound.audioSource,'video');
+   assert.equal(valid.SCENES[0].visual.video.speechBinding.generationAudioSha256,sha(first));
+   const result=buildOneLineReel(work,target,valid);
+   assert.equal(result.status,0,result.stderr);
+   const [source]=JSON.parse(readFileSync(join(work,'source-audio.json'),'utf8'));
+   assert.equal(source.sourceSha256,sha(remux));
+ }
+});
+for(const hasNarrator of [false,true])test('a bound '+(hasNarrator?'externally narrated':'speechless')+' picture cannot become an A2V take',async t=>{
+ const {dir,target,file,first,retake,original,overdub,bind,record}=a2vFixture(t);
+ const win=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const picture=join(dir,'picture-only.mov');
+ execFileSync('ffmpeg',['-v','error','-i',original,'-map','0:v','-c','copy',picture]);
+ const narration=hasNarrator?[{id:'outside',speaker:'hero',delivery:'voiceover',tts:'Later.'}]:[];
+ win.SCENES.push({id:'s0002',type:'points',duration:0.25,narration,visual:{video:{
+   engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'image'}}});
+ writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const call=async input=>JSON.parse((await ROUTES.speech_manage({path:target,
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision,...input})).content[0].text);
+ if(hasNarrator)await call({action:'attach_audio',lineId:'outside',audioPath:first,
+   generation:{generator:'tts_generate',text:'Later.',language:'ko',voiceSettings:{voiceName:'Kore',speed:1}}});
+ assert.equal((await call({action:'attach_video',shotId:'s0002',videoPath:picture})).plan.mode,'voiceover');
+ await record(retake);
+ const before=readFileSync(file);
+ await assert.rejects(bind(overdub),/post_lipsync_forbidden|speech_video_source_mismatch|speech_video_performance_conflict/);
+ assert.deepEqual(readFileSync(file),before);
 });
 test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');

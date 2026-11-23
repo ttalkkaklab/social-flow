@@ -320,7 +320,10 @@ Choose the production route from the selected adapter and the authored speech de
 An existing native clip can serve several cards with different dialogue when their source
 intervals are disjoint. Set `edit.in` and `edit.out` on the cards to select the lines from the
 original scene. An overlapping interval with different bound speech requires a new take.
-Attachment and assembly check this ownership and any matching local generation receipt.
+Attachment and assembly check the active take, earlier takes in the episode's speech
+history, and local generation receipts. An audible A2V output keeps its embedded
+soundtrack. When its generation receipt identifies the driving WAV, its current
+line recordings and timing must still produce that WAV.
 
 | Speech | Route | When speech changes |
 |---|---|---|

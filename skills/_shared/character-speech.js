@@ -152,12 +152,16 @@ function conditioningAudioSha256(videoPath) {
   try { receipt = JSON.parse(fs.readFileSync(receipts[0], 'utf8')); } catch { return; }
   if (!receipt || receipt.status !== 'completed' || !receipt.jobId || receipt.videoPath !== video ||
       !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256) || hash(fs.readFileSync(video)) !== receipt.sha256) return;
+  return recordedConditioningDriver(receipt,receipts[0]);
+}
+function recordedConditioningDriver(receipt,sidecar) {
+  if (receipt?.status !== 'completed' || !receipt.jobId || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256)) return;
   const request = receipt.submittedRequest;
-  const astra = receipts[0].endsWith('.astra-job.json') && receipt.mode === 'audio2video' &&
+  const astra = sidecar.endsWith('.astra-job.json') && receipt.mode === 'audio2video' &&
     request?.mode === 'audio2video' && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === undefined;
-  const gateway = receipts[0].endsWith('.astra-genai.json') && receipt.version === 1 && receipt.operation === 'audio-to-video' &&
+  const gateway = sidecar.endsWith('.astra-genai.json') && receipt.version === 1 && receipt.operation === 'audio-to-video' &&
     /^[a-f0-9]{64}$/.test(receipt.fingerprint);
   if (astra || gateway) return receipt.conditioningAudioSha256;
 }
 
-module.exports = {characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256};
+module.exports = {characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver};

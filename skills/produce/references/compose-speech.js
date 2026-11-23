@@ -71,7 +71,7 @@ function samePerformanceWav(file, mono) {
   return false;
 }
 
-function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath,
+function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath, includeCardAudio = true,
   work = path.resolve(board, '../.work'), timing = sceneTiming(scene, board, timingVersion)}) {
   const lines = (scene.narration || []).filter(line => line.tts?.trim());
   const sources = lines.map(line => path.resolve(board, line.audio.path));
@@ -80,7 +80,7 @@ function currentConditioningAudio(scene, board, {index, timingVersion, driverSha
     interval.speechEndSeconds === timing.durationSeconds && hash(fs.readFileSync(sources[0])) === driverSha256;
   const cards = path.join(work, 'cards.tsv');
   const choices = [audioPath, sceneAudioPath].filter(Boolean).map(file => path.resolve(board, file));
-  if (fs.existsSync(cards)) {
+  if (includeCardAudio && fs.existsSync(cards)) {
     const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/).filter(row => row.trim() && !row.startsWith('#'))
       .map(row => row.split('\t')).filter(fields => fields[0].trim() && Number(fields[0]) === index);
     if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error('conditioning_audio_unverified: ambiguous selected WAV in cards.tsv');

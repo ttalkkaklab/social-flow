@@ -418,7 +418,7 @@ export function manageSpeech(args, options = {}) {
                 throw new Error('Video file is empty');
             const videoSha256 = hash(bytes);
             const receipts = speechContract().episodeVideoReceipts(scenes, dirname(file), videoPath);
-            speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
+            const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
             for (const card of scenes) {
                 const video = object(card.visual?.video), binding = object(video.speechBinding);
                 if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding))
@@ -445,7 +445,7 @@ export function manageSpeech(args, options = {}) {
             if (plan.mode === 'audio_conditioned') {
                 const signal = audioSignalContract().inspect(videoPath).status;
                 if (signal !== 'signal') {
-                    driverSha256 = characterSpeechContract().conditioningAudioSha256(videoPath);
+                    driverSha256 = recordedDriver ?? characterSpeechContract().conditioningAudioSha256(videoPath);
                     if (!driverSha256)
                         throw new Error('conditioning_audio_unverified: a silent A2V clip needs its completed generation receipt binding these video bytes to the original conditioning WAV');
                 }
@@ -461,9 +461,10 @@ export function manageSpeech(args, options = {}) {
                     throw new Error('Speech generation evidence changed: ' + errors.join('; '));
                 return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
             });
-            const driverPath = driverSha256 && nodeModule.createRequire(import.meta.url)('../../skills/produce/references/compose-speech.js')
+            const generationDriver = plan.mode === 'audio_conditioned' ? recordedDriver ?? driverSha256 : undefined;
+            const driverPath = generationDriver && nodeModule.createRequire(import.meta.url)('../../skills/produce/references/compose-speech.js')
                 .currentConditioningAudio(scene, dirname(file), { index: scenes.indexOf(scene), timingVersion: doc.performanceTimingVersion,
-                driverSha256, audioPath: args.audioPath, sceneAudioPath: owner?.videoDirection?.audio?.path });
+                driverSha256: generationDriver, includeCardAudio: Boolean(driverSha256), audioPath: args.audioPath, sceneAudioPath: owner?.videoDirection?.audio?.path });
             const visual = object(scene.visual);
             const video = object(visual.video);
             if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model))
@@ -471,7 +472,7 @@ export function manageSpeech(args, options = {}) {
             const priorBinding = object(video.speechBinding);
             const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
             const performanceSource = native || plan.mode === 'audio_conditioned'
-                ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : undefined;
+                ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
             if (performanceSource) {
                 // Replacing a native clip clears trims measured on its predecessor.
                 const candidate = { id: scene.id, narration: scene.narration, edit: native && replacement ? {} : scene.edit,
@@ -513,7 +514,8 @@ export function manageSpeech(args, options = {}) {
                         note: 'The previous clip\'s trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack.' };
                 }
                 video.clip = args.videoPath;
-                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality, ...(performanceSource && { performanceSource }), ...(driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {}),
+                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality, ...(performanceSource && { performanceSource }),
+                    ...(generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath }), ...(driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {}),
                     ...(tailTrim ? { reuse: { kind: 'tail_trim', sourcePerformanceRevision: priorBinding.performanceRevision,
                             sourceDurationSeconds: priorBinding.durationSeconds, selectedDurationSeconds: plan.durationSeconds,
                             review: 'not_reviewed' } } : {}) };

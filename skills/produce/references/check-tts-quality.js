@@ -264,6 +264,15 @@ function check(work, board) {
       if(path.resolve(board,s.visual.video.clip||'')!==path.resolve(binding.videoPath) || hash(fs.readFileSync(binding.videoPath))!==binding.videoSha256)throw new Error('Bound video changed for card '+i);
       const audio=(s.narration||[]).map(n=>native?{lineId:n.id,revision:speechRevision(n,{tts:cast.find(c=>c.id===n.speaker)?.tts})}:{lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision});
       if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
+      if(binding.mode==='audio_conditioned' && s.sound?.audioSource==='video') {
+        const known=receipts.drivers.get(path.resolve(board,binding.videoPath));
+        if(known && binding.generationAudioSha256 && known!==binding.generationAudioSha256)
+          throw new Error('conditioning_audio_unverified: the selected clip has a different generation-time driver');
+        const driver=known ?? binding.generationAudioSha256;
+        if(driver)require('./compose-speech.js').currentConditioningAudio(s,board,{index:i,work,
+          timingVersion:win.SB_DOC?.performanceTimingVersion,driverSha256:driver,includeCardAudio:false,
+          audioPath:binding.generationAudioPath,sceneAudioPath:win.STRUCTURE?.scenes?.find(owner=>owner.no===s.scene)?.videoDirection?.audio?.path});
+      }
       const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
       if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))warnings.push('card '+i+': performance plan changed since the clip was bound; inspect the clip against the current plan (stale)');
       if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');

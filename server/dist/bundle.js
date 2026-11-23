@@ -96768,6 +96768,242 @@ var require_character_voice = __commonJS({
   }
 });
 
+// ../skills/channel/references/character-sheet.js
+var require_character_sheet = __commonJS({
+  "../skills/channel/references/character-sheet.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path39 = __require("node:path");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
+    var { identityVoice, voiceErrors } = require_character_voice();
+    function episodeVoiceOverride(win, tts) {
+      const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim().length > 0 && typeof override2.model === "string" && override2.model.trim().length > 0 && override2.engine === tts?.engine && override2.model === tts?.model && voiceErrors(tts).length === 0;
+    }
+    function handoff(file, { requireSpeech = true, voiceOnly = false } = {}) {
+      const source = fs26.readFileSync(file, "utf8");
+      const options = { ready: !voiceOnly };
+      const character = identityCharacter(source, options);
+      const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
+      if (!name) throw new Error("identity.md needs a # Name heading");
+      const id = path39.basename(path39.dirname(path39.resolve(file)));
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
+      const tts = identityVoice(source, { optional: !requireSpeech });
+      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash33("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
+    }
+    function selectedVoiceReference(source, tts) {
+      if (!tts) return {};
+      const document2 = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1])).find((v) => v?.character);
+      const selection = document2?.voiceSelection;
+      if (!selection?.auditionPath) return selection ? { voiceSelection: selection } : {};
+      try {
+        const audition = JSON.parse(fs26.readFileSync(selection.auditionPath, "utf8"));
+        const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
+        const registration = selection.registration;
+        const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
+        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path39.isAbsolute(chosen.audioPath))
+          throw new Error("Selected voice sample no longer matches the pinned character voice");
+        return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
+      } catch (error2) {
+        return { voiceSelection: selection, voiceReferenceWarning: error2.message };
+      }
+    }
+    if (__require.main === module) {
+      try {
+        const args = process.argv.slice(2);
+        const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
+        if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
+        if (view) {
+          const manifest2 = path39.join(path39.dirname(args[0]), "panels.json");
+          const front = view === "back" && fs26.existsSync(manifest2) ? JSON.parse(fs26.readFileSync(manifest2, "utf8")).panels?.front : void 0;
+          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs26.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
+          if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
+          console.log(text4);
+        } else console.log(JSON.stringify(handoff(args[0]), null, 2));
+      } catch (e2) {
+        console.error(e2.message);
+        process.exitCode = 1;
+      }
+    }
+    function sourceErrors(win, boardDir) {
+      const entries = win?.SB_DOC?.characters;
+      const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
+      if (!chars.length) return [];
+      let channel = path39.resolve(boardDir);
+      while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
+      const errors = [];
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
+          errors.push("Invalid character id");
+          continue;
+        }
+        const file = path39.join(channel, "assets", "characters", c.id, "identity.md");
+        try {
+          const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
+          const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
+          if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || voiceChanged && !episodeVoiceOverride(win, c.tts))
+            errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
+        } catch (error2) {
+          errors.push(`Character ${c.id}: ${error2.message}`);
+        }
+      }
+      return errors;
+    }
+    module.exports = { handoff, sourceErrors, selectedVoiceReference };
+  }
+});
+
+// ../skills/_shared/character-speech.js
+var require_character_speech = __commonJS({
+  "../skills/_shared/character-speech.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path39 = __require("node:path");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
+    var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
+    var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
+    function explicitVoiceOverride(board, voice, current) {
+      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
+    }
+    function characterSpeech(character, { boardDir, board } = {}) {
+      let current;
+      if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
+        let channel = path39.resolve(boardDir);
+        while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
+        const identity = path39.join(channel, "assets/characters", character.id, "identity.md");
+        if (fs26.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
+      }
+      const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
+      const voice = resolved.tts;
+      const invalid = voiceErrors(voice);
+      if (invalid.length) throw new Error("character_voice_invalid: " + invalid.join("; "));
+      const override2 = explicitVoiceOverride(board, voice, current);
+      if (current && !override2 && !isDeepStrictEqual2(normalizeVoice(current.tts), normalizeVoice(voice)))
+        throw new Error(`character_voice_stale: ${resolved.id} differs from the shared character voice; apply the requested sheet voice to SB_DOC.characters, or record an explicit episode speech override with request and voiceId`);
+      if (current?.voiceReference && resolved.voiceReference && !override2 && current.voiceReference.sha256 !== resolved.voiceReference.sha256)
+        throw new Error(`character_voice_stale: ${resolved.id} selected sample changed; refresh the episode voice reference explicitly`);
+      const reference2 = resolved.voiceReference || (!override2 ? current?.voiceReference : void 0);
+      const selected = reference2 || resolved.voiceSelection || resolved.voiceReferenceWarning || !override2 && (current?.voiceSelection || current?.voiceReferenceWarning);
+      if (voice.engine === "astra-genai" && voice.voiceId.trim().toLowerCase() === "default" && selected && !override2)
+        throw new Error(`character_voice_unregistered: ${resolved.id} has a selected sample but voiceId is default; register that sample with the gateway and pin its returned voice ID. A direction prompt does not clone a sample`);
+      if (!override2 && (resolved.voiceReferenceWarning || current?.voiceReferenceWarning))
+        throw new Error(`character_voice_sample_invalid: ${resolved.id} selected sample cannot be resolved`);
+      if (reference2) {
+        if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
+          throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
+        const file = path39.resolve(boardDir || process.cwd(), reference2.path);
+        if (!reference2.sha256 || hash7(fs26.readFileSync(file)) !== reference2.sha256)
+          throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
+        return { ...resolved, voiceReference: { ...reference2, path: file } };
+      }
+      return resolved;
+    }
+    function physicalPath(file) {
+      let current = path39.resolve(file), suffix = [];
+      while (!fs26.existsSync(current) && path39.dirname(current) !== current) {
+        suffix.unshift(path39.basename(current));
+        current = path39.dirname(current);
+      }
+      return path39.join(fs26.realpathSync(current), ...suffix);
+    }
+    function episodeBoardForOutput(outputPath) {
+      let folder = physicalPath(outputPath || process.cwd());
+      while (true) {
+        if (path39.basename(folder) === "assets" && fs26.existsSync(path39.join(path39.dirname(folder), "profile.md"))) return void 0;
+        const board = path39.join(folder, "storyboard/scenes.js");
+        if (fs26.existsSync(board)) return fs26.realpathSync(board);
+        if (path39.dirname(folder) === folder) return void 0;
+        folder = path39.dirname(folder);
+      }
+    }
+    function plannedGenerationErrors(voice, proof, line) {
+      const errors = generationVoiceErrors(voice, proof, line);
+      if (errors.length) return errors;
+      const expected = require_speech_contract().compileActing(line?.tts ?? proof.text, line?.acting, voice);
+      const fields2 = proof.generator === "tts_astra_genai" ? ["model", "text", "voice", "speed", "instructions"] : proof.generator === "tts_gemini_38" ? ["turns"] : ["text"];
+      for (const key of fields2) {
+        if (!isDeepStrictEqual2(proof.voiceSettings[key], expected.generation[key]))
+          errors.push("Actual provider arguments differ from plan_audio: " + key);
+      }
+      return errors;
+    }
+    function validateSpeechContext(generator, args) {
+      const context2 = args.speechContext;
+      const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
+      if (!context2) {
+        if (outputBoard) throw new Error("speech_context_required: use speech_manage plan_audio for episode TTS");
+        return;
+      }
+      const file = fs26.realpathSync(context2.path);
+      if (outputBoard && file !== outputBoard) throw new Error("speech_context_mismatch: output belongs to a different episode");
+      const source = fs26.readFileSync(file, "utf8");
+      if (hash7(source) !== context2.expectedRevision) throw new Error("speech_context_stale: re-plan audio after storyboard changes");
+      const board = require_scenes_vm().evaluateWindowScript(source, { filename: file });
+      const matches = (board.SCENES || []).flatMap((shot) => shot.narration || []).filter((line2) => line2.id === context2.lineId);
+      if (matches.length !== 1 || !matches[0].speaker) throw new Error("speech_context_invalid: select one explicit stable line ID");
+      const line = matches[0], raw = board.SB_DOC?.characters;
+      const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
+      const cast = characters.filter((character2) => character2.id === line.speaker);
+      if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
+      const character = characterSpeech(cast[0], { boardDir: path39.dirname(file), board });
+      const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
+      if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
+    }
+    function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
+      if (!proof?.receiptPath) {
+        if (required2) throw new Error("speech_receipt_required: attach the completed TTS receiptPath");
+        return proof;
+      }
+      const receipt = JSON.parse(fs26.readFileSync(proof.receiptPath, "utf8"));
+      if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs26.realpathSync(receipt.result.audioPath) !== fs26.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs26.readFileSync(audioPath)))
+        throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
+      const actual = { ...proof, voiceSettings: receipt.generation };
+      const errors = plannedGenerationErrors(voice, actual, line);
+      if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
+      return actual;
+    }
+    function verifyShotPerformance(file, card, board, boardDir) {
+      const lines = (card.narration || []).filter((line2) => line2.tts?.trim());
+      const line = lines[0], audio = line?.audio;
+      const registry2 = board.SB_DOC?.characters ?? [];
+      const actor = Array.isArray(registry2) ? registry2.find((person) => person.id === line?.speaker) : registry2[line?.speaker];
+      if (lines.length !== 1 || line.delivery === "voiceover" || !actor || !audio?.path || fs26.realpathSync(path39.resolve(boardDir, audio.path)) !== fs26.realpathSync(file) || audio.sha256 !== hash7(fs26.readFileSync(file)))
+        throw new Error("scene_speech_performance: attach the current recording of the speaking line before using its audio");
+      const character = characterSpeech({ ...actor, id: line.speaker }, { board, boardDir });
+      if (audio.revision !== require_speech_contract().speechRevision(line, character) || audio.generation?.text !== line.tts)
+        throw new Error("scene_speech_performance: the recorded line has changed");
+      verifiedSpeechGeneration(file, audio.generation, character.tts, line, { required: true });
+    }
+    function conditioningAudioSha256(videoPath) {
+      if (!videoPath || !fs26.existsSync(videoPath)) return;
+      const video2 = path39.resolve(videoPath);
+      const receipts = [".astra-job.json", ".astra-genai.json"].map((suffix) => video2 + suffix).filter((file) => fs26.existsSync(file));
+      if (receipts.length !== 1) return;
+      let receipt;
+      try {
+        receipt = JSON.parse(fs26.readFileSync(receipts[0], "utf8"));
+      } catch {
+        return;
+      }
+      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256) || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
+      return recordedConditioningDriver(receipt, receipts[0]);
+    }
+    function recordedConditioningDriver(receipt, sidecar) {
+      if (receipt?.status !== "completed" || !receipt.jobId || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256)) return;
+      const request = receipt.submittedRequest;
+      const astra = sidecar.endsWith(".astra-job.json") && receipt.mode === "audio2video" && request?.mode === "audio2video" && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === void 0;
+      const gateway = sidecar.endsWith(".astra-genai.json") && receipt.version === 1 && receipt.operation === "audio-to-video" && /^[a-f0-9]{64}$/.test(receipt.fingerprint);
+      if (astra || gateway) return receipt.conditioningAudioSha256;
+    }
+    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver };
+  }
+});
+
 // ../skills/_shared/audio-signal.js
 var require_audio_signal = __commonJS({
   "../skills/_shared/audio-signal.js"(exports, module) {
@@ -96979,7 +97215,7 @@ var require_speech_contract = __commonJS({
     function episodeVideoReceipts(shots, board, extra) {
       const fs26 = __require("node:fs"), path39 = __require("node:path");
       const dirs = /* @__PURE__ */ new Set([path39.resolve(board, "../.work/video"), path39.resolve(board, "../output/video/scenes")]);
-      const hashes = /* @__PURE__ */ new Map(), forbidden = [];
+      const hashes = /* @__PURE__ */ new Map(), forbidden = [], renders = [];
       function directory2(file) {
         if (typeof file === "string" && file) dirs.add(path39.dirname(path39.resolve(board, file)));
       }
@@ -97021,15 +97257,25 @@ var require_speech_contract = __commonJS({
             sha2 = createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
           if (!/^[a-f0-9]{64}$/.test(sha2)) continue;
           if (!hashes.has(sha2)) hashes.set(sha2, []);
-          hashes.get(sha2).push({ receipt, suffix });
+          const source = { receipt, suffix, sha: sha2, file };
+          hashes.get(sha2).push(source);
+          if (receipt.status === "completed" && receipt.jobId && typeof receipt.videoPath === "string" && !hasPostLipSync(receipt)) renders.push(source);
           if (hasPostLipSync(receipt)) forbidden.push({ sha: sha2, file });
         }
       }
-      return { hashes, forbidden, history };
+      return { hashes, forbidden, history, renders, drivers: /* @__PURE__ */ new Map() };
     }
     function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
       const fs26 = __require("node:fs");
       const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+      let driver;
+      function verify(receipt, suffix, hashBound) {
+        verifyReceiptOperation(receipt, suffix, plan2, hashBound);
+        const original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
+        if (!original) return;
+        if (driver && original !== driver) throw new Error("conditioning_audio_unverified: conflicting drivers for the same video");
+        driver = original;
+      }
       for (const suffix of receiptSuffixes) {
         let receipt;
         try {
@@ -97041,11 +97287,11 @@ var require_speech_contract = __commonJS({
         }
         sha2563 ??= digest5(videoPath);
         if (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath) continue;
-        verifyReceiptOperation(receipt, suffix, plan2, receipt.sha256 === sha2563);
+        verify(receipt, suffix, receipt.sha256 === sha2563);
       }
-      if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return;
+      if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return driver;
       sha2563 ??= digest5(videoPath);
-      for (const { receipt, suffix } of index.hashes.get(sha2563) ?? []) verifyReceiptOperation(receipt, suffix, plan2, true);
+      for (const { receipt, suffix } of index.hashes.get(sha2563) ?? []) verify(receipt, suffix, true);
       let frames;
       for (const source of index.forbidden) {
         if (source.sha === sha2563) throw new Error("post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source");
@@ -97056,6 +97302,35 @@ var require_speech_contract = __commonJS({
         if (sameVideoFrames(source.frames, frames))
           throw new Error("post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source");
       }
+      if (["native", "audio_conditioned"].includes(plan2.mode)) {
+        let sound;
+        const audio = (file) => {
+          const signal = require_audio_signal();
+          return signal.inspect(file).status === "signal" ? signal.decodedAudioHash(file) : "silent";
+        };
+        for (const source of index.renders) {
+          if (source.sha === sha2563 || !fs26.existsSync(source.file)) continue;
+          if (source.intact === void 0) source.intact = digest5(source.file) === source.sha;
+          if (!source.intact) continue;
+          if (!source.frames) {
+            try {
+              source.frames = videoPerformanceSource(source.file, true);
+            } catch {
+              source.intact = false;
+              continue;
+            }
+          }
+          frames ??= videoPerformanceSource(videoPath, true);
+          if (!sameVideoFrames(source.frames, frames)) continue;
+          verify(source.receipt, source.suffix, true);
+          source.sound ??= audio(source.file);
+          sound ??= audio(videoPath);
+          if (source.sound !== sound)
+            throw new Error("post_lipsync_forbidden: an existing render cannot acquire a replacement dialogue soundtrack");
+        }
+      }
+      if (driver) index.drivers.set(videoPath, driver);
+      return driver;
     }
     function videoPerformanceSource(file, silentConditioned = false) {
       const { execFileSync: execFileSync20 } = __require("node:child_process");
@@ -97069,6 +97344,17 @@ var require_speech_contract = __commonJS({
       const encodedPicture = hash7(["-c:v", "copy"]);
       return { version: 2, picture: picture2, encodedPicture, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
     }
+    function externalPictureSource(file) {
+      let source;
+      try {
+        source = videoPerformanceSource(file, true);
+      } catch {
+        return;
+      }
+      const signal = require_audio_signal();
+      if (signal.inspect(file).status === "signal") source.audio = signal.decodedAudioHash(file);
+      return source;
+    }
     function sameVideoFrames(left, right) {
       if (!left?.picture || !right?.picture) return false;
       return left.picture === right.picture || left.picture === right.encodedPicture || left.encodedPicture === right.picture || Boolean(left.encodedPicture && left.encodedPicture === right.encodedPicture);
@@ -97078,24 +97364,27 @@ var require_speech_contract = __commonJS({
       const media = /* @__PURE__ */ new Map();
       function source(shot) {
         const binding = shot.visual?.video?.speechBinding;
-        if (!["native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256 || !binding.audio?.length) return;
+        if (!["voiceover", "native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256) return;
+        if (binding.mode !== "voiceover" && !binding.audio?.length) return;
         const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
         if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
           throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
         const visible = shot.narration?.some((line) => line.delivery === "on_screen" && line.tts?.trim());
-        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify(binding.audio.map((line) => [line.revision, line.sha256])) };
+        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify((binding.audio ?? []).map((line) => [line.revision, line.sha256])) };
       }
       function identity(entry2) {
         const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
         if (!media.has(videoSha256)) {
           const file = typeof videoPath === "string" && path39.resolve(boardDir, videoPath);
           const original = file && fs26.existsSync(file) && createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
-          media.set(videoSha256, original ? videoPerformanceSource(file, Boolean(conditioningAudioSha256)) : performanceSource);
+          const measured = original && (entry2.binding.mode === "voiceover" ? externalPictureSource(file) : videoPerformanceSource(file, Boolean(conditioningAudioSha256)));
+          media.set(videoSha256, measured || performanceSource);
         }
         return media.get(videoSha256);
       }
       function check2(left, right, active = false) {
         if (left.end <= right.start || right.end <= left.start) return;
+        if (left.binding.mode === "voiceover" && right.binding.mode === "voiceover") return;
         const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions && left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
         if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
         const a = identity(left), b = identity(right);
@@ -97106,7 +97395,8 @@ var require_speech_contract = __commonJS({
         const samePicture = (left.visible || right.visible) && sameVideoFrames(a, b);
         const changedSoundtrack = samePicture && a.audio !== b.audio;
         const sameMedia = samePicture || a?.audio && a.audio === b?.audio || left.binding.videoSha256 === right.binding.videoSha256;
-        if (changedSoundtrack || !samePlan && sameMedia)
+        const external = left.binding.mode === "voiceover" || right.binding.mode === "voiceover";
+        if (changedSoundtrack || !external && !samePlan && sameMedia)
           throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign a different recording or performance to the same footage or soundtrack over an overlapping source interval");
       }
       const prior = [];
@@ -97133,7 +97423,7 @@ var require_speech_contract = __commonJS({
         for (const entry2 of next ? [next] : prior) check2(earlier, entry2);
       }
     }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource };
+    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
   }
 });
 
@@ -104755,238 +105045,6 @@ var require_check_production = __commonJS({
   }
 });
 
-// ../skills/channel/references/character-sheet.js
-var require_character_sheet = __commonJS({
-  "../skills/channel/references/character-sheet.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path39 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
-    var { identityVoice, voiceErrors } = require_character_voice();
-    function episodeVoiceOverride(win, tts) {
-      const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
-      return typeof override2?.request === "string" && override2.request.trim().length > 0 && typeof override2.model === "string" && override2.model.trim().length > 0 && override2.engine === tts?.engine && override2.model === tts?.model && voiceErrors(tts).length === 0;
-    }
-    function handoff(file, { requireSpeech = true, voiceOnly = false } = {}) {
-      const source = fs26.readFileSync(file, "utf8");
-      const options = { ready: !voiceOnly };
-      const character = identityCharacter(source, options);
-      const name = /^#\s+(.+)$/m.exec(source)?.[1]?.trim();
-      if (!name) throw new Error("identity.md needs a # Name heading");
-      const id = path39.basename(path39.dirname(path39.resolve(file)));
-      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
-      const tts = identityVoice(source, { optional: !requireSpeech });
-      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash33("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
-    }
-    function selectedVoiceReference(source, tts) {
-      if (!tts) return {};
-      const document2 = [...source.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1])).find((v) => v?.character);
-      const selection = document2?.voiceSelection;
-      if (!selection?.auditionPath) return selection ? { voiceSelection: selection } : {};
-      try {
-        const audition = JSON.parse(fs26.readFileSync(selection.auditionPath, "utf8"));
-        const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
-        const registration = selection.registration;
-        const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
-        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path39.isAbsolute(chosen.audioPath))
-          throw new Error("Selected voice sample no longer matches the pinned character voice");
-        return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
-      } catch (error2) {
-        return { voiceSelection: selection, voiceReferenceWarning: error2.message };
-      }
-    }
-    if (__require.main === module) {
-      try {
-        const args = process.argv.slice(2);
-        const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
-        if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
-        if (view) {
-          const manifest2 = path39.join(path39.dirname(args[0]), "panels.json");
-          const front = view === "back" && fs26.existsSync(manifest2) ? JSON.parse(fs26.readFileSync(manifest2, "utf8")).panels?.front : void 0;
-          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs26.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
-          if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
-          console.log(text4);
-        } else console.log(JSON.stringify(handoff(args[0]), null, 2));
-      } catch (e2) {
-        console.error(e2.message);
-        process.exitCode = 1;
-      }
-    }
-    function sourceErrors(win, boardDir) {
-      const entries = win?.SB_DOC?.characters;
-      const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id, c]) => ({ ...c, id }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
-      if (!chars.length) return [];
-      let channel = path39.resolve(boardDir);
-      while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
-      const errors = [];
-      for (const c of chars) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
-          errors.push("Invalid character id");
-          continue;
-        }
-        const file = path39.join(channel, "assets", "characters", c.id, "identity.md");
-        try {
-          const current = handoff(file, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
-          const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
-          if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || voiceChanged && !episodeVoiceOverride(win, c.tts))
-            errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
-        } catch (error2) {
-          errors.push(`Character ${c.id}: ${error2.message}`);
-        }
-      }
-      return errors;
-    }
-    module.exports = { handoff, sourceErrors, selectedVoiceReference };
-  }
-});
-
-// ../skills/_shared/character-speech.js
-var require_character_speech = __commonJS({
-  "../skills/_shared/character-speech.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path39 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
-    var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
-    var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
-    function explicitVoiceOverride(board, voice, current) {
-      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
-      return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
-    }
-    function characterSpeech(character, { boardDir, board } = {}) {
-      let current;
-      if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
-        let channel = path39.resolve(boardDir);
-        while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
-        const identity = path39.join(channel, "assets/characters", character.id, "identity.md");
-        if (fs26.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
-      }
-      const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
-      const voice = resolved.tts;
-      const invalid = voiceErrors(voice);
-      if (invalid.length) throw new Error("character_voice_invalid: " + invalid.join("; "));
-      const override2 = explicitVoiceOverride(board, voice, current);
-      if (current && !override2 && !isDeepStrictEqual2(normalizeVoice(current.tts), normalizeVoice(voice)))
-        throw new Error(`character_voice_stale: ${resolved.id} differs from the shared character voice; apply the requested sheet voice to SB_DOC.characters, or record an explicit episode speech override with request and voiceId`);
-      if (current?.voiceReference && resolved.voiceReference && !override2 && current.voiceReference.sha256 !== resolved.voiceReference.sha256)
-        throw new Error(`character_voice_stale: ${resolved.id} selected sample changed; refresh the episode voice reference explicitly`);
-      const reference2 = resolved.voiceReference || (!override2 ? current?.voiceReference : void 0);
-      const selected = reference2 || resolved.voiceSelection || resolved.voiceReferenceWarning || !override2 && (current?.voiceSelection || current?.voiceReferenceWarning);
-      if (voice.engine === "astra-genai" && voice.voiceId.trim().toLowerCase() === "default" && selected && !override2)
-        throw new Error(`character_voice_unregistered: ${resolved.id} has a selected sample but voiceId is default; register that sample with the gateway and pin its returned voice ID. A direction prompt does not clone a sample`);
-      if (!override2 && (resolved.voiceReferenceWarning || current?.voiceReferenceWarning))
-        throw new Error(`character_voice_sample_invalid: ${resolved.id} selected sample cannot be resolved`);
-      if (reference2) {
-        if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
-          throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
-        const file = path39.resolve(boardDir || process.cwd(), reference2.path);
-        if (!reference2.sha256 || hash7(fs26.readFileSync(file)) !== reference2.sha256)
-          throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
-        return { ...resolved, voiceReference: { ...reference2, path: file } };
-      }
-      return resolved;
-    }
-    function physicalPath(file) {
-      let current = path39.resolve(file), suffix = [];
-      while (!fs26.existsSync(current) && path39.dirname(current) !== current) {
-        suffix.unshift(path39.basename(current));
-        current = path39.dirname(current);
-      }
-      return path39.join(fs26.realpathSync(current), ...suffix);
-    }
-    function episodeBoardForOutput(outputPath) {
-      let folder = physicalPath(outputPath || process.cwd());
-      while (true) {
-        if (path39.basename(folder) === "assets" && fs26.existsSync(path39.join(path39.dirname(folder), "profile.md"))) return void 0;
-        const board = path39.join(folder, "storyboard/scenes.js");
-        if (fs26.existsSync(board)) return fs26.realpathSync(board);
-        if (path39.dirname(folder) === folder) return void 0;
-        folder = path39.dirname(folder);
-      }
-    }
-    function plannedGenerationErrors(voice, proof, line) {
-      const errors = generationVoiceErrors(voice, proof, line);
-      if (errors.length) return errors;
-      const expected = require_speech_contract().compileActing(line?.tts ?? proof.text, line?.acting, voice);
-      const fields2 = proof.generator === "tts_astra_genai" ? ["model", "text", "voice", "speed", "instructions"] : proof.generator === "tts_gemini_38" ? ["turns"] : ["text"];
-      for (const key of fields2) {
-        if (!isDeepStrictEqual2(proof.voiceSettings[key], expected.generation[key]))
-          errors.push("Actual provider arguments differ from plan_audio: " + key);
-      }
-      return errors;
-    }
-    function validateSpeechContext(generator, args) {
-      const context2 = args.speechContext;
-      const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
-      if (!context2) {
-        if (outputBoard) throw new Error("speech_context_required: use speech_manage plan_audio for episode TTS");
-        return;
-      }
-      const file = fs26.realpathSync(context2.path);
-      if (outputBoard && file !== outputBoard) throw new Error("speech_context_mismatch: output belongs to a different episode");
-      const source = fs26.readFileSync(file, "utf8");
-      if (hash7(source) !== context2.expectedRevision) throw new Error("speech_context_stale: re-plan audio after storyboard changes");
-      const board = require_scenes_vm().evaluateWindowScript(source, { filename: file });
-      const matches = (board.SCENES || []).flatMap((shot) => shot.narration || []).filter((line2) => line2.id === context2.lineId);
-      if (matches.length !== 1 || !matches[0].speaker) throw new Error("speech_context_invalid: select one explicit stable line ID");
-      const line = matches[0], raw = board.SB_DOC?.characters;
-      const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
-      const cast = characters.filter((character2) => character2.id === line.speaker);
-      if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
-      const character = characterSpeech(cast[0], { boardDir: path39.dirname(file), board });
-      const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
-      if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
-    }
-    function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
-      if (!proof?.receiptPath) {
-        if (required2) throw new Error("speech_receipt_required: attach the completed TTS receiptPath");
-        return proof;
-      }
-      const receipt = JSON.parse(fs26.readFileSync(proof.receiptPath, "utf8"));
-      if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs26.realpathSync(receipt.result.audioPath) !== fs26.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs26.readFileSync(audioPath)))
-        throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
-      const actual = { ...proof, voiceSettings: receipt.generation };
-      const errors = plannedGenerationErrors(voice, actual, line);
-      if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
-      return actual;
-    }
-    function verifyShotPerformance(file, card, board, boardDir) {
-      const lines = (card.narration || []).filter((line2) => line2.tts?.trim());
-      const line = lines[0], audio = line?.audio;
-      const registry2 = board.SB_DOC?.characters ?? [];
-      const actor = Array.isArray(registry2) ? registry2.find((person) => person.id === line?.speaker) : registry2[line?.speaker];
-      if (lines.length !== 1 || line.delivery === "voiceover" || !actor || !audio?.path || fs26.realpathSync(path39.resolve(boardDir, audio.path)) !== fs26.realpathSync(file) || audio.sha256 !== hash7(fs26.readFileSync(file)))
-        throw new Error("scene_speech_performance: attach the current recording of the speaking line before using its audio");
-      const character = characterSpeech({ ...actor, id: line.speaker }, { board, boardDir });
-      if (audio.revision !== require_speech_contract().speechRevision(line, character) || audio.generation?.text !== line.tts)
-        throw new Error("scene_speech_performance: the recorded line has changed");
-      verifiedSpeechGeneration(file, audio.generation, character.tts, line, { required: true });
-    }
-    function conditioningAudioSha256(videoPath) {
-      if (!videoPath || !fs26.existsSync(videoPath)) return;
-      const video2 = path39.resolve(videoPath);
-      const receipts = [".astra-job.json", ".astra-genai.json"].map((suffix) => video2 + suffix).filter((file) => fs26.existsSync(file));
-      if (receipts.length !== 1) return;
-      let receipt;
-      try {
-        receipt = JSON.parse(fs26.readFileSync(receipts[0], "utf8"));
-      } catch {
-        return;
-      }
-      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256) || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
-      const request = receipt.submittedRequest;
-      const astra = receipts[0].endsWith(".astra-job.json") && receipt.mode === "audio2video" && request?.mode === "audio2video" && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === void 0;
-      const gateway = receipts[0].endsWith(".astra-genai.json") && receipt.version === 1 && receipt.operation === "audio-to-video" && /^[a-f0-9]{64}$/.test(receipt.fingerprint);
-      if (astra || gateway) return receipt.conditioningAudioSha256;
-    }
-    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256 };
-  }
-});
-
 // ../skills/produce/references/prepare-source-audio.js
 var require_prepare_source_audio = __commonJS({
   "../skills/produce/references/prepare-source-audio.js"(exports, module) {
@@ -105567,6 +105625,7 @@ var require_compose_speech = __commonJS({
       driverSha256,
       audioPath,
       sceneAudioPath,
+      includeCardAudio = true,
       work = path39.resolve(board, "../.work"),
       timing = sceneTiming(scene, board, timingVersion)
     }) {
@@ -105576,7 +105635,7 @@ var require_compose_speech = __commonJS({
       const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 && interval.speechEndSeconds === timing.durationSeconds && hash7(fs26.readFileSync(sources[0])) === driverSha256;
       const cards = path39.join(work, "cards.tsv");
       const choices = [audioPath, sceneAudioPath].filter(Boolean).map((file) => path39.resolve(board, file));
-      if (fs26.existsSync(cards)) {
+      if (includeCardAudio && fs26.existsSync(cards)) {
         const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/).filter((row) => row.trim() && !row.startsWith("#")).map((row) => row.split("	")).filter((fields2) => fields2[0].trim() && Number(fields2[0]) === index);
         if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error("conditioning_audio_unverified: ambiguous selected WAV in cards.tsv");
         if (rows.length) choices.push(path39.resolve(work, rows[0][1]));
@@ -105920,6 +105979,21 @@ var require_check_tts_quality = __commonJS({
           if (path39.resolve(board, s2.visual.video.clip || "") !== path39.resolve(binding.videoPath) || hash7(fs26.readFileSync(binding.videoPath)) !== binding.videoSha256) throw new Error("Bound video changed for card " + i2);
           const audio2 = (s2.narration || []).map((n) => native ? { lineId: n.id, revision: speechRevision2(n, { tts: cast.find((c) => c.id === n.speaker)?.tts }) } : { lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision });
           if (JSON.stringify(binding.audio) !== JSON.stringify(audio2)) throw new Error("Video speech binding is stale for card " + i2);
+          if (binding.mode === "audio_conditioned" && s2.sound?.audioSource === "video") {
+            const known = receipts.drivers.get(path39.resolve(board, binding.videoPath));
+            if (known && binding.generationAudioSha256 && known !== binding.generationAudioSha256)
+              throw new Error("conditioning_audio_unverified: the selected clip has a different generation-time driver");
+            const driver = known ?? binding.generationAudioSha256;
+            if (driver) require_compose_speech().currentConditioningAudio(s2, board, {
+              index: i2,
+              work,
+              timingVersion: win.SB_DOC?.performanceTimingVersion,
+              driverSha256: driver,
+              includeCardAudio: false,
+              audioPath: binding.generationAudioPath,
+              sceneAudioPath: win.STRUCTURE?.scenes?.find((owner) => owner.no === s2.scene)?.videoDirection?.audio?.path
+            });
+          }
           const payload = require_scene_acting().scenePerformancePayload(s2);
           if (binding.performanceRevision && binding.performanceRevision !== hash7(JSON.stringify(payload))) warnings.push("card " + i2 + ": performance plan changed since the clip was bound; inspect the clip against the current plan (stale)");
           if (!binding.performanceRevision) warnings.push("card " + i2 + ": legacy video performance binding is unverified");
@@ -147488,7 +147562,7 @@ function manageSpeech(args, options = {}) {
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash4(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname11(file), videoPath);
-      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan2, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan2, receipts);
       for (const card of scenes) {
         const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -147509,7 +147583,7 @@ function manageSpeech(args, options = {}) {
       if (plan2.mode === "audio_conditioned") {
         const signal = audioSignalContract().inspect(videoPath).status;
         if (signal !== "signal") {
-          driverSha256 = characterSpeechContract().conditioningAudioSha256(videoPath);
+          driverSha256 = recordedDriver ?? characterSpeechContract().conditioningAudioSha256(videoPath);
           if (!driverSha256) throw new Error("conditioning_audio_unverified: a silent A2V clip needs its completed generation receipt binding these video bytes to the original conditioning WAV");
         }
       }
@@ -147520,10 +147594,12 @@ function manageSpeech(args, options = {}) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const driverPath = driverSha256 && nodeModule7.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname11(file), {
+      const generationDriver = plan2.mode === "audio_conditioned" ? recordedDriver ?? driverSha256 : void 0;
+      const driverPath = generationDriver && nodeModule7.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname11(file), {
         index: scenes.indexOf(scene),
         timingVersion: doc.performanceTimingVersion,
-        driverSha256,
+        driverSha256: generationDriver,
+        includeCardAudio: Boolean(driverSha256),
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
@@ -147532,7 +147608,7 @@ function manageSpeech(args, options = {}) {
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object5(video2.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const performanceSource = native || plan2.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : void 0;
+      const performanceSource = native || plan2.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
       if (performanceSource) {
         const candidate2 = {
           id: scene.id,
@@ -147580,6 +147656,7 @@ function manageSpeech(args, options = {}) {
           videoSha256,
           quality,
           ...performanceSource && { performanceSource },
+          ...generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",

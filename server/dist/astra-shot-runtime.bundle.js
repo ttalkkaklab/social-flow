@@ -55347,7 +55347,7 @@ function manageSpeech(args, options = {}) {
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash2(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
-      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
       for (const card of scenes) {
         const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -55368,7 +55368,7 @@ function manageSpeech(args, options = {}) {
       if (plan.mode === "audio_conditioned") {
         const signal = audioSignalContract().inspect(videoPath).status;
         if (signal !== "signal") {
-          driverSha256 = characterSpeechContract().conditioningAudioSha256(videoPath);
+          driverSha256 = recordedDriver ?? characterSpeechContract().conditioningAudioSha256(videoPath);
           if (!driverSha256) throw new Error("conditioning_audio_unverified: a silent A2V clip needs its completed generation receipt binding these video bytes to the original conditioning WAV");
         }
       }
@@ -55379,10 +55379,12 @@ function manageSpeech(args, options = {}) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
-      const driverPath = driverSha256 && nodeModule4.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname6(file), {
+      const generationDriver = plan.mode === "audio_conditioned" ? recordedDriver ?? driverSha256 : void 0;
+      const driverPath = generationDriver && nodeModule4.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname6(file), {
         index: scenes.indexOf(scene),
         timingVersion: doc.performanceTimingVersion,
-        driverSha256,
+        driverSha256: generationDriver,
+        includeCardAudio: Boolean(driverSha256),
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
@@ -55391,7 +55393,7 @@ function manageSpeech(args, options = {}) {
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object3(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const performanceSource = native || plan.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : void 0;
+      const performanceSource = native || plan.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
       if (performanceSource) {
         const candidate = {
           id: scene.id,
@@ -55439,6 +55441,7 @@ function manageSpeech(args, options = {}) {
           videoSha256,
           quality,
           ...performanceSource && { performanceSource },
+          ...generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",
