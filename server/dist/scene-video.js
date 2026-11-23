@@ -11,7 +11,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { verifyImageFile } from './image-media.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
-import { FRAME_FIELDS, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
+import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { resolveCharacterVoice, voiceReference } from './video-voice.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
 const load = createRequire(import.meta.url);
@@ -38,16 +38,6 @@ export function bindSceneCards(members, bindings) {
             timeline.openingPositions = binding.openingPositions;
         if (binding.dialogueCues)
             timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter(c => !binding.dialogueCues.some(b => b.lineId === c.lineId)), ...binding.dialogueCues];
-        const visual = raw.visual;
-        for (const ref of binding.references ?? []) {
-            const source = visual?.references?.find(r => r.id === ref.id);
-            if (!source)
-                throw new Error('scene_render_bindings: unknown reference ' + binding.shotId + ' ' + ref.id);
-            if (source.use === 'image')
-                source.use = 'both';
-            const pin = { role: ref.role === 'character' ? 'face' : ref.role, character: ref.character, path: source.path, frame: timeline.startFrame };
-            timeline.images = [...(timeline.images ?? []).filter(p => !(p.path === source.path && ['face', 'outfit'].includes(p.role))), pin];
-        }
         raw.timeline = timeline;
     }
     return cards;
@@ -56,7 +46,7 @@ export function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene
     const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
     return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, assetOnly = false) {
+export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
     const render = load('../../skills/storyboard/references/render-routing.js');
     const members = raw;
     const fps = scene.fps ?? 24;
@@ -67,6 +57,15 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
         throw new Error('scene_video_timing: duplicate shot ID');
     let cursor = 0, seconds = 0;
     const images = [];
+    const requiredPaths = new Set();
+    if (guideLimit !== undefined)
+        for (const member of members) {
+            for (const ref of render.imageReferences(member))
+                if (['both', 'video'].includes(ref.use))
+                    requiredPaths.add(ref.path);
+        }
+    let guideSlots = guideLimit === undefined ? Infinity : Math.max(0, guideLimit - requiredPaths.size);
+    const guides = [];
     const shots = members.map((member, index) => {
         const { id: shotId, visual } = member;
         const timeline = member.timeline && shotTimelineSchema.parse(member.timeline);
@@ -78,8 +77,8 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             (transition === 'open') !== (index === 0))
             throw new Error('scene_video_timing: inconsistent frame range or transition on ' + shotId);
         cursor = endFrame;
-        const notes = sceneShotNotes(raw[index]);
-        const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing);
+        const notes = sceneShotNotes(raw[index], concise);
+        const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing, concise);
         const framing = shotFraming || (coverage.common.camera ? attributeWords('camera', coverage.common.camera)
             : members.length === 1 ? 'Use the opening composition.' : '');
         const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ''), ...notes.beats].filter(Boolean).join(' ');
@@ -101,9 +100,8 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             if (!pins.some(p => p.frame === frame && p.path === pin.image))
                 pins.push({ path: pin.image, frame, role: 'keyframe', cue: english(pin.state), strength: pin.strength });
         }
-        // In Veo reference mode the board's display image is a composition guide.
-        // Explicit timeline pins still reach validation and cannot share a Vertex asset request.
-        if (frames.start && !(assetOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start))
+        // Reference-mode display images are not temporal pins. Named video/both assets carry appearance.
+        if (frames.start && !(namedReferencesOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start))
             pins.push({ path: frames.start, frame: startFrame, role: 'start' });
         if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1)))
             pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
@@ -120,16 +118,38 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             }
             images.push(image);
         };
+        const people = requiredCharacters(raw[index]);
+        const ownerOf = (file) => people.find(person => file === person.face?.path || file === person.bodyPath)?.character;
         const claimed = new Set();
         for (const pin of pins.sort((a, b) => a.frame - b.frame)) {
             const ref = ['face', 'outfit'].includes(pin.role) ? references.find(r => r.path === pin.path) : undefined;
             if (ref)
                 claimed.add(ref);
-            add(ref ? { ...pin, reference: ref } : pin);
+            const owner = ref && ownerOf(ref.path);
+            if (owner && pin.character && pin.character !== owner)
+                throw new Error('scene_reference_owner: ' + shotId + ' assigns ' + ref.path + ' to the wrong character');
+            add(ref ? { ...pin, ...(owner ? { character: owner } : {}), reference: ref } : pin);
         }
         for (const ref of references)
             if (!claimed.has(ref))
-                add({ path: ref.path, role: ref.role, frame: startFrame, reference: ref });
+                add({ path: ref.path, role: ref.scope === 'scene' && ref.id.endsWith('-face') ? 'face' : ref.role, frame: startFrame, reference: ref, ...((ref.character || ownerOf(ref.path)) ? { character: ref.character || ownerOf(ref.path) } : {}) });
+        if (member.referenceImage) {
+            // Distilled I2V accepts a background alongside at least one subject.
+            const subjectMissing = guideMode === 'background' && !references.some(ref => !['background', 'location'].includes(ref.role));
+            const occupied = guideMode === 'background' && references.some(ref => ['background', 'location'].includes(ref.role));
+            const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied && !subjectMissing) };
+            if (guideMode && guide.submitted) {
+                guideSlots--;
+                const reference = { id: shotId + '-composition', role: guideMode, use: 'video', scope: 'shot_guide', path: member.referenceImage, purpose: 'Framing guide for ' + shotId + ' only.' };
+                add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference });
+                guides.push(guide);
+            }
+            else {
+                const reason = subjectMissing ? 'The background reference input requires a separate subject reference.' :
+                    guideMode ? 'No free composition-reference slot.' : 'The selected operation has no compatible composition-reference input.';
+                guides.push({ ...guide, reason });
+            }
+        }
         // Older approved single-shot plans already bind their narration and voices in
         // the adapter. Preserve their manifest and hash unless a timeline adds a binding.
         const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
@@ -166,7 +186,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
     const audio = scene.audio && { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), path: realpathSync(path.resolve(episode, 'storyboard', scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
     if (audio?.cues.some(c => c.frame >= cursor))
         throw new Error('scene_audio_timing: cue outside the scene');
-    return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...(audio ? { audio } : {}) };
+    return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...(guides.length ? { shotReferenceImages: guides } : {}), ...(audio ? { audio } : {}) };
 }
 /** Older video references point to a registered cast panel but carry no cast ID. */
 export function bindRegisteredPanels(scene, episode, board) {
@@ -198,15 +218,18 @@ export function sceneTimelineWords(t, scene, includeDialogue = true) {
     return [`Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
             const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `Frame ${p.frame}: ${p.cue}`);
             return [`${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${s.transition.replaceAll('_', ' ')}.`,
-                ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : 'Frame ' + l.frame + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),
-            ].filter(Boolean).join(' ');
+                ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p => p.shotId === s.shotId && p.reference?.scope === 'shot_guide').map(p => p.reference.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
+                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : 'Frame ' + l.frame + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
         }), ...(t.audio ? ['Play one continuous scene track from frame 0.', ...t.audio.cues.map(c => `Frame ${c.frame}: ${c.action}`)] : [])].join('\n');
 }
 /** Compile once, then present the complete scene to the selected adapter's input mapper. */
 export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
     const coverage = sceneCoverage(members, scene, board, sceneNo);
-    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.assetOnly);
+    const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
+    load('../../skills/_shared/scene-cast.js').sceneCast(owner ?? { no: sceneNo }, members);
+    const modelPacedCuts = owner?.frames !== undefined && !options.shotScoped && members.length > 1 &&
+        !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut'));
+    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && options.bindDialogue);
     const common = coverage.common;
     const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
     const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(' ');
@@ -218,7 +241,7 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
     const text = options.bindDialogue ? scenePromptText(scene, shared, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
-    const request = { sceneNo, prompt, ...timeline, sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
+    const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
     return { request, providerPrompt, camera, mapped: mapInputs(request) };
 }
@@ -377,18 +400,18 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
     const caps = sceneInputCapabilities(tool);
     if (request.audio?.mode === 'mix')
         missing.push({ input: 'audio', frame: 0, reason: 'Mixing with native sound requires per-shot scene rendering' });
-    if (!caps.frameAccurateCuts)
+    if (!caps.frameAccurateCuts && !request.modelPacedCuts)
         missing.push(...request.cuts.map(c => ({ input: 'transition', shotId: c.to, frame: c.frame, role: c.transition, reason: 'No frame-addressed ' + c.transition + ' boundary' })));
     for (const shot of request.shots) {
         if (!shot.framing || !shot.action)
             missing.push({ input: 'direction', shotId: shot.shotId, frame: shot.startFrame,
                 reason: 'Write the missing English framing/action in story_shot.timeline' });
-        if (tool === 'astra_genai_img2video' && request.shots.length > 1 && shot.openingPositions?.length && !caps.shotScopedReferences)
+        if (tool === 'astra_genai_img2video' && request.shots.length > 1 && !request.modelPacedCuts && shot.openingPositions?.length && !caps.shotScopedReferences)
             missing.push({ input: 'position', role: 'opening_positions', shotId: shot.shotId, frame: shot.startFrame, endFrame: shot.endFrame,
                 reason: 'The renderer has no shot-local opening positions for its subject slots' });
         if (!request.audio && !caps.frameAddressedNativeDialogue)
             for (const line of shot.dialogue ?? []) {
-                if (line.delivery === 'voiceover' || request.shots.length === 1 && line.frame === undefined)
+                if (line.delivery === 'voiceover' || (request.modelPacedCuts || request.shots.length === 1) && line.frame === undefined)
                     continue;
                 const scope = { shotId: shot.shotId, frame: line.frame ?? shot.startFrame, endFrame: shot.endFrame, speaker: line.speaker, lineId: line.lineId };
                 missing.push({ ...scope, input: 'dialogue', role: line.delivery, reason: line.frame === undefined
@@ -397,11 +420,12 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
                     missing.push({ ...scope, input: 'voice', role: 'voice_reference', path: line.voice.path,
                         reason: 'Voice timbre is bound to a global subject slot, without a shot interval' });
             }
-        if (request.shots.length > 1 && shot.sound && !request.audio)
+        if (request.shots.length > 1 && !request.modelPacedCuts && shot.sound && !request.audio)
             missing.push({ input: 'sound', role: 'scene_sound', shotId: shot.shotId, frame: shot.startFrame, endFrame: shot.endFrame,
                 reason: 'No timed native sound cue for this shot on a single scene soundtrack' });
     }
-    const pins = request.images.filter(temporal), refs = request.images.filter(p => !temporal(p));
+    const pins = request.images.filter(temporal);
+    const refs = request.images.filter(p => !temporal(p) && (p.reference?.scope !== 'scene' || p.shotId === request.shotIds[0]));
     for (const ref of refs)
         if (ref.strength !== undefined && ref.strength !== 1)
             missing.push({ input: 'reference', role: ref.role, shotId: ref.shotId, frame: ref.frame, path: ref.path, reason: 'Individual subject strength is unsupported' });
@@ -437,11 +461,13 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
             })));
     }
     for (const p of refs) {
-        if (request.shots.length > 1 && !caps.shotScopedReferences) {
+        if (p.reference?.scope === 'shot_guide' && tool === 'seedance_reference' && (request.shots.length === 1 || request.modelPacedCuts))
+            continue;
+        if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== 'scene') {
             missing.push({ input: 'reference', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: 'Subject/reference slots apply across the whole generation' });
             continue;
         }
-        if (assets && p.frame === 0)
+        if (p.frame === 0 && (assets || tool === 'astra_genai_msr' || tool === 'seedance_reference' && (p.strength ?? 1) === 1))
             continue;
         if (tool === 'astra_genai_img2video' && model === 'ltx-2.5-22b-distilled' && p.frame === 0)
             continue;
@@ -480,7 +506,8 @@ export function sceneImageBindings(request, tool, bindings) {
         if (!image)
             return binding;
         const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1]
-            : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
+            : tool === 'seedance_reference' ? 'referenceImagePaths[' + slot++ + ']'
+                : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
         return { ...binding, shotId: image.shotId, frame: image.frame, role: image.role, parameter, character: image.character };
     });
 }
@@ -491,6 +518,8 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
     const args = {};
     const sceneSeconds = request.frameCount / request.fps;
     for (const field of ['duration', 'durationSeconds', 'requiredSeconds']) {
+        if (tool.startsWith('seedance_') && field === 'durationSeconds' && input[field] === -1)
+            continue;
         if (input[field] !== undefined && input[field] !== sceneSeconds)
             throw new Error('scene_video_timing: ' + field + ' differs from the authored scene duration');
     }
@@ -559,7 +588,7 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
         purpose: [p.character, p.role].filter(Boolean).join(' ') + ' reference only. Use the shot action for entrance timing.' });
     // Subject assets go through the shot binder, which attaches the same ordered
     // reference descriptions and preserve/avoid instructions to the provider prompt.
-    const projected = { ...visual, frames: { mode: assets ? 'reference' : end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
+    const projected = { ...visual, frames: { mode: assets || tool === 'astra_genai_msr' || tool === 'seedance_reference' ? 'reference' : end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
         bg: start?.path, imagePair: undefined, lastImagePath: undefined };
     if (caps.timedImages || assets || !request.images.length) {
         const fields = ['images', 'keyframes', 'sourceImagePath', 'lastImagePath', 'imagePath', 'imageUri', 'lastFramePath',

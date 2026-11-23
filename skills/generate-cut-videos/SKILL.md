@@ -3,10 +3,17 @@ name: generate-cut-videos
 description: >
   Generates one video per scene from its ordered shots, images and sound. Stops before assembly. Use when videos are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__modelark_portrait_register", "mcp__plugin_social-flow_social-flow__modelark_portrait_register", "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__video_approve", "mcp__plugin_social-flow_social-flow__video_approve", "mcp__social-flow__video_execute", "mcp__plugin_social-flow_social-flow__video_execute", "mcp__social-flow__video_status", "mcp__plugin_social-flow_social-flow__video_status", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Videos
+
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+
+For a character reference shot, set `visual.character` and the camera’s subject and view. The plan binds the sheet face and the front or rear body panel to that character. Use `visual.characterInputs` to specify each principal’s body view when their directions differ. On-screen and off-screen lines by a principal require the selected voice sample. Check the panel paths and speaker slots before approval.
+
+For Seedance, follow [character portrait registration](../register-seedance-portrait/SKILL.md) before planning a visible face. Inspect the shot, character, asset and numbered slots in `characterBindings`. Keep existing location and prop references in prompt order. If an old card leaves the performer’s view unresolved, fix that card and plan again. For a selected original, supply the character’s `faceTaskId` and a passed cast continuity review in `faceReviewPath`. Follow the [binding and retry rules](../_shared/video-routing.md).
+
 
 Steps 7–8 of [the production order](../_shared/production-workflow.md) (user directive
 2026-10-31). Read [video model selection](../produce/references/video-model-selection.md)
@@ -18,7 +25,7 @@ For LTX and Google Cloud Veo, call `video_plan` with the same scene and request 
 
 ## Generate one scene
 
-1. Read the scene and its shot cards in playback order with `storyboard_read`. Use the first card's actual opening image. Keep every camera setup on its own shot card. Use scene-relative frames for its image pins and incoming cut. An entrance, zoom or camera move during uninterrupted filming stays on that shot.
+1. Read the scene and its shot cards in playback order with `storyboard_read`. Read the scene's opening and ending images and its optional shot references. Keep every camera setup on its own shot card. Use scene-relative frames for its image pins and incoming cut. An entrance, zoom or camera move during uninterrupted filming stays on that shot.
 2. Save `videoDirection` on the scene with `story_scene` (retain its sequence, number, place, time, event and summary). Identify each person from the viewer's perspective by side, depth, posture and a landmark. Link their face and outfit panels to the same cast ID. Describe an off-screen start when appropriate. Use clothing to disambiguate people who share a desk or row. Coordinates and phrases such as “third man” make poor identifiers.
 3. Write the emotional change in English. Keep the dialogue on the shot cards in the original language. Keep each shot’s framing and action in its timeline. For example, “He rises behind that same far-right desk and points across the room at Miran.” Read the scene’s `directionDefaults` and each shot’s icon choices. A shot move replaces the scene default for its interval. Use the legacy free-text `videoDirection.camera` only when no catalogue default is set. When a reveal or reaction needs a move, name the cue, direction and landing in one sentence. For example, “When Miran unfolds the letter, the camera tilts down from her face and settles on the torn corner in her hand.” Specify a fixed view when the scene depends on seeing both performances together. Leave coverage open when the cards give the scene no reason to move. Keep audience-only shock effects on the post-production cue track.
 4. Call `video_plan {episode, sceneNo, requestId}` once per scene. Omit `args.prompt`. Check the actual compiled prompt, input images, speaker and voice assignments, total seconds, resolution and price. Distilled GenAI LTX uses the opening image as the temporal first frame with compatible subject references. For mixed-media scenes, keep editorial inserts on their existing route and plan continuous generated material as its own scene. A larger room or crowd in frame still needs visual review. A blocked plan lists each unsupported input with its shot and frame. Show the list and retain the storyboard. Splitting the generation or changing the input requires a new user choice.
@@ -27,11 +34,11 @@ For LTX and Google Cloud Veo, call `video_plan` with the same scene and request 
 
 A scene shares one soundtrack from frame zero, including its lead-in. Check each cut and beat against the requested scene frames. Subject panels establish identity and outfit. The shot action controls when the person enters. See the [scene input contract](../_shared/video-routing.md).
 
-When the user approves rendering each camera setup separately, set `sceneRendering:"per_shot"` on the scene’s `video_plan`. The GenAI scene endpoint validates the actual files, renders each interval with the saved model (distilled I2V for native sound or a continuous mix, dev A2V for a conditioning track), then returns one video under the scene request ID. Keep the existing budget and approval. Use `shotBindings` to identify existing cast panels, opening positions or a reply cue on a protected board. For a frame-cued line, attach its recorded performance and room sound in `performanceAudio`. A reviewed `motionPrefix` can keep an approved dolly continuous. The deployed renderer must advertise these controls. Inspect both frames beside each cut and listen for the first word, the end of each line and repeated effects.
+When the user approves rendering each camera setup separately, set `sceneRendering:"per_shot"` on the scene’s `video_plan`. The GenAI scene endpoint validates the actual files, renders each interval with the saved model (distilled I2V for native sound or a continuous mix, dev A2V for a conditioning track), then returns one video under the scene request ID. Keep the existing budget and approval. Set identity images in `story_scene.speakerReferences` and opening positions in `story_scene.videoDirection`. A protected board can supply a reply cue or recorded performance in `shotBindings`. For a frame-cued line, attach its recorded performance and room sound in `performanceAudio`. A reviewed `motionPrefix` can keep an approved dolly continuous. The deployed renderer must advertise these controls. Inspect both frames beside each cut and listen for the first word, the end of each line and repeated effects.
 
-## When the user requests one shot
+## Correcting a shot
 
-Use `shotId` and the following shot workflow for a specific shot correction or an existing single-shot plan.
+Edit the identified card, then plan and approve its complete scene.
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener
@@ -84,17 +91,7 @@ the saved model and resolution unless the user authorizes a change, and keep att
 
 Describe the room and sounds made by the visible action in `shot_prompt.sound`. Keep the accepted video's soundtrack. Omit a scene effect when the selected route cannot render it. Keep the input voice track free of audience cues. Put cues such as a surprise hit or tension rise in `sound.effects[].audience` for post. The saved music model can score them independently of the scene's BGM.
 
-**Approval.** Plan each shot with `video_plan` (it sends the stored prompt when args name
-none, and on MSR the start image rides in the background slot). Before `video_execute`,
-show the user that shot's prompt, start (and end) image and cost, and ask: approve this
-shot, approve every shot from now on, or change something. Record a yes with
-`video_approve {planIds:[…]}` and an approve-all with `video_approve {auto:true}`, each
-with the user's own words. Never call `video_approve` without their answer; `video_execute`
-refuses a plan without one (`video_approval_required`). A changed prompt, image or model is
-a new plan and needs a new yes unless auto is on; `video_approve` refuses a plan that went
-stale before the yes (`video_plan_stale`), so plan it again and show the new one. It also
-writes `storyboard/video-approvals.js`, so the review page marks each shot approved, awaiting
-approval, or changed (prompt, start/end image or lines) after its yes. `render-astra-shot.js` runs only after the same yes.
+**Approval.** Show the scene prompt, planned attachments, dialogue and cost. Record the user's approval with `video_approve` and execute that scene plan once. When inputs change, replan and show the updated scene under the existing approval policy.
 
 **Length.** `video_plan` returns `speechFit` on a natively voiced shot. When it carries a
 warning, the request is longer than the lines and timed actions need and the model will fill

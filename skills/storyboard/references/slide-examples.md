@@ -8,7 +8,7 @@ belong to that channel's theme; the reusable lesson is structure, not its palett
 
 ## Before: information too small for the phone
 
-![Historical episode strip](../../../docs/research/2026-09-02-broadcast-slide-design/before-ep11.jpg)
+![Historical episode strip](../examples/before-ep11.jpg)
 
 The second and third panels compress numbers and labels into a small part of a tall frame.
 Compare their text hierarchy at phone size against the next image. Do not treat the adjoining
@@ -16,7 +16,7 @@ photographs as rejected media; the failure being illustrated is the diagram's sc
 
 ## Better hierarchy: one measured value first
 
-![Value hierarchy across reveal states](../../../docs/research/2026-09-02-broadcast-slide-design/after-s2.jpg)
+![Value hierarchy across reveal states](../examples/after-s2.jpg)
 
 The leading measurement is large, the unit stays beside it, and supporting quantities enter
 later. Use that reading order, not these example numbers. This strip alone cannot establish
@@ -25,7 +25,7 @@ a large numeral is not a substitute for a data graph or an explanation of a phys
 
 ## Better integration: subject and stage share light
 
-![Object and stage reveal sheet](../../../docs/research/2026-09-04-rendered-object-slide/fixture-sheet.jpg)
+![Object and stage reveal sheet](../examples/fixture-sheet.jpg)
 
 The object, cast shadow, plates and ground share a light direction. Its visible marks change
 between states while the value changes. Use those relationships when inspecting a new scene.
@@ -41,5 +41,5 @@ mesh lane and inspect full-rate playback. Never infer continuous motion quality 
 3. A source/code inspection or an example image cannot earn points for unseen output.
    Report the score and findings as evidence; an example image never grants a pass.
 
-Source context: [broadcast study](../../../docs/research/2026-09-02-broadcast-slide-design/index.html)
-and [object study](../../../docs/research/2026-09-04-rendered-object-slide/index.html).
+Source context: [broadcast study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-02-broadcast-slide-design/index.html)
+and [object study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-04-rendered-object-slide/index.html).

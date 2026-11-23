@@ -404,7 +404,7 @@ The rules automated authoring breaks most often:
   causes·mechanisms·state changes are `"principle"`, and the rest is `"other"`. The first three
   use the mandatory moving editorial diagram and mapped role, with one allowed
   `slide.motionBeats` primitive per narration group, on the studio stage, to the bar of
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. They never fall back
+  `skills/storyboard/examples/reference-slide.html`. They never fall back
   to a still or to a clip with marks over it.
 - `treatment:"footage"` is retired (user directive 2026-09-05 — nothing is drawn over video;
   CLAUDE.md §Nothing is drawn over video). `check-scenes.js` rejects it, so a `scenes.js`
@@ -691,7 +691,7 @@ the price.
   bans text-to-video here (the same prompt renders a different scene every time, so there's
   no baseline to roll back to). Under absolute rule 9 the b-roll segment uses the clip's own
   audio.
-  Seedance 2.x rejects real human faces, so a photoreal person goes to an LTX lane. **If the
+  On Seedance, pass a reviewed character portrait from the ModelArk library. **If the
   source shows anyone who reads as a child or teenager, remake the person as an adult.**
 
   Existing 720p clips follow the `visual.reuse` source contract. New clips follow the selected
@@ -997,4 +997,4 @@ authorization.
 - `../produce/references/speedup.sh` — the required speed pass (produce §7.5)
 - `../produce/references/build-reel.sh` — the compositing pipeline
 - `../platform-guide/references/platform-playbook.md` · `korean-style.md` · `check-style.py`
-- `../../docs/guides/ai-video-production/index.html` — why hybrid is the default, prompt rules
+- [Production workflow](../../_shared/production-workflow.md) — media order and generation approvals

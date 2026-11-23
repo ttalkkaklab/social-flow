@@ -16,3 +16,18 @@ test('hosted vendors reserve from the price sheet: HeyGen at its standard rate, 
   assert.equal(quoteVideo('minimax_reference', { model: 'MiniMax-H3', resolution: '768P', durationSeconds: 5, referenceImagePaths: seven }).reserveUsd, 0.48);
   assert.equal(quoteVideo('minimax_reference', { model: 'MiniMax-H3-Max', resolution: '768P', durationSeconds: 5, referenceImagePaths: ['a.png', 'b.png'] }).reserveUsd, 0.4);
 });
+
+test('Seedance Flash and standard 4K reserve adaptive clips at the full duration and correct input tier', () => {
+  for (const [model,resolution,plain,withVideo] of [
+    ['dreamina-seedance-2-5-flash-261115', '720p', 7, 4.3],
+    ['dreamina-seedance-2-5-260628', '4k', 4.7, 2.9],
+  ]) {
+    const base = { model, resolution, durationSeconds:-1 };
+    assert.equal(quoteVideo('seedance_text2video', base).tokenRate, plain);
+    const args = {...base, referenceVideoUrls:['https://example.org/a.mp4']};
+    const auto = quoteVideo('seedance_reference',args);
+    assert.equal(auto.tokenRate, withVideo);
+    assert.ok(auto.reserveUsd > 0);
+    assert.equal(auto.reserveUsd, quoteVideo('seedance_reference',{...args,durationSeconds:30}).reserveUsd);
+  }
+});

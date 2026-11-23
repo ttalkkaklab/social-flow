@@ -22,7 +22,7 @@ function historicalSpend(episode) {
         const event = JSON.parse(line);
         if (['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit', 'astra_genai_catalog', 'astra_genai_desktop_status'].includes(event.tool))
             continue;
-        if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|ltx_api_|minimax_|heygen_|fasth3_omni_|astra_)/.test(event.tool || ''))
+        if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|ltx_api_|ltx_desktop_|minimax_|heygen_|fasth3_omni_|astra_)/.test(event.tool || ''))
             continue;
         const price = prices.get(event.key);
         if (typeof event.quantity !== 'number' || !Number.isFinite(event.quantity) || event.quantity < 0 || price === undefined || !Number.isFinite(price))

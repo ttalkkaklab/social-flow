@@ -31,8 +31,9 @@ Example saved video selection (explicitly select it; do not overwrite unrelated 
 {"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","resolution":"768x448"}
 ```
 
-For configured episodes use `video_plan` with `operation:"reference"`, then
-`video_execute`. A standalone adapter request:
+For a configured episode, use `video_plan` with `operation:"reference"`, record
+the approved plan with `video_approve` and submit it with `video_execute`.
+A standalone adapter accepts the following inputs.
 
 ```json
 {

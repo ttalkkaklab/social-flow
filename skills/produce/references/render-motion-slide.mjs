@@ -45,7 +45,7 @@
  *   zone_fill_pct — how much of the subtitle-free zone the painted content covers at the
  *   final rest frame — and warns under 55%.
  *
- * How it works — the seek model (docs/research/2026-08-29-motion-slide-lane):
+ * How it works — the seek model (1eabc4fb:docs/research/2026-08-29-motion-slide-lane):
  *   Chrome is launched ONCE (headless, --remote-debugging-pipe — CDP over fd 3/4, no puppeteer)
  *   and the page is asked for every frame at an exact time: window.__seek(tMs, g) pauses every
  *   animation and sets its currentTime, so the same (g, t) always yields the same pixels. A
@@ -78,7 +78,7 @@
  *   (--png-only --keep-frames) and count how many classes the output falls into.
  * Measured on Chrome 152 / M4: ~20 fps capture at 1080×1920 on a plate slide. A footage slide
  *   captures at 6–7 fps per tab (photographic PNGs) and 10–11 fps on three tabs — ep209 s10's
- *   459 frames in 46 s against 197 s before (full mp4 render, bench.tsv in docs/research/2026-09-04-render-perf).
+ *   459 frames in 46 s against 197 s before (full mp4 render, bench.tsv in 1eabc4fb:docs/research/2026-09-04-render-perf).
  *   The mp4 encode of a finished group runs while the next group is still being captured (one
  *   encode at a time), so it no longer adds to the wall clock. Group k's f0000 is the frame group
  *   k−1 captured at its end (the seam, see the capture loop), so --jobs 1 and --jobs 3 give

@@ -11,7 +11,7 @@ import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
-import { audienceDecisionSchema, audienceEndForSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
+import { audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 /** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
@@ -74,7 +74,7 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * destructiveHint in particular translates "a call is immediately public" —
  * the nature of this server — into a form **the client can read**: the
  * description prose reaches only the model, never the approval UI.
- * The verdict table in docs/api-reference/mcp-tools.html §7 is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 /**
  * Shared ASTRA video property definitions (self-hosted LTX-2.5).
@@ -220,21 +220,19 @@ const ASTRA_LIMITS_LINE = 'Uploads: 10/min per key. Job acceptance: 5/min and 60
  */
 const SEEDANCE_MODEL_PROPERTY = {
     type: 'string',
-    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — rank 1 on the Artificial Analysis blind image-to-video arena, Elo 1,198, and it outputs 1080p and 4k; every ModelArk model still needs console activation). ` +
-        'dreamina-seedance-2-5-260628 and the 2.0 fast/mini variants have NO public evaluation — prefer them only for cost or for a capability 2.0 lacks (2.5: more than 9 references, more than 15 seconds, Korean prompts). ' +
-        'Every model REJECTS input images containing real human faces and needs account balance > $30 to activate.',
+    description: `BytePlus ModelArk model ID (default: ${DEFAULT_SEEDANCE_MODEL}). Standard 2.5 supports 30s, 4k and 30 images. Flash supports 30s, 720p and 10 images. Enable the selected model in ModelArk.`,
     enum: [...VALID_SEEDANCE_MODELS],
     default: DEFAULT_SEEDANCE_MODEL,
 };
 const SEEDANCE_RESOLUTION_PROPERTY = {
     type: 'string',
-    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — 1080p needs 2.5 or 2.0; 4k is 2.0 only; the 2.0 fast/mini models top out at 720p.`,
+    description: `Output resolution (default: "${DEFAULT_SEEDANCE_RESOLUTION}"). Support differs per model — standard 2.5 and 2.0 reach 4k; Flash, Fast and Mini reach 720p.`,
     enum: [...VALID_SEEDANCE_RESOLUTIONS],
     default: DEFAULT_SEEDANCE_RESOLUTION,
 };
 const SEEDANCE_DURATION_PROPERTY = {
     type: 'number',
-    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 accepts 4-30, the 2.0 series 4-15. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
+    description: `Clip length in seconds (default: ${DEFAULT_SEEDANCE_DURATION}). Range differs per model — 2.5 and Flash accept 4-30, the 2.0 series 4-15; -1 lets the model decide. Frame rate is fixed at ${SEEDANCE_FPS} fps. Cost scales linearly with duration.`,
     default: DEFAULT_SEEDANCE_DURATION,
 };
 const SEEDANCE_AUDIO_PROPERTY = {
@@ -345,7 +343,7 @@ const SEARCH_ARG_LINE = 'Shared search-tool arguments: query (search terms) · l
  * call is public the moment it happens — stating that only in description
  * prose reaches the model but never the client.
  *
- * The verdict table in docs/api-reference/mcp-tools.html is the source of truth.
+ * The verdict table in docs/tool-contracts.md is the source of truth.
  */
 const HINT = {
     /** External lookup — no side effects */
@@ -2189,12 +2187,23 @@ Returns: the server's JSON report verbatim. No arguments.`,
     // The source of truth for which engine to use when is
     // skills/produce/references/video-model-selection.md.
     {
+        name: 'modelark_portrait_register', title: 'Register a character portrait in ModelArk',
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+        description: 'Register or reuse a character sheet image in the BytePlus private portrait library before Seedance video generation. Supply the absolute identity.md path and sheet panel. On first registration choose AIGC for an original virtual character or LivenessFace with the consent-verified group ID for a real person. This tool hosts the image for ingestion, writes the receipt into the sheet, and returns an active asset ID and URI. A pending or failed review stops generation. Use video_plan for the subsequent video.',
+        inputSchema: { type: 'object', additionalProperties: false, required: ['identityPath'], properties: {
+                identityPath: { type: 'string', description: 'Absolute path to assets/characters/<id>/identity.md.' },
+                panel: { type: 'string', description: 'Sheet panel key or image filename within the character folder. Defaults to face.' },
+                groupType: { type: 'string', enum: ['AIGC', 'LivenessFace'], description: 'Original virtual portrait or a real person whose identity and consent have been verified.' },
+                verifiedGroupId: { type: 'string', description: 'ModelArk group ID from the real person verification result. Used only for LivenessFace.' },
+            } },
+    },
+    {
         name: 'seedance_text2video',
         title: 'Video generation (text → video, Seedance)',
         annotations: HINT.generate,
         description: `Generate a video from a text prompt using ByteDance Seedance (BytePlus ModelArk).
 
-Use for a cut no character speaks in: any whole-second length from 4 to 30, a 21:9 or 4:3 frame, billed for the requested duration. Korean prompts are understood only by dreamina-seedance-2-5; every other model expects English.
+Use for a cut no character speaks in: any whole-second length from 4 to 30, a 21:9 or 4:3 frame, billed for the requested duration. Write the visual direction in English and quote dialogue in its original language.
 Do NOT use for a cut where a character speaks — that needs the speaker's voice sample through seedance_reference (or astra_genai_msr). When a source visual already exists use seedance_img2video, and for subject consistency from photos use seedance_reference.
 Model choice drives both price and limits; read the model parameter before overriding the default. Generation is asynchronous and typically takes 1-6 minutes.
 
@@ -2235,8 +2244,8 @@ Returns: a text block with the saved .mp4 file path, model, ratio, resolution, d
         annotations: HINT.generate,
         description: `Animate a still image into a video (first frame, or first+last frame interpolation) using ByteDance Seedance.
 
-Use for a b-roll cut no character speaks in: animating an already-generated cover or point background PNG. ratio defaults to "adaptive" so the source image is not center-cropped — pass an explicit ratio only when you intend a different frame. Billing follows the requested duration, so ask for the length you will actually cut in.
-Every Seedance model REJECTS input images containing real human faces, so never route a photoreal-person background through it.
+Use for a b-roll cut no character speaks in: animating an already-generated cover or point background PNG. The adaptive ratio follows the source image and is required on both 2.5 models. On 2.0 another ratio can crop the frame. Billing follows the requested duration, so ask for the length you will actually cut in.
+For a human face, use the character sheet portrait linked to its active ModelArk asset and set realFaceInput:true.
 Do NOT use for pure text-to-video (use seedance_text2video), for subject consistency across several photos, or for a cut where a character speaks (both use seedance_reference).
 
 Returns: a text block with the saved .mp4 file path, source/last frame image paths, model, ratio, resolution, duration, and the billed completion token count.`,
@@ -2247,6 +2256,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                     type: 'string',
                     description: 'Identity words stay, layout words go — the Seedance image lane is not motion-only. Reuse the source image prompt\'s identity words (who and what the subject is), drop the composition words (where things sit — the frame already holds that), add the motion, write camera as a span ("starting frame composition + movement + ending frame composition"), and CLOSE WITH A CONSISTENCY LOCK: "the subject stays exactly consistent with the input frame; appearance, proportions and materials hold; no unrelated elements appear". Re-describe the layout, facing or lighting and the model redesigns the scene. Do NOT write timecodes such as "0-3 seconds" (vendor: precise-timing support is unstable) — an in-clip state change goes in words ("in under half a second"), and the length lives in durationSeconds. English on every model; only quoted dialogue uses the video\'s language. There is no negativePrompt parameter on this engine: an unwanted element is designed out of the sentence and pinned by the lock, never forbidden in it — the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative.',
                 },
+                realFaceInput: { type: 'boolean', description: 'Set true when the shot includes a portrait. Supply its character sheet image or a reviewed asset video URI. Ordinary props and headless fitting references keep their authored slots.' },
                 sourceImagePath: {
                     type: 'string',
                     description: 'Absolute path to the first frame (starting) image file',
@@ -2258,7 +2268,7 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
                 model: SEEDANCE_MODEL_PROPERTY,
                 ratio: {
                     type: 'string',
-                    description: 'Aspect ratio of the generated video (default: "adaptive" — follows the source image). A different value makes the server center-crop your image.',
+                    description: 'Use adaptive to follow the source frame. Both 2.5 models require adaptive. On 2.0 another ratio can crop the image.',
                     enum: SEEDANCE_RATIO_VALUES,
                     default: 'adaptive',
                 },
@@ -2284,12 +2294,12 @@ Returns: a text block with the saved .mp4 file path, source/last frame image pat
         annotations: HINT.generate,
         description: `Generate a video that keeps subjects from reference images consistent, using Dreamina Seedance 2.x.
 
-Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상), and for every Seedance cut where a character speaks: each speaker gets their image and voice sample, as MSR does on LTX. dreamina-seedance-2-5-260628 takes 1-30 reference images and up to 30 seconds; the 2.0 series takes 1-9 and up to 15 seconds.
-Do NOT pass reference images containing real human faces — every Seedance model rejects them. These models also need account balance > $30 to activate.
+Use when a character, product, or garment must stay the same across the shot and you have several photos of it (캐릭터 일관성, 제품 영상), and for every Seedance cut where a character speaks: each speaker gets their image and voice sample, as MSR does on LTX. Standard 2.5 accepts up to 30 images, Flash 10, and both produce up to 30 seconds. The 2.0 series accepts up to 9 images and produces up to 15 seconds.
+For a face-bearing reference, pass the matching character sheet panel. Its reviewed private ModelArk asset is used in the same image slot. Activation requires a qualifying balance, an AI Savings Plan or a resource pack with remaining quota.
 References carry the artistic STYLE through along with the subject. That is the feature when you want a sketch or toon look transferred — this is the only style-transfer lane in the plugin — and a defect when you only wanted the layout: a storyboard frame passed here returns its drawing style, not its composition. For composition use seedance_img2video with sourceImagePath + lastImagePath.
 Do NOT feed a three-view or multi-view character sheet. ByteDance's own docs advise against it twice: the model reads the separate angles as separate people, which worsens identity drift and produces duplicate characters in one frame. Send a headshot (face only, neutral expression, minimal shoulders and background) plus one full-body shot instead — the docs call those two sufficient. Order is weight: put the asset that must be matched most precisely first in the array.
-Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Route this to dreamina-seedance-2-5-260628: only its guide documents the per-character mapping and only it takes audio-only input; the 2.0 series takes at most 3 clips and needs an image alongside. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav; video_plan binds it from the character's voiceReference.
-Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". The vendor takes video by public URL only, so a local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
+Reference AUDIO gives a character a fixed voice. Pass the clip in referenceAudioPaths with generateAudio: true and bind it in the prompt the way the 2.5 guide does — "Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2" (@Image N and @Audio N are each list's own order). Both 2.5 models accept audio-only input. On 2.0 use up to three audio clips and include an image or video. A channel character's fixed voice sample lives at data/<channel>/assets/characters/<id>/voice.wav; video_plan binds it from the character's voiceReference.
+Reference VIDEO hands over camera movement, blocking and motion timing — the Blender previz lane (blender_render_previz → referenceVideoPaths). The vendor's own "3D clay-model reference" recipe: a grey primitive render, each actor its own flat colour, no stamp or gizmos, 24 fps, a whole number of seconds equal to durationSeconds; the styled source still goes first in referenceImagePaths ("Image 1 is the first frame" — first_frame cannot be mixed with a reference video); the prompt names "Video 1" as the ONLY reference for camera, shot rhythm, subject trajectory and blocking, maps each coloured model to its Image, and says "Do not reference its visual content". ModelArk accepts public video URLs and asset:// library IDs. A local file is published for the life of the task — through MEDIA_UPLOAD_URL when set, else a cloudflared quick tunnel — and released afterwards. Input seconds are billed alongside output seconds at a lower per-token rate.
 
 Returns: a text block with the saved .mp4 file path, reference image, video and audio lists, model, ratio, resolution, duration, and the billed completion token count.`,
         inputSchema: {
@@ -2299,17 +2309,22 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
                     type: 'string',
                     description: 'Scene and subject interactions. The 2.x advanced formula: precise subject + action details + scene/environment + lighting & color tone + camera movement + visual style + image quality + constraints. For multi-cut, write a "Shot 1 / Shot 2 / Shot 3" storyboard and order each shot as camera movement -> subject action and expression -> position change -> audio; open on the wide so the later cuts inherit one floor plan, and time each cut by an action beat. Do NOT put timecodes on the shots — the vendor states precise-timing support is unstable (dreamina-seedance-2-5-260628 alone takes integer-second forms). Close with the constraints slot as a POSITIVE-LOCKS paragraph — what holds in every frame, said positively, with each reference given its scope ("@ocean_location controls water and sky only"; "the lantern stays lit in every cut") — because this engine has no negativePrompt parameter; the one exception the vendor templates is the artifact classes (subtitles, on-frame text, logo, watermark, BGM), which may stay negative. English on every model; only quoted dialogue uses the video\'s language (for audio-conditioned speech, use the supplied audio and omit literal dialogue quotes from the visual prompt). Unwanted subtitles cannot be fully blocked at 9:16: the vendor notes portrait output hallucinates burned-in text noticeably more often than landscape, so inspect the frames.',
                 },
+                realFaceInput: { type: 'boolean', description: 'Set true when the shot includes a portrait. Supply its character sheet image or a reviewed asset video URI. Ordinary props and headless fitting references keep their authored slots.' },
                 referenceImagePaths: {
                     type: 'array',
                     items: { type: 'string' },
                     maxItems: 30,
-                    description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, up to 9 for the 2.0 series. Must not contain real human faces. May be left out only on dreamina-seedance-2-5-260628 when referenceAudioPaths carries the reference; the 2.0 series needs at least one image.',
+                    description: 'Absolute paths to reference images guiding subject appearance — up to 30 for dreamina-seedance-2-5-260628, 10 on Flash and 9 on 2.0. Use a registered character-sheet portrait for a human face. Both 2.5 models accept audio alone; 2.0 needs an image or video with audio.',
                 },
                 referenceVideoPaths: {
                     type: 'array',
                     items: { type: 'string' },
                     maxItems: 10,
-                    description: 'Absolute paths to local reference videos — the Blender previz lane (blender_render_previz output as the vendor\'s clay-model reference) — mp4 or mov (H.264/H.265), 200MB each at most, 24–60 fps, 407,696–8,295,044 pixels a frame (720×1280 and 1080×1920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips of 2–30s (30s total); the 2.0 series up to 3 clips of 2–15s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces — the same moderation as images.',
+                    description: 'Absolute paths to local reference videos — the Blender previz lane (blender_render_previz output as the vendor\'s clay-model reference) — mp4 or mov (H.264/H.265), 200MB each at most, 24–60 fps, 407,696–8,847,360 pixels a frame on 2.5, up to 8,295,044 on 2.0 (720×1280 and 1080×1920 both pass). dreamina-seedance-2-5-260628 takes up to 10 clips, Flash takes 5, both 2–30s (4–30s for editing, 30s total); the 2.0 series up to 3 clips of 2–15s (15s total). Checked with ffprobe before anything is published or billed. Each file is served to the vendor through MEDIA_UPLOAD_URL (+ MEDIA_UPLOAD_API_KEY) when set, otherwise through a cloudflared quick tunnel for the life of the task. @Video N in the prompt is the Nth entry here (referenceVideoUrls continue the numbering after these). No real human faces — the same moderation as images.',
+                },
+                referenceVideoTaskIds: {
+                    type: 'array', items: { type: 'string' },
+                    description: 'Completed same-account Seedance 2.x task IDs. Original video URLs are resolved from ModelArk before submission. These video slots follow local videos and referenceVideoUrls.',
                 },
                 referenceVideoUrls: {
                     type: 'array',
@@ -2321,13 +2336,12 @@ Returns: a text block with the saved .mp4 file path, reference image, video and 
                     type: 'array',
                     items: { type: 'string' },
                     maxItems: 10,
-                    description: 'Absolute paths to reference audio clips — wav or mp3, 15MB each at most (prefer wav: the mp3 data-URI label is unverified against a live call). What the clip carries is what the model imitates: a voice (its timbre — the character then speaks in that voice), or dialogue and music content it lip-syncs to and follows. Limits: dreamina-seedance-2-5-260628 takes up to 10 clips of 2-30s (30s total) and may be audio-only; the 2.0 series takes up to 3 clips of 2-15s (15s total) and needs a reference image alongside. The vendor recommends 5-10s per voice. Requires generateAudio: true. Numbering: @Audio N in the prompt is the Nth entry here and @Image N the Nth of referenceImagePaths — bind them in the prompt ("Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2"). This is imitation, not cloning: the vendor\'s own FAQ says the result can drift from the reference, and its fix is to also describe the voice in words (gender, age, texture, pace, mood) and keep the lines in the reference\'s tone.',
+                    description: 'Absolute paths to reference audio clips — wav or mp3, 15MB each at most (prefer wav: the mp3 data-URI label is unverified against a live call). What the clip carries is what the model imitates: a voice (its timbre — the character then speaks in that voice), or dialogue and music content it lip-syncs to and follows. Limits: dreamina-seedance-2-5-260628 takes up to 10 clips of 2-30s (30s total) and may be audio-only; Flash takes 5 with the same duration limits. The 2.0 series takes up to 3 clips of 2-15s (15s total) alongside an image or video. The vendor recommends 5-10s per voice. Requires generateAudio: true. Numbering: @Audio N in the prompt is the Nth entry here and @Image N the Nth of referenceImagePaths — bind them in the prompt ("Images 1-2 are Character 1 and correspond to Audio 1; Image 3 is Character 2 and speaks with the voice of Audio 2"). This is imitation, not cloning: the vendor\'s own FAQ says the result can drift from the reference, and its fix is to also describe the voice in words (gender, age, texture, pace, mood) and keep the lines in the reference\'s tone.',
                 },
-                model: {
-                    type: 'string',
-                    description: `Seedance model (default: "${DEFAULT_SEEDANCE_MODEL}" — the only model with independent quality data: rank 1 on the Artificial Analysis blind image-to-video arena, and it also outputs 1080p and 4k). Switch to dreamina-seedance-2-5-260628 when you actually need more than 9 reference images or more than 15 seconds — it is untested in every public arena, so do not pick it for a shot that matters without comparing first. fast and mini trade quality for cost and are likewise untested.`,
-                    enum: [...VALID_SEEDANCE_MODELS],
-                    default: DEFAULT_SEEDANCE_MODEL,
+                model: SEEDANCE_MODEL_PROPERTY,
+                omniReferenceTaskType: {
+                    type: 'string', enum: ['auto', 'reference', 'edit', 'extend'],
+                    description: 'Seedance 2.5 series only. Edit and extend need a reference video and adaptive ratio. Edit keeps the source duration (-1).',
                 },
                 ratio: {
                     type: 'string',
@@ -4644,7 +4658,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Declare speakers at scene authoring, in stable reference order. Use [] for silence. Split before a third distinct speaker, including an off-screen speaker. Silent people can share the frame. Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
@@ -4663,6 +4677,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             event: { type: 'string', description: 'The one thing that happens in this scene' },
                             summary: { type: 'string', description: "The scene's story in one sentence" },
                             turn: { type: 'string', description: 'What flipped between the open and the close' },
+                            frames: zodToJsonSchema(sceneFramesSchema, { $refStrategy: 'none' }),
+                            speakerReferences: zodToJsonSchema(sceneSpeakerReferencesSchema, { $refStrategy: 'none' }),
+                            speakers: zodToJsonSchema(sceneSpeakersSchema, { $refStrategy: 'none' }),
                             directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: 'none' }),
                             videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: 'none' }),
                             audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: 'none' }),
@@ -4680,7 +4697,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'story_shot',
         title: 'Write shot stories (story step 3 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Supply timeline with scene-relative frame range, incoming transition, English framing/action and each video image’s role and frame. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+        description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Set duration for model-paced cuts or supply timeline for exact frame ranges and dialogue cues. Use referenceImage for an optional composition guide. Set temporal anchors on story_scene.frames. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Use timeline.framing for video direction. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title — the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -4693,6 +4710,8 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id to revise; omit to add a shot' },
                             scene: { type: 'integer', minimum: 1, description: 'The scene number' },
                             summary: { type: 'string', description: 'The story this shot tells, in one sentence' },
+                            duration: { type: 'number', exclusiveMinimum: 0, description: 'Target duration in seconds for a model-paced shot. Use timeline for exact cuts.' },
+                            referenceImage: { type: 'string', description: 'Optional composition reference for this shot on a compatible adapter.' },
                             timeline: zodToJsonSchema(shotTimelineSchema, { $refStrategy: 'none' }),
                         } } },
             },
@@ -4977,6 +4996,8 @@ Do NOT use it just to inspect a shot — use storyboard_read. Do NOT use it for 
                     }, required: ['x', 'y', 'width', 'height'] },
                 preserve: { type: 'string', description: 'Details to preserve during editExisting, e.g. Keep the navy blazer.' },
                 location: { type: 'string', description: 'SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
+                role: { type: 'string', enum: ['shot_reference', 'scene_start', 'scene_end'], description: 'One optional guide per shot, or the whole scene opening/ending from its first/last card.' },
+                bystanders: { type: 'array', uniqueItems: true, items: { type: 'string' }, description: 'Additional cast IDs visible in the opening image. Their portraits condition only this still.' },
                 props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
                 size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning' },
                 reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run' },
@@ -5141,9 +5162,9 @@ TOOLS.push({ name: 'fasth3_omni_reference', title: 'Generate FastH3 Omni video f
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } });
 // Hosted vendors through the common layer (vendor-video.ts); episode calls go through video_plan.
 const vendorTool = (name, title, description, schema) => ({ name, title,
-    description: description + ' Billed by the vendor per output second (audio-to-video: per input audio second). Returns the local MP4 path, the vendor job ID and reported duration; failures say whether a job may still be running. Do NOT resubmit a request whose job may still be running; inspect video_status first. Production output still needs playback review.',
+    description: description + (name.startsWith('ltx_desktop_') ? ' Runs on the local GPU.' : ' Billed by the vendor per output second (audio-to-video: per input audio second).') + ' Returns the local MP4 path and job ID; failures say whether a job may still be running. Do NOT resubmit a request whose job may still be running; inspect video_status first. Production output still needs playback review.',
     inputSchema: zodToJsonSchema(schema, { $refStrategy: 'none' }),
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } });
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: !name.startsWith('ltx_desktop_') } });
 TOOLS.push(...Object.entries(HOSTED_VIDEO_ROUTES).map(([name, route]) => vendorTool(name, route.title, route.description, route.schema)), vendorTool('minimax_img2video', 'Generate a MiniMax H3 video from frames', 'Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4–15 s, native audio always on. For cuts no character speaks in. Do NOT use for spoken cuts — use minimax_reference with the speaker\'s voice sample.', minimaxImg2VideoSchema), vendorTool('minimax_reference', 'Generate a MiniMax H3 video from references', 'Create a MiniMax H3 clip from reference pictures (character panels, the start image last) and voice samples; the prompt names them "reference image N" and "reference audio N". The first frame is not pinned. Do NOT use for silent cuts — use minimax_img2video.', minimaxReferenceSchema), vendorTool('heygen_img2video', 'Generate a HeyGen Video 1 clip from frames', 'Create a HeyGen Video 1 clip (HEYGEN_API_KEY) that opens exactly on the first frame, with an optional end image, 5–15 s, native audio always on. Files upload to HeyGen assets first. For cuts no character speaks in. Do NOT use for spoken cuts — use heygen_reference.', heygenImg2VideoSchema), vendorTool('heygen_reference', 'Generate a HeyGen Video 1 clip from references', 'Create a HeyGen Video 1 clip from reference pictures (<Picture N>, the start image last) and voice samples (<Audio N>). The first frame is not pinned, and the voice-sample behaviour is documented only by secondary sources. Do NOT use for silent cuts — use heygen_img2video.', heygenReferenceSchema));
 // New generations can state the coverage needed; exact legacy requests keep their schema.
 for (const tool of TOOLS) {
@@ -5177,21 +5198,21 @@ export const SNS_PLATFORM_BY_TOOL = {
 const videoContextSchema = {
     type: 'object', additionalProperties: false,
     properties: { episode: { type: 'string', description: 'Absolute episode directory.' },
-        shotId: { type: 'string', description: 'Stable storyboard shot ID.' },
+        sceneNo: { type: 'integer', minimum: 1, description: 'Complete storyboard scene, including a one-shot scene.' },
         requestId: { type: 'string', description: 'Stable logical attempt ID; reuse after timeout, never invent a retry ID.' } },
-    required: ['episode', 'shotId', 'requestId'],
+    required: ['episode', 'sceneNo', 'requestId'],
 };
 for (const tool of TOOLS) {
     if (VIDEO_ADAPTERS[tool.name]) {
         // Legacy direct entrypoints: the routing contract comes first in every description.
-        tool.description = `Video generation requires a selected, ready project. Episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
+        tool.description = `Video generation requires a selected, ready project. Episode video goes through video_plan → video_execute; direct calls need videoContext (episode, sceneNo, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
         tool.inputSchema.properties = { ...tool.inputSchema.properties,
             videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
     }
 }
-TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts, deployment identifiers and supported operations. Read-only; no generation or live authentication probe. Use before video_plan; model availability is configuration, not a successful API test.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.',
-    inputSchema: { ...videoContextSchema, required: ['episode', 'requestId'], oneOf: [{ required: ['sceneNo'] }, { required: ['shotId'] }], properties: { ...videoContextSchema.properties,
+TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
+    inputSchema: { type: 'object', properties: { engine: { type: 'string', enum: ['ltx-desktop-local'] } }, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.',
+    inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
             sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native or supplied scene audio.' },

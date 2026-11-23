@@ -37,61 +37,7 @@ test('prefix reuse permits a shorter tail but rejects shifted speech, changed di
   assert.equal(prefixCompatible(legacy,plan(shorter)),false);
 });
 
-test('provider padding uses a separate WAV and cannot change canonical speech or truncate it', async t => {
-  const {mkdtempSync,readFileSync,rmSync}=await import('node:fs');
-  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
-  const {execFileSync}=await import('node:child_process');
-  const {conditioningAudio}=require('../../skills/produce/references/render-astra-shot.js');
-  const {duration}=require('../../skills/produce/references/compose-speech.js');
-  const dir=mkdtempSync(join(tmpdir(),'transport-clock-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  const source=join(dir,'canonical.wav'),output=join(dir,'transport.wav');
-  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1','-c:a','pcm_s16le',source]);
-  const before=readFileSync(source);conditioningAudio(source,output,33/24);
-  assert.deepEqual(readFileSync(source),before);assert.equal(duration(source),1);
-  assert.ok(Math.abs(duration(output)-33/24)<1/48000);
-  assert.throws(()=>conditioningAudio(source,source,2),/Never overwrite/);
-  assert.throws(()=>conditioningAudio(source,output,0.5),/cannot truncate/);
-});
-
-test('shared renderer refuses an existing candidate before any planning or provider call', async t => {
-  const {mkdtempSync,writeFileSync,rmSync}=await import('node:fs');
-  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
-  const {render}=require('../../skills/produce/references/render-astra-shot.js');
-  const dir=mkdtempSync(join(tmpdir(),'duplicate-shot-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  setupProject(dir);
-  writeFileSync(join(dir,'candidate.mp4.render.json'),'{}');
-  await assert.rejects(render(join(dir,'missing-board'),{outputPath:dir,filename:'candidate.mp4'}),/already exists/);
-  await assert.rejects(render(join(dir,'missing-board'),{outputPath:dir,filename:'../other.mp4'}),/plain .mp4/);
-});
-
-test('concurrent render attempts reserve a single candidate before preparation', async t => {
-  const {mkdtempSync,readFileSync,rmSync}=await import('node:fs');
-  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
-  const {render}=require('../../skills/produce/references/render-astra-shot.js');
-  const dir=mkdtempSync(join(tmpdir(),'concurrent-shot-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  setupProject(dir);
-  const options={outputPath:dir,filename:'candidate.mp4'};
-  const attempts=await Promise.allSettled([render(join(dir,'missing-board'),options),render(join(dir,'missing-board'),options)]);
-  assert.equal(attempts.filter(r=>r.status==='rejected' && /already exists/.test(r.reason.message)).length,1);
-  assert.equal(JSON.parse(readFileSync(join(dir,'candidate.mp4.render.json'),'utf8')).status,'preparing');
-  await assert.rejects(render(join(dir,'missing-board'),options),/already exists/);
-});
-
-test('retry reservations conflict with independent candidate names in either order and preserve existing media', async t => {
-  const {mkdtempSync,readFileSync,writeFileSync,rmSync}=await import('node:fs');
-  const {tmpdir}=await import('node:os');const {join}=await import('node:path');
-  const {render,reserveRetryCandidates}=require('../../skills/produce/references/render-astra-shot.js');
-  const dir=mkdtempSync(join(tmpdir(),'retry-shot-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
-  setupProject(dir);
-  reserveRetryCandidates(join(dir,'first.mp4'),2);
-  await assert.rejects(render(join(dir,'missing-board'),{outputPath:dir,filename:'first-attempt2.mp4'}),/already exists/);
-  const root=render(join(dir,'missing-board'),{outputPath:dir,filename:'second-attempt2.mp4'});
-  assert.throws(()=>reserveRetryCandidates(join(dir,'second.mp4'),2),/already exists/);
-  await assert.rejects(root);
-  writeFileSync(join(dir,'third-attempt2.mp4'),'existing footage');
-  assert.throws(()=>reserveRetryCandidates(join(dir,'third.mp4'),2),/already exists/);
-  assert.equal(readFileSync(join(dir,'third-attempt2.mp4'),'utf8'),'existing footage');
-  writeFileSync(join(dir,'fourth-attempt2.mp4.astra-job.json'),'existing receipt');
-  assert.throws(()=>reserveRetryCandidates(join(dir,'fourth.mp4'),2),/already exists/);
-  assert.equal(readFileSync(join(dir,'fourth-attempt2.mp4.astra-job.json'),'utf8'),'existing receipt');
+test('historical shot renderer refuses before touching a candidate or contacting a provider', async () => {
+  const {render} = require('../../skills/produce/references/render-astra-shot.js');
+  await assert.rejects(render('board', {shotId:'s0001'}), /scene_video_scope/);
 });

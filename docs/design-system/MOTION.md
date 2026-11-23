@@ -1,7 +1,6 @@
 # Motion design system
 
-Status: contextual themes and bundled role-based typography implemented; review evidence is stored with local rendered artifacts.
-Executable tokens: `skills/storyboard/references/motion-graphics.js` (`THEMES`).
+The [theme definitions](../../skills/storyboard/references/motion-graphics.js) specify the typography, spacing and motion for each context.
 
 ## Intent
 
@@ -29,7 +28,7 @@ composition. Theme dimensions use the 1600×900 or 900×1600 design coordinate s
 
 Bundled Paperlogy, Black Han Sans, Gowun Batang and Jua supply thematic titles.
 Space Grotesk and Roboto Flex supply Latin and numeric roles; Pretendard supplies
-body text and a verified whole-text fallback. See FONTS.md for sources and roles. Variable
+body text and a verified whole-text fallback. See [bundled fonts](FONTS.md) for sources and roles. Variable
 weights and tracking differentiate theme roles without relying on a system font.
 Numbers retain tabular alignment. Titles are balanced by available width; source
 text stays subordinate. Font-family variety alone does not establish good design.
@@ -49,8 +48,7 @@ those with rectangles. Realistic UI proof still requires a recording.
 
 Inspect horizontal and vertical renders, the beginning, transformation and hold,
 plus arbitrary seeks. Check overlapping text, numerical geometry, subject fit and
-visual hierarchy independently of input validation. The previous aesthetic score
-was rejected by the user and is not inherited by this system.
+visual hierarchy independently of input validation.
 
 ## Episode consistency
 

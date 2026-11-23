@@ -208,7 +208,7 @@ SIL_MIN=${SIL_MIN:-0.16}           # sentence-boundary minimum silence length (s
 ZOOM_SPAN=${ZOOM_SPAN:-0.035}      # floor of the still zoom span, and the punch's landing size (3.5%)
 ZOOM_SPAN=$(awk -v v="$ZOOM_SPAN" 'BEGIN{printf "%.3f", v}')   # %.3f normalized so span= report-tag compares stay exact
 KB_RATE=${KB_RATE:-0.04}           # default still zoom per second when no span= is written — the observe row of
-                                   #   the ladder (docs/research/2026-08-26-still-photo-camera-motion: the explain
+                                   #   the ladder (1eabc4fb:docs/research/2026-08-26-still-photo-camera-motion: the explain
                                    #   cut ran 4%/s; our old 3.5% per card was ten times slower, and read as a photo)
 KB_ZMAX=${KB_ZMAX:-1.075}          # cap on the default's total scale. Text is baked into a still card, so a centre
                                    #   zoom pushes every edge of the text zone outward, and the cap is the tightest of
@@ -882,7 +882,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   PEXPR="(on/$ZLAST)"
   # Per-card EASE (ease= option, default KB_EASE). "in" accelerates to the cut point — quadratic
   # progress, so the rate climbs linearly and peaks exactly where the cut lands (the action/CTA
-  # register measured in docs/research/2026-08-26-still-photo-camera-motion).
+  # register measured in 1eabc4fb:docs/research/2026-08-26-still-photo-camera-motion).
   case "$EASE" in linear) E="$PEXPR" ;; in) E="($PEXPR*$PEXPR)" ;; *) E="($PEXPR*$PEXPR*(3-2*$PEXPR))" ;; esac
   KTAG=""
   # A pan card reports its span only when the zoom drift actually uses it — pan + in/out runs

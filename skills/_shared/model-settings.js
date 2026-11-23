@@ -78,8 +78,21 @@ function validateModels(models, partial = false, allowRetired = false) {
     const choice = models[kind];
     const retired = allowRetired && retiredChoice(kind, choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
+    if (kind === 'video' && choice.engine === 'ltx-desktop-local') {
+      if (!/^ltx-[a-z0-9.-]+$/i.test(choice.model || '') || !/^(270|360|540|720|1080|1440|2160)p$/.test(choice.resolution || '') ||
+          (choice.operation && !VIDEO_ADAPTERS.some(a => a.engine === choice.engine && a.operation === choice.operation)))
+        throw new Error('Choose a local Desktop offering, resolution and operation from video_catalog with engine ltx-desktop-local');
+    }
     if (kind === 'video' && choice.engine === 'host' && /^veo-/.test(choice.model || ''))
       throw new Error('Select engine veo for a Google Cloud Veo model; host handoff cannot verify this model');
+    if (kind === 'video' && choice.engine === 'seedance' && !retiredVideo(choice)) {
+      const spec = VIDEO_ADAPTERS.find(a => a.engine === 'seedance').modelConstraints;
+      if (!Object.hasOwn(spec, choice.model)) throw new Error('Unknown Seedance model; consult video_catalog');
+      if (choice.resolution && !spec[choice.model].resolutions.includes(choice.resolution))
+        throw new Error('Unsupported Seedance resolution for ' + choice.model);
+      if (choice.operation && !VIDEO_ADAPTERS.some(a => a.engine === 'seedance' && a.operation === choice.operation))
+        throw new Error('Unsupported Seedance operation: ' + choice.operation);
+    }
     if (kind === 'video' && choice.engine === 'veo' && !retiredVideo(choice)) {
       const { modelConstraints } = VIDEO_ADAPTERS.find(a => a.engine === 'veo');
       if (!Object.hasOwn(modelConstraints, choice.model)) throw new Error('Unknown Google Cloud Veo model; consult video_catalog');

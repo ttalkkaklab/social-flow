@@ -11,7 +11,7 @@ harden into rules.
 Platform-wide style and publishing rules live in
 `skills/platform-guide/references/platform-playbook.md`; this document carries
 **growth-loop tactics only**. The companion guide for human readers is
-`docs/guides/youtube-shorts-growth/index.html`.
+[YouTube Shorts growth guide](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/guides/youtube-shorts-growth/index.html).
 
 ## Contents
 

@@ -18,12 +18,27 @@ import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js'
  * Engines with no voice lane at all (Veo, Gemini Omni, Seedance 1.x) left the plugin on 2026-10-31.
  */
 export type VoiceLane = 'reference' | 'supplied' | 'none';
+export interface CharacterVideoInput {
+  character: string;
+  face?: { path: string; taskId?: never } | { taskId: string; reviewPath?: string; path?: never };
+  bodyView: 'front' | 'back';
+  bodyPath: string;
+  voiceRequired: boolean;
+}
+
+export function requiredCharacters(shot: Record<string, unknown>): CharacterVideoInput[] {
+  const inputs = (shot.visual as { characterInputs?: CharacterVideoInput[] } | undefined)?.characterInputs;
+  // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
+  return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
+}
+
 export interface VideoAdapter {
   engine: string;
   deployment: string;
   operation: string;
   schema: z.ZodTypeAny;
   voice: VoiceLane;
+  bindCharacterSources?: (args: Record<string, unknown>, cast: CharacterVideoInput[]) => Record<string, unknown>;
 }
 const entry = (engine: string, deployment: string, operation: string, schema: z.ZodTypeAny): VideoAdapter =>
   ({ engine, deployment, operation, schema, voice: operation === 'audio' ? 'supplied' : 'none' });
@@ -33,7 +48,29 @@ const reference = (engine: string, deployment: string, schema: z.ZodTypeAny): Vi
 export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.freeze({
   seedance_text2video: entry('seedance', 'byteplus', 'text', seedance.seedanceText2VideoSchema),
   seedance_img2video: entry('seedance', 'byteplus', 'image', seedance.seedanceImg2VideoSchema),
-  seedance_reference: reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+  seedance_reference: {
+    ...reference('seedance', 'byteplus', seedance.seedanceReferenceSchema),
+    bindCharacterSources(args, cast) {
+      const originals = new Map<string, string>();
+      for (const person of cast) {
+        const id = person.face?.taskId;
+        if (!id) continue;
+        if (originals.has(id) && originals.get(id) !== person.character)
+          throw new Error('character_face_source_ambiguous: each facial reference needs one identifiable character');
+        originals.set(id, person.character);
+      }
+      const taskIds = [...originals.keys()];
+      if (args.realFaceInput === false && taskIds.length ||
+          taskIds.length && args.referenceVideoTaskIds !== undefined && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
+        throw new Error('character_inputs_mismatch: use the face sources declared on the storyboard');
+      const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
+      const offset = videos.reduce<number>((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+      const notes = [...originals.values()].map((character, index) =>
+        `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      return { ...args, realFaceInput: cast.some(person => person.face) || args.realFaceInput === true,
+        ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt:[args.prompt, ...notes].join('\n') } : {}) };
+    },
+  },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
     'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),
     entry('astra-genai-desktop', 'gateway-desktop-v1', ({ 'text-to-video': 'text', 'image-to-video': 'image', 'audio-to-video': 'audio', keyframes: 'keyframe' }[feature] || feature), schema),
@@ -116,7 +153,7 @@ export function sceneInputCapabilities(tool: string) {
     } } : {}),
     openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
     shotDescriptions: ['astra_genai_text2video','astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',
-    sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video'].includes(tool),
+    sceneAudio: ['astra_genai_audio2video','astra_genai_desktop_audio2video','astra_audio2video','ltx_api_audio2video','ltx_desktop_audio2video'].includes(tool),
   };
 }
 
@@ -158,12 +195,14 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
   if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
   if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
-  if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' ||
+  if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' || provider === 'ltx-desktop-local' ||
     provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))
     return { provider, model, audioConditioning: true, lipSync: false, postLipSync: false, evidence: 'The supplied track conditions video generation. Mouth movement and phoneme alignment require output review.' };
+  if (provider === 'seedance' && operation === 'reference')
+    return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing.' };
   if (provider === 'seedance' && Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'Reference audio does not promise exact recorded-speech timing; no post-lipsync adapter installed' };
-  if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-api', 'minimax', 'heygen'].includes(provider))
+  if (['host', 'veo', 'mlx', 'astra', 'astra-genai', 'astra-genai-desktop', 'ltx-desktop-local', 'ltx-api', 'minimax', 'heygen'].includes(provider))
     return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, evidence: 'No verified external-speech synchronization adapter; voiceover remains available' };
   throw new Error('No verified speech synchronization contract for selected deployment/model');
 }

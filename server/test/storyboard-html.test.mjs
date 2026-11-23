@@ -8,6 +8,7 @@ import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
 const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
+const review = require('../../skills/storyboard/references/video-production.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
 test('offline review shows the selected Veo asset slots before and after a tool is recorded', t => {
@@ -19,7 +20,7 @@ test('offline review shows the selected Veo asset slots before and after a tool 
   runInNewContext(readFileSync(join(directory, 'production-mode.js'), 'utf8'), {window});
   const template = readFileSync(join(directory, 'storyboard.html'), 'utf8');
   const select = template.slice(template.indexOf('  function reviewVideoSelection'), template.indexOf('  function clipPromptOf'));
-  const lanes = template.slice(template.indexOf('  var REF_LANES ='), template.indexOf('  // The MSR icon'));
+  const lanes = template.slice(template.indexOf('  var REF_LANES ='), template.indexOf('  var REF_ROLE ='));
   const context = {window, LANG: 'en', shot: {id: 's1', visual: {video: {}}}, fp: {mode: 'reference'}};
   window.REVIEW_VIDEO_SNAPSHOT = {engine: 'ltx-api', model: 'ltx-2-5-pro'};
   const video = {engine: 'veo', model: 'veo-3.1-fast-generate-001', operation: 'reference'};
@@ -41,13 +42,20 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
     visual: { bgPrompt: 'Paint the plaza', video: { prompt: 'Earlier single-shot prompt' } } };
   const second = { id: 's0002', duration: 1, timeline: { action: 'Clap', transition: 'hard_cut' } };
   const plan = { sceneNo: 1, shotIds: [first.id, second.id], prompt: 'Saved <take>', requestId: 'take-1', stale: false };
-  const context = { LANG: 'en', window: { VIDEO_PRODUCTION: { candidates: [plan] } },
+  const context = { LANG: 'en', window: { VIDEO_PRODUCTION: { candidates: [plan] }, VIDEO_PRODUCTION_REVIEW: review },
     grp: { scene: 1, items: [first, second].map((s, i) => ({ s, i })) }, sc: { videoDirection: { sound: 'Street noise' } },
     first, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
     safeSrc: () => '', esc: s => String(s).replaceAll('<', '&lt;'),
     T: { shotCap: n => 'Shot ' + n, sceneNamed: n => 'Scene ' + n }, DOC: {}, OFF_GLYPH: '' };
   const render = expression => runInNewContext(functions + '\n' + expression, context);
   const scene = () => render('sceneVideoPromptHtml(sc, grp)');
+  const drawings = new Set();
+  for (const mode of ['MSR','I2V','A2V','T2V']) {
+    const icon = render('generationIcon("'+mode+'", "scene-mode-1", "plan")');
+    assert.ok(icon.includes('aria-label="'+mode+'"'));
+    drawings.add(icon.match(/<path d="([^"]+)"/)[1]);
+  }
+  assert.equal(drawings.size, 4);
   assert.match(scene(), /Saved request plan.*Request take-1<\/p><pre>Saved &lt;take><\/pre>/s);
   for (const candidate of [{ ...plan, stale: true }, { ...plan, stale: null }, { ...plan, shotIds: [second.id, first.id] }]) {
     context.window.VIDEO_PRODUCTION.candidates = [candidate];
@@ -56,22 +64,41 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
     assert.doesNotMatch(html, /<details/);
     assert.doesNotMatch(html, /Saved &lt;take>/);
   }
-  const notes = render('sceneNotesHtml(grp, "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
-  assert.equal(notes.match(/role="tab"/g).length, 2);
-  assert.match(notes, /aria-controls="scene-notes-1-sound" aria-selected="true"/);
-  assert.match(notes, /role="tabpanel" id="scene-notes-1-sound"[^>]*><div[^>]*><b>Sound cues<\/b>/);
+  const notes = render('sceneNotesHtml(grp, "Cast and settings", "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
+  assert.equal(notes.match(/role="tab"/g).length, 3);
+  assert.match(notes, /aria-controls="scene-notes-1-settings" aria-selected="true".*aria-controls="scene-notes-1-sound" aria-selected="false"/s);
+  assert.match(notes, /role="tabpanel" id="scene-notes-1-sound"[^>]* hidden><div[^>]*><b>Sound cues<\/b>/);
   assert.match(notes, /role="tabpanel" id="scene-notes-1-prompt"[^>]* hidden>.*Street noise/s);
-  assert.doesNotMatch(render('sceneNotesHtml(grp, "Sound only", "")'), /role="tab"/);
-  const card = render('shotBodyHtml(first, [], true)');
-  assert.match(card, /Image generation details.*Paint the plaza.*Shot direction.*Step left/s);
+  assert.equal(render('sceneNotesHtml(grp, "Cast", "Sound only", "")').match(/role="tab"/g).length, 2);
+  const card = render('shotBodyHtml(first, [], true, 1)');
+  assert.match(card, /Image generation details.*Paint the plaza/s);
+  assert.match(card, /Shot direction.*Step left/s);
+  for (const key of ['story', 'lines', 'direction']) {
+    const control = card.match(new RegExp('<button[^>]+aria-controls="(shot-content-1-' + key + ')"[^>]*>(.*?)</button>'));
+    assert.ok(control);
+    assert.match(control[2], /^<svg.*<\/svg>$/);
+    assert.ok(card.includes('popover="manual" role="region"'));
+    assert.ok(card.includes('id="' + control[1] + '"'));
+  }
+  assert.doesNotMatch(card,/role="tablist"|type="radio"/);
   assert.doesNotMatch(card, /Earlier single-shot prompt|>Prompt<|>Video prompt</);
-  assert.match(render('shotBodyHtml(first, [], false)'), /Earlier single-shot prompt/);
+  assert.match(render('shotBodyHtml(first, [], false, 1)'), /Earlier single-shot prompt/);
+  context.window.STRUCTURE = {scenes:[{no:1,speakers:[],frames:{start:'opening.png'}}]};
+  Object.assign(first,{scene:1,shot:{render:{mode:'generated_video'}}});
+  const sceneCard = () => render('shotBodyHtml(first, [], true, 1)');
+  assert.match(sceneCard(),/shot-body lines-only/);
+  assert.doesNotMatch(sceneCard(),/shot-refs|Start image|End image/);
+  first.referenceImage = 'guide.png';
+  context.safeSrc = file => file;
+  assert.match(sceneCard(),/Shot reference.*guide.png/s);
+  assert.doesNotMatch(sceneCard(),/shot-refs|opening.png/);
 });
 
 test('offline direction icons identify inherited shots and show the middle override in both languages', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url),'utf8');
-  const source = template.slice(template.indexOf('  function directionAttributes'), template.indexOf('  function sceneVideoPromptHtml'));
-  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window <light>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
+  const source = template.slice(template.indexOf('  function esc('), template.indexOf('  function copy(')) +
+    template.slice(template.indexOf('  function detailControl'), template.indexOf('  function sceneVideoPromptHtml'));
+  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window "light" <left>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
   const cards = [{}, {visual:{camera:{movement:'dolly in',target:'the letter',speed:'slow'}, expression:{mina:'Narrowed eyes.'}}}, {}];
   cards[1].shot = {techniques:[{id:'camera.rack-focus',from:'the ribbon',to:'the bell'}]};
   cards[1].visual.frames = {mode:'first_last',endState:'The raven closes its claw.'};
@@ -84,13 +111,22 @@ test('offline direction icons identify inherited shots and show the middle overr
   const rows = direction.resolve(sc,cards);
   for (const lang of ['ko','en']) {
     const context = {LANG:lang, sc, cards, rows, window:{SCENE_DIRECTION:direction,FILM_TECHNIQUES:film},
-      camIcon:id=>'<svg data-camera="'+id+'"></svg>', esc:s=>String(s).replaceAll('<','&lt;')};
+      camIcon:id=>'<svg data-camera="'+id+'"></svg>'};
     const render = expr => runInNewContext(source+'\n'+expr,context);
     const header = render('directionAttributes(sc,rows.defaults)');
-    assert.match(header,/data-camera="camera.static"/); assert.match(header,/Window &lt;light>/);
+    assert.match(header,/data-camera="camera.static"/);
+    assert.match(header,/data-attribute="lighting"[^]*?Window &quot;light&quot; &lt;left&gt;/);
     assert.match(header,/data-attribute="emotion"/);
-    const html = cards.map((_,i) => render('directionAttributes(sc,rows.shots['+i+'],cards['+i+'])'));
+    assert.match(header,/class="scene-direction-icon"[^>]*aria-expanded="false"[^>]*aria-controls="([^"]+)"[^>]*>[\s\S]*?popover="manual" role="tooltip" id="\1"/);
+
+    const html = cards.map((_,i) => render('directionAttributes(sc,rows.shots['+i+'],cards['+i+'],false,'+(i+1)+')'));
     assert.equal(html.filter(value=>value.includes('camera.static')).length,2);
+    for (const [index, row] of html.entries()) {
+      const control = row.match(/<button[^>]*data-attribute="camera"[^>]*aria-controls="([^"]+)"[^>]*>(.*?)<\/button>/);
+      assert.equal(control[1], 'shot-dir-' + (index + 1) + '-camera');
+      assert.match(control[2], /^<svg.*<\/svg>$/);
+      assert.ok(row.includes('popover="manual" role="tooltip" id="' + control[1] + '"'));
+    }
     assert.match(html[1],/camera.dolly-in/); assert.match(html[1],/slow · the letter/);
     assert.ok(html[1].includes(lang==='ko'?'샷 예외':'Shot override'));
     assert.ok(html[2].includes(lang==='ko'?'씬 기본':'Scene default'));
@@ -103,10 +139,27 @@ test('offline direction icons identify inherited shots and show the middle overr
     assert.doesNotMatch(html[1],/The clerk/);
     assert.match(html[2],/The clerk/);
     assert.doesNotMatch(html[1],/camera.static/);
-    const still = render('directionAttributes(sc,rows.shots[0],cards[0],true)');
+    const still = render('directionAttributes(sc,rows.shots[0],cards[0],true,1)');
     assert.match(still,/data-attribute="lighting"/);
     assert.doesNotMatch(still,/data-attribute="camera"/);
   }
+});
+
+test('the scroll that brings a keyboard-focused icon into view keeps its detail open', () => {
+  const html = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = html.indexOf('    function viewportChanged(');
+  const listeners = {}, calls = [];
+  const window = { innerWidth: 375, innerHeight: 700, addEventListener: (type, fn) => { listeners[type] = fn; } };
+  const rect = { top: 540, bottom: 584, left: 24, right: 68 };
+  const button = { matches: selector => selector === ':focus-visible', getBoundingClientRect: () => rect };
+  runInNewContext(html.slice(start, html.indexOf('  })();', start)), {
+    window, box: {}, cur: button, position: r => calls.push(r), hide: () => calls.push('hidden'),
+  });
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect]);
+  rect.top = 720; rect.bottom = 764;
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect, 'hidden']);
 });
 
 test('a background export shows the saved scene prompt when the board matches and references are unchecked', t => {
@@ -130,7 +183,7 @@ test('a background export shows the saved scene prompt when the board matches an
     require('../../skills/storyboard/references/video-production.js').write(episode);
     const snapshot = readFileSync(join(dir, 'video-production-data.js'), 'utf8');
     return runInNewContext(snapshot + source + '\nsceneVideoPromptHtml(sc, grp)', {
-      window: {}, sc, grp: { scene: 1, items: [{ i: 0, s }] }, LANG: 'en', T: { shotCap: n => 'Shot ' + n },
+      window: { VIDEO_PRODUCTION_REVIEW: review }, sc, grp: { scene: 1, items: [{ i: 0, s }] }, LANG: 'en', T: { shotCap: n => 'Shot ' + n },
       esc: value => String(value).replaceAll('<', '&lt;'),
     });
   }
@@ -395,8 +448,9 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 27 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 28 + FONT_ASSETS.length);
     assert.ok(existsSync(join(dir,'audience-review-data.js')));
+    assert.ok(existsSync(join(dir, 'ttalkkak-story.svg')));
     const file = join(dir, 'storyboard.html');
     const original = readFileSync(file, 'utf8');
     const title = '<title>Episode $& — 로컬 검토</title>';
@@ -424,7 +478,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 27 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 28 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');

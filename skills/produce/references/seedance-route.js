@@ -1,29 +1,23 @@
 'use strict';
 
-// Planning constraints mirror the server table; seedance-route.test.mjs checks drift.
-const MODELS = {
-  'dreamina-seedance-2-0-260128': { family: '2-0', duration: [4, 15], resolutions: ['480p', '720p', '1080p', '4k'], images: 9, videos: 3, audio: true },
-  'dreamina-seedance-2-5-260628': { family: '2-5', duration: [4, 30], resolutions: ['480p', '720p', '1080p'], images: 30, videos: 10, audio: true },
-  'dreamina-seedance-2-0-fast-260128': { family: '2-0-fast', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true },
-  'dreamina-seedance-2-0-mini-260615': { family: '2-0-mini', duration: [4, 15], resolutions: ['480p', '720p'], images: 9, videos: 3, audio: true }
-};
+// The build projects the server's adapter table into the catalog shared with the storyboard.
+const { adapters } = require('../../_shared/video-catalog.json');
+const { modelConstraints } = adapters.find(a => a.tool === 'seedance_reference');
+const MODELS = Object.fromEntries(Object.entries(modelConstraints).map(([model, spec]) => [model, {
+  family: model.replace('dreamina-seedance-', '').replace(/-\d{6}$/, ''),
+  duration: spec.duration, resolutions: spec.resolutions, taskTypes: spec.referenceTaskTypes, images: spec.referenceImages[1],
+  videos: spec.referenceVideos.maxClips, voices: spec.referenceAudio.maxClips, audioOnly: spec.referenceAudio.audioOnly, audio: spec.audio,
+}]));
+const { selectOperation, seedanceMedia } = require('../../_shared/video-selection.js');
 const { forecastHostedVideo, hostedSelection } = require('../../_shared/hosted-video-forecast.js');
 const DEFAULT_MODEL = 'dreamina-seedance-2-0-260128';
 const { checkFrames, framePlan, previzHandoff } = require('../../storyboard/references/render-routing.js');
 
-// A model may render a resolution the price table has no row for. Forecasting silently drops
-// such a shot, so the plan is rejected here instead. Mirrors autoproduce/references/prices.tsv;
-// seedance-route.test.mjs checks the drift.
-const PRICED = new Set([
-  'seedance.2-0-mini.720p', 'seedance.2-0-fast.720p',
-  'seedance.2-0.1080p', 'seedance.2-5.720p', 'seedance.2-5.1080p',
-  // with a reference video (the previz lane): input + output seconds at the with-video rate
-  'seedance.2-0-video.1080p', 'seedance.2-5-video.720p', 'seedance.2-5-video.1080p',
-  'seedance.2-0-fast-video.720p', 'seedance.2-0-mini-video.720p',
-]);
+const PRICED = new Set(Object.values(MODELS).flatMap(spec => spec.resolutions.flatMap(res =>
+  [`seedance.${spec.family}.${res}`, `seedance.${spec.family}-video.${res}`])));
 
 // Seedance-only settings on another engine's slot would skip every check below.
-const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'previz'];
+const SEEDANCE_KEYS = ['model', 'modelPurpose', 'modelReason', 'referenceImagePaths', 'referenceAudioPaths', 'referenceVideoTaskIds', 'previz'];
 
 /** Resolve a planned shot before either forecasting or calling the generation tool. */
 function scenePlan(scene, production) {
@@ -39,7 +33,7 @@ function scenePlan(scene, production) {
   const kind = scene.type === 'broll' ? 'broll' : v.video ? 'motion'
     : scene.type === 'quote' && v.clip && typeof v.clip === 'object' ? 'quote' : null;
   if (!kind) return null;
-  const settings = Object.assign({}, v, kind === 'motion' ? v.video : kind === 'quote' ? v.clip : {});
+  const settings = { ...v, ...mode.videoSlot(scene) };
   const choice = hostedSelection(production, scene);
   if (choice) {
     for (const key of ['engine', 'model', 'resolution', 'operation']) delete settings[key];
@@ -56,7 +50,7 @@ function scenePlan(scene, production) {
   // time, so a board only asks for it where nobody is waiting. Like `host` it takes none of the
   // Seedance planning fields.
   const engine = settings.engine || (settings.model?.startsWith('veo-') ? 'veo' : 'seedance');
-  if (['veo', 'ltx-api'].includes(engine)) return forecastHostedVideo({ scene, settings, engine, kind });
+  if (['veo', 'ltx-api', 'ltx-desktop-local'].includes(engine)) return forecastHostedVideo({ scene, settings, engine, kind });
   if (!['seedance', 'host', 'astra'].includes(engine)) throw new Error('unknown video engine: ' + engine);
   if (engine !== 'seedance') {
     const refs = Array.isArray(v.references) ? v.references.filter(ref => ['video', 'both'].includes(ref.use)) : [];
@@ -75,8 +69,13 @@ function scenePlan(scene, production) {
     throw new Error('unknown modelPurpose: ' + purpose);
   const references = v.references === undefined ? (settings.referenceImagePaths || []) : require('../../storyboard/references/render-routing.js').imageReferences(scene).filter(ref => ['video', 'both'].includes(ref.use)).map(ref => ref.path);
   if (v.references !== undefined && references.length && v.frames?.mode !== 'reference') throw new Error('image_plan_unsupported: pinned frames cannot be combined with video references');
-  const voices = settings.referenceAudioPaths || [];
-  for (const [name, values] of [['referenceImagePaths', references], ['referenceAudioPaths', voices]]) {
+  const media = seedanceMedia(scene);
+  const paths = media.referenceVideoPaths || [], urls = media.referenceVideoUrls || [];
+  const originals = media.referenceVideoTaskIds ?? [];
+  if (!Array.isArray(originals) || originals.some(id => typeof id !== 'string' || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(id)))
+    throw new Error('referenceVideoTaskIds must contain Seedance generation task IDs');
+  const voices = media.referenceAudioPaths || [];
+  for (const [name, values] of [['referenceImagePaths', references], ['referenceAudioPaths', voices], ['referenceVideoPaths', paths], ['referenceVideoUrls', urls]]) {
     if (!Array.isArray(values) || values.some(x => typeof x !== 'string' || !x.trim()))
       throw new Error(name + ' must be an array of nonempty paths');
   }
@@ -99,30 +98,42 @@ function scenePlan(scene, production) {
     if (referencePreviz && (!references.length || references[0] !== (v.bg || ''))) throw new Error('previz route: referenceImagePaths[0] must be the source still (visual.bg) — "Image 1 is the first frame"');
     if (referencePreviz && settings.lastImagePath !== undefined) throw new Error('previz route takes no end frame — the reference route cannot carry last_frame');
   }
+  const saved = Boolean(production?.modelSettings?.models?.video || production?.videoModel?.engine === 'seedance' || production?.modelSettings?.overrides?.length);
+  const operation = settings.operation || (saved && selectOperation(settings, [scene]).operation);
+  const spoken = (scene.narration || []).some(line => line.tts?.trim() && ['on_screen', 'off_screen'].includes(line.delivery));
   const needsVoice = purpose === 'fixed-voice' || voices.length > 0;
-  const needsReference = purpose === 'reference' || referencePreviz || references.length > 0 || needsVoice;
+  const videoCount = paths.length + urls.length + originals.length;
+  const task = media.omniReferenceTaskType;
+  const needsReference = videoCount > 0 || Boolean(task) || operation === 'reference' || purpose === 'reference' || referencePreviz || references.length > 0 || needsVoice;
   const suggested = needsVoice || references.length > 9 ? 'dreamina-seedance-2-5-260628'
     : needsReference || purpose === 'complex-motion' ? 'dreamina-seedance-2-0-260128' : DEFAULT_MODEL;
   const model = settings.model || suggested;
   const spec = MODELS[model];
   if (!spec) throw new Error('unknown Seedance model: ' + model);
+  if (videoCount > spec.videos) throw new Error(model + ' accepts at most ' + spec.videos + ' reference videos');
+  if (task && !spec.taskTypes.includes(task))
+    throw new Error('Unsupported Seedance reference task for ' + model);
+  if (['edit','extend'].includes(task) && (!videoCount || settings.ratio && settings.ratio !== 'adaptive'))
+    throw new Error('Editing and extension require a video and adaptive ratio');
   if (referencePreviz && !spec.videos)
     throw new Error(model + ' takes no reference video — use previz.handoff:"frame_and_prompt" and omit reference arrays, or choose a model with video input');
-  if (spec.images && settings.realFaceInput !== false)
-    throw new Error('Seedance requires realFaceInput:false after inspecting all source/reference images; photoreal faces use an LTX engine (astra)');
+  if (spec.images && !saved && typeof media.realFaceInput !== 'boolean')
+    throw new Error('Specify realFaceInput:false for ordinary media or true for reviewed ModelArk portrait assets');
   if (needsReference && !spec.images) throw new Error(model + ' does not accept reference images/audio');
   if (references.length > spec.images) throw new Error(model + ' accepts at most ' + spec.images + ' reference images');
-  if (needsReference && !references.length && !voices.length) throw new Error('reference route needs referenceImagePaths or referenceAudioPaths');
+  if (needsReference && !saved && !references.length && !voices.length && !videoCount) throw new Error('reference route needs referenceImagePaths or referenceAudioPaths');
   if (settings.lastImagePath !== undefined && (typeof settings.lastImagePath !== 'string' || !settings.lastImagePath.trim() || needsReference))
     throw new Error('lastImagePath needs a supported image-to-video route and a nonempty local path');
-  if (needsVoice && (!voices.length || spec.family !== '2-5')) throw new Error('fixed-voice route requires Seedance 2.5 and referenceAudioPaths');
-  if (voices.length > 10) throw new Error('Seedance 2.5 accepts at most 10 reference audio clips');
-  const generateAudio = kind !== 'motion';
+  if (needsVoice && (!voices.length || !spec.audioOnly && !references.length && !videoCount)) throw new Error('fixed-voice route needs reference audio and a compatible visual reference');
+  if (voices.length > spec.voices) throw new Error(model + ' accepts at most ' + spec.voices + ' reference audio clips');
+  if (operation && !['text', 'image', 'reference'].includes(operation)) throw new Error('Unsupported Seedance operation: ' + operation);
+  if (operation && operation !== 'reference' && (needsReference || spoken)) throw new Error('Seedance needs the reference operation for the selected inputs or speech');
+  const generateAudio = saved ? (spoken || Boolean(media.generateAudio)) : kind !== 'motion';
   if (settings.generateAudio !== undefined && settings.generateAudio !== generateAudio)
     throw new Error('generateAudio must be ' + generateAudio + ' for a ' + kind + ' slot');
   if (needsVoice && !generateAudio) throw new Error('fixed voice needs a b-roll or speaking slot; motion backgrounds discard audio');
   if (generateAudio && !spec.audio) throw new Error(model + ' cannot supply the audio this slot uses');
-  const resolution = settings.resolution || '1080p';
+  const resolution = settings.resolution || (saved ? '720p' : '1080p');
   if (!spec.resolutions.includes(resolution)) throw new Error(model + ' does not support ' + resolution);
   const used = Number(scene.duration);
   if (!Number.isFinite(used) || used <= 0) throw new Error('Seedance scene needs a positive duration');
@@ -134,7 +145,13 @@ function scenePlan(scene, production) {
     if (referencePreviz && !spec.videos) throw new Error(model + ' does not accept a reference video');
     if (previz.seconds !== durationSeconds) throw new Error('previz.seconds (' + previz.seconds + ') must equal the billed length ' + durationSeconds + 's — render the previz at the cut length');
   }
-  const family = spec.family + (referencePreviz ? '-video' : '');
+  const adaptive = task === 'edit' || settings.durationSeconds === -1;
+  const outputSeconds = adaptive ? spec.duration[1] : (settings.durationSeconds ?? durationSeconds);
+  if (!Number.isInteger(outputSeconds) || outputSeconds < durationSeconds || outputSeconds > spec.duration[1] ||
+      task === 'edit' && settings.durationSeconds !== undefined && settings.durationSeconds !== -1)
+    throw new Error('Invalid Seedance output duration for the planned shot');
+  const inputSeconds = videoCount ? (referencePreviz && videoCount === 1 ? previz.seconds : spec.duration[1]) : 0;
+  const family = spec.family + (videoCount ? '-video' : '');
   const priceKey = 'seedance.' + family + '.' + resolution;
   if (!PRICED.has(priceKey)) {
     const priced = [...PRICED].filter((k) => k.startsWith('seedance.' + family + '.'))
@@ -142,12 +159,15 @@ function scenePlan(scene, production) {
     throw new Error(model + ' has no price for ' + resolution +
       (priced.length ? ' — this model is billed at ' + priced.join(', ') : ' — this model has no price row'));
   }
-  return { kind, engine, model, resolution, durationSeconds, generateAudio,
-    tool: needsReference ? 'seedance_reference' : 'seedance_img2video',
+  return { kind, engine, model, resolution, ...(typeof media.realFaceInput === 'boolean' ? {realFaceInput:media.realFaceInput} : {}), durationSeconds: adaptive ? -1 : outputSeconds, generateAudio,
+    tool: needsReference ? 'seedance_reference' : operation === 'text' ? 'seedance_text2video' : 'seedance_img2video',
     referenceImagePaths: references, referenceAudioPaths: voices,
     ...(settings.lastImagePath ? { lastImagePath: settings.lastImagePath } : {}),
     // The vendor bills input + output seconds when a video is attached.
-    ...(referencePreviz ? { referenceVideoPaths: [previz.clip], billedSeconds: durationSeconds + previz.seconds } : {}),
+    ...(paths.length ? { referenceVideoPaths: paths } : {}), ...(urls.length ? { referenceVideoUrls: urls } : {}),
+    ...(originals.length ? { referenceVideoTaskIds: originals } : {}),
+    ...(task ? { omniReferenceTaskType: task } : {}),
+    ...(adaptive || videoCount ? { billedSeconds: outputSeconds + inputSeconds } : {}),
     priceKey,
     reason: settings.modelReason || model + ' / ' + purpose };
 }

@@ -2,13 +2,20 @@
 (function (root) {
   'use strict';
   const text = value => typeof value === 'string' && !!value.trim();
+  // Storyboards store a motion prompt on video, a b-roll prompt on visual, and speaking clips on clip.
+  function videoSlot(shot) {
+    const v = shot.visual || {};
+    if (shot.type === 'broll') return { ...v.video, ...v };
+    if (shot.type === 'quote' && v.clip && typeof v.clip === 'object') return v.clip;
+    return v.video;
+  }
   function resolveVideoChoice(production, shot, snapshotVideo) {
     const shotId = String(shot.id ?? shot.shot?.id);
     const object = value => value && typeof value === 'object' && !Array.isArray(value);
     let selection = snapshotVideo;
     let source = snapshotVideo ? 'episode_snapshot' : 'legacy_board';
     if (!selection) {
-      const v = shot.visual?.video;
+      const v = videoSlot(shot);
       const model = v?.model || production.videoModel?.model;
       const engine = ['host', 'astra'].includes(production.videoProvider) ? production.videoProvider : v?.engine || production.videoModel?.engine || (
         typeof model === 'string' && model.includes('seedance') ? 'seedance' : typeof model === 'string' && model.startsWith('veo-') ? 'veo' : /^ltx-2-5-(pro|fast)$/.test(model) ? 'ltx-api' : undefined);
@@ -19,9 +26,9 @@
     }
     // Preserve pre-existing per-cut and episode choices before applying scoped changes.
     if (snapshotVideo) {
-      for (const [choice, origin] of [[production.videoModel, 'board_episode'], [shot.visual?.video, 'board_shot']]) {
+      for (const [choice, origin] of [[production.videoModel, 'board_episode'], [videoSlot(shot), 'board_shot']]) {
         if (!choice || choice.model === 'mixed') continue;
-        if (!choice.engine && !choice.model && !choice.resolution) continue;
+        if (!choice.engine && !choice.model && !choice.resolution && !choice.operation) continue;
         const engine = choice.engine || (choice.model?.includes('seedance') ? 'seedance' : choice.model?.startsWith('veo-') ? 'veo' : selection.engine);
         const next = { ...(engine === selection.engine ? selection : {}), engine, ...Object.fromEntries(['engine','model','resolution','host','operation'].filter(k => choice[k] !== undefined).map(k => [k, choice[k]])) };
 
@@ -98,13 +105,8 @@
     ? require('../../_shared/video-catalog.json') : { adapters: root.REVIEW_VIDEO_ADAPTERS || [] };
   const engines = new Set(['host', ...catalogue.adapters.map(adapter => adapter.engine)]);
   const seedanceContract = catalogue.adapters.find(adapter => adapter.tool === 'seedance_img2video');
-  const priced = typeof module === 'object' && module.exports ? require('../../produce/references/seedance-route.js').PRICED : new Set();
   const VIDEO_MODELS = Object.fromEntries(Object.entries(seedanceContract?.modelConstraints || {})
-    .filter(([, spec]) => spec.referenceVideos)
-    .map(([model, spec]) => [model, { label: model.replace(/^(dreamina-)?seedance-/, 'Seedance ').replace(/-\d{6}$/, '').replace(/(\d)-(\d)/, '$1.$2').replace(/-/g, ' ').replace(/ pro$/, ' Pro'), resolutions: spec.resolutions.filter(res => {
-      const family = model.replace(/^(dreamina-)?seedance-/, '').replace(/-\d{6}$/, '');
-      return priced.has('seedance.' + family + '-video.' + res);
-    }) }]).filter(([, spec]) => spec.resolutions.length));
+    .map(([model, spec]) => [model, { label: model.replace(/^dreamina-seedance-/, 'Seedance ').replace(/-\d{6}$/, '').replace(/(\d)-(\d)/, '$1.$2').replace(/-/g, ' '), resolutions: spec.resolutions }]));
 
   // Our own LTX-2.5 box is not a tier in the table above: it has no price, so nothing to compare.
   // Its dimensions follow the board FORMAT while staying on the 64-pixel grid and below the area ceiling.
@@ -450,7 +452,7 @@
       prompt: 'Photoreal live-action cinematography: life-size human proportions, natural skin and fabric texture, real locations, physically plausible light and photographic lenses; every surface reads as a real material at real scale.' },
     'webtoon': { label: '웹툰풍', looks: ['webtoon'],
       prompt: 'Korean webtoon illustration: consistent expressive character linework, clean contour lines, controlled cel shading, illustrated backgrounds and a coherent drawn palette; skin and cloth are drawn, and the frame is one unbroken picture.' },
-    // Added 2026-09-08 from the Shorts style survey (docs/research/2026-09-08-shorts-visual-styles).
+    // Added 2026-09-08 from the Shorts style survey (1eabc4fb:docs/research/2026-09-08-shorts-visual-styles).
     // Named studios and living artists stay out of every prompt: the image lane refuses them.
     'claymation': { label: '클레이 스톱모션', looks: ['clay'],
       prompt: 'Stop-motion claymation: matte plasticine figures and sets with visible thumbprints and slight surface imperfections, chunky simplified forms, handcrafted miniature props, warm tactile studio light and soft contact shadows; the whole frame is one sculpted scene photographed on a set.' },
@@ -779,7 +781,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { videoSlot, resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

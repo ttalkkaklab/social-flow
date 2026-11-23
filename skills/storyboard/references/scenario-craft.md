@@ -20,7 +20,7 @@ unattended path scores them (scenario mode). The engine table and that loop live
 scenario-stage reference the skill loads. §4 · §5 · §6 here are what
 "working" means for those four; the candidate stage is where they are the bar.
 
-Survey with sources: [docs/research/2026-08-25-scenario-craft](../../../docs/research/2026-08-25-scenario-craft/).
+Survey with sources: [scenario craft study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-25-scenario-craft).
 Grades follow the repo convention — **craft canon** (the standard playbook of a named
 practitioner or theorist, no measurement), **measured** (published measurement), **field
 practice** (practitioner reports, unsourced).
@@ -240,7 +240,7 @@ curiosity — the hook has to sit close enough that the answer feels reachable. 
   next one is the part people argue about"). A chapter title is a search phrase; the
   mini-hook is a narration sentence, and it's the chapter's own catch job.
 - **Short-form re-hooks ride the cut** (measured on one reference short, 85 s, 2026-08-29 —
-  docs/research/2026-08-29-one-world-word-cue). The piece opens a new question every 13–15 s,
+  https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-one-world-word-cue). The piece opens a new question every 13–15 s,
   and those are the only places its picture cuts: 「그럼 대체 왜 저걸 입고 들어가는 걸까요?」
   at 13 s, 「근데 진짜 재앙은 따로 있습니다」 at 33 s, 「그럼 납으로 만들면 되지 않을까요?」
   at 48 s (the viewer's own objection, asked for them), 「결국 인류는 막는 걸 포기합니다」 at
@@ -426,7 +426,7 @@ for yet, and the seams read "and then", which §1 already bans one cut at a time
 bans it at the storyline level: lay the episode out as an **investigation of one question**,
 and settle which investigation shape 전개 #1 rides inside before any scene exists — in the
 scenario itself on story-v2 (no approval step), at the §2.5 question on legacy story-v1 boards. Survey with graded sources:
-[docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/).
+[long-form story structure study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-longform-storyline).
 Our own retention report (2026-08-26, n=4) points the same way — the mystery-shaped subject
 held a flat curve and finished first.
 
@@ -585,7 +585,7 @@ tie-breaker under both is stated as flatly in 2011 ("드라마는 예술이 아�
 truth, and this one says the remaining freedom goes to interest. Craft canon (a named
 practitioner's stated method; no measurement behind any of it, and none of it was calibrated on
 short-form). Survey with sources:
-[docs/research/2026-09-04-kim-eunsook-craft](../../../docs/research/2026-09-04-kim-eunsook-craft/).
+[study of Kim Eun-sook’s screenwriting](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-04-kim-eunsook-craft).
 
 > "저는 1회부터 20회까지 각 편당 엔딩지점만 잡고, 인상적인 장면 10개 정도만 미리 만들어 놓고
 > 스토리를 만들어요." — 『방송작가』 2011년 2월호
@@ -693,7 +693,7 @@ retention measurement behind it.
 - Muller, "Saying the wrong thing: improving learning with multimedia by including misconceptions" (J. Computer Assisted Learning, 2008) — the false-answer beat (§11). Measured.
 - ["How to succeed in MrBeast production"](https://simonwillison.net/2024/Sep/15/how-to-succeed-in-mrbeast-production/) (leaked handbook, 2024) — first-minute exit, expectation match, segment ladder (§11). Field practice.
 - [YouTube Creator Playbook — the first 15 seconds](https://blog.youtube/creator-and-artist-stories/youtube-creator-playbook-tips-first-15/) — open on the finished result (§11). Platform official.
-- Structure survey (chronological-trap naming, the six body shapes, layered loops) — blog grade, collected and graded in [docs/research/2026-08-29-longform-storyline](../../../docs/research/2026-08-29-longform-storyline/). Field practice.
+- Structure survey (chronological-trap naming, the six body shapes, layered loops) — blog grade, collected and graded in [long-form story structure study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-29-longform-storyline). Field practice.
 - Loewenstein, ["The Psychology of Curiosity"](https://www.cmu.edu/dietrich/sds/docs/golman/golman_loewenstein_curiosity.pdf) (1994, and Golman & Loewenstein 2015) — information gap. Craft canon / measured.
 - Redelmeier & Kahneman, ["Patients' memories of painful medical treatments"](https://doi.org/10.1016/0304-3959(96)02994-6) (Pain, 1996) + Fredrickson & Kahneman (1993) — peak-end rule. Measured (clinical/lab, not short-form).
 - Own-channel analytics, 4 Shorts (2026-08) — retention rank vs. view rank, watch-time
@@ -717,7 +717,7 @@ retention measurement behind it.
 - [Alphacut, "유튜브 쇼츠 조회수 안 나오는 진짜 이유 — 후킹 전략 5가지"](https://alphacut.video/blog/shorts-hooking-strategy) · [피카클립, "숏드라마가 터지는 이유"](https://fikad.boo/blog/183059) — loss-first hooks, the short-drama beat recipe (§12). Field practice, unsourced.
 - [레이디경향, 스토리피아 랩 인터뷰 ③ — 윤수영](https://lady.khan.co.kr/culture/article/202410310700011) (2024-10) — hook and ending first, 의외성 (§12). Field practice.
 - Short-form CTA practitioner guides ([Zebracat](https://www.zebracat.ai/post/best-youtube-shorts-call-to-actions), [The Indie Practice](https://www.theindiepractice.com/blog/short-form-video-call-to-actions-cta-ideas)) — one CTA, tied to the message, no stacked asks (§12). Field practice.
-- Collected and graded in [docs/research/2026-08-30-shortform-catharsis](../../../docs/research/2026-08-30-shortform-catharsis/).
+- Collected and graded in [short-form payoff study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-30-shortform-catharsis).
 - 김은숙 interview, 『방송작가』 2011년 2월호 — "신데렐라 이야기의 종결자 <시크릿가든> 김은숙
   작가" (김주영 책임편집위원, `ktrwawebzine.kr/common/pdf/2011/2011-02.pdf`) — the endings-first
   grid, the ten set pieces, the five options, the half step, character as a way of solving,
@@ -734,4 +734,4 @@ retention measurement behind it.
   [국민일보](https://www.kmib.co.kr/article/view.asp?arcid=0014688869) (더 킹, 2020) — the
   endings that took something back, and the whole-step premise that lost its audience (§13).
   Field practice.
-- Collected and graded in [docs/research/2026-09-04-kim-eunsook-craft](../../../docs/research/2026-09-04-kim-eunsook-craft/).
+- Collected and graded in [study of Kim Eun-sook’s screenwriting](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-04-kim-eunsook-craft).

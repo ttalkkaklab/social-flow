@@ -96,7 +96,7 @@ export async function runVendorJob(job) {
     return { success: false, error: `${job.vendor} job ${id} still running after ${(maxPolls * interval) / 60_000} minutes; check it at the vendor and settle the request with video_status action:reconcile — do not resubmit`, terminal: false, providerId: id };
 }
 /** Downloads and recovery publish a complete file atomically, even if the process is interrupted. */
-export async function saveVendorOutput(status, target, id) {
+export async function saveVendorOutput(status, target, id, verify) {
     const temporary = target + '.' + randomUUID() + '.tmp';
     try {
         let bytes;
@@ -111,6 +111,8 @@ export async function saveVendorOutput(status, target, id) {
         if (!bytes.length)
             throw new Error('empty video');
         fs.writeFileSync(temporary, bytes, { flag: 'wx' });
+        if (verify)
+            await verify(temporary);
         fs.renameSync(temporary, target);
         return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
     }

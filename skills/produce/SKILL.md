@@ -32,18 +32,13 @@ The builder verifies silence and preserves the frame clock without loudness scor
 For tracked props, read [prop continuity](../storyboard/references/prop-continuity.md). Resolve the shot snapshot before prompts, preserve reference versions and record the snapshot with generated assets; verify the actual holder and condition in images and clips.
 **New authoring contract (2026-10-16):** Read [character-led scenarios](../storyboard/references/character-scenarios.md) first. New scenarios use `scenario-v2` and boards use `story-v2`: cast existing characters (including narrators), choose evidence/fiction/adapted, write observable actions and attributed speech, and review the whole performance. Its type-specific grounding and rubric replace the legacy research quotas, forced wow/engine mix, spoken-message and narration-only requirements below. Legacy unversioned scenarios and story-v1 boards keep their existing checks. Production voice, budget and publishing consent are unchanged.
 # Per-platform content production — data/[channel]/episodes/[topic]/output/
-**Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md): `shot_image` makes each shot's start image (and the end image a first_last shot needs), `story_scene.videoDirection` records the opening positions, emotion and any essential action. Follow [scene generation](../generate-cut-videos/SKILL.md) to produce one approved video per scene with its authored cuts. For assembly, use the take once and assign observed source intervals if the edit keeps several cards. Reviews and Blender compositions run only when the user asks; preserve their findings without claiming a pass.
+**Production order (user directive, 2026-10-31):** Follow [production order](../_shared/production-workflow.md): `shot_image` makes the scene anchors and optional shot references, `story_scene.videoDirection` records the opening positions, emotion and any essential action. Follow [scene generation](../generate-cut-videos/SKILL.md) to produce one approved video per scene with its authored cuts. For assembly, use the take once and assign observed source intervals if the edit keeps several cards. Reviews and Blender compositions run only when the user asks; preserve their findings without claiming a pass.
 **Owner directive (2026-10-17): every delivered video is subtitle-free, including speech.**
 This supersedes older burned-subtitle exceptions and rendering recipes below. Use the clean
 master on every platform. No subtitle/caption typography may be generated into clips or
 burned during editing. Keep exact dialogue for audio checks and optional separate YouTube
 subtitle files only when requested; existing subtitle files do not authorize uploading them.
-Use the selected adapter's prepared request and its no-visible-text policy. For ASTRA,
-use [render-astra-shot.js](references/render-astra-shot.js) after composing speech. It calls
-[prepare-astra-shot.js](references/prepare-astra-shot.js), pads a separate transport WAV
-and records a provisional candidate without changing the authored shot clock. It carries the performance timing
-into a motion prompt without literal dialogue or screenplay labels. `plan_video` remains
-the performance plan; its structured `videoPrompt` is not ASTRA's final provider prompt.
+Use the selected adapter's prepared request and its no-visible-text policy. For ASTRA, compose the scene audio, then plan and execute the complete scene. The retired [shot-render CLI](references/render-astra-shot.js) directs old commands to the scene planner.
 Do not paste literal dialogue into an audio-conditioned video prompt; the supplied WAV
 carries the exact spoken words.
 Inspect actual clips for accidental text; a no-text prompt alone does not prove clean frames.
@@ -202,7 +197,7 @@ Use [story-quality.md](../storyboard/references/story-quality.md) to improve the
    recording; subtitles and captions are also forbidden on the moving picture. A cut that needs an
    arrow, a figure or a principle is `kind:"diagram", motion:true, treatment:"editorial"` on
    the studio stage, with a rendered object when a thing is the subject, built to the quality
-   of `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`. The footage slide
+   of `skills/storyboard/examples/reference-slide.html`. The footage slide
    (`treatment:"footage"`) is retired and the checkers reject it.
 ## Procedure
 ### 1. Check the inputs
@@ -357,7 +352,7 @@ The §6 manifest references these file paths directly, so follow the naming belo
 motion-background scenes from scenes.js against the rule's list, with profile.md §3 open for
 the target person, and only then start the generation calls. The stills those clips are made
 from already exist and were already looked at (§1.5); an engine question about a still belongs
-there, in [still-generation.md](references/still-generation.md). **Every clip request in this section goes `video_catalog` → `video_plan` → `video_approve` (the user's yes) → `video_execute`** (`video_status` on resume) on the saved video model — except the audio-conditioned ASTRA cut, which the 2026-10-17 block above sends through `render-astra-shot.js`. With `videoProvider:"host"` the plan returns a `host_handoff` for the host `image_to_video` — same source PNG, same stored prompt, `video.host` in the ledger. A direct `seedance_*` / `astra_*` / `astra_genai_*` call appears only as the adapter the plan selected and must carry `videoContext: {episode, shotId, requestId}`; a configured workspace refuses one without it (`video_context_required`).
+there, in [still-generation.md](references/still-generation.md). **Every clip request in this section goes `video_catalog` → `video_plan` → `video_approve` (the user's yes) → `video_execute`** (`video_status` on resume) on the saved video model, including scenes with supplied audio. With `videoProvider:"host"` the plan returns a `host_handoff` for the host `image_to_video` — same source PNG, same stored prompt, `video.host` in the ledger. A direct `seedance_*` / `astra_*` / `astra_genai_*` call appears only as the adapter the plan selected and must carry `videoContext: {episode, sceneNo, requestId}`; a configured workspace refuses one without it (`video_context_required`).
 
 **What the storyboard already settled — pass it through, don't re-decide it.** These values
 arrive from scenes.js already chosen and already reviewed. Inventing a replacement at call time
@@ -424,7 +419,7 @@ means generating something nobody approved.
   lip-synced speaking cut — pass it as `referenceAudioPaths` and bind it in the prompt right
   after the reference list: `@Image 1-2 are Claude and speak with the voice of @Audio 1`. Two
   speakers, two clips, one sentence each; `@Audio N` is the Nth entry of `referenceAudioPaths`.
-  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.0/Fast/Mini accept reference audio with an image. Do not silently switch grades.
+  Use the saved compatible Seedance selection: 2.5 documents explicit mapping; 2.5 and Flash accept audio alone. On 2.0/Fast/Mini, include an image or video with the reference audio. Do not silently switch grades.
   `video_plan` preserves reference indices and maps pinned samples.
   An adapter whose voice lane is `none` refuses a spoken cut (`voice_lane_required`); use an
   audio2video adapter under shot-speech.md when the finished WAV must drive the mouth. A cut voiced
@@ -455,9 +450,9 @@ means generating something nobody approved.
   replacement that needs new spend goes through the budget check (`--before-call`)
   (video-generation §what the clip brought back).
 
-- **`visual.video.previz` — optional.** A previz helps camera and blocking when the saved model takes a reference clip (Seedance 2.x `reference_video`): pass the `generation` object's `referenceVideoPaths` to `seedance_reference` resolved from the storyboard directory like `referenceImagePaths` — never a re-rendered or substituted clip (its bytes are hash-bound; `check-production.js` flags a mismatch as stale). On a `frame_and_prompt` adapter (a host tool, ASTRA, image-to-video) it is advice only: the still edited from `previz.firstFrame` and the stored prompt carry its composition. No checker refuses a generated cut without one; when `.social-flow/models.json` has `production.previzRenderer` use that renderer, otherwise pick one and record it as an assistant decision. When a previz exists, check the result against it — a contact sheet at 0/25/50/75/100 % and an edge overlay ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
+- **`visual.video.previz` — optional.** A previz helps camera and blocking when the saved model takes a reference clip (Seedance 2.x `reference_video`): keep the authored clip on the storyboard. The managed planner binds its path and checks the file hash. On a `frame_and_prompt` adapter (a host tool, ASTRA, image-to-video) it is advice only: the still edited from `previz.firstFrame` and the stored prompt carry its composition. No checker refuses a generated cut without one; when `.social-flow/models.json` has `production.previzRenderer` use that renderer, otherwise pick one and record it as an assistant decision. When a previz exists, check the result against it — a contact sheet at 0/25/50/75/100 % and an edge overlay ([blender-previz.md](../storyboard/references/blender-previz.md) §6.4, §6.7). **Reuse the user's saved model choice**: `PRODUCTION.videoModel` holds it (directory model settings and storyboard §1.7). Populate a new board from its snapshot without another model question; preserve older boards' actual approved choices. Use `video-model-options.js storyboard/` only during first setup or an explicit requested change. Record each cut's selected model/resolution and recalculate costs when the user changes them; retain actual spending authorization.
 
-**Use the `generation` arguments from `cost-preview.js --json` as the `video_plan` operation args; resolve errors and re-estimate retries before spending. Prompt shape and per-slot recipe** —
+Use `cost-preview.js --json` for the estimate. Call `video_plan` with the episode, scene number and request ID so it resolves the saved model, authored references and selected voices. Inspect its final numbered inputs before approval. For the prompt and slot recipes, see
 [video-generation.md](references/video-generation.md). The engine is the saved video model;
 that document's voice → face → sound route is first-setup advice, while each engine's prompt
 shape and the per-slot recipes for b-roll, motion backgrounds and quote speaking clips apply
@@ -622,7 +617,7 @@ order.
    or actual mesh parts plus restrained arrows; kinetic `renderKinetic` puts the first art on
    group 1 then the title with `in`; type-only skips arts. An explanation slide is built on
    the studio stage to the bar of
-   `docs/research/2026-09-04-rendered-object-slide/reference-slide.html`; a `slide.object` is
+   `skills/storyboard/examples/reference-slide.html`; a `slide.object` is
    rendered with the mesh lane by default ([mesh-objects.md](../storyboard/references/mesh-objects.md)),
    or baked by Blender Cycles into a sheet when `renderer:"blender"` ([blender-objects.md](../storyboard/references/blender-objects.md) — rebake with the measured `--segs`);
    existing sheet objects are baked first. Use `h.mark.arrow` for refined curved arrows.

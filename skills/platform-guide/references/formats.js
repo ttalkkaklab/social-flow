@@ -150,7 +150,7 @@ const FORMATS = {
     introAsset: 'intro-master.mp4',
     stingerAsset: 'intro-stinger.mp4',
 
-    // The episode cover episode_cover renders (docs/research/2026-11-18-thumbnail-best-practices).
+    // The episode cover episode_cover renders (1eabc4fb:docs/research/2026-11-18-thumbnail-best-practices).
     // Bands are fractions of the canvas: core = the centre 16:9 slice (Shorts landscape surfaces),
     // support = the centre 1:1 (Instagram feed share), outer = the centre 3:4 (profile grids).
     // unverified holds platform facts nobody has measured on a live account yet; change the value

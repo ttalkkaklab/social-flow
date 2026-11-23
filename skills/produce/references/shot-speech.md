@@ -369,8 +369,7 @@ sets it. After each render the tool correlates picture motion with the speech lo
 (ffmpeg only, any OS, no upload). Under the routing contract a request submits once
 (`maxAttempts: 1`, video-routing.md); when no region moves with the speech the tool reports the
 measurement, and a retake with the same audio, image and prompt and a new seed is a new request
-within the episode attempt limit. `render-astra-shot.js`, which calls the runtime outside routing,
-keeps the runtime's own `maxAttempts` (default 2) for that retry and reserves `-attemptN` candidates.
+within the episode attempt limit.
 Every attempt's seed and measurement is written into the attempt's
 `.astra-job.json`. Speech cut off by the frame count and a clip track that differs from the
 WAV are reported without a retry, because another seed fixes neither. Mixed on-screen and
@@ -423,11 +422,7 @@ Use the built-in `speech_manage` sequence, not an episode-specific timing script
    `timingPatch.speechBoundActions:true` explicitly removes inherited concurrent-action
    durations. `timingPatch.actions:[[index,seconds]]` changes only the named standalone
    actions. No text, acting direction, voice identity or speech audio is rewritten.
-3. Recompose speech. For ASTRA call [render-astra-shot.js](render-astra-shot.js) with
-   `BOARD --shot ID --audio COMPOSED_WAV --output DIR --filename UNIQUE.mp4`. It uses
-   the canonical planner, pads a separate transport WAV to the provider frame grid,
-   preserves the speech and edit clocks, and records the generation before waiting.
-   Existing candidate/submission records prevent an accidental duplicate request.
+3. Recompose speech. Save the complete track on the scene, then plan the scene with its `sceneNo`. Inspect or recover its existing receipt before another attempt.
 4. Inspect candidates and adjacent cuts within the existing authorization. A motion/audio
    correlation ranking is only a provisional candidate, not a visual or phoneme review.
    `attach_video` preserves hash-bound synchronization warnings; assembly surfaces them.

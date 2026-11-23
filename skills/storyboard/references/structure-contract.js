@@ -1248,17 +1248,22 @@
   }
   // A picture route draws its shot from a generated start image (and an end image when first_last).
   const imageRoute = s => ['still_camera', 'generated_video'].includes(s.shot && s.shot.render && s.shot.render.mode);
+  function sceneOwnsFrames(win, shot) {
+    return shot.shot?.render?.mode === 'generated_video' &&
+      win.STRUCTURE?.scenes?.some(scene => scene.no === shot.scene && scene.frames !== undefined);
+  }
   /** Shots still waiting for icon attributes: a render route, and for a picture route its size, angle and frame plan. */
   function iconGaps(win) {
     return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type)).flatMap(s => {
       const p = s.shot || {}, frames = s.visual && s.visual.frames;
       if (!(p.render && p.render.mode)) return ['shot ' + (s.id || '?') + ' has no render route'];
-      return imageRoute(s) && !(p.size && p.angle && frames && frames.mode) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
+      return imageRoute(s) && !(p.size && p.angle && (sceneOwnsFrames(win, s) || frames && frames.mode)) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
     });
   }
   /** Picture-route shots still waiting for their start image, or the end image a first_last plan needs. */
   function imageGaps(win) {
     return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type) && imageRoute(s)).flatMap(s => {
+      if (sceneOwnsFrames(win, s)) return [];
       const frames = s.visual && s.visual.frames || {};
       return !text(frames.start) ? ['shot ' + (s.id || '?') + ' has no start image']
         : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];

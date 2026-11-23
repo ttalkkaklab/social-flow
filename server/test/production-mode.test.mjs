@@ -105,7 +105,9 @@ test('quotes six choices with billed seconds, retry range and API rates, excludi
   win.SCENES.push({ type: 'broll', duration: 20, visual: { source: 'recording', clip: 'evidence.mp4' } });
   assert.equal(quote(win).options.full_video.clips, 15);
   win.PRODUCTION.comparison = { resolution: '480p' };
-  assert.throws(() => quote(win), /has no price/);
+  const options = quote(win).options;
+  assert.ok(options.video_50.rows.every(row => row.key.endsWith('.480p')));
+  assert.ok(options.full_video.rows.every(row => row.key === 'seedance.2-0-mini.720p'));
 });
 // Every generated cut carries its 3D previz (blender-previz.md §6, user directive 2026-09-11): the
 // Seedance fields of the reference route, the record, and the motion prompt the assembler writes

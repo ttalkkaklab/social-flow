@@ -40,5 +40,5 @@ release. Follow [story interest](../storyboard/references/story-interest.md) for
 information and [episode anticipation](../storyboard/references/episode-anticipation.md)
 for the opening promise and its payoff.
 
-[Case research and type distinctions](../../docs/research/2026-11-20-story-intensity/README.md) ·
+[Case research and type distinctions](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-intensity/README.md) ·
 [Evaluation examples](references/evals.md)
