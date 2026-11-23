@@ -12,6 +12,7 @@ import { buildLtxApiBody } from '../dist/ltx-api-video.js';
 import { generateWithReferences, seedanceReferenceSchema } from '../dist/seedance-client.js';
 import { buildVeoBody } from '../dist/veo-video.js';
 import { buildGenaiVideoBody } from '../dist/astra-genai-video.js';
+import { openingPrompt, sceneCastProse } from '../dist/msr-opening.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
@@ -1771,4 +1772,39 @@ test('a scene dip and two fractional shot lengths still fit exactly 113 frames',
   assert.match(plan.args.prompt, /The cart rolls\.[\s\S]*Then cut directly\.[\s\S]*The wheel hits the curb\./);
   assert.doesNotMatch(plan.args.prompt, /s\d{4}|Frame numbers start|Scene at \d+ fps|At \d+(?:\.\d+)? seconds/);
   assert.deepEqual(plan.sceneRequest.shotIds, f.board.SCENES.map(card => card.id));
+});
+
+test('intermediate action states travel in one scene video request', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
+  const frames = {start:'opening.png', end:'ending.png'};
+  const direction = {openingPositions:[], emotion:'The load slips.', keyframes:[{frame:63,path:'release.png',strength:0.8}]};
+  const directory = path.join(f.episode, 'storyboard');
+  for (const name of [frames.start,frames.end,'release.png']) fs.writeFileSync(path.join(directory,name),png);
+  f.board.STRUCTURE = {scenes:[{no:1,speakers:[],frames,videoDirection:direction}]};
+  for (const [i,card] of f.board.SCENES.entries()) {
+    Object.assign(card,{id:'shot'+i,scene:1,duration:[56,57][i]/24,transition:'cut',narration:[],
+      shot:{size:'ms',angle:'eye'},visual:{action:i ? 'The rail leaves her hands.' : 'She grips the rail.'}});
+  }
+  const plan = () => planVideo({episode:f.episode,sceneNo:1,requestId:'action-states',args:{reserveUsd:0}},false);
+  f.save();
+  const take = plan();
+  const body = buildGenaiVideoBody(take.args);
+  assert.equal(take.sceneRendering,undefined);
+  assert.equal(take.sceneRequest.modelPacedCuts,true);
+  assert.equal(body.num_frames,113);
+  assert.ok(body.image_uri && body.last_frame_uri);
+  assert.deepEqual(body.keyframes,[{frame_idx:63,strength:0.8,image_uri:'data:image/png;base64,'+png.toString('base64')}]);
+  assert.ok(take.inputs[path.join(directory,'release.png')]);
+  direction.keyframes[0].frame=113;
+  f.save();
+  assert.throws(plan,/scene_image_timing/);
+});
+
+test('scene prompt uses a cast name without changing quoted speech or doubling the opening', () => {
+  const positions = [{character:'ep13-linh',images:[1],position:'On the right.'}];
+  const line = 'ep13-linh says "ep13-linh" to her friend.';
+  const spoken = sceneCastProse(openingPrompt(line,positions),positions,[{speaker:'ep13-linh',name:'Linh'}]);
+  assert.equal(openingPrompt(spoken.prompt,spoken.positions),spoken.prompt);
+  assert.match(spoken.prompt,/Linh \(Image 1\): On the right/);
+  assert.ok(spoken.prompt.endsWith('Linh says "ep13-linh" to her friend.'));
 });

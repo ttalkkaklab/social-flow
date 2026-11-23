@@ -39,6 +39,8 @@ Re-plan after changes. No network submission occurs during planning.
 
 ### Scene frames and adapter inputs
 
+For a single LTX generation, `story_scene.videoDirection.keyframes` can pin an intermediate action state, for example `[{"frame":64,"path":"images/handle-released.png"}]`. Frame numbers start at zero for the whole scene. Use `scene.frames.start` and `scene.frames.end` for the endpoints. The GenAI image-to-video request carries the interior images in `keyframes[]` alongside its endpoints and supported speaker references. Ordinary `referenceImage` entries keep their composition-only role. The generation plan identifies the image file and frame for each pin.
+
 Write one shot per camera setup. A cut from a wide to a hand insert, or a reverse angle, starts a new card. A pan, tilt, dolly, zoom or entrance during continuous filming stays on its card. Set `videoDirection.oneTake` only for an explicitly uninterrupted scene. A duration or generation count does not specify the number of shots.
 
 `story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.

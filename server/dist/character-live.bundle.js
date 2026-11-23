@@ -34531,6 +34531,11 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  keyframes: external_exports.array(external_exports.object({
+    frame: frame.positive(),
+    path: external_exports.string().trim().min(1),
+    strength: external_exports.number().gt(0).max(1).optional()
+  }).strict()).min(1).optional().describe("Images of specific action states at interior scene frames, numbered from zero. Use the scene endpoints for the first and last frames. Each image conditions the same scene request on a compatible adapter."),
   oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
   audio: external_exports.object({
     mode: external_exports.enum(["conditioning", "mix"]).optional().describe("Condition generation by default, or mix this track once with native shot sound."),

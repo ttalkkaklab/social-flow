@@ -594,7 +594,7 @@ test('keeps simultaneous actions with the correct spoken turn in provider prose'
   const card = { narration: [{ speaker: 'Mochi', tts: 'Wait.' }, { speaker: 'Mochi', tts: 'Come back.' }],
     performance: [{kind:'action', character:'Bo', text:'Lower the crate.', withGroup:2},
       {kind:'dialogue', group:1}, {kind:'dialogue', group:2},
-      {kind:'action', character:'Bo', text:'Hold the door.', withGroup:1}] };
+      {kind:'action', character:'Bo', text:'Hold the door.', withGroup:1,durationSeconds:38/24}] };
   const notes = sceneDirectionNotes(card, Boolean, true, true, true);
   assert.deepEqual(notes.beats, ['As Mochi speaks: Bo: Hold the door.', 'As Mochi speaks: Bo: Lower the crate.']);
 });

@@ -95018,7 +95018,7 @@ var require_scene_direction = __commonJS({
         function actionWords(event, i2) {
           const cue = redact(text4(event.videoDirection) || text4(event.text));
           if (!cue || !accept(cue)) return;
-          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
+          const duration5 = event.durationSeconds && !(scenePrompt && concise) ? " for " + event.durationSeconds + " s" : "";
           const withLine = event.withGroup && !scenePrompt ? " with speech group " + event.withGroup : "";
           const label = scenePrompt ? [event.character, duration5.trim()].filter(Boolean).join(" ") : concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
           return (label || withLine ? label + withLine + ": " : "") + cue;
@@ -112747,6 +112747,11 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  keyframes: external_exports.array(external_exports.object({
+    frame: frame.positive(),
+    path: external_exports.string().trim().min(1),
+    strength: external_exports.number().gt(0).max(1).optional()
+  }).strict()).min(1).optional().describe("Images of specific action states at interior scene frames, numbered from zero. Use the scene endpoints for the first and last frames. Each image conditions the same scene request on a compatible adapter."),
   oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
   audio: external_exports.object({
     mode: external_exports.enum(["conditioning", "mix"]).optional().describe("Condition generation by default, or mix this track once with native shot sound."),
@@ -112758,6 +112763,16 @@ var sceneVideoDirectionSchema = external_exports.object({
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
   camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
 }).strict();
+function sceneCastProse(prompt, positions, speakers) {
+  const aliases = /* @__PURE__ */ new Map();
+  for (const { speaker, name } of speakers) {
+    if (!/[-_]/.test(speaker) || !name || nonEnglishOutsideQuotes(name) || /["“”\r\n]/.test(name)) continue;
+    if (speakers.some((s2) => s2.speaker !== speaker && s2.name.toLowerCase() === name.toLowerCase()) || positions.some((p) => p.character !== speaker && p.character.toLowerCase() === name.toLowerCase())) continue;
+    aliases.set(speaker, name);
+  }
+  const display = (value) => value.replace(/"[^"]*"|“[^”]*”|「[^」]*」|[\p{L}\p{M}\d_-]+/gu, (token) => aliases.get(token) ?? token);
+  return { prompt: display(prompt), positions: positions.map((p) => ({ ...p, character: aliases.get(p.character) ?? p.character, position: display(p.position) })) };
+}
 function openingPrompt(prompt, positions = []) {
   if (!positions.length) return prompt;
   const header = positions.map(({ character, images, position }) => {
@@ -121296,6 +121311,9 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     const framing = shotFraming || (coverage2.common.camera ? attributeWords("camera", coverage2.common.camera) : members.length === 1 ? "Use the opening composition." : "");
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
+    for (const pin of scene.keyframes ?? []) {
+      if (pin.frame >= startFrame && pin.frame < endFrame) pins.push({ ...pin, role: "keyframe" });
+    }
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
     const fallback = legacy?.keyframes === void 0 ? legacy?.storyboardKeyframes : void 0;
@@ -121395,6 +121413,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       ...dialogue.length ? { dialogue } : {}
     };
   });
+  if (scene.keyframes?.some((pin) => pin.frame <= 0 || pin.frame >= cursor - 1))
+    throw new Error("scene_image_timing: scene keyframes must fall between the opening and ending frames");
   const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
   const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync7(path21.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
@@ -123203,7 +123223,15 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (frames !== void 0 && frames !== sceneRequest.frameCount)
       throw new Error("scene_video_timing: adapter ends at frame " + (frames - 1) + ", storyboard ends at " + (sceneRequest.frameCount - 1));
   }
-  if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions);
+  if (Array.isArray(args.openingPositions)) {
+    const positions = args.openingPositions;
+    const opening = openingPrompt(String(args.prompt), positions);
+    if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
+      const prose = sceneCastProse(opening, positions, voice.voiceContinuity.speakers);
+      args.openingPositions = prose.positions;
+      args.prompt = prose.prompt;
+    } else args.prompt = opening;
+  }
   if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
     const sourceSeconds = ltxApiAudioSeconds(path26.resolve(context2.episode, args.audioPath));
     const fps = Number(args.fps ?? args.frameRate ?? 24);

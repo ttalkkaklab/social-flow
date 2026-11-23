@@ -43,7 +43,7 @@
     function actionWords(event, i) {
       const cue = redact(text(event.videoDirection) || text(event.text));
       if (!cue || !accept(cue)) return;
-      const duration = event.durationSeconds ? ' for ' + event.durationSeconds + ' s' : '';
+      const duration = event.durationSeconds && !(scenePrompt && concise) ? ' for ' + event.durationSeconds + ' s' : '';
       const withLine = event.withGroup && !scenePrompt ? ' with speech group ' + event.withGroup : '';
       const label = scenePrompt ? [event.character, duration.trim()].filter(Boolean).join(' ') :
         concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :

@@ -1,6 +1,6 @@
 import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
-import { openingPrompt, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
+import { openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
@@ -716,7 +716,15 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (frames !== undefined && frames !== sceneRequest.frameCount)
       throw new Error('scene_video_timing: adapter ends at frame ' + (frames - 1) + ', storyboard ends at ' + (sceneRequest.frameCount - 1));
   }
-  if (Array.isArray(args.openingPositions)) args.prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[]);
+  if (Array.isArray(args.openingPositions)) {
+    const positions = args.openingPositions as OpeningPosition[];
+    const opening = openingPrompt(String(args.prompt), positions);
+    if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
+      const prose = sceneCastProse(opening,positions,voice.voiceContinuity.speakers);
+      args.openingPositions = prose.positions;
+      args.prompt = prose.prompt;
+    } else args.prompt = opening;
+  }
   if (VIDEO_ADAPTERS[tool].voice === 'supplied' && typeof args.audioPath === 'string' && durationPlan.requiredSeconds !== undefined) {
     const sourceSeconds = ltxApiAudioSeconds(path.resolve(context.episode, args.audioPath));
     const fps = Number(args.fps ?? args.frameRate ?? 24);

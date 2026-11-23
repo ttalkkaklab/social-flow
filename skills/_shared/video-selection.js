@@ -170,7 +170,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
       .map(c => typeof c === 'string' ? c : c.id)))];
     for (const id of (scene.frames !== undefined ? cast.speakers : people)) if (!positions.some(p => p.character === id))
       throw new Error('openingPositions: describe where ' + id + ' starts, including an off-screen start');
-    timed = Boolean(scene.frames !== undefined || members.some(s => s.referenceImage) || members.length > 1 || scene.videoDirection.audio || scene.videoDirection.oneTake || scene.videoDirection.fps ||
+    timed = Boolean(scene.frames !== undefined || members.some(s => s.referenceImage) || members.length > 1 || scene.videoDirection.audio || scene.videoDirection.keyframes?.length || scene.videoDirection.oneTake || scene.videoDirection.fps ||
       members.some(s => s.timeline || s.visual?.frames?.keyframes || s.visual?.frames?.storyboardKeyframes));
     const pinned = !scene.videoDirection.audio && selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' &&
       ['reference','image',undefined].includes(selection.operation);

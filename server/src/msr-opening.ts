@@ -58,6 +58,9 @@ export const sceneShotBindingsSchema = z.array(z.object({
 export const sceneVideoDirectionSchema = z.object({
   openingPositions: openingPositionsSchema,
   fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
+  keyframes: z.array(z.object({
+    frame: frame.positive(), path: z.string().trim().min(1), strength: z.number().gt(0).max(1).optional(),
+  }).strict()).min(1).optional().describe('Images of specific action states at interior scene frames, numbered from zero. Use the scene endpoints for the first and last frames. Each image conditions the same scene request on a compatible adapter.'),
   oneTake: z.boolean().optional().describe('True only for an explicitly requested uninterrupted shot.'),
   audio: z.object({
     mode:z.enum(['conditioning','mix']).optional().describe('Condition generation by default, or mix this track once with native shot sound.'),
@@ -70,6 +73,19 @@ export const sceneVideoDirectionSchema = z.object({
   camera: sceneText.optional().describe('Shared camera direction. Each shot keeps its own framing and incoming transition.'),
 }).strict();
 export type SceneVideoDirection = z.infer<typeof sceneVideoDirectionSchema>;
+
+/** Use the cast's spoken names in provider prose. Authored dialogue and the board's IDs stay intact. */
+export function sceneCastProse(prompt: string, positions: OpeningPosition[], speakers: {speaker:string;name:string}[]) {
+  const aliases = new Map<string,string>();
+  for (const {speaker,name} of speakers) {
+    if (!/[-_]/.test(speaker) || !name || nonEnglishOutsideQuotes(name) || /["“”\r\n]/.test(name)) continue;
+    if (speakers.some(s => s.speaker !== speaker && s.name.toLowerCase() === name.toLowerCase()) ||
+        positions.some(p => p.character !== speaker && p.character.toLowerCase() === name.toLowerCase())) continue;
+    aliases.set(speaker,name);
+  }
+  const display = (value:string) => value.replace(/"[^"]*"|“[^”]*”|「[^」]*」|[\p{L}\p{M}\d_-]+/gu, token => aliases.get(token) ?? token);
+  return {prompt:display(prompt), positions:positions.map(p => ({...p,character:aliases.get(p.character) ?? p.character,position:display(p.position)}))};
+}
 
 export function openingPrompt(prompt: string, positions: OpeningPosition[] = []): string {
   if (!positions.length) return prompt;

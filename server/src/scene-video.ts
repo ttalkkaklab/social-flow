@@ -87,6 +87,9 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       : members.length === 1 ? 'Use the opening composition.' : '');
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ''), ...notes.beats].filter(Boolean).join(' ');
     const pins: Pin[] = [...(timeline?.images ?? [])];
+    for (const pin of scene.keyframes ?? []) {
+      if (pin.frame >= startFrame && pin.frame < endFrame) pins.push({...pin, role:'keyframe'});
+    }
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
     const fallback = legacy?.keyframes === undefined ? legacy?.storyboardKeyframes : undefined;
@@ -178,6 +181,8 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       ...(positions?.length ? {openingPositions:positions} : {}), ...(blocking ? {blocking} : {}),
       ...(sound ? {sound} : {}), ...(dialogue.length ? {dialogue} : {}) };
   });
+  if (scene.keyframes?.some(pin => pin.frame <= 0 || pin.frame >= cursor - 1))
+    throw new Error('scene_image_timing: scene keyframes must fall between the opening and ending frames');
   const cuts = shots.slice(1).map(({ shotId, startFrame: frame, transition }, i) => ({ from: shots[i].shotId, to: shotId, frame, transition }));
   const audio = scene.audio && { ...(scene.audio.mode ? {mode:scene.audio.mode} : {}), path: realpathSync(path.resolve(episode, 'storyboard', scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some(c => c.frame >= cursor)) throw new Error('scene_audio_timing: cue outside the scene');
