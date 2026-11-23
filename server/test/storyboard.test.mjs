@@ -1838,6 +1838,19 @@ describe('storyboard_read inspection', () => {
     ]) };
     const warnings = applyPatch(authored, { path: 'unused' }, { outline: true }).findings;
     assert.ok(warnings.some(finding => finding.code === 'scene_boundary_review' && finding.level === 'warn'));
+    const recorded = structuredClone(win);
+    const clip = recorded.SCENES[2];
+    clip.narration = [];
+    clip.visual = { reuse: { clip: 'call.mp4' } };
+    clip.performance = [{ kind: 'dialogue', group: 1, character: 'caller' }];
+    recorded.STORY.transcripts = [{ shot: 3, source: 'call.mp4', groups: [{ text: 'Hello.', start: 0, end: 1 }] }];
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'exceeds_two');
+    recorded.STORY.transcripts[0].source = 'other.mp4';
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'unknown');
+    const malformed = structuredClone(win);
+    malformed.SCENES = {};
+    malformed.STRUCTURE.scenes[0].speakers = 'child';
+    assert.equal(contract().sceneBoundaries(malformed)[0].speakerLimit, 'unknown');
     delete win.STRUCTURE.scenes[0].speakers;
     delete win.SCENES[1].narration;
     withBoard(dir => {

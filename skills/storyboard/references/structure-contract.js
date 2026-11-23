@@ -391,14 +391,31 @@
     const normalize = (value) => typeof value === 'string' ? value.normalize().trim().replace(/\s+/g, ' ').toLowerCase() : '';
     const cards = new Map(structure.scenes.filter(Boolean).map(scene => [scene.no, scene]));
     const order = structure.sequences.flatMap(sequence => Array.isArray(sequence?.scenes) ? sequence.scenes : []);
+    const source = Array.isArray(win.SCENES) ? win.SCENES : [];
     const runs = order.map(no => {
       const scene = cards.get(no);
-      const shots = (win.SCENES ?? []).filter(shot => shot && shot.scene === no && PLACED(shot));
-      const lines = shots.flatMap(shot => Array.isArray(shot.narration) ? shot.narration : []).filter(line => text(line?.tts));
-      const speakers = new Set(Array.isArray(scene?.speakers) ? scene.speakers : []);
-      for (const line of lines) if (line.speaker) speakers.add(line.speaker);
-      const identified = lines.every(line => !!line.speaker) &&
-        (scene?.speakers !== undefined || (shots.length > 0 && shots.every(shot => Array.isArray(shot.narration))));
+      const shots = source.filter(shot => PLACED(shot) && shot.scene === no);
+      const declared = Array.isArray(scene?.speakers) && scene.speakers.every(text);
+      const speakers = new Set(declared ? scene.speakers : []);
+      let identified = declared || (scene?.speakers === undefined && shots.length > 0);
+      for (const shot of shots) {
+        const narration = Array.isArray(shot.narration) ? shot.narration : [];
+        const clip = shot.visual?.reuse?.clip || shot.visual?.clip;
+        const live = shot.visual?.reuse || shot.visual?.source === 'recording';
+        const transcript = live && text(clip) && Array.isArray(win.STORY?.transcripts) &&
+          win.STORY.transcripts.find(row => row?.shot === source.indexOf(shot) + 1 && row.source === clip);
+        const recorded = Array.isArray(transcript?.groups) ? transcript.groups : null;
+        const events = Array.isArray(shot.performance) ? shot.performance : [];
+        const lines = narration.length ? narration : recorded || [];
+        if (!declared && (live && !recorded && !narration.length || !Array.isArray(shot.narration) && !recorded)) identified = false;
+        lines.forEach((line, index) => {
+          if (!text(line?.tts) && !text(line?.sub) && !text(line?.text)) return;
+          const actor = line.speaker || events.find(event => event?.group === index + 1 &&
+            (event.kind === 'dialogue' || event.kind === 'narration'))?.character;
+          if (text(actor)) speakers.add(actor);
+          else identified = false;
+        });
+      }
       return { no, place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
         shotIds: shots.map(shot => shot.id ?? null), speakers: [...speakers], speakersKnown: identified };
     });

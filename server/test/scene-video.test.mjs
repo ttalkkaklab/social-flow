@@ -587,3 +587,14 @@ test('scene camera returns to its default after the insert and every shot cue re
   assert.ok(!legacy.sceneDirection.camera && !legacy.shots[1].framing.includes('locked'));
   assert.match(legacy.shots[2].framing,/locked/);
 });
+
+
+test('keeps simultaneous actions with the correct spoken turn in provider prose', async () => {
+  const {default: {notes: sceneDirectionNotes}} = await import('../../skills/storyboard/references/scene-direction.js');
+  const card = { narration: [{ speaker: 'Mochi', tts: 'Wait.' }, { speaker: 'Mochi', tts: 'Come back.' }],
+    performance: [{kind:'action', character:'Bo', text:'Lower the crate.', withGroup:2},
+      {kind:'dialogue', group:1}, {kind:'dialogue', group:2},
+      {kind:'action', character:'Bo', text:'Hold the door.', withGroup:1}] };
+  const notes = sceneDirectionNotes(card, Boolean, true, true, true);
+  assert.deepEqual(notes.beats, ['As Mochi speaks: Bo: Hold the door.', 'As Mochi speaks: Bo: Lower the crate.']);
+});

@@ -95015,6 +95015,14 @@ var require_scene_direction = __commonJS({
         const spoken = lines.map((line) => text4(line.tts)).filter(Boolean);
         const redact = (cue) => spoken.reduce((result, line) => result.split(line).join("the authored line"), cue);
         const beats = [], groups = /* @__PURE__ */ new Set();
+        function actionWords(event, i2) {
+          const cue = redact(text4(event.videoDirection) || text4(event.text));
+          if (!cue || !accept(cue)) return;
+          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
+          const withLine = event.withGroup && !scenePrompt ? " with speech group " + event.withGroup : "";
+          const label = scenePrompt ? [event.character, duration5.trim()].filter(Boolean).join(" ") : concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
+          return (label || withLine ? label + withLine + ": " : "") + cue;
+        }
         function addLine(line, group, prefix, event = {}) {
           if (!line) return;
           const acting = { ...line.acting };
@@ -95029,6 +95037,11 @@ var require_scene_direction = __commonJS({
           const to = text4(event.to) || text4(line.to);
           if (to && accept(redact(to))) fields2.unshift((concise ? "to " : "Addressed to ") + redact(to) + ".");
           if (pauses) fields2.push(pauses);
+          if (scenePrompt) for (const [index, action] of (card.performance || []).entries()) {
+            if (action.kind !== "action" || action.withGroup !== group) continue;
+            const cue = actionWords(action, index);
+            if (cue) fields2.push(cue);
+          }
           if (fields2.length || card.performance?.length) {
             const who = [line.speaker, scenePrompt ? void 0 : line.id].filter(Boolean).join(", ");
             const label = scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
@@ -95038,12 +95051,9 @@ var require_scene_direction = __commonJS({
         }
         (card.performance || []).forEach((event, i2) => {
           if (event.kind !== "action") return addLine(lines[event.group - 1], event.group, "Beat " + (i2 + 1) + " with ", event);
-          const cue = redact(text4(event.videoDirection) || text4(event.text));
-          if (!cue || !accept(cue)) return;
-          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
-          const withLine = event.withGroup ? scenePrompt ? " during the line" : " with speech group " + event.withGroup : "";
-          const label = scenePrompt ? [event.character, duration5.trim()].filter(Boolean).join(" ") : concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
-          beats.push((label || withLine ? label + withLine + ": " : "") + cue);
+          if (scenePrompt && lines[event.withGroup - 1]) return;
+          const cue = actionWords(event, i2);
+          if (cue) beats.push(cue);
         });
         lines.forEach((line, i2) => {
           if (!groups.has(i2 + 1)) addLine(line, i2 + 1, "With ");
@@ -120797,7 +120807,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     } else {
       const label = (i2) => vendor || tool2 === "fasth3_omni_reference" ? referenceLabel(tool2, "image", i2) : "Image " + i2;
       const guidance = [
-        ...sent.map((ref, i2) => `${label(i2 + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+        ...sent.map((ref, i2) => `${label(i2 + 1)} (${ref.scope === "shot_guide" ? ref.role : ref.id + ", " + ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : []
       ].join("\n");
       args.prompt = String(args.prompt ?? "") + "\nImage reference roles:\n" + guidance;
@@ -121332,7 +121342,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
       if (guideMode && guide.submitted) {
         guideSlots--;
-        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose: "Opening composition guide for this shot." };
+        const purpose = index === 0 ? "Composition for the opening view." : `Composition for the view after cut ${index}.`;
+        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose };
         add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference: reference2 });
         guides.push(guide);
       } else {

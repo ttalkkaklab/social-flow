@@ -140,7 +140,8 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied && !subjectMissing) };
             if (guideMode && guide.submitted) {
                 guideSlots--;
-                const reference = { id: shotId + '-composition', role: guideMode, use: 'video', scope: 'shot_guide', path: member.referenceImage, purpose: 'Opening composition guide for this shot.' };
+                const purpose = index === 0 ? 'Composition for the opening view.' : `Composition for the view after cut ${index}.`;
+                const reference = { id: shotId + '-composition', role: guideMode, use: 'video', scope: 'shot_guide', path: member.referenceImage, purpose };
                 add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference });
                 guides.push(guide);
             }

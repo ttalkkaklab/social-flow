@@ -1686,6 +1686,9 @@ test('scene submission distinguishes soft shot references, temporal endpoints an
   assert.deepEqual(withGuides.args.referenceImagePaths.map(p=>path.basename(p)),['guide0.png','guide1.png']);
   assert.deepEqual(withGuides.sceneRequest.shotReferenceImages.map(g=>g.submitted),[true,true]);
   assert.ok(withGuides.sceneRequest.images.every(image=>image.reference.scope==='shot_guide'));
+  assert.doesNotMatch(withGuides.args.prompt, /s[12]-composition/);
+  assert.match(withGuides.args.prompt, /Image 1 \(composition\): Composition for the opening view/i);
+  assert.match(withGuides.args.prompt, /Image 2 \(composition\): Composition for the view after cut 1/i);
   assert.throws(()=>planVideo({...input,shotId:'s2'}), /shotId/);
   assert.throws(()=>planVideo({...input,args:{referenceImagePaths:['guide0.png']}}), /scene_image_scope/);
   scene.frames = {start:'guide1.png',end:'guide0.png'};
