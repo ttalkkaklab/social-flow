@@ -372,17 +372,18 @@ test('native performances own their source intervals across attachment and archi
    });
  }
  await t.test('a fresh take can replace the old take while its original receipt remains',async()=>{
+   const fresh=join(dir,'independent.mp4');spokenClip(fresh,770,'green');
    save(oneShot);
-   assert.equal((await attach('s0001',second)).changed,true);
-   assert.equal(read().SCENES[0].visual.video.clip,second);
+   assert.equal((await attach('s0001',fresh)).changed,true);
+   assert.equal(read().SCENES[0].visual.video.clip,fresh);
    const fingerprinted=structuredClone(oneShot);
    fingerprinted.SCENES[0].visual.video.speechBinding.performanceSource=attached.SCENES[0].visual.video.speechBinding.performanceSource;
    save(fingerprinted);
    const oldBytes=readFileSync(first);
    try {
-     writeFileSync(first,readFileSync(second));
+     writeFileSync(first,readFileSync(fresh));
      assert.equal((await attach('s0001',first)).changed,true);
-     assert.equal(read().SCENES[0].visual.video.speechBinding.videoSha256,createHash('sha256').update(readFileSync(second)).digest('hex'));
+     assert.equal(read().SCENES[0].visual.video.speechBinding.videoSha256,createHash('sha256').update(readFileSync(fresh)).digest('hex'));
    } finally { writeFileSync(first,oldBytes); }
  });
  stage();
