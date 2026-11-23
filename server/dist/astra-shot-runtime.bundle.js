@@ -50196,7 +50196,7 @@ function attributeWords(key, row, camera = {}) {
 }
 function sceneShotNotes(card, concise = false) {
   const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
-  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise);
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise, true);
   const actions = notes.actions.map(english2).filter(Boolean);
   return {
     action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
@@ -53869,7 +53869,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
       if (guideMode && guide.submitted) {
         guideSlots--;
-        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose: "Framing guide for " + shotId + " only." };
+        const purpose = index === 0 ? "Composition for the opening view." : `Composition for the view after cut ${index}.`;
+        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose };
         add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference: reference2 });
         guides.push(guide);
       } else {
@@ -53926,19 +53927,34 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...guides.length ? { shotReferenceImages: guides } : {}, ...audio ? { audio } : {} };
 }
-function sceneTimelineWords(t2, scene, includeDialogue = true) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  return [`Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
-    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
+  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
+  const transitions = {
+    hard_cut: "cut directly",
+    dissolve: "dissolve to the next view",
+    fade: "fade to the next view"
+  };
+  return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
+    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
+    const transition = s2.transition.replaceAll("_", " ");
+    const cut = transitions[s2.transition] ?? transition;
+    let heading = `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
+    if (modelFacing) {
+      heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
+    }
     return [
-      `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
+      heading,
       ...[s2.framing, s2.blocking, s2.action].filter((text3) => text3 && !wholeTake.has(text3)),
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
-  }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
+  }), ...t2.audio ? [
+    modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
+    ...t2.audio.cues.map((c) => `${timing(c.frame)}: ${c.action}`)
+  ] : []].filter(Boolean).join("\n");
 }
 var SceneInputError = class extends Error {
   constructor(tool, sceneRequest, missing, model2, resolution2) {

@@ -80,6 +80,8 @@ interface Contract {
     RENDER_MODES: string[]; PRODUCTION_MODES: string[]; CHARGES_OPEN: string[]; CHARGES_CLOSE: string[]; TRANSITION_RE: RegExp;
   };
   check(win: Board, opts?: { draft?: boolean }): Finding[];
+  sceneBoundaries(win: Board): Array<Record<string, unknown>>;
+  sceneBoundaryFindings(win: Board): Finding[];
   executionCheck(win: Board): Finding[];
   guidedCheck(win: Board, opts?: { draft?: boolean }): Finding[];
   castOf(shot: unknown): string[] | undefined;
@@ -532,7 +534,7 @@ function boundaryReview(win: Board, playback: Array<{ no: number }>, videoTiming
       decision: 'needs_editorial_review',
     };
   });
-  return { version: 'shot-boundaries-v1', status: 'not_reviewed', sceneRuns, shots, boundaries,
+  return { version: 'shot-boundaries-v1', status: 'not_reviewed', sceneRuns, shots, boundaries, sceneBoundaries: contract().sceneBoundaries(win),
     note: 'Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed.' };
 }
 
@@ -1043,6 +1045,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
   let synced = 0;
   if (!findings.some((f) => f.level === 'bad')) {
     synced = contract().sync(next);
+    findings.push(...contract().sceneBoundaryFindings(next));
     // A write refuses only an unreadable board and the story order (user directive 2026-10-31); storyboard_check
     // runs every other rule on request. A story outline may hold sequences and scenes before its first shot story.
     findings.push(...contract().executionCheck(next).filter((f) => shots.length || !opts.outline || f.where !== 'board'));

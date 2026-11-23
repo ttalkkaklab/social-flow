@@ -331,7 +331,7 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
         }
         else {
             const label = (i) => vendor || tool === 'fasth3_omni_reference' ? referenceLabel(tool, 'image', i) : 'Image ' + i;
-            const guidance = [...sent.map((ref, i) => `${label(i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+            const guidance = [...sent.map((ref, i) => `${label(i + 1)} (${ref.scope === 'shot_guide' ? ref.role : ref.id + ', ' + ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
                 ...(start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : [])].join('\n');
             args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
         }

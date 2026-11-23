@@ -170,7 +170,7 @@ export function attributeWords(key, row, camera = {}) {
 }
 export function sceneShotNotes(card, concise = false) {
     const english = (s) => s && !nonEnglishOutsideQuotes(s) ? s : '';
-    const notes = directions().notes(card, cue => Boolean(english(cue)), true, concise);
+    const notes = directions().notes(card, cue => Boolean(english(cue)), true, concise, true);
     const actions = notes.actions.map(english).filter(Boolean);
     return { action: actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound: english(notes.sound), blocking: english(notes.blocking),
         end: english(notes.end), beats: [...notes.beats, ...notes.motion].map(english).filter(Boolean) };

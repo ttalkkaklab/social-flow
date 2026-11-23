@@ -95009,12 +95009,20 @@ var require_scene_direction = __commonJS({
         lines.forEach((_, index) => groups.add(index));
         return Array.from(groups, (index) => lines[index]);
       }
-      function notes(card, accept = Boolean, visualOnly = false, concise = false) {
+      function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
         const visual = card.visual || {}, video2 = visual.video || {}, source = video2.promptSource || {};
         const design = card.shot?.videoDesign || {}, lines = card.narration || [];
         const spoken = lines.map((line) => text4(line.tts)).filter(Boolean);
         const redact = (cue) => spoken.reduce((result, line) => result.split(line).join("the authored line"), cue);
         const beats = [], groups = /* @__PURE__ */ new Set();
+        function actionWords(event, i2) {
+          const cue = redact(text4(event.videoDirection) || text4(event.text));
+          if (!cue || !accept(cue)) return;
+          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
+          const withLine = event.withGroup && !scenePrompt ? " with speech group " + event.withGroup : "";
+          const label = scenePrompt ? [event.character, duration5.trim()].filter(Boolean).join(" ") : concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
+          return (label || withLine ? label + withLine + ": " : "") + cue;
+        }
         function addLine(line, group, prefix, event = {}) {
           if (!line) return;
           const acting = { ...line.acting };
@@ -95029,21 +95037,23 @@ var require_scene_direction = __commonJS({
           const to = text4(event.to) || text4(line.to);
           if (to && accept(redact(to))) fields2.unshift((concise ? "to " : "Addressed to ") + redact(to) + ".");
           if (pauses) fields2.push(pauses);
+          if (scenePrompt) for (const [index, action] of (card.performance || []).entries()) {
+            if (action.kind !== "action" || action.withGroup !== group) continue;
+            const cue = actionWords(action, index);
+            if (cue) fields2.push(cue);
+          }
           if (fields2.length || card.performance?.length) {
-            const who = [line.speaker, line.id].filter(Boolean).join(", ");
-            const label = concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
+            const who = [line.speaker, scenePrompt ? void 0 : line.id].filter(Boolean).join(", ");
+            const label = scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
             beats.push(label + (fields2.length ? ": " + fields2.join(" ") : "."));
           }
           groups.add(group);
         }
         (card.performance || []).forEach((event, i2) => {
           if (event.kind !== "action") return addLine(lines[event.group - 1], event.group, "Beat " + (i2 + 1) + " with ", event);
-          const cue = redact(text4(event.videoDirection) || text4(event.text));
-          if (!cue || !accept(cue)) return;
-          const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
-          const withLine = event.withGroup ? " with speech group " + event.withGroup : "";
-          const label = concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
-          beats.push((label || withLine ? label + withLine + ": " : "") + cue);
+          if (scenePrompt && lines[event.withGroup - 1]) return;
+          const cue = actionWords(event, i2);
+          if (cue) beats.push(cue);
         });
         lines.forEach((line, i2) => {
           if (!groups.has(i2 + 1)) addLine(line, i2 + 1, "With ");
@@ -120410,7 +120420,7 @@ function attributeWords(key, row, camera = {}) {
 }
 function sceneShotNotes(card, concise = false) {
   const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
-  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise);
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise, true);
   const actions = notes.actions.map(english2).filter(Boolean);
   return {
     action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
@@ -120797,7 +120807,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     } else {
       const label = (i2) => vendor || tool2 === "fasth3_omni_reference" ? referenceLabel(tool2, "image", i2) : "Image " + i2;
       const guidance = [
-        ...sent.map((ref, i2) => `${label(i2 + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+        ...sent.map((ref, i2) => `${label(i2 + 1)} (${ref.scope === "shot_guide" ? ref.role : ref.id + ", " + ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : []
       ].join("\n");
       args.prompt = String(args.prompt ?? "") + "\nImage reference roles:\n" + guidance;
@@ -121332,7 +121342,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
       if (guideMode && guide.submitted) {
         guideSlots--;
-        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose: "Framing guide for " + shotId + " only." };
+        const purpose = index === 0 ? "Composition for the opening view." : `Composition for the view after cut ${index}.`;
+        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose };
         add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference: reference2 });
         guides.push(guide);
       } else {
@@ -121409,19 +121420,34 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, includeDialogue = true) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  return [`Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
-    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
+  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
+  const transitions = {
+    hard_cut: "cut directly",
+    dissolve: "dissolve to the next view",
+    fade: "fade to the next view"
+  };
+  return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
+    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
+    const transition = s2.transition.replaceAll("_", " ");
+    const cut = transitions[s2.transition] ?? transition;
+    let heading = `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
+    if (modelFacing) {
+      heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
+    }
     return [
-      `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
+      heading,
       ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
-  }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
+  }), ...t2.audio ? [
+    modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
+    ...t2.audio.cues.map((c) => `${timing(c.frame)}: ${c.action}`)
+  ] : []].filter(Boolean).join("\n");
 }
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
   const coverage2 = sceneCoverage(members, scene, board, sceneNo);
@@ -121438,7 +121464,8 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const text4 = options.bindDialogue ? scenePromptText(scene, shared5, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
+  const providerTimeline = sceneTimelineWords(timeline, scene, { includeDialogue: !options.bindDialogue, modelFacing: true, modelPacedCuts });
+  const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, sceneDirection: {
     emotion: scene.emotion,
@@ -123079,9 +123106,10 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const drift = !scene && !compiled && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
   const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
   let direction = sceneCamera ? {
     sourcePrompt,
-    directionWarnings: sceneCamera.warnings,
+    directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
     ...sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
   } : directionOf(compiled);
   if (selection.engine === "host") {
@@ -124624,6 +124652,7 @@ function boundaryReview(win, playback, videoTiming) {
     sceneRuns,
     shots,
     boundaries,
+    sceneBoundaries: contract().sceneBoundaries(win),
     note: "Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed."
   };
 }
@@ -125100,6 +125129,7 @@ function applyPatch(win, patch, opts = {}) {
   let synced = 0;
   if (!findings.some((f3) => f3.level === "bad")) {
     synced = contract().sync(next);
+    findings.push(...contract().sceneBoundaryFindings(next));
     findings.push(...contract().executionCheck(next).filter((f3) => shots.length || !opts.outline || f3.where !== "board"));
   }
   return { win: next, findings, synced };
@@ -135647,7 +135677,7 @@ For inspection, the default includeContext:true adds reviewContext.story (STORY)
 
 The runtime field identifies the loaded module and its on-disk hash; it does not certify runtime-loaded reference modules. Compare the intended installation and reconnect after changes. imageFraming tracks staging/performance and generated-prompt provenance separately from pixel inspection.
 
-Includes boundaryReview (shot-boundaries-v1): every actual playback join with full ordered speech/performance, camera context, incoming join ownership and factual review signals. It is read-only and always not_reviewed; repeated speakers/cast or reasons are not merge commands. For splices incoming is null: inspect the edit plan. Missing evidence stays unknown. Compare the uncut scene before images, and audit line ids/order/acting, performance groups, references and outer joins after edits. If this field is absent on an older connection, update/reconnect rather than guessing a bundle path.
+boundaryReview (shot-boundaries-v1) records playback joins, full performance, camera and incoming transitions. sceneBoundaries compares adjacent scene events, place, time, shots and combined speakers. Signals are unreviewed. Inspect splice edits (incoming:null). After edits audit lines, acting, references and outer joins. Reconnect older servers if this field is missing.
 
 Includes videoTiming for generated shots: selected route, planned source coverage, frame grid, maximum seconds, and fits/split_required/timing_unknown/limits_unknown. This is not measured speech or output duration. boundaryReview.shots[].performanceTiming times a line nobody timed from its syllables in the board's language (STORY.language; speechRate "uncalibrated" outside Korean, whose rate alone was measured) and gives storedExcessSeconds: the seconds the stored duration holds beyond its lines and timed actions, which a native-speech clip (MSR) plays as silent acting around the line.
 
@@ -135726,7 +135756,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Declare speakers at scene authoring, in stable reference order. Use [] for silence. Split before a third distinct speaker, including an off-screen speaker. Silent people can share the frame. Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Keep an action with its immediate reaction and consequence across shot changes. A silent insert or a different camera setup can stay in the same scene. Check adjacent scenes against boundaryReview.sceneBoundaries for their place, time, events and combined speakers. Declare speakers at scene authoring, in stable reference order. Use [] for silence. Split before a third distinct speaker, including an off-screen speaker. Silent people can share the frame. Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
