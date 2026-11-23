@@ -51,7 +51,7 @@ input validation stay. Work in this order:
    using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
-   Set shared camera, axis, continuity, lighting and attention with `story_scene.directionDefaults` before the shot images. Set a shot move only where it changes the default.
+   Set the actors' seats or marks, facing and fixed landmarks in `story_scene.directionDefaults.continuity`, and the camera side and eyelines in `axis`. Set each shot's crop and viewpoint with `shot_icons.view`. Set a shot move only where it changes the default.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
    Before a prop's description or picture, look up the real thing — the rule or form that
    makes it genuine and saved pictures of actual examples — and record `research` on its
@@ -61,7 +61,7 @@ input validation stay. Work in this order:
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before
    `shot_image` selects its matching panel (front by default).
-6. Generate the scene's chosen opening and ending images from the first and last cards using `shot_image.role` values `scene_start` and `scene_end`. Attach one composition image to every generated shot. The scene opening covers its first card. Use `shot_reference` for every card that needs its own image. A still-camera shot uses its own source image.
+6. Generate and inspect the first card's image before composing the corresponding scene's other shots. Use `scene_start` for a temporal opening or `shot_reference` for a composition image. Later cards in the same space use the first image as a spatial reference with their own framing, actions and prop states. Use `scene_end` for a temporal ending. It uses the final shot's reference when available. Attach one composition image to every generated shot. A still-camera shot uses its own source image.
 7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
 8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. The planner reports missing or unreadable shot images as `shot_image_required` and reports composition images the selected operation omits. Replan the complete scene after a shot correction.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts

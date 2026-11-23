@@ -410,6 +410,11 @@ for the default front view with a missing-view warning; a missing back panel is 
 Built sets use the same direction against their establishing camera and reject an opposing
 subject viewpoint before rendering. See [asset sheets](skills/storyboard/references/asset-sheets.md).
 
+Before image generation, store the scene's fixed positions, landmarks and axis in
+`story_scene.directionDefaults`. `shot_image` puts that plan in the first shot's prompt
+and uses its saved image as a spatial reference for subsequent shots in the same location.
+The current shot supplies the next camera view, action and prop state.
+
 ## Scene video generation
 
 Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)

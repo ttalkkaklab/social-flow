@@ -1527,6 +1527,59 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_limit/);
     assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina'],speakerReferences:[{character:'extra',path:'places/key.png'}]}]}),/scene_reference_owner/);
   });
+  it('reuses the opening’s scene geography without copying its crop or losing a reverse view', () => {
+    const {dir} = pictureBoard();
+    const scene = {sequence:'q1',no:1,place:'Room',time:'Night',event:'Meeting',summary:'They talk across a table.',
+      speakers:['mina'], directionDefaults:{axis:'Keep the camera on the aisle end. Mina faces across the table.'}};
+    writeStoryScenes({path:dir,scenes:[scene]});
+    const {win,sha256} = readBoard(dir);
+    applyStoryboard({path:dir,draft:true,expectedSha256:sha256,globals:{SB_DOC:{...win.SB_DOC,locations:[
+      {id:'room',layout:'Separate seats sit on opposing sides of the grill.',invariants:'One green window beyond the table.',
+        panels:{front:'places/room.png',back:'places/back.png'}},
+      {id:'terrace',imageUrl:'places/back.png'},
+    ]}}});
+    chooseEpisodeImage(dir,{engine:'host',model:'host-managed',host:'codex'},'Fixture: inspect the actual host image inputs');
+    writeFileSync(join(dir,'places/back.png'),png);
+    icons(dir);
+    writeShotIcons({path:dir,shots:[{id:'s0002',view:{mode:'three-quarter-left',subject:'Mina waiting',subjectId:'mina',
+      crop:'Mina from the crown to mid-chest, with the aisle at right',reason:'Keep the glance readable.'}}]});
+    const next = {path:dir,id:'s0002',role:'shot_reference',frame:'start',prompt:'Mina looks toward the other seat.'};
+    const unanchored = shotImageRequest(next);
+    assert.ok(unanchored.warnings.some(row=>row.what.startsWith('scene_composition_reference_missing:')));
+    const first = make(dir,'s0001','start',{role:'shot_reference',location:'room'});
+    assert.match(first.prompt,/Separate seats sit on opposing sides of the grill/);
+    assert.match(first.prompt,/Keep the camera on the aisle end/);
+    assert.equal(readBoard(dir).win.SCENES[0].visual.locationId,'room');
+    const later = shotImageRequest(next);
+    assert.equal(later.inputs[0], first.file);
+    assert.deepEqual(later.args.referenceImages,later.inputs);
+    assert.equal(later.refs[0].role,'continuity');
+    assert.equal(later.refs[0].use,'image');
+    assert.match(later.prompt,/Mina from the crown to mid-chest/);
+    assert.match(later.prompt,/Use the current shot’s crop, camera side, visible cast, action phase and prop state/);
+    assert.ok(later.inputHashes[first.file]);
+    const differentPlace = shotImageRequest({...next,location:'terrace'});
+    assert.ok(!differentPlace.inputs.includes(first.file));
+
+    writeShotIcons({path:dir,shots:[{id:'s0002',backgroundView:'back'}]});
+    const reverse = shotImageRequest({...next,props:['key']});
+    assert.deepEqual(reverse.inputs.slice(0,2),[join(dir,'places/back.png'),first.file]);
+    assert.equal(reverse.inputs.length,5);
+    assert.match(reverse.inputs[4],/reference-sheet-[a-f0-9]+\.png$/);
+    assert.equal(readImageMetadata(reverse.inputs[4]).width,1024);
+    assert.match(reverse.prompt,/Image 5, row 1, column 2 shows the key prop/);
+    assert.ok(reverse.inputHashes[join(dir,'places/key.png')]);
+    assert.ok(!reverse.prompt.includes("Keep Image 1's physical arrangement"));
+    storyboardImages.deferShotImage(next, reverse);
+    writeFileSync(reverse.file,png);
+    make(dir,'s0001','start',{role:'shot_reference',location:'room'});
+    const completion = {path:dir,id:next.id,frame:'start',action:'complete',requestId:reverse.requestId};
+    assert.throws(()=>storyboardImages.completeShotImage(completion),/shot_image_request_stale/);
+    const finalOpening = make(dir,'s0002','start',{role:'shot_reference',location:'room'});
+    const finalImage = make(dir,'s0002','end',{role:'scene_end'});
+    assert.equal(finalImage.inputs[0],finalOpening.file);
+    assert.match(finalImage.prompt,/final shot’s opening composition/);
+  });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /story_order.*no render route/);

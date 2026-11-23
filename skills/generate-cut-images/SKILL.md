@@ -18,6 +18,22 @@ Step 6 of [the production order](../_shared/production-workflow.md) (user direct
 compose the chosen scene anchors with `shot_image`: set `role:"scene_start"` on its first card and `role:"scene_end"` on its last. Include silent cast as `bystanders` on the opening. The scene opening covers its first card. Attach a composition image with `role:"shot_reference"` to every other generated shot. If there is no scene opening, attach an image to the first card too. A still-camera card uses its own source image. Older boards may keep their per-shot frame plans. Check `storyboard_read.readiness.shotImageGaps` and inspect all shot cards before delivery. Read [still generation](../produce/references/still-generation.md)
 and [image routing](../_shared/image-routing.md).
 
+Before starting a multi-shot scene, use `story_scene.directionDefaults` to record its space.
+Put fixed seats, standing marks, actor facing, landmark placement and persistent prop relations
+in `continuity`. Put the selected camera side and reciprocal eyelines in `axis`. Give each
+card its own `shot_icons.view` crop, subject and viewpoint. Compare the cuts against these
+positions before requesting images. A deliberate move across the axis needs a visible cue.
+The tool feeds the scene notes and the location sheet's layout into the normal image request.
+
+Finish and inspect the first image before making its same-location follow-up cards. It can be
+the scene opening or the first card's own composition image. The follow-up request uses it to
+carry seating, actor spacing and world landmarks. A reverse angle still starts from its own
+directional view or camera-matched set. Keep the focus, opening action, cast in frame and
+prop state of the current card. A tight opening may show only part of the space, so save the
+wider layout in the scene and location plan. On Codex, the planner keeps the leading
+images separate and arranges references beyond the fourth in a fifth image, with matching
+row and column labels. Use the ordered handoff exactly as returned.
+
 For each shot, read its story, characters, lines and icon attributes with `storyboard_read`
 and apply [content-led opening views](../storyboard/references/shot-view.md). Before making
 a new image, the board author sets `visual.camera.view` with `shot_icons`: subject, crop,
@@ -79,7 +95,8 @@ tool adds each character's head count from the sheet (`physical.proportions`, e.
 heads tall") as a sentence wherever the crop shows the body, and warns `head_count_missing`
 when the sheet has none: write it with `character_manage` rather than in `prompt`. After
 generation, look at the head against the shoulders and body; correct an oversized head
-with `editExisting` and a prompt that changes only the head size. The place goes first as the picture to edit.
+with `editExisting` and a prompt that changes only the head size. The saved spatial frame,
+matching location view or built set supplies the composition reference.
 A model that takes fewer pictures than the frame composes refuses
 (`image_references_unsupported`): report it and ask which model to use — gpt-image takes up
 to 16, astra-genai-native and an MLX Qwen-Image-2.1 pack up to 10, MLX FLUX.2 klein and

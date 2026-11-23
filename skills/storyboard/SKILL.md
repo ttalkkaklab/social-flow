@@ -158,6 +158,10 @@ The review derives camera icons, cut connections and planned length bars from ex
 For related cuts, use [shot continuity](references/shot-continuity.md): stage concrete
 opening/closing poses and shared blocking before choosing source images. Keep dependent
 actions connected; a source still depicts the opening instant, not the completed action.
+Set the scene's fixed spatial relationships and camera side in `story_scene.directionDefaults`
+before composing the first shot. Name seats or standing marks, facing, eyelines and a fixed
+landmark. Check each shot's own view against that layout. Establish or make that arrangement
+legible at the first opportunity without forcing an establishing shot on a tight opening.
 
 Read [automation guidance](../_shared/automation-guidance.md) and
 [character-led scenarios](references/character-scenarios.md). They define the active
