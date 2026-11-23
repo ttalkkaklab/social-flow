@@ -1,6 +1,11 @@
 # Video routing contract
 
-Declare every speaker with a line in the complete scene, including off-screen speech and voiceover. Split before a third distinct speaker talks. Silent listeners belong in the opening picture as bystanders. For generation, author the scene opening in `frames.start`; `frames.end` and each shot's composition `referenceImage` are optional. A picture with no visible speech uses image-to-video. Keep voiceover and off-screen-only speech on the external soundtrack. One physical speaker with visible dialogue needs audio-to-video and the finished, scene-length dialogue track in `videoDirection.audio`. For two physical speakers with visible dialogue, supply the opening picture and a distinct pinned voice sample for each character. The planner binds both samples and submits compatible composition references. A reference-only model uses the opening as a composition guide. A saved model without the required operation or inputs cannot generate that scene. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`.
+Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. Distilled LTX can combine the opening, an optional ending, up to four subject images and one background. Its first two subjects can carry voice samples in each native render. With authored cuts, the per-shot renderer can change that pair inside one scene job. A one-take exceeding the selected model's capacity needs an authoring decision.
+- Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Seedance 2.0 reference mode binds composition images by shot ID and numbered image within one scene request. Its image limit includes other reference images. A pinned first or last frame uses a different operation. Distilled LTX combined I2V takes its start and end frames separately from up to four scene-wide subject references and one background. A single character leaves three subject slots for other subjects or objects. These slots carry no shot index. The single-shot route may use its background slot for a composition guide when a subject is present. Inspect `sceneRequest.shotReferenceImages` for the disposition of each guide.
 
@@ -57,7 +62,7 @@ succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
-For a protected storyboard, pass `shotBindings` with the exact shot IDs. Set scene identity images in `story_scene.speakerReferences` and positions in `story_scene.videoDirection`. Each binding can supply a dialogue cue, revised framing or action, or MSR negative guidance. Legacy boards with frame-addressed shot inputs can also revise their keyframes and shot opening positions. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, use `performanceAudio` only for a card with one spoken line in a two-speaker scene. Attach the original voice recording and completed generation receipt to the line. The planner converts that verified recording to stereo 48 kHz PCM and pads the native shot tail with silence. The planner checks the bytes, speaker, text, revision and audio signal before upload. Include the selected voice sample as a separate identity reference. The spoken recording must fit inside the visible shot. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
+For a protected storyboard, pass `shotBindings` with the exact shot IDs. Set scene identity images in `story_scene.speakerReferences` and positions in `story_scene.videoDirection`. Each binding can supply a dialogue cue, revised framing or action, or MSR negative guidance. Legacy boards with frame-addressed shot inputs can also revise their keyframes and shot opening positions. For a reviewed camera move, set the card’s `motionPrefix` to a matching MP4 of 9–121 frames on the 8k+1 grid. The renderer fixes its latent frames in both diffusion stages. For a reply on a specific cut, use `performanceAudio` only for a card with one spoken line on the pinned-voice route. Attach the original voice recording and completed generation receipt to the line. The planner converts that verified recording to stereo 48 kHz PCM and pads the native shot tail with silence. The planner checks the bytes, speaker, text, revision and audio signal before upload. Include the selected voice sample as a separate identity reference. The spoken recording must fit inside the visible shot. The plan records these choices and hashes its media before approval. The gateway validates the staged files and the chosen model’s limits. On a lost response, `video_status` with `action:"refresh"` looks up the original scene request. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
 
 **LTX contracts checked 2026-11-22**
 
@@ -177,19 +182,9 @@ its adapter/schema and registering its deployment; update pricing and behavioral
 tests, regenerate the catalog/bundle, then expose it in settings. Research alone
 never enables an unimplemented API.
 
-## Single-speaker shots and MSR routing
+## Dialogue coverage and native renders
 
-Split every speaker change before final camera icons and images. Each shot has at most
-one speaking character, while a silent listener may share the picture. For a saved
-GenAI MSR (`operation:"reference"`) project, silent and voiceover-only shots resolve to
-`operation:"image"` with the same engine/model/resolution. This is the standing
-2026-11-09 operation rule, not a provider fallback. Explicit MSR requests for those
-shots fail before generation (`msr_speech_route`); multiple speakers report
-`shot_speaker_limit`. The hosted reference lanes (`minimax_reference`,
-`heygen_reference`) follow the same rule (`reference_speech_route`): they get the cast's
-panels, the start image as the last picture (not a pinned first frame) and the speaker's
-sample, and silent shots plan `operation:"image"`. A saved `ltx-api` selection plans
-spoken shots with `operation:"audio"` and the composed pinned-voice track as `args.audioPath`. Split physical speech and inner thoughts into their own shots.
+Conventional coverage follows one speaker per shot. In an authored one-take, retain the replies and check the selected adapter's capacity. A distilled LTX render can bind two pinned voices to the first two subject slots. A scene with cuts can use different subjects on successive child renders. The hosted reference adapters receive their own ordered pictures and voice samples. On their reference-only routes the opening picture guides composition. A hosted LTX audio-to-video request takes the composed track as `args.audioPath`.
 
 Use the composed opening image, `generateAudio:false` and closed-mouth action for
 thoughts. `speech_manage` plans external TTS voiceover and binds assembly to
@@ -270,7 +265,7 @@ The planner reads the saved choice and the storyboard. Each provider adapter ser
 | --- | --- | --- | --- |
 | First and optional last frame | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image` and `lastFrame` |
 | Character references | Distilled I2V combines the opening with subject images when supported. Spoken MSR accepts subject images and a background. | The image endpoint requires an opening and has no subject slots. | Standard/Fast accept 1–3 images of one subject for eight seconds. A timeline pin cannot accompany the assets. |
-| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | Veo has no input for the supplied dialogue track or two character voices. Use it for non-speaking episode pictures. |
+| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | Veo can synthesize the authored dialogue when the scene permits model-generated voices. It cannot take a supplied recording. |
 
 An explicit operation must agree with the scene speech route. The planner reports inputs that the selected deployment cannot represent before approval. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
 

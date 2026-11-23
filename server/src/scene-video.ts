@@ -159,7 +159,7 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions &&
         JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error('scene_opening_positions: a single shot and its scene must have the same opening positions');
-    const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : undefined) : undefined;
+    let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : undefined) : undefined;
     const blocking = notes.blocking;
     const sound = notes.sound;
     const ordered = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech as (card:Member)=>NonNullable<Member['narration']>;
@@ -182,6 +182,18 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
         ...(frame !== undefined ? {frame} : {}), ...(voice ? {voice} : {}),
         ...(warnings.length ? {warnings} : {}) };
     });
+    if (shotScoped && dialogue.some(line => line.voice)) {
+      const owners = [...new Set(dialogue.filter(line => line.voice).map(line => line.speaker))];
+      const indices = images.flatMap((image, i) => image.shotId === shotId && !temporal(image) ? [i] : []);
+      const references = indices.map(i => images[i]);
+      // The gateway binds a voice to the first picture owned by that speaker.
+      const voices = owners.map(id => references.find(ref => ref.character === id && !['location','background'].includes(ref.role))).filter((ref):ref is SceneImage => !!ref);
+      const slots = references.filter(ref => !['location','background'].includes(ref.role));
+      const ordered = voices.every(ref => slots.indexOf(ref) < 2) ? references : [...voices, ...references.filter(ref => !voices.includes(ref))];
+      for (const [i,slot] of indices.entries()) images[slot] = ordered[i];
+      const subjects = ordered.filter(ref => !['location','background'].includes(ref.role));
+      positions = positions?.map(row => ({...row, images:subjects.flatMap((ref,i) => ref.character === row.character ? [i+1] : [])}));
+    }
     return { shotId, startFrame, endFrame, transition, framing, action,
       ...(concise && notes.end ? {closingState:notes.end} : {}),
       ...(positions?.length ? {openingPositions:positions} : {}), ...(blocking ? {blocking} : {}),
@@ -346,11 +358,16 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
       ...(image.reference ? {reference_id:image.reference.id, purpose:image.reference.purpose} : {}),
       image_uri:genaiSourceUri(undefined, image.path),
     }));
+    let delivery: string | undefined;
+    if (scene.silentPicture || !shot.dialogue?.length && !conditioned)
+      delivery = 'All visible mouths stay closed. No speech or vocalization.';
+    else if (shot.dialogue?.length && shot.dialogue.every(line => line.delivery === 'off_screen'))
+      delivery = 'All visible mouths stay closed while the off-screen speaker talks.';
     return { ...(binding?.motionPrefix ? {motion_uri:''} : {}),
       ...(binding?.performanceAudio ? {performance_uri:''} : {}),shot_id:shot.shotId, start_frame:shot.startFrame, end_frame:shot.endFrame,
       ...(guidance ? {negative_prompt:guidance.negativePrompt, guidance_scale:guidance.guidanceScale} : {}),
       ...(shot.transition === 'open' ? {} : {transition:shot.transition}),
-      description:[shot.framing,shot.action,scene.silentPicture && 'All visible mouths stay closed. No speech or vocalization.',videoTextPolicy()].filter(Boolean).join(' '), opening_positions:shot.openingPositions,
+      description:[shot.framing,shot.action,delivery,videoTextPolicy()].filter(Boolean).join(' '), opening_positions:shot.openingPositions,
       blocking:shot.blocking, audio:shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
       dialogue:shot.dialogue?.map(line => ({id:line.lineId, speaker:line.speaker, text:line.text, delivery:line.delivery,
         direction:line.direction, frame:conditioned ? undefined : line.frame, ...(line.voice ? {voice_uri:genaiAudioUri(undefined,line.voice.path)} : {})})),
@@ -464,6 +481,13 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
   }
   if (tool === 'astra_genai_img2video' && !pins.some(p => p.frame === 0 && (p.strength ?? 1) === 1))
     missing.push({input:'image',frame:0,reason:'Gateway I2V requires a full-strength opening image'});
+  if (tool === 'astra_genai_img2video' || tool === 'astra_genai_msr') {
+    for (const [background, limit] of [[false,4], [true,1]] as const) {
+      const group = refs.filter(ref => ['background','location'].includes(ref.role) === background);
+      for (const ref of group.slice(limit)) missing.push({input:'reference', role:ref.role, shotId:ref.shotId, frame:ref.frame,
+        path:ref.path, reason:'MSR accepts at most ' + limit + (background ? ' background' : ' subject references') + ' per render'});
+    }
+  }
   const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
   if (assets) {
     const issue = assets.validate(refs, model);

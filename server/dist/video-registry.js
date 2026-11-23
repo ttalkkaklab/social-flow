@@ -83,6 +83,20 @@ function keys(schema) {
         return Object.keys(schema.shape);
     return [];
 }
+/** Number of independently owned samples accepted in one native render. */
+export function voiceReferenceLimit(tool, model) {
+    if (tool === 'seedance_reference')
+        return seedance.SEEDANCE_MODEL_SPECS[(model ?? seedance.DEFAULT_SEEDANCE_MODEL)]?.referenceAudio.maxClips ?? 0;
+    if (tool === 'astra_genai_img2video' || tool === 'astra_genai_msr')
+        return 2;
+    let schema = VIDEO_ADAPTERS[tool]?.schema;
+    while (schema instanceof z.ZodEffects)
+        schema = schema.innerType();
+    let field = schema instanceof z.ZodObject ? schema.shape.referenceAudioPaths : undefined;
+    while (field instanceof z.ZodOptional || field instanceof z.ZodDefault)
+        field = field._def.innerType;
+    return field instanceof z.ZodArray ? field._def.maxLength?.value ?? 0 : 0;
+}
 /** The adapter's prompt length limit from its schema, or undefined when it states none. */
 export function videoPromptLimit(tool) {
     let schema = VIDEO_ADAPTERS[tool]?.schema;
@@ -121,7 +135,7 @@ export function sceneInputCapabilities(tool) {
         shotScopedReferences: false, frameAddressedNativeDialogue: false,
         ...(['astra_genai_img2video', 'astra_genai_audio2video'].includes(tool) ? { sceneRenderer: {
                 model: tool === 'astra_genai_img2video' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev',
-                sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: true,
+                sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: tool !== 'astra_genai_img2video',
                 capabilities: '/v1/ltx/v2/scene-to-video/capabilities', validation: '/v1/ltx/v2/scene-to-video/validate',
             } } : {}),
         openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
@@ -153,6 +167,10 @@ export function videoVoiceCapabilities(tool) {
     if (!adapter)
         throw new Error('Unsupported video tool: ' + tool);
     return {
+        maxPinnedVoicesPerRender: tool === 'seedance_reference'
+            ? Object.fromEntries(Object.entries(seedance.SEEDANCE_MODEL_SPECS).map(([model, spec]) => [model, spec.referenceAudio.maxClips]))
+            : voiceReferenceLimit(tool),
+        postLipSync: false,
         lane: tool === 'astra_genai_img2video' ? 'conditional_reference' : adapter.voice,
         dialogue: scenePromptProfile(tool).allowsGeneratedVoice ? 'requires_model_generated_scene_voice' : tool === 'astra_genai_img2video' ? 'requires_subject_references' : adapter.voice === 'none' ? 'refused' : 'allowed',
         voiceReference: tool === 'astra_genai_img2video' ? 'backend_dependent_with_subject_references' : adapter.voice !== 'reference' ? 'unsupported' : ['astra_genai_msr', 'heygen_reference'].includes(tool) ? 'backend_dependent' : 'supported',

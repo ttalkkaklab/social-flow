@@ -54,4 +54,18 @@ function compileActing(text, acting, voice) {
   throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
 }
 
-module.exports = { speechRevision, compileActing };
+// Reject executable legacy modes and caller-supplied capabilities, including nested saved plans.
+function hasPostLipSync(value) {
+  if (!value || typeof value !== 'object') return false;
+  return Object.entries(value).some(([key, entry]) => {
+    if ((key === 'postLipSync' || key === 'post_lipsync') && entry === true) return true;
+    if (typeof entry === 'string' && ['mode', 'operation', 'strategy', 'route', 'tool'].includes(key))
+      return /^post[-_ ]?lip[-_ ]?sync$/i.test(entry);
+    return hasPostLipSync(entry);
+  });
+}
+function assertNoPostLipSync(value) {
+  if (hasPostLipSync(value)) throw new Error('post_lipsync_forbidden: generate a new speaking take from the approved inputs');
+}
+
+module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync };

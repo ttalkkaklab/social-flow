@@ -9,17 +9,9 @@ function sceneSpeech(scene, cards, planning = false) {
   const lines = cards.flatMap(card => orderedSpeech(card).filter(line => line.tts?.trim()).map(line => ({card, line})));
   const spoken = new Set(), physical = new Set();
   const declared = scene.speakers;
-  if (declared !== undefined && (!Array.isArray(declared) || declared.length > 2 ||
+  if (declared !== undefined && (!Array.isArray(declared) ||
       declared.some(id => typeof id !== 'string' || !id.trim()) || new Set(declared).size !== declared.length))
-    throw new Error('scene_speaker_limit: declare up to two distinct speakers in scene ' + scene.no);
-  if (scene.speakerReferences !== undefined) {
-    const ids = new Set();
-    for (const ref of scene.speakerReferences) {
-      if (!ref.path || !declared?.includes(ref.character) || ids.has(ref.character))
-        throw new Error('scene_reference_owner: each scene reference needs a distinct declared speaker');
-      ids.add(ref.character);
-    }
-  }
+    throw new Error('scene_speaker_mismatch: list each speaker once by cast ID in scene ' + scene.no);
   for (const {card, line} of lines) {
     if (!line.speaker) {
       if (planning || declared || line.delivery === 'on_screen' || line.delivery === 'off_screen')
@@ -29,14 +21,31 @@ function sceneSpeech(scene, cards, planning = false) {
     if (planning && !['on_screen','off_screen','voiceover'].includes(line.delivery))
       throw new Error('scene_speaker_delivery: identify the delivery of ' + line.speaker + ' in ' + card.id);
     spoken.add(line.speaker);
-    if (spoken.size > 2)
-      throw new Error('scene_speaker_limit: split scene ' + scene.no + ' before ' + line.speaker +
-        ' speaks in shot ' + card.id + ', line ' + (line.id || line.tts));
     if (declared && !declared.includes(line.speaker)) {
-      throw new Error('scene_speaker_limit: scene ' + scene.no + ', shot ' + card.id + ', line ' +
-        (line.id || line.tts) + ' names ' + line.speaker + '; declare the speaker or start a new scene');
+      throw new Error('scene_speaker_mismatch: scene ' + scene.no + ', shot ' + card.id + ', line ' +
+        (line.id || line.tts) + ' names undeclared speaker ' + line.speaker);
     }
     if (line.delivery !== 'voiceover') physical.add(line.speaker);
+  }
+  if (scene.speakerReferences !== undefined && !Array.isArray(scene.speakerReferences))
+    throw new Error('scene_reference_owner: list the scene references by cast ID');
+  if (scene.speakerReferences?.length) {
+    const staged = new Set([...spoken, ...(declared ?? []), ...(scene.videoDirection?.openingPositions ?? []).map(row => row.character)]);
+    for (const card of cards) {
+      for (const id of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id);
+      for (const item of [...(card.timeline?.images ?? []), ...(card.timeline?.openingPositions ?? []), ...(card.visual?.characterInputs ?? [])])
+        if (item.character) staged.add(item.character);
+    }
+    // Scene references can be declared before story_shot and shot_characters fill the cards.
+    const castAssigned = cards.length > 0 && cards.every(card => card.visual?.character !== undefined || card.visual?.characters !== undefined);
+    const owners = new Set();
+    for (const ref of scene.speakerReferences) {
+      if (!ref?.path || !ref.character || owners.has(ref.character))
+        throw new Error('scene_reference_owner: each scene reference needs a path and a distinct cast ID');
+      if ((planning || castAssigned) && !staged.has(ref.character))
+        throw new Error('scene_reference_owner: ' + ref.character + ' does not appear or speak in scene ' + scene.no);
+      owners.add(ref.character);
+    }
   }
   if (planning && declared?.some(id => !spoken.has(id)))
     throw new Error('scene_speaker_mismatch: the declared speakers must match the lines of scene ' + scene.no);
@@ -50,20 +59,41 @@ function sceneCast(scene, cards) {
 function sceneSpeechRoute(scene, cards, selection) {
   const {physical, visible} = sceneSpeech(scene, cards, true);
   const speakers = visible ? physical : [];
-  const operation = speakers.length < 2 ? (speakers.length ? 'audio' : 'image')
-    : selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' && selection.operation !== 'reference' ? 'image' : 'reference';
-  return {speakers, operation, external:!visible && physical.length > 0};
+  const direction = scene.videoDirection || {};
+  const track = direction.audio && direction.audio.mode !== 'mix';
+  const distilled = selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled';
+  const generated = direction.dialogueVoice === 'model_generated';
+  if (track && !visible) throw new Error('scene_speech_route: an external voice or a non-speaking picture uses a mix track');
+  if (track && generated) throw new Error('scene_speech_route: choose recorded audio or generated dialogue for this render');
+  const mode = track ? 'conditioned' : !speakers.length ? 'picture' : generated ? 'generated'
+    : selection.operation === 'audio' ? 'conditioned' : 'reference';
+  let operation = 'image';
+  if (mode === 'conditioned') operation = 'audio';
+  else if (mode === 'reference') operation = distilled && selection.operation !== 'reference' ? 'image' : 'reference';
+  else if (mode === 'generated' && selection.engine === 'veo' && selection.operation === 'reference') operation = 'reference';
+  // Explicit temporal openings and hard cuts describe separate native renders.
+  const anchoredCuts = cards.every((card, index) => card.timeline &&
+    card.timeline.transition === (index ? 'hard_cut' : 'open') &&
+    card.timeline.images?.some(pin => pin.role === 'start' && pin.frame === card.timeline.startFrame) &&
+    !card.timeline.dialogueCues?.length);
+  const perShot = distilled && operation === 'image' && cards.length > 1 && !direction.oneTake &&
+    (mode === 'reference' && speakers.length > 2 || anchoredCuts);
+  return {speakers, operation, mode, ...(perShot ? {rendering:'per_shot'} : {}), external:!visible && physical.length > 0};
 }
 
 const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
-function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false) {
+function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
   const voiceOnly = new Set(actors.filter(actor => actor.voiceOnly === true).map(actor => actor.id));
   const speakers = sceneCast(scene, cards).filter(id => !voiceOnly.has(id));
+  const declaredRefs = scene.speakerReferences ?? [];
+  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character)])];
+  if (declaredRefs.some(ref => !actors.some(actor => actor.id === ref.character)))
+    throw new Error('scene_reference_owner: register the owner of every scene identity reference');
   if (scene.speakerReferences?.some(ref => voiceOnly.has(ref.character)))
     throw new Error('scene_reference_owner: a voice-only speaker has no visual identity in this scene');
   const owners = new Map();
@@ -87,7 +117,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     return speakers.find(id => ref.id === id || ref.id === id+'-face' || ref.id?.startsWith(card.id+'-'+id+'-'));
   }
   const sheets = new Map();
-  for (const character of speakers) {
+  for (const character of identities) {
     // Resolve the same registered source used by the engine-specific character binder.
     try {
       const panels = require('../channel/references/character-panels.js').sheetPanels(boardDir,[character],new Map([[character,['face']]])).get(character);
@@ -100,7 +130,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   const originals = new Map();
   if (engine === 'seedance' && scene.frames !== undefined) {
     for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
-      if (!spec.faceTaskId || !speakers.includes(spec.character)) continue;
+      if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
       if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
         throw new Error('scene_reference_owner: conflicting originals for ' + spec.character);
       originals.set(spec.character, spec);
@@ -109,7 +139,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   const references = [];
   const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
   const ltx = engine === 'astra-genai';
-  for (const character of speakers) {
+  for (const character of identities) {
     const actor = actors.find(c => c.id === character);
     let face = sheets.get(character)?.face ?? actor?.panels?.face;
     const candidates = cards.flatMap(card => [
@@ -135,31 +165,48 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     } else if (ltx && scene.speakers && !conditioning)
       throw new Error('character_panel_missing: scene ' + scene.no + ' speaker ' + character + ' needs a registered face');
   }
-  const positions = rows => rows?.map(row => ({...row, images:ltx ? references.flatMap((r,i)=>r.character === row.character ? [i+1] : []) : speakers.includes(row.character) ? row.images : []}));
+  const positions = (rows, refs) => rows?.map(row => ({...row, images:ltx
+    ? refs.flatMap((ref,i) => ref.character === row.character ? [i+1] : []) : row.images}));
+  let openingRefs = [];
   const members = cards.map((card, index) => {
     const visual = card.visual || {};
     const original = castIds(visual.character);
-    const silent = original.filter(id => !speakers.includes(id));
+    const active = [...new Set(orderedSpeech(card).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker))];
+    const localIds = new Set([...active, ...original, ...castIds(visual.bystanders), ...(card.timeline?.openingPositions ?? []).map(p => p.character)]);
+    const localRefs = perShot && speakers.length > 2 ? [
+      ...active.flatMap(id => references.filter(ref => ref.character === id)),
+      ...references.filter(ref => !active.includes(ref.character) && localIds.has(ref.character))
+    ] : references;
     const useSceneRefs = (ltx || scene.frames !== undefined) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === 'mix');
     const keep = ref => {
       const owner = registeredOwner(ref.path);
       if (owner && ref.character && owner !== ref.character) throw new Error('scene_reference_owner: conflicting owner for ' + ref.path);
       if (scene.frames !== undefined && ref.legacy) return false;
-      if (ref.role === 'bystander') return false;
+      if (ref.use === 'image') return true;
+      if (localRefs.some(item => canonical(item.path) === canonical(ref.path))) return false;
+      if (!ref.legacy && personRoles.has(ref.role)) return true;
+      const identity = ownerOf(ref,card);
+      if (identity && !speakers.includes(identity) && !declaredRefs.some(item => item.character === identity)) return !ref.legacy;
       if (!personRoles.has(ref.role) && !owner) return true;
       if (ltx || scene.frames !== undefined) return false;
       return speakers.includes(ownerOf(ref,card));
     };
-    const kept = (visual.references || []).filter(keep);
-    const subjectRefs = useSceneRefs ? references : [];
+    const kept = (visual.references || []).filter(keep).map(ref => {
+      const character = ownerOf(ref, card);
+      return personRoles.has(ref.role) && character ? {...ref, character, role:ref.role === 'bystander' ? 'character' : ref.role} : ref;
+    });
+    const subjectRefs = useSceneRefs ? localRefs : [];
+    const pins = card.timeline?.images?.filter(pin => !personRoles.has(pin.role) || keep(pin)) ?? [];
+    const slots = [...pins.filter(pin => !['start','end','keyframe','location','background'].includes(pin.role)),
+      ...[...subjectRefs,...kept].filter(ref => ref.use !== 'image' && !['location','background'].includes(ref.role) && !pins.some(pin => pin.path === ref.path))];
+    if (!index) openingRefs = slots;
     const timeline = card.timeline && {...card.timeline,
-      ...(card.timeline.images ? {images:card.timeline.images.filter(pin => !personRoles.has(pin.role) || keep(pin))} : {}),
-      ...(card.timeline.openingPositions ? {openingPositions:positions(card.timeline.openingPositions)} : {})};
-    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(visual.character !== undefined ? {character:original.filter(id=>speakers.includes(id))} : {}),
-      ...(silent.length ? {bystanders:[...new Set([...(visual.bystanders || []),...silent])]} : {}),
+      ...(card.timeline.images ? {images:pins} : {}),
+      ...(card.timeline.openingPositions ? {openingPositions:positions(card.timeline.openingPositions, slots)} : {})};
+    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(visual.character !== undefined ? {character:original} : {}),
       ...(visual.references || subjectRefs.length ? {references:[...subjectRefs,...kept]} : {}),
-      ...(visual.characterInputs ? {characterInputs:visual.characterInputs.filter(c=>speakers.includes(c.character))} : {}),
-      ...(visual.video?.openingPositions ? {video:{...visual.video,openingPositions:positions(visual.video.openingPositions)}} : {})};
+      ...(visual.characterInputs ? {characterInputs:visual.characterInputs} : {}),
+      ...(visual.video?.openingPositions ? {video:{...visual.video,openingPositions:positions(visual.video.openingPositions, slots)}} : {})};
     if (originals.size && updated.character?.length) {
       updated.characterInputs = updated.character.map(character => {
         const local = updated.characterInputs?.find(spec => spec.character === character) ?? {character};
@@ -182,13 +229,13 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
         delete updated.video.lastImagePath;
         delete updated.video.referenceImagePaths;
       }
-      if (timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
+      if (!perShot && timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
         throw new Error('scene_image_scope: scene anchors and optional shot guides replace temporal pins on ' + card.id);
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};
   });
-  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(scene.videoDirection.openingPositions)};
-  return {members, direction, speakers};
+  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(scene.videoDirection.openingPositions, openingRefs)};
+  return {members, direction, speakers, identities};
 }
 
 module.exports = {sceneCast, sceneSpeechRoute, projectSceneCast};

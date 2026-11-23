@@ -4,14 +4,22 @@ import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import path,{join} from 'node:path';
 import {createRequire} from 'node:module';
+import {createHash} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {manageSpeech,speechAudioPlan,speechVideoPlan,speechManageSchema,speechRevision} from '../dist/speech.js';
 import {ttsGenerateSchema,gemini38TtsSchema} from '../dist/tts-client.js';
 import {elevenLabsGenerateSchema} from '../dist/elevenlabs-client.js';
 import {ASTRA_VIDEO_MAX_PROMPT_CHARS} from '../dist/astra-video-client.js';
 import {TOOLS} from '../dist/tools.js';
+import {ROUTES} from '../dist/handlers.js';
+import {setupProject} from './workflow-fixture.mjs';
 const require=createRequire(import.meta.url);
 const voice={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
 const caps={provider:'replaceable',model:'first',audioConditioning:true,lipSync:true,postLipSync:false,evidence:'fixture adapter contract'};
+function spokenClip(file, frequency = 440) {
+  execFileSync('ffmpeg',['-v','error','-y','-f','lavfi','-i','color=s=16x16:r=24','-f','lavfi','-i',`sine=frequency=${frequency}:sample_rate=48000`,
+    '-t','0.25','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',file]);
+}
 function setup(t){
  const dir=mkdtempSync(path.join(tmpdir(),'shot-speech-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
  mkdirSync(path.join(dir,'storyboard'));mkdirSync(path.join(dir,'.work'));
@@ -93,7 +101,7 @@ test('video adapters select by capabilities, never a provider name',()=>{
  const lines=[{id:'a',speaker:'hero',delivery:'on_screen',tts:'Hello'}];
  assert.equal(speechVideoPlan(lines,caps).mode,'audio_conditioned');
  assert.equal(speechVideoPlan(lines,{...caps,provider:'another',model:'second'}).mode,'audio_conditioned');
- assert.equal(speechVideoPlan(lines,{...caps,audioConditioning:false,postLipSync:true}).mode,'post_lipsync');
+ assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false,postLipSync:true}),/post_lipsync_forbidden/);
  assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false}),/cannot synchronize/);
  assert.equal(speechVideoPlan([{...lines[0],delivery:'voiceover'}],caps).mode,'voiceover');
  const native={...caps,audioConditioning:false,lipSync:false,nativeSpeech:true},msr=speechVideoPlan(lines,native);
@@ -108,6 +116,44 @@ test('video adapters select by capabilities, never a provider name',()=>{
   assert.doesNotMatch(outside.videoPrompt,/Show this speaker physically saying/);
  }
 });
+test('public speech planning and attachment reject post lip sync on boards without a model snapshot',async t=>{
+ const {dir,target,r}=setup(t); setupProject(dir);
+ const file=join(target,'scenes.js'), candidate=join(dir,'renamed.mp4');
+ spokenClip(candidate);
+ const board=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ board.SCENES[0].visual.video.speechBinding={mode:'post_lipsync',videoPath:'old.mp4',
+   videoSha256:createHash('sha256').update(readFileSync(candidate)).digest('hex')};
+ const original=Object.entries(board).map(([key,value])=>`window.${key}=${JSON.stringify(value)};`).join('\n');
+ writeFileSync(file,original);
+ const base={path:target,shotId:r.lines[0].shotId,capabilities:caps}, expectedRevision=manageSpeech({path:target,action:'list'}).revision;
+ await assert.rejects(ROUTES.speech_manage({...base,action:'plan_video',capabilities:{...caps,postLipSync:true}}),/post_lipsync_forbidden/);
+ await assert.rejects(ROUTES.speech_manage({...base,action:'plan_video',tool:'post_lipsync'}),/post_lipsync_forbidden/);
+ await assert.rejects(ROUTES.speech_manage({...base,action:'plan_video',tool:'astra_video_retake',capabilities:{...caps,provider:'astra',model:'astra'}}),/capabilities disagree/);
+ await assert.rejects(ROUTES.speech_manage({...base,action:'attach_video',expectedRevision,videoPath:candidate}),/post_lipsync_forbidden/);
+ assert.equal(readFileSync(file,'utf8'),original);
+ delete board.SCENES[0].visual.video.speechBinding.videoSha256;
+ writeFileSync(join(target,'old.mp4'),readFileSync(candidate));
+ writeFileSync(file,Object.entries(board).map(([key,value])=>`window.${key}=${JSON.stringify(value)};`).join('\n'));
+ await assert.rejects(ROUTES.speech_manage({...base,action:'attach_video',expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:candidate}),/post_lipsync_forbidden/);
+ assert.equal(manageSpeech({...base,action:'plan_video'}).plan.mode,'audio_conditioned');
+});
+test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
+ const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=0.25','-c:a','pcm_s16le',audio]);
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=0.25','-c:v','libx264','-pix_fmt','yuv420p',candidate]);
+ const state=manageSpeech({path:target,action:'attach_audio',expectedRevision:r.revision,lineId:line.id,audioPath:audio,
+   generation:{generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:line.tts}});
+ const attach=()=>manageSpeech({path:target,action:'attach_video',expectedRevision:state.revision,shotId:line.shotId,videoPath:candidate,capabilities:caps});
+ assert.throws(attach,/conditioning_audio_unverified/);
+ const digest=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+ const proof={status:'completed',jobId:'fresh-a2v',mode:'audio2video',videoPath:candidate,sha256:digest(candidate),
+   conditioningAudioSha256:digest(audio),submittedRequest:{mode:'audio2video',audio_upload_id:'original-wav'}};
+ writeFileSync(candidate+'.astra-job.json',JSON.stringify(proof));
+ attach();
+ const card=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(join(target,'scenes.js'),'utf8')).SCENES[0];
+ assert.equal(card.sound.audioSource,'speech');
+ assert.equal(card.visual.video.speechBinding.conditioningAudioSha256,digest(audio));
+});
 test('a native-speech clip binds line revisions and assembles from its soundtrack without line audio',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js'),win={};
  new Function('window',readFileSync(file,'utf8'))(win);win.SCENES=[win.SCENES[0]];
@@ -116,22 +162,22 @@ test('a native-speech clip binds line revisions and assembles from its soundtrac
  const work=path.join(dir,'.work'),audio=path.join(work,'c0.wav');writeFileSync(audio,'extracted soundtrack');
  writeFileSync(path.join(work,'cards.tsv'),'0\tc0.wav\t1\n');
  const hash=f=>require('node:crypto').createHash('sha256').update(readFileSync(f)).digest('hex');
- const clip=(name,bytes)=>{const video=path.join(dir,name);writeFileSync(video,bytes);
+ const clip=(name,frequency)=>{const video=path.join(dir,name);spokenClip(video,frequency);
   writeFileSync(path.join(work,'source-audio.json'),JSON.stringify([{card:'0',video,sourceSha256:hash(video),audio,audioSha256:hash(audio)}]));return video;};
  const attach=video=>manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:video,capabilities:native});
  const checker=require('../../skills/produce/references/check-tts-quality.js'),shot=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0];
- const first=clip('msr-1.mp4','first clip');
- assert.throws(()=>checker.check(work,target),/needs a video speech binding/);
+ const first=clip('msr-1.mp4',440);
+ assert.throws(()=>checker.check(work,target),/post_lipsync_forbidden/);
  attach(first);assert.equal(shot().visual.video.speechBinding.mode,'native');assert.equal(shot().sound.audioSource,'video');
  assert.ok(checker.check(work,target)[audio]);
  const edited=manageSpeech({path:target,action:'update',lineId:line.id,expectedRevision:manageSpeech({path:target,action:'list'}).revision,patch:{tts:'Changed',sub:'Changed'}});
  assert.equal(edited.lines[0].mediaStatus,undefined);assert.throws(()=>checker.check(work,target),/video is stale/);
  attach(first);assert.throws(()=>checker.check(work,target),/video is stale/); // these bytes spoke the old words
- attach(clip('msr-2.mp4','regenerated clip'));assert.ok(checker.check(work,target)[audio]);
+ attach(clip('msr-2.mp4',660));assert.ok(checker.check(work,target)[audio]);
  assert.equal(manageSpeech({path:target,action:'list'}).lines[0].audioProvenanceStatus,'native_speech');
  const board={};new Function('window',readFileSync(file,'utf8'))(board);board.SCENES[0].sound.audioSource='speech';
  writeFileSync(file,Object.entries(board).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
- assert.throws(()=>checker.check(work,target),/needs sound.audioSource video/);
+ assert.throws(()=>checker.check(work,target),/post_lipsync_forbidden/);
  // A clip that opens on silent acting comes back with where its line sits and a trim to listen to.
  const voiced=path.join(dir,'msr-3.mp4');
  require('node:child_process').execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=4','-f','lavfi','-i','aevalsrc=if(between(t\\,2\\,3.5)\\,0.3*sin(2*PI*440*t)\\,0):s=48000:d=4','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',voiced]);
@@ -184,7 +230,7 @@ test('generation binding rejects wrong voices and invalidates old audio after ed
 test('same-text audio retake invalidates bound lip-sync video until rebound',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0];
  const audio=path.join(dir,'take1.wav'),retake=path.join(dir,'take2.wav'),video=path.join(dir,'clip.mp4');
- writeFileSync(audio,'first audio');writeFileSync(retake,'different timing');writeFileSync(video,'video fixture');
+ writeFileSync(audio,'first audio');writeFileSync(retake,'different timing');spokenClip(video);
  const generation={generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:'Hello'};
  let next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:r.revision,audioPath:audio,generation});
  next=manageSpeech({path:target,action:'attach_video',shotId:line.shotId,expectedRevision:next.revision,videoPath:video,capabilities:caps});
@@ -255,7 +301,7 @@ test('retime is a revisioned tool operation; safe tail reuse preserves speech an
  win.SCENES[0].performance=[{kind:'action',text:'Speak on phone',withGroup:1,durationSeconds:4},{kind:'dialogue',character:line.speaker,group:1}];
  win.SCENES[0].duration=4;writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
  const audio=path.join(dir,'timed.wav'),video=path.join(dir,'video.mp4');
- execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1','-c:a','pcm_s16le',audio]);writeFileSync(video,'video fixture');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=1','-c:a','pcm_s16le',audio]);spokenClip(video);
  let next=manageSpeech({path:target,action:'list'});
  const generation={generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:'Hello'};
  next=manageSpeech({path:target,action:'attach_audio',lineId:line.id,expectedRevision:next.revision,audioPath:audio,generation});
@@ -425,14 +471,15 @@ describe('scene direction', () => {
   const pcm=execFileSync('ffmpeg',['-v','error','-i',output.audioPath,'-f','s16le','-ac','1','-ar','48000','pipe:1']);
   const sample=seconds=>pcm.readInt16LE(Math.round(seconds*48000)*2);
   assert.equal(sample(.5),1000);assert.equal(sample(1.5),0);assert.equal(sample(2.5),2000);
-  const video=path.join(dir,'phone.mp4');writeFileSync(video,'previous synchronized media');
+  const video=path.join(dir,'phone.mp4');spokenClip(video);
   state=manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
   const secondAudio=state.lines[1].audio;
   state=manageSpeech({path:board,action:'update',lineId:'identify',expectedRevision:state.revision,patch:{acting:{...phone.narration[0].acting,vocal:'Firm low falling self-identification, with natural connected Korean phrasing.'}}});
   assert.equal(state.invalidated.video.speechStatus,'stale');
   const current=manageSpeech({path:board,action:'list'}).lines;
   assert.equal(current[0].audioCurrent,false);assert.equal(current[1].audioCurrent,true);
-  assert.deepEqual(current[1].audio,secondAudio);assert.throws(()=>compose(work,board),/identify: Character speech requires recorded generation voiceSettings/);
+  assert.deepEqual(current[1].audio,secondAudio);
+  assert.deepEqual(compose(work,board),[], 'changed speech cannot be laid over the previous speaking take');
  });
  test('raw audio plans satisfy each adapter schema without unsupported style parameters',()=>{
   const line={tts:'Hello',acting:{emotion:'Concerned',vocal:'Quiet measured question'}};
@@ -585,14 +632,14 @@ describe('scene direction', () => {
   const revision=()=>manageSpeech({path:board,action:'list'}).revision;
   const attachAudio=()=>manageSpeech({path:board,action:'attach_audio',lineId:line.id,expectedRevision:revision(),audioPath:audio,generation:proof(line)});
   const attachVideo=()=>manageSpeech({path:board,action:'attach_video',shotId:line.shotId,expectedRevision:revision(),videoPath:video,capabilities:caps});
-  writeFileSync(audio,wav(1));writeFileSync(video,'original synchronized clip');attachAudio();attachVideo();
+  writeFileSync(audio,wav(1));spokenClip(video);attachAudio();attachVideo();
   const original=read().speechBinding;
   writeFileSync(audio,wav(2));attachAudio();assert.equal(read().speechStatus,'stale');
   const result=attachVideo();
   assert.equal(read().speechStatus,'stale');assert.deepEqual(read().speechBinding,original);
   assert.equal(result.plan.performanceRevision,original.performanceRevision);
   assert.match(result.plan.warnings.join(),/Unchanged video bytes.*audio binding/);
-  writeFileSync(video,'new synchronized clip');attachVideo();
+  spokenClip(video,660);attachVideo();
   assert.equal(read().speechStatus,'current');assert.notDeepEqual(read().speechBinding.audio,original.audio);
   assert.equal(read().speechBinding.durationSeconds,2);
  });

@@ -419,7 +419,7 @@ export function prepareVideoVoice(tool, input, context) {
         if (msr || vendor)
             warnings.push(`${msr ? 'MSR' : tool} renders speech and effects into its own soundtrack; assembly uses it as the cut's audio.`);
         else if (!nativeSlot && !context.modelVoice)
-            warnings.push('visual.video assembly uses the external TTS track. Native voice guidance does not synchronize that WAV; use audio2video for exact supplied-speech staging or the existing visual.clip native-audio slot.');
+            warnings.push('Keep the generated soundtrack with its speaking picture. To use a finished recording, generate a fresh audio-to-video take with it.');
     }
     if (strategy === 'supplied_audio')
         warnings.push('Use the final composed pinned-voice WAV. ASTRA re-encodes supplied audio; mouth motion and speaker identity remain unreviewed.');

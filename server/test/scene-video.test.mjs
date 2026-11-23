@@ -93,7 +93,11 @@ test('one-take endpoint board reaches the A2V body with a single audio file and 
  assert.throws(()=>planVideo({...f.input,sceneNo:undefined,shotId:first.id}),/sceneNo|shotId/);
  first.timeline.images.push({role:'face',frame:0,path:'images/duo.png',character:'mai-an'});
  f.save();
- assert.deepEqual(buildGenaiAudioBody(planVideo(f.input).args),body);
+ assert.throws(()=>planVideo(f.input), error=>{
+   assert.deepEqual(error.missing.map(p=>[p.shotId,p.frame,p.role,path.basename(p.path)]),
+     [['s0001',0,'face','duo.png']]);
+   return true;
+ });
 });
 
 test('EP2 keeps the dolly in one shot and binds Miran’s line, position and references at the cut', async t => {
@@ -260,6 +264,147 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.equal(panel.character,undefined);
   answer.timeline.dialogueCues[0].lineId='missing-line'; f.save();
   assert.throws(()=>planVideo(f.input),/scene_dialogue_timing/);
+});
+
+function pinnedActor(dir, id, face, frequency) {
+  const sample = path.join(dir, id + '.wav');
+  execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i',`sine=frequency=${frequency}:duration=0.5`,sample]);
+  const tts = {engine:'gemini', voiceId:id, language:'vi', speed:1};
+  const sha256 = createHash('sha256').update(fs.readFileSync(sample)).digest('hex');
+  return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
+}
+
+test('EP13 keeps five Linh face pins and only her third-shot voice in one native scene submission', async t => {
+  const f = busking(t);
+  delete f.scene.audio;
+  f.scene.openingPositions = [
+    {character:'bo',images:[],position:'At the flower stall.'},
+    {character:'ep13-linh',images:[1],position:'In the rear passenger seat.'},
+    {character:'mochi',images:[],position:'Off camera.'},
+  ];
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc=size=16x16:rate=10',
+    '-frames:v','10',path.join(f.dir,'images/ep13-%02d.png')]);
+  const linh = pinnedActor(f.dir,'ep13-linh','images/ep13-10.png',450);
+  const shots = [
+    ['s0040',0,73,1,2,'The sedan stops.'],
+    ['s0038',73,146,3,4,'Linh leaves the rear seat.'],
+    ['s0002',146,203,5,null,'Linh asks Bơ to marry her.'],
+    ['s0003',203,228,6,7,'Mochi releases the cart.'],
+    ['s0004',228,267,8,9,'The flowers fall.'],
+  ];
+  const visible = [['bo'],['bo',linh.id],['bo',linh.id],['mochi'],[]];
+  const imagePath = number => 'images/ep13-' + String(number).padStart(2,'0') + '.png';
+  const members = shots.map(([id,startFrame,endFrame,first,last,action],i) => {
+    const images = [{role:'start',frame:startFrame,path:imagePath(first)}];
+    if (last) images.push({role:'end',frame:endFrame-1,path:imagePath(last)});
+    return {id, scene:1, duration:(endFrame-startFrame)/24,
+      visual:{character:visible[i],video:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'720x1280'},
+        frames:{mode:last?'first_last':'first',start:imagePath(first),...(last?{end:imagePath(last)}:{})}},
+      timeline:{startFrame,endFrame,transition:i?'hard_cut':'open',framing:'Fixed shot.',action,images},
+      narration:i===2?[{id:'s0002-l1',speaker:linh.id,delivery:'on_screen',tts:'Anh Bơ, cưới em nha?'}]:[]};
+  });
+  f.members.splice(0,f.members.length,...members);
+  f.save();
+  const board = path.join(f.dir,'scenes.js');
+  const cast = [linh,{id:'bo',panels:{face:'images/duo.png'}},{id:'mochi',panels:{face:'images/solo.png'}}];
+  fs.appendFileSync(board,'\nwindow.SB_DOC='+JSON.stringify({characters:cast})+';\nwindow.PRODUCTION='+
+    JSON.stringify({videoAuthorization:{reference:'Fixture scene approval',maxUsd:0,maxConcurrent:1,maxAttempts:1}})+';');
+
+  const selected = 'ltx-2.5-22b-distilled', sceneRoute = '/v1/ltx/v2/scene-to-video';
+  const key = config.astraGenaiApiKey, fetch = globalThis.fetch;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(()=>{config.astraGenaiApiKey=key;globalThis.fetch=fetch});
+  const validated = [], submitted = [];
+  globalThis.fetch = async (url, options) => {
+    const route = new URL(url).pathname;
+    if (route === '/v1/ltx/msr/capabilities') return Response.json({voice_references:true});
+    if (route === sceneRoute+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut']});
+    if (route === '/v1/uploads') {
+      const {sha256} = JSON.parse(options.body);
+      return Response.json({upload_id:sha256,chunk_size:1048576,chunks:1});
+    }
+    const uploadId = route.split('/')[3];
+    if (options.method === 'PUT') {
+      assert.equal(createHash('sha256').update(options.body).digest('hex'),uploadId);
+      return Response.json({});
+    }
+    if (route.endsWith('/complete')) return Response.json({file_id:uploadId,uri:'genai-file://'+uploadId});
+    if (route === sceneRoute+'/validate') {
+      validated.push(JSON.parse(options.body));
+      return Response.json({schema_valid:true,model:selected,shots:5});
+    }
+    assert.equal(route,sceneRoute);
+    submitted.push(JSON.parse(options.body));
+    throw new Error('Captured scene submission');
+  };
+  const plan = await planManagedVideo({...f.input,requestId:'ep13-s01-right-rear-native-v4'});
+  assert.deepEqual([plan.tool,plan.selection.model,plan.selection.operation],['astra_genai_img2video',selected,'image']);
+  assert.deepEqual(plan.sceneRequest.shots.map(s=>[s.shotId,s.startFrame,s.endFrame]),shots.map(s=>s.slice(0,3)));
+  const face = path.join(f.dir,linh.panels.face);
+  const expected = members.flatMap(m=>[
+    ...m.timeline.images.map(p=>[m.id,p.role,p.frame,path.join(f.dir,p.path)]),
+    [m.id,'face',m.timeline.startFrame,face],
+  ]);
+  assert.deepEqual(plan.sceneRequest.images.map(p=>[p.shotId,p.role,p.frame,p.path]),expected);
+  const voices = plan.sceneRequest.shots.flatMap(s=>(s.dialogue??[]).map(d=>[s.shotId,d.speaker,d.text,d.voice]));
+  assert.deepEqual(voices,[['s0002',linh.id,'Anh Bơ, cưới em nha?',{
+    path:linh.voiceReference.path,sha256:linh.voiceReference.sha256,provenance:'pinned_settings_and_bytes',
+  }]]);
+  approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate EP13 scene one'});
+  await assert.rejects(executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected child submission')),/Captured scene submission/);
+  assert.equal(submitted.length,1);
+  const [wire] = submitted;
+  assert.deepEqual(validated,[wire,wire]);
+  assert.deepEqual([wire.model,wire.num_frames,wire.scene_audio],[selected,267,undefined]);
+  const pins = wire.shots.flatMap(s=>s.images.map(p=>[s.shot_id,p.role,p.frame,p.image_uri]));
+  const uri = file => 'genai-file://' + createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  assert.deepEqual(pins,expected.map(([id,role,frame,file])=>[id,role,frame,uri(file)]));
+  assert.equal(new Set(pins.map(pin=>pin[3])).size,10);
+  assert.deepEqual(wire.shots.flatMap(s=>(s.dialogue??[]).map(d=>[s.shot_id,d.speaker,d.text,d.voice_uri])),
+    [['s0002',linh.id,'Anh Bơ, cưới em nha?',uri(linh.voiceReference.path)]]);
+  assert.deepEqual(wire.shots.filter(s=>s.description.includes('All visible mouths stay closed.')).map(s=>s.shot_id),
+    ['s0040','s0038','s0003','s0004']);
+  assert.ok(wire.shots.every(s=>s.images.find(p=>p.role==='face')?.character===linh.id));
+});
+
+test('native scene children bind the active voices locally and reject three speakers in one shot', async t => {
+  const f = busking(t);
+  delete f.scene.audio;
+  const cast = ['seorin','mai-an','tu-vi'].map((id,i)=>pinnedActor(f.dir,id,'images/'+['solo','duo','trio'][i]+'.png',400+i*150));
+  const line = (speaker,id) => ({id,speaker,delivery:'on_screen',tts:'Your turn.'});
+  for (const [i,shot] of f.members.entries()) {
+    shot.visual.video.model = 'ltx-2.5-22b-distilled';
+    shot.timeline.openingPositions = f.scene.openingPositions;
+    shot.narration = [line(cast[i].id,shot.id+'-l1')];
+  }
+  f.members[0].narration.push(line(cast[1].id,'reply'));
+  const save = () => {
+    f.save();
+    fs.appendFileSync(path.join(f.dir,'scenes.js'),'\nwindow.SB_DOC='+JSON.stringify({characters:cast})+';');
+  };
+  save();
+  const options = {...f.input,sceneRendering:'per_shot'};
+  const plan = planVideo(options,false);
+  assert.equal(planVideo(f.input,false).sceneRendering,'per_shot');
+  const {body} = await buildSceneWire(plan.sceneRequest,plan.selection.model,plan.selection.resolution);
+  assert.deepEqual(body.shots.map(s=>s.dialogue.map(d=>d.speaker)),[['seorin','mai-an'],['mai-an'],['tu-vi']]);
+  for (const shot of body.shots) {
+    const faces = shot.images.filter(p=>p.role==='face');
+    for (const d of shot.dialogue) {
+      const actor = cast.find(a=>a.id===d.speaker);
+      assert.equal(d.voice_uri,'data:audio/wav;base64,'+fs.readFileSync(actor.voiceReference.path,'base64'));
+      const slot = faces.findIndex(p=>p.character===actor.id);
+      assert.ok(slot===0 || slot===1);
+      assert.deepEqual(shot.opening_positions.find(p=>p.character===actor.id).images,[slot+1]);
+    }
+  }
+  f.members[0].narration.push(line('tu-vi','third'));
+  save();
+  assert.throws(()=>planVideo(options,false),/scene_render_voice_limit: s0001/);
+  f.members.splice(1);
+  f.scene.oneTake = true;
+  save();
+  assert.throws(()=>planVideo(options,false),/scene_render_voice_limit: s0001.*one-take/);
 });
 
 test('a refused I2V scene reads the selected endpoint and renderer contract without submitting media',async t=>{
@@ -450,7 +595,7 @@ test('a distilled I2V prop stays separate from the opening image and silent danc
  assert.throws(()=>planVideo(f.input), /scene_inputs_unsupported/);
 });
 
-test('a 25-frame silent scene retains its length and excludes all three face references', t => {
+test('a 25-frame silent scene retains its length and all three authored face references', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.scene.oneTake = true;
@@ -466,14 +611,15 @@ test('a 25-frame silent scene retains its length and excludes all three face ref
   const image = planVideo({...f.input,operation:'image'});
   assert.equal(image.args.numFrames,25);
   assert.equal(image.args.duration,undefined);
-  assert.equal(image.args.references,undefined);
+  assert.deepEqual(image.args.references.map(ref=>path.basename(ref.imagePath)),['solo.png','duo.png','trio.png']);
+  assert.ok(image.args.references.every(ref=>!ref.audioPath));
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];
   f.save();
   assert.throws(()=>planVideo({...f.input,operation:'text'}),/scene_speech_route/);
 });
 
-test('Veo reference scenes omit silent cast panels and keep prop assets separate from temporal frames', t => {
+test('Veo image-to-video identifies unsupported silent cast panels and keeps the opening frame', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.members.splice(1);
@@ -486,6 +632,14 @@ test('Veo reference scenes omit silent cast panels and keep prop assets separate
   f.scene.openingPositions[1].images = [1,2];
   shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
   shot.visual.frames = {mode:'reference', start:'images/opening.png'};
+  f.save();
+  assert.throws(()=>planVideo({...f.input,args:{}}), error=>{
+    assert.deepEqual(error.missing.map(p=>[p.shotId,p.frame,p.role,path.basename(p.path)]),
+      [['s0001',0,'face','solo.png'],['s0001',0,'outfit','duo.png']]);
+    return true;
+  });
+  shot.timeline.images=[];
+  f.scene.openingPositions[1].images=[];
   f.save();
   const plan=planVideo({...f.input,args:{}});
   const [wire]=buildVeoBody(plan.args).instances;

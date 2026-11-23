@@ -237,15 +237,14 @@ function performanceBeats(performance, mode, includeDialogue = true, { brief = f
   });
 }
 function sceneVideoPrompt(performance, mode, scene = {}) {
+  require('./speech-contract.js').assertNoPostLipSync({mode});
   const route = !performance.some(event => event.kind !== 'action')
     ? 'Perform the ordered visible actions without invented speech or voiceover.'
     : mode === 'native'
     ? 'Speak each authored line in its speaker\'s voice from the quoted words; no audio is supplied. Only on_screen lines move a visible mouth. Keep off_screen speaking faces outside the authored crop and voiceover separate from physical speech. Do not transcribe speech into the image.'
     : mode === 'audio_conditioned'
     ? 'Use the supplied audio as the sole source of spoken words. Synchronize visible mouths only during each on_screen speech interval; follow the delivery instruction for every beat. Do not transcribe speech into the image.'
-    : mode === 'post_lipsync'
-      ? 'Animate the planned action; the selected post lip-sync adapter supplies mouth synchronization from the original audio.'
-      : 'Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.';
+    : 'Perform the planned action while the separately supplied voiceover plays; do not turn narration into visible writing.';
   const beats = performanceBeats(performance, mode);
   const visualDirection = value => performance.filter(line => line.kind !== 'action' && line.text).reduce((text,line) => text.split(line.text).join('the supplied speech'), String(value));
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');

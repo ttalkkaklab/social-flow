@@ -94,7 +94,7 @@ class MissingSceneDirection extends Error {
   }
 }
 
-function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
+function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rendering) {
   const root = fs.realpathSync(episode);
   const boardFile = path.join(root, 'storyboard/scenes.js');
   const board = fs.existsSync(boardFile) ? evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'), { filename: boardFile }) : {};
@@ -112,7 +112,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
     : scenes.filter(s => s.scene === sceneNo);
   if (sceneNo === undefined && storedMembers.length !== 1) throw new Error('shotId must identify exactly one storyboard shot');
   let scene = sceneNo === undefined ? undefined : board.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
-  if (scene?.speakers !== undefined && scene.frames === undefined) scene = {...scene,frames:{}};
+  if (scene?.speakers !== undefined && scene.frames === undefined && !storedMembers.some(card => card.timeline?.images?.some(pin => pin.role === 'start'))) scene = {...scene,frames:{}};
   if (sceneNo !== undefined && (!scene || !storedMembers.length)) throw new Error('sceneNo must identify a storyboard scene with shots');
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   const { selection: savedSelection, source } = choice(storedMembers[0]);
@@ -126,13 +126,13 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
         line.delivery === 'off_screen' ? {...line,delivery:'voiceover'} : line)};
   }
   const sourceCards = storedMembers.map(raw => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.operation === 'audio');
+  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', (rendering ?? speechRoute?.rendering) === 'per_shot');
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
     const raw = shotWithRefs;
     const seedance = savedSelection.engine === 'seedance';
-    const keepCast = (selectionOnly && seedance) && !raw.visual?.characterInputs || cast && savedSelection.engine === 'astra-genai';
-    let shot = keepCast ? raw : resolveShotCharacterInputs(raw, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.speakers);
+    const keepCast = (selectionOnly && seedance) && !raw.visual?.characterInputs || cast && savedSelection.engine === 'astra-genai' && !raw.visual?.characterInputs?.length;
+    let shot = keepCast ? raw : resolveShotCharacterInputs(raw, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.identities);
     if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
       const slot = videoSlot(shot);
       if (slot) shot = { ...shot, visual: { ...shot.visual, video:slot } };
@@ -147,7 +147,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   if (scene?.frames !== undefined && savedSelection.engine !== 'astra-genai') {
     const identities = new Map();
     for (const member of members) for (const ref of member.visual?.references ?? []) {
-      if (ref.character && cast.speakers.includes(ref.character) && ref.use !== 'image') {
+      if (ref.character && ref.use !== 'image') {
         const file = path.resolve(root, 'storyboard', ref.path);
         if (!identities.has(file)) identities.set(file, {...ref,scope:'scene'});
       }

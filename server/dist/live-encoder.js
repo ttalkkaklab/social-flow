@@ -3,7 +3,7 @@ import { createWriteStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { finished } from 'node:stream/promises';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { FPS, HEIGHT, mouthLevel, RATE, SAMPLES, WIDTH } from './live-character.js';
+import { FPS, HEIGHT, RATE, SAMPLES, WIDTH } from './live-character.js';
 export function splitIngest(value, allowRtmp = false) {
     const url = new URL(value);
     const slash = url.pathname.lastIndexOf('/');
@@ -222,6 +222,8 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
                 active = pull();
                 offset = 0;
                 if (active) {
+                    if (!motion || !active.motion)
+                        throw Error('post_lipsync_forbidden: play the speaking video with its own audio');
                     motion?.startSpeech();
                     log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay });
                 }
@@ -233,7 +235,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             }
             const blink = frame % (FPS * 4) < 3;
             audio.write(pcm);
-            video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
+            video.write(motion ? motion.next(active?.motion) : frames[blink ? 4 : 0]);
             if (active && offset >= active.pcm.length) {
                 log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
                 if (finishedSpeaking)

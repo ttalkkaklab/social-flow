@@ -313,15 +313,21 @@ trace as proof of natural acting. Normal production still has no automatic liste
 
 For the selected provider/model, resolve and record capabilities with evidence:
 `{provider, model, audioConditioning, lipSync, postLipSync, nativeSpeech?, evidence}`.
-`plan_video` uses capabilities only:
+`postLipSync` is a compatibility field and must be false. Applying TTS lip sync to existing
+footage is prohibited, including plans saved with an older version of the plugin.
+Choose the production route from the selected adapter and the authored speech delivery.
 
 | Speech | Route | When speech changes |
 |---|---|---|
 | one physical speaker + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
 | voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
 | on_screen + audioConditioning | audio_conditioned | Regenerate from the final voice WAV and review the visible mouth timing |
-| on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
-| on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
+| on_screen without native speech or audio conditioning | unsupported | Report the missing capability and preserve the authored dialogue |
+
+For fresh audio-conditioned video, use the rendered soundtrack when audible. A silent
+render may use its original conditioning WAV when the completed generation receipt binds
+the exact WAV and video bytes. Keep the WAV on the original timeline. A changed line or
+delivery needs a new speaking take.
 
 A native-speech shot has one physical speaker: on-screen speech moves that speaker's
 mouth and off-screen dialogue keeps the speaker unseen. Silent/inner-thought shots use

@@ -5,6 +5,7 @@ const fs = require('node:fs'), path = require('node:path');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { createHash } = require('node:crypto');
 const { speechRevision } = require('../../_shared/speech-contract.js');
+const { usesConditioningTrack, checkAssemblyRoutes } = require('./prepare-source-audio.js');
 const { authorizeSpeed } = require('./tts-speed-policy.js');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '');
@@ -168,6 +169,8 @@ function retainedSoundtrack(scene, board, cast, media) {
     throw new Error('Retained soundtrack sources must cover the current lines in order');
   for(const source of repair.sources){
     if(!['native_video','selected_line_audio'].includes(source.kind)||typeof source.path!=='string')throw new Error('Invalid retained soundtrack source');
+    if(source.kind==='selected_line_audio' && lines.some(line=>line.delivery==='on_screen' && source.lineIds.includes(line.id)))
+      throw new Error('post_lipsync_forbidden: a soundtrack repair cannot replace on-screen speech with selected line audio');
     const file=path.resolve(board,source.path);
     if(hash(fs.readFileSync(file))!==source.sha256)throw new Error('Retained soundtrack source changed');
     media[file]=source.sha256;
@@ -179,6 +182,7 @@ function check(work, board) {
   work=path.resolve(work); board=path.resolve(board);
   const file=path.join(board,'scenes.js');
   const win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
+  checkAssemblyRoutes(win);
   if(!Array.isArray(win.SCENES))throw new Error('SCENES missing');
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
@@ -195,6 +199,9 @@ function check(work, board) {
     const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
     const binding=s.visual?.video?.speechBinding;
     const retained=retainedSoundtrack(s,board,cast,media);
+    const originalDriver=usesConditioningTrack(s,board,audio);
+    if(originalDriver && !(rows[k][4]||'').split(',').includes('sync=1'))
+      throw new Error('post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture');
     // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
     const native=binding?.mode==='native';
     if(native && s.sound?.audioSource!=='video')throw new Error('Native speech video needs sound.audioSource video for card '+i);

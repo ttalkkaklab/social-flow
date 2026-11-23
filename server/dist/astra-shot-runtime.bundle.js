@@ -49965,7 +49965,7 @@ function nonEnglishOutsideQuotes(prompt) {
 // src/msr-opening.ts
 var openingPositionsSchema = external_exports.array(external_exports.object({
   character: external_exports.string().trim().min(1).describe("Cast ID, or an English character name for a standalone render."),
-  images: external_exports.array(external_exports.number().int().min(1).max(4)).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
+  images: external_exports.array(external_exports.number().int().positive()).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
@@ -53059,13 +53059,15 @@ async function uploadFile(filePath) {
     throw new Error(`${path6.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit} bytes.`);
   }
   await waitForUploadSlot();
+  const contents = fs5.readFileSync(resolved);
+  if (contents.length > limit) throw new Error("File exceeds the upload ceiling: " + path6.basename(resolved));
   const headers2 = authHeaders();
   const result = await withBackoff("upload", async () => {
     try {
       const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
         method: "POST",
         headers: { ...headers2, "Content-Type": contentType },
-        body: fs5.readFileSync(resolved),
+        body: contents,
         signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS)
       });
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -53080,6 +53082,7 @@ async function uploadFile(filePath) {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
+    ...contentType === "audio/wav" ? { wavSha256: createHash2("sha256").update(contents).digest("hex") } : {},
     ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
     ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
     ...parsed.width !== void 0 ? { width: parsed.width } : {},
@@ -53170,7 +53173,7 @@ function atomicVideoFile(file, contents) {
     fs5.rmSync(temp, { force: true });
   }
 }
-async function runJob(mode, prompt, body, outputPath, filename, signal) {
+async function runJob(mode, prompt, body, outputPath, filename, signal, conditioningAudioSha256) {
   const videoPath = resolveOutputFile(outputPath || process.cwd(), filename || `astra_${Date.now()}.mp4`, "video");
   const receiptPath = `${videoPath}.astra-job.json`;
   const writeReceipt = (value) => {
@@ -53179,7 +53182,15 @@ async function runJob(mode, prompt, body, outputPath, filename, signal) {
   signal?.throwIfAborted();
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
-  const submitted = { jobId, mode, prompt, videoPath, submittedAt: (/* @__PURE__ */ new Date()).toISOString(), submittedRequest: body };
+  const submitted = {
+    jobId,
+    mode,
+    prompt,
+    videoPath,
+    submittedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    submittedRequest: body,
+    ...conditioningAudioSha256 ? { conditioningAudioSha256 } : {}
+  };
   writeReceipt({ ...submitted, status: "submitted" });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error) => {
     if (error instanceof FailedVideoJob) writeReceipt({ ...submitted, status: "failed", error: error.message });
@@ -53226,9 +53237,10 @@ async function generateFromAudio(args) {
   if (image2 && image2.kind !== "image") throw new Error("ASTRA video imagePath must upload as image");
   const images = image2 ? [{ uploadId: image2.uploadId, frameIdx: 0, strength: args.strength }] : void 0;
   const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+  const driver = !args.audioStartTime && args.audioMaxDuration === void 0 ? audio?.wavSha256 : void 0;
   if (!args.expectLipSync) {
     const body = buildJobBody("audio2video", { ...args, audioUploadId, images });
-    return { ...await runJob("audio2video", args.prompt, body, args.outputPath, args.filename), ...uploaded };
+    return { ...await runJob("audio2video", args.prompt, body, args.outputPath, args.filename, void 0, driver), ...uploaded };
   }
   const results = [];
   const attempts = [];
@@ -53239,7 +53251,7 @@ async function generateFromAudio(args) {
     const body = buildJobBody("audio2video", { ...args, seed, audioUploadId, images });
     let result;
     try {
-      result = await runJob("audio2video", args.prompt, body, args.outputPath, filename);
+      result = await runJob("audio2video", args.prompt, body, args.outputPath, filename, void 0, driver);
     } catch (error) {
       if (attempt === 1) throw error;
       retryError = `attempt ${attempt} failed: ${error instanceof Error ? error.message : String(error)}`;
@@ -53523,7 +53535,8 @@ var receiptSchema2 = external_exports.object({
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
+  sha256: external_exports.string().optional(),
+  conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).strict();
 var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
@@ -53772,7 +53785,7 @@ function sceneInputCapabilities(tool) {
       model: tool === "astra_genai_img2video" ? "ltx-2.5-22b-distilled" : "ltx-2.5-22b-dev",
       sceneAudioModes: tool === "astra_genai_img2video" ? ["native", "mix"] : ["conditioning"],
       sceneRendering: "per_shot",
-      requiresUserChoice: true,
+      requiresUserChoice: tool !== "astra_genai_img2video",
       capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
       validation: "/v1/ltx/v2/scene-to-video/validate"
     } } : {},
@@ -54006,7 +54019,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
     if (members.length === 1 && timeline?.openingPositions && scene.openingPositions && JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
-    const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
+    let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
     const sound = notes.sound;
     const ordered2 = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
@@ -54035,6 +54048,17 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
         ...warnings.length ? { warnings } : {}
       };
     });
+    if (shotScoped && dialogue.some((line) => line.voice)) {
+      const owners = [...new Set(dialogue.filter((line) => line.voice).map((line) => line.speaker))];
+      const indices = images.flatMap((image2, i2) => image2.shotId === shotId && !temporal(image2) ? [i2] : []);
+      const references2 = indices.map((i2) => images[i2]);
+      const voices = owners.map((id) => references2.find((ref) => ref.character === id && !["location", "background"].includes(ref.role))).filter((ref) => !!ref);
+      const slots = references2.filter((ref) => !["location", "background"].includes(ref.role));
+      const ordered3 = voices.every((ref) => slots.indexOf(ref) < 2) ? references2 : [...voices, ...references2.filter((ref) => !voices.includes(ref))];
+      for (const [i2, slot] of indices.entries()) images[slot] = ordered3[i2];
+      const subjects = ordered3.filter((ref) => !["location", "background"].includes(ref.role));
+      positions = positions?.map((row) => ({ ...row, images: subjects.flatMap((ref, i2) => ref.character === row.character ? [i2 + 1] : []) }));
+    }
     return {
       shotId,
       startFrame,
@@ -54143,6 +54167,19 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
   }
   if (tool === "astra_genai_img2video" && !pins.some((p) => p.frame === 0 && (p.strength ?? 1) === 1))
     missing.push({ input: "image", frame: 0, reason: "Gateway I2V requires a full-strength opening image" });
+  if (tool === "astra_genai_img2video" || tool === "astra_genai_msr") {
+    for (const [background, limit] of [[false, 4], [true, 1]]) {
+      const group = refs.filter((ref) => ["background", "location"].includes(ref.role) === background);
+      for (const ref of group.slice(limit)) missing.push({
+        input: "reference",
+        role: ref.role,
+        shotId: ref.shotId,
+        frame: ref.frame,
+        path: ref.path,
+        reason: "MSR accepts at most " + limit + (background ? " background" : " subject references") + " per render"
+      });
+    }
+  }
   const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
   if (assets) {
     const issue = assets.validate(refs, model2);
@@ -54395,10 +54432,10 @@ var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_
 var load6 = createRequire8(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
-function routingContext(episode, shotId, sceneNo, selectionOnly) {
+function routingContext(episode, shotId, sceneNo, selectionOnly, rendering) {
   const reader = load6(shared);
   try {
-    return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly);
+    return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly, rendering);
   } catch (error) {
     if (sceneNo === void 0 || !(error instanceof reader.MissingSceneDirection)) throw error;
     const timeline = compileSceneTimeline(error.members, {}, episode, error.board);
@@ -54865,8 +54902,8 @@ var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
   external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
 ]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneFramesSchema = external_exports.object({ start: nonEmpty.optional(), end: nonEmpty.optional() }).strict().describe("Temporal anchors for the complete scene, relative to the storyboard. An empty object selects no anchors.");
-var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).max(2).describe("Optional scene-wide face image for a declared speaker. Defaults to the registered face panel.");
-var sceneSpeakersSchema = external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene. Their registered panels and voices supply video identity.");
+var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).describe("Optional scene-wide face images. Identify the registered cast member who owns each image, including a silent character appearing in the scene.");
+var sceneSpeakersSchema = external_exports.array(nonEmpty).refine((ids) => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
@@ -55258,7 +55295,7 @@ var shotCharactersSchema = external_exports.object({
     id: shotIdSchema,
     characters: external_exports.array(nonEmpty).max(4).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").describe("Principal characters on screen, subject first; [] when nobody from the cast is on screen"),
     expression: external_exports.record(nonEmpty, nonEmpty).optional().describe("Each listed character's visible state as the shot opens, in English physical cues read from the scene's situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call's entry stays when omitted."),
-    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most four of the cast on screen. An earlier call's list stays when omitted; [] clears it."),
+    bystanders: external_exports.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, "a character is listed once").optional().describe("Additional cast members in the frame without on-screen dialogue. The start image draws them from their sheet panels. A separately designated video reference can identify a silent participant. With characters, at most four cast members appear in the shot. Omit to keep the current list, or use [] to clear it."),
     extras: external_exports.string().optional().describe(`Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call's text stays when omitted; "" clears it.`)
   }).strict()).min(1)
 }).strict();
@@ -55339,7 +55376,7 @@ var scenarioCheckResultSchema = external_exports.object({
 // src/speech.ts
 import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import { readFileSync as readFileSync9, writeFileSync as writeFileSync5, renameSync as renameSync3, mkdirSync as mkdirSync3, existsSync as existsSync7 } from "node:fs";
-import { dirname as dirname6, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
+import { basename as basename5, dirname as dirname6, resolve as resolve5, join as join6, relative as relative2 } from "node:path";
 import * as nodeModule4 from "node:module";
 import { execFileSync as execFileSync5 } from "node:child_process";
 
@@ -55395,6 +55432,7 @@ var speechManageSchema = external_exports.object({
 }).strict();
 var hash2 = (s2) => createHash5("sha256").update(s2).digest("hex");
 var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var speechContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
 var videoSeconds = (file) => Number(execFileSync5(
   "ffprobe",
   ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
@@ -55494,13 +55532,14 @@ function measuredDuration(line) {
 }
 function speechVideoPlan(input, capabilities, sceneNo) {
   if (!capabilities) throw new Error("Supply the selected adapter capabilities and their evidence; never infer support from the model name");
+  speechContract().assertNoPostLipSync(capabilities);
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
-  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : capabilities.postLipSync ? "post_lipsync" : null;
+  const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
   const saved = object3(object3(object3(scene.visual).video).promptSource);
   const design = object3(object3(scene.shot).videoDesign);
@@ -55678,6 +55717,8 @@ function manageSpeech(args) {
     changed = true;
   }
   if (args.action === "plan_video" || args.action === "attach_video") {
+    speechContract().assertNoPostLipSync({ tool: args.tool, capabilities: args.capabilities });
+    if (args.tool && !Object.hasOwn(VIDEO_ADAPTERS, args.tool)) throw new Error("video_tool_unknown: " + args.tool);
     const scene = scenes.find((item) => item.id === args.shotId);
     if (!args.shotId || !scene) throw new Error("Select one existing shot");
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
@@ -55685,24 +55726,38 @@ function manageSpeech(args) {
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname6(dirname6(file));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
-    if (existsSync7(join6(episode, ".work/model-settings.json"))) {
+    const authoredVideo = scene.visual?.video;
+    const production = object3(win.PRODUCTION);
+    const episodeBoard = basename5(dirname6(file)) === "storyboard" && basename5(file) === "scenes.js";
+    const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
+    let verified;
+    if (episodeBoard && (existsSync7(join6(episode, ".work/model-settings.json")) || authoredVideo?.engine || authoredVideo?.model || production.videoModel || production.videoProvider)) {
       const context = routingContext(episode, args.shotId, void 0, true);
       const { selection } = context;
-      const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
       const tool = selectedVideoTool(selection);
       if (context.speechRoute && (!tool || args.tool && args.tool !== tool))
         throw new Error("scene_speech_route: the complete scene requires " + selection.operation);
-      const generatedVoice = !context.speechRoute && usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
-      const verified = speechVideoCapabilities(
+      const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
+      verified = speechVideoCapabilities(
         selection.engine,
         selection.model || selection.engine,
         adapter?.operation ?? selection.operation,
-        context.speechRoute ? context.speechRoute.speakers.length === 2 : hasVideoSubjectReferences(scene),
+        context.speechRoute ? context.speechRoute.mode === "reference" : hasVideoSubjectReferences(scene),
         generatedVoice
       );
+    } else if (adapter) {
+      verified = speechVideoCapabilities(
+        adapter.engine,
+        args.capabilities?.model ?? authoredVideo?.model ?? adapter.engine,
+        adapter.operation,
+        hasVideoSubjectReferences(scene),
+        usesGeneratedVoice(args.tool, owner?.videoDirection?.dialogueVoice)
+      );
+    }
+    if (verified) {
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
-        throw new Error("Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot");
+        throw new Error("Caller capabilities disagree with selected adapter registry; use the registered video operation");
       args = { ...args, capabilities: verified };
     }
     plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
@@ -55713,6 +55768,15 @@ function manageSpeech(args) {
       const videoPath = resolve5(dirname6(file), args.videoPath);
       const bytes = readFileSync9(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
+      const videoSha256 = hash2(bytes);
+      for (const card of scenes) {
+        const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
+        if (!speechContract().hasPostLipSync(binding)) continue;
+        const source = binding.videoPath ?? video2.clip ?? video2.src;
+        const original = typeof source === "string" ? resolve5(dirname6(file), source) : void 0;
+        const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync7(original) && hash2(readFileSync9(original)) === videoSha256);
+        if (matches) throw new Error("post_lipsync_forbidden: this video belongs to a previous post lip-sync plan. Generate a new speaking take");
+      }
       const native = plan.mode === "native";
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
       if (nativeAudio?.status === "missing")
@@ -55721,6 +55785,14 @@ function manageSpeech(args) {
         throw new Error("native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip");
       const sound = object3(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
+      let driverSha256;
+      if (plan.mode === "audio_conditioned") {
+        const signal = audioSignalContract().inspect(videoPath).status;
+        if (signal !== "signal") {
+          driverSha256 = characterSpeechContract().conditioningAudioSha256(videoPath);
+          if (!driverSha256) throw new Error("conditioning_audio_unverified: a silent A2V clip needs its completed generation receipt binding these video bytes to the original conditioning WAV");
+        }
+      }
       const audio = selected.map(({ line }) => {
         if (native) return { lineId: line.id, revision: speechRevision(line, character(line.speaker)) };
         if (!line.audio || line.audio.revision !== speechRevision(line, character(line.speaker)) || hash2(readFileSync9(line.audio.path)) !== line.audio.sha256) throw new Error("Generate and attach current speech before binding video");
@@ -55732,7 +55804,6 @@ function manageSpeech(args) {
       const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object3(video.speechBinding);
-      const videoSha256 = hash2(bytes);
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
       const retiming = nodeModule4.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
@@ -55770,6 +55841,7 @@ function manageSpeech(args) {
           videoPath,
           videoSha256,
           quality,
+          ...driverSha256 ? { conditioningAudioSha256: driverSha256 } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",
             sourcePerformanceRevision: priorBinding.performanceRevision,
@@ -55798,6 +55870,8 @@ function manageSpeech(args) {
         }
         scene.sound = { ...sound, audioSource: "video" };
         for (const { line } of selected) if (line.mediaStatus === "needs_audio") delete line.mediaStatus;
+      } else if (plan.mode === "audio_conditioned") {
+        scene.sound = { ...sound, audioSource: driverSha256 ? "speech" : "video" };
       } else if (selected.length && plan.mode === "voiceover") {
         scene.sound = { ...sound, audioSource: "speech" };
       } else if (!selected.length && sound.audioSource !== "speech") {
