@@ -96,8 +96,28 @@ function comparisonResolution(win) {
     : p.videoProvider === 'astra' ? mode.astraResolution(win) : '1080p');
 }
 
+const HELP = [
+  'usage: production-cost.js <storyboard dir|scenes.js> [--json] [--krw-per-usd 1400]',
+  '       production-cost.js --seconds <1-3600> [--clip-seconds <4-12>] [--json]',
+  '',
+  'Read-only video-generation cost estimate. Runs with Node, needs no provider keys,',
+  'and prints the same option breakdown the approval flow quotes.',
+  '',
+  'examples:',
+  '  duration only  node skills/autoproduce/references/production-cost.js --seconds 90',
+  '  storyboard     node skills/autoproduce/references/production-cost.js <storyboard dir>',
+  '',
+  'options:',
+  '  --seconds N        quote a duration-only plan of N seconds (1-3600)',
+  '  --clip-seconds N   clip length used by --seconds (4-12, default 5)',
+  '  --json             print the quote as JSON instead of the human summary',
+  '  --krw-per-usd N    won per dollar used for the KRW column (default 1400)',
+  '  --help             print this help and exit',
+].join('\n');
+
 function main() {
   const args = process.argv.slice(2), value = name => args[args.indexOf(name) + 1];
+  if (args.includes('--help')) return console.log(HELP);
   let win;
   if (args.includes('--seconds')) {
     const seconds = Number(value('--seconds')), clip = args.includes('--clip-seconds') ? Number(value('--clip-seconds')) : 5;

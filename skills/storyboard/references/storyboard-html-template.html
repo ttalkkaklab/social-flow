@@ -1023,12 +1023,13 @@
   /* Instant tooltip for the icon tiles (data-tip) — the browser's own title tip waits a second
      and folds the line breaks, so a small box follows the pointer instead. */
   .tipbox {
-    position: fixed; z-index: 50; max-width: 320px; padding: 8px 11px; border-radius: 9px;
+    display: none; position: fixed; z-index: 101; box-sizing: border-box; width: max-content;
+    max-width: min(320px, calc(100vw - 16px)); padding: 8px 11px; border-radius: 9px;
     background: var(--text); color: var(--bg); font-size: 12.5px; line-height: 1.5;
-    white-space: pre-line; word-break: keep-all; pointer-events: none;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .22); opacity: 0; transition: opacity .08s;
+    white-space: pre-line; word-break: keep-all; overflow-wrap: anywhere; overflow-y: auto;
+    overscroll-behavior: contain; box-shadow: 0 6px 18px rgba(0, 0, 0, .22);
   }
-  .tipbox.on { opacity: 1; }
+  .tipbox.on { display: block; }
   .tipbox b { display: block; font-weight: 700; margin-bottom: 2px; }
   .shot-meta .shot-feel { margin: 0; flex-basis: 100%; }
   .shot-feel.miss b { color: var(--warn-ink, var(--accent-ink)); }
@@ -1477,6 +1478,12 @@
     .scene { break-inside: auto; border-color: #ddd; padding: var(--s4); margin: var(--s3) 0; }
     .scene:has(.conti) { max-width: none; }   /* on paper the print margin decides the width */
     .scene-head { break-after: avoid; }
+    .tipbox.on { display: none; }
+    .direction-attributes { display: block; }
+    .direction-attribute { display: block; text-align: start; color: inherit; font: inherit; }
+    .direction-attribute svg { display: none; }
+    .direction-attribute::before { content: attr(aria-label); display: block; font-weight: bold; }
+    .direction-attribute::after { content: attr(data-tip); white-space: pre-line; }
     .scene-workbench { box-shadow: none; }
     .scene-tab-bar { display: none; }
     .score-player { display: block; background: transparent; color: #111; padding: 0; }
@@ -2841,7 +2848,7 @@ window.STORYBOARD_READY = (async function () {
       audio:'M8 5v22m5-18v14m6-18v22m5-16v10', oneTake:'M5 12h17l5 4-5 4H5z',
       fps:'M16 4a12 12 0 1 0 .1 0M16 9v8l6 3', view:'M4 12V5h7m10 0h7v7m0 8v7h-7m-10 0H4v-7',
       expression:'M8 14h3m10 0h3M7 8q4-3 8 0m3 0q4 3 8 0M10 23q6-4 12 0',
-      blocking:'M5 25h22M10 20v-8l7 3 5 8m-11-18a3 3 0 1 0 6 0a3 3 0 1 0-6 0', beats:'M4 8h17m-13 8h17m-13 8h17', end:'M5 7h22v18H5zM11 12h10v8H11z', landing:'M6 27V5h18l-5 6 5 5H6',
+      blocking:'M5 25h22M10 20v-8l7 3 5 8m-11-18a3 3 0 1 0 6 0a3 3 0 1 0-6 0', beats:'M4 8h17m-13 8h17m-13 8h17', end:'M6 6l14 10L6 26zM25 6v20', landing:'M6 27V5h18l-5 6 5 5H6',
       camera:'M4 9h16v14H4zM20 13l8-5v16l-8-5', framing:'M4 5h24v22H4zM10 11h12v10H10z'
     };
     function add(key, value, origin, id) {
@@ -6270,24 +6277,84 @@ window.STORYBOARD_READY = (async function () {
      this script in a vm with a stub document that has no event API, so bail out there. */
   (function () {
     if (typeof document.addEventListener !== "function") return;
-    var box = document.createElement("div"); box.className = "tipbox"; document.body.appendChild(box);
-    var cur = null;
+    var box = document.createElement("div");
+    box.id = "storyboard-tip"; box.className = "tipbox"; box.setAttribute("role", "tooltip");
+    document.body.appendChild(box);
+    var cur = null, pinned = false;
+    function trigger(node) { return node && node.closest && node.closest("[data-tip]"); }
+    function hide() {
+      if (cur && cur.classList.contains("direction-attribute")) {
+        cur.setAttribute("aria-expanded", "false");
+        cur.removeAttribute("aria-describedby");
+      }
+      box.classList.remove("on"); cur = null; pinned = false;
+    }
+    function position(r) {
+      var pad = 8, below = window.innerHeight - r.bottom - pad, above = r.top - pad;
+      box.style.maxHeight = "";
+      var opensAbove = box.offsetHeight > below && above > below;
+      box.style.maxHeight = Math.max(0, opensAbove ? above : below) + "px";
+      box.style.left = Math.max(pad, Math.min(r.left, window.innerWidth - box.offsetWidth - pad)) + "px";
+      box.style.top = (opensAbove ? r.top - box.offsetHeight : r.bottom) + "px";
+    }
     function show(el) {
+      if (cur === el) return;
+      hide();
       var tip = el.getAttribute("data-tip") || ""; if (!tip) return;
       var nl = tip.indexOf(" — ");
-      box.innerHTML = nl > 0 ? "<b>" + esc(tip.slice(0, nl)) + "</b>" + esc(tip.slice(nl + 3)) : esc(tip);
-      var r = el.getBoundingClientRect(), pad = 8;
-      box.style.left = "0px"; box.style.top = "0px"; box.classList.add("on");
-      var w = box.offsetWidth, hgt = box.offsetHeight;
-      var x = Math.max(pad, Math.min(r.left, window.innerWidth - w - pad));
-      var y = r.bottom + 6; if (y + hgt > window.innerHeight - pad) y = r.top - hgt - 6;
-      box.style.left = x + "px"; box.style.top = y + "px"; cur = el;
+      var direction = el.classList.contains("direction-attribute");
+      var title = direction ? el.getAttribute("aria-label") : nl > 0 ? tip.slice(0, nl) : "";
+      box.textContent = !direction && nl > 0 ? tip.slice(nl + 3) : tip;
+      if (title) {
+        var heading = document.createElement("b");
+        heading.textContent = title; box.prepend(heading);
+      }
+      box.classList.add("on"); position(el.getBoundingClientRect());
+      box.scrollTop = 0; cur = el;
+      if (direction) {
+        cur.setAttribute("aria-expanded", "true");
+        cur.setAttribute("aria-describedby", box.id);
+      }
     }
-    function hide() { box.classList.remove("on"); cur = null; }
-    document.addEventListener("mouseover", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el !== cur) show(el); });
-    document.addEventListener("mouseout", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (el && el === cur && !el.contains(e.relatedTarget)) hide(); });
-    document.addEventListener("click", function (e) { var el = e.target.closest && e.target.closest("[data-tip]"); if (!el) { if (cur) hide(); } else if (el === cur) hide(); else show(el); });
-    window.addEventListener("scroll", function () { if (cur) hide(); }, true);
+    function inside(node) { return cur && (cur.contains(node) || box.contains(node)); }
+    document.addEventListener("pointerover", function (e) {
+      var el = trigger(e.target);
+      if (el && e.pointerType !== "touch") show(el);
+    });
+    document.addEventListener("pointerout", function (e) {
+      if (e.pointerType !== "touch" && !pinned && inside(e.target) && !inside(e.relatedTarget) && !cur.matches(":focus-visible")) hide();
+    });
+    document.addEventListener("focusin", function (e) {
+      var el = trigger(e.target); if (el) show(el);
+    });
+    document.addEventListener("focusout", function (e) {
+      if (inside(e.target) && !inside(e.relatedTarget)) hide();
+    });
+    document.addEventListener("click", function (e) {
+      if (box.contains(e.target)) return;
+      var el = trigger(e.target);
+      if (!el || (el === cur && pinned)) hide();
+      else { show(el); pinned = true; }
+    });
+    document.addEventListener("keydown", function (e) {
+      if (!cur) return;
+      if (e.key === "Escape") { hide(); return; }
+      if (e.target !== cur || box.scrollHeight <= box.clientHeight) return;
+      var step = { ArrowDown: 32, ArrowUp: -32, PageDown: box.clientHeight, PageUp: -box.clientHeight }[e.key];
+      if (step) { e.preventDefault(); box.scrollTop += step; }
+    });
+    function viewportChanged(e) {
+      if (!cur || e.target === box) return;
+      if (cur.matches(":focus-visible")) {
+        var r = cur.getBoundingClientRect();
+        if (r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) {
+          position(r); return;
+        }
+      }
+      hide();
+    }
+    window.addEventListener("resize", viewportChanged);
+    window.addEventListener("scroll", viewportChanged, true);
   })();
 
   /* Filling the check strip — nothing is missed only once every violation has been registered */

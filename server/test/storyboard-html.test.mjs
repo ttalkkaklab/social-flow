@@ -96,8 +96,9 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
 
 test('offline direction icons identify inherited shots and show the middle override in both languages', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url),'utf8');
-  const source = template.slice(template.indexOf('  function detailControl'), template.indexOf('  function sceneVideoPromptHtml'));
-  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window <light>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
+  const source = template.slice(template.indexOf('  function esc('), template.indexOf('  function copy(')) +
+    template.slice(template.indexOf('  function detailControl'), template.indexOf('  function sceneVideoPromptHtml'));
+  const sc = {directionDefaults:{camera:'camera.static', lighting:'Window "light" <left>', attention:'The clerk.'}, videoDirection:{emotion:'She relaxes.'}};
   const cards = [{}, {visual:{camera:{movement:'dolly in',target:'the letter',speed:'slow'}, expression:{mina:'Narrowed eyes.'}}}, {}];
   cards[1].shot = {techniques:[{id:'camera.rack-focus',from:'the ribbon',to:'the bell'}]};
   cards[1].visual.frames = {mode:'first_last',endState:'The raven closes its claw.'};
@@ -110,10 +111,11 @@ test('offline direction icons identify inherited shots and show the middle overr
   const rows = direction.resolve(sc,cards);
   for (const lang of ['ko','en']) {
     const context = {LANG:lang, sc, cards, rows, window:{SCENE_DIRECTION:direction,FILM_TECHNIQUES:film},
-      camIcon:id=>'<svg data-camera="'+id+'"></svg>', esc:s=>String(s).replaceAll('<','&lt;')};
+      camIcon:id=>'<svg data-camera="'+id+'"></svg>'};
     const render = expr => runInNewContext(source+'\n'+expr,context);
     const header = render('directionAttributes(sc,rows.defaults)');
-    assert.match(header,/data-camera="camera.static"/); assert.match(header,/Window &lt;light>/);
+    assert.match(header,/data-camera="camera.static"/);
+    assert.match(header,/data-attribute="lighting"[^]*?Window &quot;light&quot; &lt;left&gt;/);
     assert.match(header,/data-attribute="emotion"/);
     assert.match(header,/class="scene-direction-icon"[^>]*aria-expanded="false"[^>]*aria-controls="([^"]+)"[^>]*>[\s\S]*?popover="manual" role="tooltip" id="\1"/);
 
@@ -141,6 +143,23 @@ test('offline direction icons identify inherited shots and show the middle overr
     assert.match(still,/data-attribute="lighting"/);
     assert.doesNotMatch(still,/data-attribute="camera"/);
   }
+});
+
+test('the scroll that brings a keyboard-focused icon into view keeps its detail open', () => {
+  const html = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = html.indexOf('    function viewportChanged(');
+  const listeners = {}, calls = [];
+  const window = { innerWidth: 375, innerHeight: 700, addEventListener: (type, fn) => { listeners[type] = fn; } };
+  const rect = { top: 540, bottom: 584, left: 24, right: 68 };
+  const button = { matches: selector => selector === ':focus-visible', getBoundingClientRect: () => rect };
+  runInNewContext(html.slice(start, html.indexOf('  })();', start)), {
+    window, box: {}, cur: button, position: r => calls.push(r), hide: () => calls.push('hidden'),
+  });
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect]);
+  rect.top = 720; rect.bottom = 764;
+  listeners.scroll({target: window});
+  assert.deepEqual(calls, [rect, 'hidden']);
 });
 
 test('a background export shows the saved scene prompt when the board matches and references are unchecked', t => {
