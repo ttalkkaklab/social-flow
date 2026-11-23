@@ -98485,7 +98485,12 @@ var require_scene_speech_receipt = __commonJS({
         mismatch("scene request used a different speech operation");
       const card = plan2.sourceShot;
       if (card) {
-        const lines = (card.narration ?? []).filter((line) => line.tts?.trim() && line.delivery !== "voiceover");
+        const { orderedSpeech } = require_scene_direction();
+        const turns = orderedSpeech(card).filter((line) => line.tts?.trim());
+        const lines = turns.filter((line) => line.delivery !== "voiceover");
+        const cues = card.timeline?.dialogueCues ?? [];
+        if (cues.some((cue) => turns.filter((line) => line.id === cue.lineId).length !== 1))
+          mismatch("a dialogue cue must identify one authored line");
         const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
         if (!original) mismatch("the requested shot is absent from the recorded scene");
         const dialogue = original.dialogue ?? [];
@@ -98503,10 +98508,13 @@ var require_scene_speech_receipt = __commonJS({
         }
         if (plan2.mode === "native") verifyNativeReferences(wire, original, plan2);
         if (plan2.mode === "native" || dialogue.length) {
-          const spoken = (row) => [row.speaker, row.text.trim(), row.delivery];
-          const assigned = lines.map((line) => spoken({ speaker: line.speaker, text: line.tts, delivery: line.delivery }));
-          if (JSON.stringify(dialogue.map(spoken)) !== JSON.stringify(assigned))
-            mismatch("recorded speakers, words or delivery do not match this shot");
+          if (dialogue.length !== lines.length) mismatch("the recorded dialogue count differs from this shot");
+          for (const [index, line] of lines.entries()) {
+            const recorded = dialogue[index];
+            if (recorded.speaker !== line.speaker || recorded.text?.trim() !== line.tts.trim() || recorded.delivery !== line.delivery || recorded.id && line.id && recorded.id !== line.id) mismatch("recorded speakers, words or delivery do not match this shot");
+            const cue = cues.find((item) => item.lineId === line.id);
+            if (plan2.mode === "native" && cue && recorded.frame !== cue.frame) mismatch("the recorded dialogue frame differs from the authored cue");
+          }
         }
       }
       return driver;
