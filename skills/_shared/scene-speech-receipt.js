@@ -43,6 +43,80 @@ function audioAttachment(wire,role,uri,shot) {
   return rows[0].sha256;
 }
 
+// Old staged records have no owner field. The renderer stages each role in
+// the order of the corresponding rows in the submitted shot, including repeats.
+function shotAssetDigests(wire,shot,role,assets) {
+  const records = wire.attachments.filter(row => row.shotId === shot.shot_id && row.role === role);
+  const result = [];
+  let index = 0;
+  for (const {uri,frame} of assets) {
+    if (typeof uri !== 'string') mismatch('missing ' + role + ' URI');
+    if (uri.startsWith('data:')) {
+      if (!/^data:(?:image|audio)\/[^,]+;base64,/.test(uri)) mismatch('invalid inline ' + role);
+      result.push(sha(Buffer.from(uri.slice(uri.indexOf(',')+1),'base64')));
+    } else {
+      const row = records[index++], id = uri.slice('genai-file://'.length);
+      if (!uri.startsWith('genai-file://') || !id || !row || row.frame !== frame ||
+          !shaPattern.test(row.sha256) || !Number.isInteger(row.bytes) || row.bytes<=0 ||
+          shaPattern.test(id) && id !== row.sha256) mismatch('unbound ' + role + ' upload');
+      result.push(row.sha256);
+    }
+  }
+  if (index !== records.length) mismatch('extra ' + role + ' upload in the saved shot');
+  return result;
+}
+
+function verifyNativeReferences(wire,shot,plan) {
+  const {board,boardDir,sourceShot:card} = plan;
+  if (!board || !boardDir) mismatch('the current storyboard is required to verify native references');
+  const owner = board.STRUCTURE?.scenes?.find(scene => scene.no === card.scene);
+  const cards = board.SCENES.filter(item => item.scene === card.scene);
+  const members = owner ? require('./scene-cast.js').projectSceneCast(owner,cards,board,boardDir,'astra-genai',false,true).members : [card];
+  const member = members.find(item => item.id === card.id) ?? card;
+  const dialogue = shot.dialogue ?? [];
+  const pinned = dialogue.filter(line => line.voice_uri);
+  const hashes = shotAssetDigests(wire,shot,'voice_reference',pinned.map(line=>({uri:line.voice_uri,frame:line.frame ?? shot.start_frame})));
+  const {currentSceneVoice} = require('./scene-voice.js');
+  let sample = 0;
+  for (const line of dialogue) {
+    // Managed gateway native dialogue uses the speaker's registered reference.
+    const expected = currentSceneVoice(board,boardDir,member,line.speaker);
+    if (!line.voice_uri || !expected || hashes[sample++] !== expected.sha256)
+      mismatch('the recorded voice reference differs from the current sample for ' + line.speaker);
+  }
+  const expected = [];
+  for (const pin of member?.timeline?.images ?? []) {
+    if (pin.character) expected.push(pin);
+  }
+  for (const ref of member?.visual?.references ?? []) {
+    if (ref.use === 'image' || !ref.character || expected.some(pin => pin.path === ref.path && pin.character === ref.character)) continue;
+    const role = ref.scope === 'scene' && ref.id?.endsWith('-face') ? 'face' : ref.role;
+    expected.push({role,character:ref.character,path:ref.path});
+  }
+  const images = shot.images ?? [], captured = [], temporal = [];
+  for (const role of new Set(images.map(image=>image.role))) {
+    const rows = images.filter(image=>image.role===role);
+    const digests = shotAssetDigests(wire,shot,role,rows.map(image=>({uri:image.image_uri,frame:image.frame})));
+    rows.forEach((image,index)=>{
+      if (image.character) captured.push([image.character,image.role,digests[index]]);
+      if (['start','end','keyframe'].includes(role)) temporal.push([role,image.frame,digests[index]]);
+    });
+  }
+  const path = require('node:path');
+  const frames = require('../storyboard/references/render-routing.js').framePlan(member);
+  const pins = [...(member.timeline?.images ?? []).filter(pin=>['start','end','keyframe'].includes(pin.role))];
+  if (frames.start && frames.mode !== 'reference') pins.push({role:'start',frame:shot.start_frame,path:frames.start});
+  if (frames.end) pins.push({role:'end',frame:shot.end_frame-1,path:frames.end});
+  for (const pin of pins) {
+    const digest = sha(fs.readFileSync(path.resolve(boardDir,pin.path)));
+    if (!temporal.some(([role,frame,hash])=>role===pin.role && frame===pin.frame && hash===digest))
+      mismatch('the archived ' + pin.role + ' frame differs from the current storyboard');
+  }
+  const wanted = expected.map(pin=>[pin.character,pin.role,sha(fs.readFileSync(path.resolve(boardDir,pin.path)))]);
+  const keys = items => JSON.stringify([...new Set(items.map(item=>JSON.stringify(item)))].sort());
+  if (keys(wanted)!==keys(captured)) mismatch('recorded character images differ from the current shot references');
+}
+
 function sceneDriver(wire) {
   const {scene_audio:track,num_frames:frames} = wire.body;
   if (!track || track.mode === 'mix') return;
@@ -91,6 +165,7 @@ function verifySceneSpeech(wire,plan) {
       if (start < original.start_frame/body.fps - 1e-6 || end > original.end_frame/body.fps + 1e-6 || end <= start)
         mismatch('the selected source interval extends outside the recorded shot');
     }
+    if (plan.mode === 'native') verifyNativeReferences(wire,original,plan);
     if (plan.mode === 'native' || dialogue.length) {
       const spoken = row => [row.speaker,row.text.trim(),row.delivery];
       const assigned = lines.map(line => spoken({speaker:line.speaker,text:line.tts,delivery:line.delivery}));

@@ -1223,7 +1223,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load13;
+    exports.load = load14;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1359,7 +1359,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load13() {
+    function load14() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1397,7 +1397,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load13;
+    exports.load = load14;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1539,7 +1539,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load13() {
+    function load14() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -91191,7 +91191,7 @@ var require_signal_exit = __commonJS({
         }
         assert2.equal(typeof cb, "function", "a callback must be provided for exit handler");
         if (loaded === false) {
-          load13();
+          load14();
         }
         var ev = "exit";
         if (opts && opts.alwaysLast) {
@@ -91251,7 +91251,7 @@ var require_signal_exit = __commonJS({
         return signals;
       };
       loaded = false;
-      load13 = function load14() {
+      load14 = function load15() {
         if (loaded || !processOk(global.process)) {
           return;
         }
@@ -91268,7 +91268,7 @@ var require_signal_exit = __commonJS({
         process3.emit = processEmit;
         process3.reallyExit = processReallyExit;
       };
-      module.exports.load = load13;
+      module.exports.load = load14;
       originalProcessReallyExit = process3.reallyExit;
       processReallyExit = function processReallyExit2(code) {
         if (!processOk(global.process)) {
@@ -91304,7 +91304,7 @@ var require_signal_exit = __commonJS({
     var emit;
     var sigListeners;
     var loaded;
-    var load13;
+    var load14;
     var originalProcessReallyExit;
     var processReallyExit;
     var originalProcessEmit;
@@ -96855,841 +96855,756 @@ var require_character_sheet = __commonJS({
   }
 });
 
-// ../skills/_shared/audio-signal.js
-var require_audio_signal = __commonJS({
-  "../skills/_shared/audio-signal.js"(exports, module) {
-    "use strict";
-    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
-    var SILENCE_DB = -60;
-    function inspect(file) {
-      const streams = JSON.parse(execFileSync20("ffprobe", [
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=duration:format=duration",
-        "-of",
-        "json",
-        file
-      ], { encoding: "utf8" }));
-      if (!streams.streams?.length) return { status: "missing", spans: [] };
-      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
-      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
-      const result = spawnSync4(
-        "ffmpeg",
-        [
-          "-hide_banner",
-          "-nostdin",
-          "-nostats",
-          "-xerror",
-          "-progress",
-          "pipe:1",
-          "-i",
-          file,
-          "-map",
-          "0:a:0",
-          "-af",
-          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
-          "-f",
-          "null",
-          "-"
-        ],
-        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
-      );
-      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
-        throw new Error("cannot decode audio signal");
-      const spans = [];
-      let start = 0;
-      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
-        if (event === "start") start = Number(time3);
-        else spans.push([start, Number(time3)]);
-      }
-      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
-      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
-      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
-      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
-    }
-    function covers(spans, start, seconds2, tolerance = 0) {
-      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
-    }
-    function decodedAudioHash(file) {
-      return execFileSync20("ffmpeg", [
-        "-nostdin",
-        "-v",
-        "error",
-        "-xerror",
-        "-i",
-        file,
-        "-map",
-        "0:a:0",
-        "-ac",
-        "2",
-        "-ar",
-        "16000",
-        "-c:a",
-        "pcm_s16le",
-        "-f",
-        "hash",
-        "-hash",
-        "sha256",
-        "-"
-      ], { encoding: "utf8", timeout: 3e4 }).trim();
-    }
-    function pcmToWav2(pcmData, sampleRate, numChannels) {
-      const bitsPerSample = 16;
-      const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-      const blockAlign = numChannels * (bitsPerSample / 8);
-      const dataSize = pcmData.length;
-      const header = Buffer.alloc(44);
-      header.write("RIFF", 0);
-      header.writeUInt32LE(36 + dataSize, 4);
-      header.write("WAVE", 8);
-      header.write("fmt ", 12);
-      header.writeUInt32LE(16, 16);
-      header.writeUInt16LE(1, 20);
-      header.writeUInt16LE(numChannels, 22);
-      header.writeUInt32LE(sampleRate, 24);
-      header.writeUInt32LE(byteRate, 28);
-      header.writeUInt16LE(blockAlign, 32);
-      header.writeUInt16LE(bitsPerSample, 34);
-      header.write("data", 36);
-      header.writeUInt32LE(dataSize, 40);
-      return Buffer.concat([header, pcmData]);
-    }
-    module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash, pcmToWav: pcmToWav2 };
-  }
-});
-
-// ../skills/_shared/scene-speech-receipt.js
-var require_scene_speech_receipt = __commonJS({
-  "../skills/_shared/scene-speech-receipt.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var sha2 = (value) => createHash33("sha256").update(value).digest("hex");
-    var shaPattern = /^[a-f0-9]{64}$/;
-    function mismatch(message) {
-      throw new Error("speech_video_source_mismatch: " + message);
-    }
-    function readSceneRequest(file, receipt) {
-      if (receipt.version !== 1 || receipt.status !== "completed" || !receipt.jobId || !shaPattern.test(receipt.fingerprint) || receipt.requestId !== "scene-" + receipt.fingerprint) mismatch("invalid completed scene receipt");
-      let wire;
-      try {
-        wire = JSON.parse(fs26.readFileSync(file + ".scene-request.json", "utf8"));
-      } catch {
-        mismatch("restore the archived scene request for this clip");
-      }
-      const body = wire?.body, bytes = JSON.stringify(body);
-      if (!bytes || wire.bodySha256 !== sha2(bytes) || wire.bytes !== Buffer.byteLength(bytes) || receipt.sceneRequestSha256 && receipt.sceneRequestSha256 !== sha2(JSON.stringify(wire)) || !Array.isArray(wire.attachments) || !Array.isArray(body.shots) || !body.shots.length || !Number.isFinite(body.fps) || body.fps <= 0 || !Number.isInteger(body.num_frames) || body.num_frames <= 0 || receipt.expected?.frames && receipt.expected.frames !== body.num_frames || receipt.expected?.fps && receipt.expected.fps !== body.fps) mismatch("the archived scene request does not match the completed render");
-      let frame2 = 0;
-      const ids = /* @__PURE__ */ new Set();
-      for (const shot of body.shots) {
-        if (!shot.shot_id || ids.has(shot.shot_id) || shot.start_frame !== frame2 || !Number.isInteger(shot.end_frame) || shot.end_frame <= frame2)
-          mismatch("invalid shot intervals in the archived scene");
-        ids.add(shot.shot_id);
-        frame2 = shot.end_frame;
-      }
-      if (frame2 !== body.num_frames) mismatch("the archived shots do not cover the video");
-      return wire;
-    }
-    function audioAttachment(wire, role, uri, shot) {
-      const rows = wire.attachments.filter((row) => row.role === role && row.shotId === shot?.shot_id);
-      const inline = typeof uri === "string" && /^data:audio\/[^,]+;base64,/.test(uri);
-      if (inline && !rows.length) return sha2(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"));
-      if (rows.length !== 1 || rows[0].frame !== (shot?.start_frame ?? 0) || !shaPattern.test(rows[0].sha256) || !Number.isInteger(rows[0].bytes) || rows[0].bytes <= 0 || typeof uri !== "string" || !uri.startsWith("genai-file://"))
-        mismatch("missing archived " + role + " upload");
-      const id = uri.slice("genai-file://".length);
-      if (!id || shaPattern.test(id) && id !== rows[0].sha256) mismatch("scene audio URI and attachment disagree");
-      return rows[0].sha256;
-    }
-    function sceneDriver(wire) {
-      const { scene_audio: track, num_frames: frames } = wire.body;
-      if (!track || track.mode === "mix") return;
-      if (!["conditioning", void 0].includes(track.mode) || track.start_frame !== 0 || track.end_frame !== frames)
-        mismatch("invalid full-scene conditioning interval");
-      return audioAttachment(wire, "scene_audio", track.audio_uri);
-    }
-    function performanceWav(source, shotFrames, fps) {
-      const sampleRate = 48e3, channels = 2, block = 4;
-      const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
-      const samples = Math.ceil(nativeFrames * sampleRate / fps);
-      const pcm = __require("node:child_process").execFileSync("ffmpeg", [
-        "-nostdin",
-        "-v",
-        "error",
-        "-xerror",
-        "-i",
-        source,
-        "-map",
-        "0:a:0",
-        "-ac",
-        String(channels),
-        "-ar",
-        String(sampleRate),
-        "-f",
-        "s16le",
-        "pipe:1"
-      ], { maxBuffer: 32 * 1024 * 1024, timeout: 3e4 });
-      const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
-      if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some((byte) => byte !== 0))
-        throw new Error("scene_speech_performance: the recorded dialogue extends past the shot");
-      const padded = Buffer.alloc(samples * block);
-      pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
-      return require_audio_signal().pcmToWav(padded, sampleRate, channels);
-    }
-    function verifySceneSpeech(wire, plan2) {
-      const body = wire.body, driver = sceneDriver(wire);
-      if (body.generate_audio === false && plan2.mode === "native" || plan2.model && body.model !== plan2.model)
-        mismatch("scene model or native audio differs from the selected route");
-      if (plan2.mode === "audio_conditioned" && !driver || plan2.mode === "native" && driver)
-        mismatch("scene request used a different speech operation");
-      const card = plan2.sourceShot;
-      if (card) {
-        const lines = (card.narration ?? []).filter((line) => line.tts?.trim() && line.delivery !== "voiceover");
-        const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
-        if (!original) mismatch("the requested shot is absent from the recorded scene");
-        const dialogue = original.dialogue ?? [];
-        if (original.performance_uri) {
-          const file = lines.length === 1 && lines[0].audio?.path;
-          if (!file || !plan2.boardDir) mismatch("restore the recorded dialogue performance for this shot");
-          const bytes = performanceWav(__require("node:path").resolve(plan2.boardDir, file), original.end_frame - original.start_frame, body.fps);
-          if (sha2(bytes) !== audioAttachment(wire, "performance_audio", original.performance_uri, original))
-            mismatch("the current recording differs from the performance supplied to this shot");
-        }
-        if (plan2.assembly && body.shots.length > 1) {
-          const start = card.edit?.in ?? 0, end = card.edit?.out ?? body.num_frames / body.fps;
-          if (start < original.start_frame / body.fps - 1e-6 || end > original.end_frame / body.fps + 1e-6 || end <= start)
-            mismatch("the selected source interval extends outside the recorded shot");
-        }
-        if (plan2.mode === "native" || dialogue.length) {
-          const spoken = (row) => [row.speaker, row.text.trim(), row.delivery];
-          const assigned = lines.map((line) => spoken({ speaker: line.speaker, text: line.tts, delivery: line.delivery }));
-          if (JSON.stringify(dialogue.map(spoken)) !== JSON.stringify(assigned))
-            mismatch("recorded speakers, words or delivery do not match this shot");
-        }
-      }
-      return driver;
-    }
-    module.exports = { readSceneRequest, sceneDriver, verifySceneSpeech, performanceWav };
-  }
-});
-
-// ../skills/_shared/character-speech.js
-var require_character_speech = __commonJS({
-  "../skills/_shared/character-speech.js"(exports, module) {
+// ../skills/channel/references/character-panels.js
+var require_character_panels = __commonJS({
+  "../skills/channel/references/character-panels.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
     var { createHash: createHash33 } = __require("node:crypto");
-    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
-    var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
-    var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
-    function explicitVoiceOverride(board, voice, current) {
-      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
-      return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
-    }
-    function characterSpeech(character, { boardDir, board } = {}) {
-      let current;
-      if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
-        let channel = path39.resolve(boardDir);
-        while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
-        const identity = path39.join(channel, "assets/characters", character.id, "identity.md");
-        if (fs26.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
+    var { execFileSync: execFileSync20 } = __require("node:child_process");
+    var { identityCharacter } = require_character_identity();
+    var sha2 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
+    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
+    function localFile(folder, name) {
+      if (typeof name !== "string" || !name || path39.isAbsolute(name)) return null;
+      const file = path39.resolve(folder, name);
+      try {
+        const relative4 = path39.relative(fs26.realpathSync(folder), fs26.realpathSync(file));
+        return relative4 && !relative4.startsWith("..") && !path39.isAbsolute(relative4) && fs26.statSync(file).isFile() ? file : null;
+      } catch {
+        return null;
       }
-      const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
-      const voice = resolved.tts;
-      const invalid = voiceErrors(voice);
-      if (invalid.length) throw new Error("character_voice_invalid: " + invalid.join("; "));
-      const override2 = explicitVoiceOverride(board, voice, current);
-      if (current && !override2 && !isDeepStrictEqual2(normalizeVoice(current.tts), normalizeVoice(voice)))
-        throw new Error(`character_voice_stale: ${resolved.id} differs from the shared character voice; apply the requested sheet voice to SB_DOC.characters, or record an explicit episode speech override with request and voiceId`);
-      if (current?.voiceReference && resolved.voiceReference && !override2 && current.voiceReference.sha256 !== resolved.voiceReference.sha256)
-        throw new Error(`character_voice_stale: ${resolved.id} selected sample changed; refresh the episode voice reference explicitly`);
-      const reference2 = resolved.voiceReference || (!override2 ? current?.voiceReference : void 0);
-      const selected = reference2 || resolved.voiceSelection || resolved.voiceReferenceWarning || !override2 && (current?.voiceSelection || current?.voiceReferenceWarning);
-      if (voice.engine === "astra-genai" && voice.voiceId.trim().toLowerCase() === "default" && selected && !override2)
-        throw new Error(`character_voice_unregistered: ${resolved.id} has a selected sample but voiceId is default; register that sample with the gateway and pin its returned voice ID. A direction prompt does not clone a sample`);
-      if (!override2 && (resolved.voiceReferenceWarning || current?.voiceReferenceWarning))
-        throw new Error(`character_voice_sample_invalid: ${resolved.id} selected sample cannot be resolved`);
-      if (reference2) {
-        if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
-          throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
-        const file = path39.resolve(boardDir || process.cwd(), reference2.path);
-        if (!reference2.sha256 || hash7(fs26.readFileSync(file)) !== reference2.sha256)
-          throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
-        return { ...resolved, voiceReference: { ...reference2, path: file } };
+    }
+    function dimensions(file) {
+      const data = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
+      const { width, height } = data.streams?.[0] || {};
+      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
+      return { width, height };
+    }
+    function inspectPanels(folder, fallback = {}) {
+      const findings = [], slots = {}, measurements = {};
+      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
+      let manifest2;
+      const manifestFile = path39.join(folder, "panels.json");
+      if (fs26.existsSync(manifestFile)) {
+        try {
+          const safe = localFile(folder, "panels.json");
+          if (!safe) throw new Error("unsafe manifest path");
+          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
+          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
+        } catch (error2) {
+          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
+          manifest2 = { panels: {} };
+        }
+      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      for (const [slot, spec] of Object.entries(SPECS)) {
+        const entry2 = manifest2?.panels?.[slot];
+        const name = manifest2 ? entry2?.file : fallback[slot];
+        const file = localFile(folder, name);
+        if (!file) {
+          warn("image-slot", slot + ": missing or unsafe shared reference", SLOT_LABELS[slot] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot)) {
+          warn("image-purpose", slot + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        slots[slot] = path39.relative(folder, file).split(path39.sep).join("/");
+        const hash7 = sha2(file);
+        try {
+          const size = dimensions(file);
+          measurements[slot] = size;
+          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot}: ${size.width}x${size.height}; expected ${slot === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot === "face" ? "1:1" : "2:3"}`);
+        } catch {
+          warn("image-ratio", slot + ": dimensions unavailable; not verified", SLOT_LABELS[slot] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        }
+        const framing = entry2?.framing;
+        const box = framing?.subjectBox;
+        if (framing?.status !== "measured" || framing.sha256 !== hash7 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
+          warn("image-framing", slot + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
+        } else {
+          measurements[slot] = { ...measurements[slot], subjectHeight: box[3] };
+          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
+        }
+      }
+      const front = measurements.front, back = measurements.back;
+      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
+      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
+      return { slots, findings, measurements };
+    }
+    function boardPanelFindings(win, boardDir, channelDir) {
+      const entries = win?.SB_DOC?.characters || [];
+      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
+      for (const id of Object.keys(win?.PRODUCTION?.cast || {})) {
+        if (!chars.some((c) => c?.id === id)) chars.push({ id });
+      }
+      const findings = [];
+      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
+      const sceneHashes = new Set(sceneFiles.map((name) => localFile(boardDir, name)).filter(Boolean).map(sha2));
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
+        const folder = path39.join(channelDir, "assets", "characters", c.id);
+        if (!localFile(channelDir, path39.relative(channelDir, path39.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
+        let registered;
+        const manifestFile = localFile(channelDir, path39.relative(channelDir, path39.join(folder, "panels.json")));
+        if (manifestFile) {
+          try {
+            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
+          } catch {
+            registered = {};
+          }
+        }
+        for (const [slot, entry2] of Object.entries(registered || {})) {
+          if (slot === "msr") continue;
+          const source = entry2?.purpose === "character_reference" && entry2.view === slot && localFile(folder, entry2.file);
+          const linked = c.panels?.[slot] || slot === "front" && c.panels?.body;
+          if (source && !(typeof linked === "string" && linked.trim())) findings.push({
+            characterId: c.id,
+            domain: "image-reference-missing",
+            slot,
+            source,
+            field: `SB_DOC.characters.${c.id}.panels.${slot}`,
+            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source}`,
+            message: `${c.id}: shared ${slot} image exists at ${source}, but storyboard panels.${slot} is empty`
+          });
+        }
+        for (const [slot, name] of Object.entries(c.panels || {})) {
+          const file = typeof name === "string" ? path39.resolve(boardDir, name) : "";
+          const shared5 = file && localFile(channelDir, path39.relative(channelDir, file)) && localFile(folder, path39.relative(folder, file));
+          const view = slot === "body" ? "front" : slot;
+          const entry2 = registered?.[view];
+          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
+          if (!shared5 || !matches || sceneHashes.has(sha2(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
+        }
+      }
+      return findings;
+    }
+    function episodeCast(boardDir) {
+      const castFile = path39.join(boardDir, "cast.json");
+      if (!fs26.existsSync(castFile)) return [];
+      const value = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
+      return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry2]) => ({ ...entry2, id }));
+    }
+    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
+      return new Map(ids.map((id) => {
+        const entry2 = cast.find((c) => c.id === id);
+        let folder;
+        if (entry2?.source) {
+          const identity = path39.resolve(boardDir, entry2.source);
+          folder = path39.dirname(identity);
+          if (path39.basename(identity) !== "identity.md" || path39.basename(folder) !== id || path39.basename(path39.dirname(folder)) !== "characters" || path39.basename(path39.dirname(path39.dirname(folder))) !== "assets")
+            throw new Error(`cast_source_missing: ${id} needs its own assets/characters/${id}/identity.md`);
+        } else for (let dir = boardDir; ; dir = path39.dirname(dir)) {
+          const candidate2 = path39.join(dir, "assets", "characters", id);
+          if (fs26.existsSync(path39.join(candidate2, "panels.json"))) {
+            folder = candidate2;
+            break;
+          }
+          if (path39.dirname(dir) === dir) break;
+        }
+        if (folder && fs26.existsSync(folder) && path39.basename(fs26.realpathSync(folder)) !== id)
+          throw new Error(`cast_source_missing: ${id} needs its own character folder`);
+        if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
+        let manifest2;
+        try {
+          manifest2 = JSON.parse(fs26.readFileSync(path39.join(folder, "panels.json"), "utf8"));
+        } catch {
+          throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`);
+        }
+        const panels = {};
+        for (const view of requiredViews?.get(id) ?? ["face", "front", "back"]) {
+          const panel = manifest2.panels?.[view];
+          const file = localFile(folder, panel?.file);
+          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file)
+            throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
+          panels[view] = path39.relative(boardDir, file).split(path39.sep).join("/");
+        }
+        return [id, { folder, paths: panels, entries: manifest2.panels }];
+      }));
+    }
+    function sheetPanels(boardDir, ids, views) {
+      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
+    }
+    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
+      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
+      const sheets = readPanelSheets(boardDir, ids);
+      if (options.combined) return ids.map((id) => {
+        const { folder, paths: sources, entries } = sheets.get(id);
+        const entry2 = entries.msr;
+        const file = localFile(folder, entry2?.file);
+        if (!file || entry2.purpose !== "character_reference" || entry2.view !== "msr")
+          throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
+        if (entry2.sha256 !== sha2(file) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha2(path39.resolve(boardDir, sources[view]))))
+          throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
+        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
+        return {
+          id: `${shotId}-${id}-msr`,
+          path: path39.relative(boardDir, file).split(path39.sep).join("/"),
+          role: "character",
+          use,
+          purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit`
+        };
+      });
+      const views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
+      const outfits = /* @__PURE__ */ new Map();
+      for (const [id, { folder, entries }] of sheets) {
+        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
+        const source = localFile(folder, "identity.md");
+        if (!source) continue;
+        try {
+          const outfit = identityCharacter(fs26.readFileSync(source, "utf8"), { ready: false }).physical.outfit;
+          if (outfit?.status === "confirmed") outfits.set(id, outfit.value);
+        } catch {
+        }
+      }
+      return views.flatMap((view) => ids.map((id) => {
+        const { paths: paths3, entries } = sheets.get(id);
+        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
+        return {
+          id: `${shotId}-${id}-${view}`,
+          path: paths3[view],
+          role: "character",
+          use,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          ...fitting && outfits.has(id) ? { defaultOutfit: outfits.get(id) } : {},
+          purpose: view === "face" ? `${id}'s face and hair` : fitting ? `${id}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id}'s body and outfit, ${view}`
+        };
+      }));
+    }
+    function missingAppearance(shot, character, role, message) {
+      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role + ": " + message);
+      error2.report = {
+        stage: "character_inputs",
+        code: "character_input_required",
+        shotId: shot.id,
+        character,
+        role,
+        executable: false,
+        videoSubmitted: false,
+        message: error2.message
+      };
+      return error2;
+    }
+    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
+      const visual = shot.visual || {}, view = visual.camera?.view;
+      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
+      const lines = require_scene_direction().orderedSpeech(shot);
+      const explicit = visual.characterInputs;
+      let registry2;
+      if (seedance2) {
+        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
+        if (view?.subjectId && !view.subjectType) {
+          registry2 = episodeCast(boardDir);
+          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
+          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
+        }
+        if (view?.subjectType === "person") people.push(view.subjectId);
+        if (view?.mode === "ots") people.push(view.viewerId);
+        for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
+      }
+      const bodyForView = (id) => {
+        if (view?.mode === "ots" && view.viewerId === id) return "back";
+        if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
+        if (["detail", "object", "space"].includes(view?.subjectType)) return;
+        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
+        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
+      };
+      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
+      const specs = explicit ?? cast.map((character) => ({ character }));
+      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
+      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
+      for (const spec of specs) {
+        const id = spec?.character;
+        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
+          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
+        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
+          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
+        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
+          throw new Error("character_face_source_invalid: a face review must identify the selected original");
+        const body = spec.bodyView ?? bodyForView(id);
+        if (seedance2) {
+          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
+            throw missingAppearance(shot, id, "visibility", "select face_visible, body_only or hands_only");
+          if (spec.visibility === "hands_only") {
+            if (lines.some((line) => line.speaker === id && line.delivery === "on_screen" && line.tts?.trim()))
+              throw missingAppearance(shot, id, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
+            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id, "hands", "remove the face and body sources for this insert");
+            hands.add(id);
+            views.set(id, []);
+            continue;
+          }
+          if (!body) throw missingAppearance(shot, id, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
+          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id) === "back") {
+            if (spec.faceTaskId) throw missingAppearance(shot, id, "body", "a body-only view cannot use a facial original");
+            views.set(id, [body]);
+            continue;
+          }
+        }
+        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id);
+        views.set(id, spec.faceTaskId ? [body] : ["face", body]);
+      }
+      const omitted = cast.find((id) => !views.has(id));
+      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
+      if (cast.length && (cast.some((id) => !views.has(id)) || specs.some((spec) => !cast.includes(spec.character))))
+        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
+      let sheets;
+      try {
+        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id) => !hands.has(id)), views, registry2);
+      } catch (error2) {
+        if (!seedance2) throw error2;
+        const id = [...views.keys()].find((id2) => error2.message.includes(": " + id2 + " "));
+        if (!id) throw error2;
+        throw missingAppearance(shot, id, views.get(id).includes("face") ? "face" : "body", error2.message);
+      }
+      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
+      for (const { character, faceTaskId, faceReviewPath } of specs) {
+        if (hands.has(character)) continue;
+        const sheet = sheets.get(character);
+        if (faceTaskId) {
+          for (const slot2 of ["face", "msr"]) {
+            const name = sheet.entries[slot2]?.file;
+            if (typeof name === "string") replacedFaces.add(path39.resolve(sheet.folder, name));
+          }
+        }
+        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
+        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
+        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
+        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
+        const ref = { character, role: "character", use: "video" };
+        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
+        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
+        bodies.push({
+          ...ref,
+          id: shot.id + "-" + character + "-" + bodyView,
+          path: bodyPath,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
+        });
+      }
+      const pending2 = new Map([...faces, ...bodies].map((ref) => [path39.resolve(boardDir, ref.path), ref]));
+      const references = [], ids = /* @__PURE__ */ new Set();
+      for (const authored of visual.references || []) {
+        const file = authored.path && path39.resolve(boardDir, authored.path);
+        if (replacedFaces.has(file) && authored.use !== "image")
+          throw new Error("character_face_source_conflict: remove the superseded face from video references");
+        const selected = pending2.get(file);
+        if (selected && authored.use !== "image") {
+          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
+          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
+          pending2.delete(file);
+        } else references.push(authored);
+        ids.add(authored.id);
+      }
+      for (const ref of pending2.values()) {
+        let id = ref.id;
+        while (ids.has(id)) id += "-video";
+        references.push({ ...ref, id, ...seedance2 ? { resolvedPanel: true } : {} });
+        ids.add(id);
+      }
+      if (!contracts.length) return shot;
+      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
+      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
+      const slot = require_production_mode().videoSlot(shot);
+      if (slot?.referenceImagePaths !== void 0) {
+        if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
+          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
+        const referenceImagePaths = videoPaths(references);
+        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
+        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
+        normalized.video = { ...slot, referenceImagePaths };
+      }
+      return { ...shot, visual: normalized };
+    }
+    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
+  }
+});
+
+// ../skills/_shared/scene-cast.js
+var require_scene_cast = __commonJS({
+  "../skills/_shared/scene-cast.js"(exports, module) {
+    "use strict";
+    var path39 = __require("node:path");
+    var fs26 = __require("node:fs");
+    var { orderedSpeech } = require_scene_direction();
+    function sceneSpeech(scene, cards, planning = false) {
+      const lines = cards.flatMap((card) => orderedSpeech(card).filter((line) => line.tts?.trim()).map((line) => ({ card, line })));
+      const spoken = /* @__PURE__ */ new Set(), physical = /* @__PURE__ */ new Set();
+      const declared = scene.speakers;
+      if (declared !== void 0 && (!Array.isArray(declared) || declared.some((id) => typeof id !== "string" || !id.trim()) || new Set(declared).size !== declared.length))
+        throw new Error("scene_speaker_mismatch: list each speaker once by cast ID in scene " + scene.no);
+      for (const { card, line } of lines) {
+        if (!line.speaker) {
+          if (planning || declared || line.delivery === "on_screen" || line.delivery === "off_screen")
+            throw new Error("scene_speaker_missing: identify the speaker in " + card.id + " " + (line.id || line.tts));
+          continue;
+        }
+        if (planning && !["on_screen", "off_screen", "voiceover"].includes(line.delivery))
+          throw new Error("scene_speaker_delivery: identify the delivery of " + line.speaker + " in " + card.id);
+        spoken.add(line.speaker);
+        if (declared && !declared.includes(line.speaker)) {
+          throw new Error("scene_speaker_mismatch: scene " + scene.no + ", shot " + card.id + ", line " + (line.id || line.tts) + " names undeclared speaker " + line.speaker);
+        }
+        if (line.delivery !== "voiceover") physical.add(line.speaker);
+      }
+      if (scene.speakerReferences !== void 0 && !Array.isArray(scene.speakerReferences))
+        throw new Error("scene_reference_owner: list the scene references by cast ID");
+      if (scene.speakerReferences?.length) {
+        const staged = /* @__PURE__ */ new Set([...spoken, ...declared ?? [], ...(scene.videoDirection?.openingPositions ?? []).map((row) => row.character)]);
+        for (const card of cards) {
+          for (const id of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id);
+          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.video?.openingPositions ?? [], ...card.visual?.references ?? [], ...card.visual?.characterInputs ?? []])
+            if (item.character) staged.add(item.character);
+        }
+        const castAssigned = cards.length > 0 && cards.every((card) => card.visual?.character !== void 0 || card.visual?.characters !== void 0);
+        const owners = /* @__PURE__ */ new Set();
+        for (const ref of scene.speakerReferences) {
+          if (!ref?.path || !ref.character || owners.has(ref.character))
+            throw new Error("scene_reference_owner: each scene reference needs a path and a distinct cast ID");
+          if ((planning || castAssigned) && !staged.has(ref.character))
+            throw new Error("scene_reference_owner: " + ref.character + " does not appear or speak in scene " + scene.no);
+          owners.add(ref.character);
+        }
+      }
+      if (planning && declared?.some((id) => !spoken.has(id)))
+        throw new Error("scene_speaker_mismatch: the declared speakers must match the lines of scene " + scene.no);
+      return { physical: (declared ?? [...spoken]).filter((id) => physical.has(id)), visible: lines.some(({ line }) => line.delivery === "on_screen") };
+    }
+    function sceneCast(scene, cards) {
+      return sceneSpeech(scene, cards).physical;
+    }
+    function sceneSpeechRoute(scene, cards, selection) {
+      const { physical, visible } = sceneSpeech(scene, cards, true);
+      const speakers = visible ? physical : [];
+      const direction = scene.videoDirection || {};
+      const track = direction.audio && direction.audio.mode !== "mix";
+      const distilled = selection.engine === "astra-genai" && selection.model === "ltx-2.5-22b-distilled";
+      const generated = direction.dialogueVoice === "model_generated";
+      if (track && !visible) throw new Error("scene_speech_route: an external voice or a non-speaking picture uses a mix track");
+      if (track && generated) throw new Error("scene_speech_route: choose recorded audio or generated dialogue for this render");
+      const mode = track ? "conditioned" : !speakers.length ? "picture" : generated ? "generated" : selection.operation === "audio" ? "conditioned" : "reference";
+      let operation = "image";
+      if (mode === "conditioned") operation = "audio";
+      else if (mode === "reference") operation = distilled && selection.operation !== "reference" ? "image" : "reference";
+      else if (mode === "generated" && selection.engine === "veo" && selection.operation === "reference") operation = "reference";
+      const anchoredCuts = cards.every((card, index) => card.timeline && card.timeline.transition === (index ? "hard_cut" : "open") && card.timeline.images?.some((pin) => pin.role === "start" && pin.frame === card.timeline.startFrame) && !card.timeline.dialogueCues?.length);
+      const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mode === "reference" && speakers.length > 2 || anchoredCuts);
+      return { speakers, operation, mode, ...perShot ? { rendering: "per_shot" } : {}, external: !visible && physical.length > 0 };
+    }
+    function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, rendering = route.rendering, generateAudio, limit: limit2 }) {
+      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => require_production_mode().videoSlot(card)?.generateAudio === false)))
+        throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
+      if (route.mode !== "reference") return;
+      if (limit2 === void 0) {
+        const entry2 = require_video_catalog().adapters.find((adapter2) => adapter2.tool === tool2);
+        const capacity = entry2?.voice.maxPinnedVoicesPerRender;
+        limit2 = typeof capacity === "number" ? capacity : capacity?.[model2];
+      }
+      if (!limit2 || ["astra_genai_img2video", "astra_genai_msr"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled")
+        throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
+      const perShot = rendering === "per_shot" && !scene?.videoDirection?.oneTake;
+      const groups = perShot ? cards.map((card) => [card]) : [cards];
+      for (const group of groups) {
+        const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
+        if (voices.size <= limit2) continue;
+        const label = group.length === 1 || scene?.no === void 0 ? group[0].id : "scene " + scene.no;
+        throw new Error("scene_render_voice_limit: " + label + " needs " + voices.size + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (scene?.videoDirection?.oneTake || cards.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
+      }
+    }
+    var personRoles = /* @__PURE__ */ new Set(["character", "face", "outfit", "bystander"]);
+    var castIds = (value) => [].concat(value || []).map((person) => typeof person === "string" ? person : person.id);
+    function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
+      const registry2 = board.SB_DOC?.characters ?? [];
+      const actors = Array.isArray(registry2) ? registry2 : Object.entries(registry2).map(([id, actor]) => ({ ...actor, id }));
+      const voiceOnly = new Set(actors.filter((actor) => actor.voiceOnly === true).map((actor) => actor.id));
+      const speakers = sceneCast(scene, cards).filter((id) => !voiceOnly.has(id));
+      const declaredRefs = scene.speakerReferences ?? [];
+      const identities = [.../* @__PURE__ */ new Set([...speakers, ...declaredRefs.map((ref) => ref.character)])];
+      if (declaredRefs.some((ref) => !actors.some((actor) => actor.id === ref.character)))
+        throw new Error("scene_reference_owner: register the owner of every scene identity reference");
+      if (scene.speakerReferences?.some((ref) => voiceOnly.has(ref.character)))
+        throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
+      const owners = /* @__PURE__ */ new Map();
+      const canonical4 = (file) => {
+        const local2 = path39.resolve(boardDir, file);
+        return fs26.existsSync(local2) ? fs26.realpathSync(local2) : local2;
+      };
+      for (const actor of actors) for (const file of [actor.imageUrl, ...Object.values(actor.panels || {}), ...actor.voiceReference?.imagePaths || []]) {
+        if (typeof file === "string") owners.set(canonical4(file), actor.id);
+      }
+      function registeredOwner(file) {
+        if (!file) return;
+        const source = canonical4(file);
+        return owners.get(source) || source.match(/[/\\]assets[/\\]characters[/\\]([^/\\]+)[/\\]/)?.[1];
+      }
+      function ownerOf(ref, card) {
+        const registered = registeredOwner(ref.path);
+        if (registered && ref.character && registered !== ref.character)
+          throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
+        if (registered || ref.character) return registered || ref.character;
+        return speakers.find((id) => ref.id === id || ref.id === id + "-face" || ref.id?.startsWith(card.id + "-" + id + "-"));
+      }
+      const sheets = /* @__PURE__ */ new Map();
+      for (const character of identities) {
+        try {
+          const panels = require_character_panels().sheetPanels(boardDir, [character], /* @__PURE__ */ new Map([[character, ["face"]]])).get(character);
+          sheets.set(character, panels);
+          for (const file of Object.values(panels)) owners.set(canonical4(file), character);
+        } catch (error2) {
+          if (engine === "astra-genai" && !scene.videoDirection?.audio && !scene.speakerReferences?.some((ref) => ref.character === character) && fs26.existsSync(path39.join(boardDir, "cast.json"))) throw error2;
+        }
+      }
+      const originals = /* @__PURE__ */ new Map();
+      if (engine === "seedance" && (scene.frames !== void 0 || declaredRefs.length)) {
+        for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
+          if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
+          if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
+            throw new Error("scene_reference_owner: conflicting originals for " + spec.character);
+          originals.set(spec.character, spec);
+        }
+      }
+      const references = [];
+      const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== "mix";
+      const ltx2 = engine === "astra-genai";
+      for (const character of identities) {
+        const actor = actors.find((c) => c.id === character);
+        let face = sheets.get(character)?.face ?? actor?.panels?.face;
+        const candidates = cards.flatMap((card) => [
+          ...(card.timeline?.images ?? []).filter((p) => p.role === "face" && p.character === character),
+          ...(card.visual?.references ?? []).filter((r2) => r2.role === "character" && ownerOf(r2, card) === character && !/-(?:front|back)$/.test(r2.id))
+        ]);
+        const custom3 = scene.speakerReferences?.find((ref) => ref.character === character);
+        if (ltx2 && conditioning && custom3)
+          throw new Error("scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for " + character);
+        if (originals.has(character)) {
+          if (custom3) throw new Error("scene_reference_owner: select one facial original for " + character);
+          continue;
+        }
+        if (custom3 && face && engine === "seedance" && canonical4(custom3.path) !== canonical4(face))
+          throw new Error("scene_reference_owner: Seedance requires the registered face for " + character);
+        face = custom3?.path ?? face ?? candidates[0]?.path;
+        if (face && !conditioning && (ltx2 || scene.frames !== void 0 || custom3)) {
+          if (registeredOwner(face) && registeredOwner(face) !== character)
+            throw new Error("scene_reference_owner: " + character + " does not own " + face);
+          if (references.some((ref) => canonical4(ref.path) === canonical4(face))) throw new Error("scene_reference_owner: two speakers share one face path");
+          references.push({ id: "scene-" + scene.no + "-" + character + "-face", character, path: face, role: "character", scope: "scene", use: "video", purpose: character + " facial identity." });
+        } else if (ltx2 && scene.speakers && !conditioning)
+          throw new Error("character_panel_missing: scene " + scene.no + " speaker " + character + " needs a registered face");
+      }
+      const positions = (rows, refs) => rows?.map((row) => ({ ...row, images: ltx2 ? refs.flatMap((ref, i2) => ref.character === row.character ? [i2 + 1] : []) : row.images }));
+      let openingRefs = [];
+      const members = cards.map((card, index) => {
+        const visual = card.visual || {};
+        const original = castIds(visual.character ?? visual.characters);
+        const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
+        const positioned = [
+          ...card.timeline?.openingPositions ?? [],
+          ...visual.video?.openingPositions ?? [],
+          ...index === 0 ? scene.videoDirection?.openingPositions ?? [] : []
+        ];
+        const localIds = /* @__PURE__ */ new Set([
+          ...active,
+          ...original,
+          ...castIds(visual.bystanders),
+          ...positioned.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...(visual.characterInputs ?? []).map((input) => input.character),
+          ...(card.timeline?.images ?? []).map((pin) => pin.character),
+          ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
+        ]);
+        const localRefs = perShot && identities.length > 2 ? [
+          ...active.flatMap((id) => references.filter((ref) => ref.character === id)),
+          ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
+        ] : references;
+        const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
+        const keep2 = (ref) => {
+          const owner = registeredOwner(ref.path);
+          if (owner && ref.character && owner !== ref.character) throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
+          if (scene.frames !== void 0 && ref.legacy) return false;
+          if (ref.use === "image") return true;
+          if (localRefs.some((item) => canonical4(item.path) === canonical4(ref.path))) return false;
+          if (!ref.legacy && personRoles.has(ref.role)) return true;
+          const identity = ownerOf(ref, card);
+          if (identity && !speakers.includes(identity) && !declaredRefs.some((item) => item.character === identity)) return !ref.legacy;
+          if (!personRoles.has(ref.role) && !owner) return true;
+          if (ltx2 || scene.frames !== void 0) return false;
+          return speakers.includes(ownerOf(ref, card));
+        };
+        const kept = (visual.references || []).filter(keep2).map((ref) => {
+          const character = ownerOf(ref, card);
+          return personRoles.has(ref.role) && character ? { ...ref, character, role: ref.role === "bystander" ? "character" : ref.role } : ref;
+        });
+        const subjectRefs = useSceneRefs ? localRefs : [];
+        const pins = card.timeline?.images?.filter((pin) => !personRoles.has(pin.role) || keep2(pin)) ?? [];
+        const slots = [
+          ...pins.filter((pin) => !["start", "end", "keyframe", "location", "background"].includes(pin.role)),
+          ...[...subjectRefs, ...kept].filter((ref) => ref.use !== "image" && !["location", "background"].includes(ref.role) && !pins.some((pin) => pin.path === ref.path))
+        ];
+        if (!index) openingRefs = slots;
+        const shotPositions = (rows) => {
+          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows.some((local2) => local2.character === row.character)) : [];
+          return positions([...rows, ...inherited], slots);
+        };
+        const timeline = card.timeline && {
+          ...card.timeline,
+          ...card.timeline.images ? { images: pins } : {},
+          ...card.timeline.openingPositions ? { openingPositions: shotPositions(card.timeline.openingPositions) } : {}
+        };
+        const updated = {
+          ...visual,
+          ...ltx2 ? { sceneSpeakerReferences: true } : {},
+          ...visual.character !== void 0 || visual.characters !== void 0 ? { character: original } : {},
+          ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
+          ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
+          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
+        };
+        if (originals.size && updated.character?.length) {
+          updated.characterInputs = updated.character.map((character) => {
+            const local2 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
+            const original2 = originals.get(character);
+            return original2 && local2.visibility !== "hands_only" && local2.visibility !== "body_only" ? { ...local2, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local2;
+          });
+        }
+        if (updated.characterInputs?.length === 0) delete updated.characterInputs;
+        if (scene.frames !== void 0) {
+          const start = index === 0 ? scene.frames.start : void 0;
+          const end = index === cards.length - 1 ? scene.frames.end : void 0;
+          updated.frames = { mode: end ? "first_last" : start ? "first" : "reference", start, end };
+          delete updated.bg;
+          delete updated.src;
+          delete updated.imagePair;
+          delete updated.lastImagePath;
+          if (updated.video) {
+            updated.video = { ...updated.video };
+            delete updated.video.lastImagePath;
+            delete updated.video.referenceImagePaths;
+          }
+          if (!perShot && timeline?.images?.some((pin) => ["start", "end", "keyframe"].includes(pin.role)))
+            throw new Error("scene_image_scope: scene anchors and optional shot guides replace temporal pins on " + card.id);
+        }
+        return { ...card, visual: updated, ...timeline ? { timeline } : {} };
+      });
+      for (const ref of declaredRefs) {
+        const used = members.some((member) => member.visual.references?.some((item) => item.use !== "image" && item.character === ref.character && canonical4(item.path) === canonical4(ref.path)));
+        if (!used) throw new Error("scene_reference_owner: no render binds the requested visual reference for " + ref.character);
+      }
+      const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(scene.videoDirection.openingPositions, openingRefs) };
+      return { members, direction, speakers, identities };
+    }
+    function requiredCharacters2(shot) {
+      const inputs2 = shot?.visual?.characterInputs;
+      return Array.isArray(inputs2) ? inputs2.filter((person) => person && typeof person.bodyPath === "string") : [];
+    }
+    module.exports = { requiredCharacters: requiredCharacters2, sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast };
+  }
+});
+
+// ../skills/_shared/scene-voice.js
+var require_scene_voice = __commonJS({
+  "../skills/_shared/scene-voice.js"(exports, module) {
+    "use strict";
+    var path39 = __require("node:path");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { existsSync: existsSync44, readFileSync: readFileSync42, realpathSync: realpathSync15 } = __require("node:fs");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { handoff } = require_character_sheet();
+    var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
+    var object6 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    var text4 = (value) => typeof value === "string" ? value.trim() : "";
+    var fileHash2 = (file) => createHash33("sha256").update(readFileSync42(file)).digest("hex");
+    var sameSettings = (a, b) => isDeepStrictEqual2(JSON.parse(JSON.stringify(a ?? null)), JSON.parse(JSON.stringify(b ?? null)));
+    function channelRoot(boardDir) {
+      let channel = path39.resolve(boardDir);
+      while (!existsSync44(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
+      return channel;
+    }
+    function resolveCharacterVoice2(character, boardDir, shot, warnings) {
+      const id = text4(character.id);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
+      const channel = channelRoot(boardDir);
+      const required2 = requiredCharacters2(shot).find((person) => person.character === id);
+      const folder = required2 ? path39.dirname(path39.resolve(boardDir, required2.bodyPath)) : path39.join(channel, "assets/characters", id);
+      const identity = path39.join(folder, "identity.md");
+      let resolved = character;
+      const pinnedSettings = Object.keys(object6(character.tts)).length > 0;
+      if ((!pinnedSettings || !object6(character.voiceReference).path) && existsSync44(identity)) {
+        try {
+          const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
+          if (!pinnedSettings || sameSettings(current.tts, character.tts)) {
+            resolved = { ...current, ...character, tts: current.tts };
+            if (current.voiceReference && !object6(resolved.voiceReference).path)
+              resolved.voiceReference = { ...object6(resolved.voiceReference), ...current.voiceReference };
+            if (required2 && !object6(resolved.voiceReference).path) {
+              const sample = path39.join(folder, "voice.wav");
+              const selected = object6(current.voiceSelection).audioSha256;
+              if (typeof selected === "string" && existsSync44(sample) && fileHash2(sample) === selected)
+                resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
+            }
+          }
+        } catch (error2) {
+          warnings.push(`${id}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
+          return character;
+        }
+      }
+      const reference2 = object6(resolved.voiceReference);
+      if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face?.path, required2.bodyPath].filter(Boolean) } };
+      const sceneRefs = object6(shot.visual).references;
+      const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object6) : []).filter((ref) => ref.scope === "scene" && ref.character === id && ref.role === "character").map((ref) => text4(ref.path));
+      if (facePaths.length) return { ...resolved, voiceReference: { ...reference2, imagePaths: facePaths } };
+      if (!Array.isArray(reference2.imagePaths) && existsSync44(folder)) {
+        const root = realpathSync15(folder) + path39.sep;
+        const refs = object6(shot.visual).references;
+        const imagePaths = (Array.isArray(refs) ? refs.map(object6) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text4(ref.use))).map((ref) => text4(ref.path)).filter(Boolean).map((file) => path39.resolve(boardDir, file)).filter((file) => existsSync44(file) && realpathSync15(file).startsWith(root));
+        if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
       }
       return resolved;
     }
-    function physicalPath(file) {
-      let current = path39.resolve(file), suffix = [];
-      while (!fs26.existsSync(current) && path39.dirname(current) !== current) {
-        suffix.unshift(path39.basename(current));
-        current = path39.dirname(current);
+    function voiceReference2(character, boardDir, warnings) {
+      const declared = object6(character.voiceReference);
+      if (character.voiceReferenceWarning && !declared.path) {
+        warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
+        return void 0;
       }
-      return path39.join(fs26.realpathSync(current), ...suffix);
-    }
-    function episodeBoardForOutput(outputPath) {
-      let folder = physicalPath(outputPath || process.cwd());
-      while (true) {
-        if (path39.basename(folder) === "assets" && fs26.existsSync(path39.join(path39.dirname(folder), "profile.md"))) return void 0;
-        const board = path39.join(folder, "storyboard/scenes.js");
-        if (fs26.existsSync(board)) return fs26.realpathSync(board);
-        if (path39.dirname(folder) === folder) return void 0;
-        folder = path39.dirname(folder);
-      }
-    }
-    function plannedGenerationErrors(voice, proof, line) {
-      const errors = generationVoiceErrors(voice, proof, line);
-      if (errors.length) return errors;
-      const expected = require_speech_contract().compileActing(line?.tts ?? proof.text, line?.acting, voice);
-      const fields2 = proof.generator === "tts_astra_genai" ? ["model", "text", "voice", "speed", "instructions"] : proof.generator === "tts_gemini_38" ? ["turns"] : ["text"];
-      for (const key of fields2) {
-        if (!isDeepStrictEqual2(proof.voiceSettings[key], expected.generation[key]))
-          errors.push("Actual provider arguments differ from plan_audio: " + key);
-      }
-      return errors;
-    }
-    function validateSpeechContext(generator, args) {
-      const context2 = args.speechContext;
-      const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
-      if (!context2) {
-        if (outputBoard) throw new Error("speech_context_required: use speech_manage plan_audio for episode TTS");
-        return;
-      }
-      const file = fs26.realpathSync(context2.path);
-      if (outputBoard && file !== outputBoard) throw new Error("speech_context_mismatch: output belongs to a different episode");
-      const source = fs26.readFileSync(file, "utf8");
-      if (hash7(source) !== context2.expectedRevision) throw new Error("speech_context_stale: re-plan audio after storyboard changes");
-      const board = require_scenes_vm().evaluateWindowScript(source, { filename: file });
-      const matches = (board.SCENES || []).flatMap((shot) => shot.narration || []).filter((line2) => line2.id === context2.lineId);
-      if (matches.length !== 1 || !matches[0].speaker) throw new Error("speech_context_invalid: select one explicit stable line ID");
-      const line = matches[0], raw = board.SB_DOC?.characters;
-      const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
-      const cast = characters.filter((character2) => character2.id === line.speaker);
-      if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
-      const character = characterSpeech(cast[0], { boardDir: path39.dirname(file), board });
-      const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
-      if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
-    }
-    function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
-      if (!proof?.receiptPath) {
-        if (required2) throw new Error("speech_receipt_required: attach the completed TTS receiptPath");
-        return proof;
-      }
-      const receipt = JSON.parse(fs26.readFileSync(proof.receiptPath, "utf8"));
-      if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs26.realpathSync(receipt.result.audioPath) !== fs26.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs26.readFileSync(audioPath)))
-        throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
-      const actual = { ...proof, voiceSettings: receipt.generation };
-      const errors = plannedGenerationErrors(voice, actual, line);
-      if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
-      return actual;
-    }
-    function verifyShotPerformance(file, card, board, boardDir) {
-      const lines = (card.narration || []).filter((line2) => line2.tts?.trim());
-      const line = lines[0], audio = line?.audio;
-      const registry2 = board.SB_DOC?.characters ?? [];
-      const actor = Array.isArray(registry2) ? registry2.find((person) => person.id === line?.speaker) : registry2[line?.speaker];
-      if (lines.length !== 1 || line.delivery === "voiceover" || !actor || !audio?.path || fs26.realpathSync(path39.resolve(boardDir, audio.path)) !== fs26.realpathSync(file) || audio.sha256 !== hash7(fs26.readFileSync(file)))
-        throw new Error("scene_speech_performance: attach the current recording of the speaking line before using its audio");
-      const character = characterSpeech({ ...actor, id: line.speaker }, { board, boardDir });
-      if (audio.revision !== require_speech_contract().speechRevision(line, character) || audio.generation?.text !== line.tts)
-        throw new Error("scene_speech_performance: the recorded line has changed");
-      verifiedSpeechGeneration(file, audio.generation, character.tts, line, { required: true });
-    }
-    function conditioningAudioSha256(videoPath) {
-      if (!videoPath || !fs26.existsSync(videoPath)) return;
-      const video2 = path39.resolve(videoPath);
-      const receipts = [".astra-job.json", ".astra-genai.json"].map((suffix) => video2 + suffix).filter((file) => fs26.existsSync(file));
-      if (receipts.length !== 1) return;
-      let receipt;
-      try {
-        receipt = JSON.parse(fs26.readFileSync(receipts[0], "utf8"));
-      } catch {
-        return;
-      }
-      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
-      if (receipt.operation === "scene-to-video") {
-        const contract2 = require_scene_speech_receipt();
-        return contract2.sceneDriver(contract2.readSceneRequest(video2, receipt));
-      }
-      return recordedConditioningDriver(receipt, receipts[0]);
-    }
-    function recordedConditioningDriver(receipt, sidecar) {
-      if (receipt?.status !== "completed" || !receipt.jobId || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256)) return;
-      const request = receipt.submittedRequest;
-      const astra = sidecar.endsWith(".astra-job.json") && receipt.mode === "audio2video" && request?.mode === "audio2video" && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === void 0;
-      const gateway = sidecar.endsWith(".astra-genai.json") && receipt.version === 1 && receipt.operation === "audio-to-video" && /^[a-f0-9]{64}$/.test(receipt.fingerprint);
-      if (astra || gateway) return receipt.conditioningAudioSha256;
-    }
-    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver };
-  }
-});
-
-// ../skills/_shared/speech-contract.js
-var require_speech_contract = __commonJS({
-  "../skills/_shared/speech-contract.js"(exports, module) {
-    "use strict";
-    var { createHash: createHash33 } = __require("node:crypto");
-    function speechRevision2(line, character) {
-      return createHash33("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
-    }
-    function compileActing2(text4, acting, voice) {
-      voice = { ...voice };
-      for (const key of ["voiceId", "model", "stylePrompt", "voiceDirection"]) if (typeof voice[key] === "string") voice[key] = voice[key].trim();
-      if (typeof voice.language === "string") voice.language = require_character_voice().normalizeLanguage(voice.language);
-      const { resolveTtsModel: resolveTtsModel2 } = require_tts_models();
-      if (!["gemini", "elevenlabs", "astra-genai"].includes(voice.engine)) throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
-      if (voice.engine === "elevenlabs" && voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
-      const contract2 = resolveTtsModel2(voice.engine, voice.model);
-      const performance2 = acting || {};
-      const { actingErrors, resolvedStyle, directionSupport } = require_scene_acting();
-      const errors = actingErrors(acting);
-      if (errors.length) throw new Error(errors.join("; "));
-      const direction = resolvedStyle(voice, acting), support = directionSupport(voice, acting);
-      if (!support.supported && voice.engine === "gemini") throw new Error(support.warnings.join("; "));
-      const tags = performance2.tags || [];
-      if (contract2.direction === "gateway") {
-        if (tags.length) throw new Error("Gateway speech does not support inline acting tags");
-        return { generator: "tts_astra_genai", generation: {
-          model: voice.model,
-          text: text4,
-          voice: voice.voiceId,
-          speed: voice.speed ?? 1,
-          ...direction ? { instructions: direction } : {}
-        } };
-      }
-      if (contract2.direction === "inline") {
-        if (voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
-        const controls = [performance2.direction?.trim(), ...tags].filter(Boolean).map((tag) => `[${tag}]`).join(" ");
-        return { generator: "tts_elevenlabs_generate", generation: {
-          text: controls ? `${controls} ${text4}` : text4,
-          voiceId: voice.voiceId,
-          model: "eleven_v4",
-          languageCode: voice.language,
-          ...voice.stability !== void 0 ? { stability: voice.stability } : {},
-          ...voice.similarity !== void 0 ? { similarity: voice.similarity } : {}
-        } };
-      }
-      if (contract2.direction === "metadata") {
-        const events = tags.map((tag) => `<${tag}>`).join(" ");
-        return { generator: "tts_gemini_38", generation: {
-          model: voice.model,
-          voice: voice.voiceId,
-          turns: [{ text: events ? `${events} ${text4}` : text4, ...direction && support.supported ? { style: direction } : {} }]
-        } };
-      }
-      if (voice.engine === "gemini") {
-        if (tags.length) throw new Error("Inline acting events require Gemini 3.8; choose its model explicitly or omit tags");
-        const stylePrompt = direction;
-        return { generator: "tts_generate", generation: {
-          text: text4,
-          voiceName: voice.voiceId,
-          model: voice.model,
-          ...stylePrompt ? { stylePrompt } : {}
-        } };
-      }
-      throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
-    }
-    function hasPostLipSync(value) {
-      if (!value || typeof value !== "object") return false;
-      return Object.entries(value).some(([key, entry2]) => {
-        if ((key === "postLipSync" || key === "post_lipsync") && entry2 === true) return true;
-        if (typeof entry2 === "string" && ["mode", "operation", "strategy", "route", "tool", "provider", "model"].includes(key))
-          return /^(?:post[-_ ]?lip[-_ ]?sync|musetalk|wav2lip)$/i.test(entry2);
-        return hasPostLipSync(entry2);
-      });
-    }
-    function assertNoPostLipSync2(value) {
-      if (hasPostLipSync(value)) throw new Error("post_lipsync_forbidden: generate a new speaking take from the approved inputs");
-    }
-    var receiptSuffixes = [".astra-job.json", ".astra-genai.json"];
-    function verifyReceiptOperation(receipt, suffix, plan2, hashBound) {
-      assertNoPostLipSync2(receipt);
-      if (!hashBound || !["native", "audio_conditioned"].includes(plan2.mode)) return;
-      const operation = receipt.operation ?? receipt.mode;
-      if (!operation) return;
-      const provider = suffix === ".astra-job.json" ? "astra" : receipt.protocol === "gateway-desktop-v1" ? "astra-genai-desktop" : "astra-genai";
-      const conditioned = ["audio-to-video", "audio2video", "scene-to-video"].includes(operation);
-      const native = provider === "astra-genai" && ["image-to-video", "scene-to-video", "msr"].includes(operation);
-      if (provider !== plan2.provider || (plan2.mode === "native" ? !native : !conditioned) || typeof receipt.model === "string" && receipt.model !== plan2.model)
-        throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
-    }
-    function performanceKey(shot) {
-      const binding = shot.visual?.video?.speechBinding;
-      if (!binding?.videoSha256) return;
-      return JSON.stringify([shot.id, binding.mode, binding.videoSha256, binding.audio, binding.conditioningAudioSha256]);
-    }
-    function speechHistory(board) {
-      const fs26 = __require("node:fs"), path39 = __require("node:path");
-      const dir = path39.resolve(board, "../.work/speech-history");
-      let names;
-      try {
-        names = fs26.readdirSync(dir);
-      } catch (error2) {
-        if (error2.code === "ENOENT") return [];
-        throw error2;
-      }
-      const records = /* @__PURE__ */ new Map();
-      for (const name of names) {
-        if (!/^[a-f0-9]{64}\.js$/.test(name)) continue;
-        const file = path39.join(dir, name), bytes = fs26.readFileSync(file);
-        if (createHash33("sha256").update(bytes).digest("hex") !== name.slice(0, -3))
-          throw new Error("speech_history_invalid: a storyboard snapshot no longer matches its content hash");
-        if (!bytes.includes("speechBinding")) continue;
-        const win = require_scenes_vm().evaluateWindowScript(bytes.toString("utf8"), { filename: file });
-        const time3 = fs26.statSync(file, { bigint: true }).mtimeNs;
-        for (const shot of win.SCENES ?? []) {
-          const performance2 = performanceKey(shot);
-          if (!performance2) continue;
-          const key = JSON.stringify([performance2, shot.visual.video.speechBinding.videoPath, shot.visual.video.clip]);
-          if (records.get(key)?.time > time3) continue;
-          records.set(key, { time: time3, shot });
-        }
-      }
-      return Array.from(records.values(), (record3) => record3.shot);
-    }
-    function episodeVideoReceipts(shots, board, extra) {
-      const fs26 = __require("node:fs"), path39 = __require("node:path");
-      const dirs = /* @__PURE__ */ new Set([path39.resolve(board, "../.work/video"), path39.resolve(board, "../output/video/scenes")]);
-      const hashes = /* @__PURE__ */ new Map(), forbidden = [], renders = [];
-      function directory2(file) {
-        if (typeof file === "string" && file) dirs.add(path39.dirname(path39.resolve(board, file)));
-      }
-      directory2(extra);
-      const archived = speechHistory(board);
-      const active = new Set(shots.map(performanceKey));
-      const history = archived.filter((shot) => !active.has(performanceKey(shot)));
-      for (const shot of [...shots, ...archived]) {
-        const video2 = shot.visual?.video ?? {}, binding = video2.speechBinding;
-        for (const file of [video2.clip, binding?.videoPath, video2.soundtrackRepair?.videoPath]) directory2(file);
-        for (const source of video2.soundtrackRepair?.sources ?? []) directory2(source.path);
-        if (binding?.videoSha256 && hasPostLipSync(binding)) forbidden.push({
-          sha: binding.videoSha256,
-          file: typeof binding.videoPath === "string" && path39.resolve(board, binding.videoPath),
-          frames: binding.performanceSource
-        });
-      }
-      for (const dir of dirs) {
-        let entries;
-        try {
-          entries = fs26.readdirSync(dir, { withFileTypes: true });
-        } catch (error2) {
-          if (error2.code === "ENOENT" || error2.code === "ENOTDIR") continue;
-          throw error2;
-        }
-        for (const entry2 of entries) {
-          const suffix = receiptSuffixes.find((s2) => entry2.name.endsWith(s2));
-          if (!suffix || !entry2.isFile()) continue;
-          const sidecar = path39.join(dir, entry2.name);
-          let receipt;
-          try {
-            receipt = JSON.parse(fs26.readFileSync(sidecar, "utf8"));
-          } catch {
-            continue;
+      let file = text4(declared.path);
+      if (file) {
+        file = path39.resolve(boardDir, file);
+        if (declared.tts && !sameSettings(declared.tts, character.tts))
+          throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
+      } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text4(character.id))) {
+        const channel = channelRoot(boardDir);
+        const identity = path39.join(channel, "assets/characters", text4(character.id), "identity.md");
+        const candidate2 = path39.join(path39.dirname(identity), "voice.wav");
+        if (existsSync44(identity) && existsSync44(candidate2)) {
+          const { identityVoice } = require_character_voice();
+          if (!sameSettings(identityVoice(readFileSync42(identity, "utf8")), character.tts)) {
+            warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
+            return void 0;
           }
-          const file = sidecar.slice(0, -suffix.length);
-          let sha2 = receipt?.sha256;
-          if (!sha2 && receipt?.videoPath === file && hasPostLipSync(receipt) && fs26.existsSync(file))
-            sha2 = createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
-          if (!/^[a-f0-9]{64}$/.test(sha2)) continue;
-          if (!hashes.has(sha2)) hashes.set(sha2, []);
-          const source = { receipt, suffix, sha: sha2, file };
-          hashes.get(sha2).push(source);
-          if (receipt.status === "completed" && receipt.jobId && typeof receipt.videoPath === "string" && !hasPostLipSync(receipt)) renders.push(source);
-          if (hasPostLipSync(receipt)) forbidden.push({ sha: sha2, file });
+          file = candidate2;
         }
       }
-      return { hashes, forbidden, history, renders, drivers: /* @__PURE__ */ new Map(), sceneRenders: /* @__PURE__ */ new Map() };
+      if (!file) return void 0;
+      if (!existsSync44(file)) throw new Error(`voice_reference_stale: ${character.id} selected sample is missing: ${file}`);
+      const absolute = realpathSync15(file), sha2563 = fileHash2(absolute);
+      const selected = declared.sha256 || object6(character.voiceSelection).audioSha256;
+      if (selected && selected !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
+      const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
+      if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
+      return { path: absolute, sha256: sha2563, provenance };
     }
-    function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
-      const fs26 = __require("node:fs");
-      const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
-      let driver;
-      function verify(receipt, suffix, hashBound, originalFile) {
-        verifyReceiptOperation(receipt, suffix, plan2, hashBound);
-        let original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
-        if (hashBound && receipt.operation === "scene-to-video" && ["native", "audio_conditioned"].includes(plan2.mode)) {
-          const contract2 = require_scene_speech_receipt();
-          const file = [originalFile, ...(index?.hashes.get(receipt.sha256) ?? []).filter((item) => item.receipt.fingerprint === receipt.fingerprint).map((item) => item.file)].find((path39) => path39 && fs26.existsSync(path39 + ".scene-request.json")) ?? originalFile;
-          const wire = contract2.readSceneRequest(file, receipt);
-          original = contract2.verifySceneSpeech(wire, plan2);
-          if (index) index.sceneRenders.set(videoPath, wire.body);
-        }
-        if (!original) return;
-        if (driver && original !== driver) throw new Error("conditioning_audio_unverified: conflicting drivers for the same video");
-        driver = original;
-      }
-      for (const suffix of receiptSuffixes) {
-        let receipt;
-        try {
-          receipt = JSON.parse(fs26.readFileSync(videoPath + suffix, "utf8"));
-          if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) throw new Error("Invalid receipt");
-        } catch (error2) {
-          if (error2.code === "ENOENT") continue;
-          throw new Error("speech_video_receipt_invalid: cannot verify the generation receipt for " + videoPath);
-        }
-        sha2563 ??= digest5(videoPath);
-        if (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath) continue;
-        verify(receipt, suffix, receipt.sha256 === sha2563, videoPath);
-      }
-      if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return driver;
-      sha2563 ??= digest5(videoPath);
-      for (const { receipt, suffix, file } of index.hashes.get(sha2563) ?? []) verify(receipt, suffix, true, file);
-      let frames;
-      for (const source of index.forbidden) {
-        if (source.sha === sha2563) throw new Error("post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source");
-        if (!source.frames && source.file && fs26.existsSync(source.file) && digest5(source.file) === source.sha)
-          source.frames = videoPerformanceSource(source.file, true);
-        if (!source.frames) continue;
-        frames ??= videoPerformanceSource(videoPath, true);
-        if (sameVideoFrames(source.frames, frames))
-          throw new Error("post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source");
-      }
-      if (["native", "audio_conditioned"].includes(plan2.mode)) {
-        let sound;
-        const audio = (file) => {
-          const signal = require_audio_signal();
-          return signal.inspect(file).status === "signal" ? signal.decodedAudioHash(file) : "silent";
-        };
-        for (const source of index.renders) {
-          if (source.sha === sha2563 || !fs26.existsSync(source.file)) continue;
-          if (source.intact === void 0) source.intact = digest5(source.file) === source.sha;
-          if (!source.intact) continue;
-          if (!source.frames) {
-            try {
-              source.frames = videoPerformanceSource(source.file, true);
-            } catch {
-              source.intact = false;
-              continue;
-            }
-          }
-          frames ??= videoPerformanceSource(videoPath, true);
-          if (!sameVideoFrames(source.frames, frames)) continue;
-          verify(source.receipt, source.suffix, true, source.file);
-          source.sound ??= audio(source.file);
-          sound ??= audio(videoPath);
-          if (source.sound !== sound)
-            throw new Error("post_lipsync_forbidden: an existing render cannot acquire a replacement dialogue soundtrack");
-        }
-      }
-      if (driver) index.drivers.set(videoPath, driver);
-      return driver;
+    function currentSceneVoice2(board, boardDir, shot, id, warnings) {
+      const cast = board?.SB_DOC?.characters;
+      const matches = Array.isArray(cast) ? cast.filter((character2) => character2?.id === id) : cast && Object.hasOwn(cast, id) ? [{ ...cast[id], id }] : [];
+      if (matches.length > 1) throw new Error("voice_reference_ambiguous: duplicate cast entries for " + id);
+      if (!matches.length) return void 0;
+      const issues = [];
+      const character = resolveCharacterVoice2(matches[0], boardDir, shot, issues);
+      const ref = voiceReference2(character, boardDir, issues);
+      if (warnings) warnings.push(...issues);
+      else if (!ref && issues.length) throw new Error("voice_reference_stale: " + issues.join(" "));
+      return ref;
     }
-    function videoPerformanceSource(file, silentConditioned = false) {
-      const { execFileSync: execFileSync20 } = __require("node:child_process");
-      const input = ["-nostdin", "-v", "error", "-xerror", "-i", file, "-map", "0:V:0"];
-      const hash7 = (options) => execFileSync20(
-        "ffmpeg",
-        [...input, ...options, "-f", "hash", "-hash", "sha256", "-"],
-        { encoding: "utf8", timeout: 12e4, stdio: ["ignore", "pipe", "pipe"] }
-      ).trim();
-      const picture2 = hash7(["-fps_mode", "passthrough", "-c:v", "rawvideo", "-pix_fmt", "yuv420p"]);
-      const encodedPicture = hash7(["-c:v", "copy"]);
-      return { version: 2, picture: picture2, encodedPicture, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
-    }
-    function externalPictureSource(file) {
-      let source;
-      try {
-        source = videoPerformanceSource(file, true);
-      } catch {
-        return;
-      }
-      const signal = require_audio_signal();
-      if (signal.inspect(file).status === "signal") source.audio = signal.decodedAudioHash(file);
-      return source;
-    }
-    function sameVideoFrames(left, right) {
-      if (!left?.picture || !right?.picture) return false;
-      return left.picture === right.picture || left.picture === right.encodedPicture || left.encodedPicture === right.picture || Boolean(left.encodedPicture && left.encodedPicture === right.encodedPicture);
-    }
-    function assertVideoPerformanceOwnership(shots, boardDir, candidate2, receipts) {
-      const fs26 = __require("node:fs"), path39 = __require("node:path");
-      const media = /* @__PURE__ */ new Map();
-      function source(shot) {
-        const binding = shot.visual?.video?.speechBinding;
-        if (!["voiceover", "native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256) return;
-        if (binding.mode !== "voiceover" && !binding.audio?.length) return;
-        const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
-        if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
-          throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
-        const visible = shot.narration?.some((line) => line.delivery === "on_screen" && line.tts?.trim());
-        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify((binding.audio ?? []).map((line) => [line.revision, line.sha256])) };
-      }
-      function identity(entry2) {
-        const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
-        if (!media.has(videoSha256)) {
-          const file = typeof videoPath === "string" && path39.resolve(boardDir, videoPath);
-          const original = file && fs26.existsSync(file) && createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
-          const measured = original && (entry2.binding.mode === "voiceover" ? externalPictureSource(file) : videoPerformanceSource(file, Boolean(conditioningAudioSha256)));
-          media.set(videoSha256, measured || performanceSource);
-        }
-        return media.get(videoSha256);
-      }
-      function check2(left, right, active = false) {
-        if (left.end <= right.start || right.end <= left.start) return;
-        if (left.binding.mode === "voiceover" && right.binding.mode === "voiceover") return;
-        const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions && left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
-        if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
-        const a = identity(left), b = identity(right);
-        if (active && candidate2 && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 && (left.visible || right.visible) && !a?.picture) {
-          const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({ receipt }) => receipt.status === "completed" && receipt.jobId && ["msr", "image-to-video", "scene-to-video", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode));
-          if (!fresh) throw new Error("speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement");
-        }
-        const samePicture = (left.visible || right.visible) && sameVideoFrames(a, b);
-        const changedSoundtrack = samePicture && a.audio !== b.audio;
-        const sameMedia = samePicture || a?.audio && a.audio === b?.audio || left.binding.videoSha256 === right.binding.videoSha256;
-        const external = left.binding.mode === "voiceover" || right.binding.mode === "voiceover";
-        if (changedSoundtrack || !external && !samePlan && sameMedia)
-          throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign a different recording or performance to the same footage or soundtrack over an overlapping source interval");
-      }
-      const prior = [];
-      const next = candidate2 && source(candidate2);
-      for (const shot of shots) {
-        const entry2 = source(shot);
-        if (!entry2) continue;
-        if (candidate2) {
-          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next, true);
-        } else {
-          if (entry2.binding.performanceSource) {
-            const current = identity(entry2), recorded = entry2.binding.performanceSource;
-            const match2 = recorded.version === void 0 ? sameVideoFrames(current, recorded) : recorded.version === 2 && current?.picture === recorded.picture && current?.encodedPicture === recorded.encodedPicture;
-            if (!match2 || current?.audio !== recorded.audio)
-              throw new Error("speech_video_performance_conflict: the source streams for " + entry2.id + " changed after attachment");
-          }
-          for (const earlier of prior) check2(earlier, entry2);
-          prior.push(entry2);
-        }
-      }
-      for (const shot of receipts?.history ?? []) {
-        const earlier = source(shot);
-        if (!earlier) continue;
-        for (const entry2 of next ? [next] : prior) check2(earlier, entry2);
-      }
-    }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
-  }
-});
-
-// ../skills/_shared/speech-span.js
-var require_speech_span = __commonJS({
-  "../skills/_shared/speech-span.js"(exports, module) {
-    "use strict";
-    var { spawnSync: spawnSync4 } = __require("node:child_process");
-    var STEP = 0.02;
-    var RATE2 = 16e3;
-    var WINDOW = 8;
-    var ACTIVE = 6;
-    var LEAD_KEEP = 0.3;
-    var TAIL_KEEP = 0.5;
-    var WORTH = 0.3;
-    function spanOf(levels2) {
-      if (levels2.length < WINDOW) return null;
-      const sorted = [...levels2].sort((a, b) => a - b);
-      const peak = sorted[Math.floor(sorted.length * 0.95)], floor = sorted[Math.floor(sorted.length * 0.1)];
-      if (peak < -50) return null;
-      const threshold = Math.max(peak - 18, floor + 8);
-      const loud = levels2.map((level) => level > threshold);
-      const sustained = (at) => loud.slice(at, at + WINDOW).filter(Boolean).length >= ACTIVE;
-      let first = -1, last = -1;
-      for (let i2 = 0; i2 + WINDOW <= loud.length; i2++) if (sustained(i2)) {
-        first = i2;
-        break;
-      }
-      for (let i2 = loud.length - WINDOW; i2 >= 0; i2--) if (sustained(i2)) {
-        last = i2 + WINDOW;
-        break;
-      }
-      if (first < 0) return null;
-      while (!loud[first]) first++;
-      while (!loud[last - 1]) last--;
-      const round2 = (n) => Math.round(n * 100) / 100;
-      return { startSeconds: round2(first * STEP), endSeconds: round2(last * STEP) };
-    }
-    function inspect(file) {
-      const run = spawnSync4("ffmpeg", [
-        "-v",
-        "error",
-        "-nostdin",
-        "-i",
-        file,
-        "-vn",
-        "-ac",
-        "1",
-        "-ar",
-        String(RATE2),
-        "-af",
-        "highpass=f=150,lowpass=f=3800",
-        "-f",
-        "s16le",
-        "-"
-      ], { maxBuffer: 256 * 1024 * 1024 });
-      if (run.error || run.status !== 0 || run.stdout.length < 2) {
-        const probe5 = spawnSync4("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type", "-of", "json", file], { encoding: "utf8" });
-        try {
-          const streams = JSON.parse(probe5.stdout).streams;
-          if (probe5.status === 0 && streams?.some((s2) => s2.codec_type === "video") && !streams.some((s2) => s2.codec_type === "audio"))
-            return { status: "missing", span: null };
-        } catch {
-        }
-        return { status: "unverified", span: null };
-      }
-      const samples = new Int16Array(run.stdout.buffer, run.stdout.byteOffset, Math.floor(run.stdout.length / 2));
-      const hop = RATE2 * STEP, levels2 = [];
-      for (let i2 = 0; i2 + hop <= samples.length; i2 += hop) {
-        let energy = 0;
-        for (let j = i2; j < i2 + hop; j++) energy += samples[j] * samples[j];
-        levels2.push(10 * Math.log10(energy / hop + 1) - 90.3);
-      }
-      const span = spanOf(levels2);
-      const clipSeconds = Math.round(samples.length / RATE2 * 100) / 100;
-      const peakDb = levels2.length ? Math.max(...levels2) : null;
-      return {
-        status: peakDb !== null && peakDb < -60 ? "silent" : "unverified",
-        peakDb,
-        clipSeconds,
-        span: span && {
-          ...span,
-          clipSeconds,
-          leadSilenceSeconds: span.startSeconds,
-          tailSilenceSeconds: Math.round((clipSeconds - span.endSeconds) * 100) / 100
-        }
-      };
-    }
-    function measure(file) {
-      return inspect(file).span;
-    }
-    function authoredMargins(scene) {
-      const lines = scene.narration || [];
-      const events = Array.isArray(scene.performance) && scene.performance.length ? scene.performance : lines.map((_, index) => ({ kind: "dialogue", group: index + 1 }));
-      const speech = events.map((event, index) => event.kind === "action" ? -1 : index).filter((index) => index >= 0);
-      if (!speech.length) return { lead: null, tail: null };
-      const standalone = (part) => part.filter((event) => event.kind === "action" && event.withGroup === void 0).reduce((sum, event) => sum === null || !(event.durationSeconds > 0) ? null : sum + event.durationSeconds, 0);
-      const acting = (index) => lines[events[index].group - 1]?.acting || {};
-      const first = speech[0], last = speech[speech.length - 1];
-      const lead = standalone(events.slice(0, first)), tail = standalone(events.slice(last + 1));
-      return {
-        lead: lead === null ? null : lead + (acting(first).leadInSeconds ?? 0),
-        tail: tail === null ? null : tail + (acting(last).tailOutSeconds ?? 0)
-      };
-    }
-    function suggestTrim(span, scene, frameRate = 24) {
-      const { lead, tail } = authoredMargins(scene);
-      const edit2 = {};
-      if (lead !== null) {
-        const start = Math.floor(Math.max(0, span.startSeconds - Math.max(lead, LEAD_KEEP)) * frameRate) / frameRate;
-        if (start >= WORTH) edit2.in = Math.round(start * 1e3) / 1e3;
-      }
-      if (tail !== null) {
-        const end = Math.ceil(Math.min(span.clipSeconds, span.endSeconds + Math.max(tail, TAIL_KEEP)) * frameRate) / frameRate;
-        if (span.clipSeconds - end >= WORTH) edit2.out = Math.round(end * 1e3) / 1e3;
-      }
-      if (edit2.in === void 0 && edit2.out === void 0) return null;
-      return { edit: edit2, durationSeconds: Math.round(((edit2.out ?? span.clipSeconds) - (edit2.in ?? 0)) * 1e3) / 1e3 };
-    }
-    module.exports = { spanOf, measure, inspect, authoredMargins, suggestTrim };
+    module.exports = { currentSceneVoice: currentSceneVoice2, resolveCharacterVoice: resolveCharacterVoice2, voiceReference: voiceReference2 };
   }
 });
 
@@ -98309,6 +98224,912 @@ var require_render_routing = __commonJS({
       if (typeof module === "object" && module.exports) module.exports = api2;
       else root.RENDER_ROUTING = api2;
     })(typeof window === "object" ? window : globalThis);
+  }
+});
+
+// ../skills/_shared/audio-signal.js
+var require_audio_signal = __commonJS({
+  "../skills/_shared/audio-signal.js"(exports, module) {
+    "use strict";
+    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
+    var SILENCE_DB = -60;
+    function inspect(file) {
+      const streams = JSON.parse(execFileSync20("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration:format=duration",
+        "-of",
+        "json",
+        file
+      ], { encoding: "utf8" }));
+      if (!streams.streams?.length) return { status: "missing", spans: [] };
+      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
+      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
+      const result = spawnSync4(
+        "ffmpeg",
+        [
+          "-hide_banner",
+          "-nostdin",
+          "-nostats",
+          "-xerror",
+          "-progress",
+          "pipe:1",
+          "-i",
+          file,
+          "-map",
+          "0:a:0",
+          "-af",
+          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
+          "-f",
+          "null",
+          "-"
+        ],
+        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
+      );
+      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
+        throw new Error("cannot decode audio signal");
+      const spans = [];
+      let start = 0;
+      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
+        if (event === "start") start = Number(time3);
+        else spans.push([start, Number(time3)]);
+      }
+      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
+      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
+      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
+      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
+    }
+    function covers(spans, start, seconds2, tolerance = 0) {
+      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
+    }
+    function decodedAudioHash(file) {
+      return execFileSync20("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-ac",
+        "2",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        "-f",
+        "hash",
+        "-hash",
+        "sha256",
+        "-"
+      ], { encoding: "utf8", timeout: 3e4 }).trim();
+    }
+    function pcmToWav2(pcmData, sampleRate, numChannels) {
+      const bitsPerSample = 16;
+      const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+      const blockAlign = numChannels * (bitsPerSample / 8);
+      const dataSize = pcmData.length;
+      const header = Buffer.alloc(44);
+      header.write("RIFF", 0);
+      header.writeUInt32LE(36 + dataSize, 4);
+      header.write("WAVE", 8);
+      header.write("fmt ", 12);
+      header.writeUInt32LE(16, 16);
+      header.writeUInt16LE(1, 20);
+      header.writeUInt16LE(numChannels, 22);
+      header.writeUInt32LE(sampleRate, 24);
+      header.writeUInt32LE(byteRate, 28);
+      header.writeUInt16LE(blockAlign, 32);
+      header.writeUInt16LE(bitsPerSample, 34);
+      header.write("data", 36);
+      header.writeUInt32LE(dataSize, 40);
+      return Buffer.concat([header, pcmData]);
+    }
+    module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash, pcmToWav: pcmToWav2 };
+  }
+});
+
+// ../skills/_shared/scene-speech-receipt.js
+var require_scene_speech_receipt = __commonJS({
+  "../skills/_shared/scene-speech-receipt.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var sha2 = (value) => createHash33("sha256").update(value).digest("hex");
+    var shaPattern = /^[a-f0-9]{64}$/;
+    function mismatch(message) {
+      throw new Error("speech_video_source_mismatch: " + message);
+    }
+    function readSceneRequest(file, receipt) {
+      if (receipt.version !== 1 || receipt.status !== "completed" || !receipt.jobId || !shaPattern.test(receipt.fingerprint) || receipt.requestId !== "scene-" + receipt.fingerprint) mismatch("invalid completed scene receipt");
+      let wire;
+      try {
+        wire = JSON.parse(fs26.readFileSync(file + ".scene-request.json", "utf8"));
+      } catch {
+        mismatch("restore the archived scene request for this clip");
+      }
+      const body = wire?.body, bytes = JSON.stringify(body);
+      if (!bytes || wire.bodySha256 !== sha2(bytes) || wire.bytes !== Buffer.byteLength(bytes) || receipt.sceneRequestSha256 && receipt.sceneRequestSha256 !== sha2(JSON.stringify(wire)) || !Array.isArray(wire.attachments) || !Array.isArray(body.shots) || !body.shots.length || !Number.isFinite(body.fps) || body.fps <= 0 || !Number.isInteger(body.num_frames) || body.num_frames <= 0 || receipt.expected?.frames && receipt.expected.frames !== body.num_frames || receipt.expected?.fps && receipt.expected.fps !== body.fps) mismatch("the archived scene request does not match the completed render");
+      let frame2 = 0;
+      const ids = /* @__PURE__ */ new Set();
+      for (const shot of body.shots) {
+        if (!shot.shot_id || ids.has(shot.shot_id) || shot.start_frame !== frame2 || !Number.isInteger(shot.end_frame) || shot.end_frame <= frame2)
+          mismatch("invalid shot intervals in the archived scene");
+        ids.add(shot.shot_id);
+        frame2 = shot.end_frame;
+      }
+      if (frame2 !== body.num_frames) mismatch("the archived shots do not cover the video");
+      return wire;
+    }
+    function audioAttachment(wire, role, uri, shot) {
+      const rows = wire.attachments.filter((row) => row.role === role && row.shotId === shot?.shot_id);
+      const inline = typeof uri === "string" && /^data:audio\/[^,]+;base64,/.test(uri);
+      if (inline && !rows.length) return sha2(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"));
+      if (rows.length !== 1 || rows[0].frame !== (shot?.start_frame ?? 0) || !shaPattern.test(rows[0].sha256) || !Number.isInteger(rows[0].bytes) || rows[0].bytes <= 0 || typeof uri !== "string" || !uri.startsWith("genai-file://"))
+        mismatch("missing archived " + role + " upload");
+      const id = uri.slice("genai-file://".length);
+      if (!id || shaPattern.test(id) && id !== rows[0].sha256) mismatch("scene audio URI and attachment disagree");
+      return rows[0].sha256;
+    }
+    function shotAssetDigests(wire, shot, role, assets) {
+      const records = wire.attachments.filter((row) => row.shotId === shot.shot_id && row.role === role);
+      const result = [];
+      let index = 0;
+      for (const { uri, frame: frame2 } of assets) {
+        if (typeof uri !== "string") mismatch("missing " + role + " URI");
+        if (uri.startsWith("data:")) {
+          if (!/^data:(?:image|audio)\/[^,]+;base64,/.test(uri)) mismatch("invalid inline " + role);
+          result.push(sha2(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64")));
+        } else {
+          const row = records[index++], id = uri.slice("genai-file://".length);
+          if (!uri.startsWith("genai-file://") || !id || !row || row.frame !== frame2 || !shaPattern.test(row.sha256) || !Number.isInteger(row.bytes) || row.bytes <= 0 || shaPattern.test(id) && id !== row.sha256) mismatch("unbound " + role + " upload");
+          result.push(row.sha256);
+        }
+      }
+      if (index !== records.length) mismatch("extra " + role + " upload in the saved shot");
+      return result;
+    }
+    function verifyNativeReferences(wire, shot, plan2) {
+      const { board, boardDir, sourceShot: card } = plan2;
+      if (!board || !boardDir) mismatch("the current storyboard is required to verify native references");
+      const owner = board.STRUCTURE?.scenes?.find((scene) => scene.no === card.scene);
+      const cards = board.SCENES.filter((item) => item.scene === card.scene);
+      const members = owner ? require_scene_cast().projectSceneCast(owner, cards, board, boardDir, "astra-genai", false, true).members : [card];
+      const member = members.find((item) => item.id === card.id) ?? card;
+      const dialogue = shot.dialogue ?? [];
+      const pinned = dialogue.filter((line) => line.voice_uri);
+      const hashes = shotAssetDigests(wire, shot, "voice_reference", pinned.map((line) => ({ uri: line.voice_uri, frame: line.frame ?? shot.start_frame })));
+      const { currentSceneVoice: currentSceneVoice2 } = require_scene_voice();
+      let sample = 0;
+      for (const line of dialogue) {
+        const expected2 = currentSceneVoice2(board, boardDir, member, line.speaker);
+        if (!line.voice_uri || !expected2 || hashes[sample++] !== expected2.sha256)
+          mismatch("the recorded voice reference differs from the current sample for " + line.speaker);
+      }
+      const expected = [];
+      for (const pin of member?.timeline?.images ?? []) {
+        if (pin.character) expected.push(pin);
+      }
+      for (const ref of member?.visual?.references ?? []) {
+        if (ref.use === "image" || !ref.character || expected.some((pin) => pin.path === ref.path && pin.character === ref.character)) continue;
+        const role = ref.scope === "scene" && ref.id?.endsWith("-face") ? "face" : ref.role;
+        expected.push({ role, character: ref.character, path: ref.path });
+      }
+      const images = shot.images ?? [], captured = [], temporal2 = [];
+      for (const role of new Set(images.map((image2) => image2.role))) {
+        const rows = images.filter((image2) => image2.role === role);
+        const digests = shotAssetDigests(wire, shot, role, rows.map((image2) => ({ uri: image2.image_uri, frame: image2.frame })));
+        rows.forEach((image2, index) => {
+          if (image2.character) captured.push([image2.character, image2.role, digests[index]]);
+          if (["start", "end", "keyframe"].includes(role)) temporal2.push([role, image2.frame, digests[index]]);
+        });
+      }
+      const path39 = __require("node:path");
+      const frames = require_render_routing().framePlan(member);
+      const pins = [...(member.timeline?.images ?? []).filter((pin) => ["start", "end", "keyframe"].includes(pin.role))];
+      if (frames.start && frames.mode !== "reference") pins.push({ role: "start", frame: shot.start_frame, path: frames.start });
+      if (frames.end) pins.push({ role: "end", frame: shot.end_frame - 1, path: frames.end });
+      for (const pin of pins) {
+        const digest5 = sha2(fs26.readFileSync(path39.resolve(boardDir, pin.path)));
+        if (!temporal2.some(([role, frame2, hash7]) => role === pin.role && frame2 === pin.frame && hash7 === digest5))
+          mismatch("the archived " + pin.role + " frame differs from the current storyboard");
+      }
+      const wanted = expected.map((pin) => [pin.character, pin.role, sha2(fs26.readFileSync(path39.resolve(boardDir, pin.path)))]);
+      const keys2 = (items) => JSON.stringify([...new Set(items.map((item) => JSON.stringify(item)))].sort());
+      if (keys2(wanted) !== keys2(captured)) mismatch("recorded character images differ from the current shot references");
+    }
+    function sceneDriver(wire) {
+      const { scene_audio: track, num_frames: frames } = wire.body;
+      if (!track || track.mode === "mix") return;
+      if (!["conditioning", void 0].includes(track.mode) || track.start_frame !== 0 || track.end_frame !== frames)
+        mismatch("invalid full-scene conditioning interval");
+      return audioAttachment(wire, "scene_audio", track.audio_uri);
+    }
+    function performanceWav(source, shotFrames, fps) {
+      const sampleRate = 48e3, channels = 2, block = 4;
+      const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
+      const samples = Math.ceil(nativeFrames * sampleRate / fps);
+      const pcm = __require("node:child_process").execFileSync("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        source,
+        "-map",
+        "0:a:0",
+        "-ac",
+        String(channels),
+        "-ar",
+        String(sampleRate),
+        "-f",
+        "s16le",
+        "pipe:1"
+      ], { maxBuffer: 32 * 1024 * 1024, timeout: 3e4 });
+      const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
+      if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some((byte) => byte !== 0))
+        throw new Error("scene_speech_performance: the recorded dialogue extends past the shot");
+      const padded = Buffer.alloc(samples * block);
+      pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
+      return require_audio_signal().pcmToWav(padded, sampleRate, channels);
+    }
+    function verifySceneSpeech(wire, plan2) {
+      const body = wire.body, driver = sceneDriver(wire);
+      if (body.generate_audio === false && plan2.mode === "native" || plan2.model && body.model !== plan2.model)
+        mismatch("scene model or native audio differs from the selected route");
+      if (plan2.mode === "audio_conditioned" && !driver || plan2.mode === "native" && driver)
+        mismatch("scene request used a different speech operation");
+      const card = plan2.sourceShot;
+      if (card) {
+        const lines = (card.narration ?? []).filter((line) => line.tts?.trim() && line.delivery !== "voiceover");
+        const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
+        if (!original) mismatch("the requested shot is absent from the recorded scene");
+        const dialogue = original.dialogue ?? [];
+        if (original.performance_uri) {
+          const file = lines.length === 1 && lines[0].audio?.path;
+          if (!file || !plan2.boardDir) mismatch("restore the recorded dialogue performance for this shot");
+          const bytes = performanceWav(__require("node:path").resolve(plan2.boardDir, file), original.end_frame - original.start_frame, body.fps);
+          if (sha2(bytes) !== audioAttachment(wire, "performance_audio", original.performance_uri, original))
+            mismatch("the current recording differs from the performance supplied to this shot");
+        }
+        if (plan2.assembly && body.shots.length > 1) {
+          const start = card.edit?.in ?? 0, end = card.edit?.out ?? body.num_frames / body.fps;
+          if (start < original.start_frame / body.fps - 1e-6 || end > original.end_frame / body.fps + 1e-6 || end <= start)
+            mismatch("the selected source interval extends outside the recorded shot");
+        }
+        if (plan2.mode === "native") verifyNativeReferences(wire, original, plan2);
+        if (plan2.mode === "native" || dialogue.length) {
+          const spoken = (row) => [row.speaker, row.text.trim(), row.delivery];
+          const assigned = lines.map((line) => spoken({ speaker: line.speaker, text: line.tts, delivery: line.delivery }));
+          if (JSON.stringify(dialogue.map(spoken)) !== JSON.stringify(assigned))
+            mismatch("recorded speakers, words or delivery do not match this shot");
+        }
+      }
+      return driver;
+    }
+    module.exports = { readSceneRequest, sceneDriver, verifySceneSpeech, performanceWav };
+  }
+});
+
+// ../skills/_shared/character-speech.js
+var require_character_speech = __commonJS({
+  "../skills/_shared/character-speech.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path39 = __require("node:path");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
+    var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
+    var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
+    function explicitVoiceOverride(board, voice, current) {
+      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
+    }
+    function characterSpeech(character, { boardDir, board } = {}) {
+      let current;
+      if (boardDir && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(character?.id || "")) {
+        let channel = path39.resolve(boardDir);
+        while (!fs26.existsSync(path39.join(channel, "profile.md")) && path39.dirname(channel) !== channel) channel = path39.dirname(channel);
+        const identity = path39.join(channel, "assets/characters", character.id, "identity.md");
+        if (fs26.existsSync(identity)) current = require_character_sheet().handoff(identity, { voiceOnly: character.voiceOnly === true });
+      }
+      const resolved = character?.tts ? character : { ...current, ...character, tts: current?.tts };
+      const voice = resolved.tts;
+      const invalid = voiceErrors(voice);
+      if (invalid.length) throw new Error("character_voice_invalid: " + invalid.join("; "));
+      const override2 = explicitVoiceOverride(board, voice, current);
+      if (current && !override2 && !isDeepStrictEqual2(normalizeVoice(current.tts), normalizeVoice(voice)))
+        throw new Error(`character_voice_stale: ${resolved.id} differs from the shared character voice; apply the requested sheet voice to SB_DOC.characters, or record an explicit episode speech override with request and voiceId`);
+      if (current?.voiceReference && resolved.voiceReference && !override2 && current.voiceReference.sha256 !== resolved.voiceReference.sha256)
+        throw new Error(`character_voice_stale: ${resolved.id} selected sample changed; refresh the episode voice reference explicitly`);
+      const reference2 = resolved.voiceReference || (!override2 ? current?.voiceReference : void 0);
+      const selected = reference2 || resolved.voiceSelection || resolved.voiceReferenceWarning || !override2 && (current?.voiceSelection || current?.voiceReferenceWarning);
+      if (voice.engine === "astra-genai" && voice.voiceId.trim().toLowerCase() === "default" && selected && !override2)
+        throw new Error(`character_voice_unregistered: ${resolved.id} has a selected sample but voiceId is default; register that sample with the gateway and pin its returned voice ID. A direction prompt does not clone a sample`);
+      if (!override2 && (resolved.voiceReferenceWarning || current?.voiceReferenceWarning))
+        throw new Error(`character_voice_sample_invalid: ${resolved.id} selected sample cannot be resolved`);
+      if (reference2) {
+        if (reference2.tts && !isDeepStrictEqual2(normalizeVoice(reference2.tts), normalizeVoice(voice)))
+          throw new Error(`character_voice_sample_stale: ${resolved.id} sample uses different TTS settings`);
+        const file = path39.resolve(boardDir || process.cwd(), reference2.path);
+        if (!reference2.sha256 || hash7(fs26.readFileSync(file)) !== reference2.sha256)
+          throw new Error(`character_voice_sample_stale: ${resolved.id} selected sample bytes changed or lack a pinned hash`);
+        return { ...resolved, voiceReference: { ...reference2, path: file } };
+      }
+      return resolved;
+    }
+    function physicalPath(file) {
+      let current = path39.resolve(file), suffix = [];
+      while (!fs26.existsSync(current) && path39.dirname(current) !== current) {
+        suffix.unshift(path39.basename(current));
+        current = path39.dirname(current);
+      }
+      return path39.join(fs26.realpathSync(current), ...suffix);
+    }
+    function episodeBoardForOutput(outputPath) {
+      let folder = physicalPath(outputPath || process.cwd());
+      while (true) {
+        if (path39.basename(folder) === "assets" && fs26.existsSync(path39.join(path39.dirname(folder), "profile.md"))) return void 0;
+        const board = path39.join(folder, "storyboard/scenes.js");
+        if (fs26.existsSync(board)) return fs26.realpathSync(board);
+        if (path39.dirname(folder) === folder) return void 0;
+        folder = path39.dirname(folder);
+      }
+    }
+    function plannedGenerationErrors(voice, proof, line) {
+      const errors = generationVoiceErrors(voice, proof, line);
+      if (errors.length) return errors;
+      const expected = require_speech_contract().compileActing(line?.tts ?? proof.text, line?.acting, voice);
+      const fields2 = proof.generator === "tts_astra_genai" ? ["model", "text", "voice", "speed", "instructions"] : proof.generator === "tts_gemini_38" ? ["turns"] : ["text"];
+      for (const key of fields2) {
+        if (!isDeepStrictEqual2(proof.voiceSettings[key], expected.generation[key]))
+          errors.push("Actual provider arguments differ from plan_audio: " + key);
+      }
+      return errors;
+    }
+    function validateSpeechContext(generator, args) {
+      const context2 = args.speechContext;
+      const outputBoard = generator === "tts_astra_genai" ? episodeBoardForOutput(args.outputPath) : void 0;
+      if (!context2) {
+        if (outputBoard) throw new Error("speech_context_required: use speech_manage plan_audio for episode TTS");
+        return;
+      }
+      const file = fs26.realpathSync(context2.path);
+      if (outputBoard && file !== outputBoard) throw new Error("speech_context_mismatch: output belongs to a different episode");
+      const source = fs26.readFileSync(file, "utf8");
+      if (hash7(source) !== context2.expectedRevision) throw new Error("speech_context_stale: re-plan audio after storyboard changes");
+      const board = require_scenes_vm().evaluateWindowScript(source, { filename: file });
+      const matches = (board.SCENES || []).flatMap((shot) => shot.narration || []).filter((line2) => line2.id === context2.lineId);
+      if (matches.length !== 1 || !matches[0].speaker) throw new Error("speech_context_invalid: select one explicit stable line ID");
+      const line = matches[0], raw = board.SB_DOC?.characters;
+      const characters = Array.isArray(raw) ? raw : Object.entries(raw || {}).map(([id, value]) => ({ ...value, id }));
+      const cast = characters.filter((character2) => character2.id === line.speaker);
+      if (cast.length !== 1) throw new Error("speech_context_invalid: speaker needs one character entry");
+      const character = characterSpeech(cast[0], { boardDir: path39.dirname(file), board });
+      const errors = plannedGenerationErrors(character.tts, { generator, voiceSettings: args, text: line.tts, language: character.tts.language }, line);
+      if (errors.length) throw new Error("speech_context_mismatch: " + errors.join("; "));
+    }
+    function verifiedSpeechGeneration(audioPath, proof, voice, line, { required: required2 = false } = {}) {
+      if (!proof?.receiptPath) {
+        if (required2) throw new Error("speech_receipt_required: attach the completed TTS receiptPath");
+        return proof;
+      }
+      const receipt = JSON.parse(fs26.readFileSync(proof.receiptPath, "utf8"));
+      if (receipt.status !== "completed" || receipt.result?.success !== true || receipt.generator !== proof.generator || !receipt.result?.audioPath || fs26.realpathSync(receipt.result.audioPath) !== fs26.realpathSync(audioPath) || receipt.audioSha256 !== hash7(fs26.readFileSync(audioPath)))
+        throw new Error("speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes");
+      const actual = { ...proof, voiceSettings: receipt.generation };
+      const errors = plannedGenerationErrors(voice, actual, line);
+      if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
+      return actual;
+    }
+    function verifyShotPerformance(file, card, board, boardDir) {
+      const lines = (card.narration || []).filter((line2) => line2.tts?.trim());
+      const line = lines[0], audio = line?.audio;
+      const registry2 = board.SB_DOC?.characters ?? [];
+      const actor = Array.isArray(registry2) ? registry2.find((person) => person.id === line?.speaker) : registry2[line?.speaker];
+      if (lines.length !== 1 || line.delivery === "voiceover" || !actor || !audio?.path || fs26.realpathSync(path39.resolve(boardDir, audio.path)) !== fs26.realpathSync(file) || audio.sha256 !== hash7(fs26.readFileSync(file)))
+        throw new Error("scene_speech_performance: attach the current recording of the speaking line before using its audio");
+      const character = characterSpeech({ ...actor, id: line.speaker }, { board, boardDir });
+      if (audio.revision !== require_speech_contract().speechRevision(line, character) || audio.generation?.text !== line.tts)
+        throw new Error("scene_speech_performance: the recorded line has changed");
+      verifiedSpeechGeneration(file, audio.generation, character.tts, line, { required: true });
+    }
+    function conditioningAudioSha256(videoPath) {
+      if (!videoPath || !fs26.existsSync(videoPath)) return;
+      const video2 = path39.resolve(videoPath);
+      const receipts = [".astra-job.json", ".astra-genai.json"].map((suffix) => video2 + suffix).filter((file) => fs26.existsSync(file));
+      if (receipts.length !== 1) return;
+      let receipt;
+      try {
+        receipt = JSON.parse(fs26.readFileSync(receipts[0], "utf8"));
+      } catch {
+        return;
+      }
+      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
+      if (receipt.operation === "scene-to-video") {
+        const contract2 = require_scene_speech_receipt();
+        return contract2.sceneDriver(contract2.readSceneRequest(video2, receipt));
+      }
+      return recordedConditioningDriver(receipt, receipts[0]);
+    }
+    function recordedConditioningDriver(receipt, sidecar) {
+      if (receipt?.status !== "completed" || !receipt.jobId || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256)) return;
+      const request = receipt.submittedRequest;
+      const astra = sidecar.endsWith(".astra-job.json") && receipt.mode === "audio2video" && request?.mode === "audio2video" && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === void 0;
+      const gateway = sidecar.endsWith(".astra-genai.json") && receipt.version === 1 && receipt.operation === "audio-to-video" && /^[a-f0-9]{64}$/.test(receipt.fingerprint);
+      if (astra || gateway) return receipt.conditioningAudioSha256;
+    }
+    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver };
+  }
+});
+
+// ../skills/_shared/speech-contract.js
+var require_speech_contract = __commonJS({
+  "../skills/_shared/speech-contract.js"(exports, module) {
+    "use strict";
+    var { createHash: createHash33 } = __require("node:crypto");
+    function speechRevision2(line, character) {
+      return createHash33("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+    }
+    function compileActing2(text4, acting, voice) {
+      voice = { ...voice };
+      for (const key of ["voiceId", "model", "stylePrompt", "voiceDirection"]) if (typeof voice[key] === "string") voice[key] = voice[key].trim();
+      if (typeof voice.language === "string") voice.language = require_character_voice().normalizeLanguage(voice.language);
+      const { resolveTtsModel: resolveTtsModel2 } = require_tts_models();
+      if (!["gemini", "elevenlabs", "astra-genai"].includes(voice.engine)) throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
+      if (voice.engine === "elevenlabs" && voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
+      const contract2 = resolveTtsModel2(voice.engine, voice.model);
+      const performance2 = acting || {};
+      const { actingErrors, resolvedStyle, directionSupport } = require_scene_acting();
+      const errors = actingErrors(acting);
+      if (errors.length) throw new Error(errors.join("; "));
+      const direction = resolvedStyle(voice, acting), support = directionSupport(voice, acting);
+      if (!support.supported && voice.engine === "gemini") throw new Error(support.warnings.join("; "));
+      const tags = performance2.tags || [];
+      if (contract2.direction === "gateway") {
+        if (tags.length) throw new Error("Gateway speech does not support inline acting tags");
+        return { generator: "tts_astra_genai", generation: {
+          model: voice.model,
+          text: text4,
+          voice: voice.voiceId,
+          speed: voice.speed ?? 1,
+          ...direction ? { instructions: direction } : {}
+        } };
+      }
+      if (contract2.direction === "inline") {
+        if (voice.model !== void 0 && voice.model !== "eleven_v4") throw new Error("Explicitly update this character to eleven_v4 before generating new speech");
+        const controls = [performance2.direction?.trim(), ...tags].filter(Boolean).map((tag) => `[${tag}]`).join(" ");
+        return { generator: "tts_elevenlabs_generate", generation: {
+          text: controls ? `${controls} ${text4}` : text4,
+          voiceId: voice.voiceId,
+          model: "eleven_v4",
+          languageCode: voice.language,
+          ...voice.stability !== void 0 ? { stability: voice.stability } : {},
+          ...voice.similarity !== void 0 ? { similarity: voice.similarity } : {}
+        } };
+      }
+      if (contract2.direction === "metadata") {
+        const events = tags.map((tag) => `<${tag}>`).join(" ");
+        return { generator: "tts_gemini_38", generation: {
+          model: voice.model,
+          voice: voice.voiceId,
+          turns: [{ text: events ? `${events} ${text4}` : text4, ...direction && support.supported ? { style: direction } : {} }]
+        } };
+      }
+      if (voice.engine === "gemini") {
+        if (tags.length) throw new Error("Inline acting events require Gemini 3.8; choose its model explicitly or omit tags");
+        const stylePrompt = direction;
+        return { generator: "tts_generate", generation: {
+          text: text4,
+          voiceName: voice.voiceId,
+          model: voice.model,
+          ...stylePrompt ? { stylePrompt } : {}
+        } };
+      }
+      throw new Error("Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed");
+    }
+    function hasPostLipSync(value) {
+      if (!value || typeof value !== "object") return false;
+      return Object.entries(value).some(([key, entry2]) => {
+        if ((key === "postLipSync" || key === "post_lipsync") && entry2 === true) return true;
+        if (typeof entry2 === "string" && ["mode", "operation", "strategy", "route", "tool", "provider", "model"].includes(key))
+          return /^(?:post[-_ ]?lip[-_ ]?sync|musetalk|wav2lip)$/i.test(entry2);
+        return hasPostLipSync(entry2);
+      });
+    }
+    function assertNoPostLipSync2(value) {
+      if (hasPostLipSync(value)) throw new Error("post_lipsync_forbidden: generate a new speaking take from the approved inputs");
+    }
+    var receiptSuffixes = [".astra-job.json", ".astra-genai.json"];
+    function verifyReceiptOperation(receipt, suffix, plan2, hashBound) {
+      assertNoPostLipSync2(receipt);
+      if (!hashBound || !["native", "audio_conditioned"].includes(plan2.mode)) return;
+      const operation = receipt.operation ?? receipt.mode;
+      if (!operation) return;
+      const provider = suffix === ".astra-job.json" ? "astra" : receipt.protocol === "gateway-desktop-v1" ? "astra-genai-desktop" : "astra-genai";
+      const conditioned = ["audio-to-video", "audio2video", "scene-to-video"].includes(operation);
+      const native = provider === "astra-genai" && ["image-to-video", "scene-to-video", "msr"].includes(operation);
+      if (provider !== plan2.provider || (plan2.mode === "native" ? !native : !conditioned) || typeof receipt.model === "string" && receipt.model !== plan2.model)
+        throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
+    }
+    function performanceKey(shot) {
+      const binding = shot.visual?.video?.speechBinding;
+      if (!binding?.videoSha256) return;
+      return JSON.stringify([shot.id, binding.mode, binding.videoSha256, binding.audio, binding.conditioningAudioSha256]);
+    }
+    function speechHistory(board) {
+      const fs26 = __require("node:fs"), path39 = __require("node:path");
+      const dir = path39.resolve(board, "../.work/speech-history");
+      let names;
+      try {
+        names = fs26.readdirSync(dir);
+      } catch (error2) {
+        if (error2.code === "ENOENT") return [];
+        throw error2;
+      }
+      const records = /* @__PURE__ */ new Map();
+      for (const name of names) {
+        if (!/^[a-f0-9]{64}\.js$/.test(name)) continue;
+        const file = path39.join(dir, name), bytes = fs26.readFileSync(file);
+        if (createHash33("sha256").update(bytes).digest("hex") !== name.slice(0, -3))
+          throw new Error("speech_history_invalid: a storyboard snapshot no longer matches its content hash");
+        if (!bytes.includes("speechBinding")) continue;
+        const win = require_scenes_vm().evaluateWindowScript(bytes.toString("utf8"), { filename: file });
+        const time3 = fs26.statSync(file, { bigint: true }).mtimeNs;
+        for (const shot of win.SCENES ?? []) {
+          const performance2 = performanceKey(shot);
+          if (!performance2) continue;
+          const key = JSON.stringify([performance2, shot.visual.video.speechBinding.videoPath, shot.visual.video.clip]);
+          if (records.get(key)?.time > time3) continue;
+          records.set(key, { time: time3, shot });
+        }
+      }
+      return Array.from(records.values(), (record3) => record3.shot);
+    }
+    function episodeVideoReceipts(shots, board, extra) {
+      const fs26 = __require("node:fs"), path39 = __require("node:path");
+      const dirs = /* @__PURE__ */ new Set([path39.resolve(board, "../.work/video"), path39.resolve(board, "../output/video/scenes")]);
+      const hashes = /* @__PURE__ */ new Map(), forbidden = [], renders = [];
+      function directory2(file) {
+        if (typeof file === "string" && file) dirs.add(path39.dirname(path39.resolve(board, file)));
+      }
+      directory2(extra);
+      const archived = speechHistory(board);
+      const active = new Set(shots.map(performanceKey));
+      const history = archived.filter((shot) => !active.has(performanceKey(shot)));
+      for (const shot of [...shots, ...archived]) {
+        const video2 = shot.visual?.video ?? {}, binding = video2.speechBinding;
+        for (const file of [video2.clip, binding?.videoPath, video2.soundtrackRepair?.videoPath]) directory2(file);
+        for (const source of video2.soundtrackRepair?.sources ?? []) directory2(source.path);
+        if (binding?.videoSha256 && hasPostLipSync(binding)) forbidden.push({
+          sha: binding.videoSha256,
+          file: typeof binding.videoPath === "string" && path39.resolve(board, binding.videoPath),
+          frames: binding.performanceSource
+        });
+      }
+      for (const dir of dirs) {
+        let entries;
+        try {
+          entries = fs26.readdirSync(dir, { withFileTypes: true });
+        } catch (error2) {
+          if (error2.code === "ENOENT" || error2.code === "ENOTDIR") continue;
+          throw error2;
+        }
+        for (const entry2 of entries) {
+          const suffix = receiptSuffixes.find((s2) => entry2.name.endsWith(s2));
+          if (!suffix || !entry2.isFile()) continue;
+          const sidecar = path39.join(dir, entry2.name);
+          let receipt;
+          try {
+            receipt = JSON.parse(fs26.readFileSync(sidecar, "utf8"));
+          } catch {
+            continue;
+          }
+          const file = sidecar.slice(0, -suffix.length);
+          let sha2 = receipt?.sha256;
+          if (!sha2 && receipt?.videoPath === file && hasPostLipSync(receipt) && fs26.existsSync(file))
+            sha2 = createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+          if (!/^[a-f0-9]{64}$/.test(sha2)) continue;
+          if (!hashes.has(sha2)) hashes.set(sha2, []);
+          const source = { receipt, suffix, sha: sha2, file };
+          hashes.get(sha2).push(source);
+          if (receipt.status === "completed" && receipt.jobId && typeof receipt.videoPath === "string" && !hasPostLipSync(receipt)) renders.push(source);
+          if (hasPostLipSync(receipt)) forbidden.push({ sha: sha2, file });
+        }
+      }
+      return { hashes, forbidden, history, renders, drivers: /* @__PURE__ */ new Map(), sceneRenders: /* @__PURE__ */ new Map() };
+    }
+    function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
+      const fs26 = __require("node:fs");
+      const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+      let driver;
+      function verify(receipt, suffix, hashBound, originalFile) {
+        verifyReceiptOperation(receipt, suffix, plan2, hashBound);
+        let original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
+        if (hashBound && receipt.operation === "scene-to-video" && ["native", "audio_conditioned"].includes(plan2.mode)) {
+          const contract2 = require_scene_speech_receipt();
+          const file = [originalFile, ...(index?.hashes.get(receipt.sha256) ?? []).filter((item) => item.receipt.fingerprint === receipt.fingerprint).map((item) => item.file)].find((path39) => path39 && fs26.existsSync(path39 + ".scene-request.json")) ?? originalFile;
+          const wire = contract2.readSceneRequest(file, receipt);
+          original = contract2.verifySceneSpeech(wire, plan2);
+          if (index) index.sceneRenders.set(videoPath, receipt.sceneRequestSha256 && wire.conditioningInputs ? { ...wire.body, conditioningInputs: wire.conditioningInputs } : wire.body);
+        }
+        if (!original) return;
+        if (driver && original !== driver) throw new Error("conditioning_audio_unverified: conflicting drivers for the same video");
+        driver = original;
+      }
+      for (const suffix of receiptSuffixes) {
+        let receipt;
+        try {
+          receipt = JSON.parse(fs26.readFileSync(videoPath + suffix, "utf8"));
+          if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) throw new Error("Invalid receipt");
+        } catch (error2) {
+          if (error2.code === "ENOENT") continue;
+          throw new Error("speech_video_receipt_invalid: cannot verify the generation receipt for " + videoPath);
+        }
+        sha2563 ??= digest5(videoPath);
+        if (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath) continue;
+        verify(receipt, suffix, receipt.sha256 === sha2563, videoPath);
+      }
+      if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return driver;
+      sha2563 ??= digest5(videoPath);
+      for (const { receipt, suffix, file } of index.hashes.get(sha2563) ?? []) verify(receipt, suffix, true, file);
+      let frames;
+      for (const source of index.forbidden) {
+        if (source.sha === sha2563) throw new Error("post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source");
+        if (!source.frames && source.file && fs26.existsSync(source.file) && digest5(source.file) === source.sha)
+          source.frames = videoPerformanceSource(source.file, true);
+        if (!source.frames) continue;
+        frames ??= videoPerformanceSource(videoPath, true);
+        if (sameVideoFrames(source.frames, frames))
+          throw new Error("post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source");
+      }
+      if (["native", "audio_conditioned"].includes(plan2.mode)) {
+        let sound;
+        const audio = (file) => {
+          const signal = require_audio_signal();
+          return signal.inspect(file).status === "signal" ? signal.decodedAudioHash(file) : "silent";
+        };
+        for (const source of index.renders) {
+          if (source.sha === sha2563 || !fs26.existsSync(source.file)) continue;
+          if (source.intact === void 0) source.intact = digest5(source.file) === source.sha;
+          if (!source.intact) continue;
+          if (!source.frames) {
+            try {
+              source.frames = videoPerformanceSource(source.file, true);
+            } catch {
+              source.intact = false;
+              continue;
+            }
+          }
+          frames ??= videoPerformanceSource(videoPath, true);
+          if (!sameVideoFrames(source.frames, frames)) continue;
+          verify(source.receipt, source.suffix, true, source.file);
+          source.sound ??= audio(source.file);
+          sound ??= audio(videoPath);
+          if (source.sound !== sound)
+            throw new Error("post_lipsync_forbidden: an existing render cannot acquire a replacement dialogue soundtrack");
+        }
+      }
+      if (driver) index.drivers.set(videoPath, driver);
+      return driver;
+    }
+    function videoPerformanceSource(file, silentConditioned = false) {
+      const { execFileSync: execFileSync20 } = __require("node:child_process");
+      const input = ["-nostdin", "-v", "error", "-xerror", "-i", file, "-map", "0:V:0"];
+      const hash7 = (options) => execFileSync20(
+        "ffmpeg",
+        [...input, ...options, "-f", "hash", "-hash", "sha256", "-"],
+        { encoding: "utf8", timeout: 12e4, stdio: ["ignore", "pipe", "pipe"] }
+      ).trim();
+      const picture2 = hash7(["-fps_mode", "passthrough", "-c:v", "rawvideo", "-pix_fmt", "yuv420p"]);
+      const encodedPicture = hash7(["-c:v", "copy"]);
+      return { version: 2, picture: picture2, encodedPicture, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
+    }
+    function externalPictureSource(file) {
+      let source;
+      try {
+        source = videoPerformanceSource(file, true);
+      } catch {
+        return;
+      }
+      const signal = require_audio_signal();
+      if (signal.inspect(file).status === "signal") source.audio = signal.decodedAudioHash(file);
+      return source;
+    }
+    function sameVideoFrames(left, right) {
+      if (!left?.picture || !right?.picture) return false;
+      return left.picture === right.picture || left.picture === right.encodedPicture || left.encodedPicture === right.picture || Boolean(left.encodedPicture && left.encodedPicture === right.encodedPicture);
+    }
+    function assertVideoPerformanceOwnership(shots, boardDir, candidate2, receipts) {
+      const fs26 = __require("node:fs"), path39 = __require("node:path");
+      const media = /* @__PURE__ */ new Map();
+      function source(shot) {
+        const binding = shot.visual?.video?.speechBinding;
+        if (!["voiceover", "native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256) return;
+        if (binding.mode !== "voiceover" && !binding.audio?.length) return;
+        const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
+        if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
+          throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
+        const visible = shot.narration?.some((line) => line.delivery === "on_screen" && line.tts?.trim());
+        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify((binding.audio ?? []).map((line) => [line.revision, line.sha256])) };
+      }
+      function identity(entry2) {
+        const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
+        if (!media.has(videoSha256)) {
+          const file = typeof videoPath === "string" && path39.resolve(boardDir, videoPath);
+          const original = file && fs26.existsSync(file) && createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
+          const measured = original && (entry2.binding.mode === "voiceover" ? externalPictureSource(file) : videoPerformanceSource(file, Boolean(conditioningAudioSha256)));
+          media.set(videoSha256, measured || performanceSource);
+        }
+        return media.get(videoSha256);
+      }
+      function check2(left, right, active = false) {
+        if (left.end <= right.start || right.end <= left.start) return;
+        if (left.binding.mode === "voiceover" && right.binding.mode === "voiceover") return;
+        const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions && left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
+        if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
+        const a = identity(left), b = identity(right);
+        if (active && candidate2 && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 && (left.visible || right.visible) && !a?.picture) {
+          const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({ receipt }) => receipt.status === "completed" && receipt.jobId && ["msr", "image-to-video", "scene-to-video", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode));
+          if (!fresh) throw new Error("speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement");
+        }
+        const samePicture = (left.visible || right.visible) && sameVideoFrames(a, b);
+        const changedSoundtrack = samePicture && a.audio !== b.audio;
+        const sameMedia = samePicture || a?.audio && a.audio === b?.audio || left.binding.videoSha256 === right.binding.videoSha256;
+        const external = left.binding.mode === "voiceover" || right.binding.mode === "voiceover";
+        if (changedSoundtrack || !external && !samePlan && sameMedia)
+          throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign a different recording or performance to the same footage or soundtrack over an overlapping source interval");
+      }
+      const prior = [];
+      const next = candidate2 && source(candidate2);
+      for (const shot of shots) {
+        const entry2 = source(shot);
+        if (!entry2) continue;
+        if (candidate2) {
+          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next, true);
+        } else {
+          if (entry2.binding.performanceSource) {
+            const current = identity(entry2), recorded = entry2.binding.performanceSource;
+            const match2 = recorded.version === void 0 ? sameVideoFrames(current, recorded) : recorded.version === 2 && current?.picture === recorded.picture && current?.encodedPicture === recorded.encodedPicture;
+            if (!match2 || current?.audio !== recorded.audio)
+              throw new Error("speech_video_performance_conflict: the source streams for " + entry2.id + " changed after attachment");
+          }
+          for (const earlier of prior) check2(earlier, entry2);
+          prior.push(entry2);
+        }
+      }
+      for (const shot of receipts?.history ?? []) {
+        const earlier = source(shot);
+        if (!earlier) continue;
+        for (const entry2 of next ? [next] : prior) check2(earlier, entry2);
+      }
+    }
+    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
+  }
+});
+
+// ../skills/_shared/speech-span.js
+var require_speech_span = __commonJS({
+  "../skills/_shared/speech-span.js"(exports, module) {
+    "use strict";
+    var { spawnSync: spawnSync4 } = __require("node:child_process");
+    var STEP = 0.02;
+    var RATE2 = 16e3;
+    var WINDOW = 8;
+    var ACTIVE = 6;
+    var LEAD_KEEP = 0.3;
+    var TAIL_KEEP = 0.5;
+    var WORTH = 0.3;
+    function spanOf(levels2) {
+      if (levels2.length < WINDOW) return null;
+      const sorted = [...levels2].sort((a, b) => a - b);
+      const peak = sorted[Math.floor(sorted.length * 0.95)], floor = sorted[Math.floor(sorted.length * 0.1)];
+      if (peak < -50) return null;
+      const threshold = Math.max(peak - 18, floor + 8);
+      const loud = levels2.map((level) => level > threshold);
+      const sustained = (at) => loud.slice(at, at + WINDOW).filter(Boolean).length >= ACTIVE;
+      let first = -1, last = -1;
+      for (let i2 = 0; i2 + WINDOW <= loud.length; i2++) if (sustained(i2)) {
+        first = i2;
+        break;
+      }
+      for (let i2 = loud.length - WINDOW; i2 >= 0; i2--) if (sustained(i2)) {
+        last = i2 + WINDOW;
+        break;
+      }
+      if (first < 0) return null;
+      while (!loud[first]) first++;
+      while (!loud[last - 1]) last--;
+      const round2 = (n) => Math.round(n * 100) / 100;
+      return { startSeconds: round2(first * STEP), endSeconds: round2(last * STEP) };
+    }
+    function inspect(file) {
+      const run = spawnSync4("ffmpeg", [
+        "-v",
+        "error",
+        "-nostdin",
+        "-i",
+        file,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        String(RATE2),
+        "-af",
+        "highpass=f=150,lowpass=f=3800",
+        "-f",
+        "s16le",
+        "-"
+      ], { maxBuffer: 256 * 1024 * 1024 });
+      if (run.error || run.status !== 0 || run.stdout.length < 2) {
+        const probe5 = spawnSync4("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type", "-of", "json", file], { encoding: "utf8" });
+        try {
+          const streams = JSON.parse(probe5.stdout).streams;
+          if (probe5.status === 0 && streams?.some((s2) => s2.codec_type === "video") && !streams.some((s2) => s2.codec_type === "audio"))
+            return { status: "missing", span: null };
+        } catch {
+        }
+        return { status: "unverified", span: null };
+      }
+      const samples = new Int16Array(run.stdout.buffer, run.stdout.byteOffset, Math.floor(run.stdout.length / 2));
+      const hop = RATE2 * STEP, levels2 = [];
+      for (let i2 = 0; i2 + hop <= samples.length; i2 += hop) {
+        let energy = 0;
+        for (let j = i2; j < i2 + hop; j++) energy += samples[j] * samples[j];
+        levels2.push(10 * Math.log10(energy / hop + 1) - 90.3);
+      }
+      const span = spanOf(levels2);
+      const clipSeconds = Math.round(samples.length / RATE2 * 100) / 100;
+      const peakDb = levels2.length ? Math.max(...levels2) : null;
+      return {
+        status: peakDb !== null && peakDb < -60 ? "silent" : "unverified",
+        peakDb,
+        clipSeconds,
+        span: span && {
+          ...span,
+          clipSeconds,
+          leadSilenceSeconds: span.startSeconds,
+          tailSilenceSeconds: Math.round((clipSeconds - span.endSeconds) * 100) / 100
+        }
+      };
+    }
+    function measure(file) {
+      return inspect(file).span;
+    }
+    function authoredMargins(scene) {
+      const lines = scene.narration || [];
+      const events = Array.isArray(scene.performance) && scene.performance.length ? scene.performance : lines.map((_, index) => ({ kind: "dialogue", group: index + 1 }));
+      const speech = events.map((event, index) => event.kind === "action" ? -1 : index).filter((index) => index >= 0);
+      if (!speech.length) return { lead: null, tail: null };
+      const standalone = (part) => part.filter((event) => event.kind === "action" && event.withGroup === void 0).reduce((sum, event) => sum === null || !(event.durationSeconds > 0) ? null : sum + event.durationSeconds, 0);
+      const acting = (index) => lines[events[index].group - 1]?.acting || {};
+      const first = speech[0], last = speech[speech.length - 1];
+      const lead = standalone(events.slice(0, first)), tail = standalone(events.slice(last + 1));
+      return {
+        lead: lead === null ? null : lead + (acting(first).leadInSeconds ?? 0),
+        tail: tail === null ? null : tail + (acting(last).tailOutSeconds ?? 0)
+      };
+    }
+    function suggestTrim(span, scene, frameRate = 24) {
+      const { lead, tail } = authoredMargins(scene);
+      const edit2 = {};
+      if (lead !== null) {
+        const start = Math.floor(Math.max(0, span.startSeconds - Math.max(lead, LEAD_KEEP)) * frameRate) / frameRate;
+        if (start >= WORTH) edit2.in = Math.round(start * 1e3) / 1e3;
+      }
+      if (tail !== null) {
+        const end = Math.ceil(Math.min(span.clipSeconds, span.endSeconds + Math.max(tail, TAIL_KEEP)) * frameRate) / frameRate;
+        if (span.clipSeconds - end >= WORTH) edit2.out = Math.round(end * 1e3) / 1e3;
+      }
+      if (edit2.in === void 0 && edit2.out === void 0) return null;
+      return { edit: edit2, durationSeconds: Math.round(((edit2.out ?? span.clipSeconds) - (edit2.in ?? 0)) * 1e3) / 1e3 };
+    }
+    module.exports = { spanOf, measure, inspect, authoredMargins, suggestTrim };
   }
 });
 
@@ -100932,646 +101753,6 @@ var require_structure_contract = __commonJS({
   }
 });
 
-// ../skills/channel/references/character-panels.js
-var require_character_panels = __commonJS({
-  "../skills/channel/references/character-panels.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path39 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var { execFileSync: execFileSync20 } = __require("node:child_process");
-    var { identityCharacter } = require_character_identity();
-    var sha2 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
-    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
-    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
-    function localFile(folder, name) {
-      if (typeof name !== "string" || !name || path39.isAbsolute(name)) return null;
-      const file = path39.resolve(folder, name);
-      try {
-        const relative4 = path39.relative(fs26.realpathSync(folder), fs26.realpathSync(file));
-        return relative4 && !relative4.startsWith("..") && !path39.isAbsolute(relative4) && fs26.statSync(file).isFile() ? file : null;
-      } catch {
-        return null;
-      }
-    }
-    function dimensions(file) {
-      const data = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
-      const { width, height } = data.streams?.[0] || {};
-      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
-      return { width, height };
-    }
-    function inspectPanels(folder, fallback = {}) {
-      const findings = [], slots = {}, measurements = {};
-      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
-      let manifest2;
-      const manifestFile = path39.join(folder, "panels.json");
-      if (fs26.existsSync(manifestFile)) {
-        try {
-          const safe = localFile(folder, "panels.json");
-          if (!safe) throw new Error("unsafe manifest path");
-          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
-          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
-        } catch (error2) {
-          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
-          manifest2 = { panels: {} };
-        }
-      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-      for (const [slot, spec] of Object.entries(SPECS)) {
-        const entry2 = manifest2?.panels?.[slot];
-        const name = manifest2 ? entry2?.file : fallback[slot];
-        const file = localFile(folder, name);
-        if (!file) {
-          warn("image-slot", slot + ": missing or unsafe shared reference", SLOT_LABELS[slot] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot)) {
-          warn("image-purpose", slot + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        slots[slot] = path39.relative(folder, file).split(path39.sep).join("/");
-        const hash7 = sha2(file);
-        try {
-          const size = dimensions(file);
-          measurements[slot] = size;
-          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot}: ${size.width}x${size.height}; expected ${slot === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot === "face" ? "1:1" : "2:3"}`);
-        } catch {
-          warn("image-ratio", slot + ": dimensions unavailable; not verified", SLOT_LABELS[slot] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-        }
-        const framing = entry2?.framing;
-        const box = framing?.subjectBox;
-        if (framing?.status !== "measured" || framing.sha256 !== hash7 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
-          warn("image-framing", slot + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
-        } else {
-          measurements[slot] = { ...measurements[slot], subjectHeight: box[3] };
-          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
-        }
-      }
-      const front = measurements.front, back = measurements.back;
-      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
-      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
-      return { slots, findings, measurements };
-    }
-    function boardPanelFindings(win, boardDir, channelDir) {
-      const entries = win?.SB_DOC?.characters || [];
-      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
-      for (const id of Object.keys(win?.PRODUCTION?.cast || {})) {
-        if (!chars.some((c) => c?.id === id)) chars.push({ id });
-      }
-      const findings = [];
-      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
-      const sceneHashes = new Set(sceneFiles.map((name) => localFile(boardDir, name)).filter(Boolean).map(sha2));
-      for (const c of chars) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
-        const folder = path39.join(channelDir, "assets", "characters", c.id);
-        if (!localFile(channelDir, path39.relative(channelDir, path39.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
-        let registered;
-        const manifestFile = localFile(channelDir, path39.relative(channelDir, path39.join(folder, "panels.json")));
-        if (manifestFile) {
-          try {
-            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
-          } catch {
-            registered = {};
-          }
-        }
-        for (const [slot, entry2] of Object.entries(registered || {})) {
-          if (slot === "msr") continue;
-          const source = entry2?.purpose === "character_reference" && entry2.view === slot && localFile(folder, entry2.file);
-          const linked = c.panels?.[slot] || slot === "front" && c.panels?.body;
-          if (source && !(typeof linked === "string" && linked.trim())) findings.push({
-            characterId: c.id,
-            domain: "image-reference-missing",
-            slot,
-            source,
-            field: `SB_DOC.characters.${c.id}.panels.${slot}`,
-            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source}`,
-            message: `${c.id}: shared ${slot} image exists at ${source}, but storyboard panels.${slot} is empty`
-          });
-        }
-        for (const [slot, name] of Object.entries(c.panels || {})) {
-          const file = typeof name === "string" ? path39.resolve(boardDir, name) : "";
-          const shared5 = file && localFile(channelDir, path39.relative(channelDir, file)) && localFile(folder, path39.relative(folder, file));
-          const view = slot === "body" ? "front" : slot;
-          const entry2 = registered?.[view];
-          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
-          if (!shared5 || !matches || sceneHashes.has(sha2(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
-        }
-      }
-      return findings;
-    }
-    function episodeCast(boardDir) {
-      const castFile = path39.join(boardDir, "cast.json");
-      if (!fs26.existsSync(castFile)) return [];
-      const value = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
-      return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry2]) => ({ ...entry2, id }));
-    }
-    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
-      return new Map(ids.map((id) => {
-        const entry2 = cast.find((c) => c.id === id);
-        let folder;
-        if (entry2?.source) {
-          const identity = path39.resolve(boardDir, entry2.source);
-          folder = path39.dirname(identity);
-          if (path39.basename(identity) !== "identity.md" || path39.basename(folder) !== id || path39.basename(path39.dirname(folder)) !== "characters" || path39.basename(path39.dirname(path39.dirname(folder))) !== "assets")
-            throw new Error(`cast_source_missing: ${id} needs its own assets/characters/${id}/identity.md`);
-        } else for (let dir = boardDir; ; dir = path39.dirname(dir)) {
-          const candidate2 = path39.join(dir, "assets", "characters", id);
-          if (fs26.existsSync(path39.join(candidate2, "panels.json"))) {
-            folder = candidate2;
-            break;
-          }
-          if (path39.dirname(dir) === dir) break;
-        }
-        if (folder && fs26.existsSync(folder) && path39.basename(fs26.realpathSync(folder)) !== id)
-          throw new Error(`cast_source_missing: ${id} needs its own character folder`);
-        if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
-        let manifest2;
-        try {
-          manifest2 = JSON.parse(fs26.readFileSync(path39.join(folder, "panels.json"), "utf8"));
-        } catch {
-          throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`);
-        }
-        const panels = {};
-        for (const view of requiredViews?.get(id) ?? ["face", "front", "back"]) {
-          const panel = manifest2.panels?.[view];
-          const file = localFile(folder, panel?.file);
-          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file)
-            throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
-          panels[view] = path39.relative(boardDir, file).split(path39.sep).join("/");
-        }
-        return [id, { folder, paths: panels, entries: manifest2.panels }];
-      }));
-    }
-    function sheetPanels(boardDir, ids, views) {
-      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
-    }
-    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
-      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
-      const sheets = readPanelSheets(boardDir, ids);
-      if (options.combined) return ids.map((id) => {
-        const { folder, paths: sources, entries } = sheets.get(id);
-        const entry2 = entries.msr;
-        const file = localFile(folder, entry2?.file);
-        if (!file || entry2.purpose !== "character_reference" || entry2.view !== "msr")
-          throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
-        if (entry2.sha256 !== sha2(file) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha2(path39.resolve(boardDir, sources[view]))))
-          throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
-        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
-        return {
-          id: `${shotId}-${id}-msr`,
-          path: path39.relative(boardDir, file).split(path39.sep).join("/"),
-          role: "character",
-          use,
-          purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit`
-        };
-      });
-      const views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
-      const outfits = /* @__PURE__ */ new Map();
-      for (const [id, { folder, entries }] of sheets) {
-        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
-        const source = localFile(folder, "identity.md");
-        if (!source) continue;
-        try {
-          const outfit = identityCharacter(fs26.readFileSync(source, "utf8"), { ready: false }).physical.outfit;
-          if (outfit?.status === "confirmed") outfits.set(id, outfit.value);
-        } catch {
-        }
-      }
-      return views.flatMap((view) => ids.map((id) => {
-        const { paths: paths3, entries } = sheets.get(id);
-        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
-        return {
-          id: `${shotId}-${id}-${view}`,
-          path: paths3[view],
-          role: "character",
-          use,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          ...fitting && outfits.has(id) ? { defaultOutfit: outfits.get(id) } : {},
-          purpose: view === "face" ? `${id}'s face and hair` : fitting ? `${id}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id}'s body and outfit, ${view}`
-        };
-      }));
-    }
-    function missingAppearance(shot, character, role, message) {
-      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role + ": " + message);
-      error2.report = {
-        stage: "character_inputs",
-        code: "character_input_required",
-        shotId: shot.id,
-        character,
-        role,
-        executable: false,
-        videoSubmitted: false,
-        message: error2.message
-      };
-      return error2;
-    }
-    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
-      const visual = shot.visual || {}, view = visual.camera?.view;
-      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
-      const lines = require_scene_direction().orderedSpeech(shot);
-      const explicit = visual.characterInputs;
-      let registry2;
-      if (seedance2) {
-        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
-        if (view?.subjectId && !view.subjectType) {
-          registry2 = episodeCast(boardDir);
-          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
-          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
-        }
-        if (view?.subjectType === "person") people.push(view.subjectId);
-        if (view?.mode === "ots") people.push(view.viewerId);
-        for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
-      }
-      const bodyForView = (id) => {
-        if (view?.mode === "ots" && view.viewerId === id) return "back";
-        if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
-        if (["detail", "object", "space"].includes(view?.subjectType)) return;
-        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
-        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
-      };
-      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
-      const specs = explicit ?? cast.map((character) => ({ character }));
-      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
-      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
-      for (const spec of specs) {
-        const id = spec?.character;
-        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
-          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
-        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
-          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
-        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
-          throw new Error("character_face_source_invalid: a face review must identify the selected original");
-        const body = spec.bodyView ?? bodyForView(id);
-        if (seedance2) {
-          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
-            throw missingAppearance(shot, id, "visibility", "select face_visible, body_only or hands_only");
-          if (spec.visibility === "hands_only") {
-            if (lines.some((line) => line.speaker === id && line.delivery === "on_screen" && line.tts?.trim()))
-              throw missingAppearance(shot, id, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
-            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id, "hands", "remove the face and body sources for this insert");
-            hands.add(id);
-            views.set(id, []);
-            continue;
-          }
-          if (!body) throw missingAppearance(shot, id, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
-          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id) === "back") {
-            if (spec.faceTaskId) throw missingAppearance(shot, id, "body", "a body-only view cannot use a facial original");
-            views.set(id, [body]);
-            continue;
-          }
-        }
-        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id);
-        views.set(id, spec.faceTaskId ? [body] : ["face", body]);
-      }
-      const omitted = cast.find((id) => !views.has(id));
-      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
-      if (cast.length && (cast.some((id) => !views.has(id)) || specs.some((spec) => !cast.includes(spec.character))))
-        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
-      let sheets;
-      try {
-        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id) => !hands.has(id)), views, registry2);
-      } catch (error2) {
-        if (!seedance2) throw error2;
-        const id = [...views.keys()].find((id2) => error2.message.includes(": " + id2 + " "));
-        if (!id) throw error2;
-        throw missingAppearance(shot, id, views.get(id).includes("face") ? "face" : "body", error2.message);
-      }
-      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
-      for (const { character, faceTaskId, faceReviewPath } of specs) {
-        if (hands.has(character)) continue;
-        const sheet = sheets.get(character);
-        if (faceTaskId) {
-          for (const slot2 of ["face", "msr"]) {
-            const name = sheet.entries[slot2]?.file;
-            if (typeof name === "string") replacedFaces.add(path39.resolve(sheet.folder, name));
-          }
-        }
-        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
-        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
-        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
-        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
-        const ref = { character, role: "character", use: "video" };
-        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
-        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
-        bodies.push({
-          ...ref,
-          id: shot.id + "-" + character + "-" + bodyView,
-          path: bodyPath,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
-        });
-      }
-      const pending2 = new Map([...faces, ...bodies].map((ref) => [path39.resolve(boardDir, ref.path), ref]));
-      const references = [], ids = /* @__PURE__ */ new Set();
-      for (const authored of visual.references || []) {
-        const file = authored.path && path39.resolve(boardDir, authored.path);
-        if (replacedFaces.has(file) && authored.use !== "image")
-          throw new Error("character_face_source_conflict: remove the superseded face from video references");
-        const selected = pending2.get(file);
-        if (selected && authored.use !== "image") {
-          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
-          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
-          pending2.delete(file);
-        } else references.push(authored);
-        ids.add(authored.id);
-      }
-      for (const ref of pending2.values()) {
-        let id = ref.id;
-        while (ids.has(id)) id += "-video";
-        references.push({ ...ref, id, ...seedance2 ? { resolvedPanel: true } : {} });
-        ids.add(id);
-      }
-      if (!contracts.length) return shot;
-      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
-      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
-      const slot = require_production_mode().videoSlot(shot);
-      if (slot?.referenceImagePaths !== void 0) {
-        if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
-          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
-        const referenceImagePaths = videoPaths(references);
-        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
-        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
-        normalized.video = { ...slot, referenceImagePaths };
-      }
-      return { ...shot, visual: normalized };
-    }
-    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
-  }
-});
-
-// ../skills/_shared/scene-cast.js
-var require_scene_cast = __commonJS({
-  "../skills/_shared/scene-cast.js"(exports, module) {
-    "use strict";
-    var path39 = __require("node:path");
-    var fs26 = __require("node:fs");
-    var { orderedSpeech } = require_scene_direction();
-    function sceneSpeech(scene, cards, planning = false) {
-      const lines = cards.flatMap((card) => orderedSpeech(card).filter((line) => line.tts?.trim()).map((line) => ({ card, line })));
-      const spoken = /* @__PURE__ */ new Set(), physical = /* @__PURE__ */ new Set();
-      const declared = scene.speakers;
-      if (declared !== void 0 && (!Array.isArray(declared) || declared.some((id) => typeof id !== "string" || !id.trim()) || new Set(declared).size !== declared.length))
-        throw new Error("scene_speaker_mismatch: list each speaker once by cast ID in scene " + scene.no);
-      for (const { card, line } of lines) {
-        if (!line.speaker) {
-          if (planning || declared || line.delivery === "on_screen" || line.delivery === "off_screen")
-            throw new Error("scene_speaker_missing: identify the speaker in " + card.id + " " + (line.id || line.tts));
-          continue;
-        }
-        if (planning && !["on_screen", "off_screen", "voiceover"].includes(line.delivery))
-          throw new Error("scene_speaker_delivery: identify the delivery of " + line.speaker + " in " + card.id);
-        spoken.add(line.speaker);
-        if (declared && !declared.includes(line.speaker)) {
-          throw new Error("scene_speaker_mismatch: scene " + scene.no + ", shot " + card.id + ", line " + (line.id || line.tts) + " names undeclared speaker " + line.speaker);
-        }
-        if (line.delivery !== "voiceover") physical.add(line.speaker);
-      }
-      if (scene.speakerReferences !== void 0 && !Array.isArray(scene.speakerReferences))
-        throw new Error("scene_reference_owner: list the scene references by cast ID");
-      if (scene.speakerReferences?.length) {
-        const staged = /* @__PURE__ */ new Set([...spoken, ...declared ?? [], ...(scene.videoDirection?.openingPositions ?? []).map((row) => row.character)]);
-        for (const card of cards) {
-          for (const id of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id);
-          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.video?.openingPositions ?? [], ...card.visual?.references ?? [], ...card.visual?.characterInputs ?? []])
-            if (item.character) staged.add(item.character);
-        }
-        const castAssigned = cards.length > 0 && cards.every((card) => card.visual?.character !== void 0 || card.visual?.characters !== void 0);
-        const owners = /* @__PURE__ */ new Set();
-        for (const ref of scene.speakerReferences) {
-          if (!ref?.path || !ref.character || owners.has(ref.character))
-            throw new Error("scene_reference_owner: each scene reference needs a path and a distinct cast ID");
-          if ((planning || castAssigned) && !staged.has(ref.character))
-            throw new Error("scene_reference_owner: " + ref.character + " does not appear or speak in scene " + scene.no);
-          owners.add(ref.character);
-        }
-      }
-      if (planning && declared?.some((id) => !spoken.has(id)))
-        throw new Error("scene_speaker_mismatch: the declared speakers must match the lines of scene " + scene.no);
-      return { physical: (declared ?? [...spoken]).filter((id) => physical.has(id)), visible: lines.some(({ line }) => line.delivery === "on_screen") };
-    }
-    function sceneCast(scene, cards) {
-      return sceneSpeech(scene, cards).physical;
-    }
-    function sceneSpeechRoute(scene, cards, selection) {
-      const { physical, visible } = sceneSpeech(scene, cards, true);
-      const speakers = visible ? physical : [];
-      const direction = scene.videoDirection || {};
-      const track = direction.audio && direction.audio.mode !== "mix";
-      const distilled = selection.engine === "astra-genai" && selection.model === "ltx-2.5-22b-distilled";
-      const generated = direction.dialogueVoice === "model_generated";
-      if (track && !visible) throw new Error("scene_speech_route: an external voice or a non-speaking picture uses a mix track");
-      if (track && generated) throw new Error("scene_speech_route: choose recorded audio or generated dialogue for this render");
-      const mode = track ? "conditioned" : !speakers.length ? "picture" : generated ? "generated" : selection.operation === "audio" ? "conditioned" : "reference";
-      let operation = "image";
-      if (mode === "conditioned") operation = "audio";
-      else if (mode === "reference") operation = distilled && selection.operation !== "reference" ? "image" : "reference";
-      else if (mode === "generated" && selection.engine === "veo" && selection.operation === "reference") operation = "reference";
-      const anchoredCuts = cards.every((card, index) => card.timeline && card.timeline.transition === (index ? "hard_cut" : "open") && card.timeline.images?.some((pin) => pin.role === "start" && pin.frame === card.timeline.startFrame) && !card.timeline.dialogueCues?.length);
-      const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mode === "reference" && speakers.length > 2 || anchoredCuts);
-      return { speakers, operation, mode, ...perShot ? { rendering: "per_shot" } : {}, external: !visible && physical.length > 0 };
-    }
-    function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, rendering = route.rendering, generateAudio, limit: limit2 }) {
-      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => require_production_mode().videoSlot(card)?.generateAudio === false)))
-        throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
-      if (route.mode !== "reference") return;
-      if (limit2 === void 0) {
-        const entry2 = require_video_catalog().adapters.find((adapter2) => adapter2.tool === tool2);
-        const capacity = entry2?.voice.maxPinnedVoicesPerRender;
-        limit2 = typeof capacity === "number" ? capacity : capacity?.[model2];
-      }
-      if (!limit2 || ["astra_genai_img2video", "astra_genai_msr"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled")
-        throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
-      const perShot = rendering === "per_shot" && !scene?.videoDirection?.oneTake;
-      const groups = perShot ? cards.map((card) => [card]) : [cards];
-      for (const group of groups) {
-        const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
-        if (voices.size <= limit2) continue;
-        const label = group.length === 1 || scene?.no === void 0 ? group[0].id : "scene " + scene.no;
-        throw new Error("scene_render_voice_limit: " + label + " needs " + voices.size + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (scene?.videoDirection?.oneTake || cards.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
-      }
-    }
-    var personRoles = /* @__PURE__ */ new Set(["character", "face", "outfit", "bystander"]);
-    var castIds = (value) => [].concat(value || []).map((person) => typeof person === "string" ? person : person.id);
-    function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
-      const registry2 = board.SB_DOC?.characters ?? [];
-      const actors = Array.isArray(registry2) ? registry2 : Object.entries(registry2).map(([id, actor]) => ({ ...actor, id }));
-      const voiceOnly = new Set(actors.filter((actor) => actor.voiceOnly === true).map((actor) => actor.id));
-      const speakers = sceneCast(scene, cards).filter((id) => !voiceOnly.has(id));
-      const declaredRefs = scene.speakerReferences ?? [];
-      const identities = [.../* @__PURE__ */ new Set([...speakers, ...declaredRefs.map((ref) => ref.character)])];
-      if (declaredRefs.some((ref) => !actors.some((actor) => actor.id === ref.character)))
-        throw new Error("scene_reference_owner: register the owner of every scene identity reference");
-      if (scene.speakerReferences?.some((ref) => voiceOnly.has(ref.character)))
-        throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
-      const owners = /* @__PURE__ */ new Map();
-      const canonical4 = (file) => {
-        const local2 = path39.resolve(boardDir, file);
-        return fs26.existsSync(local2) ? fs26.realpathSync(local2) : local2;
-      };
-      for (const actor of actors) for (const file of [actor.imageUrl, ...Object.values(actor.panels || {}), ...actor.voiceReference?.imagePaths || []]) {
-        if (typeof file === "string") owners.set(canonical4(file), actor.id);
-      }
-      function registeredOwner(file) {
-        if (!file) return;
-        const source = canonical4(file);
-        return owners.get(source) || source.match(/[/\\]assets[/\\]characters[/\\]([^/\\]+)[/\\]/)?.[1];
-      }
-      function ownerOf(ref, card) {
-        const registered = registeredOwner(ref.path);
-        if (registered && ref.character && registered !== ref.character)
-          throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
-        if (registered || ref.character) return registered || ref.character;
-        return speakers.find((id) => ref.id === id || ref.id === id + "-face" || ref.id?.startsWith(card.id + "-" + id + "-"));
-      }
-      const sheets = /* @__PURE__ */ new Map();
-      for (const character of identities) {
-        try {
-          const panels = require_character_panels().sheetPanels(boardDir, [character], /* @__PURE__ */ new Map([[character, ["face"]]])).get(character);
-          sheets.set(character, panels);
-          for (const file of Object.values(panels)) owners.set(canonical4(file), character);
-        } catch (error2) {
-          if (engine === "astra-genai" && !scene.videoDirection?.audio && !scene.speakerReferences?.some((ref) => ref.character === character) && fs26.existsSync(path39.join(boardDir, "cast.json"))) throw error2;
-        }
-      }
-      const originals = /* @__PURE__ */ new Map();
-      if (engine === "seedance" && (scene.frames !== void 0 || declaredRefs.length)) {
-        for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
-          if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
-          if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
-            throw new Error("scene_reference_owner: conflicting originals for " + spec.character);
-          originals.set(spec.character, spec);
-        }
-      }
-      const references = [];
-      const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== "mix";
-      const ltx2 = engine === "astra-genai";
-      for (const character of identities) {
-        const actor = actors.find((c) => c.id === character);
-        let face = sheets.get(character)?.face ?? actor?.panels?.face;
-        const candidates = cards.flatMap((card) => [
-          ...(card.timeline?.images ?? []).filter((p) => p.role === "face" && p.character === character),
-          ...(card.visual?.references ?? []).filter((r2) => r2.role === "character" && ownerOf(r2, card) === character && !/-(?:front|back)$/.test(r2.id))
-        ]);
-        const custom3 = scene.speakerReferences?.find((ref) => ref.character === character);
-        if (ltx2 && conditioning && custom3)
-          throw new Error("scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for " + character);
-        if (originals.has(character)) {
-          if (custom3) throw new Error("scene_reference_owner: select one facial original for " + character);
-          continue;
-        }
-        if (custom3 && face && engine === "seedance" && canonical4(custom3.path) !== canonical4(face))
-          throw new Error("scene_reference_owner: Seedance requires the registered face for " + character);
-        face = custom3?.path ?? face ?? candidates[0]?.path;
-        if (face && !conditioning && (ltx2 || scene.frames !== void 0 || custom3)) {
-          if (registeredOwner(face) && registeredOwner(face) !== character)
-            throw new Error("scene_reference_owner: " + character + " does not own " + face);
-          if (references.some((ref) => canonical4(ref.path) === canonical4(face))) throw new Error("scene_reference_owner: two speakers share one face path");
-          references.push({ id: "scene-" + scene.no + "-" + character + "-face", character, path: face, role: "character", scope: "scene", use: "video", purpose: character + " facial identity." });
-        } else if (ltx2 && scene.speakers && !conditioning)
-          throw new Error("character_panel_missing: scene " + scene.no + " speaker " + character + " needs a registered face");
-      }
-      const positions = (rows, refs) => rows?.map((row) => ({ ...row, images: ltx2 ? refs.flatMap((ref, i2) => ref.character === row.character ? [i2 + 1] : []) : row.images }));
-      let openingRefs = [];
-      const members = cards.map((card, index) => {
-        const visual = card.visual || {};
-        const original = castIds(visual.character ?? visual.characters);
-        const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
-        const positioned = [
-          ...card.timeline?.openingPositions ?? [],
-          ...visual.video?.openingPositions ?? [],
-          ...index === 0 ? scene.videoDirection?.openingPositions ?? [] : []
-        ];
-        const localIds = /* @__PURE__ */ new Set([
-          ...active,
-          ...original,
-          ...castIds(visual.bystanders),
-          ...positioned.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
-          ...(visual.characterInputs ?? []).map((input) => input.character),
-          ...(card.timeline?.images ?? []).map((pin) => pin.character),
-          ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
-        ]);
-        const localRefs = perShot && identities.length > 2 ? [
-          ...active.flatMap((id) => references.filter((ref) => ref.character === id)),
-          ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
-        ] : references;
-        const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
-        const keep2 = (ref) => {
-          const owner = registeredOwner(ref.path);
-          if (owner && ref.character && owner !== ref.character) throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
-          if (scene.frames !== void 0 && ref.legacy) return false;
-          if (ref.use === "image") return true;
-          if (localRefs.some((item) => canonical4(item.path) === canonical4(ref.path))) return false;
-          if (!ref.legacy && personRoles.has(ref.role)) return true;
-          const identity = ownerOf(ref, card);
-          if (identity && !speakers.includes(identity) && !declaredRefs.some((item) => item.character === identity)) return !ref.legacy;
-          if (!personRoles.has(ref.role) && !owner) return true;
-          if (ltx2 || scene.frames !== void 0) return false;
-          return speakers.includes(ownerOf(ref, card));
-        };
-        const kept = (visual.references || []).filter(keep2).map((ref) => {
-          const character = ownerOf(ref, card);
-          return personRoles.has(ref.role) && character ? { ...ref, character, role: ref.role === "bystander" ? "character" : ref.role } : ref;
-        });
-        const subjectRefs = useSceneRefs ? localRefs : [];
-        const pins = card.timeline?.images?.filter((pin) => !personRoles.has(pin.role) || keep2(pin)) ?? [];
-        const slots = [
-          ...pins.filter((pin) => !["start", "end", "keyframe", "location", "background"].includes(pin.role)),
-          ...[...subjectRefs, ...kept].filter((ref) => ref.use !== "image" && !["location", "background"].includes(ref.role) && !pins.some((pin) => pin.path === ref.path))
-        ];
-        if (!index) openingRefs = slots;
-        const shotPositions = (rows) => {
-          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows.some((local2) => local2.character === row.character)) : [];
-          return positions([...rows, ...inherited], slots);
-        };
-        const timeline = card.timeline && {
-          ...card.timeline,
-          ...card.timeline.images ? { images: pins } : {},
-          ...card.timeline.openingPositions ? { openingPositions: shotPositions(card.timeline.openingPositions) } : {}
-        };
-        const updated = {
-          ...visual,
-          ...ltx2 ? { sceneSpeakerReferences: true } : {},
-          ...visual.character !== void 0 || visual.characters !== void 0 ? { character: original } : {},
-          ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
-          ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
-          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
-        };
-        if (originals.size && updated.character?.length) {
-          updated.characterInputs = updated.character.map((character) => {
-            const local2 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
-            const original2 = originals.get(character);
-            return original2 && local2.visibility !== "hands_only" && local2.visibility !== "body_only" ? { ...local2, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local2;
-          });
-        }
-        if (updated.characterInputs?.length === 0) delete updated.characterInputs;
-        if (scene.frames !== void 0) {
-          const start = index === 0 ? scene.frames.start : void 0;
-          const end = index === cards.length - 1 ? scene.frames.end : void 0;
-          updated.frames = { mode: end ? "first_last" : start ? "first" : "reference", start, end };
-          delete updated.bg;
-          delete updated.src;
-          delete updated.imagePair;
-          delete updated.lastImagePath;
-          if (updated.video) {
-            updated.video = { ...updated.video };
-            delete updated.video.lastImagePath;
-            delete updated.video.referenceImagePaths;
-          }
-          if (!perShot && timeline?.images?.some((pin) => ["start", "end", "keyframe"].includes(pin.role)))
-            throw new Error("scene_image_scope: scene anchors and optional shot guides replace temporal pins on " + card.id);
-        }
-        return { ...card, visual: updated, ...timeline ? { timeline } : {} };
-      });
-      for (const ref of declaredRefs) {
-        const used = members.some((member) => member.visual.references?.some((item) => item.use !== "image" && item.character === ref.character && canonical4(item.path) === canonical4(ref.path)));
-        if (!used) throw new Error("scene_reference_owner: no render binds the requested visual reference for " + ref.character);
-      }
-      const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(scene.videoDirection.openingPositions, openingRefs) };
-      return { members, direction, speakers, identities };
-    }
-    module.exports = { sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast };
-  }
-});
-
 // ../skills/_shared/video-selection.js
 var require_video_selection = __commonJS({
   "../skills/_shared/video-selection.js"(exports, module) {
@@ -103942,7 +104123,7 @@ var require_location_assets = __commonJS({
       if (realAncestor !== realRoot && !realAncestor.startsWith(realRoot + path39.sep)) throw new Error("asset symlink escapes root");
       return p;
     }
-    function load13(manifestPath) {
+    function load14(manifestPath) {
       const m2 = read4(manifestPath);
       assert2(C.validate(m2));
       if (!m2.assets) throw new Error("location has no built assets");
@@ -103987,7 +104168,7 @@ var require_location_assets = __commonJS({
       const s2 = win.SCENES?.[index], b = s2?.shot?.location;
       if (!b) return null;
       if (typeof b.manifest !== "string" || path39.isAbsolute(b.manifest)) throw new Error("location manifest must be relative to storyboard");
-      const p = path39.resolve(dir, b.manifest), m2 = load13(p);
+      const p = path39.resolve(dir, b.manifest), m2 = load14(p);
       assert2(C.bindingErrors(b, m2));
       if (fileHash2(p) !== b.manifestSha256) throw new Error("location manifest changed; bind an explicit revision");
       const camera = b.camera || m2.cameras[b.cameraId];
@@ -104084,7 +104265,7 @@ var require_location_assets = __commonJS({
       };
     }
     function bind(win, index, dir, { manifest: manifest2, stateId, endStateId, cameraId, mustShow = [], continuityGroup, continuityBreak, blocking }) {
-      const p = path39.resolve(manifest2), m2 = load13(p), s2 = win.SCENES[index];
+      const p = path39.resolve(manifest2), m2 = load14(p), s2 = win.SCENES[index];
       if (!s2) throw new Error("unknown shot");
       const b = { id: m2.id, revision: m2.revision, manifest: path39.relative(dir, p), manifestSha256: fileHash2(p), stateId, cameraId, mustShow, ...continuityGroup !== void 0 ? { continuityGroup } : {}, ...endStateId !== void 0 ? { endStateId } : {}, ...continuityBreak !== void 0 ? { continuityBreak } : {}, ...blocking !== void 0 ? { blocking } : {} };
       assert2(C.bindingErrors(b, m2));
@@ -104183,7 +104364,7 @@ var require_location_assets = __commonJS({
       return cameras;
     }
     function sheet({ manifest: manifest2, stateId, output: output2, cameras = {} }) {
-      const p = path39.resolve(manifest2), m2 = load13(p);
+      const p = path39.resolve(manifest2), m2 = load14(p);
       if (!Object.hasOwn(m2.states, stateId)) throw new Error("unknown state");
       const managed = output2 === void 0, out = managed ? path39.join(path39.dirname(p), "angles", stateId) : path39.resolve(output2);
       if (!managed && fs26.existsSync(out)) throw new Error("sheet output exists; use a new output directory");
@@ -104417,7 +104598,7 @@ var require_location_assets = __commonJS({
     }
     function shotFrame(win, index, dir, { manifest: manifest2, cast = [], size, angle, width, height }) {
       if (typeof manifest2 !== "string" || path39.isAbsolute(manifest2)) throw new Error("location manifest must be relative to storyboard");
-      const p = path39.resolve(dir, manifest2), m2 = load13(p), s2 = win.SCENES?.[index];
+      const p = path39.resolve(dir, manifest2), m2 = load14(p), s2 = win.SCENES?.[index];
       if (!s2?.id || !/^s\d{4,}$/.test(s2.id)) throw new Error("stable shot id required");
       const warnings = [], b = s2.shot?.location, bound = b && b.id === m2.id && b.revision === m2.revision ? b : null;
       if (b && !bound) warnings.push(`the shot is bound to ${b.id} v${b.revision}, not the sheet's ${m2.id} v${m2.revision}, so its blocking stays out of the render`);
@@ -104549,7 +104730,7 @@ var require_location_assets = __commonJS({
     function sheetView(manifestPath) {
       const p = path39.resolve(manifestPath);
       try {
-        const m2 = load13(p), stateId = Object.keys(m2.states)[0], cameraId = Object.keys(m2.cameras)[0];
+        const m2 = load14(p), stateId = Object.keys(m2.states)[0], cameraId = Object.keys(m2.cameras)[0];
         return {
           sheet: true,
           shotId: "sheet-" + m2.id,
@@ -104618,7 +104799,7 @@ var require_location_assets = __commonJS({
       const { action } = args;
       if (action === "build") return build(args);
       if (action === "sheet") return sheet(args);
-      if (action === "read") return load13(args.manifest);
+      if (action === "read") return load14(args.manifest);
       const p = path39.resolve(args.board), dir = path39.dirname(p), win = readBoard2(p), index = win.SCENES.findIndex((s2) => s2.id === args.shotId);
       if (["bind", "render", "previz", "approve", "references", "receipt", "review"].includes(action) && index < 0) throw new Error("unknown shot id");
       let result;
@@ -104638,7 +104819,7 @@ var require_location_assets = __commonJS({
     function detailFilename(topic, id) {
       return digest5([topic, id]).slice(0, 24) + ".html";
     }
-    module.exports = { detailFilename, angleCameras, shotCamera, shotViewpoint, shotFrame, locationPrompt, digest: digest5, fileHash: fileHash2, load: load13, build, sheet, sheetView, context: context2, signature, plan: plan2, bind, render, previz, renderJob, approve, references, receipt, reviewResult, applyCamera, check: check2, preview: preview2, run, saveBoard };
+    module.exports = { detailFilename, angleCameras, shotCamera, shotViewpoint, shotFrame, locationPrompt, digest: digest5, fileHash: fileHash2, load: load14, build, sheet, sheetView, context: context2, signature, plan: plan2, bind, render, previz, renderJob, approve, references, receipt, reviewResult, applyCamera, check: check2, preview: preview2, run, saveBoard };
     if (__require.main === module) run(read4(process.argv[2])).then((r2) => console.log(JSON.stringify(r2, null, 2))).catch((e2) => {
       console.error(e2.message);
       process.exitCode = 1;
@@ -105232,18 +105413,18 @@ var require_compose_speech = __commonJS({
       const timing = sceneTiming(scene, board, performanceTimingVersion);
       if (duration5(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
     }
-    function silentWav(samples, channels = 1) {
-      const stride = 2 * channels, size = samples * stride, wav = Buffer.alloc(44 + size);
+    function silentWav(samples, channels = 1, rate = 48e3, bits = 16, format = 1) {
+      const stride = bits / 8 * channels, size = samples * stride, wav = Buffer.alloc(44 + size);
       wav.write("RIFF");
       wav.writeUInt32LE(36 + size, 4);
       wav.write("WAVEfmt ", 8);
       wav.writeUInt32LE(16, 16);
-      wav.writeUInt16LE(1, 20);
+      wav.writeUInt16LE(format, 20);
       wav.writeUInt16LE(channels, 22);
-      wav.writeUInt32LE(48e3, 24);
-      wav.writeUInt32LE(48e3 * stride, 28);
+      wav.writeUInt32LE(rate, 24);
+      wav.writeUInt32LE(rate * stride, 28);
       wav.writeUInt16LE(stride, 32);
-      wav.writeUInt16LE(16, 34);
+      wav.writeUInt16LE(bits, 34);
       wav.write("data", 36);
       wav.writeUInt32LE(size, 40);
       return wav;
@@ -105272,6 +105453,26 @@ var require_compose_speech = __commonJS({
         const stereo = execFileSync20("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
         if (matches(stereo)) return true;
       }
+      const speech = mono.subarray(44);
+      if (!speech.length || actual.length < speech.length * 2 || actual.subarray(speech.length * 2).some((byte) => byte !== 0)) return false;
+      for (const originalChannel of [0, 1]) {
+        let low = 0, high = Infinity, audible = false;
+        for (let i2 = 0; i2 < speech.length; i2 += 2) {
+          const sample = speech.readInt16LE(i2), anchor = actual.readInt16LE(2 * i2 + 2 * originalChannel);
+          const mixed = actual.readInt16LE(2 * i2 + 2 * (1 - originalChannel));
+          if (anchor !== sample || !sample && mixed !== 0) {
+            high = -1;
+            break;
+          }
+          if (!sample) continue;
+          audible = true;
+          const a = (mixed - 0.5) / sample, b = (mixed + 0.5) / sample;
+          low = Math.max(low, Math.min(a, b));
+          high = Math.min(high, Math.max(a, b));
+          if (low > high) break;
+        }
+        if (audible && low <= high) return true;
+      }
       return false;
     }
     function currentLineSources(lines, board, cast) {
@@ -105288,6 +105489,27 @@ var require_compose_speech = __commonJS({
         require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
         return source;
       });
+    }
+    function conditioningInputs(cards, board, shots, characters, timingVersion, driverSha256) {
+      const cast = Array.isArray(characters) ? characters : Object.entries(characters ?? {}).map(([id, c]) => ({ ...c, id }));
+      const spoken = cards.flatMap((card) => (card.narration ?? []).filter((line) => line.tts?.trim()));
+      if (!spoken.length || spoken.some((line) => !line.audio?.path)) return void 0;
+      const records = shots.map(({ shotId, startFrame, endFrame }, i2) => {
+        const card = cards[i2];
+        if (card?.id !== shotId || cards.length !== shots.length) throw new Error("conditioning_audio_unverified: storyboard shots differ from the render");
+        const lines = (card.narration ?? []).filter((line) => line.tts?.trim());
+        currentLineSources(lines, board, cast);
+        const timing = sceneTiming(card, board, timingVersion);
+        return { shotId, startFrame, endFrame, lines: lines.map((line) => ({
+          id: line.id,
+          speaker: line.speaker,
+          text: line.tts,
+          delivery: line.delivery,
+          revision: line.audio.revision,
+          sha256: line.audio.sha256
+        })), intervals: timing.intervals, durationSeconds: timing.durationSeconds };
+      });
+      return { version: 1, driverSha256, shots: records };
     }
     function fullScenePerformance(scene, board, render, cards, characters, timingVersion, driverBytes) {
       const { shots, fps, num_frames: frames } = render;
@@ -105325,6 +105547,23 @@ var require_compose_speech = __commonJS({
       return { wav: driverSamples(driver, start, end), start, end, offset: (startFrame - shot.start_frame) / fps };
     }
     function driverSamples(driver, start, end) {
+      const stream = JSON.parse(execFileSync20("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=codec_name,sample_rate,channels",
+        "-of",
+        "json",
+        driver
+      ], { encoding: "utf8" })).streams[0];
+      const rate = Number(stream?.sample_rate), channels = stream?.channels;
+      if (!Number.isSafeInteger(rate) || rate <= 0 || ![1, 2].includes(channels))
+        throw new Error("conditioning_audio_unverified: unreadable original master");
+      const from = Math.round(start * rate / 48e3), to = Math.round(end * rate / 48e3);
+      const format = { pcm_u8: "u8", pcm_s24le: "s24le", pcm_s32le: "s32le", pcm_f32le: "f32le", pcm_f64le: "f64le" }[stream.codec_name] ?? "s16le";
+      const bits = Number(format.match(/\d+/)[0]);
       const pcm = execFileSync20("ffmpeg", [
         "-nostdin",
         "-v",
@@ -105334,14 +105573,13 @@ var require_compose_speech = __commonJS({
         "-map",
         "0:a:0",
         "-af",
-        "atrim=start_sample=" + start + ":end_sample=" + end,
+        "atrim=start_sample=" + from + ":end_sample=" + to,
         "-f",
-        "s16le",
+        format,
         "-"
       ], { timeout: 12e4, maxBuffer: 1 << 30 });
-      const channels = pcm.length / (2 * (end - start));
-      if (![1, 2].includes(channels)) throw new Error("conditioning_audio_unverified: the original WAV does not cover the requested samples");
-      const wav = silentWav(end - start, channels);
+      if (pcm.length !== (to - from) * channels * bits / 8) throw new Error("conditioning_audio_unverified: the original WAV does not cover the requested samples");
+      const wav = silentWav(to - from, channels, rate, bits, format.startsWith("f") ? 3 : 1);
       pcm.copy(wav, 44);
       return wav;
     }
@@ -105397,7 +105635,12 @@ var require_compose_speech = __commonJS({
         if (!fs26.existsSync(file) || hash7(fs26.readFileSync(file)) !== driverSha256)
           throw new Error("conditioning_audio_unverified: the selected WAV differs from the recorded video driver");
       }
-      if (!direct) {
+      if (sceneRender?.conditioningInputs) {
+        const shots = sceneRender.shots.map((s2) => ({ shotId: s2.shot_id, startFrame: s2.start_frame, endFrame: s2.end_frame }));
+        const current = conditioningInputs(sceneCards, board, shots, characters, timingVersion, driverSha256);
+        if (!current || !__require("node:util").isDeepStrictEqual(current, sceneRender.conditioningInputs))
+          throw new Error("conditioning_audio_unverified: the original scene recordings or their timing changed");
+      } else if (!direct) {
         const composition = multiShot ? fullScenePerformance(scene, board, sceneRender, sceneCards, characters, timingVersion, fs26.statSync(choices[0]).size) : mixLines(lines, sources, timing);
         if (hash7(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
           throw new Error("conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver");
@@ -105482,7 +105725,7 @@ var require_compose_speech = __commonJS({
             fields2[1] = file2;
             rows[row] = fields2.join("	");
             sliced = true;
-          } else verifyConditioningPerformance(scene, win, Number(fields2[0]), board, work, audio, hash7(fs26.readFileSync(audio)));
+          } else verifyConditioningPerformance(scene, win, Number(fields2[0]), board, work, audio, hash7(fs26.readFileSync(audio)), render);
           continue;
         }
         if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
@@ -105505,7 +105748,7 @@ var require_compose_speech = __commonJS({
       if (outputs.length || sliced) fs26.writeFileSync(cards, rows.join("\n"));
       return outputs;
     }
-    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming, currentConditioningAudio, verifyConditioningPerformance, matchesConditioningSlice };
+    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming, conditioningInputs, currentConditioningAudio, verifyConditioningPerformance, matchesConditioningSlice };
     if (__require.main === module) {
       try {
         console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
@@ -105548,7 +105791,7 @@ var require_prepare_source_audio = __commonJS({
           sound: shot.sound
         });
         for (const file of /* @__PURE__ */ new Set([video2.clip, video2.speechBinding?.videoPath, video2.soundtrackRepair?.videoPath])) {
-          if (typeof file === "string") assertVideoSpeechProvenance(path39.resolve(board, file), null, { ...video2.speechBinding, sourceShot: shot, boardDir: board, assembly: true }, receipts);
+          if (typeof file === "string") assertVideoSpeechProvenance(path39.resolve(board, file), null, { ...video2.speechBinding, sourceShot: shot, boardDir: board, board: win, assembly: true }, receipts);
         }
         for (const source of video2.soundtrackRepair?.sources ?? []) {
           if (source.kind === "native_video" && typeof source.path === "string")
@@ -110654,10 +110897,10 @@ function manageWorkflow(raw) {
 function requireStoryOutline(episode) {
   const file = path2.join(episode, "storyboard/scenes.js");
   if (!fs2.existsSync(file)) return;
-  const load13 = nodeModule2.createRequire(import.meta.url);
-  const board = load13(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
+  const load14 = nodeModule2.createRequire(import.meta.url);
+  const board = load14(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
   if (board.STORY?.version !== "story-v2") return;
-  const contract2 = load13(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
+  const contract2 = load14(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
   const gaps = [...contract2.outlineGaps(board), ...contract2.castGaps(board)];
   if (gaps.length) throw new Error("story_outline_required: " + gaps.join("; "));
 }
@@ -126473,6 +126716,9 @@ function isManagedImageCall(tool2, args) {
   return Object.hasOwn(IMAGE_ADAPTERS, tool2) && !!args && typeof args === "object" && "imageContext" in args;
 }
 
+// src/video-registry.ts
+import { createRequire as createRequire7 } from "node:module";
+
 // src/local-video-models.ts
 var LOCAL_VIDEO_MODELS = {
   ltx_video_generate: {
@@ -128735,9 +128981,9 @@ function formatReferenceLabel(style, kind, index) {
 }
 
 // src/video-registry.ts
+var load2 = createRequire7(import.meta.url);
 function requiredCharacters(shot) {
-  const inputs2 = shot.visual?.characterInputs;
-  return Array.isArray(inputs2) ? inputs2.filter((person) => person && typeof person.bodyPath === "string") : [];
+  return load2("../../skills/_shared/scene-cast.js").requiredCharacters(shot);
 }
 var entry = (engine, deployment, operation, schema2) => ({ engine, deployment, operation, schema: schema2, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema2) => ({ ...entry(engine, deployment, "reference", schema2), voice: "reference" });
@@ -128927,10 +129173,10 @@ function isManagedVideoCall(tool2, input) {
 
 // src/character-manage.ts
 import { existsSync as existsSync17, mkdirSync as mkdirSync5, readFileSync as readFileSync18, writeFileSync as writeFileSync13 } from "node:fs";
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 import path18 from "node:path";
-var load2 = createRequire7(import.meta.url);
-var catalog = () => load2("../../skills/_shared/character-identity.js");
+var load3 = createRequire8(import.meta.url);
+var catalog = () => load3("../../skills/_shared/character-identity.js");
 var pending = external_exports.object({ status: external_exports.literal("pending"), reason: external_exports.string().trim().min(1).max(2e3) }).strict();
 var basic = external_exports.union([external_exports.string().trim().min(1).max(2e3), pending]);
 var field = external_exports.union([
@@ -129007,18 +129253,18 @@ ${source}`;
   mkdirSync5(folder, { recursive: true });
   writeFileSync13(file, source);
   const basics = [...REQUIRED.identity.map((k) => ["identity", k]), ["physical", "heightCm"]].filter(([g, k]) => character[g][k].status === "pending").map(([g, k]) => `${g}.${k}`);
-  const { inspectPanels } = load2("../../skills/channel/references/character-panels.js");
+  const { inspectPanels } = load3("../../skills/channel/references/character-panels.js");
   const images = ["face", "front", "back"].filter((view) => !inspectPanels(folder).slots[view]);
   let voice = "missing";
   try {
-    voice = load2("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
+    voice = load3("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
   } catch {
     voice = "invalid";
   }
   const channel = path18.resolve(folder, "../../..");
   let sheet;
   try {
-    const result = load2("../../skills/channel/references/review-library.js").exportChannel(channel);
+    const result = load3("../../skills/channel/references/review-library.js").exportChannel(channel);
     sheet = { path: path18.join(folder, "index.html"), warnings: result.contentWarnings.filter((w) => w.characterId === id).map((w) => w.message) };
   } catch (error2) {
     sheet = { error: error2.message };
@@ -129058,16 +129304,16 @@ import path21 from "node:path";
 import { createHash as createHash17 } from "node:crypto";
 import { execFileSync as execFileSync12 } from "node:child_process";
 import { existsSync as existsSync20, readFileSync as readFileSync21, realpathSync as realpathSync7, statSync as statSync13 } from "node:fs";
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire as createRequire8 } from "node:module";
-var load3 = createRequire8(import.meta.url);
-var videoTextPolicy = () => String(load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
+import { createRequire as createRequire9 } from "node:module";
+var load4 = createRequire9(import.meta.url);
+var videoTextPolicy = () => String(load4("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function planVideoPerformance(shot, options = {}) {
-  const acting = load3("../../skills/_shared/scene-acting.js");
+  const acting = load4("../../skills/_shared/scene-acting.js");
   const timeline = acting.planScenePerformance(shot, options.measureAudio);
   return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
 }
@@ -129083,10 +129329,10 @@ function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
   if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const catalogue = load4("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load3("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const travels = load4("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
     const path39 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
@@ -129172,12 +129418,12 @@ function cameraDrift(prompt, movement) {
 }
 function shotVisualDirection(shot, concise = false) {
   const plan2 = object3(shot.shot), camera = object3(object3(shot.visual).camera);
-  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load3("../../skills/storyboard/references/shot-view.js");
+  const words = load4("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load4("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
+  const catalogue = load4("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load4("../../skills/storyboard/references/structure-contract.js");
   const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object3).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -129201,7 +129447,7 @@ function shotVisualDirection(shot, concise = false) {
   ].filter(Boolean);
   return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
 }
-var directions = () => load3("../../skills/storyboard/references/scene-direction.js");
+var directions = () => load4("../../skills/storyboard/references/scene-direction.js");
 function resolvedDirection(scene, cards) {
   return directions().resolve(scene, cards);
 }
@@ -129250,7 +129496,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const motion = object3(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object3(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load3("../../skills/_shared/scene-acting.js");
+  const acting = load4("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -129386,11 +129632,11 @@ function sceneTimelineWords(timeline, scene, options = {}) {
 import path19 from "node:path";
 import { createHash as createHash15 } from "node:crypto";
 import { existsSync as existsSync18, realpathSync as realpathSync5, readFileSync as readFileSync19 } from "node:fs";
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
-var load4 = createRequire9(import.meta.url);
-var imageRouting = () => load4(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
-var characterPanels = () => load4(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
+var load5 = createRequire10(import.meta.url);
+var imageRouting = () => load5(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var characterPanels = () => load5(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 function nearestRatio(width, height) {
   const ratios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
   const value = (ratio) => {
@@ -129772,13 +130018,13 @@ import { createHash as createHash16 } from "node:crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync20, realpathSync as realpathSync6 } from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path20 from "node:path";
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load5 = createRequire10(import.meta.url);
+var load6 = createRequire11(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
@@ -129799,78 +130045,13 @@ function voiceDescription(character) {
   ].filter(Boolean).join(". ");
 }
 function resolveCharacterVoice(character, context2, warnings) {
-  const id = text2(character.id);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
-  let channel = context2.episode;
-  while (!existsSync19(path20.join(channel, "profile.md")) && path20.dirname(channel) !== channel) channel = path20.dirname(channel);
-  const required2 = requiredCharacters(context2.shot).find((person) => person.character === id);
-  const folder = required2 ? path20.dirname(path20.resolve(context2.episode, "storyboard", required2.bodyPath)) : path20.join(channel, "assets/characters", id);
-  const identity = path20.join(folder, "identity.md");
-  let resolved = character;
-  const pinnedSettings = Object.keys(object4(character.tts)).length > 0;
-  if ((!pinnedSettings || required2 && !object4(character.voiceReference).path) && existsSync19(identity)) {
-    try {
-      const { handoff } = load5("../../skills/channel/references/character-sheet.js");
-      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-      if (!pinnedSettings || hash(current.tts) === hash(character.tts)) {
-        resolved = { ...current, ...character, tts: current.tts };
-        if (required2 && !object4(resolved.voiceReference).path) {
-          const sample = path20.join(folder, "voice.wav");
-          const selected = object4(current.voiceSelection).audioSha256;
-          if (typeof selected === "string" && existsSync19(sample) && fileHash(sample) === selected)
-            resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
-          else if (current.voiceReference) resolved.voiceReference = current.voiceReference;
-        }
-      }
-    } catch (error2) {
-      warnings.push(`${id}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
-      return character;
-    }
-  }
-  const reference2 = object4(resolved.voiceReference);
-  if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face?.path, required2.bodyPath].filter(Boolean) } };
-  const sceneRefs = object4(context2.shot.visual).references;
-  const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object4) : []).filter((ref) => ref.scope === "scene" && ref.character === id && ref.role === "character").map((ref) => text2(ref.path));
-  if (facePaths.length) return { ...resolved, voiceReference: { ...reference2, imagePaths: facePaths } };
-  if (!Array.isArray(reference2.imagePaths) && existsSync19(folder)) {
-    const root = realpathSync6(folder) + path20.sep;
-    const refs = object4(context2.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object4) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text2(ref.use))).map((ref) => text2(ref.path)).filter(Boolean).map((file) => path20.resolve(context2.episode, "storyboard", file)).filter((file) => existsSync19(file) && realpathSync6(file).startsWith(root));
-    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
-  }
-  return resolved;
+  return load6("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path20.join(context2.episode, "storyboard"), context2.shot, warnings);
 }
 function voiceReference(character, context2, warnings) {
-  const declared = object4(character.voiceReference);
-  if (character.voiceReferenceWarning && !declared.path) {
-    warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
-    return void 0;
-  }
-  let file = text2(declared.path);
-  if (file) {
-    file = path20.resolve(context2.episode, "storyboard", file);
-    if (declared.tts && hash(declared.tts) !== hash(character.tts))
-      throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
-  } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text2(character.id))) {
-    let channel = context2.episode;
-    while (!existsSync19(path20.join(channel, "profile.md")) && path20.dirname(channel) !== channel) channel = path20.dirname(channel);
-    const identity = path20.join(channel, "assets/characters", text2(character.id), "identity.md");
-    const candidate2 = path20.join(path20.dirname(identity), "voice.wav");
-    if (existsSync19(identity) && existsSync19(candidate2)) {
-      const { identityVoice } = load5("../../skills/_shared/character-voice.js");
-      if (hash(identityVoice(readFileSync20(identity, "utf8"))) !== hash(character.tts)) {
-        warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
-        return void 0;
-      }
-      file = candidate2;
-    }
-  }
-  if (!file) return void 0;
-  const absolute = realpathSync6(file), sha2563 = fileHash(absolute);
-  if (declared.sha256 && declared.sha256 !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
-  const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
-  if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
-  return { path: absolute, sha256: sha2563, provenance };
+  return load6("../../skills/_shared/scene-voice.js").voiceReference(character, path20.join(context2.episode, "storyboard"), warnings);
+}
+function currentSceneVoice(board, boardDir, shot, id, warnings) {
+  return load6("../../skills/_shared/scene-voice.js").currentSceneVoice(board, boardDir, shot, id, warnings);
 }
 function msrSubject(character, refs, context2) {
   const owned = object4(character.voiceReference).imagePaths;
@@ -129881,7 +130062,7 @@ function msrSubject(character, refs, context2) {
   if (sceneFace || requiredCharacters(context2.shot).some((person) => person.character === character.id)) {
     ownedPaths = owned.map((file) => realpathSync6(path20.resolve(context2.episode, "storyboard", file)));
   } else if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync19(path20.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels, canonicalReferences } = load5("../../skills/channel/references/character-panels.js");
+    const { sheetPanels, canonicalReferences } = load6("../../skills/channel/references/character-panels.js");
     const dir = path20.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
     const combined = object4(object4(context2.shot.visual).video).referenceLayout === "combined";
@@ -129917,7 +130098,7 @@ function afterImageBlock(prompt, lines) {
 }
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
-  const ordered2 = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+  const ordered2 = load6("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
   const lines = ordered2(context2.shot).map(object4).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
@@ -130107,7 +130288,7 @@ function prepareVideoVoice(tool2, input, context2) {
 }
 
 // src/scene-video.ts
-var load6 = createRequire11(import.meta.url);
+var load7 = createRequire12(import.meta.url);
 var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
 var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
 function bindSceneCards(members, bindings) {
@@ -130132,7 +130313,7 @@ function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
   return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
 function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
-  const render = load6("../../skills/storyboard/references/render-routing.js");
+  const render = load7("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
   if (scene.oneTake && members.length !== 1) throw new Error("scene_one_take: an uninterrupted camera setup must have one shot");
@@ -130224,20 +130405,17 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
     const sound = notes.sound;
-    const ordered2 = load6("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const ordered2 = load7("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
     const lines = scoped ? ordered2(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
     }
-    const cast = board?.SB_DOC?.characters;
     const dialogue = lines.filter((line) => !shotScoped || line.delivery !== "voiceover").map((line) => {
       const frame2 = timeline?.dialogueCues?.find((c) => c.lineId === line.id)?.frame;
-      const character = cast?.find((c) => c.id === line.speaker);
-      const context2 = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
       const nativeVoice = line.delivery !== "voiceover" && (!scene.audio || scene.audio.mode === "mix") && scene.dialogueVoice !== "model_generated";
-      const voice = nativeVoice && character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
+      const voice = nativeVoice && currentSceneVoice(board, path21.join(episode, "storyboard"), raw[index], line.speaker, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
@@ -130305,7 +130483,7 @@ function bindRegisteredPanels(scene, episode, board) {
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
   const coverage2 = sceneCoverage(members, scene, board, sceneNo);
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
-  load6("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
+  load7("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
   const ownsFrames = owner?.frames !== void 0 || owner?.speakers !== void 0;
   const modelPacedCuts = ownsFrames && !options.shotScoped && members.length > 1 && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut"));
   const cutTiming = options.profile?.cutTiming;
@@ -130506,7 +130684,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     for (const shot of shots) {
       const binding = bindings?.find((b) => b.shotId === shot.shot_id);
       if (binding?.performanceAudio) {
-        const wav = load6("../../skills/_shared/scene-speech-receipt.js").performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+        const wav = load7("../../skills/_shared/scene-speech-receipt.js").performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
         shot.performance_uri = await stageBytes(wav, "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
       }
       if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync21(binding.motionPrefix), "video/mp4", "motion_prefix", shot.start_frame, shot.shot_id);
@@ -130854,7 +131032,7 @@ async function checkSceneDeployment(request, tool2, args) {
 import * as fs19 from "node:fs";
 import { execFileSync as execFileSync14 } from "node:child_process";
 import path26 from "node:path";
-import { createRequire as createRequire13 } from "node:module";
+import { createRequire as createRequire14 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash20 } from "node:crypto";
 
@@ -131169,9 +131347,9 @@ import path24 from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 
 // src/video-review.ts
-import { createRequire as createRequire12 } from "node:module";
+import { createRequire as createRequire13 } from "node:module";
 import path23 from "node:path";
-var review = () => createRequire12(import.meta.url)("../../skills/storyboard/references/video-production.js");
+var review = () => createRequire13(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function readVideoProduction(episode) {
   return review().read(path23.join(episode, "storyboard"));
 }
@@ -131184,7 +131362,7 @@ function refreshVideoReview(episode) {
 }
 function refreshAudienceReview(boardDirectory) {
   try {
-    const data = createRequire12(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    const data = createRequire13(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
     data.refresh(boardDirectory);
   } catch {
     process.stderr.write("Audience audio preview needs a refresh.\n");
@@ -131409,15 +131587,15 @@ function seedanceBindings(episode, members, args, inputs2, images = [], voice, s
 }
 
 // src/video-routing.ts
-var load7 = createRequire13(import.meta.url);
+var load8 = createRequire14(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 function assertNoPostLipSync(value) {
-  load7("../../skills/_shared/speech-contract.js").assertNoPostLipSync(value);
+  load8("../../skills/_shared/speech-contract.js").assertNoPostLipSync(value);
 }
 var modelSettings = fileURLToPath7(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 function routingContext(episode, shotId, sceneNo, selectionOnly, rendering) {
-  const reader = load7(shared2);
+  const reader = load8(shared2);
   try {
     return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly, rendering);
   } catch (error2) {
@@ -131444,10 +131622,10 @@ function shotVideoTiming(context2, tool2, args) {
   if (context2.sceneDirection) {
     coverage2 = { requiredSeconds: Number(shot.duration) };
   } else if (shot.duration !== void 0) {
-    const edit2 = load7(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
+    const edit2 = load8(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
     const cards = context2.board.SCENES;
     const index = cards.findIndex((card) => String(card.id ?? card.shot?.id) === context2.shotId);
-    const timing = load7(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
+    const timing = load8(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
     const planned = edit2.find((entry2) => entry2.card === index);
     const ownVoice = shot.sound?.audioSource === "video";
     coverage2 = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
@@ -131466,7 +131644,7 @@ function shotVideoTiming(context2, tool2, args) {
   };
 }
 function nativeSpeechTiming(shot, language) {
-  const acting = load7(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
+  const acting = load8(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
   let estimatedSeconds, unmeasuredRate = false;
   try {
     estimatedSeconds = acting.planScenePerformance(shot, (line) => {
@@ -131487,7 +131665,7 @@ function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const unmeasuredRate = speechRate === "uncalibrated";
   let shortest;
   try {
-    shortest = load7(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
+    shortest = load8(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
   } catch {
     return void 0;
   }
@@ -131672,9 +131850,11 @@ async function validateShotRenderPlan(plan2) {
       throw new Error("scene_audio@0: gateway does not advertise " + mode + " for the selected model");
   }
   const prepared = await buildSceneWire(plan2.sceneRequest, String(plan2.selection.model), String(plan2.selection.resolution), true, plan2.shotBindings);
+  if (plan2.conditioningInputs && prepared.attachments.find((file) => file.role === "scene_audio")?.sha256 !== plan2.conditioningInputs.driverSha256)
+    throw new Error("video_plan_stale: the staged conditioning master differs from the approved scene");
   const validation = await requestGenai("POST", sceneRoute + "/validate", prepared.body, 12e4, void 0, void 0, "scene-" + plan2.id);
   external_exports.object({ schema_valid: external_exports.literal(true), model: external_exports.literal(String(plan2.selection.model)), shots: external_exports.literal(plan2.shotIds.length) }).parse(validation);
-  return prepared;
+  return plan2.conditioningInputs ? { ...prepared, conditioningInputs: plan2.conditioningInputs } : prepared;
 }
 async function executeShotRenderPlan(plan2, prepared) {
   const target = resolveOutputFile(String(plan2.args.outputPath), String(plan2.args.filename), "video");
@@ -131701,7 +131881,7 @@ async function executeShotRenderPlan(plan2, prepared) {
   return { content: [{ type: "text", text: JSON.stringify({ ...result, receiptPath: receiptPath2 }) }] };
 }
 function requireSpeechSignal(file, code) {
-  const signal = load7("../../skills/_shared/audio-signal.js").inspect(file);
+  const signal = load8("../../skills/_shared/audio-signal.js").inspect(file);
   if (signal.status !== "signal") throw new Error(code + ": audible speech is required in " + path26.basename(file));
   return signal.duration;
 }
@@ -131715,14 +131895,14 @@ function verifyDistinctSamples(samples) {
     }
     seen.set(file, speaker);
     requireSpeechSignal(file, "scene_speech_references");
-    const digest5 = load7("../../skills/_shared/audio-signal.js").decodedAudioHash(file);
+    const digest5 = load8("../../skills/_shared/audio-signal.js").decodedAudioHash(file);
     if (owners.has(digest5) && owners.get(digest5) !== speaker)
       throw new Error("scene_speech_references: different characters need distinct decoded voice samples");
     owners.set(digest5, speaker);
   }
 }
 function assertSpeechRenderCapacity(tool2, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
-  load7("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+  load8("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
     tool: tool2,
     model: model2,
     scene,
@@ -131869,7 +132049,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (cast.some((person) => person.face?.taskId) && !sourceBinder)
     throw new Error("character_face_source_unsupported: the selected adapter cannot use a Seedance original for facial identity");
   if (selection.engine === "seedance") {
-    const { seedanceMedia } = load7(shared2);
+    const { seedanceMedia } = load8(shared2);
     const media = seedanceMedia(context2.shot, context2.sceneMembers);
     if (input.args.realFaceInput === false && (media.realFaceInput === true || cast.some((person) => person.face) && media.realFaceInput !== false))
       throw new Error("character_inputs_mismatch: the request cannot disable the storyboard portrait declaration");
@@ -131964,7 +132144,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       if (binding.performanceAudio) {
         requireSpeechSignal(binding.performanceAudio, "scene_speech_performance");
         const card = context2.sceneMembers.find((member) => member.id === binding.shotId);
-        load7("../../skills/_shared/character-speech.js").verifyShotPerformance(
+        load8("../../skills/_shared/character-speech.js").verifyShotPerformance(
           binding.performanceAudio,
           card,
           context2.board,
@@ -131973,6 +132153,15 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       }
     }
     const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash20("sha256").update(fs19.readFileSync(file)).digest("hex")]));
+    const doc = context2.board.SB_DOC;
+    const conditioningInputs = conditioned && request.audio ? load8("../../skills/produce/references/compose-speech.js").conditioningInputs(
+      context2.sceneMembers,
+      path26.join(context2.episode, "storyboard"),
+      request.shots,
+      doc?.characters,
+      doc?.performanceTimingVersion,
+      inputs3[request.audio.path]
+    ) : void 0;
     const outputPath = canonical2(path26.resolve(context2.episode, settings.outputPath ?? ".work/video"));
     if (!within(context2.episode, outputPath)) throw new Error("video_output_outside_episode");
     const filename = settings.filename ?? "video-" + input.requestId + ".mp4";
@@ -131984,6 +132173,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       episode: context2.episode,
       shotId: context2.shotId,
       requestId: input.requestId,
+      ...conditioningInputs ? { conditioningInputs } : {},
       sceneRendering: input.sceneRendering,
       ...cast.length ? { characterInputs: cast } : {},
       ...input.shotBindings ? { shotBindings: input.shotBindings } : {},
@@ -132370,7 +132560,7 @@ function authorization(context2) {
   const approval = external_exports.object({ kind: external_exports.enum(["user", "standing"]), reference: external_exports.string().min(1), at: external_exports.string().min(1), quoteFingerprint: external_exports.string().min(1) }).passthrough().parse(p.approval);
   if (!Number.isFinite(Date.parse(approval.at))) throw new Error("Invalid spending approval date");
   const helper2 = fileURLToPath7(new URL("../../skills/autoproduce/references/production-cost.js", import.meta.url));
-  const quote = load7(helper2).quote(context2.board);
+  const quote = load8(helper2).quote(context2.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error("Existing quote changed; spending authorization does not cover this plan");
   return {
     maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd),
@@ -132612,7 +132802,7 @@ async function executeVideo(raw, dispatch) {
   }
 }
 async function dispatchChannelAsset(tool2, args, root, output2, dispatch) {
-  const read4 = load7(modelSettings).readSettings(root);
+  const read4 = load8(modelSettings).readSettings(root);
   const selection = read4.config?.models?.video;
   if (!selection) throw new Error(`project_setup_required: ${read4.status}; save .social-flow/models.json before generating channel assets`);
   requireSupportedSelection(selection);
@@ -132784,7 +132974,7 @@ async function videoStatus(raw) {
 import * as fs21 from "node:fs";
 import path28 from "node:path";
 import os3 from "node:os";
-import { createRequire as createRequire14 } from "node:module";
+import { createRequire as createRequire15 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -132874,9 +133064,9 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load8 = createRequire14(import.meta.url);
+var load9 = createRequire15(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
-var imageContext = (directory2, assetId) => load8(selectionHelper).readImageContext(directory2, assetId);
+var imageContext = (directory2, assetId) => load9(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -145567,7 +145757,7 @@ import * as fs25 from "node:fs";
 import path33 from "node:path";
 import os4 from "node:os";
 import { execFileSync as execFileSync17 } from "node:child_process";
-import { createRequire as createRequire16 } from "node:module";
+import { createRequire as createRequire17 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
@@ -145712,12 +145902,12 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load9 = createRequire16(import.meta.url);
+var load10 = createRequire17(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 function refreshAudienceOutput(directory2, file) {
   if (path33.dirname(file) === path33.join(directory2, ".work/music/audience")) refreshAudienceReview(path33.join(directory2, "storyboard"));
 }
-var musicContext = (directory2, assetId) => load9(selectionHelper2).readMusicContext(directory2, assetId);
+var musicContext = (directory2, assetId) => load10(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -146366,7 +146556,7 @@ import { createHash as createHash27, randomUUID as randomUUID12 } from "node:cry
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync34, mkdirSync as mkdirSync18, readFileSync as readFileSync35, writeFileSync as writeFileSync23, renameSync as renameSync8 } from "node:fs";
 import { basename as basename10, dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire19 } from "node:module";
+import { createRequire as createRequire20 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -146490,7 +146680,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire19(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire20(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -146499,7 +146689,7 @@ function refreshSheet(identityPath) {
   const folder = dirname9(identityPath);
   if (basename10(dirname9(folder)) !== "characters" || basename10(dirname9(dirname9(folder))) !== "assets") return void 0;
   try {
-    createRequire19(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
+    createRequire20(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
     return join15(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -146608,7 +146798,7 @@ function bindRegisteredVoice(args) {
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
   if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync35(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
-  const handoff = createRequire19(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  const handoff = createRequire20(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
   const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
   const registration = {
@@ -146753,9 +146943,9 @@ import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_proc
 import { copyFileSync as copyFileSync2, existsSync as existsSync35, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync36, realpathSync as realpathSync12, renameSync as renameSync9, rmSync as rmSync19, statSync as statSync21, writeFileSync as writeFileSync24, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { basename as basename11, dirname as dirname10, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve11, sep as sep2 } from "node:path";
-import { createRequire as createRequire21 } from "node:module";
+import { createRequire as createRequire22 } from "node:module";
 import { pathToFileURL } from "node:url";
-var load10 = createRequire21(import.meta.url);
+var load11 = createRequire22(import.meta.url);
 var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
 var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
 var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
@@ -146793,7 +146983,7 @@ function episodeOf(path39) {
   const board = readBoard(path39);
   const storyboard = realpathSync12(dirname10(scenesPath(path39)));
   const format = String(board.win.FORMAT ?? "shorts-9x16");
-  const formats = load10(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const formats = load11(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
   const spec = formats[format]?.cover;
   if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
   return { board, storyboard, episode: dirname10(storyboard), format, spec };
@@ -146995,8 +147185,8 @@ function regionFor(spec, focus) {
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
-  const motion = load10(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
-  const cjk = load10(join17(COVER_REFS, "cover-font-data.js"));
+  const motion = load11(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load11(join17(COVER_REFS, "cover-font-data.js"));
   const all = { ...motion, ...cjk };
   const lang = language.split("-")[0];
   const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
@@ -147270,7 +147460,7 @@ async function renderCover(path39) {
     const episodesDir = dirname10(ep.episode);
     if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
       try {
-        const library = load10(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        const library = load11(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
         library.exportChannel(dirname10(episodesDir));
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
@@ -147808,7 +147998,7 @@ function manageSpeech(args, options = {}) {
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash4(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname11(file), videoPath);
-      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan2, sourceShot: scene, boardDir: dirname11(file) }, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan2, sourceShot: scene, boardDir: dirname11(file), board: win }, receipts);
       for (const card of scenes) {
         const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -148529,7 +148719,7 @@ function save2(draft) {
   writeFileSync27(temp, JSON.stringify(draft), { mode: 384 });
   renameSync12(temp, file);
 }
-function load11(id) {
+function load12(id) {
   const value = JSON.parse(readFileSync39(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
@@ -148570,7 +148760,7 @@ function createThreadsDraft(args) {
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
     const input = reviewSchema2.strict().parse(args);
-    const draft = load11(input.draftId);
+    const draft = load12(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
     const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
@@ -148591,7 +148781,7 @@ function submitThreadsReview(args) {
 function checkThreadsGate(input) {
   return gateCall("threads_publish", input, () => {
     if (!input.draftId) throw new Error("Growth publishing requires draftId");
-    const draft = load11(input.draftId);
+    const draft = load12(input.draftId);
     if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
@@ -154157,10 +154347,10 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync42, readFileSync as readFileSync41, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire23 } from "node:module";
+import { createRequire as createRequire24 } from "node:module";
 import path38 from "node:path";
-var load12 = createRequire23(import.meta.url);
-var shared4 = (file) => load12(`../../skills/${file}`);
+var load13 = createRequire24(import.meta.url);
+var shared4 = (file) => load13(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),

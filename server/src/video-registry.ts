@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { LOCAL_VIDEO_MODELS, localVideoStrategy } from './local-video-models.js';
 import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
@@ -27,10 +28,9 @@ export interface CharacterVideoInput {
   voiceRequired: boolean;
 }
 
+const load = createRequire(import.meta.url);
 export function requiredCharacters(shot: Record<string, unknown>): CharacterVideoInput[] {
-  const inputs = (shot.visual as { characterInputs?: CharacterVideoInput[] } | undefined)?.characterInputs;
-  // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
-  return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
+  return load('../../skills/_shared/scene-cast.js').requiredCharacters(shot);
 }
 
 export interface VideoAdapter {

@@ -279,4 +279,10 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   return {members, direction, speakers, identities};
 }
 
-module.exports = {sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast};
+// Authored cards can reach scene preview before the sheet resolver supplies body paths.
+function requiredCharacters(shot) {
+  const inputs=shot?.visual?.characterInputs;
+  return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
+}
+
+module.exports = {requiredCharacters, sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast};

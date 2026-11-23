@@ -329,9 +329,11 @@ async function validateShotRenderPlan(plan) {
             throw new Error('scene_audio@0: gateway does not advertise ' + mode + ' for the selected model');
     }
     const prepared = await buildSceneWire(plan.sceneRequest, String(plan.selection.model), String(plan.selection.resolution), true, plan.shotBindings);
+    if (plan.conditioningInputs && prepared.attachments.find(file => file.role === 'scene_audio')?.sha256 !== plan.conditioningInputs.driverSha256)
+        throw new Error('video_plan_stale: the staged conditioning master differs from the approved scene');
     const validation = await requestGenai('POST', sceneRoute + '/validate', prepared.body, 120000, undefined, undefined, 'scene-' + plan.id);
     z.object({ schema_valid: z.literal(true), model: z.literal(String(plan.selection.model)), shots: z.literal(plan.shotIds.length) }).parse(validation);
-    return prepared;
+    return plan.conditioningInputs ? { ...prepared, conditioningInputs: plan.conditioningInputs } : prepared;
 }
 async function executeShotRenderPlan(plan, prepared) {
     const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
@@ -615,6 +617,10 @@ function buildVideoPlan(input, { context, tool }, persist) {
             }
         }
         const inputs = Object.fromEntries(files.map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
+        const doc = context.board.SB_DOC;
+        const conditioningInputs = conditioned && request.audio
+            ? load('../../skills/produce/references/compose-speech.js').conditioningInputs(context.sceneMembers, path.join(context.episode, 'storyboard'), request.shots, doc?.characters, doc?.performanceTimingVersion, inputs[request.audio.path])
+            : undefined;
         const outputPath = canonical(path.resolve(context.episode, settings.outputPath ?? '.work/video'));
         if (!within(context.episode, outputPath))
             throw new Error('video_output_outside_episode');
@@ -622,6 +628,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         resolveOutputFile(outputPath, filename, 'video');
         const args = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
+            ...(conditioningInputs ? { conditioningInputs } : {}),
             sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: { ...request, ...(!speakers.length ? { silentPicture: true } : {}) }, tool, args, sourceArgs: input.args, inputs, selection,
             source: context.source, contextRevision: context.revision, quote: quoteFor(tool, args), execution: 'server' };
         const plan = { ...body, id: hash(body) };

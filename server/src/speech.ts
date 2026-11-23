@@ -385,7 +385,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
       if (!bytes.length) throw new Error('Video file is empty');
       const videoSha256 = hash(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes,dirname(file),videoPath);
-      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, {...plan,sourceShot:scene,boardDir:dirname(file)}, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, {...plan,sourceShot:scene,boardDir:dirname(file),board:win}, receipts);
       for (const card of scenes) {
         const video = object(card.visual?.video), binding = object(video.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;

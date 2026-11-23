@@ -16,7 +16,7 @@ import { verifyImageFile } from './image-media.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
-import { resolveCharacterVoice, voiceReference } from './video-voice.js';
+import { currentSceneVoice } from './video-voice.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
 
 const load = createRequire(import.meta.url);
@@ -167,14 +167,11 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       if (lines.filter(line => line.id === cue.lineId).length !== 1)
         throw new Error('scene_dialogue_timing: ' + shotId + ' needs one spoken line with id ' + cue.lineId);
     }
-    const cast = (board?.SB_DOC as {characters?: Record<string,unknown>[]} | undefined)?.characters;
     const dialogue = lines.filter(line => !shotScoped || line.delivery !== 'voiceover').map(line => {
       const frame = timeline?.dialogueCues?.find(c => c.lineId === line.id)?.frame;
-      const character = cast?.find(c => c.id === line.speaker);
-      const context = { episode, board:board ?? {}, shot:raw[index] };
       const warnings: string[] = [];
       const nativeVoice = line.delivery !== 'voiceover' && (!scene.audio || scene.audio.mode === 'mix') && scene.dialogueVoice !== 'model_generated';
-      const voice = nativeVoice && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+      const voice = nativeVoice && currentSceneVoice(board,path.join(episode,'storyboard'),raw[index],line.speaker,warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return { lineId:line.id, speaker:line.speaker, delivery:line.delivery, text:line.tts!,
         ...(direction ? {direction} : {}),

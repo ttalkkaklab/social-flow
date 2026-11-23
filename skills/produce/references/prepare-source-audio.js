@@ -18,7 +18,7 @@ function checkAssemblyRoutes(win,board) {
       postLipSync:video.postLipSync, post_lipsync:video.post_lipsync, capabilities:video.capabilities, speechBinding:video.speechBinding,
       soundtrackRepair:video.soundtrackRepair, reuse:shot.visual?.reuse, sound:shot.sound});
     for (const file of new Set([video.clip, video.speechBinding?.videoPath, video.soundtrackRepair?.videoPath])) {
-      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,{...video.speechBinding,sourceShot:shot,boardDir:board,assembly:true},receipts);
+      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,{...video.speechBinding,sourceShot:shot,boardDir:board,board:win,assembly:true},receipts);
     }
     for (const source of video.soundtrackRepair?.sources ?? []) {
       if (source.kind === 'native_video' && typeof source.path === 'string')

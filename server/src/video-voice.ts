@@ -70,91 +70,18 @@ function voiceDescription(character: Record<string, unknown>): string {
     text(tts.voiceDirection) || text(tts.stylePrompt)].filter(Boolean).join('. ');
 }
 
-/** Story-first boards can carry only a cast id and name; resolve their selected voice at planning time. */
-export function resolveCharacterVoice(character: Record<string, unknown>, context: VoiceContext,
-  warnings: string[]): Record<string, unknown> {
-  const id = text(character.id);
-  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) return character;
-  let channel = context.episode;
-  while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel) channel = path.dirname(channel);
-  const required = requiredCharacters(context.shot).find(person => person.character === id);
-  const folder = required ? path.dirname(path.resolve(context.episode, 'storyboard', required.bodyPath)) : path.join(channel, 'assets/characters', id);
-  const identity = path.join(folder, 'identity.md');
-  let resolved = character;
-  const pinnedSettings = Object.keys(object(character.tts)).length > 0;
-  if ((!pinnedSettings || required && !object(character.voiceReference).path) && existsSync(identity)) {
-    try {
-      const { handoff } = load('../../skills/channel/references/character-sheet.js') as {
-        handoff(file: string, options?: { voiceOnly: boolean }): Record<string, unknown>;
-      };
-      const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-      if (!pinnedSettings || hash(current.tts) === hash(character.tts)) {
-        resolved = { ...current, ...character, tts: current.tts };
-        if (required && !object(resolved.voiceReference).path) {
-          const sample = path.join(folder, 'voice.wav');
-          const selected = object(current.voiceSelection).audioSha256;
-          if (typeof selected === 'string' && existsSync(sample) && fileHash(sample) === selected)
-            resolved = { ...resolved, voiceReference:{ path:sample, sha256:selected, tts:current.tts } };
-          else if (current.voiceReference) resolved.voiceReference = current.voiceReference;
-        }
-      }
-    } catch (error) {
-      warnings.push(`${id}: cannot read the selected character voice: ${error instanceof Error ? error.message : String(error)}`);
-      return character;
-    }
-  }
-  const reference = object(resolved.voiceReference);
-  if (required) return {...resolved, voiceReference:{...reference, imagePaths:[required.face?.path,required.bodyPath].filter(Boolean)}};
-  const sceneRefs = object(context.shot.visual).references;
-  const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object) : [])
-    .filter(ref => ref.scope === 'scene' && ref.character === id && ref.role === 'character').map(ref => text(ref.path));
-  if (facePaths.length) return {...resolved, voiceReference:{...reference,imagePaths:facePaths}};
-  // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
-  if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
-    const root = realpathSync(folder) + path.sep;
-    const refs = object(context.shot.visual).references;
-    const imagePaths = (Array.isArray(refs) ? refs.map(object) : [])
-      .filter(ref => ref.role === 'character' && ['both', 'video'].includes(text(ref.use)))
-      .map(ref => text(ref.path)).filter(Boolean)
-      .map(file => path.resolve(context.episode, 'storyboard', file))
-      .filter(file => existsSync(file) && realpathSync(file).startsWith(root));
-    if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference, imagePaths } };
-  }
-  return resolved;
+/** The same cast handoff and sample bytes are used when an archived scene reaches assembly. */
+export function resolveCharacterVoice(character: Record<string,unknown>, context: VoiceContext, warnings: string[]): Record<string,unknown> {
+  return load('../../skills/_shared/scene-voice.js').resolveCharacterVoice(character,path.join(context.episode,'storyboard'),context.shot,warnings);
 }
 
-export function voiceReference(character: Record<string, unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
-  const declared = object(character.voiceReference);
-  if (character.voiceReferenceWarning && !declared.path) {
-    warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
-    return undefined;
-  }
-  let file = text(declared.path);
-  if (file) {
-    // Character handoff paths are relative to scenes.js, like other cast assets.
-    file = path.resolve(context.episode, 'storyboard', file);
-    if (declared.tts && hash(declared.tts) !== hash(character.tts))
-      throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
-  } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text(character.id))) {
-    let channel = context.episode;
-    while (!existsSync(path.join(channel, 'profile.md')) && path.dirname(channel) !== channel) channel = path.dirname(channel);
-    const identity = path.join(channel, 'assets/characters', text(character.id), 'identity.md');
-    const candidate = path.join(path.dirname(identity), 'voice.wav');
-    if (existsSync(identity) && existsSync(candidate)) {
-      const { identityVoice } = load('../../skills/_shared/character-voice.js');
-      if (hash(identityVoice(readFileSync(identity, 'utf8'))) !== hash(character.tts)) {
-        warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
-        return undefined;
-      }
-      file = candidate;
-    }
-  }
-  if (!file) return undefined;
-  const absolute = realpathSync(file), sha256 = fileHash(absolute);
-  if (declared.sha256 && declared.sha256 !== sha256) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
-  const provenance = declared.tts && declared.sha256 ? 'pinned_settings_and_bytes' : 'legacy_sample_unverified';
-  if (provenance === 'legacy_sample_unverified') warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
-  return { path: absolute, sha256, provenance };
+export function voiceReference(character: Record<string,unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
+  return load('../../skills/_shared/scene-voice.js').voiceReference(character,path.join(context.episode,'storyboard'),warnings);
+}
+
+export function currentSceneVoice(board: Record<string,unknown> | undefined, boardDir: string, shot: Record<string,unknown>,
+  id: string | undefined, warnings: string[]): SpeakerVoice['reference'] {
+  return load('../../skills/_shared/scene-voice.js').currentSceneVoice(board,boardDir,shot,id,warnings);
 }
 
 /**

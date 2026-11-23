@@ -178,7 +178,8 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
         .find(path => path && fs.existsSync(path + '.scene-request.json')) ?? originalFile;
       const wire = contract.readSceneRequest(file,receipt);
       original = contract.verifySceneSpeech(wire,plan);
-      if (index) index.sceneRenders.set(videoPath,wire.body);
+      if (index) index.sceneRenders.set(videoPath,receipt.sceneRequestSha256 && wire.conditioningInputs
+        ? {...wire.body,conditioningInputs:wire.conditioningInputs} : wire.body);
     }
     if (!original) return;
     if (driver && original !== driver) throw new Error('conditioning_audio_unverified: conflicting drivers for the same video');

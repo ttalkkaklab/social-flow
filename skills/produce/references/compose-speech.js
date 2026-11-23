@@ -35,10 +35,10 @@ function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
   // provider's frame padding; the board's duration can still be a draft estimate.
   if (duration(audio)+0.03 < timing.durationSeconds) throw new Error('Silent scene audio is shorter than planned action timing');
 }
-function silentWav(samples,channels=1) {
-  const stride=2*channels, size=samples*stride, wav=Buffer.alloc(44+size);
-  wav.write('RIFF');wav.writeUInt32LE(36+size,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(channels,22);
-  wav.writeUInt32LE(48000,24);wav.writeUInt32LE(48000*stride,28);wav.writeUInt16LE(stride,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(size,40);
+function silentWav(samples,channels=1,rate=48000,bits=16,format=1) {
+  const stride=bits/8*channels, size=samples*stride, wav=Buffer.alloc(44+size);
+  wav.write('RIFF');wav.writeUInt32LE(36+size,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(format,20);wav.writeUInt16LE(channels,22);
+  wav.writeUInt32LE(rate,24);wav.writeUInt32LE(rate*stride,28);wav.writeUInt16LE(stride,32);wav.writeUInt16LE(bits,34);wav.write('data',36);wav.writeUInt32LE(size,40);
   return wav;
 }
 function mixLines(lines, sources, timing) {
@@ -72,6 +72,24 @@ function samePerformanceWav(file, mono) {
     const stereo = execFileSync('ffmpeg',['-v','error','-f','wav','-i','pipe:0',...layout,'-f','s16le','-'],{...options,input:mono});
     if (matches(stereo)) return true;
   }
+  // Older uploads have no line manifest. An untouched channel identifies the take;
+  // the other channel may be the same samples at one fixed mixer gain.
+  const speech=mono.subarray(44);
+  if (!speech.length || actual.length<speech.length*2 || actual.subarray(speech.length*2).some(byte=>byte!==0)) return false;
+  for (const originalChannel of [0,1]) {
+    let low=0, high=Infinity, audible=false;
+    for (let i=0;i<speech.length;i+=2) {
+      const sample=speech.readInt16LE(i), anchor=actual.readInt16LE(2*i+2*originalChannel);
+      const mixed=actual.readInt16LE(2*i+2*(1-originalChannel));
+      if (anchor!==sample || !sample && mixed!==0) { high=-1; break; }
+      if (!sample) continue;
+      audible=true;
+      const a=(mixed-0.5)/sample, b=(mixed+0.5)/sample;
+      low=Math.max(low,Math.min(a,b));high=Math.min(high,Math.max(a,b));
+      if (low>high) break;
+    }
+    if (audible && low<=high) return true;
+  }
   return false;
 }
 
@@ -89,6 +107,24 @@ function currentLineSources(lines, board, cast) {
     require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
     return source;
   });
+}
+
+// Archive the selected takes beside the provider request. A mastered mix can
+// contain panning, room tone and processing that cannot be recovered from mono stems.
+function conditioningInputs(cards, board, shots, characters, timingVersion, driverSha256) {
+  const cast=Array.isArray(characters)?characters:Object.entries(characters ?? {}).map(([id,c])=>({...c,id}));
+  const spoken=cards.flatMap(card=>(card.narration ?? []).filter(line=>line.tts?.trim()));
+  if (!spoken.length || spoken.some(line=>!line.audio?.path)) return undefined;
+  const records=shots.map(({shotId,startFrame,endFrame},i)=>{
+    const card=cards[i];
+    if (card?.id!==shotId || cards.length!==shots.length) throw new Error('conditioning_audio_unverified: storyboard shots differ from the render');
+    const lines=(card.narration ?? []).filter(line=>line.tts?.trim());
+    currentLineSources(lines,board,cast);
+    const timing=sceneTiming(card,board,timingVersion);
+    return {shotId,startFrame,endFrame,lines:lines.map(line=>({id:line.id,speaker:line.speaker,text:line.tts,delivery:line.delivery,
+      revision:line.audio.revision,sha256:line.audio.sha256})),intervals:timing.intervals,durationSeconds:timing.durationSeconds};
+  });
+  return {version:1,driverSha256,shots:records};
 }
 
 function fullScenePerformance(scene, board, render, cards, characters, timingVersion, driverBytes) {
@@ -133,11 +169,18 @@ function conditioningSlice(scene, render, driver) {
 }
 
 function driverSamples(driver,start,end) {
+  const stream=JSON.parse(execFileSync('ffprobe',['-v','error','-select_streams','a:0','-show_entries','stream=codec_name,sample_rate,channels',
+    '-of','json',driver],{encoding:'utf8'})).streams[0];
+  const rate=Number(stream?.sample_rate),channels=stream?.channels;
+  if (!Number.isSafeInteger(rate) || rate<=0 || ![1,2].includes(channels))
+    throw new Error('conditioning_audio_unverified: unreadable original master');
+  const from=Math.round(start*rate/48000),to=Math.round(end*rate/48000);
+  const format=({pcm_u8:'u8',pcm_s24le:'s24le',pcm_s32le:'s32le',pcm_f32le:'f32le',pcm_f64le:'f64le'})[stream.codec_name] ?? 's16le';
+  const bits=Number(format.match(/\d+/)[0]);
   const pcm=execFileSync('ffmpeg',['-nostdin','-v','error','-i',driver,'-map','0:a:0','-af',
-    'atrim=start_sample='+start+':end_sample='+end,'-f','s16le','-'],{timeout:120000,maxBuffer:1<<30});
-  const channels=pcm.length/(2*(end-start));
-  if (![1,2].includes(channels)) throw new Error('conditioning_audio_unverified: the original WAV does not cover the requested samples');
-  const wav=silentWav(end-start,channels);
+    'atrim=start_sample='+from+':end_sample='+to,'-f',format,'-'],{timeout:120000,maxBuffer:1<<30});
+  if (pcm.length!==(to-from)*channels*bits/8) throw new Error('conditioning_audio_unverified: the original WAV does not cover the requested samples');
+  const wav=silentWav(to-from,channels,rate,bits,format.startsWith('f')?3:1);
   pcm.copy(wav,44);
   return wav;
 }
@@ -191,7 +234,12 @@ function currentConditioningAudio(scene, board, {index, timingVersion, driverSha
     if (!fs.existsSync(file) || hash(fs.readFileSync(file)) !== driverSha256)
       throw new Error('conditioning_audio_unverified: the selected WAV differs from the recorded video driver');
   }
-  if (!direct) {
+  if (sceneRender?.conditioningInputs) {
+    const shots=sceneRender.shots.map(s=>({shotId:s.shot_id,startFrame:s.start_frame,endFrame:s.end_frame}));
+    const current=conditioningInputs(sceneCards,board,shots,characters,timingVersion,driverSha256);
+    if (!current || !require('node:util').isDeepStrictEqual(current,sceneRender.conditioningInputs))
+      throw new Error('conditioning_audio_unverified: the original scene recordings or their timing changed');
+  } else if (!direct) {
     const composition = multiShot ? fullScenePerformance(scene,board,sceneRender,sceneCards,characters,timingVersion,fs.statSync(choices[0]).size) : mixLines(lines,sources,timing);
     if (hash(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
       throw new Error('conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver');
@@ -255,7 +303,7 @@ function compose(work,board) {
         fs.mkdirSync(path.dirname(file),{recursive:true});
         if (!fs.existsSync(file) || !fs.readFileSync(file).equals(wav)) fs.writeFileSync(file,wav);
         fields[1]=file;rows[row]=fields.join('\t');sliced=true;
-      } else verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)));
+      } else verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)),render);
       continue;
     }
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
@@ -271,5 +319,5 @@ function compose(work,board) {
   if(outputs.length || sliced)fs.writeFileSync(cards,rows.join('\n'));
   return outputs;
 }
-module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio,verifyConditioningPerformance,matchesConditioningSlice};
+module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,conditioningInputs,currentConditioningAudio,verifyConditioningPerformance,matchesConditioningSlice};
 if(require.main===module){try{console.log(JSON.stringify(compose(process.argv[2],process.argv[3]),null,2));}catch(e){console.error(e.message);process.exitCode=1;}}

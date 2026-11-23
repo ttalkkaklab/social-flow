@@ -601,7 +601,8 @@ async function captureSceneRequest(scene,model) {
    if(options.method==='PUT' && /^\/v1\/uploads\/[a-f0-9]{64}\/chunks\/0$/.test(route))return Response.json({});
    const complete=/^\/v1\/uploads\/([a-f0-9]{64})\/complete$/.exec(route);
    assert.ok(complete,'Unexpected fixture request '+route);
-   return Response.json({file_id:complete[1],uri:'genai-file://'+complete[1]});
+   const fileId=complete[1].slice(0,32);
+   return Response.json({file_id:fileId,uri:'genai-file://'+fileId});
  };
  try{return await buildSceneWire(scene,model,'576x1024',true);}
  finally{globalThis.fetch=oldFetch;config.astraGenaiApiKey=oldKey;}
@@ -619,9 +620,15 @@ for(const render of ['conditioning','native','mix','silent','off-screen'])test('
  mkdirSync(assetDir);writeFileSync(image,png);
  const source=join(assetDir,'scene.mov');writeFileSync(source,readFileSync(original));
  const audibleDialogue=conditioned || render==='native' || render==='off-screen';
+ const pinned=render==='native' || render==='off-screen';
+ if(pinned){
+   win.SB_DOC.characters.find(actor=>actor.id===line.speaker).voiceReference={path:first,sha256:sha(first),tts:voice};
+   save(win);
+ }
  const scene={sceneNo:1,fps:24,frameCount:6,silentPicture:render==='mix' || render==='silent',
    shots:[{shotId:shot.id,startFrame:0,endFrame:6,transition:'open',action:'She opens the door.',openingPositions:[],blocking:[],
-     ...(audibleDialogue && {dialogue:[{lineId:line.id,speaker:line.speaker,text:line.tts,delivery:render==='off-screen'?'off_screen':'on_screen',frame:0}]})}],
+     ...(audibleDialogue && {dialogue:[{lineId:line.id,speaker:line.speaker,text:line.tts,delivery:render==='off-screen'?'off_screen':'on_screen',frame:0,
+       ...(pinned && {voice:{path:first,sha256:sha(first)}})}]})}],
    images:[{shotId:shot.id,role:'start',frame:0,path:image}],
    ...((conditioned || render==='mix') && {audio:{mode:render,path:first,startFrame:0,endFrame:6,cues:[]}})};
  const captured=await captureSceneRequest(scene,model),fingerprint='3'.repeat(64);
@@ -677,6 +684,92 @@ for(const render of ['conditioning','native','mix','silent','off-screen'])test('
      }
    }
  }
+});
+for(const ensemble of [false,true])test('a managed native scene retains '+(ensemble?'the pins for simultaneous speakers':'the selected voice and face')+' on import',async t=>{
+ const {dir,target,file,first,retake,original,remux,bind}=a2vFixture(t);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+ const work=join(dir,'.work'),assets=join(work,'video');mkdirSync(assets);
+ const source=join(assets,'native.mov');writeFileSync(source,readFileSync(original));
+ const faces=['blue','red'].map(color=>{
+   const image=join(target,color+'.png');
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color='+color+':s=16x16','-frames:v','1',image]);
+   return image;
+ });
+ const model='ltx-2.5-22b-distilled',actors=ensemble?['hero','guest']:['hero'];
+ const voicePin=path=>({path,sha256:sha(path),tts:voice});
+ const win=read(),shot=win.SCENES[0];
+ win.SB_DOC={speechPlanVersion:1,characters:actors.map((id,i)=>({
+   id,tts:voice,voiceReference:voicePin([first,retake][i]),panels:{face:faces[i]}}))};
+ win.MUSIC={$timeline:[]};
+ win.STRUCTURE={version:'structure-v1',sequences:[{id:'q1',title:'Entrance',scenes:[1]}],scenes:[{
+   no:1,speakers:actors,speakerReferences:actors.map((character,i)=>({character,path:faces[i]})),videoDirection:{oneTake:false}}]};
+ win.PRODUCTION.videoModel={engine:'astra-genai',model,operation:'reference'};
+ shot.scene=1;shot.duration=0.25;shot.visual={character:actors};
+ shot.narration=(ensemble?['hero','guest','hero']:['hero']).map((speaker,i)=>({
+   id:'line'+i,speaker,delivery:'on_screen',tts:['Hello.','Welcome.','Thanks.'][i]}));
+ const inputs=actors.map((character,i)=>({shotId:shot.id,role:'face',character,frame:0,path:faces[i]}));
+ async function receipt(pins){
+   const dialogue=shot.narration.map((line,i)=>({lineId:line.id,speaker:line.speaker,text:line.tts,delivery:line.delivery,
+     frame:0,...(pins[i] && {voice:voicePin(pins[i])})}));
+   const wire=await captureSceneRequest({sceneNo:1,fps:24,frameCount:6,images:[{shotId:shot.id,role:'start',frame:0,path:faces[0]},...inputs],
+     shots:[{shotId:shot.id,startFrame:0,endFrame:6,transition:'open',action:'They speak.',openingPositions:[],blocking:[],dialogue}]},model);
+   assert.deepEqual(wire.attachments.filter(row=>row.role==='voice_reference').map(row=>row.sha256),pins.filter(Boolean).map(sha));
+   const fingerprint='7'.repeat(64);
+   writeFileSync(source+'.scene-request.json',JSON.stringify(wire));
+   writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'native-render',operation:'scene-to-video',
+     videoPath:source,sha256:sha(source),fingerprint,requestId:'scene-'+fingerprint,sceneRequestSha256:sha(source+'.scene-request.json')}));
+ }
+ save(win);await receipt(ensemble?[first,retake,first]:[first]);
+ assert.equal((await bind(remux)).plan.mode,'native');
+ const archive=read(),wrong=/speech_video_source_mismatch/;
+ async function rejected(current){
+   save(current);
+   const before=readFileSync(file);
+   await assert.rejects(bind(remux),wrong);
+   assert.deepEqual(readFileSync(file),before);
+ }
+ if(ensemble){
+   await t.test('two different samples at one frame keep their owners and repeated occurrences',async()=>{
+     await receipt([retake,first,first]);
+     await rejected(archive);
+     await receipt([first,retake,retake]);
+     await rejected(archive);
+   });
+ }else{
+   const valid=buildOneLineReel(work,target,archive);
+   assert.equal(valid.status,0,valid.stderr);
+   for(const change of ['different voice','removed voice','different face'])await t.test(change+' rejects attachment and archived assembly',async()=>{
+     const edited=structuredClone(archive),actor=edited.SB_DOC.characters[0];
+     if(change==='different voice')actor.voiceReference=voicePin(retake);
+     if(change==='removed voice')delete actor.voiceReference;
+     if(change==='different face'){
+       actor.panels.face=faces[1];
+       edited.STRUCTURE.scenes[0].speakerReferences[0].path=faces[1];
+     }
+     await rejected(edited);
+     const built=buildOneLineReel(work,target,edited);
+     assert.notEqual(built.status,0);assert.match(built.stderr,wrong);
+   });
+   await t.test('a current pin cannot label a previously unpinned native take',async()=>{
+     await receipt([]);await rejected(archive);
+   });
+   await t.test('an unpinned render and unpinned character still require a selected speech route',async()=>{
+     const unpinned=structuredClone(archive);
+     delete unpinned.SB_DOC.characters[0].voiceReference;
+     await receipt([]);await rejected(unpinned);
+   });
+ }
+});
+test('explicit model-generated dialogue accepts its unpinned native import',async t=>{
+ const {file,original,bind}=a2vFixture(t);
+ const win=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ win.SCENES[0].scene=1;
+ win.STRUCTURE={scenes:[{no:1,speakers:['hero'],videoDirection:{dialogueVoice:'model_generated'}}]};
+ win.PRODUCTION.videoModel={engine:'seedance',model:'dreamina-seedance-2-0-fast-260128',operation:'image'};
+ writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ assert.equal((await bind(original)).plan.mode,'native');
 });
 for(const hasNarrator of [false,true])test('a bound '+(hasNarrator?'externally narrated':'speechless')+' picture cannot become an A2V take',async t=>{
  const {dir,target,file,first,retake,original,overdub,bind,record}=a2vFixture(t);
@@ -1294,7 +1387,7 @@ test('a silent multi-shot A2V render keeps each dialogue at its original frame i
  const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
  const driver=join(dir,'scene.wav'),clip=join(dir,'scene.mp4'),work=join(dir,'.work');
  execFileSync('ffmpeg',['-v','error','-i',first,'-i',retake,'-filter_complex',
-   '[0:a]apad=whole_dur=0.5[a];[1:a]apad=whole_dur=0.5[b];[a][b]concat=n=2:v=0:a=1,pan=stereo|FL=c0|FR=c0',
+   '[0:a]apad=whole_dur=0.5[a];[1:a]apad=whole_dur=0.5[b];[a][b]concat=n=2:v=0:a=1,pan=stereo|FL=c0|FR=0.5*c0',
    '-c:a','pcm_s16le',driver]);
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=32x48:r=24:d=1','-c:v','libx264',clip]);
  const win=read(),model='ltx-2.5-22b-dev';
@@ -1326,14 +1419,87 @@ test('a silent multi-shot A2V render keeps each dialogue at its original frame i
  const slices=readFileSync(join(work,'cards.tsv'),'utf8').trim().split('\n').map(row=>row.split('\t')[1]);
  const decoded=file=>execFileSync('ffmpeg',['-v','error','-i',file,'-f','s16le','-']);
  assert.deepEqual(Buffer.concat(slices.map(decoded)),decoded(driver));
- const build=spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
+ const build=()=>spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
    {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
- assert.equal(build.status,0,build.stderr);
+ const whole=build();assert.equal(whole.status,0,whole.stderr);
  assert.equal(require('../../skills/produce/references/compose-speech.js').duration(join(work,'reel.mp4')),1);
  const trimmed=read();trimmed.SCENES[1].edit.out=0.875;save(trimmed);
  compose(work,target);
  const narrower=readFileSync(join(work,'cards.tsv'),'utf8').trim().split('\n')[1].split('\t')[1];
  assert.deepEqual(decoded(narrower),decoded(slices[1]).subarray(0,0.375*48000*4));
+ const cut=build();assert.equal(cut.status,0,cut.stderr);
+ assert.equal(require('../../skills/produce/references/compose-speech.js').duration(join(work,'reel.mp4')),0.875);
  writeFileSync(narrower,readFileSync(slices[0]));
  assert.throws(()=>compose(work,target),/post_lipsync_forbidden/);
+});
+
+test('a managed scene archives its selected takes and timing beside a finished stereo master',async t=>{
+ const {dir,target,file,line,first,retake,record}=a2vFixture(t);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+ const model='ltx-2.5-22b-dev',driver=join(target,'master.wav'),win=read(),shot=win.SCENES[0];
+ writeFileSync(join(target,'opening.png'),png);
+ // The right channel contains an independent room tone. Its samples cannot be
+ // reconstructed by applying gain or a stereo layout to the dry line alone.
+ execFileSync('ffmpeg',['-v','error','-i',first,'-f','lavfi','-i','sine=frequency=140:sample_rate=48000:duration=0.25',
+   '-filter_complex','[0:a]asplit[l][r];[r]volume=0.7[quiet];[quiet][1:a]amix=duration=first[m];[l][m]amerge=inputs=2,aformat=channel_layouts=stereo',
+   '-c:a','pcm_s16le',driver]);
+ win.PRODUCTION={videoModel:{engine:'astra-genai',model,operation:'audio',resolution:'576x1024'},
+   videoAuthorization:{reference:'Local scene test',maxUsd:0,maxConcurrent:1,maxAttempts:1}};
+ win.SB_DOC.speechPlanVersion=1;win.MUSIC={$timeline:[]};
+ win.STRUCTURE={version:'structure-v1',sequences:[{id:'q1',title:'A conversation',scenes:[1]}],scenes:[{no:1,speakers:['hero'],videoDirection:{fps:24,emotion:'She hesitates.',
+   openingPositions:[{character:'hero',images:[],position:'At the door.'}],audio:{mode:'conditioning',path:'master.wav',cues:[]}}}]};
+ shot.scene=1;shot.duration=0.25;
+ shot.timeline={startFrame:0,endFrame:6,transition:'open',framing:'Medium shot.',action:'She turns toward the door.',
+   images:[{role:'start',frame:0,path:'opening.png'}]};
+ save(win);await record(first);
+ const {planManagedVideo,approveVideo,executeVideo}=await import('../dist/video-routing.js');
+ const previousFetch=globalThis.fetch,previousKey=config.astraGenaiApiKey;config.astraGenaiApiKey='test';
+ t.after(()=>{globalThis.fetch=previousFetch;config.astraGenaiApiKey=previousKey});
+ const endpoint='/v1/ltx/v2/scene-to-video';
+ globalThis.fetch=async(url,options)=>{
+   const route=new URL(url).pathname;
+   if (route===endpoint+'/capabilities')return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],scene_audio_modes:{conditioning:model}});
+   if (route==='/v1/uploads')return Response.json({upload_id:JSON.parse(options.body).sha256,chunk_size:1048576,chunks:1});
+   if (options.method==='PUT')return Response.json({});
+   if (route.endsWith('/complete'))return Response.json({file_id:route.split('/')[3],uri:'genai-file://'+route.split('/')[3]});
+   const body=JSON.parse(options.body);
+   assert.equal(body.conditioningInputs,undefined);
+   if(route===endpoint+'/validate')return Response.json({schema_valid:true,model,shots:1});
+   assert.equal(route,endpoint);
+   throw new Error('Captured finished stereo master');
+ };
+ const plan=await planManagedVideo({episode:dir,sceneNo:1,requestId:'stereo-master',sceneRendering:'per_shot',maxCostUsd:0,args:{}});
+ const before=read().SCENES[0].narration[0].audio;
+ assert.equal(plan.conditioningInputs.driverSha256,sha(driver));
+ assert.deepEqual(plan.conditioningInputs.shots[0].lines,[{id:line.id,speaker:'hero',text:line.tts,delivery:'on_screen',revision:before.revision,sha256:before.sha256}]);
+ approveVideo({episode:dir,planIds:[plan.id],request:'Submit the offline scene test'});
+ await assert.rejects(executeVideo({episode:dir,planId:plan.id},()=>assert.fail('Expected scene renderer')),/Captured finished stereo master/);
+ const clip=join(plan.args.outputPath,plan.args.filename),sidecar=clip+'.astra-genai.json';
+ const wire=JSON.parse(readFileSync(clip+'.scene-request.json')),receipt=JSON.parse(readFileSync(sidecar));
+ assert.deepEqual(wire.conditioningInputs,plan.conditioningInputs);
+ assert.equal(receipt.sceneRequestSha256,createHash('sha256').update(JSON.stringify(wire)).digest('hex'));
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=32x48:r=24:d=0.25','-c:v','libx264',clip]);
+ writeFileSync(sidecar,JSON.stringify({...receipt,jobId:'fixture-render',status:'completed',sha256:sha(clip)}));
+ const attach=audioPath=>ROUTES.speech_manage({action:'attach_video',path:target,shotId:shot.id,videoPath:clip,audioPath,
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision});
+ await assert.rejects(attach(first),/conditioning_audio_unverified/);
+ await attach(driver);
+ assert.equal(read().SCENES[0].visual.video.speechBinding.conditioningAudioSha256,sha(driver));
+ const work=join(dir,'.work');
+ writeFileSync(join(work,'cards.tsv'),[0,driver,0,'none'].join('\t')+'\n');
+ writeFileSync(join(work,'segs.tsv'),[0,0,clip,line.tts,line.tts].join('\t')+'\n');
+ const rendered=spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
+   {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
+ assert.equal(rendered.status,0,rendered.stderr);
+ assert.equal(require('../../skills/produce/references/compose-speech.js').duration(join(work,'reel.mp4')),0.25);
+ assert.equal(readFileSync(join(work,'cards.tsv'),'utf8').split('\t')[1],driver);
+ const original=read();
+ await record(retake);
+ await assert.rejects(attach(driver),/conditioning_audio_unverified/);
+ save(original);
+ const retimed=read();retimed.SCENES[0].performance=[{kind:'action',character:'hero',text:'Pauses.',durationSeconds:0.1},
+   {kind:'dialogue',character:'hero',group:1}];retimed.SB_DOC.performanceTimingVersion=1;save(retimed);
+ await assert.rejects(attach(driver),/conditioning_audio_unverified/);
 });

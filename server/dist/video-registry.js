@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { LOCAL_VIDEO_MODELS, localVideoStrategy } from './local-video-models.js';
 import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
@@ -11,10 +12,9 @@ import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from '
 import { scenePromptProfile } from './scene-prompt-profile.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
+const load = createRequire(import.meta.url);
 export function requiredCharacters(shot) {
-    const inputs = shot.visual?.characterInputs;
-    // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
-    return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
+    return load('../../skills/_shared/scene-cast.js').requiredCharacters(shot);
 }
 const entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === 'audio' ? 'supplied' : 'none' });
 const reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, 'reference', schema), voice: 'reference' });
