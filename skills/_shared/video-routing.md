@@ -286,7 +286,7 @@ Veo also accepts text-only requests and extension of a 1–30 second 24 fps MP4 
 
 The Veo adapter sends one `instances` entry with an English `prompt`. Image requests carry `image` and optionally `lastFrame`. Reference requests carry `referenceImages` entries with `referenceType: "asset"`. Extension requests carry `video`. Local media becomes `{mimeType, bytesBase64Encoded}`. The `parameters` object includes `sampleCount: 1`, aspect ratio, resolution and the sound flag. Text and frame requests take 4, 6 or 8 seconds. Submit with `predictLongRunning`, then send the returned operation name to `fetchPredictOperation`. The local tool schemas in `tools/list` specify the required paths and defaults for each operation. [Veo API reference](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/veo-video-generation) · [LTX API specification](https://docs.ltx.io/openapi.json)
 
-Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation. Repeated status reads never submit a generation.
+Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation; for a GenAI gateway request, `astra_genai_jobs` lists the token's recent jobs as evidence of whether it is still running, finished or failed. Repeated status reads never submit a generation.
 
 ### Adding a hosted provider
 

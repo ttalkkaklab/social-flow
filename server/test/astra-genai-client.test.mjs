@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { config } from '../dist/config.js';
-import { requestGenai, downloadGenaiResult, genaiCatalog, requestGenaiMedia } from '../dist/astra-genai-client.js';
+import { requestGenai, downloadGenaiResult, genaiCatalog, genaiJobs, requestGenaiMedia } from '../dist/astra-genai-client.js';
 
 test('gateway authentication is separate, POST errors are redacted and never retried, downloads carry no token', async t => {
   const original = globalThis.fetch, key = config.astraGenaiApiKey, legacy = config.astraVideoApiKey;
@@ -101,4 +101,25 @@ test('Desktop discovery and downloads use the configured Desktop origin, v2 down
     ['http://127.0.0.1:18081', 'Bearer desktop-key'],
     ['https://v2.example', 'Bearer v2-key'],
   ]);
+});
+
+test('job history asks the gateway that took the request and marks an active-only answer', async t => {
+  const original = globalThis.fetch, key = config.astraGenaiApiKey, env = { ...process.env };
+  t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; process.env = env; });
+  config.astraGenaiApiKey = 'remote-key'; process.env.ASTRA_GENAI_URL = 'https://remote.example';
+  process.env.ASTRA_GENAI_IMAGE_URL = 'http://127.0.0.1:18081'; process.env.ASTRA_GENAI_IMAGE_API_KEY = 'local-key';
+  const seen = [];
+  globalThis.fetch = async (url, options) => {
+    seen.push([url, options.method, options.headers.Authorization]);
+    // The local gateway predates the history route.
+    if (url === 'http://127.0.0.1:18081/v1/jobs?limit=5') return new Response('{"detail":"Not Found"}', { status: 404 });
+    return new Response(JSON.stringify({ jobs: [{ id: url.includes('active') ? 'still-running' : 'finished', status: 'failed' }] }));
+  };
+  assert.deepEqual(await genaiJobs(), { gateway: 'main', history: true, jobs: [{ id: 'finished', status: 'failed' }] });
+  assert.deepEqual(await genaiJobs({ gateway: 'image', limit: 5 }), { gateway: 'image', history: false, jobs: [{ id: 'still-running', status: 'failed' }] });
+  assert.deepEqual(seen, [['https://remote.example/v1/jobs?limit=20', 'GET', 'Bearer remote-key'],
+    ['http://127.0.0.1:18081/v1/jobs?limit=5', 'GET', 'Bearer local-key'], ['http://127.0.0.1:18081/v1/jobs/active', 'GET', 'Bearer local-key']]);
+  globalThis.fetch = async () => new Response('{"detail":"revoked"}', { status: 401 });
+  await assert.rejects(genaiJobs({ gateway: 'speech' }), /HTTP 401/);
+  await assert.rejects(genaiJobs({ limit: 101 }));
 });

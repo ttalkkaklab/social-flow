@@ -113717,9 +113717,9 @@ var GenaiRequestError = class extends Error {
   terminal;
   httpStatus;
 };
-async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId) {
-  const key = requireAstraGenaiKey(route);
-  const response = await fetch(astraGenaiBaseUrl(route) + route, {
+async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId, credentialRoute = route) {
+  const key = requireAstraGenaiKey(credentialRoute);
+  const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
     method,
     redirect: "error",
     signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
@@ -113841,6 +113841,21 @@ async function genaiCatalog(kind) {
     contracts: "/v1/ltx/desktop/contracts"
   };
   return requestGenai("GET", routes[kind]);
+}
+var JOB_GATEWAYS = { main: "", image: "/v1/images/", speech: "/v1/audio/", desktop: "/v1/ltx/desktop/" };
+var genaiJobsSchema = external_exports.object({
+  gateway: external_exports.enum(["main", "image", "speech", "desktop"]).default("main"),
+  limit: external_exports.number().int().min(1).max(100).default(20)
+}).strict();
+async function genaiJobs(input = {}) {
+  const { gateway, limit: limit2 } = genaiJobsSchema.parse(input);
+  const read4 = (route) => requestGenai("GET", route, void 0, 6e4, void 0, void 0, void 0, JOB_GATEWAYS[gateway]);
+  try {
+    return { gateway, history: true, jobs: (await read4("/v1/jobs?limit=" + limit2)).jobs };
+  } catch (error2) {
+    if (!(error2 instanceof GenaiRequestError) || error2.httpStatus !== 404) throw error2;
+    return { gateway, history: false, jobs: (await read4("/v1/jobs/active")).jobs };
+  }
 }
 
 // src/astra-genai-native-image.ts
@@ -114856,7 +114871,9 @@ var descriptions = {
   keyframes: 'One to ten temporal pins, e.g. [{imagePath:"/work/start.png",frameIndex:0,strength:1}].',
   frameIndex: "Unique zero-based output frame index, e.g. 0; must lie within requested duration/fps.",
   receiptPath: "Existing local .astra-genai.json receipt, e.g. /work/shot.mp4.astra-genai.json.",
-  download: "Download and verify completed output, e.g. true; never creates another generation."
+  download: "Download and verify completed output, e.g. true; never creates another generation.",
+  gateway: "Gateway that took the lost request, e.g. image. main is ASTRA_GENAI_URL (LTX v2 and MSR video); image, speech and desktop use their own URL and key when configured, else main.",
+  limit: "Newest jobs to return, 1-100, e.g. 20."
 };
 function describeProperties(value) {
   if (!value || typeof value !== "object") return;
@@ -114891,6 +114908,12 @@ var NATIVE_GENAI_TOOLS = [
     external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "ltx_video", "desktop_video", "loras", "contracts"]) }).strict(),
     true
   ),
+  tool(
+    "astra_genai_jobs",
+    "List this token's recent gateway jobs, newest first, when a response was lost and no job ID or result came back. Use to tell whether an interrupted image, speech or video request is still queued or running, succeeded, failed or was cancelled before deciding anything else. Read-only: it never submits, downloads or changes a receipt or reservation. Each job has id, api, endpoint, model, status, created_at, started_at, completed_at, error {code,message}, submission_status (uncertain means a local video submission was cut while sending and needs operator recovery) and status_url; prompts are never returned, so match the lost request by endpoint, model and created_at and treat the match as evidence, not identity. queued or running means wait and read again, never resubmit. history:false means the gateway is older than GET /v1/jobs and only active jobs are listed, so a missing job is finished or failed, not known. The gateway keeps finished jobs for 24 hours; chat calls are not jobs. Do NOT use to download or reconcile: use image_status or video_status action:refresh, astra_genai_video_status or astra_genai_desktop_status with the receipt.",
+    genaiJobsSchema,
+    true
+  ),
   tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
   tool("astra_genai_image_edit", "Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.", nativeImageEditSchema),
   tool("tts_astra_genai", "Create one speech take with a gateway model and registered voice. Use for TTS, narration and character retakes. For episode lines copy speech_manage plan_audio arguments including speechContext unchanged; stale character selections, default in place of a selected sample, edited arguments and missing episode context fail before synthesis. Discover models/voices with astra_genai_catalog kind:speech. VoxCPM2 accepts WAV and speed 1; voice cloning needs an operator-registered ID, never a client sample path. Use requestId for durable replay. Returns audioPath, receiptPath and not_reviewed; pass receiptPath to attach_audio. Do NOT use to select a character sample: use character_voice_audition. No automatic retries or listening score.", genaiSpeechSchema),
@@ -114915,7 +114938,7 @@ import * as path10 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.126.0",
+  version: "0.127.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -122218,7 +122241,7 @@ function priceOf(tool2, args = {}) {
     }
   }
   if (tool2 === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
-  if (tool2 === "astra_genai_catalog" || tool2 === "astra_genai_desktop_status") return { key: null, quantity: null };
+  if (["astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(tool2)) return { key: null, quantity: null };
   if (tool2.startsWith("astra_genai_")) {
     const image2 = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool2);
     const seconds2 = image2 ? null : typeof args.duration === "number" ? args.duration : tool2 === "astra_genai_msr" ? num2(args.numFrames, 121) / num2(args.frameRate, 24) : null;
@@ -122369,7 +122392,7 @@ function isBillableTool(tool2) {
   if (["tts_astra_genai", "tts_route", "tts_generate_checked", "character_voice_audition", "tts_review_acting"].includes(tool2)) return false;
   if (["music_catalog", "music_plan", "music_execute", "music_status"].includes(tool2)) return false;
   if (tool2 === "tts_list_voices" || tool2 === "tts_elevenlabs_voices" || tool2 === "music_list_options") return false;
-  return tool2.startsWith("astra_genai_") && !["astra_genai_video_status", "astra_genai_catalog", "astra_genai_desktop_status"].includes(tool2) || tool2.startsWith("seedance_") || /^(veo|ltx_api|ltx_desktop|minimax|heygen)_/.test(tool2) || tool2.startsWith("gpt_image_") || tool2.startsWith("tts_") || tool2.startsWith("sfx_") || tool2.startsWith("music_") || tool2.startsWith("suno_generate") || tool2.startsWith("mlx_") || Boolean(localVideoStrategy(tool2)) || tool2 === "image_local_generate";
+  return tool2.startsWith("astra_genai_") && !["astra_genai_video_status", "astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(tool2) || tool2.startsWith("seedance_") || /^(veo|ltx_api|ltx_desktop|minimax|heygen)_/.test(tool2) || tool2.startsWith("gpt_image_") || tool2.startsWith("tts_") || tool2.startsWith("sfx_") || tool2.startsWith("music_") || tool2.startsWith("suno_generate") || tool2.startsWith("mlx_") || Boolean(localVideoStrategy(tool2)) || tool2 === "image_local_generate";
 }
 
 // src/video-pricing.ts
@@ -122479,7 +122502,7 @@ function historicalSpend(episode) {
   const quantities = /* @__PURE__ */ new Map();
   for (const line of fs17.readFileSync(events, "utf8").split("\n").filter(Boolean)) {
     const event = JSON.parse(line);
-    if (["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit", "astra_genai_catalog", "astra_genai_desktop_status"].includes(event.tool)) continue;
+    if (["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit", "astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(event.tool)) continue;
     if (!/^(veo_|seedance_|omni_|mlx_video|ltx_video|ltx_api_|ltx_desktop_|minimax_|heygen_|fasth3_omni_|astra_)/.test(event.tool || "")) continue;
     const price = prices.get(event.key);
     if (typeof event.quantity !== "number" || !Number.isFinite(event.quantity) || event.quantity < 0 || price === void 0 || !Number.isFinite(price))
@@ -145972,6 +145995,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
   astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "ltx_video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
+  astra_genai_jobs: async (args) => text3(JSON.stringify(await genaiJobs(args))),
   tts_astra_genai: async (args) => {
     const generation2 = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({
@@ -146996,7 +147020,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.126.0" },
+  { name: "social-flow", version: "0.127.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

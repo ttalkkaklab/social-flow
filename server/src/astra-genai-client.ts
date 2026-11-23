@@ -53,9 +53,9 @@ export class GenaiRequestError extends Error {
 }
 
 /** No automatic POST retries: a disconnected request may already be generating. */
-export async function requestGenai(method: 'GET' | 'POST', route: string, body?: unknown, timeoutMs = 60_000, onResponse?: (headers: Headers) => void, signal?: AbortSignal, requestId?: string): Promise<unknown> {
-  const key = requireAstraGenaiKey(route);
-  const response = await fetch(astraGenaiBaseUrl(route) + route, {
+export async function requestGenai(method: 'GET' | 'POST', route: string, body?: unknown, timeoutMs = 60_000, onResponse?: (headers: Headers) => void, signal?: AbortSignal, requestId?: string, credentialRoute = route): Promise<unknown> {
+  const key = requireAstraGenaiKey(credentialRoute);
+  const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
     method, redirect: 'error', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs), ...({ dispatcher: waitFor(timeoutMs) } as RequestInit),
     headers: { Authorization: `Bearer ${key}`, ...(requestId ? {'X-Request-ID':requestId} : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -168,4 +168,23 @@ export async function genaiCatalog(kind: 'image' | 'speech' | 'video' | 'ltx_vid
     desktop_video: '/v1/ltx/desktop/models',
     loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
   return requestGenai('GET', routes[kind]);
+}
+
+/** A gateway lists jobs per token, and images, speech and Desktop may each run on their own gateway and token. */
+const JOB_GATEWAYS = { main: '', image: '/v1/images/', speech: '/v1/audio/', desktop: '/v1/ltx/desktop/' } as const;
+export const genaiJobsSchema = z.object({
+  gateway: z.enum(['main', 'image', 'speech', 'desktop']).default('main'),
+  limit: z.number().int().min(1).max(100).default(20),
+}).strict();
+
+/** Read the caller's jobs after a lost response; never submits, downloads or changes a receipt. */
+export async function genaiJobs(input: unknown = {}) {
+  const { gateway, limit } = genaiJobsSchema.parse(input);
+  const read = (route: string) => requestGenai('GET', route, undefined, 60_000, undefined, undefined, undefined, JOB_GATEWAYS[gateway]) as Promise<{ jobs: unknown[] }>;
+  try { return { gateway, history: true, jobs: (await read('/v1/jobs?limit=' + limit)).jobs }; }
+  catch (error) {
+    // A gateway older than GET /v1/jobs answers 404. Its active list cannot show a finished or failed job.
+    if (!(error instanceof GenaiRequestError) || error.httpStatus !== 404) throw error;
+    return { gateway, history: false, jobs: (await read('/v1/jobs/active')).jobs };
+  }
 }

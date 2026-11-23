@@ -121,7 +121,8 @@ Requested dimensions/steps are not presented as measured backend output.
 
 A `requestId` identifies one attempt. Completed calls return the same receipt after
 checking output integrity. Pending/ambiguous calls never dispatch again, even after
-settings change. Read `image_status` after interruption and inspect provider billing.
+settings change. Read `image_status` after interruption and inspect provider billing;
+for a GenAI gateway call, `astra_genai_jobs` shows whether the lost request is still running.
 `action:reconcile` requires an evidence reference and verified `spentUsd`; use it only
 after the provider job is terminal. For an interrupted `submitting` request, also
 verify the executor has exited and pass `executorStopped:true`; a live local owner PID

@@ -173,7 +173,7 @@ export function priceOf(tool, args = {}) {
     }
     if (tool === 'tts_astra_genai')
         return { key: 'tts.astra-genai', quantity: null, note: 'Gateway speech pricing unverified' };
-    if (tool === 'astra_genai_catalog' || tool === 'astra_genai_desktop_status')
+    if (['astra_genai_catalog', 'astra_genai_jobs', 'astra_genai_desktop_status'].includes(tool))
         return { key: null, quantity: null };
     if (tool.startsWith('astra_genai_')) {
         const image = ['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(tool);
@@ -369,7 +369,7 @@ export function isBillableTool(tool) {
     // Catalogue reads cost nothing and belong in no ledger.
     if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options')
         return false;
-    return ((tool.startsWith('astra_genai_') && !['astra_genai_video_status', 'astra_genai_catalog', 'astra_genai_desktop_status'].includes(tool)) ||
+    return ((tool.startsWith('astra_genai_') && !['astra_genai_video_status', 'astra_genai_catalog', 'astra_genai_jobs', 'astra_genai_desktop_status'].includes(tool)) ||
         tool.startsWith('seedance_') ||
         /^(veo|ltx_api|ltx_desktop|minimax|heygen)_/.test(tool) ||
         tool.startsWith('gpt_image_') ||

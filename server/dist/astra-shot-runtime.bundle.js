@@ -51016,6 +51016,10 @@ var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
     return false;
   }
 }, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+var genaiJobsSchema = external_exports.object({
+  gateway: external_exports.enum(["main", "image", "speech", "desktop"]).default("main"),
+  limit: external_exports.number().int().min(1).max(100).default(20)
+}).strict();
 
 // src/astra-genai-desktop.ts
 var model = external_exports.enum(["ltx-2.3-fast", "ltx-2.5-fast"]);
@@ -52144,7 +52148,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.126.0",
+  version: "0.127.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -54216,7 +54220,7 @@ function priceOf(tool, args = {}) {
     }
   }
   if (tool === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
-  if (tool === "astra_genai_catalog" || tool === "astra_genai_desktop_status") return { key: null, quantity: null };
+  if (["astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(tool)) return { key: null, quantity: null };
   if (tool.startsWith("astra_genai_")) {
     const image2 = ["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(tool);
     const seconds2 = image2 ? null : typeof args.duration === "number" ? args.duration : tool === "astra_genai_msr" ? num(args.numFrames, 121) / num(args.frameRate, 24) : null;
