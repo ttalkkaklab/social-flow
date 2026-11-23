@@ -143,16 +143,25 @@ test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=0.25','-c:v','libx264','-pix_fmt','yuv420p',candidate]);
  const state=manageSpeech({path:target,action:'attach_audio',expectedRevision:r.revision,lineId:line.id,audioPath:audio,
    generation:{generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:line.tts}});
- const attach=()=>manageSpeech({path:target,action:'attach_video',expectedRevision:state.revision,shotId:line.shotId,videoPath:candidate,capabilities:caps});
+ const attach=(revision=state.revision)=>manageSpeech({path:target,action:'attach_video',expectedRevision:revision,shotId:line.shotId,videoPath:candidate,capabilities:caps});
  assert.throws(attach,/conditioning_audio_unverified/);
  const digest=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
  const proof={status:'completed',jobId:'fresh-a2v',mode:'audio2video',videoPath:candidate,sha256:digest(candidate),
    conditioningAudioSha256:digest(audio),submittedRequest:{mode:'audio2video',audio_upload_id:'original-wav'}};
  writeFileSync(candidate+'.astra-job.json',JSON.stringify(proof));
- attach();
+ const accepted=attach();
  const card=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(join(target,'scenes.js'),'utf8')).SCENES[0];
  assert.equal(card.sound.audioSource,'speech');
  assert.equal(card.visual.video.speechBinding.conditioningAudioSha256,digest(audio));
+ assert.equal(card.visual.video.speechBinding.conditioningAudioPath,audio);
+ const replacement=join(dir,'replacement.wav');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=660:duration=0.25','-c:a','pcm_s16le',replacement]);
+ const changed=manageSpeech({path:target,action:'attach_audio',expectedRevision:accepted.revision,lineId:line.id,audioPath:replacement,
+   generation:{generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:line.tts}});
+ writeFileSync(join(dir,'.work/cards.tsv'),`0\t${audio}\t1\n`);
+ const stale=readFileSync(join(target,'scenes.js'),'utf8');
+ assert.throws(()=>attach(changed.revision),/conditioning_audio_unverified/);
+ assert.equal(readFileSync(join(target,'scenes.js'),'utf8'),stale);
 });
 test('a native-speech clip binds line revisions and assembles from its soundtrack without line audio',t=>{
  const {dir,target,r}=setup(t),line=r.lines[0],file=path.join(target,'scenes.js'),win={};
@@ -471,6 +480,20 @@ describe('scene direction', () => {
   const pcm=execFileSync('ffmpeg',['-v','error','-i',output.audioPath,'-f','s16le','-ac','1','-ar','48000','pipe:1']);
   const sample=seconds=>pcm.readInt16LE(Math.round(seconds*48000)*2);
   assert.equal(sample(.5),1000);assert.equal(sample(1.5),0);assert.equal(sample(2.5),2000);
+  const silent=path.join(dir,'phone-silent.mp4');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=3','-an','-c:v','libx264',silent]);
+  const stereo=path.join(work,'phone-driver.wav');
+  execFileSync('ffmpeg',['-v','error','-i',output.audioPath,'-ac','2','-c:a','pcm_s16le',stereo]);
+  const stereoSha=createHash('sha256').update(readFileSync(stereo)).digest('hex');
+  writeFileSync(silent+'.astra-job.json',JSON.stringify({status:'completed',jobId:'phone',mode:'audio2video',videoPath:silent,
+    sha256:createHash('sha256').update(readFileSync(silent)).digest('hex'),conditioningAudioSha256:stereoSha,
+    submittedRequest:{mode:'audio2video',audio_upload_id:'timed-phone-wav'}}));
+  const attachSilent=()=>manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:silent,capabilities:caps});
+  assert.throws(attachSilent,/conditioning_audio_unverified/,'the mono composition was not the uploaded file');
+  writeFileSync(path.join(work,'cards.tsv'),'0\tphone-driver.wav\t1\n');
+  state=attachSilent();
+  const bound=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0].visual.video.speechBinding;
+  assert.equal(bound.conditioningAudioPath,stereo);assert.equal(bound.conditioningAudioSha256,stereoSha);
   const video=path.join(dir,'phone.mp4');spokenClip(video);
   state=manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
   const secondAudio=state.lines[1].audio;

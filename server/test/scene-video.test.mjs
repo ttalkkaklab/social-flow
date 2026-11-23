@@ -378,15 +378,26 @@ test('native scene children bind the active voices locally and reject three spea
     shot.narration = [line(cast[i].id,shot.id+'-l1')];
   }
   f.members[0].narration.push(line(cast[1].id,'reply'));
+  const listener = {id:'listener',panels:{face:'images/listener.png'}};
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=16x16','-frames:v','1',path.join(f.dir,listener.panels.face)]);
+  cast.push(listener);
+  // Only the scene opening stages this silent person. The child cards have no local hint.
+  f.scene.openingPositions = [...f.scene.openingPositions,{character:listener.id,images:[],position:'Near the witness rail.'}];
   const save = () => {
     f.save();
-    fs.appendFileSync(path.join(f.dir,'scenes.js'),'\nwindow.SB_DOC='+JSON.stringify({characters:cast})+';');
+    fs.appendFileSync(path.join(f.dir,'scenes.js'),'\nwindow.SB_DOC='+JSON.stringify({characters:cast})+
+      '; window.STRUCTURE.scenes[0].speakerReferences='+JSON.stringify([{character:listener.id,path:listener.panels.face}])+';');
   };
   save();
   const options = {...f.input,sceneRendering:'per_shot'};
   const plan = planVideo(options,false);
   assert.equal(planVideo(f.input,false).sceneRendering,'per_shot');
   const {body} = await buildSceneWire(plan.sceneRequest,plan.selection.model,plan.selection.resolution);
+  const firstFaces = body.shots[0].images.filter(pin => pin.role === 'face');
+  const listenerSlot = firstFaces.findIndex(pin => pin.character === listener.id);
+  assert.equal(listenerSlot,2);
+  assert.equal(firstFaces[listenerSlot].image_uri,'data:image/png;base64,'+fs.readFileSync(path.join(f.dir,listener.panels.face),'base64'));
+  assert.deepEqual(body.shots[0].opening_positions.find(row => row.character === listener.id)?.images,[3]);
   assert.deepEqual(body.shots.map(s=>s.dialogue.map(d=>d.speaker)),[['seorin','mai-an'],['mai-an'],['tu-vi']]);
   for (const shot of body.shots) {
     const faces = shot.images.filter(p=>p.role==='face');

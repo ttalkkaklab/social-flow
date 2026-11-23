@@ -100607,7 +100607,7 @@ var require_scene_cast = __commonJS({
         const staged = /* @__PURE__ */ new Set([...spoken, ...declared ?? [], ...(scene.videoDirection?.openingPositions ?? []).map((row) => row.character)]);
         for (const card of cards) {
           for (const id of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id);
-          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.characterInputs ?? []])
+          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.video?.openingPositions ?? [], ...card.visual?.references ?? [], ...card.visual?.characterInputs ?? []])
             if (item.character) staged.add(item.character);
         }
         const castAssigned = cards.length > 0 && cards.every((card) => card.visual?.character !== void 0 || card.visual?.characters !== void 0);
@@ -100689,7 +100689,7 @@ var require_scene_cast = __commonJS({
         }
       }
       const originals = /* @__PURE__ */ new Map();
-      if (engine === "seedance" && scene.frames !== void 0) {
+      if (engine === "seedance" && (scene.frames !== void 0 || declaredRefs.length)) {
         for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
           if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
           if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
@@ -100717,7 +100717,7 @@ var require_scene_cast = __commonJS({
         if (custom3 && face && engine === "seedance" && canonical4(custom3.path) !== canonical4(face))
           throw new Error("scene_reference_owner: Seedance requires the registered face for " + character);
         face = custom3?.path ?? face ?? candidates[0]?.path;
-        if (face && !conditioning && (ltx2 || scene.frames !== void 0)) {
+        if (face && !conditioning && (ltx2 || scene.frames !== void 0 || custom3)) {
           if (registeredOwner(face) && registeredOwner(face) !== character)
             throw new Error("scene_reference_owner: " + character + " does not own " + face);
           if (references.some((ref) => canonical4(ref.path) === canonical4(face))) throw new Error("scene_reference_owner: two speakers share one face path");
@@ -100729,14 +100729,27 @@ var require_scene_cast = __commonJS({
       let openingRefs = [];
       const members = cards.map((card, index) => {
         const visual = card.visual || {};
-        const original = castIds(visual.character);
+        const original = castIds(visual.character ?? visual.characters);
         const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
-        const localIds = /* @__PURE__ */ new Set([...active, ...original, ...castIds(visual.bystanders), ...(card.timeline?.openingPositions ?? []).map((p) => p.character)]);
-        const localRefs = perShot && speakers.length > 2 ? [
+        const positioned = [
+          ...card.timeline?.openingPositions ?? [],
+          ...visual.video?.openingPositions ?? [],
+          ...index === 0 ? scene.videoDirection?.openingPositions ?? [] : []
+        ];
+        const localIds = /* @__PURE__ */ new Set([
+          ...active,
+          ...original,
+          ...castIds(visual.bystanders),
+          ...positioned.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...(visual.characterInputs ?? []).map((input) => input.character),
+          ...(card.timeline?.images ?? []).map((pin) => pin.character),
+          ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
+        ]);
+        const localRefs = perShot && identities.length > 2 ? [
           ...active.flatMap((id) => references.filter((ref) => ref.character === id)),
           ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
         ] : references;
-        const useSceneRefs = (ltx2 || scene.frames !== void 0) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
+        const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
         const keep2 = (ref) => {
           const owner = registeredOwner(ref.path);
           if (owner && ref.character && owner !== ref.character) throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
@@ -100761,18 +100774,22 @@ var require_scene_cast = __commonJS({
           ...[...subjectRefs, ...kept].filter((ref) => ref.use !== "image" && !["location", "background"].includes(ref.role) && !pins.some((pin) => pin.path === ref.path))
         ];
         if (!index) openingRefs = slots;
+        const shotPositions = (rows) => {
+          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows.some((local2) => local2.character === row.character)) : [];
+          return positions([...rows, ...inherited], slots);
+        };
         const timeline = card.timeline && {
           ...card.timeline,
           ...card.timeline.images ? { images: pins } : {},
-          ...card.timeline.openingPositions ? { openingPositions: positions(card.timeline.openingPositions, slots) } : {}
+          ...card.timeline.openingPositions ? { openingPositions: shotPositions(card.timeline.openingPositions) } : {}
         };
         const updated = {
           ...visual,
           ...ltx2 ? { sceneSpeakerReferences: true } : {},
-          ...visual.character !== void 0 ? { character: original } : {},
+          ...visual.character !== void 0 || visual.characters !== void 0 ? { character: original } : {},
           ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
           ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
-          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: positions(visual.video.openingPositions, slots) } } : {}
+          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
         };
         if (originals.size && updated.character?.length) {
           updated.characterInputs = updated.character.map((character) => {
@@ -100800,6 +100817,10 @@ var require_scene_cast = __commonJS({
         }
         return { ...card, visual: updated, ...timeline ? { timeline } : {} };
       });
+      for (const ref of declaredRefs) {
+        const used = members.some((member) => member.visual.references?.some((item) => item.use !== "image" && item.character === ref.character && canonical4(item.path) === canonical4(ref.path)));
+        if (!used) throw new Error("scene_reference_owner: no render binds the requested visual reference for " + ref.character);
+      }
       const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(scene.videoDirection.openingPositions, openingRefs) };
       return { members, direction, speakers, identities };
     }
@@ -105228,6 +105249,69 @@ var require_compose_speech = __commonJS({
       const timing = sceneTiming(scene, board, performanceTimingVersion);
       if (duration5(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
     }
+    function mixLines(lines, sources, timing) {
+      const { intervals } = timing;
+      const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
+      lines.forEach((line, i2) => {
+        const pcm = execFileSync20("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+        const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
+        for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
+      });
+      const wav = Buffer.alloc(44 + total * 2);
+      wav.write("RIFF");
+      wav.writeUInt32LE(36 + total * 2, 4);
+      wav.write("WAVEfmt ", 8);
+      wav.writeUInt32LE(16, 16);
+      wav.writeUInt16LE(1, 20);
+      wav.writeUInt16LE(1, 22);
+      wav.writeUInt32LE(48e3, 24);
+      wav.writeUInt32LE(96e3, 28);
+      wav.writeUInt16LE(2, 32);
+      wav.writeUInt16LE(16, 34);
+      wav.write("data", 36);
+      wav.writeUInt32LE(total * 2, 40);
+      mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
+      return wav;
+    }
+    function samePerformanceWav(file, mono) {
+      const probe5 = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,sample_rate,channels:format=format_name", "-of", "json", file], { encoding: "utf8" }));
+      const stream = probe5.streams[0];
+      if (probe5.format?.format_name !== "wav" || probe5.streams.length !== 1 || stream.codec_name !== "pcm_s16le" || Number(stream.sample_rate) !== 48e3 || ![1, 2].includes(stream.channels)) return false;
+      const options = { timeout: 12e4, maxBuffer: 1 << 30 };
+      const actual = execFileSync20("ffmpeg", ["-v", "error", "-i", file, "-f", "s16le", "-"], options);
+      const matches = (expected) => expected.length > 0 && actual.length >= expected.length && actual.subarray(0, expected.length).equals(expected) && actual.subarray(expected.length).every((sample) => sample === 0);
+      if (stream.channels === 1) return matches(mono.subarray(44));
+      for (const layout of [["-ac", "2"], ["-af", "pan=stereo|FL=c0|FR=c0"]]) {
+        const stereo = execFileSync20("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
+        if (matches(stereo)) return true;
+      }
+      return false;
+    }
+    function currentConditioningAudio(scene, board, { index, timingVersion, driverSha256, audioPath, sceneAudioPath }) {
+      const lines = (scene.narration || []).filter((line) => line.tts?.trim());
+      const sources = lines.map((line) => path39.resolve(board, line.audio.path));
+      const timing = sceneTiming(scene, board, timingVersion);
+      const interval = timing.intervals[0];
+      const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 && interval.speechEndSeconds === timing.durationSeconds && hash7(fs26.readFileSync(sources[0])) === driverSha256;
+      const work = path39.resolve(board, "../.work"), cards = path39.join(work, "cards.tsv");
+      const choices = [audioPath, sceneAudioPath].filter(Boolean).map((file) => path39.resolve(board, file));
+      if (fs26.existsSync(cards)) {
+        const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/).filter((row) => row.trim() && !row.startsWith("#")).map((row) => row.split("	")).filter((fields2) => fields2[0].trim() && Number(fields2[0]) === index);
+        if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error("conditioning_audio_unverified: ambiguous selected WAV in cards.tsv");
+        if (rows.length) choices.push(path39.resolve(work, rows[0][1]));
+      }
+      if (!choices.length) choices.push(direct ? sources[0] : path39.join(work, `c${index}-speech.wav`));
+      for (const file of new Set(choices)) {
+        if (!fs26.existsSync(file) || hash7(fs26.readFileSync(file)) !== driverSha256)
+          throw new Error("conditioning_audio_unverified: the selected WAV differs from the recorded video driver");
+      }
+      if (!direct) {
+        const composition = mixLines(lines, sources, timing);
+        if (hash7(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
+          throw new Error("conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver");
+      }
+      return choices[0];
+    }
     function compose(work, board) {
       work = path39.resolve(work);
       board = path39.resolve(board);
@@ -105255,26 +105339,7 @@ var require_compose_speech = __commonJS({
           sources.push(source);
         });
         const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
-        const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
-        lines.forEach((line, i2) => {
-          const pcm = execFileSync20("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
-          const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
-          for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
-        });
-        const wav = Buffer.alloc(44 + total * 2);
-        wav.write("RIFF");
-        wav.writeUInt32LE(36 + total * 2, 4);
-        wav.write("WAVEfmt ", 8);
-        wav.writeUInt32LE(16, 16);
-        wav.writeUInt16LE(1, 20);
-        wav.writeUInt16LE(1, 22);
-        wav.writeUInt32LE(48e3, 24);
-        wav.writeUInt32LE(96e3, 28);
-        wav.writeUInt16LE(2, 32);
-        wav.writeUInt16LE(16, 34);
-        wav.write("data", 36);
-        wav.writeUInt32LE(total * 2, 40);
-        mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
+        const wav = mixLines(lines, sources, timing);
         const output2 = path39.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
           fs26.writeFileSync(tmp, wav);
@@ -105291,7 +105356,7 @@ var require_compose_speech = __commonJS({
       if (outputs.length) fs26.writeFileSync(cards, rows.join("\n"));
       return outputs;
     }
-    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming };
+    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming, currentConditioningAudio };
     if (__require.main === module) {
       try {
         console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
@@ -147076,6 +147141,13 @@ function manageSpeech(args) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
+      const driverPath = driverSha256 && nodeModule7.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname11(file), {
+        index: scenes.indexOf(scene),
+        timingVersion: doc.performanceTimingVersion,
+        driverSha256,
+        audioPath: args.audioPath,
+        sceneAudioPath: owner?.videoDirection?.audio?.path
+      });
       const visual = object5(scene.visual);
       const video2 = object5(visual.video);
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
@@ -147117,7 +147189,7 @@ function manageSpeech(args) {
           videoPath,
           videoSha256,
           quality,
-          ...driverSha256 ? { conditioningAudioSha256: driverSha256 } : {},
+          ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",
             sourcePerformanceRevision: priorBinding.performanceRevision,

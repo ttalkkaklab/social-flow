@@ -33,7 +33,7 @@ function sceneSpeech(scene, cards, planning = false) {
     const staged = new Set([...spoken, ...(declared ?? []), ...(scene.videoDirection?.openingPositions ?? []).map(row => row.character)]);
     for (const card of cards) {
       for (const id of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id);
-      for (const item of [...(card.timeline?.images ?? []), ...(card.timeline?.openingPositions ?? []), ...(card.visual?.characterInputs ?? [])])
+      for (const item of [...(card.timeline?.images ?? []), ...(card.timeline?.openingPositions ?? []), ...(card.visual?.video?.openingPositions ?? []), ...(card.visual?.references ?? []), ...(card.visual?.characterInputs ?? [])])
         if (item.character) staged.add(item.character);
     }
     // Scene references can be declared before story_shot and shot_characters fill the cards.
@@ -128,7 +128,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     }
   }
   const originals = new Map();
-  if (engine === 'seedance' && scene.frames !== undefined) {
+  if (engine === 'seedance' && (scene.frames !== undefined || declaredRefs.length)) {
     for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
       if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
       if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
@@ -157,7 +157,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       throw new Error('scene_reference_owner: Seedance requires the registered face for ' + character);
     face = custom?.path ?? face ?? candidates[0]?.path;
 
-    if (face && !conditioning && (ltx || scene.frames !== undefined)) {
+    if (face && !conditioning && (ltx || scene.frames !== undefined || custom)) {
       if (registeredOwner(face) && registeredOwner(face) !== character)
         throw new Error('scene_reference_owner: ' + character + ' does not own ' + face);
       if (references.some(ref => canonical(ref.path) === canonical(face))) throw new Error('scene_reference_owner: two speakers share one face path');
@@ -170,14 +170,20 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   let openingRefs = [];
   const members = cards.map((card, index) => {
     const visual = card.visual || {};
-    const original = castIds(visual.character);
+    const original = castIds(visual.character ?? visual.characters);
     const active = [...new Set(orderedSpeech(card).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker))];
-    const localIds = new Set([...active, ...original, ...castIds(visual.bystanders), ...(card.timeline?.openingPositions ?? []).map(p => p.character)]);
-    const localRefs = perShot && speakers.length > 2 ? [
+    const positioned = [...(card.timeline?.openingPositions ?? []), ...(visual.video?.openingPositions ?? []),
+      ...(index === 0 ? scene.videoDirection?.openingPositions ?? [] : [])];
+    const localIds = new Set([...active, ...original, ...castIds(visual.bystanders),
+      ...positioned.filter(row => row.images?.length || declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
+      ...(visual.characterInputs ?? []).map(input => input.character),
+      ...(card.timeline?.images ?? []).map(pin => pin.character),
+      ...(visual.references ?? []).map(ref => ownerOf(ref,card))]);
+    const localRefs = perShot && identities.length > 2 ? [
       ...active.flatMap(id => references.filter(ref => ref.character === id)),
       ...references.filter(ref => !active.includes(ref.character) && localIds.has(ref.character))
     ] : references;
-    const useSceneRefs = (ltx || scene.frames !== undefined) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === 'mix');
+    const useSceneRefs = (ltx || scene.frames !== undefined || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === 'mix');
     const keep = ref => {
       const owner = registeredOwner(ref.path);
       if (owner && ref.character && owner !== ref.character) throw new Error('scene_reference_owner: conflicting owner for ' + ref.path);
@@ -200,13 +206,18 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     const slots = [...pins.filter(pin => !['start','end','keyframe','location','background'].includes(pin.role)),
       ...[...subjectRefs,...kept].filter(ref => ref.use !== 'image' && !['location','background'].includes(ref.role) && !pins.some(pin => pin.path === ref.path))];
     if (!index) openingRefs = slots;
+    const shotPositions = rows => {
+      const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter(row =>
+        declaredRefs.some(ref => ref.character === row.character) && !rows.some(local => local.character === row.character)) : [];
+      return positions([...rows,...inherited], slots);
+    };
     const timeline = card.timeline && {...card.timeline,
       ...(card.timeline.images ? {images:pins} : {}),
-      ...(card.timeline.openingPositions ? {openingPositions:positions(card.timeline.openingPositions, slots)} : {})};
-    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(visual.character !== undefined ? {character:original} : {}),
+      ...(card.timeline.openingPositions ? {openingPositions:shotPositions(card.timeline.openingPositions)} : {})};
+    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(visual.character !== undefined || visual.characters !== undefined ? {character:original} : {}),
       ...(visual.references || subjectRefs.length ? {references:[...subjectRefs,...kept]} : {}),
       ...(visual.characterInputs ? {characterInputs:visual.characterInputs} : {}),
-      ...(visual.video?.openingPositions ? {video:{...visual.video,openingPositions:positions(visual.video.openingPositions, slots)}} : {})};
+      ...(visual.video?.openingPositions ? {video:{...visual.video,openingPositions:shotPositions(visual.video.openingPositions)}} : {})};
     if (originals.size && updated.character?.length) {
       updated.characterInputs = updated.character.map(character => {
         const local = updated.characterInputs?.find(spec => spec.character === character) ?? {character};
@@ -234,6 +245,11 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};
   });
+  for (const ref of declaredRefs) {
+    const used = members.some(member => member.visual.references?.some(item => item.use !== 'image' &&
+      item.character === ref.character && canonical(item.path) === canonical(ref.path)));
+    if (!used) throw new Error('scene_reference_owner: no render binds the requested visual reference for ' + ref.character);
+  }
   const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(scene.videoDirection.openingPositions, openingRefs)};
   return {members, direction, speakers, identities};
 }

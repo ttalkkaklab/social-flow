@@ -55800,6 +55800,13 @@ function manageSpeech(args) {
         if (line.audio.generation.text !== line.tts || errors.length) throw new Error("Speech generation evidence changed: " + errors.join("; "));
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
+      const driverPath = driverSha256 && nodeModule4.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname6(file), {
+        index: scenes.indexOf(scene),
+        timingVersion: doc.performanceTimingVersion,
+        driverSha256,
+        audioPath: args.audioPath,
+        sceneAudioPath: owner?.videoDirection?.audio?.path
+      });
       const visual = object3(scene.visual);
       const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
@@ -55841,7 +55848,7 @@ function manageSpeech(args) {
           videoPath,
           videoSha256,
           quality,
-          ...driverSha256 ? { conditioningAudioSha256: driverSha256 } : {},
+          ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",
             sourcePerformanceRevision: priorBinding.performanceRevision,

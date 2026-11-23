@@ -392,6 +392,9 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
         if (line.audio.generation.text!==line.tts || errors.length) throw new Error('Speech generation evidence changed: '+errors.join('; '));
         return {lineId:line.id,sha256:line.audio.sha256,revision:line.audio.revision};
       });
+      const driverPath = driverSha256 && nodeModule.createRequire(import.meta.url)('../../skills/produce/references/compose-speech.js')
+        .currentConditioningAudio(scene, dirname(file), {index:scenes.indexOf(scene), timingVersion:doc.performanceTimingVersion,
+          driverSha256, audioPath:args.audioPath, sceneAudioPath:owner?.videoDirection?.audio?.path}) as string | undefined;
       const visual = object(scene.visual);
       const video = object(visual.video);
       if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model)) throw new Error('Adapter does not match the selected shot model');
@@ -426,7 +429,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
             note: 'The previous clip\'s trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack.' };
         }
         video.clip = args.videoPath;
-        video.speechBinding = {...plan,audio,videoPath,videoSha256,quality, ...(driverSha256 ? {conditioningAudioSha256:driverSha256} : {}),
+        video.speechBinding = {...plan,audio,videoPath,videoSha256,quality, ...(driverSha256 ? {conditioningAudioSha256:driverSha256, conditioningAudioPath:driverPath} : {}),
           ...(tailTrim ? {reuse:{kind:'tail_trim',sourcePerformanceRevision:priorBinding.performanceRevision,
             sourceDurationSeconds:priorBinding.durationSeconds, selectedDurationSeconds:plan.durationSeconds,
             review:'not_reviewed'}} : {})};

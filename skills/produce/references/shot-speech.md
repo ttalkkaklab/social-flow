@@ -326,8 +326,10 @@ Choose the production route from the selected adapter and the authored speech de
 
 For fresh audio-conditioned video, use the rendered soundtrack when audible. A silent
 render may use its original conditioning WAV when the completed generation receipt binds
-the exact WAV and video bytes. Keep the WAV on the original timeline. A changed line or
-delivery needs a new speaking take.
+the exact WAV and video bytes. Select that WAV in the card audio plan, or provide
+`audioPath` to `attach_video` before the card plan exists. Attachment verifies the
+selected takes and their timing against the driver, including both channels of a
+stereo export. A changed line or delivery needs a new speaking take.
 
 A native-speech shot has one physical speaker: on-screen speech moves that speaker's
 mouth and off-screen dialogue keeps the speaker unseen. Silent/inner-thought shots use

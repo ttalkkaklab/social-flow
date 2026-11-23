@@ -35,6 +35,70 @@ function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
   // provider's frame padding; the board's duration can still be a draft estimate.
   if (duration(audio)+0.03 < timing.durationSeconds) throw new Error('Silent scene audio is shorter than planned action timing');
 }
+function mixLines(lines, sources, timing) {
+  const {intervals} = timing;
+  // ffmpeg only decodes each take; the delay, sum and length are set here. An amix/apad graph hung
+  // or lost its padding on ffmpeg 8.0's threaded CLI (CI 2026-10-31, trac #11061).
+  const total=Math.round(timing.durationSeconds*48000),mix=new Int32Array(total);
+  lines.forEach((line,i)=>{
+    const pcm=execFileSync('ffmpeg',['-v','error','-i',sources[i],'-ac','1','-ar','48000','-f','s16le','-'],{timeout:120000,maxBuffer:1<<30});
+    const start=Math.round(intervals.find(item=>item.lineId===line.id).speechStartSeconds*48000);
+    for(let k=0;k<pcm.length>>1&&start+k<total;k++)mix[start+k]+=pcm.readInt16LE(k*2);
+  });
+  const wav=Buffer.alloc(44+total*2);
+  wav.write('RIFF');wav.writeUInt32LE(36+total*2,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);
+  wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(total*2,40);
+  mix.forEach((sample,k)=>wav.writeInt16LE(Math.max(-32768,Math.min(32767,sample)),44+k*2));
+  return wav;
+}
+
+// The uploaded WAV may have a different header or the stereo layout the adapter requires.
+// Compare every channel from sample zero. Only trailing digital silence may extend the take.
+function samePerformanceWav(file, mono) {
+  const probe = JSON.parse(execFileSync('ffprobe', ['-v','error','-show_entries','stream=codec_name,sample_rate,channels:format=format_name','-of','json',file], {encoding:'utf8'}));
+  const stream = probe.streams[0];
+  if (probe.format?.format_name !== 'wav' || probe.streams.length !== 1 || stream.codec_name !== 'pcm_s16le' ||
+      Number(stream.sample_rate) !== 48000 || ![1,2].includes(stream.channels)) return false;
+  const options = {timeout:120000,maxBuffer:1<<30};
+  const actual = execFileSync('ffmpeg',['-v','error','-i',file,'-f','s16le','-'],options);
+  const matches = expected => expected.length > 0 && actual.length >= expected.length &&
+    actual.subarray(0,expected.length).equals(expected) && actual.subarray(expected.length).every(sample => sample === 0);
+  if (stream.channels === 1) return matches(mono.subarray(44));
+  for (const layout of [['-ac','2'], ['-af','pan=stereo|FL=c0|FR=c0']]) {
+    const stereo = execFileSync('ffmpeg',['-v','error','-f','wav','-i','pipe:0',...layout,'-f','s16le','-'],{...options,input:mono});
+    if (matches(stereo)) return true;
+  }
+  return false;
+}
+
+function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath}) {
+  const lines = (scene.narration || []).filter(line => line.tts?.trim());
+  const sources = lines.map(line => path.resolve(board, line.audio.path));
+  const timing = sceneTiming(scene, board, timingVersion);
+  const interval = timing.intervals[0];
+  const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 &&
+    interval.speechEndSeconds === timing.durationSeconds && hash(fs.readFileSync(sources[0])) === driverSha256;
+  const work = path.resolve(board, '../.work'), cards = path.join(work, 'cards.tsv');
+  const choices = [audioPath, sceneAudioPath].filter(Boolean).map(file => path.resolve(board, file));
+  if (fs.existsSync(cards)) {
+    const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/).filter(row => row.trim() && !row.startsWith('#'))
+      .map(row => row.split('\t')).filter(fields => fields[0].trim() && Number(fields[0]) === index);
+    if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error('conditioning_audio_unverified: ambiguous selected WAV in cards.tsv');
+    if (rows.length) choices.push(path.resolve(work, rows[0][1]));
+  }
+  if (!choices.length) choices.push(direct ? sources[0] : path.join(work, `c${index}-speech.wav`));
+  for (const file of new Set(choices)) {
+    if (!fs.existsSync(file) || hash(fs.readFileSync(file)) !== driverSha256)
+      throw new Error('conditioning_audio_unverified: the selected WAV differs from the recorded video driver');
+  }
+  if (!direct) {
+    const composition = mixLines(lines, sources, timing);
+    if (hash(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
+      throw new Error('conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver');
+  }
+  return choices[0];
+}
+
 function compose(work,board) {
   work=path.resolve(work);board=path.resolve(board);
   const file=path.join(board,'scenes.js'),win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
@@ -61,18 +125,7 @@ function compose(work,board) {
       sources.push(source);
     });
     const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion),intervals=timing.intervals;
-    // ffmpeg only decodes each take; the delay, sum and length are set here. An amix/apad graph hung
-    // or lost its padding on ffmpeg 8.0's threaded CLI (CI 2026-10-31, trac #11061).
-    const total=Math.round(timing.durationSeconds*48000),mix=new Int32Array(total);
-    lines.forEach((line,i)=>{
-      const pcm=execFileSync('ffmpeg',['-v','error','-i',sources[i],'-ac','1','-ar','48000','-f','s16le','-'],{timeout:120000,maxBuffer:1<<30});
-      const start=Math.round(intervals.find(item=>item.lineId===line.id).speechStartSeconds*48000);
-      for(let k=0;k<pcm.length>>1&&start+k<total;k++)mix[start+k]+=pcm.readInt16LE(k*2);
-    });
-    const wav=Buffer.alloc(44+total*2);
-    wav.write('RIFF');wav.writeUInt32LE(36+total*2,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);
-    wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(total*2,40);
-    mix.forEach((sample,k)=>wav.writeInt16LE(Math.max(-32768,Math.min(32767,sample)),44+k*2));
+    const wav = mixLines(lines, sources, timing);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
     try {fs.writeFileSync(tmp,wav);fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}
     const receipt={generator:'speech_compose',audioSha256:hash(fs.readFileSync(output)),lineIds:lines.map(n=>n.id),lineSources:lineSources(lines),expectedText:lines.map(n=>n.tts).join('. '),durationSeconds:duration(output),intervals,timing:timing.timing,warnings:timing.warnings,status:'not_reviewed'};
@@ -82,5 +135,5 @@ function compose(work,board) {
   if(outputs.length)fs.writeFileSync(cards,rows.join('\n'));
   return outputs;
 }
-module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming};
+module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio};
 if(require.main===module){try{console.log(JSON.stringify(compose(process.argv[2],process.argv[3]),null,2));}catch(e){console.error(e.message);process.exitCode=1;}}
