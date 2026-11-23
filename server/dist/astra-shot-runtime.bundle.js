@@ -55346,7 +55346,8 @@ function manageSpeech(args, options = {}) {
       const bytes = readFileSync8(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash2(bytes);
-      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan);
+      const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
+      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
       for (const card of scenes) {
         const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;

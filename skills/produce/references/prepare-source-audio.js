@@ -9,7 +9,8 @@ const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const speechSpan = require('../../_shared/speech-span.js');
 
 function checkAssemblyRoutes(win,board) {
-  const {assertNoPostLipSync,assertVideoSpeechProvenance} = require('../../_shared/speech-contract.js');
+  const {assertNoPostLipSync,assertVideoSpeechProvenance,episodeVideoReceipts} = require('../../_shared/speech-contract.js');
+  const receipts = episodeVideoReceipts(win.SCENES ?? [],board);
   for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync(scene.videoDirection);
   for (const shot of win.SCENES ?? []) {
     const video = shot.visual?.video ?? {};
@@ -17,11 +18,11 @@ function checkAssemblyRoutes(win,board) {
       postLipSync:video.postLipSync, post_lipsync:video.post_lipsync, capabilities:video.capabilities, speechBinding:video.speechBinding,
       soundtrackRepair:video.soundtrackRepair, reuse:shot.visual?.reuse, sound:shot.sound});
     for (const file of new Set([video.clip, video.speechBinding?.videoPath, video.soundtrackRepair?.videoPath])) {
-      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,video.speechBinding);
+      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,video.speechBinding,receipts);
     }
     for (const source of video.soundtrackRepair?.sources ?? []) {
       if (source.kind === 'native_video' && typeof source.path === 'string')
-        assertVideoSpeechProvenance(path.resolve(board,source.path),null);
+        assertVideoSpeechProvenance(path.resolve(board,source.path),null,{},receipts);
     }
   }
 }

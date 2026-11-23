@@ -299,10 +299,10 @@ test('native performances own their source intervals across attachment and archi
    const binding=shot.visual.video.speechBinding;
    shot.visual.video.speechBinding=Object.fromEntries(['mode','provider','model','videoPath','videoSha256','audio'].map(k=>[k,binding[k]]));
  }
- const stage=()=>{
-   save(archive);
-   writeFileSync(join(work,'cards.tsv'),archive.SCENES.map((_,i)=>[i,'placeholder.wav',0,'none'].join('\t')).join('\n')+'\n');
-   writeFileSync(join(work,'segs.tsv'),archive.SCENES.map((shot,i)=>[i,0,shot.visual.video.clip,shot.narration[0].tts,shot.narration[0].tts].join('\t')).join('\n')+'\n');
+ const stage=(doc=archive,output=work)=>{
+   save(doc);
+   writeFileSync(join(output,'cards.tsv'),doc.SCENES.map((_,i)=>[i,'placeholder.wav',0,'none'].join('\t')).join('\n')+'\n');
+   writeFileSync(join(output,'segs.tsv'),doc.SCENES.map((shot,i)=>[i,0,shot.visual.video.clip,shot.narration[0].tts,shot.narration[0].tts].join('\t')).join('\n')+'\n');
  };
  const check=()=>{
    require('../../skills/produce/references/prepare-source-audio.js').prepare(work,target);
@@ -311,8 +311,8 @@ test('native performances own their source intervals across attachment and archi
  stage();assert.ok(check()[copy]);
  archive.SCENES[1].edit={in:1/12,out:5/24};
  stage();
- const build=()=>spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
-   {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.125',SUB:'0'}});
+ const build=(output=work)=>spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),output,target],
+   {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
  await t.test('archived overlapping source frames prevent a reel build',()=>{
    const conflict=build();
    assert.notEqual(conflict.status,0);
@@ -327,10 +327,81 @@ test('native performances own their source intervals across attachment and archi
    assert.notEqual(historicallySynced.status,0);
    assert.match(historicallySynced.stderr,/post_lipsync_forbidden/);
  });
+ const oneShot=structuredClone(archive);
+ oneShot.SCENES=oneShot.SCENES.slice(0,1);
+ oneShot.STRUCTURE.scenes[0].speakers=['hero'];
+ for(const [label,alias] of [['byte copy',copy],['metadata remux',rewrapped]]){
+   await t.test('the original post lip sync receipt prevents attaching its '+label,async()=>{
+     save(oneShot);
+     const original=readFileSync(file);
+     await assert.rejects(attach('s0001',alias),/post_lipsync_forbidden/);
+     assert.deepEqual(readFileSync(file),original);
+   });
+   await t.test('an archived board with only the '+label+' still checks its source receipt',()=>{
+     const archivedCopy=structuredClone(oneShot),shot=archivedCopy.SCENES[0];
+     shot.visual.video.clip=alias;
+     shot.visual.video.speechBinding.videoPath=alias;
+     shot.visual.video.speechBinding.videoSha256=createHash('sha256').update(readFileSync(alias)).digest('hex');
+     shot.productionPlan.cuts[0].path=path.relative(target,alias);
+     const output=join(work,path.basename(alias,'.mp4'));mkdirSync(output);
+     stage(archivedCopy,output);
+     assert.ok(!readFileSync(file,'utf8').includes(path.basename(first)));
+     const rejected=build(output);
+     assert.notEqual(rejected.status,0);
+     assert.match(rejected.stderr,/post_lipsync_forbidden/);
+   });
+ }
+ await t.test('a fresh take can replace the old take while its original receipt remains',async()=>{
+   save(oneShot);
+   assert.equal((await attach('s0001',second)).changed,true);
+   assert.equal(read().SCENES[0].visual.video.clip,second);
+   save(oneShot);
+   const oldBytes=readFileSync(first);
+   try {
+     writeFileSync(first,readFileSync(second));
+     assert.equal((await attach('s0001',first)).changed,true);
+     assert.equal(read().SCENES[0].visual.video.speechBinding.videoSha256,createHash('sha256').update(readFileSync(second)).digest('hex'));
+   } finally { writeFileSync(first,oldBytes); }
+ });
+ stage();
  rmSync(first+'.astra-genai.json');
  const rebuilt=build();
  assert.equal(rebuilt.status,0,rebuilt.stderr);
  assert.ok(readFileSync(join(work,'reel.mp4')).length);
+});
+test('public A2V binding keeps the original driver for a line when its words stay the same',async t=>{
+ const {dir,target,r}=setup(t);setupProject(dir);
+ const file=join(target,'scenes.js'),line=r.lines[0];
+ const board=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ board.SCENES=[board.SCENES[0]];
+ board.PRODUCTION={videoModel:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'audio'}};
+ writeFileSync(file,Object.entries(board).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const first=join(dir,'first.wav'),retake=join(dir,'retake.wav');
+ for(const [i,audio] of [first,retake].entries())
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency='+[440,990][i]+':sample_rate=48000:duration=0.25','-c:a','pcm_s16le',audio]);
+ const original=join(dir,'dialogue.mov'),remux=join(dir,'lossless-remux.mov'),overdub=join(dir,'different-driver.mov');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=blue:s=16x16:r=24:d=0.25','-i',first,'-map','0:v','-map','1:a','-c:v','libx264','-c:a','copy',original]);
+ execFileSync('ffmpeg',['-v','error','-i',original,'-map','0','-c','copy','-metadata','title=Same performance',remux]);
+ execFileSync('ffmpeg',['-v','error','-i',original,'-i',retake,'-map','0:v','-map','1:a','-c','copy',overdub]);
+ const call=async input=>JSON.parse((await ROUTES.speech_manage({path:target,
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision,...input})).content[0].text);
+ const record=audioPath=>call({action:'attach_audio',lineId:line.id,audioPath,
+   generation:{generator:'tts_generate',text:line.tts,language:'ko',voiceSettings:{voiceName:'Kore',speed:1}}});
+ const bind=videoPath=>call({action:'attach_video',shotId:line.shotId,videoPath});
+ await record(first);
+ assert.equal((await bind(original)).plan.mode,'audio_conditioned');
+ assert.notDeepEqual(readFileSync(original),readFileSync(remux));
+ assert.equal((await bind(remux)).changed,true);
+ const unchanged=readFileSync(file);
+ await t.test('the same driver label cannot replace the audio on the bound picture',async()=>{
+   await assert.rejects(bind(overdub),/speech_video_performance_conflict/);
+   assert.deepEqual(readFileSync(file),unchanged);
+ });
+ writeFileSync(file,unchanged);
+ const changed=await record(retake);assert.ok(changed.invalidated.video);
+ const stale=readFileSync(file);
+ await assert.rejects(bind(overdub),/speech_video_performance_conflict/);
+ assert.deepEqual(readFileSync(file),stale);
 });
 test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');

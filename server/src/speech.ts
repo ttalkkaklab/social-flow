@@ -68,7 +68,8 @@ const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex'
 const object = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const speechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-contract.js') as {
   assertNoPostLipSync(value: unknown): void; hasPostLipSync(value: unknown): boolean;
-  assertVideoSpeechProvenance(file:string, sha256:string, plan:unknown):void;
+  episodeVideoReceipts(shots:unknown[],board:string,input:string):unknown;
+  assertVideoSpeechProvenance(file:string, sha256:string, plan:unknown, receipts:unknown):void;
   videoPerformanceSource(file:string, silentConditioned:boolean):{picture:string;audio?:string};
   assertVideoPerformanceOwnership(shots:unknown[], boardDir:string, candidate:unknown):void;
 };
@@ -382,7 +383,8 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
       const bytes = readFileSync(videoPath);
       if (!bytes.length) throw new Error('Video file is empty');
       const videoSha256 = hash(bytes);
-      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan);
+      const receipts = speechContract().episodeVideoReceipts(scenes,dirname(file),videoPath);
+      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
       for (const card of scenes) {
         const video = object(card.visual?.video), binding = object(video.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
