@@ -212,7 +212,7 @@ export const shotIdSchema = z.string().regex(/^s\d{4,}$/);
 export const shotSchema = z
     .object({
     id: shotIdSchema.optional(),
-    referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+    referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
     timeline: shotTimelineSchema.optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
@@ -352,6 +352,7 @@ function boardReadiness(win, boardDir) {
         return { characterId: c.id, slot, path: file, file: present ? 'present' : 'missing', decoding, visualReview: 'not_reviewed' };
     }));
     return { configuration, assets, references: { status: !channel ? 'not_checked' : findings.length ? 'needs_attention' : 'checked', findings },
+        shotImageGaps: contract().imageGaps(win, undefined, file => existsSync(resolve(boardDir, file))),
         visualReview: 'not_reviewed', note: 'Diagnostics only; no overall production-ready or visual-quality claim.' };
 }
 /** Editorial evidence, not a cut classifier. Keep every playback join for the author's judgment. */
@@ -1363,7 +1364,7 @@ export const storyShotSchema = z.object({
         id: shotIdSchema.optional().describe('Revise this shot; without it a new shot is added at the end of its scene'),
         scene: z.number().int().positive().describe('The scene number — written first with story_scene'),
         summary: nonEmpty.describe('The story this shot tells, in one sentence'),
-        referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+        referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
         duration: z.number().finite().positive().optional().describe('Target seconds for a model-paced shot. Use timeline instead for exact frame boundaries.'),
         timeline: shotTimelineSchema.optional(),
     }).strict().refine(card => card.duration === undefined || !card.timeline, 'Choose duration or an exact timeline')).min(1),
@@ -2912,7 +2913,7 @@ export function writeShotPrompt(args) {
     const { win, st } = readOutline(args.path);
     const gaps = contract().imageGaps(win);
     if (gaps.length)
-        throw new Error('story_order: make every shot\'s start image, and the end image a first_last plan needs, with shot_image first — ' + gaps.join('; '));
+        throw new Error('story_order: attach every shot image and any required closing image with shot_image before shot_prompt — ' + gaps.join('; '));
     const shots = (win.SCENES ?? []).slice();
     const index = shotIndex(shots, args.id, 'shot_prompt');
     const shot = shots[index], plan = (shot.shot ?? {}), visual = (shot.visual ?? {});

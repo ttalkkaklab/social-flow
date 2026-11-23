@@ -140,7 +140,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
         for (const ref of references)
             if (!claimed.has(ref))
                 add({ path: ref.path, role: ref.scope === 'scene' && ref.id.endsWith('-face') ? 'face' : ref.role, frame: startFrame, reference: ref, ...((ref.character || ownerOf(ref.path)) ? { character: ref.character || ownerOf(ref.path) } : {}) });
-        if (member.referenceImage) {
+        if (member.referenceImage && !pins.some(pin => pin.role === 'start' && pin.frame === startFrame && pin.path === member.referenceImage)) {
             // Distilled I2V accepts a background alongside at least one subject.
             const subjectMissing = guideMode === 'background' && !references.some(ref => !['background', 'location'].includes(ref.role));
             const occupied = guideMode === 'background' && references.some(ref => ['background', 'location'].includes(ref.role));

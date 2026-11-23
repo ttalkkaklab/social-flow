@@ -31,6 +31,7 @@ import { recordVideoSubmission, videoEvents } from './video-events.js';
 import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects, type ImageBinding } from './video-image-inputs.js';
+import { readImageMetadata } from './image-media.js';
 import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice, type ScenePromptProfile } from './scene-prompt-profile.js';
 import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
@@ -43,6 +44,7 @@ import { checkDesktopOffering, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
 const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings.js', import.meta.url));
+const structurePath = fileURLToPath(new URL('../../skills/storyboard/references/structure-contract.js', import.meta.url));
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string; operation?: string }
@@ -347,6 +349,18 @@ function resolvePlanContext(input: PlanInput) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context = routingContext(input.episode, undefined, input.sceneNo);
   requireSupportedSelection(context.selection);
+  const structure = load(structurePath) as {
+    imageGaps(board: Context['board'], sceneNo: number, available: (file: string) => boolean): string[];
+  };
+  const gaps = structure.imageGaps(context.board, input.sceneNo, file => {
+    try {
+      readImageMetadata(path.resolve(context.episode, 'storyboard', file));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (gaps.length) throw new Error('shot_image_required: attach every shot image before video_plan — ' + gaps.join('; '));
   if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context.selection.engine)
     throw new Error('model_selection_mismatch: tool does not match selected engine');
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)

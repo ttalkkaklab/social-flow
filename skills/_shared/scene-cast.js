@@ -168,7 +168,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = fa
         delete updated.video.referenceImagePaths;
       }
       if (timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
-        throw new Error('scene_image_scope: scene anchors and optional shot guides replace temporal pins on ' + card.id);
+        throw new Error('scene_image_scope: use a scene anchor or an authored shot composition image for ' + card.id);
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};
   });

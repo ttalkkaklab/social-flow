@@ -1491,7 +1491,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(owner.frames,{});
     assert.equal(owner.videoOpeningSha256,undefined);
   });
-  it('scene anchors and the optional shot reference are stored separately and image-only extras stay out of video', () => {
+  it('scene anchors cover the first card only and image-only extras stay out of video', () => {
     const {root,dir} = pictureBoard();
     castFile(dir,['mina','friend'],{root:join(root,'data/c')});
     const input = { sequence:'q1', no:1, place:'Room',time:'Night',event:'Meeting',summary:'Two people meet.' };
@@ -1499,7 +1499,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     icons(dir);
     const snapshot = () => readBoard(dir).win;
     const first = 's0001', last = 's0002';
-    assert.deepEqual(createRequire(import.meta.url)('../../skills/storyboard/references/structure-contract.js').imageGaps(snapshot()),[]);
+    const {imageGaps}=createRequire(import.meta.url)('../../skills/storyboard/references/structure-contract.js');
+    assert.deepEqual(imageGaps(snapshot()),['shot s0001 has no shot image','shot s0002 has no shot image']);
     assert.throws(()=>make(dir,last,'start',{role:'scene_start'}),/first card/);
     assert.throws(()=>make(dir,first,'start',{role:'shot_reference',bystanders:['mina']}),/scope/);
     const independentEnd = make(dir,last,'end',{role:'scene_end',location:'room'});
@@ -1507,6 +1508,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.doesNotMatch(independentEnd.prompt,/opens on Image 1|Image 1 supplies the opening/);
     const opening = make(dir,first,'start',{role:'scene_start',bystanders:['friend']});
     assert.ok(opening.inputs.some(file=>file.includes('/characters/friend/')));
+    assert.deepEqual(imageGaps(snapshot()),['shot s0002 has no shot image']);
     writeShotCharacters({path:dir,shots:[{id:last,characters:['mina','friend']}]});
     for (const generated of [make(dir,last,'start',{role:'shot_reference'}),make(dir,last,'end',{role:'scene_end'})])
       assert.ok(generated.inputs.every(file=>!file.includes('/characters/friend/')));
@@ -1514,6 +1516,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const board=snapshot(), frames=board.STRUCTURE.scenes[0].frames;
     assert.match(frames.start,/scene_start/); assert.match(frames.end,/scene_end/);
     assert.match(board.SCENES[1].referenceImage,/shot_reference/);
+    assert.deepEqual(imageGaps(board),[]);
     assert.ok(board.SCENES.every(card=>!card.visual.frames?.start && !card.visual.frames?.end));
     const direction = {openingPositions:[],emotion:'Hope returns.'};
     writeStoryScenes({path:dir,scenes:[{...input,videoDirection:direction}]});

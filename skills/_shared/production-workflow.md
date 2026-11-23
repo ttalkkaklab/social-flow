@@ -61,15 +61,15 @@ input validation stay. Work in this order:
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before
    `shot_image` selects its matching panel (front by default).
-6. Generate the scene's chosen opening and ending images from the first and last cards using `shot_image.role` values `scene_start` and `scene_end`. Optionally compose one `shot_reference` per card. A still-camera shot keeps its own source image.
+6. Generate the scene's chosen opening and ending images from the first and last cards using `shot_image.role` values `scene_start` and `scene_end`. Attach one composition image to every generated shot. The scene opening covers its first card. Use `shot_reference` for every card that needs its own image. A still-camera shot uses its own source image.
 7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
-8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. Replan the complete scene after a shot correction.
+8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. The planner reports missing or unreadable shot images as `shot_image_required` and reports composition images the selected operation omits. Replan the complete scene after a shot correction.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
    and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
-every shot's icon attributes, and `shot_prompt` for every picture shot's start image (and
+every shot's icon attributes, and `shot_prompt` for every picture shot's image (and
 the end image a `first_last` plan needs).
 
 The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an

@@ -593,6 +593,8 @@ test('storyboard timing follows snapshot, scoped overrides, source trim and outg
   const f = fixture(t, { engine: 'astra-genai', model: 'ltx-2.5-22b-distilled', resolution: '1792x1024', operation: 'reference' });
   f.board.SCENES[0].narration = [{ id: 'l1', speaker: 'hero', delivery: 'on_screen', tts: 'Hello' }];
   Object.assign(f.board.SCENES[0], { duration: 14, edit: { in: .5 }, shot: { render: { mode: 'generated_video' } } });
+  f.board.SCENES[0].visual.bg = 'opening.png';
+  fs.writeFileSync(path.join(f.episode,'storyboard','opening.png'),png);
   f.board.SCENES[1].transition = 'dissolve';
   f.save();
   const fit = readShotVideoTiming(f.episode, 's1');
@@ -1757,14 +1759,14 @@ test('one Seedance scene binds the original on each speaking card, including the
   assert.deepEqual(plan.args.referenceImagePaths.map(file=>path.basename(file)),['front.png','front.png','guide.png']);
   assert.deepEqual(plan.characterBindings.filter(item=>item.role==='face').map(item=>[item.character,item.taskId]),[['ada','cgt-ada'],['bo','cgt-bo']]);
 });
-test('scene submission distinguishes soft shot references, temporal endpoints and omitted optional inputs', t => {
+test('scene submission requires shot images and distinguishes soft references from temporal endpoints', t => {
   const f = fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'480p'});
   const dir = path.join(f.episode,'storyboard');
   const scene = {no:1,speakers:[],frames:{},videoDirection:{openingPositions:[],emotion:'The rider relaxes.',action:'The blue bike rounds a bend.'}};
   f.board.STRUCTURE = {scenes:[scene]};
   const input = {episode:f.episode,sceneNo:1,requestId:'whole-scene'};
   for (const [i,card] of f.board.SCENES.entries()) {
-    card.scene = 1; card.duration = 2; card.shot = {size:'ms',angle:'eye'};
+    card.scene = 1; card.duration = 2; card.shot = {size:'ms',angle:'eye',render:{mode:'generated_video'}};
     card.visual = {video:{promptSource:{action:i ? 'The wheels clear the bend.' : 'The rider grips the bars.'}}};
     card.referenceImage = 'guide'+i+'.png';
     if (i === 0) card.transition = 'dip'; // The incoming scene edit precedes the first frame of this request.
@@ -1784,11 +1786,27 @@ test('scene submission distinguishes soft shot references, temporal endpoints an
   assert.throws(()=>planVideo({...input,args:{referenceImagePaths:['guide0.png']}}), /scene_image_scope/);
   scene.frames = {start:'guide1.png',end:'guide0.png'};
   f.board.SCENES[0].visual.frames = {mode:'first',start:'obsolete.png'};
+  delete f.board.SCENES[0].referenceImage;
+  delete f.board.SCENES[1].referenceImage;
+  f.save();
+  assert.throws(()=>planVideo(input,false), /shot_image_required:.*shot s2 has no shot image/);
+  f.board.SCENES[1].referenceImage = 'corrupted.png';
+  fs.writeFileSync(path.join(dir,'corrupted.png'),'not a picture');
+  f.save();
+  assert.throws(()=>planVideo(input,false), /shot_image_required:.*shot s2 has an unreadable shot image/);
+  f.board.SCENES[1].referenceImage = 'later.png';
+  fs.copyFileSync(path.join(dir,'guide0.png'),path.join(dir,'later.png'));
   f.save();
   const anchored = planVideo({...input,requestId:'anchored'},false);
   assert.equal(anchored.tool,'seedance_img2video');
   assert.deepEqual(anchored.sceneRequest.images.map(image=>[image.role,image.frame]),[['start',0],['end',95]]);
-  assert.ok(anchored.sceneRequest.shotReferenceImages.every(g=>!g.submitted && g.reason));
+  const [guide] = anchored.sceneRequest.shotReferenceImages;
+  assert.equal(guide.shotId,'s2');
+  assert.equal(guide.submitted,false);
+  assert.ok(guide.reason);
+  f.board.SCENES[0].referenceImage = scene.frames.start;
+  f.save();
+  assert.deepEqual(planVideo(input,false).sceneRequest.shotReferenceImages.map(g=>g.shotId),['s2']);
   assert.equal(anchored.args.referenceImagePaths,undefined);
   for (const [index,id] of ['ada','bo','cy'].entries()) {
     const card = f.board.SCENES[index % 2];

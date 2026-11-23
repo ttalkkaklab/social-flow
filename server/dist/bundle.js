@@ -121535,7 +121535,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     }
     for (const ref of references) if (!claimed.has(ref))
       add({ path: ref.path, role: ref.scope === "scene" && ref.id.endsWith("-face") ? "face" : ref.role, frame: startFrame, reference: ref, ...ref.character || ownerOf(ref.path) ? { character: ref.character || ownerOf(ref.path) } : {} });
-    if (member.referenceImage) {
+    if (member.referenceImage && !pins.some((pin) => pin.role === "start" && pin.frame === startFrame && pin.path === member.referenceImage)) {
       const subjectMissing = guideMode === "background" && !references.some((ref) => !["background", "location"].includes(ref.role));
       const occupied2 = guideMode === "background" && references.some((ref) => ["background", "location"].includes(ref.role));
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
@@ -122708,6 +122708,7 @@ function seedanceBindings(episode, members, args, inputs2, images = [], voice, s
 var load7 = createRequire12(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath7(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var structurePath = fileURLToPath7(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 function routingContext(episode, shotId, sceneNo, selectionOnly) {
   const reader = load7(shared2);
@@ -122994,6 +122995,16 @@ function resolvePlanContext(input) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, void 0, input.sceneNo);
   requireSupportedSelection(context2.selection);
+  const structure = load7(structurePath);
+  const gaps = structure.imageGaps(context2.board, input.sceneNo, (file) => {
+    try {
+      readImageMetadata(path26.resolve(context2.episode, "storyboard", file));
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  if (gaps.length) throw new Error("shot_image_required: attach every shot image before video_plan \u2014 " + gaps.join("; "));
   if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context2.selection.engine)
     throw new Error("model_selection_mismatch: tool does not match selected engine");
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
@@ -124611,7 +124622,7 @@ var visualSchema = external_exports.object({
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
-  referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+  referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
   timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
@@ -124766,6 +124777,7 @@ function boardReadiness(win, boardDir) {
     configuration,
     assets,
     references: { status: !channel ? "not_checked" : findings.length ? "needs_attention" : "checked", findings },
+    shotImageGaps: contract().imageGaps(win, void 0, (file) => existsSync26(resolve6(boardDir, file))),
     visualReview: "not_reviewed",
     note: "Diagnostics only; no overall production-ready or visual-quality claim."
   };
@@ -125684,7 +125696,7 @@ var storyShotSchema = external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
     summary: nonEmpty.describe("The story this shot tells, in one sentence"),
-    referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+    referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
     duration: external_exports.number().finite().positive().optional().describe("Target seconds for a model-paced shot. Use timeline instead for exact frame boundaries."),
     timeline: shotTimelineSchema.optional()
   }).strict().refine((card) => card.duration === void 0 || !card.timeline, "Choose duration or an exact timeline")).min(1)
@@ -127073,7 +127085,7 @@ var shotPromptSchema = external_exports.object({
 function writeShotPrompt(args) {
   const { win, st } = readOutline(args.path);
   const gaps = contract().imageGaps(win);
-  if (gaps.length) throw new Error("story_order: make every shot's start image, and the end image a first_last plan needs, with shot_image first \u2014 " + gaps.join("; "));
+  if (gaps.length) throw new Error("story_order: attach every shot image and any required closing image with shot_image before shot_prompt \u2014 " + gaps.join("; "));
   const shots = (win.SCENES ?? []).slice();
   const index = shotIndex(shots, args.id, "shot_prompt");
   const shot = shots[index], plan2 = shot.shot ?? {}, visual = shot.visual ?? {};
@@ -136368,7 +136380,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         }, required: ["x", "y", "width", "height"] },
         preserve: { type: "string", description: "Details to preserve during editExisting, e.g. Keep the navy blazer." },
         location: { type: "string", description: "SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start's place (refused there)" },
-        role: { type: "string", enum: ["shot_reference", "scene_start", "scene_end"], description: "One optional guide per shot, or the whole scene opening/ending from its first/last card." },
+        role: { type: "string", enum: ["shot_reference", "scene_start", "scene_end"], description: "Shot composition image, or the scene opening/ending from its first/last card. The opening also covers the first shot." },
         bystanders: { type: "array", uniqueItems: true, items: { type: "string" }, description: "Additional cast IDs visible in the opening image. Their portraits condition only this still." },
         props: { type: "array", items: { type: "string" }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
         size: { type: "string", pattern: "^\\d{3,4}x\\d{3,4}$", description: "Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning" },
@@ -136383,7 +136395,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, each character's expression from shot_characters (held to the last frame unless your action changes it), and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
 
-Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its start image or a first_last shot its end image, and for a cut that is not generated_video.
+Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its image or a first_last shot its end image, and for a cut that is not generated_video.
 
 For MSR on-screen dialogue, keep one speaking character per shot. Inspect the start image and pass speakerBindings for that speaker: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. Two people may be visible, but the listener stays silent. Purposeful off_screen speech preserves the authored detail, listener or space view; do not add a speaking face to satisfy a binding.
 
@@ -136614,7 +136626,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs its storyboard image (shot_image_required). The first card may use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },

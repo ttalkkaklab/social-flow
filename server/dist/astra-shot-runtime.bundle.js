@@ -53987,7 +53987,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     }
     for (const ref of references) if (!claimed.has(ref))
       add({ path: ref.path, role: ref.scope === "scene" && ref.id.endsWith("-face") ? "face" : ref.role, frame: startFrame, reference: ref, ...ref.character || ownerOf(ref.path) ? { character: ref.character || ownerOf(ref.path) } : {} });
-    if (member.referenceImage) {
+    if (member.referenceImage && !pins.some((pin) => pin.role === "start" && pin.frame === startFrame && pin.path === member.referenceImage)) {
       const subjectMissing = guideMode === "background" && !references.some((ref) => !["background", "location"].includes(ref.role));
       const occupied2 = guideMode === "background" && references.some((ref) => ["background", "location"].includes(ref.role));
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
@@ -54393,6 +54393,7 @@ var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_
 var load6 = createRequire8(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
 function routingContext(episode, shotId, sceneNo, selectionOnly) {
   const reader = load6(shared);
   try {
@@ -54926,7 +54927,7 @@ var visualSchema = external_exports.object({
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
-  referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+  referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
   timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
@@ -55203,7 +55204,7 @@ var storyShotSchema = external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
     summary: nonEmpty.describe("The story this shot tells, in one sentence"),
-    referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+    referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
     duration: external_exports.number().finite().positive().optional().describe("Target seconds for a model-paced shot. Use timeline instead for exact frame boundaries."),
     timeline: shotTimelineSchema.optional()
   }).strict().refine((card) => card.duration === void 0 || !card.timeline, "Choose duration or an exact timeline")).min(1)

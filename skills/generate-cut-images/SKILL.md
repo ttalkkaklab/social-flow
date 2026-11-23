@@ -1,7 +1,7 @@
 ---
 name: generate-cut-images
 description: >
-  Makes scene openings, endings and optional shot reference images, from its characters' sheet panels, place and props; stops before the video prompt. Use when images are requested or the episode order reaches them.
+  Makes and attaches an image for each picture shot. Stops before video. Uses the character sheets, place and props to compose shot images and scene endpoints. Use when images are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
 allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
@@ -15,7 +15,7 @@ handing it to video prompting. Correct the plan first if the intended coverage c
 
 Step 6 of [the production order](../_shared/production-workflow.md) (user directive
 2026-10-31): after every shot has its icon attributes and the props and backgrounds exist,
-compose the chosen scene anchors with `shot_image`: set `role:"scene_start"` on its first card and `role:"scene_end"` on its last. Include silent cast as `bystanders` on the opening. Use `role:"shot_reference"` for an optional composition guide. A still-camera card keeps its source image. Older boards with per-shot frame plans can still be read. Read [still generation](../produce/references/still-generation.md)
+compose the chosen scene anchors with `shot_image`: set `role:"scene_start"` on its first card and `role:"scene_end"` on its last. Include silent cast as `bystanders` on the opening. The scene opening covers its first card. Attach a composition image with `role:"shot_reference"` to every other generated shot. If there is no scene opening, attach an image to the first card too. A still-camera card uses its own source image. Older boards may keep their per-shot frame plans. Check `storyboard_read.readiness.shotImageGaps` and inspect all shot cards before delivery. Read [still generation](../produce/references/still-generation.md)
 and [image routing](../_shared/image-routing.md).
 
 For each shot, read its story, characters, lines and icon attributes with `storyboard_read`
