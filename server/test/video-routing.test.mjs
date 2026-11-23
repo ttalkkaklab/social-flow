@@ -1821,7 +1821,7 @@ test('model-paced MSR scenes keep bound dialogue inside the corresponding shot',
   const wav = path.join(dir,'speaker.wav');
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=400:duration=1',wav]);
   for (const file of ['opening.png','face.png']) fs.writeFileSync(path.join(dir,file),png);
-  f.board.SB_DOC = {characters:[{id:'speaker',name:'Linh',tts,voiceReference:{path:wav,tts,sha256:digest(fs.readFileSync(wav)),imagePaths:[path.join(dir,'face.png')]}}]};
+  f.board.SB_DOC = {characters:[{id:'speaker',name:'Rowan',tts,voiceReference:{path:wav,tts,sha256:digest(fs.readFileSync(wav)),imagePaths:[path.join(dir,'face.png')]}}]};
   f.board.STRUCTURE = {scenes:[{no:1,speakers:['speaker'],frames:{start:'opening.png'},
     speakerReferences:[{character:'speaker',path:'face.png'}],videoDirection:{emotion:'Hope.',openingPositions:[{character:'speaker',images:[1],position:'On the right.'}]}}]};
   const words = ['Will you marry me?', '', "It costs $&."];
@@ -1837,4 +1837,45 @@ test('model-paced MSR scenes keep bound dialogue inside the corresponding shot',
   assert.ok(ending.includes('speaker (Image 1, Audio 1): "'+words[2]+'"'));
   assert.equal(prompt.split(words[0]).length,2);
   assert.equal(prompt.split(words[2]).length,2);
+  assert.match(opening,/Hold this view for about 2.33 seconds/);
+  assert.match(opening,/Only the named on-screen speaker/);
+  assert.match(reaction,/No foreground dialogue/);
+  f.board.SCENES[2].narration[0].delivery = 'off_screen';
+  f.save();
+  const next = planVideo({episode:f.episode,sceneNo:1,requestId:'phone',args:{reserveUsd:0}},false);
+  const call = buildGenaiVideoBody(next.args).prompt.split('Then cut directly.').at(-1);
+  assert.ok(call.includes('The voice stays off screen. Visible mouths stay closed.'));
+  assert.ok(call.includes('Audio 1, off screen): "'+words[2]+'"'));
+
+  // Repeated words still belong to two distinct people in the correct shots.
+  fs.writeFileSync(path.join(dir,'second.png'),png);
+  const secondVoice = path.join(dir,'second.wav');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=600:duration=1',secondVoice]);
+  f.board.SB_DOC.characters.push({id:'guest',name:'Guest',tts,voiceReference:{path:secondVoice,tts,sha256:digest(fs.readFileSync(secondVoice)),imagePaths:[path.join(dir,'second.png')]}});
+  const scene = f.board.STRUCTURE.scenes[0];
+  scene.speakers.push('guest');
+  scene.speakerReferences.push({character:'guest',path:'second.png'});
+  scene.videoDirection.openingPositions.push({character:'guest',images:[2],position:'On the left.'});
+  Object.assign(f.board.SCENES[2].narration[0],{speaker:'guest',delivery:'on_screen',tts:words[0]});
+  f.save();
+  const second = planVideo({episode:f.episode,sceneNo:1,requestId:'echo',args:{reserveUsd:0}},false);
+  const echo = buildGenaiVideoBody(second.args).prompt.split('Then cut directly.');
+  assert.ok(echo[0].includes('speaker (Image 1, Audio 1): "'+words[0]+'"'));
+  assert.ok(echo[2].includes('guest (Image 2, Audio 2): "'+words[0]+'"'));
+  f.board.SCENES[2].narration.push({id:'phone',speaker:'speaker',delivery:'off_screen',tts:'Come in.'});
+  f.save();
+  const mixed = planVideo({episode:f.episode,sceneNo:1,requestId:'offscreen-reply',args:{reserveUsd:0}},false);
+  const lastShot = mixed.args.prompt.split('Then cut directly.').at(-1);
+  assert.match(lastShot,/Visible mouths stay still for off-screen voices/);
+  assert.ok(lastShot.indexOf('guest (Image 2, Audio 2)') < lastShot.indexOf('speaker (Image 1, Audio 1, off screen)'));
+  f.board.SCENES[2].narration.pop();
+  // A nearly full prompt drops optional pacing prose before sacrificing either bound quote.
+  const padding = 'The lane is wet. '.repeat(Math.max(0,Math.floor((2050-second.args.prompt.length)/17)));
+  f.board.SCENES[0].visual.action += ' ' + padding;
+  f.save();
+  const compact = planVideo({episode:f.episode,sceneNo:1,requestId:'tight-budget',args:{reserveUsd:0}},false);
+  assert.doesNotMatch(compact.args.prompt,/Hold this view for about/);
+  assert.equal(compact.args.prompt.split(words[0]).length,3);
+  assert.ok(compact.args.prompt.length <= 2000);
+
 });

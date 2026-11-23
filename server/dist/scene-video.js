@@ -220,7 +220,7 @@ export function bindRegisteredPanels(scene, episode, board) {
             image.character = [...ids][0];
     }
 }
-export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns } = {}) {
+export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns, describeDelivery = false } = {}) {
     let turnIndex = 0;
     const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
     const timing = (frame) => modelFacing ? `At ${Number((frame / t.fps).toFixed(3))} seconds` : `Frame ${frame}`;
@@ -236,9 +236,31 @@ export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFaci
                 // The model can paint numeric cut cues onto the picture. The scene manifest retains the cut clock.
                 heading = s.transition === 'open' ? '' : modelPacedCuts ? `Then ${cut}.` : `${timing(s.startFrame)}, ${cut}.`;
             }
-            return [heading,
+            const lines = s.dialogue ?? [];
+            const spoken = boundTurns ? lines.map(() => boundTurns[turnIndex++]) : [];
+            if (!boundTurns && includeDialogue)
+                for (const line of lines) {
+                    if (line.delivery !== 'voiceover')
+                        spoken.push((line.frame === undefined ? '' : timing(line.frame) + ': ') +
+                            (line.direction ? line.direction + ' ' : '') + line.speaker + ' (' + line.delivery + '): "' + line.text + '"');
+                }
+            let pacing = '';
+            let delivery = '';
+            if (describeDelivery) {
+                const seconds = Number(((s.endFrame - s.startFrame) / t.fps).toFixed(2));
+                pacing = 'Hold this view for about ' + seconds + (seconds === 1 ? ' second.' : ' seconds.');
+                if (!lines.length)
+                    delivery = 'No foreground dialogue.';
+                else if (lines.every(line => line.delivery === 'off_screen'))
+                    delivery = 'The voice stays off screen. Visible mouths stay closed.';
+                else if (lines.some(line => line.delivery === 'off_screen'))
+                    delivery = 'Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.';
+                else
+                    delivery = 'Only the named on-screen speaker mouths each line. Listeners stay quiet.';
+            }
+            return [heading, pacing,
                 ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p => p.shotId === s.shotId && p.reference?.scope === 'shot_guide').map(p => p.reference.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-                ...(boundTurns ? (s.dialogue ?? []).map(() => boundTurns[turnIndex++]) : includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : timing(l.frame) + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
+                delivery, ...spoken,].filter(Boolean).join(' ');
         }), ...(t.audio ? [modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.',
             ...t.audio.cues.map(c => `${timing(c.frame)}: ${c.action}`)] : [])].filter(Boolean).join('\n');
 }
@@ -265,10 +287,10 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
     // The image and voice binders add reference labels around this timeline after planning.
-    const bindSceneTurns = (prompt, turns) => {
+    const bindSceneTurns = (prompt, turns, describeDelivery = true) => {
         if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
             throw new Error('scene_dialogue_binding: the dialogue no longer matches the planned shot sequence');
-        return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns }));
+        return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns, describeDelivery }));
     };
     return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }

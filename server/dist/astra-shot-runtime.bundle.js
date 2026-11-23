@@ -53937,7 +53937,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...guides.length ? { shotReferenceImages: guides } : {}, ...audio ? { audio } : {} };
 }
-function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns } = {}) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns, describeDelivery = false } = {}) {
   let turnIndex = 0;
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
@@ -53954,13 +53954,30 @@ function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = f
     if (modelFacing) {
       heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
     }
+    const lines = s2.dialogue ?? [];
+    const spoken = boundTurns ? lines.map(() => boundTurns[turnIndex++]) : [];
+    if (!boundTurns && includeDialogue) for (const line of lines) {
+      if (line.delivery !== "voiceover") spoken.push((line.frame === void 0 ? "" : timing(line.frame) + ": ") + (line.direction ? line.direction + " " : "") + line.speaker + " (" + line.delivery + '): "' + line.text + '"');
+    }
+    let pacing = "";
+    let delivery2 = "";
+    if (describeDelivery) {
+      const seconds2 = Number(((s2.endFrame - s2.startFrame) / t2.fps).toFixed(2));
+      pacing = "Hold this view for about " + seconds2 + (seconds2 === 1 ? " second." : " seconds.");
+      if (!lines.length) delivery2 = "No foreground dialogue.";
+      else if (lines.every((line) => line.delivery === "off_screen")) delivery2 = "The voice stays off screen. Visible mouths stay closed.";
+      else if (lines.some((line) => line.delivery === "off_screen")) delivery2 = "Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.";
+      else delivery2 = "Only the named on-screen speaker mouths each line. Listeners stay quiet.";
+    }
     return [
       heading,
+      pacing,
       ...[s2.framing, s2.blocking, s2.action].filter((text3) => text3 && !wholeTake.has(text3)),
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...boundTurns ? (s2.dialogue ?? []).map(() => boundTurns[turnIndex++]) : includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      delivery2,
+      ...spoken
     ].filter(Boolean).join(" ");
   }), ...t2.audio ? [
     modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",

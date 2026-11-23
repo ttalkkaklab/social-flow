@@ -95035,16 +95035,18 @@ var require_scene_direction = __commonJS({
           const fields2 = actingFields(acting, line.delivery !== "voiceover", /* @__PURE__ */ new Set(), redact, accept);
           const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
           const to = text4(event.to) || text4(line.to);
-          if (to && accept(redact(to))) fields2.unshift((concise ? "to " : "Addressed to ") + redact(to) + ".");
+          const listener = to && accept(redact(to)) ? redact(to) : "";
+          const listenerInBeat = listener && scenePrompt && concise;
+          if (listener && !listenerInBeat) fields2.unshift((concise ? "to " : "Addressed to ") + listener + ".");
           if (pauses) fields2.push(pauses);
           if (scenePrompt) for (const [index, action] of (card.performance || []).entries()) {
             if (action.kind !== "action" || action.withGroup !== group) continue;
             const cue = actionWords(action, index);
             if (cue) fields2.push(cue);
           }
-          if (fields2.length || card.performance?.length) {
+          if (fields2.length || card.performance?.length || listenerInBeat) {
             const who = [line.speaker, scenePrompt ? void 0 : line.id].filter(Boolean).join(", ");
-            const label = scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
+            const label = listenerInBeat ? "While " + listener + " listens, " + (who || "the speaker") + " speaks" : scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
             beats.push(label + (fields2.length ? ": " + fields2.join(" ") : "."));
           }
           groups.add(group);
@@ -121441,7 +121443,7 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns } = {}) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns, describeDelivery = false } = {}) {
   let turnIndex = 0;
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
@@ -121458,13 +121460,30 @@ function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = f
     if (modelFacing) {
       heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
     }
+    const lines = s2.dialogue ?? [];
+    const spoken = boundTurns ? lines.map(() => boundTurns[turnIndex++]) : [];
+    if (!boundTurns && includeDialogue) for (const line of lines) {
+      if (line.delivery !== "voiceover") spoken.push((line.frame === void 0 ? "" : timing(line.frame) + ": ") + (line.direction ? line.direction + " " : "") + line.speaker + " (" + line.delivery + '): "' + line.text + '"');
+    }
+    let pacing = "";
+    let delivery2 = "";
+    if (describeDelivery) {
+      const seconds2 = Number(((s2.endFrame - s2.startFrame) / t2.fps).toFixed(2));
+      pacing = "Hold this view for about " + seconds2 + (seconds2 === 1 ? " second." : " seconds.");
+      if (!lines.length) delivery2 = "No foreground dialogue.";
+      else if (lines.every((line) => line.delivery === "off_screen")) delivery2 = "The voice stays off screen. Visible mouths stay closed.";
+      else if (lines.some((line) => line.delivery === "off_screen")) delivery2 = "Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.";
+      else delivery2 = "Only the named on-screen speaker mouths each line. Listeners stay quiet.";
+    }
     return [
       heading,
+      pacing,
       ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...boundTurns ? (s2.dialogue ?? []).map(() => boundTurns[turnIndex++]) : includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      delivery2,
+      ...spoken
     ].filter(Boolean).join(" ");
   }), ...t2.audio ? [
     modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
@@ -121497,10 +121516,10 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     ...scene.oneTake ? { oneTake: true } : {},
     ...scene.sound ? { sound: scene.sound } : {}
   } };
-  const bindSceneTurns = (prompt2, turns) => {
+  const bindSceneTurns = (prompt2, turns, describeDelivery = true) => {
     if (!prompt2.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
       throw new Error("scene_dialogue_binding: the dialogue no longer matches the planned shot sequence");
-    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns }));
+    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns, describeDelivery }));
   };
   return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }
@@ -123212,6 +123231,10 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   };
   let voice = prepareVideoVoice(tool2, images.args, voiceContext);
   const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
+  if (voiceContext.bindSceneTurns && promptLimit && submittedLength > promptLimit) {
+    const bindTurns2 = voiceContext.bindSceneTurns;
+    voice = prepareVideoVoice(tool2, images.args, { ...voiceContext, bindSceneTurns: (prompt, turns) => bindTurns2(prompt, turns, false) });
+  }
   if (compiled && promptLimit && typeof bound.prompt === "string" && submittedLength > promptLimit) {
     compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
     bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };

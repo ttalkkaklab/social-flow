@@ -61,16 +61,19 @@
       const fields = actingFields(acting, line.delivery !== 'voiceover', new Set(), redact, accept);
       const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
       const to = text(event.to) || text(line.to);
-      if (to && accept(redact(to))) fields.unshift((concise ? 'to ' : 'Addressed to ') + redact(to) + '.');
+      const listener = to && accept(redact(to)) ? redact(to) : '';
+      const listenerInBeat = listener && scenePrompt && concise;
+      if (listener && !listenerInBeat) fields.unshift((concise ? 'to ' : 'Addressed to ') + listener + '.');
       if (pauses) fields.push(pauses);
       if (scenePrompt) for (const [index, action] of (card.performance || []).entries()) {
         if (action.kind !== 'action' || action.withGroup !== group) continue;
         const cue = actionWords(action, index);
         if (cue) fields.push(cue);
       }
-      if (fields.length || card.performance?.length) {
+      if (fields.length || card.performance?.length || listenerInBeat) {
         const who = [line.speaker, scenePrompt ? undefined : line.id].filter(Boolean).join(', ');
-        const label = scenePrompt ? (who ? 'As ' + who + ' speaks' : 'During dialogue') :
+        const label = listenerInBeat ? 'While ' + listener + ' listens, ' + (who || 'the speaker') + ' speaks' :
+          scenePrompt ? (who ? 'As ' + who + ' speaks' : 'During dialogue') :
           concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
         beats.push(label + (fields.length ? ': ' + fields.join(' ') : '.'));
       }

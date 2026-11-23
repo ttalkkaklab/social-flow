@@ -720,6 +720,11 @@ function buildVideoPlan(input, { context, tool }, persist) {
     // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
     // the board prompt is compiled once more into the room they leave.
     const submittedLength = typeof voice.args.prompt === 'string' ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
+    // Keep all authored lines and reference bindings when optional delivery and pacing cues exceed the live prompt budget.
+    if (voiceContext.bindSceneTurns && promptLimit && submittedLength > promptLimit) {
+        const bindTurns = voiceContext.bindSceneTurns;
+        voice = prepareVideoVoice(tool, images.args, { ...voiceContext, bindSceneTurns: (prompt, turns) => bindTurns(prompt, turns, false) });
+    }
     if (compiled && promptLimit && typeof bound.prompt === 'string' && submittedLength > promptLimit) {
         compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
         bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
