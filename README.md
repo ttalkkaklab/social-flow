@@ -1384,3 +1384,11 @@ See [review translations](skills/storyboard/references/review-localization.md).
 ### Scene video requests
 
 Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+
+## Contributors
+
+The people whose commits are in this repository. [Contributing](CONTRIBUTING.md) covers a first issue, the local checks and a pull request to `dev`.
+
+<a href="https://github.com/ttalkkaklab/social-flow/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ttalkkaklab/social-flow" alt="Contributors" />
+</a>
