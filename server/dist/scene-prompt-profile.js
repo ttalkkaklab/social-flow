@@ -28,6 +28,9 @@ export function scenePromptProfile(tool, model) {
         return { ...profile, referenceLabels: 'at_indexed' };
     return profile;
 }
+export function usesGeneratedVoice(tool, dialogueVoice) {
+    return dialogueVoice === 'model_generated' && scenePromptProfile(tool).allowsGeneratedVoice;
+}
 export function referenceLabel(tool, kind, index, model) {
     return formatReferenceLabel(scenePromptProfile(tool, model).referenceLabels, kind, index);
 }

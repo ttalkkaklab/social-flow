@@ -31,7 +31,7 @@ import { recordVideoSubmission, videoEvents } from './video-events.js';
 import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects } from './video-image-inputs.js';
-import { formatReferenceLabel, scenePromptProfile } from './scene-prompt-profile.js';
+import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText } from './video-prompt.js';
@@ -59,7 +59,7 @@ export function routingContext(episode, shotId, sceneNo, selectionOnly) {
         throw error;
     }
 }
-function selectedVideoTool(selection, operation = selection.operation) {
+export function selectedVideoTool(selection, operation = selection.operation) {
     return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation &&
         (a.engine !== 'mlx' || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
 }
@@ -82,7 +82,8 @@ function shotVideoTiming(context, tool, args) {
     }
     if (args.requiredSeconds !== undefined && (typeof args.requiredSeconds !== 'number' || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
         throw new Error('requiredSeconds must be finite positive seconds');
-    const speech = VIDEO_ADAPTERS[tool]?.voice === 'reference' &&
+    const hasNativeSpeech = VIDEO_ADAPTERS[tool]?.voice === 'reference' || usesGeneratedVoice(tool, context.sceneDirection?.dialogueVoice);
+    const speech = hasNativeSpeech &&
         shot.narration?.some(line => line.delivery !== 'voiceover')
         ? nativeSpeechTiming(shot, context.board.STORY?.language) : undefined;
     const required = coverage || args.requiredSeconds !== undefined || speech
@@ -271,8 +272,11 @@ export function checkVideoEnvironment(tool) {
 }
 function saveVideoPlan(plan) {
     const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
-    if (!fs.existsSync(file))
-        atomicJson(file, plan);
+    if (!fs.existsSync(file)) {
+        // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
+        const { promptProfile: _profile, ...manifest } = plan;
+        atomicJson(file, manifest);
+    }
     fs.rmSync(blockedPlanFile(plan.episode, plan.requestId), { force: true });
     refreshVideoReview(plan.episode);
     return plan;
@@ -670,10 +674,10 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
         const images = prepareVideoImages('host_external', callArgs, context.shot, context.episode, context.sceneMembers);
-        const body = { ...take, ...(prepared ? { promptProfile } : {}), version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
+        const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
             tool: 'host_external', args: callArgs, ...(sceneRequest ? { sceneRequest } : {}), ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
-        const plan = { ...body, id: hash(body) };
+        const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile } : {}) };
         return persist ? saveVideoPlan(plan) : plan;
     }
     if (!tool)
@@ -808,7 +812,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === 'number' ? args.numFrames
         : typeof args.duration === 'number' && playFps ? framesForSeconds(args.duration, playFps) : tool === 'astra_genai_msr' ? 121 : undefined;
     const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
-    const speechFit = VIDEO_ADAPTERS[tool].voice === 'reference' && playSeconds !== undefined && playSeconds > 0 && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
+    const speechFit = durationPlan.speech && playSeconds !== undefined && playSeconds > 0 && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
         ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context.board.STORY?.language) : undefined;
     const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
     if (foreign)
@@ -862,12 +866,12 @@ function buildVideoPlan(input, { context, tool }, persist) {
         ? seedanceBindings(context.episode, context.sceneMembers ?? [context.shot], args, inputs, imageBindings, voice.voiceContinuity, sceneRequest?.images.filter(pin => pin.role === 'face' && pin.reference?.scope === 'scene'))
         : undefined;
     const quote = quoteFor(tool, args);
-    const body = { ...take, ...(prepared ? { promptProfile } : {}), ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+    const body = { ...take, ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
         ...(imageBindings ? { imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
-    const plan = { ...body, id: hash(body) };
+    const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile } : {}) };
     return persist ? saveVideoPlan(plan) : plan;
 }
 function authorization(context) {

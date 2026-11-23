@@ -182,9 +182,11 @@ export function videoVoiceCapabilities(tool: string) {
     review: 'not_reviewed',
   };
 }
-export function speechVideoCapabilities(provider: string, model: string, operation?: string, subjectReferences = false) {
+export function speechVideoCapabilities(provider: string, model: string, operation?: string, subjectReferences = false, generatedVoice = false) {
   if (provider === 'omni' || (provider === 'veo' && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, model)) || (provider === 'seedance' && !Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model)))
     throw new Error(`video_engine_unsupported: ${provider} ${model} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (generatedVoice) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true,
+    evidence: 'The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment.' };
   // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
   // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
   if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };

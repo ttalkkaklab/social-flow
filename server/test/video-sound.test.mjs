@@ -142,6 +142,16 @@ test('MSR renders effects natively and its own soundtrack carries the dialogue',
     const sound = (await prepareSound(dir, 's1', 'astra_genai_msr', msrArgs)).sound;
     assert.equal(sound.audioSource, 'video');
     assert.equal(sound.effects[0].delivery, 'native');
+    const owner = {no:1,videoDirection:{dialogueVoice:'model_generated'}};
+    scene.scene = 1;
+    scene.visual.video.engine = 'seedance';
+    const writeScene = () => writeFileSync(join(dir,'scenes.js'), `window.STRUCTURE={scenes:${JSON.stringify([owner])}};window.SCENES=${JSON.stringify([scene])};`);
+    writeScene();
+    const args = {model:'dreamina-seedance-2-0-mini-260615',sourceImagePath:'start.png',prompt:'Speak to the guest.'};
+    assert.equal((await prepareSound(dir,'s1','seedance_img2video',args)).sound.audioSource,'video');
+    delete owner.videoDirection.dialogueVoice;
+    writeScene();
+    assert.equal((await prepareSound(dir,'s1','seedance_img2video',args)).sound.audioSource,'speech');
     // The registry's engine decides, not the tool-name prefix: 'astra' must not admit astra_genai_*.
     scene.visual.video.engine = 'astra';
     writeFileSync(join(dir, 'scenes.js'), `window.SCENES=${JSON.stringify([scene])};`);

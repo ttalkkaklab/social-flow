@@ -120042,6 +120042,9 @@ function scenePromptProfile(tool2, model2) {
     return { ...profile, referenceLabels: "at_indexed" };
   return profile;
 }
+function usesGeneratedVoice(tool2, dialogueVoice) {
+  return dialogueVoice === "model_generated" && scenePromptProfile(tool2).allowsGeneratedVoice;
+}
 function referenceLabel(tool2, kind, index, model2) {
   return formatReferenceLabel(scenePromptProfile(tool2, model2).referenceLabels, kind, index);
 }
@@ -120202,9 +120205,18 @@ function videoVoiceCapabilities(tool2) {
     review: "not_reviewed"
   };
 }
-function speechVideoCapabilities(provider, model2, operation, subjectReferences = false) {
+function speechVideoCapabilities(provider, model2, operation, subjectReferences = false, generatedVoice = false) {
   if (provider === "omni" || provider === "veo" && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, model2) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (generatedVoice) return {
+    provider,
+    model: model2,
+    audioConditioning: false,
+    lipSync: false,
+    postLipSync: false,
+    nativeSpeech: true,
+    evidence: "The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment."
+  };
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
@@ -122709,7 +122721,8 @@ function shotVideoTiming(context2, tool2, args) {
   }
   if (args.requiredSeconds !== void 0 && (typeof args.requiredSeconds !== "number" || !Number.isFinite(args.requiredSeconds) || args.requiredSeconds <= 0))
     throw new Error("requiredSeconds must be finite positive seconds");
-  const speech = VIDEO_ADAPTERS[tool2]?.voice === "reference" && shot.narration?.some((line) => line.delivery !== "voiceover") ? nativeSpeechTiming(shot, context2.board.STORY?.language) : void 0;
+  const hasNativeSpeech = VIDEO_ADAPTERS[tool2]?.voice === "reference" || usesGeneratedVoice(tool2, context2.sceneDirection?.dialogueVoice);
+  const speech = hasNativeSpeech && shot.narration?.some((line) => line.delivery !== "voiceover") ? nativeSpeechTiming(shot, context2.board.STORY?.language) : void 0;
   const required2 = coverage2 || args.requiredSeconds !== void 0 || speech ? Math.max(coverage2?.requiredSeconds ?? 0, args.requiredSeconds ?? 0, speech?.estimatedSeconds ?? 0) : void 0;
   return {
     ...assessVideoDuration(tool2, args, required2),
@@ -122877,7 +122890,10 @@ function checkVideoEnvironment(tool2) {
 }
 function saveVideoPlan(plan2) {
   const file = path26.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
-  if (!fs19.existsSync(file)) atomicJson(file, plan2);
+  if (!fs19.existsSync(file)) {
+    const { promptProfile: _profile, ...manifest2 } = plan2;
+    atomicJson(file, manifest2);
+  }
   fs19.rmSync(blockedPlanFile(plan2.episode, plan2.requestId), { force: true });
   refreshVideoReview(plan2.episode);
   return plan2;
@@ -123298,7 +123314,6 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const images2 = prepareVideoImages("host_external", callArgs, context2.shot, context2.episode, context2.sceneMembers);
     const body2 = {
       ...take,
-      ...prepared ? { promptProfile } : {},
       version: 1,
       episode: context2.episode,
       shotId: context2.shotId,
@@ -123315,7 +123330,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       quote: { reserveUsd: 0, estimatedUsd: 0, revision: "host-allowance-v1", basis: "External host allowance; limits and actual tool schema must be checked by host; not API enforcement" },
       execution: "host_handoff"
     };
-    const plan3 = { ...body2, id: hash2(body2) };
+    const plan3 = { ...body2, id: hash2(body2), ...prepared ? { promptProfile } : {} };
     return persist ? saveVideoPlan(plan3) : plan3;
   }
   if (!tool2) throw new Error("Selected deployment has no adapter for this operation");
@@ -123430,7 +123445,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   }
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
   const playSeconds = playFrames !== void 0 && playFps ? playFrames / playFps : typeof args.durationSeconds === "number" ? args.durationSeconds : void 0;
-  const speechFit = VIDEO_ADAPTERS[tool2].voice === "reference" && playSeconds !== void 0 && playSeconds > 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
+  const speechFit = durationPlan.speech && playSeconds !== void 0 && playSeconds > 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output2 = canonical2(path26.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
@@ -123479,7 +123494,6 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const quote = quoteFor(tool2, args);
   const body = {
     ...take,
-    ...prepared ? { promptProfile } : {},
     ...characterBindings ? { characterBindings } : {},
     ...cast.length ? { characterInputs: cast } : {},
     ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
@@ -123503,7 +123517,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     quote,
     execution: "server"
   };
-  const plan2 = { ...body, id: hash2(body) };
+  const plan2 = { ...body, id: hash2(body), ...prepared ? { promptProfile } : {} };
   return persist ? saveVideoPlan(plan2) : plan2;
 }
 function authorization(context2) {
@@ -138666,7 +138680,7 @@ function measuredDuration(line) {
     return null;
   }
 }
-function speechVideoPlan(input, capabilities) {
+function speechVideoPlan(input, capabilities, sceneNo) {
   if (!capabilities) throw new Error("Supply the selected adapter capabilities and their evidence; never infer support from the model name");
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
@@ -138698,7 +138712,25 @@ function speechVideoPlan(input, capabilities) {
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene);
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash4(JSON.stringify(reuseContext)), performanceRevision: hash4(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+  return {
+    ...timeline,
+    ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {},
+    warnings,
+    promptLength,
+    reuseContextRevision: hash4(JSON.stringify(reuseContext)),
+    performanceRevision: hash4(JSON.stringify(performancePayload)),
+    videoPrompt,
+    textPolicy: "no_visible_text",
+    boundary: sceneNo === void 0 ? "one_shot_per_generation" : "one_scene_per_generation",
+    instructions: (sceneNo === void 0 ? "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image." : "Use video_plan with sceneNo " + sceneNo + " to generate the entire scene once. This card describes its own dialogue and actions within that scene.") + " " + actingContract().VIDEO_TEXT_POLICY,
+    mode,
+    provider: capabilities.provider,
+    model: capabilities.model,
+    capabilities,
+    audioFirst: lines.length > 0 && mode !== "native",
+    lineIds: lines.map((line) => line.id),
+    review: "not_reviewed"
+  };
 }
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
@@ -138840,16 +138872,26 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname11(dirname11(file));
+    const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
     if (existsSync36(join18(episode, ".work/model-settings.json"))) {
-      const { selection } = routingContext(episode, args.shotId, void 0, true);
+      const context2 = owner?.videoDirection?.dialogueVoice === "model_generated" ? routingContext(episode, void 0, owner.no, true) : routingContext(episode, args.shotId, void 0, true);
+      const { selection } = context2;
       const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter2?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
+      const tool2 = args.tool ?? selectedVideoTool(selection);
+      const generatedVoice = usesGeneratedVoice(tool2, owner?.videoDirection?.dialogueVoice);
+      const verified = speechVideoCapabilities(
+        selection.engine,
+        selection.model || selection.engine,
+        adapter2?.operation ?? selection.operation,
+        hasVideoSubjectReferences(scene),
+        generatedVoice
+      );
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
         throw new Error("Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot");
       args = { ...args, capabilities: verified };
     }
-    plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
+    plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
     const continuityContract = nodeModule7.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
     plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname11(file)) };
     if (args.action === "attach_video") {
@@ -138977,10 +139019,14 @@ function manageSpeech(args) {
   if (args.action === "plan_audio" && (!selected.length || selected.some(({ line }) => !line.id || !line.speaker || !line.delivery))) throw new Error("Prepare explicit speech before planning audio");
   if (changed) {
     const ids = /* @__PURE__ */ new Set();
-    for (const { line } of all) {
+    for (const { scene, line } of all) {
       if (!line.id || ids.has(line.id)) throw new Error("Dialogue ids must be present and unique");
       ids.add(line.id);
-      if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
+      const actor = character(line.speaker);
+      if (actor?.tts) continue;
+      const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
+      if (!actor || !["on_screen", "off_screen"].includes(line.delivery ?? "") || owner?.videoDirection?.dialogueVoice !== "model_generated")
+        throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
     const work = resolve12(dirname11(file), "../.work/speech-history");
     mkdirSync20(work, { recursive: true });

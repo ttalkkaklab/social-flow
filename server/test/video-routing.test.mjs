@@ -16,6 +16,7 @@ import { openingPrompt, sceneCastProse } from '../dist/msr-opening.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
 import { recordVideoSubmission, recordVideoTokens } from '../dist/video-events.js';
+import { manageSpeech } from '../dist/speech.js';
 import { config } from '../dist/config.js';
 import { refreshGenaiMsrVoice } from '../dist/astra-genai-video.js';
 import { dispatchVideo, ROUTES } from '../dist/handlers.js';
@@ -1061,7 +1062,7 @@ test('Veo puts model-voiced dialogue and silent reactions inside one timestamped
   for (const [index, card] of f.board.SCENES.entries()) {
     Object.assign(card, {scene:1, duration:2, shot:{size:'ms',angle:'eye'},
       visual:{action:index ? 'The friend nods.' : 'The guest raises a hand.'},
-      narration:index ? [] : [{speaker:'guest',delivery:'off_screen',tts:'Come in.'}]});
+      narration:index ? [] : [{id:'greeting',speaker:'guest',delivery:'off_screen',tts:'Come in.'}]});
   }
   const plan = (args={}) => planVideo({episode:f.episode, sceneNo:1, requestId:'veo-dialogue', args}, false);
   f.save();
@@ -1069,7 +1070,10 @@ test('Veo puts model-voiced dialogue and silent reactions inside one timestamped
   scene.videoDirection.dialogueVoice = 'model_generated';
   f.save();
   assert.throws(() => plan({generateAudio:false}), /scene_dialogue_audio_required/);
-  const accepted = plan();
+  const accepted = planVideo({episode:f.episode,sceneNo:1,requestId:'veo-dialogue'}, true);
+  const saved = JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/plans',accepted.id+'.json')));
+  const {promptProfile, ...manifest} = accepted;
+  assert.deepEqual(saved, JSON.parse(JSON.stringify(manifest)));
   const body = buildVeoBody(accepted.args);
   assert.equal(body.instances.length, 1);
   assert.equal(body.parameters.generateAudio, true);
@@ -1079,6 +1083,14 @@ test('Veo puts model-voiced dialogue and silent reactions inside one timestamped
   assert.match(prompt, /\[0–2s\][^\n]+Visible mouths stay closed[^\n]+"Come in\."/);
   assert.match(prompt, /\[2–4s\][^\n]+The friend nods[^\n]+No foreground dialogue/);
   assert.equal(prompt.split('"Come in."').length, 2);
+  const inspection = manageSpeech({path:board,action:'plan_video',shotId:'s1'}).plan;
+  assert.equal(inspection.mode, 'native');
+  assert.equal(inspection.boundary, 'one_scene_per_generation');
+  const spoken = f.board.SCENES[0].narration[0];
+  spoken.tts = 'A very long speech. '.repeat(90);
+  f.save();
+  assert.throws(plan, /video_duration_exceeded/);
+  spoken.tts = 'Come in.';
   scene.speakerReferences = [{character:'guest',path:'open.png'}];
   f.save();
   assert.throws(plan, /scene_inputs_unsupported/);
@@ -1095,7 +1107,7 @@ test('Seedance Mini can speak from a scene opening when the author selects a gen
   for (const [i, card] of f.board.SCENES.entries()) {
     Object.assign(card, {scene:1,duration:2,shot:{size:'ms',angle:'eye'},
       visual:{character:i ? [] : ['guest'],action:i ? 'The door closes.' : 'The guest waves.'},
-      narration:i ? [] : [{speaker:'guest',delivery:'on_screen',tts:'Wait.'}]});
+      narration:i ? [] : [{id:'greeting',speaker:'guest',delivery:'on_screen',tts:'Wait.'}]});
   }
   const plan = () => planVideo({episode:f.episode,sceneNo:1,requestId:'mini-frames'},false);
   f.save();
@@ -1108,6 +1120,14 @@ test('Seedance Mini can speak from a scene opening when the author selects a gen
   assert.equal(result.sceneRequest.shots[0].dialogue[0].voice,undefined);
   assert.match(result.args.prompt, /"Wait\."[\s\S]+Then cut directly\.[^\n]+No foreground dialogue/);
   assert.doesNotMatch(result.args.prompt,/Audio 1|Hold this view for about/);
+  const attach = {path:dir,shotId:'s1'};
+  const inspected = manageSpeech({...attach,action:'plan_video'});
+  assert.equal(inspected.plan.mode,'native');
+  const clip = path.join(f.episode,'native.mp4');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24','-f','lavfi','-i','sine=frequency=440','-t','0.25','-c:v','libx264','-c:a','aac',clip]);
+  manageSpeech({...attach,action:'attach_video',expectedRevision:inspected.revision,videoPath:clip});
+  const attached = require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(fs.readFileSync(path.join(dir,'scenes.js'),'utf8'));
+  assert.equal(attached.SCENES[0].sound.audioSource,'video');
   delete scene.videoDirection.dialogueVoice;
   f.save();
   assert.throws(plan,/character_input_required/);

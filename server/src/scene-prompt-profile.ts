@@ -38,6 +38,10 @@ export function scenePromptProfile(tool?: string, model?: unknown): Readonly<Sce
   return profile;
 }
 
+export function usesGeneratedVoice(tool: string | undefined, dialogueVoice: unknown): boolean {
+  return dialogueVoice === 'model_generated' && scenePromptProfile(tool).allowsGeneratedVoice;
+}
+
 export function referenceLabel(tool: string, kind: 'image' | 'audio', index: number, model?: unknown): string {
   return formatReferenceLabel(scenePromptProfile(tool, model).referenceLabels, kind, index);
 }
