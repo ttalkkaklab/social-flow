@@ -216,6 +216,13 @@ test('public native attachment verifies its source and registered operation even
  assert.deepEqual(readFileSync(file),muted);
  delete shot.visual.video.generateAudio;
  save();rmSync(receipt);
+ const unsigned=readFileSync(file),damaged=join(dir,'damaged.mp4'),audioOnly=join(dir,'sound.mp4');
+ writeFileSync(damaged,'invalid media');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=500:duration=0.3','-f','wav',audioOnly]);
+ for(const videoPath of [damaged,audioOnly]){
+   await assert.rejects(call('attach_video',{videoPath}),/native_speech_media_invalid/);
+   assert.deepEqual(readFileSync(file),unsigned);
+ }
  const ok=JSON.parse((await call('attach_video',{})).content[0].text);
  assert.equal(ok.plan.mode,'native');assert.equal(ok.changed,true);
 });
@@ -303,7 +310,7 @@ test('id-only story-first speakers use their character voice when listing and bi
  const doc=JSON.parse(example.match(/```json\s*\n([\s\S]*?)```/)[1]);doc.tts=voice;
  writeFileSync(join(folder,'identity.md'),'# Hero\n\n```json\n'+JSON.stringify(doc)+'\n```');
  const listed=manageSpeech({path:target,action:'list'});assert.deepEqual(listed.lines[0].voice,voice);
- const video=join(dir,'native.mp4');writeFileSync(video,'native clip');
+ const video=join(dir,'native.mp4');spokenClip(video);
  const attached=manageSpeech({path:target,action:'attach_video',shotId:r.lines[0].shotId,expectedRevision:listed.revision,
   videoPath:video,capabilities:{...caps,audioConditioning:false,lipSync:false,nativeSpeech:true}});
  assert.equal(attached.plan.mode,'native');assert.equal(attached.lines[0].audioProvenanceStatus,'native_speech');

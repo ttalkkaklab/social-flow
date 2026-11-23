@@ -21,6 +21,24 @@ import { compileVideoPrompt } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js');
 const audioSignalContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/audio-signal.js');
+function requireNativeVideo(file) {
+    let signal;
+    try {
+        // Uppercase V excludes an album cover embedded in an audio file.
+        const frame = execFileSync('ffmpeg', ['-v', 'error', '-nostdin', '-xerror', '-i', file, '-map', '0:V:0',
+            '-frames:v', '1', '-vf', 'scale=1:1', '-pix_fmt', 'gray', '-f', 'rawvideo', '-'], { timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] });
+        if (frame.length !== 1)
+            throw new Error('No decoded frame');
+        signal = audioSignalContract().inspect(file).status;
+    }
+    catch {
+        throw new Error('native_speech_media_invalid: supply a decodable video with its original audible soundtrack');
+    }
+    if (signal === 'missing')
+        throw new Error('native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip');
+    if (signal === 'silent')
+        throw new Error('native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip');
+}
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -416,11 +434,9 @@ export function manageSpeech(args, options = {}) {
                     throw new Error('speech_video_source_mismatch: this video already belongs to a different speech operation or model');
             }
             const native = plan.mode === 'native';
+            if (native)
+                requireNativeVideo(videoPath);
             const nativeAudio = native ? speechSpanContract().inspect(videoPath) : undefined;
-            if (nativeAudio?.status === 'missing')
-                throw new Error('native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip');
-            if (nativeAudio?.status === 'silent')
-                throw new Error('native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip');
             const sound = object(scene.sound);
             if (native && sound.audioSource === 'speech')
                 throw new Error('Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it');
