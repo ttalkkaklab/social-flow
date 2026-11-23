@@ -34526,8 +34526,7 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
   motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
   performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
-  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
-  references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional()
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
@@ -34614,6 +34613,7 @@ var package_default = {
     "@modelcontextprotocol/sdk": "^1.0.0",
     "google-auth-library": "^10.9.1",
     openai: "^6.46.0",
+    "proper-lockfile": "^4.1.2",
     undici: "^7.29.1",
     ws: "8.21.1",
     zod: "^3.23.8",
@@ -34621,6 +34621,7 @@ var package_default = {
   },
   devDependencies: {
     "@types/node": "^20.14.0",
+    "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.18.2",
     esbuild: "^0.28.2",
     three: "0.180.0",

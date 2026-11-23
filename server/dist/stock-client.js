@@ -8,7 +8,7 @@
  * Commons), and the storyboard should paste a block it cannot get wrong. Commons is the one
  * provider whose files carry different licenses, so it is filtered to public domain, CC0 and
  * plain CC BY — share-alike would spread to the edited cut and non-commercial is out on a
- * monetized channel (docs/research/2026-09-07-free-stock-sources).
+ * monetized channel (docs/stock-media.md).
  *
  * Measured 2026-09-07: Pexels and Pixabay need a key; NASA (images-api.nasa.gov) and the
  * Commons MediaWiki API answer without one (Commons asks for a User-Agent).
@@ -302,7 +302,7 @@ export async function stockSearch(input) {
         text: JSON.stringify(compact({
             query: input.query, media, orientation: input.orientation ?? 'any', providers: summary,
             note: items.length ? 'Every item carries the visual.license block to store on the cut; download files[0] with curl into storyboard/footage/ (video) or storyboard/images/stock/ (photo). People, logos and brands in frame stay a separate rights question on every provider.'
-                : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/research/2026-09-07-free-stock-sources/index.html.',
+                : 'No usable results. Try English keywords, orientation "any", another media type, or the manual archives in docs/stock-media.md.',
             items,
         }), null, 1),
         isError: allFailed && items.length === 0,

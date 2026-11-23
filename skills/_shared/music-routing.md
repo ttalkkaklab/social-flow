@@ -88,4 +88,4 @@ Reconciliation marks that attempt failed; a deliberate retry uses a new request
 ID. It never resends automatically. Preserve any downloaded raw audio for recovery.
 
 Provider research and current implementation scope:
-[2026-10-18 music models](../../docs/research/2026-10-18-music-models/README.md).
+[2026-10-18 music models](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-music-models/README.md).

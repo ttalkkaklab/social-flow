@@ -98,10 +98,10 @@ test('one-take endpoint board reaches the A2V body with a single audio file and 
  assert.deepEqual(plan.sceneRequest.cuts,[]);
  assert.deepEqual(plan.imageBindings.map(p=>[p.shotId,p.frame,p.role,p.parameter]),
    [['s0001',0,'start','imagePath'],['s0001',359,'end','lastFramePath']]);
- assert.equal(planVideo({...f.input,sceneNo:undefined,shotId:first.id}).id,plan.id);
+ assert.throws(()=>planVideo({...f.input,sceneNo:undefined,shotId:first.id}),/sceneNo|shotId/);
  first.timeline.images.push({role:'face',frame:0,path:'images/duo.png',character:'mai-an'});
  f.save();
- assert.throws(()=>planVideo(f.input),err=>err.missing.some(m=>m.role==='face' && m.shotId===first.id));
+ assert.deepEqual(buildGenaiAudioBody(planVideo(f.input).args),body);
 });
 
 test('EP2 keeps the dolly in one shot and binds Miran’s line, position and references at the cut', async t => {
@@ -148,8 +148,9 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   }
   assert.equal(wire.shots[1].dialogue[0].frame,171);
   assert.throws(()=>planVideo(f.input), error=>{
-    assert.deepEqual(error.sceneRequest,request);
-    assert.deepEqual(error.missing.filter(m=>m.input==='reference').map(m=>m.frame),[0,171]);
+    assert.deepEqual(error.sceneRequest.cuts,request.cuts);
+    assert.deepEqual(error.sceneRequest.shotIds,request.shotIds);
+    assert.deepEqual(error.sceneRequest.images.filter(i=>i.reference?.scope==='scene').map(i=>i.character), ['nephew','miran','nephew','miran']);
     assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
     assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),
       [['s0002','end',170],['s0001','start',171]]);
@@ -205,12 +206,12 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.equal(submitted[0].shots[1].performance_uri,'genai-file://'+file);
   assert.equal(submitted[0].shots[0].motion_uri,'genai-file://'+file);
   assert.equal(submitted[0].shots[1].transition,'hard_cut');
-  assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','face','keyframe','end'],['start','face']]);
-  assert.equal(submitted[0].shots[0].images[2].frame,48);
+  assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','keyframe','end','face','face'],['start','face','face']]);
+  assert.equal(submitted[0].shots[0].images[1].frame,48);
   assert.deepEqual(submitted[0].shots.map(s=>s.negative_prompt),['captions',undefined]);
   assert.deepEqual(submitted[0].shots.map(s=>[Boolean(s.motion_uri),Boolean(s.performance_uri)]),[[true,false],[false,true]]);
   for (const file of [motionPrefix,performanceAudio]) assert.equal(plan.inputs[file],createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
-  assert.deepEqual(submitted[0].shots.map(s=>s.opening_positions),setups.map(s=>s[8]));
+  assert.deepEqual(submitted[0].shots.map(s=>s.opening_positions),setups.map(s=>s[8].map(row=>({...row,images:[row.character==='nephew'?1:2]}))));
   await videoStatus({episode:f.episode,requestId,action:'refresh'});
   assert.equal((await videoStatus({episode:f.episode,requestId})).providerId,jobId);
   providerStatus = 'failed';
@@ -390,13 +391,13 @@ test('a saved one-take A2V request keeps the original audio, five intermediate c
   assert.match(revised.args.prompt,/Frame 42: The dancer steps forward/);
 });
 
-test('a distilled I2V subject panel belongs to an off-screen dancer, separately from the first frame',async t=>{
+test('a distilled I2V prop stays separate from the opening image and silent dancers',async t=>{
  const f=busking(t), m=f.members[0];
  delete f.scene.audio; f.members.splice(1);
  m.duration=3; m.timeline.endFrame=72;
  m.timeline.action='The plaza stays empty until Mai An enters from the left.';
  m.visual.video.model='ltx-2.5-22b-distilled';
- m.timeline.images.push({role:'outfit',frame:0,path:'images/duo.png',character:'mai-an'});
+ m.visual.references = [{id:'bag',role:'prop',use:'video',purpose:'A canvas bag.',path:'images/duo.png'}];
  f.scene.openingPositions[1].images=[1]; f.save();
  const key=config.astraGenaiApiKey, fetch=globalThis.fetch;
  config.astraGenaiApiKey='fixture'; t.after(()=>{config.astraGenaiApiKey=key;globalThis.fetch=fetch});
@@ -410,13 +411,13 @@ test('a distilled I2V subject panel belongs to an off-screen dancer, separately 
  const plan=await planManagedVideo(f.input);
  assert.deepEqual(plan.args.references.map(p=>path.basename(p.imagePath)),['duo.png']);
  assert.equal(plan.imageBindings.find(i=>i.id==='start').path,path.join(f.dir,'images/opening.png'));
- assert.match(plan.args.prompt,/mai-an \(Image 1\): Off screen/);
+ assert.match(plan.args.prompt,/mai-an: Off screen/);
  assert.match(plan.args.prompt,/no subtitles/);
- m.timeline.images.at(-1).strength=0.25; f.save();
- assert.throws(()=>planVideo(f.input), e=>e.missing.some(i=>i.role==='outfit' && i.frame===0 && i.shotId));
+ m.timeline.images[0].strength=0.25; f.save();
+ assert.throws(()=>planVideo(f.input), /scene_inputs_unsupported/);
 });
 
-test('a 25-frame scene retains its length for three I2V face references and for T2V', t => {
+test('a 25-frame silent scene retains its length and excludes all three face references', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.scene.oneTake = true;
@@ -432,14 +433,14 @@ test('a 25-frame scene retains its length for three I2V face references and for 
   const image = planVideo({...f.input,operation:'image'});
   assert.equal(image.args.numFrames,25);
   assert.equal(image.args.duration,undefined);
-  assert.deepEqual(image.args.references.map(p=>path.basename(p.imagePath)),['solo.png','duo.png','trio.png']);
+  assert.equal(image.args.references,undefined);
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];
   f.save();
   assert.equal(planVideo({...f.input,operation:'text'}).args.numFrames,25);
 });
 
-test('Veo reference-only scenes send owned face and outfit assets without a timed first frame', t => {
+test('Veo reference scenes omit silent cast panels and keep prop assets separate from temporal frames', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.members.splice(1);
@@ -453,23 +454,21 @@ test('Veo reference-only scenes send owned face and outfit assets without a time
   shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
   shot.visual.frames = {mode:'reference', start:'images/opening.png'};
   f.save();
-  const plan = planVideo({...f.input,args:{}});
-  const body = buildVeoBody(plan.args);
-  assert.equal(body.instances[0].referenceImages.length,2);
-  assert.ok(body.instances[0].referenceImages.every(p => p.image.bytesBase64Encoded));
-  assert.deepEqual(plan.imageBindings.map(b => [b.shotId,b.frame,b.role,b.character]),[
-    ['s0001',0,'face','mai-an'],['s0001',0,'outfit','mai-an'],
-  ]);
-  assert.match(plan.args.prompt,/mai-an \(Image 1, Image 2\): Off screen/);
-  shot.timeline.images[1].character = 'other';
+  assert.throws(() => planVideo({...f.input,args:{}}), e => e.sceneRequest.images.length === 0);
+  shot.timeline.images = [];
+  shot.visual.references = [{id:'wheel',role:'prop',use:'video',purpose:'The bicycle wheel.',path:'images/solo.png'}];
   f.save();
-  assert.throws(() => planVideo({...f.input,args:{}}), /same subject/);
-  shot.timeline.images[1].character = 'mai-an';
+  const plan = planVideo({...f.input,args:{}});
+  const [wire] = buildVeoBody(plan.args).instances;
+  assert.equal(wire.referenceImages.length,1);
+  assert.ok(wire.referenceImages[0].image.bytesBase64Encoded);
+  assert.equal(wire.image,undefined);
   shot.timeline.images.push({role:'start',path:'images/opening.png',frame:0});
   f.save();
   assert.throws(() => planVideo({...f.input,args:{}}), /scene_inputs_unsupported/);
   delete shot.visual.frames;
   shot.timeline.images = [];
+  delete shot.visual.references;
   shot.visual.video.operation='text';
   f.scene.openingPositions[1].images=[];
   f.save();

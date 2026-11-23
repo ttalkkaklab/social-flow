@@ -13,7 +13,12 @@
   var sidebar = document.createElement('aside');
   sidebar.className = 'review-sidebar';
   var brand = document.createElement('a');
-  brand.className = 'review-brand'; brand.textContent = '딸깍스토리';
+  brand.className = 'review-brand';
+  var logo = document.createElement('img');
+  logo.src = './ttalkkak-story.svg';
+  logo.alt = words('딸깍스토리', 'Ttalkkak Story');
+  logo.width = 167; logo.height = 50;
+  brand.appendChild(logo);
   brand.href = '../../../index.html'; sidebar.appendChild(brand);
   var channel = document.createElement('div'); channel.className = 'review-channel';
   channel.textContent = doc.channelName || doc.channel || '';

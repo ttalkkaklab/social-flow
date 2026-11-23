@@ -158,7 +158,7 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    closure are available on YouTube. Specify one platform for status on a simulcast.
    Keep the operator present to monitor chat and stop with SIGINT/SIGTERM. The duration sets the chat intake window. A reply accepted inside that window may finish after it closes. On macOS, the runner keeps the broadcast host awake for the session.
 
-Latency measurements and comparable implementations are in [the live latency study](../../docs/research/2026-11-22-character-live-latency/README.md).
+Latency measurements and comparable implementations are in [the live latency study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-22-character-live-latency/README.md).
 
 The archive is recording.flv, with chat and audio frame timestamps in events.jsonl. Treat run
 directories as private. Each unique platform message is considered once within a bounded window.

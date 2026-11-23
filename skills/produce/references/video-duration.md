@@ -38,7 +38,7 @@ retake tools keep their own length inputs.
 
 | Route | Minimum covering request | Evidence |
 | --- | --- | --- |
-| Seedance 2.0 (with Fast, Mini) / 2.5 | Integers 4–15 / 4–30 seconds | [BytePlus task API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api) |
+| Seedance 2.0 (with Fast, Mini) / 2.5 | 4–15 / 4–30 whole seconds (including Flash). Adaptive duration is -1. A 2.5 edit keeps the source duration. | [BytePlus task API](https://docs.byteplus.com/en/docs/modelark/create-video-generation-task-api) |
 | ASTRA (every mode but retake) | 25–361 frames, 8k+1 | Live server's published `/v1/models` limit, 1–60 fps (24 default); above 121 only some modes and sizes are measured. Not a claim about every LTX deployment |
 | MLX video | 9–241 frames, 8k+1 at 24 fps | Bundled local server contract; memory/resolution validation still applies |
 | FastH3 Omni reference | 124–362 frames, 17k+5 at 24 fps | Bundled local pack contract (`FASTH3_FRAME_LIMITS`) |

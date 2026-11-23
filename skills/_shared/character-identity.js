@@ -175,7 +175,7 @@ function headsTall(character) {
 // Shape words by head count: [counts below this, words]. Geometry only — the head against the body first, then a
 // neck, torso or leg cue where a source ties one to that count — and no age or style label (chibi, child, heroic),
 // which would change the character's apparent age or fight the style preset. The rows at 1.5–2, 3, 7.5 and 8 heads
-// follow the pages read in docs/research/2026-11-21-head-body-proportion; 8.5 and 9 take their count from those
+// follow the pages read in 1eabc4fb:docs/research/2026-11-21-head-body-proportion; 8.5 and 9 take their count from those
 // pages and their leg words from us; 2.5 and 4–7 are our interpolation. None is measured on our models.
 // ponytail: one row per count, picked by count alone; pick by the sheet's build too if rows start contradicting sheets.
 const HEAD_SHAPES = [

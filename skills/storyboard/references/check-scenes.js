@@ -82,7 +82,7 @@ const SLIDE_TREATMENTS = ['editorial', 'photo-action'];
    motion background, a b-roll or a recording. The footage treatment (one clip per sentence
    under drawn marks, 0.47–0.53) is retired. A beat that would need an arrow, a figure or a
    principle on screen is an HTML slide on the studio stage (slide-design.md §1 · §9), authored
-   to the quality of docs/research/2026-09-04-rendered-object-slide/reference-slide.html. */
+   to the quality of skills/storyboard/examples/reference-slide.html. */
 const FOOTAGE_RETIRED = 'treatment:"footage" is retired (user directive 2026-09-05) — nothing is drawn over video; ' +
   'an explanation beat (timeline · statistic · principle) is an editorial HTML slide on the studio stage, ' +
   'an event or a place is a motion background or a b-roll with nothing drawn on it';
@@ -463,7 +463,7 @@ function seedancePromptFindings(prompt, engine, model) {
   // The Audio: sentence is exempt from the negative check — "no music, no speech" is a state.
   const audioAt = text.search(/Audio\s*:/i);
   const body = audioAt >= 0 ? text.slice(0, audioAt) : text;
-  const promptEngine = model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  const promptEngine = String(model).startsWith('dreamina-seedance-2-5-') ? 'seedance-2.5' : 'seedance';
   PROMPT.hangulHits(text, promptEngine).forEach((h) => out.push(
     `the stored clip prompt carries Korean ("${h}") — a seedance body reads Chinese or English; Korean goes inside the quotes of a dialogue line`));
   PROMPT.negDirectiveHits(body, 'seedance').forEach((h) => out.push(

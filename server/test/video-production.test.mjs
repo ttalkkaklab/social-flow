@@ -8,6 +8,30 @@ import { createHash } from 'node:crypto';
 const require=createRequire(import.meta.url);
 const review=require('../../skills/storyboard/references/video-production.js');
 
+test('offline generation icons follow the request adapter and subject inputs', () => {
+ const adapters=require('../../skills/_shared/video-catalog.json').adapters;
+ const mode=(tool,inputs)=>review.generationMode({engine:'astra-genai',operation:'text'},tool,inputs,adapters);
+ assert.equal(mode('astra_genai_img2video',[{imagePath:'face.png'}]),'MSR');
+ assert.equal(mode('astra_genai_img2video',[{imagePath:'place.png',background:true}]),'I2V');
+ assert.equal(mode('astra_genai_msr',[]),'MSR');
+ assert.equal(mode('astra_genai_audio2video',[]),'A2V');
+ assert.equal(mode('astra_genai_text2video',[]),'T2V');
+ assert.equal(mode('seedance_reference',[]),'reference');
+ assert.equal(review.generationMode(null,null,[]),null);
+});
+
+test('an ungrouped silent shot displays the canonical image route even in a reference project', t => {
+ const episode=fs.mkdtempSync(path.join(os.tmpdir(),'offline-shot-mode-'));
+ t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));
+ const dir=path.join(episode,'storyboard');
+ fs.mkdirSync(dir);
+ const board={PRODUCTION:{videoModel:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'reference',resolution:'720x1280'}},
+  SCENES:[{id:'silent',duration:2,narration:[],shot:{render:{mode:'generated_video'}},visual:{frames:{mode:'first',start:'start.png'}}},
+   {id:'old-quote',type:'quote',duration:2,narration:[{delivery:'on_screen',speaker:'actor',tts:'Hi'}],visual:{clip:{prompt:'A greeting.'}}}]};
+ fs.writeFileSync(path.join(dir,'scenes.js'),Object.entries(board).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ assert.deepEqual(review.read(dir,board).shotModes,{silent:'I2V','old-quote':'MSR'});
+});
+
 test('local review preserves ambiguous jobs and strips provider secrets; export and rendering escape authored text',t=>{
  const episode=fs.mkdtempSync(path.join(os.tmpdir(),'sf-production-'));
  t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));

@@ -119,7 +119,7 @@ viewer's doubt and the proof scene. Once the shots before it have lengths, every
 prints when the first spoken line starts, and for a natively voiced line the silence its
 shot's stored length holds. This reports and never refuses. It is writing guidance, not a score, a problem-beat requirement or a deadline for
 the proof: on the one channel studied the earliest proof had the fewest views. Evidence and
-its limits: `docs/research/2026-11-18-promise-and-proof/README.md`.
+its limits: [promise and proof study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-promise-and-proof/README.md).
 
 ## Opening by format and platform (user directive, 2026-11-18)
 
@@ -136,7 +136,7 @@ question (YouTube's Intro reads who is still watching at 30 s). The synopsis giv
 its own paragraph, `story_sequence` records it as `STORY.opening`, and every story-first board
 write prints a reading of it against the format and platforms. This reports and never refuses;
 it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
-Evidence and its limits: `docs/research/2026-11-18-opening-hooks/`.
+Evidence and its limits: [opening hooks study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks).
 
 ## Dramatic pressure and payoff (user directive, 2026-11-20)
 
@@ -148,8 +148,8 @@ Apply the devices in the synopsis and in observable setup, choices and outcomes 
 and shots. Respect the requested tone, established canon and factual evidence. Claim-led
 and quiet work can use the uncertainty, proof or discovery already present. This pass uses
 the existing story fields and does not add a write gate. Research:
-[pressure cases](docs/research/2026-11-20-story-intensity/README.md) and
-[payoff cases](docs/research/2026-11-20-story-catharsis/README.md).
+[pressure cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-intensity/README.md) and
+[payoff cases](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-20-story-catharsis/README.md).
 
 ## Clichés as story material (user directive, 2026-11-18)
 
@@ -178,7 +178,7 @@ mode and is reported (`cliche_mode_changed`). A use a hand edit put in the story
 user's pick is reported as `cliche_unpicked`.
 This is writing guidance, not a score, a quota or an approval pause, and a cliché's name never
 answers `necessity`. Follow `skills/storyboard/references/cliche-use.md`. Evidence and its
-limits: `docs/research/2026-11-18-kdrama-cliches/`.
+limits: [K-drama cliché survey](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-kdrama-cliches).
 
 ## Scene sound and audience effects (user directive, 2026-11-21)
 
@@ -325,7 +325,7 @@ only. A sheet without a count reads `head_count_missing` in `character_manage`
 (`missing.headCount` and the sheet warnings), `character_panel` and `shot_image`. Each of these reports; none refuses.
 The shape words come from twelve rows by head count, geometry only with no age or style label:
 the rows at 1.5–2, 3, 7.5 and 8 heads follow the pages read, the rest are ours. Whether the
-sentence moves Qwen or any saved model is not measured. Evidence and limits: `docs/research/2026-11-21-head-body-proportion/README.md`.
+sentence moves Qwen or any saved model is not measured. Evidence and limits: [character proportion study](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-21-head-body-proportion/README.md).
 
 ## Silence around native lines (user directive, 2026-11-16)
 
@@ -407,7 +407,7 @@ naming a retired engine reads `migration_required` in settings and fails `video_
 `video_engine_unsupported`. Their existing clips stay reusable through `visual.reuse`; never
 regenerate solely to migrate. MSR keeps the contract above. Seedance binds each speaker's
 image and sample in the prompt (`@Image N`/`@Audio N` on 2.5, `Image N`/`Audio N` on 2.0) and
-rejects real human faces, so photoreal people go to the LTX lanes.
+uses a reviewed private portrait asset for a visible photoreal sheet face. Keep the saved model and casting. Follow the [Seedance character contract](skills/_shared/video-routing.md) before approval.
 
 ## One storyboard template (user directive, 2026-10-31)
 
@@ -619,7 +619,7 @@ This is an absolute content rule: no marks and no type of any kind over a moving
   `shot.infoType` timeline · statistic · principle, and any beat that would need something
   pointed at on the picture, are `kind:"diagram", motion:true, treatment:"editorial"` on the
   studio stage, with a rendered object when a thing is the subject. The quality bar is
-  `docs/research/2026-09-04-rendered-object-slide/reference-slide.html` — lit slabs, a
+  `skills/storyboard/examples/reference-slide.html` — lit slabs, a
   cyclorama, a baked object whose movement is the sentence, one accent, values that count
   while the sentence runs. Those slides sit outside `html_plate_max`, and the static-ground
   clock runs per reveal group on them.
@@ -826,7 +826,7 @@ regressions and the tool-surface contract.
 - **Readable over DRY.** Inputs that decide the result stay in the test body. Shared
   setup is a factory with defaults, not a `beforeEach` that hides them.
 
-Background and sources: `docs/research/2026-10-18-test-class-practices/README.md`.
+Background and sources: [test design references](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-test-class-practices/README.md).
 
 ## GitHub authentication
 
@@ -872,3 +872,7 @@ Before committing or merging, check `git status` and recently modified files
 ## Scene video generation — owner directive, 2026-11-21
 
 Write one storyboard card per shot and compile one video request per scene. A cut to a new setup starts a shot. Continuous camera moves and entrances stay on the current card. An explicit one-take request uses one uninterrupted shot. Record each shot’s incoming transition, scene-frame interval, framing, action and image roles. Inspect the actual opening image. Describe each character’s position or off-screen starting place, their emotional change and the essential action at the visible landmark. Use the authored lines and the saved model selection, including distilled LTX first-frame and subject conditioning where supported. Scene audio spans the cuts once. Carry every designated input to the selected adapter or report its shot, role and frame before generation. See [scene generation](skills/generate-cut-videos/SKILL.md).
+
+## Scene production — owner directive, 2026-11-23
+
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.

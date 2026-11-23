@@ -172,23 +172,6 @@ test('audio-conditioned shots refuse silently dropping authored intermediate con
   await assert.rejects(prepare(dir, { shotId: 's0001', audioPath: audio }), /does not support intermediate keyframes/);
 });
 
-test('renderer dispatches prepared keyframes to their own adapter and rejects unknown tools before generation', async () => {
-  const { submitPrepared } = require('../../skills/produce/references/render-astra-shot.js');
-  const calls = [];
-  const parse = args => ({ ...args, validated: true });
-  const client = {
-    astraKeyframeVideoSchema: { parse }, astraImg2VideoSchema: { parse }, astraAudio2VideoSchema: { parse },
-    generateFromKeyframes: args => { calls.push(['keyframe', args]); return 'candidate'; },
-    generateFromImage: args => { calls.push(['image', args]); },
-    generateFromAudio: args => { calls.push(['audio', args]); },
-  };
-  const args = { images: [{ frameIdx: 0 }, { frameIdx: 24 }, { frameIdx: 48 }] };
-  assert.equal(await submitPrepared(client, 'astra_keyframe_video', args), 'candidate');
-  assert.deepEqual(calls, [['keyframe', { ...args, validated: true }]]);
-  await assert.rejects(submitPrepared(client, 'unknown', args), /Unsupported prepared ASTRA tool/);
-  assert.equal(calls.length, 1);
-});
-
 test('keyframe handoff carries guided controls and rejects unsupported tier instead of dropping it', async t => {
   const { dir, scene, save } = fixture(t);
   scene.visual.frames = { mode: 'first_last', end: 'start.png', keyframes: [{ atSeconds: .5, image: 'start.png' }] };

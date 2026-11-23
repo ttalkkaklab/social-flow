@@ -189,7 +189,7 @@ behind it is the fact-list page one step earlier. Two messages may share a wow w
 holds only one real gap and two honest so-whats; the checker warns, and the pick shows whether
 the second page is an episode or a rewording.
 
-`check-research.js` reads the shape it can read (docs/research/2026-09-11-message-delivery):
+`check-research.js` reads the shape it can read (https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-11-message-delivery):
 a Message cell whose final predicate is in the past tense (냈다 · 했어요 · 였습니다) is a fact
 and fails; one carrying an Arabic digit fails; one carrying the first word of its direction's
 *Hero / stake* cell (김만덕 → 만덕 too) fails the name-erasure test. What it cannot read — whether

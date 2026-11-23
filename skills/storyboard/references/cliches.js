@@ -5,7 +5,7 @@
 // the story_cliche tool share: the tagged catalogue, the rule for when an episode applies clichés,
 // the picker that returns a few candidates for a story need, and the reading of a board's record.
 // Everything here reports; nothing scores a story. cliche-use.md is the author's guide and
-// docs/research/2026-11-18-kdrama-cliches is the evidence behind the catalogue.
+// 1eabc4fb:docs/research/2026-11-18-kdrama-cliches is the evidence behind the catalogue.
 
 const fs = require('node:fs');
 const path = require('node:path');

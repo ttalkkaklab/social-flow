@@ -65,8 +65,6 @@ a local refinement. The shared generator remains the only source.
   no results, image modal keyboard behavior, alias fragment navigation, language,
   disclosures and print restoration. Do not infer visual quality from --check.
 
-See [the scored UX review](../../../docs/design-system/screen-quality/review-generator-20261016.md).
-
 ## Character detail refinement (2026-10-16)
 
 The `.character-sheet` surface shows the name with its ID. Labeled pictogram links
@@ -102,8 +100,6 @@ Section icons are decorative SVGs paired with visible translated text.
   their existing rules. `review-library.js` regenerates every sheet from this
   template, with the same offline assets and review freshness checks.
 
-Evaluation rubric and independent reports: [character detail review](../../../docs/loops/003-character-detail/loop.md).
-
 Upstream image diagnostics and episode links remain available beneath the gallery.
 Diagnostic details show their count when collapsed; they do not override the
 character content review or imply that matching the template certifies the art.
@@ -133,9 +129,6 @@ It flows above the content below 1024px. The timing chart is a native disclosure
 so a long episode does not push the first shot far down a mobile screen.
 Reduced transparency, greater contrast, no-blur support and print have opaque
 alternatives. Fonts settle before preview measurements and dependent views mount.
-
-Research, screenshots and independent evaluation:
-[typography review](../../../docs/loops/009-review-typography/research.md).
 
 ## Library pages on the design system (2026-10-31)
 

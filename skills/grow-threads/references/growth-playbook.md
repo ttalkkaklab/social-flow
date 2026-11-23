@@ -3,7 +3,7 @@
 Based on 2026-08 research (Meta Transparency Center + multi-source
 cross-checks), re-measured 2026-09-19 against 61 popular posts written by other
 people plus two third-party datasets
-(`docs/research/2026-09-19-threads-post-styles/`). Single-source numbers were
+([threads post styles study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-09-19-threads-post-styles)). Single-source numbers were
 dropped. Platform-wide style and posting rules live in
 `skills/platform-guide/references/platform-playbook.md` §3; this document
 carries **growth-loop tactics only**.
@@ -84,7 +84,7 @@ measurements.
   them just returns an error; the account takes no mark
   (`GET /{threads-user-id}/threads_publishing_limit`). Judgment-based
   publishing never touches these lines. Research notes:
-  `docs/research/2026-08-15-posting-frequency-and-growth/`.
+  [posting frequency and growth study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-08-15-posting-frequency-and-growth).
 - Links: the 2024 link penalty was retracted (Mosseri, official). But a body
   link still has the separate problem of pulling readers away and cutting
   replies — the growth loop's regular posts **default to link-in-reply, and

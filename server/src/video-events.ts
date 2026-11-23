@@ -1,7 +1,10 @@
+import type { SeedanceBinding } from './seedance-bindings.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 /** Provider receipts must be durable before polling; this also works across concurrent calls. */
 export interface VideoEventSink {
+  characterBindings?: SeedanceBinding[];
+  castVerified?(): void;
   submitted(id: string): void;
   usage(tokens: number): void;
 }

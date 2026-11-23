@@ -38,10 +38,17 @@
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -71,9 +78,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -108,9 +159,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -143,9 +196,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -178,6 +233,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }
@@ -215,16 +271,24 @@
         "watermark",
         "outputPath",
         "filename",
+        "realFaceInput",
         "sourceImagePath",
         "lastImagePath",
         "ratio"
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -254,9 +318,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -291,9 +399,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -326,9 +436,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -361,6 +473,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }
@@ -398,18 +511,28 @@
         "watermark",
         "outputPath",
         "filename",
+        "omniReferenceTaskType",
+        "realFaceInput",
         "referenceImagePaths",
         "referenceAudioPaths",
         "referenceVideoPaths",
+        "referenceVideoTaskIds",
         "referenceVideoUrls",
         "ratio"
       ],
       "modelConstraints": {
         "dreamina-seedance-2-5-260628": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
           "resolutions": [
             "480p",
             "720p",
-            "1080p"
+            "1080p",
+            "4k"
           ],
           "duration": [
             4,
@@ -439,9 +562,53 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
+          "activationGate": true
+        },
+        "dreamina-seedance-2-5-flash-261115": {
+          "referenceTaskTypes": [
+            "auto",
+            "reference",
+            "edit",
+            "extend"
+          ],
+          "resolutions": [
+            "480p",
+            "720p"
+          ],
+          "duration": [
+            4,
+            30
+          ],
+          "lastFrame": true,
+          "referenceImages": [
+            1,
+            10
+          ],
+          "referenceAudio": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30,
+            "audioOnly": true
+          },
+          "referenceVideos": {
+            "maxClips": 5,
+            "clipSeconds": [
+              2,
+              30
+            ],
+            "totalSeconds": 30
+          },
+          "audio": true,
+          "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p",
@@ -476,9 +643,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-fast-260128": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -511,9 +680,11 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         },
         "dreamina-seedance-2-0-mini-260615": {
+          "referenceTaskTypes": [],
           "resolutions": [
             "480p",
             "720p"
@@ -546,6 +717,7 @@
           },
           "audio": true,
           "realFaceInput": false,
+          "portraitAssetInput": true,
           "activationGate": true
         }
       }
@@ -1498,6 +1670,129 @@
           "frameRate": 24
         },
         "note": "LTX 8k+1 frames; MLX-Serve backend."
+      }
+    },
+    {
+      "tool": "ltx_desktop_text2video",
+      "engine": "ltx-desktop-local",
+      "deployment": "native-desktop-loopback",
+      "operation": "text",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "fps",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "aspectRatio"
+      ],
+      "modelConstraints": {
+        "discovery": "video_catalog with engine ltx-desktop-local",
+        "note": "Use a downloaded offering on this machine."
+      }
+    },
+    {
+      "tool": "ltx_desktop_img2video",
+      "engine": "ltx-desktop-local",
+      "deployment": "native-desktop-loopback",
+      "operation": "image",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": true,
+        "shotDescriptions": "prompt",
+        "sceneAudio": false
+      },
+      "voice": {
+        "lane": "none",
+        "dialogue": "refused",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "fps",
+        "seed",
+        "outputPath",
+        "filename",
+        "durationSeconds",
+        "aspectRatio",
+        "imagePath",
+        "lastFramePath"
+      ],
+      "modelConstraints": {
+        "discovery": "video_catalog with engine ltx-desktop-local",
+        "note": "Use a downloaded offering on this machine."
+      }
+    },
+    {
+      "tool": "ltx_desktop_audio2video",
+      "engine": "ltx-desktop-local",
+      "deployment": "native-desktop-loopback",
+      "operation": "audio",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": true,
+        "endingImage": false,
+        "shotDescriptions": "prompt",
+        "sceneAudio": true
+      },
+      "voice": {
+        "lane": "supplied",
+        "dialogue": "allowed",
+        "voiceReference": "unsupported",
+        "suppliedSpeech": "audio_conditioned_reencoded",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "resolution",
+        "fps",
+        "seed",
+        "outputPath",
+        "filename",
+        "aspectRatio",
+        "audioPath",
+        "imagePath"
+      ],
+      "modelConstraints": {
+        "discovery": "video_catalog with engine ltx-desktop-local",
+        "note": "Use a downloaded offering on this machine."
       }
     },
     {

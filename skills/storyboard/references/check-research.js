@@ -101,7 +101,7 @@ const IGNORANCE = new RegExp([
 
 /* A message is a sentence that stays true with the episode's names gone — Egri's "A leads to B",
    McKee's value + cause — so it is told in the present, carries no figure, and names no hero
-   (scenario-stage §The message, docs/research/2026-09-11-message-delivery). The 2026-09-11
+   (scenario-stage §The message, 1eabc4fb:docs/research/2026-09-11-message-delivery). The 2026-09-11
    김만덕 log wrote "…임금은 그 법에 예외를 냈다" in the Message cell: a fact, the wow's 실제로는
    half said again, and the board downstream had nothing to hand over. The first two shapes a
    checker can read: a final predicate in the past tense, and an Arabic digit anywhere. */

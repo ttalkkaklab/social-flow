@@ -9,8 +9,7 @@ slide plays that sheet back by moving `background-position`, so the frame at any
 time) is one number and the seek contract holds unchanged.
 
 Where it comes from: the 2026-09-04 object-slide pass
-(`docs/research/2026-09-04-rendered-object-slide/`; the finished proposal slide is
-`reference-slide.html` there — since the 2026-09-05 directive that an explanation cut outside
+(see the [working slide](../examples/reference-slide.html) — since the 2026-09-05 directive that an explanation cut outside
 `full_video` is an HTML slide and never video with marks over it, it is the quality bar every
 timeline · statistic · principle slide is held to; a `full_video` episode may explain on clean
 video instead, production-mode.md). Three earlier attempts were measured

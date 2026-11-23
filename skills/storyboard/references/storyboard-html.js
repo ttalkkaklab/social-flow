@@ -8,7 +8,7 @@ const path = require('node:path');
 const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js', 'motion-graphics.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'scene-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
-const ASSETS = ['design-system.css', 'review.css', ...FONT_ASSETS];
+const ASSETS = ['design-system.css', 'review.css', 'ttalkkak-story.svg', ...FONT_ASSETS];
 HELPERS.push('review-localization.js', 'audience-spotting.js', 'score-player.js');
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
@@ -77,6 +77,8 @@ function storyboardHtml(directory, check = false) {
   const previews = require('./audience-review-data.js').exportData(win || {}, dir, check);
   const videoAdapters = require('../../_shared/video-catalog.json').adapters.map(({engine, tool, operation, modelConstraints}) => ({
     engine, tool, operation,
+    ...(tool === 'seedance_reference' ? { referenceLimits: Object.fromEntries(Object.entries(modelConstraints).map(([id, spec]) => [id, spec.referenceImages[1]])) } : {}),
+    ...(tool === 'seedance_img2video' ? { modelConstraints } : {}),
     ...(tool === 'veo_reference' ? { assetLimits: Object.fromEntries(Object.entries(modelConstraints).map(([model, spec]) => [model, spec.maxAssetImages])) } : {}),
   }));
   const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +

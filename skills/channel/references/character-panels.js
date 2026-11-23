@@ -104,14 +104,14 @@ function boardPanelFindings(win, boardDir, channelDir) {
   }
   return findings;
 }
-// Resolve ownership from the episode cast, never from a transport filename or a scene image.
-function readPanelSheets(boardDir, ids) {
-  let cast = [];
+function episodeCast(boardDir) {
   const castFile = path.join(boardDir, 'cast.json');
-  if (fs.existsSync(castFile)) {
-    const value = JSON.parse(fs.readFileSync(castFile, 'utf8')).characters;
-    cast = Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry]) => ({ ...entry, id }));
-  }
+  if (!fs.existsSync(castFile)) return [];
+  const value = JSON.parse(fs.readFileSync(castFile, 'utf8')).characters;
+  return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry]) => ({ ...entry, id }));
+}
+// Resolve ownership from the episode cast, never from a transport filename or a scene image.
+function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
   return new Map(ids.map(id => {
     const entry = cast.find(c => c.id === id);
     let folder;
@@ -127,12 +127,14 @@ function readPanelSheets(boardDir, ids) {
       if (fs.existsSync(path.join(candidate, 'panels.json'))) { folder = candidate; break; }
       if (path.dirname(dir) === dir) break;
     }
+    if (folder && fs.existsSync(folder) && path.basename(fs.realpathSync(folder)) !== id)
+      throw new Error(`cast_source_missing: ${id} needs its own character folder`);
     if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
     let manifest;
     try { manifest = JSON.parse(fs.readFileSync(path.join(folder, 'panels.json'), 'utf8')); }
     catch { throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`); }
     const panels = {};
-    for (const view of ['face', 'front', 'back']) {
+    for (const view of requiredViews?.get(id) ?? ['face', 'front', 'back']) {
       const panel = manifest.panels?.[view];
       const file = localFile(folder, panel?.file);
       // Older manifests omitted these tags; an explicitly different tag is never a character panel.
@@ -145,8 +147,8 @@ function readPanelSheets(boardDir, ids) {
     return [id, { folder, paths: panels, entries: manifest.panels }];
   }));
 }
-function sheetPanels(boardDir, ids) {
-  return new Map([...readPanelSheets(boardDir, ids)].map(([id, sheet]) => [id, sheet.paths]));
+function sheetPanels(boardDir, ids, views) {
+  return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
 }
 function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
   if (ids.length > 4) throw new Error('msr_subject_limit: at most four subject images');
@@ -186,4 +188,138 @@ function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
         : `${id}'s body and outfit, ${view}` };
   }));
 }
-module.exports = { SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
+// Resolve the character's appearance before an engine chooses its wire format.
+function missingAppearance(shot, character, role, message) {
+  const error = new Error('character_input_required: ' + shot.id + ' ' + character + ' ' + role + ': ' + message);
+  error.report = {stage:'character_inputs', code:'character_input_required', shotId:shot.id, character, role,
+    executable:false, videoSubmitted:false, message:error.message};
+  return error;
+}
+function resolveShotCharacterInputs(shot, boardDir, seedance = false, characters, sceneSpeakers) {
+  const visual = shot.visual || {}, view = visual.camera?.view;
+  const cast = [].concat(visual.character || []).map(c => typeof c === 'string' ? c : c.id);
+  const lines = require('../../storyboard/references/scene-direction.js').orderedSpeech(shot);
+  const explicit = visual.characterInputs;
+  let registry;
+  if (seedance) {
+    const people = lines.filter(line => line.delivery === 'on_screen' && line.tts?.trim()).map(line => line.speaker);
+    if (view?.subjectId && !view.subjectType) {
+      registry = episodeCast(boardDir);
+      const named = Array.isArray(characters) ? characters.some(c => c.id === view.subjectId)
+        : Object.hasOwn(characters ?? {}, view.subjectId);
+      if (named || registry.some(c => c.id === view.subjectId)) people.push(view.subjectId);
+    }
+    if (view?.subjectType === 'person') people.push(view.subjectId);
+    if (view?.mode === 'ots') people.push(view.viewerId);
+    for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
+  }
+  const bodyForView = id => {
+    if (view?.mode === 'ots' && view.viewerId === id) return 'back';
+    if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
+    if (['detail', 'object', 'space'].includes(view?.subjectType)) return;
+    if (view?.mode === 'rear' || visual.camera?.rear === true) return 'back';
+    if (['front', 'three-quarter-left', 'three-quarter-right', 'profile-left', 'profile-right'].includes(view?.mode)) return 'front';
+  };
+  if (explicit === undefined && (seedance ? !cast.length : visual.frames?.mode !== 'reference' || !cast.some(bodyForView))) return shot;
+  const specs = explicit ?? cast.map(character => ({ character }));
+  if (!Array.isArray(specs) || !specs.length) throw new Error('character_inputs_invalid: specify the visible cast');
+  const views = new Map(), hands = new Set();
+  for (const spec of specs) {
+    const id = spec?.character;
+    if (typeof id !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) ||
+        Object.keys(spec).some(key => !['character', 'faceTaskId', 'faceReviewPath', 'bodyView', ...(seedance ? ['visibility'] : [])].includes(key)))
+      throw new Error('character_inputs_invalid: use distinct cast IDs and supported character input fields');
+    if (spec.faceTaskId !== undefined && (typeof spec.faceTaskId !== 'string' || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
+      throw new Error('character_face_source_invalid: specify a Seedance generation task ID');
+    if (spec.faceReviewPath !== undefined && (!spec.faceTaskId || typeof spec.faceReviewPath !== 'string'))
+      throw new Error('character_face_source_invalid: a face review must identify the selected original');
+    const body = spec.bodyView ?? bodyForView(id);
+    if (seedance) {
+      if (spec.visibility !== undefined && !['face_visible','body_only','hands_only'].includes(spec.visibility))
+        throw missingAppearance(shot,id,'visibility','select face_visible, body_only or hands_only');
+      if (spec.visibility === 'hands_only') {
+        if (lines.some(line => line.speaker === id && line.delivery === 'on_screen' && line.tts?.trim()))
+          throw missingAppearance(shot,id,'face','a hands-only insert with audible dialogue needs off-screen delivery');
+        if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot,id,'hands','remove the face and body sources for this insert');
+        hands.add(id);
+        views.set(id, []);
+        continue;
+      }
+      if (!body) throw missingAppearance(shot,id,'face','no face binding; specify this character’s visibility and front/back body view');
+      if (spec.visibility === 'body_only' || !spec.visibility && !spec.faceTaskId && bodyForView(id) === 'back') {
+        if (spec.faceTaskId) throw missingAppearance(shot,id,'body','a body-only view cannot use a facial original');
+        views.set(id,[body]);
+        continue;
+      }
+    }
+    if (!['front', 'back'].includes(body)) throw new Error('character_body_view_required: select front or back for ' + id);
+    views.set(id, spec.faceTaskId ? [body] : ['face', body]);
+  }
+  const omitted = cast.find(id => !views.has(id));
+  if (seedance && omitted) throw missingAppearance(shot,omitted,'face','include the visible performer in characterInputs');
+  if (cast.length && (cast.some(id => !views.has(id)) || specs.some(spec => !cast.includes(spec.character))))
+    throw new Error('character_inputs_invalid: specify each visible principal in visual.character');
+  let sheets;
+  try { sheets = readPanelSheets(boardDir, [...views.keys()].filter(id => !hands.has(id)), views, registry); }
+  catch (error) {
+    if (!seedance) throw error;
+    const id = [...views.keys()].find(id => error.message.includes(': ' + id + ' '));
+    if (!id) throw error;
+    throw missingAppearance(shot,id,views.get(id).includes('face') ? 'face' : 'body',error.message);
+  }
+  const faces = [], bodies = [], contracts = [], replacedFaces = new Set();
+  for (const { character, faceTaskId, faceReviewPath } of specs) {
+    if (hands.has(character)) continue;
+    const sheet = sheets.get(character);
+    if (faceTaskId) {
+      for (const slot of ['face', 'msr']) {
+        const name = sheet.entries[slot]?.file;
+        if (typeof name === 'string') replacedFaces.add(path.resolve(sheet.folder, name));
+      }
+    }
+    const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
+    const face = faceTaskId ? { taskId: faceTaskId, ...(faceReviewPath ? {reviewPath:faceReviewPath} : {}) } : sheet.paths.face ? { path: sheet.paths.face } : undefined;
+    const voiceRequired = lines.some(line => line.speaker === character && line.tts?.trim() && ['on_screen', 'off_screen'].includes(line.delivery));
+    contracts.push({ character, ...(face ? {face} : {}), bodyView, bodyPath, voiceRequired });
+    const ref = { character, role: 'character', use: 'video' };
+    if (face?.path) faces.push({ ...ref, id: shot.id+'-'+character+'-face', path: face.path, purpose: character+' facial identity and hair.' });
+    const fitting = sheet.entries[bodyView].wardrobe === 'fitting';
+    bodies.push({ ...ref, id: shot.id+'-'+character+'-'+bodyView, path: bodyPath, ...(fitting ? { wardrobe:'fitting' } : {}),
+      purpose: character+' '+bodyView+' physique. ' + (face ? 'Show one complete person using the face reference. ' : '') +
+        (fitting ? 'Use the scene wardrobe.' : 'Match the outfit unless the scene changes it.') });
+  }
+  const pending = new Map([...faces, ...bodies].map(ref => [path.resolve(boardDir, ref.path), ref]));
+  const references = [], ids = new Set();
+  for (const authored of visual.references || []) {
+    const file = authored.path && path.resolve(boardDir, authored.path);
+    if (replacedFaces.has(file) && authored.use !== 'image')
+      throw new Error('character_face_source_conflict: remove the superseded face from video references');
+    const selected = pending.get(file);
+    if (selected && authored.use !== 'image') {
+      if (authored.character && authored.character !== selected.character) throw missingAppearance(shot,selected.character,'owner','reference is assigned to '+authored.character);
+      references.push({ ...authored, character:selected.character, role:'character', purpose:[authored.purpose, selected.purpose].filter(Boolean).join(' ') });
+      pending.delete(file);
+    } else references.push(authored);
+    ids.add(authored.id);
+  }
+  for (const ref of pending.values()) {
+    let id = ref.id;
+    while (ids.has(id)) id += '-video';
+    references.push({ ...ref, id, ...(seedance ? {resolvedPanel:true} : {}) });
+    ids.add(id);
+  }
+  if (!contracts.length) return shot;
+  const normalized = { ...visual, characterInputs:contracts, frames:visual.frames ?? { mode:'reference' }, references };
+  const videoPaths = refs => refs.filter(ref => ['both','video'].includes(ref.use)).map(ref => ref.path);
+  const slot = require('../../storyboard/references/production-mode.js').videoSlot(shot);
+  if (slot?.referenceImagePaths !== undefined) {
+    if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
+      throw new Error('image_plan_invalid: legacy paths disagree with authored references');
+    const referenceImagePaths = videoPaths(references);
+    if (shot.type === 'quote' && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
+    else if (shot.type === 'broll' && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
+    normalized.video = { ...slot, referenceImagePaths };
+  }
+  return { ...shot, visual:normalized };
+}
+module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };

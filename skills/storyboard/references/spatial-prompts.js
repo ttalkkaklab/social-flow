@@ -192,7 +192,7 @@ function assemble(win, index, dir) {
   const lock = lockText(d, style, treatment, castLocks) + locationLock + (propPrompt ? ". " + propPrompt : "") + (isDrone(camera) ? '. The flight keeps continuous terrain parallax and stable landmarks; the picture stays a clean aerial view with scenery at every frame edge' : '');
   let motionPrompt = null;
   const engine = v.video?.engine || v.engine || 'seedance';
-  const promptEngine = v.video?.model === 'dreamina-seedance-2-5-260628' ? 'seedance-2.5' : 'seedance';
+  const promptEngine = String(v.video?.model).startsWith('dreamina-seedance-2-5-') ? 'seedance-2.5' : 'seedance';
   // Keep the story text intact. An optional adapter rendering carries the same
   // event in English when the selected model cannot accept its original language.
   const performanceDirection = (scene.performance || []).map((event, index) => {

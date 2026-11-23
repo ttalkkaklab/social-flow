@@ -150,7 +150,7 @@ export function cameraDrift(prompt: string, movement: string): 'missing' | 'cont
   return said.some(holds) ? 'contradicted' : 'missing';
 }
 
-export function shotVisualDirection(shot: Record<string, unknown>) {
+export function shotVisualDirection(shot: Record<string, unknown>, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
   const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { SIZE_WORDS: Record<string, string>; SIZE_WORDS_OBJECT: Record<string, string>; ANGLE_WORDS: Record<string, string> };
   const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string };
@@ -165,13 +165,14 @@ export function shotVisualDirection(shot: Record<string, unknown>) {
   const rack = picked.find(t => t.entry?.fields.focus);
   const focusWords = !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
   const sizeWords = sentence(sizes[text(plan.size)] || ''), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || '');
-  const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
+  const size = sizes[text(plan.size)];
+  const framing = sentence([concise ? size?.split(',')[0] : size, words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
   const depthWords = plan.depth ? sentence(contract.depthText(plan.depth)) : '';
   // Viewpoint and framing techniques were previously displayed as icons but omitted from shot_prompt.
   const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
     !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
   const accentWords = other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction));
-  const openingView = [viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ''),
+  const openingView = [viewWords || (text(camera.framing) ? sentence(concise ? text(camera.framing) : `Opening composition: ${text(camera.framing)}`) : ''),
     !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
     !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
   ].filter(Boolean);
@@ -182,7 +183,7 @@ type ResolvedAttribute = { value: string; source: 'scene' | 'shot' | 'carry'; id
 type ResolvedRows = Record<string, ResolvedAttribute>;
 const directions = () => load('../../skills/storyboard/references/scene-direction.js') as {
   resolve(scene: unknown, cards: unknown[]): { defaults:ResolvedRows; common:ResolvedRows; shots:ResolvedRows[] };
-  notes(card: unknown, accept:(cue:string)=>boolean, visualOnly:boolean): {actions:string[]; fallback:string[]; motion:string[]; blocking:string; sound:string; end:string; beats:string[]};
+  notes(card: unknown, accept:(cue:string)=>boolean, visualOnly:boolean, concise?:boolean): {actions:string[]; fallback:string[]; motion:string[]; blocking:string; sound:string; end:string; beats:string[]};
   withCameraDefaults(cards:Record<string,unknown>[], scenes:unknown): Record<string,unknown>[];
   labels:Record<string, [string,string]>; movement(id: string): string | undefined;
 };
@@ -193,15 +194,15 @@ export function attributeWords(key: string, row: ResolvedAttribute, camera: Reco
     ? cameraMoveWords({...(row.source === 'shot' ? camera : {}), speed:row.speed, movement:row.source === 'shot' ? row.value : directions().movement(row.id!)}) : row.value;
   return nonEnglishOutsideQuotes(row.value) ? '' : sentence(directions().labels[key][1] + ': ' + row.value);
 }
-export function sceneShotNotes(card: Record<string,unknown>) {
+export function sceneShotNotes(card: Record<string,unknown>, concise = false) {
   const english = (s: string) => s && !nonEnglishOutsideQuotes(s) ? s : '';
-  const notes = directions().notes(card, cue => Boolean(english(cue)), true);
+  const notes = directions().notes(card, cue => Boolean(english(cue)), true, concise);
   const actions = notes.actions.map(english).filter(Boolean);
   return { action:actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound:english(notes.sound), blocking:english(notes.blocking),
     end:english(notes.end), beats:[...notes.beats, ...notes.motion].map(english).filter(Boolean) };
 }
-export function shotVisualWords(shot: Record<string,unknown>, rows:ResolvedRows, common:ResolvedRows, end:string, framing?:string) {
-  const dir = shotVisualDirection(shot), visual = object(shot.visual), camera = object(visual.camera);
+export function shotVisualWords(shot: Record<string,unknown>, rows:ResolvedRows, common:ResolvedRows, end:string, framing?:string, concise = false) {
+  const dir = shotVisualDirection(shot, concise), visual = object(shot.visual), camera = object(visual.camera);
   const expression = expressionWords(shot);
   return [...new Set([framing, dir.framing, ...dir.openingView, dir.focusWords, dir.depthWords, ...dir.accentWords,
     ...Object.entries(rows).filter(([key]) => !common[key]).map(([key,row]) => attributeWords(key,row,camera)),

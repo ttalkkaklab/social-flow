@@ -35,7 +35,7 @@ test('an ordinary motion slot plans silent 2.0 once faces are ruled out; invalid
   assert.equal(scenePlan(scene(action)).model, 'dreamina-seedance-2-0-260128');
   assert.equal(scenePlan(scene(plain, 4.2)).durationSeconds, 5);
   assert.throws(() => scenePlan(scene(plain, 16)), /at most 15/);
-  assert.throws(() => scenePlan(scene({ ...action, realFaceInput: true })), /realFaceInput:false/);
+  assert.equal(scenePlan(scene({ ...action, realFaceInput: true })).realFaceInput, true);
   assert.equal(scenePlan(scene({ modelPurpose: 'complex-motion', realFaceInput: false })).model, 'dreamina-seedance-2-0-260128');
   assert.throws(() => scenePlan(scene({ ...action, model: 'dreamina-seedance-2-0-mini-260615' })), /1080p/);
 });
@@ -182,4 +182,54 @@ test('the episode cost comparison prices hosted LTX and Veo from the saved selec
   assert.deepEqual(rows.map(r => [r.key, r.seconds]), [['veo.vertex.fast.720p.silent', 6], ['ltx-api.ltx-2-5-pro.1080p', 6]]);
   for (const row of rows) assert.equal(priceOf(row.generation.tool, row.generation).key, row.key);
   assert.equal(quote(win).options.video_50.rows[0].key, rows[0].key);
+});
+
+test('saved Flash forecasts editing with its video rate, adaptive duration and input budget', () => {
+  const model = 'dreamina-seedance-2-5-flash-261115';
+  const production = { modelSettings: { models: { video: { engine: 'seedance', model, resolution: '720p' } } } };
+  const card = scene({ referenceVideoUrls: ['https://example.org/clip.mp4'], omniReferenceTaskType: 'edit' });
+  const edit = scenePlan(card, production);
+  assert.equal(edit.tool, 'seedance_reference');
+  assert.equal(edit.priceKey, 'seedance.2-5-flash-video.720p');
+  assert.equal(edit.durationSeconds, -1);
+  assert.equal(edit.billedSeconds, 60);
+  assert.deepEqual(edit.referenceVideoUrls, card.visual.video.referenceVideoUrls);
+  delete card.visual.video.referenceVideoUrls;
+  assert.throws(() => scenePlan(card, production), /require a video/);
+  delete card.visual.video.omniReferenceTaskType;
+  card.narration = [{ tts: 'Come in.', delivery: 'off_screen' }];
+  const spoken = scenePlan(card, production);
+  assert.equal(spoken.tool, 'seedance_reference');
+  assert.equal(spoken.generateAudio, true);
+});
+
+test('original task references forecast the video-input tier on direct and cast-bound boards', () => {
+  const model = 'dreamina-seedance-2-5-flash-261115';
+  for (const task of ['edit', 'extend', undefined]) {
+    const settings = {model, resolution:'720p', realFaceInput:true, omniReferenceTaskType:task};
+    for (const actor of [false, true]) {
+      const shot = scene(actor ? settings : {...settings, referenceVideoTaskIds:['cgt-original']});
+      shot.visual.frames = {mode:'reference'};
+      shot.visual.references = [];
+      if (actor) shot.visual.characterInputs = [{character:'hero', bodyView:'front', faceTaskId:'cgt-original'}];
+      const plan = scenePlan(shot, {modelSettings:{models:{video:{engine:'seedance',model,resolution:'720p'}}}});
+      assert.deepEqual(plan.referenceVideoTaskIds, ['cgt-original']);
+      assert.equal(plan.tool, 'seedance_reference');
+      assert.equal(plan.priceKey, 'seedance.2-5-flash-video.720p');
+      assert.equal(plan.billedSeconds, (task === 'edit' ? 30 : 5) + 30);
+    }
+  }
+});
+
+test('the production forecast follows the saved local Desktop selection and zero API rate', () => {
+  const { quote } = require('../../skills/autoproduce/references/production-cost.js');
+  const video = { engine: 'ltx-desktop-local', model: 'ltx-2.5-fast', resolution: '270p' };
+  const board = {
+    PRODUCTION: { mode: 'full_video', modelSettings: { models: { video } } },
+    SCENES: [{ id: 'a', type: 'points', duration: 2, visual: { video: { prompt: 'A boat drifts.' } } }],
+  };
+  const forecast = quote(board);
+  const [row] = forecast.options.full_video.rows;
+  assert.equal(forecast.videoProvider, video.engine);
+  assert.deepEqual([row.generation.tool, row.key, row.usd], ['ltx_desktop_text2video', 'video.ltx-desktop-local', 0]);
 });

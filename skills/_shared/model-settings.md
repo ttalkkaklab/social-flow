@@ -103,11 +103,19 @@ prices. A configured credential does not guarantee a successful generation.
 1. **Video model** (first-setup menu; a saved choice is never re-offered). Offer host video when exposed, Seedance 2.x API models and
    Google Cloud Veo 3.1, ASTRA or MLX when available. For Veo save e.g.
    `{"engine":"veo","model":"veo-3.1-fast-generate-001","resolution":"720p"}`. Omit the operation to select text, frames or subject references from each storyboard. Save an operation when the user selects one explicitly.
+   For Seedance save e.g. `{"engine":"seedance","model":"dreamina-seedance-2-5-flash-261115","resolution":"720p"}`. An omitted operation follows the shot's text, frames, references or spoken dialogue. Standard 2.5 supports 4K; Flash supports 480p and 720p. Set `ARK_API_KEY` for the MCP server.
    Use the model-specific reference and resolution limits from `video_catalog`. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on
    2026-10-31 because none takes a voice reference. Include resolution and reference/audio support.
    Use the installed video-model selection reference and cost tables. Explain the
    change each option makes. The host is the recommended initial choice when it
    supports the requested job; the user can explicitly choose an API instead.
+   **Local LTX Desktop.** For “이 컴퓨터의 LTX” or “local LTX Desktop”, use `video_catalog {engine:"ltx-desktop-local"}`.
+   The app must be running on the MCP host. Provide its current native backend bearer in `LTX_DESKTOP_API_KEY` to the MCP process.
+   Its default address is `http://127.0.0.1:41954`. Set `LTX_DESKTOP_BASE_URL` for another loopback port.
+   Select a downloaded model from the response when `unavailableReason` is null. For example, save
+   `{"engine":"ltx-desktop-local","model":"ltx-2.5-fast","resolution":"270p"}` as the video selection.
+   The storyboard selects text, start/end images, or a supplied audio track with an optional start image.
+   After Desktop restarts, refresh an expired backend credential and reconnect the MCP server. Keep secrets out of project settings.
    **LTX means MSR (2026-10-30).** When the user chooses LTX, save
    `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
    resolution:"1792x1024"}` for 16:9 (`1024x1792` for 9:16). Episode cuts then plan
@@ -122,7 +130,7 @@ prices. A configured credential does not guarantee a successful generation.
    operation:"audio"}` (`LTX_API_KEY`; `1080x1920` for 9:16). MiniMax and HeyGen take a
    speaker's voice sample but cannot pin the start image as the first frame in the same
    call; LTX takes no voice sample, so its spoken cuts use the pinned TTS track. Prices and
-   field contracts: [API schemas](../../docs/research/2026-11-18-video-model-api-schemas/README.md).
+   field contracts: [API schemas](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-video-model-api-schemas/README.md).
 2. **BGM and audience-only tonal cues.** After the video model and its credential
    check, ask which model should make new background music, drones, risers and stingers.
    Read `music_catalog` and offer exact supported model IDs with their duration controls,
