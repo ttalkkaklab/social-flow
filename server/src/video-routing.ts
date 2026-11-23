@@ -585,7 +585,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     resolveOutputFile(outputPath,filename,'video');
     const args = {model:selection.model,resolution:selection.resolution, prompt:request.prompt, reserveUsd:settings.reserveUsd,outputPath,filename};
     const body = {...take, version:1 as const, episode:context.episode, shotId:context.shotId, requestId:input.requestId,
-      sceneRendering:input.sceneRendering, ...(cast.length ? {characterInputs:cast} : {}), ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:request, tool, args, sourceArgs:input.args, inputs, selection,
+      sceneRendering:input.sceneRendering, ...(cast.length ? {characterInputs:cast} : {}), ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:{...request,...(!speakers.length ? {silentPicture:true as const} : {})}, tool, args, sourceArgs:input.args, inputs, selection,
       source:context.source, contextRevision:context.revision,quote:quoteFor(tool,args),execution:'server' as const};
     const plan = {...body,id:hash(body)};
     if (persist) throw new Error('scene_render_validation: use video_plan to validate deployed renderer inputs before approval');

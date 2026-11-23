@@ -121759,8 +121759,37 @@ async function inspectSceneInputContract(error2, validation) {
     return { ...deployment, status: "unverified" };
   }
 }
+function performanceWav(source, shotFrames, fps) {
+  const sampleRate = 48e3, channels = 2, block = 4;
+  const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
+  const samples = Math.ceil(nativeFrames * sampleRate / fps);
+  const pcm = execFileSync12("ffmpeg", [
+    "-nostdin",
+    "-v",
+    "error",
+    "-xerror",
+    "-i",
+    source,
+    "-map",
+    "0:a:0",
+    "-ac",
+    String(channels),
+    "-ar",
+    String(sampleRate),
+    "-f",
+    "s16le",
+    "pipe:1"
+  ], { maxBuffer: 32 * 1024 * 1024, timeout: 3e4 });
+  const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
+  if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some((byte) => byte !== 0))
+    throw new Error("scene_speech_performance: the recorded dialogue extends past the shot");
+  const padded = Buffer.alloc(samples * block);
+  pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
+  return pcmToWav(padded, sampleRate, channels);
+}
 async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings) {
   const attachments = [];
+  const conditioned = model2 === "ltx-2.5-22b-dev" && scene.audio && scene.audio.mode !== "mix";
   const shots = scene.shots.map((shot) => {
     const binding = bindings?.find((item) => item.shotId === shot.shotId);
     const guidance = binding?.guidance;
@@ -121781,7 +121810,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
       end_frame: shot.endFrame,
       ...guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {},
       ...shot.transition === "open" ? {} : { transition: shot.transition },
-      description: [shot.framing, shot.action, videoTextPolicy()].join(" "),
+      description: [shot.framing, shot.action, scene.silentPicture && "All visible mouths stay closed. No speech or vocalization.", videoTextPolicy()].filter(Boolean).join(" "),
       opening_positions: shot.openingPositions,
       blocking: shot.blocking,
       audio: shot.sound === scene.sceneDirection?.sound ? void 0 : shot.sound,
@@ -121792,7 +121821,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
         text: line.text,
         delivery: line.delivery,
         direction: line.direction,
-        frame: line.frame,
+        frame: conditioned ? void 0 : line.frame,
         ...line.voice ? { voice_uri: genaiAudioUri(void 0, line.voice.path) } : {}
       }))
     };
@@ -121833,7 +121862,10 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     const stage = (uri, role, frame2, shotId) => stageBytes(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"), uri.slice(5, uri.indexOf(";")), role, frame2, shotId);
     for (const shot of shots) {
       const binding = bindings?.find((b) => b.shotId === shot.shot_id);
-      if (binding?.performanceAudio) shot.performance_uri = await stageBytes(readFileSync21(binding.performanceAudio), "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
+      if (binding?.performanceAudio) {
+        const wav = performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+        shot.performance_uri = await stageBytes(wav, "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
+      }
       if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync21(binding.motionPrefix), "video/mp4", "motion_prefix", shot.start_frame, shot.shot_id);
       for (const image2 of shot.images) image2.image_uri = await stage(image2.image_uri, image2.role, image2.frame, shot.shot_id);
       for (const line of shot.dialogue ?? []) if (line.voice_uri)
@@ -123259,7 +123291,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       sceneRendering: input.sceneRendering,
       ...cast.length ? { characterInputs: cast } : {},
       ...input.shotBindings ? { shotBindings: input.shotBindings } : {},
-      sceneRequest: request,
+      sceneRequest: { ...request, ...!speakers.length ? { silentPicture: true } : {} },
       tool: tool3,
       args: args2,
       sourceArgs: input.args,

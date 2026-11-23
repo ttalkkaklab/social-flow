@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { bindRegisteredPanels, bindSceneAdapter, checkSceneDeployment, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
+import { buildSceneWire, bindRegisteredPanels, bindSceneAdapter, checkSceneDeployment, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
 import { approveVideo, executeVideo, planManagedVideo, planVideo, videoStatus } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
@@ -171,10 +171,15 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   const requestId = f.input.requestId;
   const file = '11'.repeat(16), jobId = '22'.repeat(16);
   let providerStatus = 'processing';
+  const stagedWavs=[];
   globalThis.fetch = async (url,options) => {
     const pathname = new URL(url).pathname;
     if (pathname === '/v1/uploads') return Response.json({upload_id:file,chunk_size:1048576,chunks:1});
-    if (options.method === 'PUT') return Response.json({});
+    if (options.method === 'PUT') {
+      const bytes=Buffer.from(options.body);
+      if (bytes.toString('ascii',0,4)==='RIFF') stagedWavs.push(bytes);
+      return Response.json({});
+    }
     if (pathname.endsWith('/complete')) return Response.json({file_id:file,uri:'genai-file://'+file});
     if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],motion_prefix:true,timed_dialogue:'supplied_performance'});
     if (pathname === route+'/validate') {
@@ -198,7 +203,7 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     motionPrefix,
   },{shotId:'s0001',performanceAudio}]};
   await assert.rejects(planManagedVideo(options),/scene_speech_performance/);
-  execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=500:sample_rate=48000','-ac','2','-t','4.375',performanceAudio]);
+  execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=500:sample_rate=24000','-ac','1','-t','0.75',performanceAudio]);
   await assert.rejects(planManagedVideo(options),/scene_speech_performance/);
   const {speechRevision,compileActing}=await import('../../skills/_shared/speech-contract.js');
   const line=answer.narration[0], actor=castVoices[1], receiptPath=performanceAudio+'.json';
@@ -213,6 +218,12 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.equal(validated.length,0);
   fs.writeFileSync(receiptPath,JSON.stringify(receipt));
   const plan=await planManagedVideo(options);
+  const stagedTake=stagedWavs.find(wav=>wav.length===44+4.375*48000*4);
+  assert.equal(stagedTake.readUInt16LE(22),2);
+  assert.equal(stagedTake.readUInt32LE(24),48000);
+  assert.equal(stagedTake.readUInt16LE(34),16);
+  assert.ok(stagedTake.subarray(44,44+48000).some(byte=>byte!==0));
+  assert.ok(stagedTake.subarray(44+48000*4).every(byte=>byte===0));
   approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
   const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
   await assert.rejects(run(), /Lost the response/);
@@ -487,7 +498,7 @@ test('Veo reference scenes omit silent cast panels and keep prop assets separate
 });
 
 
-test('supplied scene audio binds the selected model and original file to per-shot plans', t => {
+test('supplied scene audio binds the selected model and original file to per-shot plans', async t => {
   for (const mode of ['mix','conditioning']) {
     const f=busking(t);
     f.scene.audio.mode=mode;
@@ -502,10 +513,14 @@ test('supplied scene audio binds the selected model and original file to per-sho
     const track=plan.sceneRequest.audio;
     assert.equal(plan.inputs[track.path],createHash('sha256').update(fs.readFileSync(track.path)).digest('hex'));
     assert.equal(track.mode,mode);
+    const {body}=await buildSceneWire(plan.sceneRequest,plan.selection.model,plan.selection.resolution);
     if (mode==='mix') {
+      assert.ok(body.shots.every(shot=>shot.description.includes('All visible mouths stay closed.')));
       assert.equal(plan.sceneRequest.shots[0].dialogue,undefined);
       assert.ok(!plan.args.prompt.includes('Ready?'));
     } else {
+      assert.equal(plan.sceneRequest.shots[0].dialogue[0].frame,0);
+      assert.equal(JSON.parse(JSON.stringify(body)).shots[0].dialogue[0].frame,undefined);
       execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=600:duration=0.25',track.path]);
       assert.throws(()=>planVideo({...f.input,sceneRendering:'per_shot'},false),/scene_audio_timing/);
     }

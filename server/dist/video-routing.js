@@ -597,7 +597,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         resolveOutputFile(outputPath, filename, 'video');
         const args = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
-            sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: request, tool, args, sourceArgs: input.args, inputs, selection,
+            sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: { ...request, ...(!speakers.length ? { silentPicture: true } : {}) }, tool, args, sourceArgs: input.args, inputs, selection,
             source: context.source, contextRevision: context.revision, quote: quoteFor(tool, args), execution: 'server' };
         const plan = { ...body, id: hash(body) };
         if (persist)

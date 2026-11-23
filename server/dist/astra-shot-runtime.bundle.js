@@ -50456,11 +50456,53 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
+// src/media-utils.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
+}
+
 // src/config.ts
 import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join } from "node:path";
-function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join as join2 } from "node:path";
+function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
@@ -50545,15 +50587,15 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, "youtube-oauth-client.json"),
-  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, "tiktok-oauth.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join2(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join2(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join2(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join2(snsTokenDir, "tiktok-oauth.json")
 };
-var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -50568,48 +50610,6 @@ function requireAstraVideoKey() {
 
 // src/ltx-api-video.ts
 import { execFileSync } from "node:child_process";
-
-// src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
-};
-function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
-}
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
-  }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
-}
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
-}
 
 // src/vendor-video.ts
 import fs2 from "node:fs";

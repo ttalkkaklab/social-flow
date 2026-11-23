@@ -12,6 +12,7 @@ import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
 export { sceneTimelineWords } from './scene-prompt.js';
 import { verifyImageFile } from './image-media.js';
+import { pcmToWav } from './media-utils.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
@@ -330,8 +331,24 @@ export async function inspectSceneInputContract(error, validation) {
         return { ...deployment, status: 'unverified' };
     }
 }
+// A timed take retains its receipted source. Stage a lossless PCM conversion with the native shot tail.
+function performanceWav(source, shotFrames, fps) {
+    const sampleRate = 48000, channels = 2, block = 4;
+    const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
+    const samples = Math.ceil(nativeFrames * sampleRate / fps);
+    const pcm = execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-xerror', '-i', source, '-map', '0:a:0',
+        '-ac', String(channels), '-ar', String(sampleRate), '-f', 's16le', 'pipe:1'], { maxBuffer: 32 * 1024 * 1024, timeout: 30000 });
+    const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
+    // A prepared WAV may already contain the renderer's padding. Never trim the spoken take.
+    if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some(byte => byte !== 0))
+        throw new Error('scene_speech_performance: the recorded dialogue extends past the shot');
+    const padded = Buffer.alloc(samples * block);
+    pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
+    return pcmToWav(padded, sampleRate, channels);
+}
 export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings) {
     const attachments = [];
+    const conditioned = model === 'ltx-2.5-22b-dev' && scene.audio && scene.audio.mode !== 'mix';
     const shots = scene.shots.map(shot => {
         const binding = bindings?.find(item => item.shotId === shot.shotId);
         const guidance = binding?.guidance;
@@ -344,10 +361,10 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
             ...(binding?.performanceAudio ? { performance_uri: '' } : {}), shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
             ...(guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {}),
             ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
-            description: [shot.framing, shot.action, videoTextPolicy()].join(' '), opening_positions: shot.openingPositions,
+            description: [shot.framing, shot.action, scene.silentPicture && 'All visible mouths stay closed. No speech or vocalization.', videoTextPolicy()].filter(Boolean).join(' '), opening_positions: shot.openingPositions,
             blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
             dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
-                direction: line.direction, frame: line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
+                direction: line.direction, frame: conditioned ? undefined : line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
         };
     });
     const direction = scene.sceneDirection;
@@ -375,8 +392,10 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
         const stage = (uri, role, frame, shotId) => stageBytes(Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64'), uri.slice(5, uri.indexOf(';')), role, frame, shotId);
         for (const shot of shots) {
             const binding = bindings?.find(b => b.shotId === shot.shot_id);
-            if (binding?.performanceAudio)
-                shot.performance_uri = await stageBytes(readFileSync(binding.performanceAudio), 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
+            if (binding?.performanceAudio) {
+                const wav = performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+                shot.performance_uri = await stageBytes(wav, 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
+            }
             if (binding?.motionPrefix)
                 shot.motion_uri = await stageBytes(readFileSync(binding.motionPrefix), 'video/mp4', 'motion_prefix', shot.start_frame, shot.shot_id);
             for (const image of shot.images)
