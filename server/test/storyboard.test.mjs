@@ -1812,6 +1812,39 @@ describe('storyboard_read inspection', () => {
       assert.equal(readFileSync(file, 'utf8'), before);
     }, win);
   });
+  it('reviews adjacent scene events independently of shot count, event wording or silent coverage', () => {
+    const win = readWin();
+    win.STORY.authoring = 'story-first';
+    win.STRUCTURE = { version: STRUCTURE_VERSION, sequences: [{ id: 'q', scenes: [5, 2, 7, 3] }],
+      scenes: [
+        { no: 2, place: 'Market', time: 'Dawn', speakers: [], event: 'The cart falls' },
+        { no: 5, place: 'Market', time: 'Dawn', speakers: ['child'], event: 'She makes an offer' },
+        { no: 7, place: 'Market', time: 'Later', speakers: ['father', 'child'] },
+        { no: 3, place: 'Market', time: 'Later' },
+      ] };
+    win.SCENES = [{ ...win.SCENES[0], scene: 5, narration: [] },
+      { ...win.SCENES[1], scene: 2, narration: [] },
+      { id: 's0003', scene: 3, narration: [{ speaker: 'caller', tts: 'Hello.', delivery: 'off_screen' }] }];
+    withBoard(dir => {
+      const { sceneBoundaries: joins } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
+      assert.deepEqual(joins.map(row => [row.left.no, row.right.no, row.sameTime, row.speakerLimit]),
+        [[5, 2, true, 'within_two'], [2, 7, false, 'within_two'], [7, 3, true, 'exceeds_two']]);
+      assert.deepEqual(joins[0].right.shotIds, ['s0002']);
+      assert.deepEqual(joins[2].speakers, ['father', 'child', 'caller']);
+    }, win);
+    const authored = { STORY: { authoring: 'story-first' }, SCENES: [], STRUCTURE: structure([
+      scene(1, { speakers: ['child'], event: 'A child shouts' }),
+      scene(2, { speakers: [], event: 'A vase falls' }),
+    ]) };
+    const warnings = applyPatch(authored, { path: 'unused' }, { outline: true }).findings;
+    assert.ok(warnings.some(finding => finding.code === 'scene_boundary_review' && finding.level === 'warn'));
+    delete win.STRUCTURE.scenes[0].speakers;
+    delete win.SCENES[1].narration;
+    withBoard(dir => {
+      const report = readStoryboard(storyboardReadSchema.parse({path: dir})).boundaryReview;
+      assert.equal(report.sceneBoundaries[0].speakerLimit, 'unknown');
+    }, win);
+  });
   it('boundary review covers changed speakers, silent action, reverse views and explicit scene changes', () => {
     const win = readWin(), first = win.SCENES[0];
     win.SCENES = Array.from({ length: 5 }, (_, i) => ({ ...structuredClone(first), id: `s000${i + 1}`, scene: i === 4 ? 2 : 1,

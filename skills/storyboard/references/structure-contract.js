@@ -384,6 +384,47 @@
     return 'Deep depth of field: sharp focus from ' + p[0] + ' in the foreground' + middle + ' to ' + p[p.length - 1] + ' in the background, all at once' + intent;
   }
 
+  /** Adjacent scenes in sequence order, including outlines that have no shots yet. */
+  function sceneBoundaries(win) {
+    const structure = win.STRUCTURE;
+    if (!Array.isArray(structure?.scenes) || !Array.isArray(structure.sequences)) return [];
+    const normalize = (value) => typeof value === 'string' ? value.normalize().trim().replace(/\s+/g, ' ').toLowerCase() : '';
+    const cards = new Map(structure.scenes.filter(Boolean).map(scene => [scene.no, scene]));
+    const order = structure.sequences.flatMap(sequence => Array.isArray(sequence?.scenes) ? sequence.scenes : []);
+    const runs = order.map(no => {
+      const scene = cards.get(no);
+      const shots = (win.SCENES ?? []).filter(shot => shot && shot.scene === no && PLACED(shot));
+      const lines = shots.flatMap(shot => Array.isArray(shot.narration) ? shot.narration : []).filter(line => text(line?.tts));
+      const speakers = new Set(Array.isArray(scene?.speakers) ? scene.speakers : []);
+      for (const line of lines) if (line.speaker) speakers.add(line.speaker);
+      const identified = lines.every(line => !!line.speaker) &&
+        (scene?.speakers !== undefined || (shots.length > 0 && shots.every(shot => Array.isArray(shot.narration))));
+      return { no, place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
+        shotIds: shots.map(shot => shot.id ?? null), speakers: [...speakers], speakersKnown: identified };
+    });
+    return runs.slice(1).map((right, index) => {
+      const left = runs[index];
+      const same = (a, b) => {
+        const first = normalize(a), second = normalize(b);
+        return first && second ? first === second : null;
+      };
+      const speakers = [...new Set([...left.speakers, ...right.speakers])];
+      const speakerLimit = speakers.length > 2 ? 'exceeds_two' :
+        left.speakersKnown && right.speakersKnown ? 'within_two' : 'unknown';
+      return { left, right, samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
+        speakers, speakerLimit };
+    });
+  }
+
+  function sceneBoundaryFindings(win) {
+    if (win.STORY?.authoring !== 'story-first') return [];
+    return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime).map(join => ({
+      level: 'warn', code: 'scene_boundary_review', where: 'scene ' + join.right.no,
+      what: `scene_boundary_review: scenes ${join.left.no} and ${join.right.no} share the same place and time. ` +
+        (join.speakerLimit === 'exceeds_two' ? 'The combined cast exceeds two speakers. Keep the required production boundary and carry the ongoing action across it.' :
+        'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.') }));
+  }
+
   function check(win, opts) {
     const out = [];
     const bad = (where, what) => out.push({ level: 'bad', where, what });
@@ -569,7 +610,9 @@
       if (st.sequences.length >= 2 && text(cq) && !st.sequences.some(q => text(q.question) && overlap(q.question, cq) >= 0.3))
         warn('structure', `COMPREHENSION.question "${String(cq).trim()}" is held by no sequence — on a long-form board one sequence's question is the episode's, the others are its branches (rule 8)`);
     }
+    out.push(...sceneBoundaryFindings(win));
     order.forEach((no, i) => {
+      if (win.STORY?.authoring === 'story-first') return;
       const prev = i ? byNo.get(order[i - 1]) : null, cur = byNo.get(no);
       if (prev && cur && text(prev.place) && text(prev.time) && text(cur.place) && text(cur.time) && compact(slugOf(prev)) === compact(slugOf(cur))
           && !(text(prev.event) && text(cur.event) && overlap(prev.event, cur.event) < 0.3 && text(prev.turn) && text(cur.turn) && overlap(prev.turn, cur.turn) < 0.3))
@@ -709,7 +752,7 @@
       if (best < 0.25)
         warn('structure', `COMPREHENSION.takeaway "${takeaway.trim()}" is said by no shot — the takeaway is a line the viewer hears, in the last scene as a rule; write the one the shots actually say, or give the last scene the shot that says it`);
     }
-    if (groups.size === 1 && placed.length >= 5)
+    if (!performanceStory && groups.size === 1 && placed.length >= 5)
       warn('structure', `${placed.length} shots in one scene — the whole episode has no cut point; a story in one place still breaks where the value turns (scenes-schema §structure rule 4)`);
     // A scene whose place an earlier scene already laid out with a wide needs no wide of its own —
     // the viewer still holds the room (directing-grammar §6 rule 2).
@@ -1036,9 +1079,9 @@
     const total = placed.reduce((n, x) => n + (Number(x.s.duration) || 0), 0);
     if (String(win.FORMAT || '').indexOf('long') !== -1 && st.sequences.length < 2 && placed.length >= 10)
       warn('structure', 'one sequence on a long-form board — long-form is 2–5 sequences, each a mini-movie with its own question and payoff; one sequence over ten minutes is a short\'s structure stretched (scenes-schema §structure field table)');
-    if (String(win.FORMAT || '').indexOf('long') !== -1 && groups.size < 8 && placed.length >= 10)
+    if (!performanceStory && String(win.FORMAT || '').indexOf('long') !== -1 && groups.size < 8 && placed.length >= 10)
       warn('structure', `${groups.size} scenes on a long-form board — a 10-minute long-form holds 8–15; a stretch that is one scene per chapter has not been cut at its turns (rule 9)`);
-    if (total && total <= 90 && groups.size >= 5)
+    if (!performanceStory && total && total <= 90 && groups.size >= 5)
       warn('structure', `${groups.size} scenes in ${Math.round(total)}s — a 45–75s short holds two to four; when places outnumber the band, the band wins: room moves inside one stretch of time are shot moves, and place is where the stretch lives (rule 9)`);
     // Three shots on one feel is a flat stretch (scenario-craft §2).
     let run = 0, prev = '';
@@ -1307,7 +1350,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
+                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);
