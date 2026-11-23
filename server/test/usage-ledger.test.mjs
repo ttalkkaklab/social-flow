@@ -269,7 +269,7 @@ test('only generation tools are recorded', () => {
   }
   for (const t of ['naver_search', 'threads_publish', 'youtube_insights', 'datago_search',
                    'tts_list_voices', 'tts_elevenlabs_voices', 'music_list_options',
-                   'stt_local_transcribe', 'content_feedback']) {
+                   'stt_local_transcribe', 'content_feedback', 'astra_genai_catalog', 'astra_genai_jobs']) {
     assert.ok(!isBillableTool(t), `${t} should not be billable`);
   }
 });

@@ -1037,6 +1037,7 @@
 .review-card.ds-card { transition: box-shadow var(--ds-duration) ease; }
 .review-catalog .review-card:hover, .review-feature .review-card:hover, .review-shortcuts .review-card:hover { box-shadow: var(--ds-shadow-glass-hover); }
 .review-catalog .review-card { display: flex; flex-direction: column; max-width: none; padding: var(--ds-s3); }
+.review-catalog .review-card[hidden] { display: none; }
 .review-catalog .review-card > a { display: flex; flex-direction: column; border-radius: inherit; }
 .review-catalog .review-image, .review-catalog .review-empty { border-radius: var(--ds-radius-panel); background: var(--ds-sunk); }
 .review-catalog .review-card-body { padding: var(--ds-s4) var(--ds-s2) var(--ds-s2); }

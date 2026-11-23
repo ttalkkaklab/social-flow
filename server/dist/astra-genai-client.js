@@ -61,9 +61,9 @@ export class GenaiRequestError extends Error {
     }
 }
 /** No automatic POST retries: a disconnected request may already be generating. */
-export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse, signal, requestId) {
-    const key = requireAstraGenaiKey(route);
-    const response = await fetch(astraGenaiBaseUrl(route) + route, {
+export async function requestGenai(method, route, body, timeoutMs = 60_000, onResponse, signal, requestId, credentialRoute = route) {
+    const key = requireAstraGenaiKey(credentialRoute);
+    const response = await fetch(astraGenaiBaseUrl(credentialRoute) + route, {
         method, redirect: 'error', signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs), ...{ dispatcher: waitFor(timeoutMs) },
         headers: { Authorization: `Bearer ${key}`, ...(requestId ? { 'X-Request-ID': requestId } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -200,4 +200,27 @@ export async function genaiCatalog(kind) {
         desktop_video: '/v1/ltx/desktop/models',
         loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
     return requestGenai('GET', routes[kind]);
+}
+/** A gateway lists jobs per token, and images, speech and Desktop may each run on their own gateway and token. */
+const JOB_GATEWAYS = { main: '', image: '/v1/images/', speech: '/v1/audio/', desktop: '/v1/ltx/desktop/' };
+export const genaiJobsSchema = z.object({
+    gateway: z.enum(['main', 'image', 'speech', 'desktop']).default('main'),
+    limit: z.number().int().min(1).max(100).default(20),
+}).strict();
+/** Read the caller's jobs after a lost response; never submits, downloads or changes a receipt. */
+export async function genaiJobs(input = {}) {
+    const { gateway, limit } = genaiJobsSchema.parse(input);
+    const read = (route) => requestGenai('GET', route, undefined, 60_000, undefined, undefined, undefined, JOB_GATEWAYS[gateway]);
+    // The answering origin shows when a lane resolved to another gateway than the one the request went to.
+    const baseUrl = astraGenaiBaseUrl(JOB_GATEWAYS[gateway]);
+    try {
+        return { gateway, baseUrl, history: true, jobs: (await read('/v1/jobs?limit=' + limit)).jobs };
+    }
+    catch (error) {
+        // A gateway older than GET /v1/jobs answers 404. Its active list cannot show a finished or failed job.
+        if (!(error instanceof GenaiRequestError) || error.httpStatus !== 404)
+            throw error;
+        // That list is oldest first and unbounded by limit.
+        return { gateway, baseUrl, history: false, jobs: (await read('/v1/jobs/active')).jobs.reverse().slice(0, limit) };
+    }
 }

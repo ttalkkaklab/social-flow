@@ -17,6 +17,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -254,9 +255,10 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "none",
-        "dialogue": "refused",
+        "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
@@ -494,6 +496,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -738,6 +741,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -782,6 +786,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -827,6 +832,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": true
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -880,6 +886,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -921,6 +928,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -963,6 +971,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1009,6 +1018,7 @@
         "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1071,6 +1081,7 @@
         "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
+      "sceneCutTiming": "approximate_holds",
       "voice": {
         "lane": "conditional_reference",
         "dialogue": "requires_subject_references",
@@ -1157,6 +1168,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": true
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1209,6 +1221,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "approximate_holds",
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -1259,6 +1272,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1307,6 +1321,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1357,6 +1372,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1401,6 +1417,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": true
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1453,6 +1470,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1499,6 +1517,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1537,6 +1556,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1586,6 +1606,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -1637,6 +1658,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1688,6 +1710,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1728,6 +1751,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -1770,6 +1794,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": true
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -1811,6 +1836,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2006,6 +2032,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": true
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "supplied",
         "dialogue": "allowed",
@@ -2200,9 +2227,10 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "time_ranges",
       "voice": {
         "lane": "none",
-        "dialogue": "refused",
+        "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
@@ -2323,9 +2351,10 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "time_ranges",
       "voice": {
         "lane": "none",
-        "dialogue": "refused",
+        "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
@@ -2448,9 +2477,10 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "time_ranges",
       "voice": {
         "lane": "none",
-        "dialogue": "refused",
+        "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
         "suppliedSpeech": "unsupported",
         "exactAudioPreservation": false,
@@ -2572,6 +2602,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "time_ranges",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2695,6 +2726,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2739,6 +2771,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",
@@ -2784,6 +2817,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "cut_order",
       "voice": {
         "lane": "none",
         "dialogue": "refused",
@@ -2826,6 +2860,7 @@
         "shotDescriptions": "prompt",
         "sceneAudio": false
       },
+      "sceneCutTiming": "action_beats",
       "voice": {
         "lane": "reference",
         "dialogue": "allowed",

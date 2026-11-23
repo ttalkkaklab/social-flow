@@ -468,7 +468,7 @@ function boundaryReview(win, playback, videoTiming) {
             decision: 'needs_editorial_review',
         };
     });
-    return { version: 'shot-boundaries-v1', status: 'not_reviewed', sceneRuns, shots, boundaries,
+    return { version: 'shot-boundaries-v1', status: 'not_reviewed', sceneRuns, shots, boundaries, sceneBoundaries: contract().sceneBoundaries(win),
         note: 'Signals are review prompts, never merge instructions or quality failures. Compare the complete scene, including offscreen action. Recompute a proposed continuous performance and its selected video route before claiming it fits; separate-shot timing is not merged capacity. No files or approvals are changed.' };
 }
 /** Read plans and recorded evidence without claiming to have inspected media or validated reviews. */
@@ -997,6 +997,7 @@ export function applyPatch(win, patch, opts = {}) {
     let synced = 0;
     if (!findings.some((f) => f.level === 'bad')) {
         synced = contract().sync(next);
+        findings.push(...contract().sceneBoundaryFindings(next));
         // A write refuses only an unreadable board and the story order (user directive 2026-10-31); storyboard_check
         // runs every other rule on request. A story outline may hold sequences and scenes before its first shot story.
         findings.push(...contract().executionCheck(next).filter((f) => shots.length || !opts.outline || f.where !== 'board'));

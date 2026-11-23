@@ -339,7 +339,37 @@ Generation POSTs are never retried automatically. Each output has a private
 Standalone `astra_genai_video_status` takes `receiptPath` and optional `download:true`.
 Reusing the same standalone video output and unchanged request resumes its existing job.
 `image_status action:refresh` recovers text or edit downloads from the saved synchronous
-response. An interrupted image POST has no status endpoint; never guess a request ID.
+response. An interrupted image or speech POST returns no job ID; never guess a request ID.
+
+When a response was lost, read `astra_genai_jobs` before deciding anything else. It lists
+the token's recent jobs on one gateway, newest first, and never submits, downloads or
+changes a receipt. Pass `gateway` for the lane that took the request: `main` for LTX v2
+and MSR video and for `astra_genai_text2img` / `astra_genai_edit`, whose DashScope route
+stays on `ASTRA_GENAI_URL`; `image` (`astra_genai_image_generate` / `_edit`), `speech` or
+`desktop` where that lane has its own URL and key. Check the returned `baseUrl` against
+the receipt before reading a missing row as "never submitted".
+Rows carry no prompt, so match the lost request by `endpoint`, `model` and `created_at`
+and treat the match as evidence, not identity.
+
+- `queued` or `running`: the gateway is still working. Wait and read again; do not
+  resubmit or switch model.
+- `succeeded`: a receipt that already holds this job recovers through the receipt tools
+  above. Otherwise the outputs stay on the gateway at `status_url`
+  (`/v1/generations/{id}`); no tool adopts a listed job into a receipt, so give the user
+  the job ID and ask before requesting again. A `null` `status_url` is a synchronous
+  image or speech call whose result was not kept: once no matching row is still
+  `queued` or `running`, it has to be requested again.
+- `failed` or `cancelled`: `error.code` is `invalid_input`, `generation_failed` or
+  `cancelled`. Report it; a new request is a new attempt, not a silent retry.
+- `submission_status: "uncertain"`: a local video submission was cut while sending and
+  needs operator recovery on the gateway. Do not resubmit.
+- `history: false`: the gateway is older than `GET /v1/jobs` and listed active jobs
+  only, without `model`, `completed_at` or `error`; match by `endpoint` and
+  `created_at`. A missing job there is finished or failed, not known.
+
+The gateway keeps finished jobs for 24 hours and chat calls are not jobs. The list is
+evidence for the user and for `image_status` / `video_status action:reconcile`; managed
+receipts and reservations still close only through those tools.
 Result downloads carry no gateway token. Keep receipts private; they can contain
 signed result URLs. Existing outputs are not overwritten and cached hashes must match.
 
@@ -436,7 +466,8 @@ The client uploads files as gateway-owned assets and downloads private output wi
 that same gateway credential. It never sends the token to external result URLs.
 Generation writes a durable receipt before submission; lost responses stay uncertain.
 Use `image_status action:refresh`, `video_status action:refresh`, or the corresponding
-receipt recovery tool. Do not delete receipts or change request IDs to retry an
+receipt recovery tool; `astra_genai_jobs gateway:desktop` shows whether the gateway holds
+the job. Do not delete receipts or change request IDs to retry an
 ambiguous generation. The gateway token must retain access to those jobs/assets.
 LoRA compatibility and perceptual voice/video quality still need actual renders.
 

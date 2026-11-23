@@ -206,6 +206,7 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   const chars = listCharacters(root, slug);
   const boards = listStoryboards(root, slug);
   const outputs = new Map();
+  const boardAliases = new Map();
   const warnings = [];
   const contentWarnings = [], structuralWarnings = [];
   const contentWarning = (characterId, domain, detail) => {
@@ -421,7 +422,9 @@ function exportChannel(channelDirectory, { check = false } = {}) {
       // One renderer: copy the canonical shell, using a relative base for its unchanged
       // scenes.js, helper files and media. Works with both file:// and HTTP.
       const base = rel(file, path.join(folder, 'index.html')).replace(/index\.html$/, '');
-      put(file, source.replace(/<head([^>]*)>/i, `<head$1>\n${MARKER}\n<base href="${esc(base)}">`));
+      const baseTag = `<base href="${esc(base)}">`;
+      boardAliases.set(file, { source, baseTag });
+      put(file, source.replace(/<head([^>]*)>/i, `<head$1>\n${MARKER}\n${baseTag}`));
     } else {
       const message = board.topic + ': missing/unsupported storyboard.html; run storyboard-html.js first';
       warnings.push(message); structuralWarnings.push(message);
@@ -455,7 +458,15 @@ function exportChannel(channelDirectory, { check = false } = {}) {
     safeOutput(dir, file);
     if (fs.existsSync(file)) {
       const old = fs.readFileSync(file);
-      if (file.endsWith('.html') && !old.toString('utf8').includes(MARKER)) throw new Error('Refusing to replace hand-authored HTML: ' + file);
+      if (file.endsWith('.html')) {
+        const html = old.toString('utf8');
+        if (!html.includes(MARKER)) {
+          // Older storyboard copies added just the relative base, sometimes at the end of the head.
+          const alias = boardAliases.get(file);
+          if (!alias || !html.includes(alias.baseTag + '\n') || html.replace(alias.baseTag + '\n', '') !== alias.source)
+            throw new Error('Refusing to replace hand-authored HTML: ' + file);
+        }
+      }
       if (old.equals(content)) continue;
     }
     changed.push(file);

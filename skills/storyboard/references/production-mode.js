@@ -711,7 +711,9 @@
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
       // A stock photograph (visual.source "stock") is a supplied source image: a license record, no prompt.
-      if (!text(v.bg) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
+      const owner = win.STRUCTURE?.scenes?.find(scene => scene.no === s.scene);
+      const sourceImage = v.bg || s.referenceImage || owner?.frames?.start;
+      if (!text(sourceImage) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
       if (!text(v.video?.prompt)) bad('store the motion prompt before generation' + (win.STORY?.authoring === 'story-first' ? ' (shot_prompt)' : ''));
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       let selected;

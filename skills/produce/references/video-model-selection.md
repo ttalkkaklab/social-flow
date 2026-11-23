@@ -20,7 +20,7 @@ on 2026-10-31 because none takes a voice reference.
 
 For normal episode generation plan one scene with `video_plan {episode,sceneNo,requestId}`. Its ordered cards provide dialogue and duration. On distilled LTX the image adapter carries both the first frame and subject references. The shot recipes below also support explicit single-shot work.
 
-Google Cloud Veo 3.1 supports non-speaking scenes, native effects and external narration. [LTX and Google Cloud Veo setup](../../_shared/video-routing.md#ltx-and-google-cloud-veo).
+Google Cloud Veo 3.1 supports native effects and external narration. A scene may opt into a model-generated speaking voice. [LTX and Google Cloud Veo setup](../../_shared/video-routing.md#ltx-and-google-cloud-veo).
 
 ## ASTRA — our own LTX box
 

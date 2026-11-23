@@ -18,7 +18,7 @@ const imageRouting = () => load(fileURLToPath(new URL('../../skills/storyboard/r
   imageReferences(scene: unknown): ImageReference[];
   referenceConstraints(ref: ImageReference): string;
 };
-interface ImageReference { resolvedPanel?: boolean; id: string; path: string; role: string; use: string; purpose: string; wardrobe?: 'fitting'; defaultOutfit?: string; preserve?: string[]; avoid?: string[] }
+interface ImageReference { scope?: string; resolvedPanel?: boolean; id: string; path: string; role: string; use: string; purpose: string; wardrobe?: 'fitting'; defaultOutfit?: string; preserve?: string[]; avoid?: string[] }
 export const characterPanels = () => load(fileURLToPath(new URL('../../skills/channel/references/character-panels.js', import.meta.url))) as {
   canonicalReferences(boardDir: string, shotId: string, ids: string[], use: string, options?: { combined?: boolean }): ImageReference[];
   sheetPanels(boardDir: string, ids: string[]): Map<string, Record<string, string>>;
@@ -318,8 +318,8 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
         ...(start ? [`Image ${sent.length + 1}: ${canonicalMsr ? 'opening composition (people, place, props)' : 'the opening picture, the characters, place and props as the shot begins'}`] : []),
         ...(binding ? [binding] : []), '', String(args.prompt ?? '')].join('\n');
     } else {
-      const label = (i: number) => vendor || tool === 'fasth3_omni_reference' ? referenceLabel(tool, 'image', i) : 'Image ' + i;
-      const guidance = [...sent.map((ref, i) => `${label(i + 1)} (${ref.id}, ${ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
+      const label = (i: number) => referenceLabel(tool, 'image', i, args.model);
+      const guidance = [...sent.map((ref, i) => `${label(i + 1)} (${ref.scope === 'shot_guide' ? ref.role : ref.id + ', ' + ref.role}): ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
         ...(start ? [`${label(sent.length + 1)} (start, opening picture): the characters, place and props as the shot begins; open on this composition.`] : [])].join('\n');
       args.prompt = String(args.prompt ?? '') + '\nImage reference roles:\n' + guidance;
     }

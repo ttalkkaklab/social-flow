@@ -39,6 +39,8 @@ Re-plan after changes. No network submission occurs during planning.
 
 ### Scene frames and adapter inputs
 
+For a single LTX generation, `story_scene.videoDirection.keyframes` can pin an intermediate action state, for example `[{"frame":64,"path":"images/handle-released.png"}]`. Frame numbers start at zero for the whole scene. Use `scene.frames.start` and `scene.frames.end` for the endpoints. The GenAI image-to-video request carries the interior images in `keyframes[]` alongside its endpoints and supported speaker references. Ordinary `referenceImage` entries keep their composition-only role. The generation plan identifies the image file and frame for each pin.
+
 Write one shot per camera setup. A cut from a wide to a hand insert, or a reverse angle, starts a new card. A pan, tilt, dolly, zoom or entrance during continuous filming stays on its card. Set `videoDirection.oneTake` only for an explicitly uninterrupted scene. A duration or generation count does not specify the number of shots.
 
 `story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.
@@ -248,6 +250,12 @@ staging before regeneration. Keep the original file. Dubbing native dialogue can
 lip sync; do not apply it automatically. Unknown submissions retain their original
 request ID and reservation; the review view supplies the same-request status command.
 
+## Model-specific scene prompts
+
+`video_plan` returns the ordered storyboard shots in `sceneRequest` and the selected writing rules in `promptProfile`. The profile gives the cut timing style and reference labels for the selected operation and model version. The compiled prompt in `args.prompt` contains the actual directions. For ordinary cuts Veo gets time ranges, Seedance gets action beats, and voiced LTX MSR scenes get approximate holds. The planner retains the storyboard frame clock for review. A short prompt limit can remove a hold while keeping its speaker and line together.
+
+Keep each physical action's starting state, performer, movement and ending state on its own card. Write who lets go, whose hands stay clear and what moves next when that order matters. A generated take can show the correct four views and reverse one of those actions. Check the original video before selecting a take or changing a model default. A comparison can keep the model, prompt, opening picture and settings fixed while changing one supported input.
+
 ## LTX and Google Cloud Veo
 
 Select the engine, model and resolution in the project's video settings. The operation is optional. Use the same managed call across the gateway LTX, hosted LTX and Google Cloud Veo deployments:
@@ -262,7 +270,7 @@ The planner reads the saved choice and the storyboard. Each provider adapter ser
 | --- | --- | --- | --- |
 | First and optional last frame | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image_uri` and `last_frame_uri` | Image-to-video, `image` and `lastFrame` |
 | Character references | Distilled I2V combines the opening with subject images when supported. Spoken MSR accepts subject images and a background. | The image endpoint requires an opening and has no subject slots. | Standard/Fast accept 1–3 images of one subject for eight seconds. A timeline pin cannot accompany the assets. |
-| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | The managed planner reports unsupported dialogue or supplied scene audio. |
+| Continuous supplied speech | Dev A2V accepts the authored audio track. | Audio-to-video takes the supplied track, which sets the duration. | Veo accepts generated dialogue when the scene explicitly sets `videoDirection.dialogueVoice:"model_generated"`. Supplied voice samples and scene audio have no input slot. |
 
 Explicit operations and existing per-shot settings remain available. The planner reports inputs that the selected deployment cannot represent before approval. The hosted LTX API uses `LTX_API_KEY`. Local LTX and gateway deployments retain their own settings.
 
@@ -278,7 +286,7 @@ Veo also accepts text-only requests and extension of a 1–30 second 24 fps MP4 
 
 The Veo adapter sends one `instances` entry with an English `prompt`. Image requests carry `image` and optionally `lastFrame`. Reference requests carry `referenceImages` entries with `referenceType: "asset"`. Extension requests carry `video`. Local media becomes `{mimeType, bytesBase64Encoded}`. The `parameters` object includes `sampleCount: 1`, aspect ratio, resolution and the sound flag. Text and frame requests take 4, 6 or 8 seconds. Submit with `predictLongRunning`, then send the returned operation name to `fetchPredictOperation`. The local tool schemas in `tools/list` specify the required paths and defaults for each operation. [Veo API reference](https://docs.cloud.google.com/vertex-ai/generative-ai/docs/model-reference/veo-video-generation) · [LTX API specification](https://docs.ltx.io/openapi.json)
 
-Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation. Repeated status reads never submit a generation.
+Use `video_status` with the original request ID and `action:"refresh"` after an interrupted hosted LTX or Veo request. The provider job ID is recorded before polling. A submission with no known provider ID requires reconciliation; for a GenAI gateway request, `astra_genai_jobs` lists the token's recent jobs as evidence of whether it is still running, finished or failed. Repeated status reads never submit a generation.
 
 ### Adding a hosted provider
 
