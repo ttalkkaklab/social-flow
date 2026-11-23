@@ -59,7 +59,11 @@ export const sceneShotBindingsSchema = z.array(z.object({
 }).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
     openingPositions: openingPositionsSchema,
+    dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
+    keyframes: z.array(z.object({
+        frame: frame.positive(), path: z.string().trim().min(1), strength: z.number().gt(0).max(1).optional(),
+    }).strict()).min(1).optional().describe('Images of specific action states at interior scene frames, numbered from zero. Use the scene endpoints for the first and last frames. Each image conditions the same scene request on a compatible adapter.'),
     oneTake: z.boolean().optional().describe('True only for an explicitly requested uninterrupted shot.'),
     audio: z.object({
         mode: z.enum(['conditioning', 'mix']).optional().describe('Condition generation by default, or mix this track once with native shot sound.'),
@@ -71,11 +75,25 @@ export const sceneVideoDirectionSchema = z.object({
     sound: sceneText.optional().describe('Room tone or sound from an essential action.'),
     camera: sceneText.optional().describe('Shared camera direction. Each shot keeps its own framing and incoming transition.'),
 }).strict();
-export function openingPrompt(prompt, positions = []) {
+/** Use the cast's spoken names in provider prose. Authored dialogue and the board's IDs stay intact. */
+export function sceneCastProse(prompt, positions, speakers) {
+    const aliases = new Map();
+    for (const { speaker, name } of speakers) {
+        if (!/[-_]/.test(speaker) || !name || nonEnglishOutsideQuotes(name) || /["“”\r\n]/.test(name))
+            continue;
+        if (speakers.some(s => s.speaker !== speaker && s.name.toLowerCase() === name.toLowerCase()) ||
+            positions.some(p => p.character !== speaker && p.character.toLowerCase() === name.toLowerCase()))
+            continue;
+        aliases.set(speaker, name);
+    }
+    const display = (value) => value.replace(/"[^"]*"|“[^”]*”|「[^」]*」|[\p{L}\p{M}\d_-]+/gu, token => aliases.get(token) ?? token);
+    return { prompt: display(prompt), positions: positions.map(p => ({ ...p, character: aliases.get(p.character) ?? p.character, position: display(p.position) })) };
+}
+export function openingPrompt(prompt, positions = [], imageLabel = (index) => 'Image ' + index) {
     if (!positions.length)
         return prompt;
     const header = positions.map(({ character, images, position }) => {
-        const refs = images.map(index => 'Image ' + index).join(', ');
+        const refs = images.map(imageLabel).join(', ');
         return character + (refs ? ' (' + refs + ')' : '') + ': ' + position;
     });
     const prefix = 'Opening frame, from the viewer’s perspective:\n' + header.join('\n') + '\n\n';

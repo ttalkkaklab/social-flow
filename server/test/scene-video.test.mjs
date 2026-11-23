@@ -496,6 +496,20 @@ test('supplied scene audio binds the selected model and original file to per-sho
   }
 });
 
+test('declaring the scene cast without endpoint images still allows model-paced cuts', () => {
+  const owner = {no:1, speakers:[]};
+  const board = {STRUCTURE:{scenes:[owner]}};
+  const scene = {emotion:'Anticipation.', fps:24, openingPositions:[]};
+  const cards = ['A cart rolls.', 'The wheel stops.'].map((action, index) => ({
+    id:'s'+index, scene:1, duration:1, visual:{action},
+  }));
+  const options = {bindDialogue:false, bindOpening:false, suffix:''};
+  const compile = () => prepareSceneRequest(1,cards,scene,'/unused',[],options,()=>null,board).request;
+  assert.equal(compile().modelPacedCuts, true);
+  cards[1].timeline = {startFrame:24,endFrame:48,transition:'hard_cut',framing:'Close up.',action:'The wheel stops.'};
+  assert.equal(compile().modelPacedCuts, undefined);
+});
+
 test('scene camera returns to its default after the insert and every shot cue reaches the wire body', async () => {
   const scene = {emotion:'Suspicion turns to relief.', openingPositions:[], fps:24};
   const defaults = {camera:'camera.static', axis:'Stay on the window side.', lighting:'Dusk light.', attention:'Watch the lamp.'};
@@ -594,7 +608,9 @@ test('keeps simultaneous actions with the correct spoken turn in provider prose'
   const card = { narration: [{ speaker: 'Mochi', tts: 'Wait.' }, { speaker: 'Mochi', tts: 'Come back.' }],
     performance: [{kind:'action', character:'Bo', text:'Lower the crate.', withGroup:2},
       {kind:'dialogue', group:1}, {kind:'dialogue', group:2},
-      {kind:'action', character:'Bo', text:'Hold the door.', withGroup:1}] };
+      {kind:'action', character:'Bo', text:'Hold the door.', withGroup:1,durationSeconds:38/24}] };
   const notes = sceneDirectionNotes(card, Boolean, true, true, true);
   assert.deepEqual(notes.beats, ['As Mochi speaks: Bo: Hold the door.', 'As Mochi speaks: Bo: Lower the crate.']);
+  card.performance[1].to = 'Bo';
+  assert.equal(sceneDirectionNotes(card, Boolean, true, true, true).beats[0], 'While Bo listens, Mochi speaks: Bo: Hold the door.');
 });

@@ -40,7 +40,7 @@ const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
-function projectSceneCast(scene, cards, board, boardDir, engine) {
+function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = false) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
   const voiceOnly = new Set(actors.filter(actor => actor.voiceOnly === true).map(actor => actor.id));
@@ -100,6 +100,10 @@ function projectSceneCast(scene, cards, board, boardDir, engine) {
     const custom = scene.speakerReferences?.find(ref => ref.character === character);
     if (ltx && conditioning && custom)
       throw new Error('scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for ' + character);
+    // A speaking character can share an opening picture with the listener. Preserve separately requested assets.
+    if (frameVoice &&
+        !custom && !candidates.length && !cards.some(card => card.visual?.characterInputs?.some(spec => spec.character === character) ||
+          card.visual?.references?.some(ref => ref.use !== 'image' && ownerOf(ref, card) === character))) continue;
     if (originals.has(character)) {
       if (custom) throw new Error('scene_reference_owner: select one facial original for ' + character);
       continue;

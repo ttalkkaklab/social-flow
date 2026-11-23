@@ -74,7 +74,7 @@ export function capabilityStatus(): {
       capability: 'video_generation',
       providers: [
         { provider: 'seedance (BytePlus ModelArk)', configured: has(config.arkApiKey), needs: 'ARK_API_KEY',
-          note: 'seedance_text2video · seedance_img2video · seedance_reference (Seedance 2.x; spoken cuts need seedance_reference with voice samples)' },
+          note: 'seedance_text2video · seedance_img2video · seedance_reference (Seedance 2.x; use reference for selected voices or image for an explicitly model-voiced scene)' },
         { provider: 'veo (Google Cloud)', configured: has(config.googleCloudProject), needs: 'GOOGLE_CLOUD_PROJECT and Google Cloud ADC',
           note: 'Project configured only; authorization and quota are checked by Google Cloud. Native sound, no character voice input.' },
         { provider: 'ltx-api (official LTX API)', configured: has(config.ltxApiKey), needs: 'LTX_API_KEY',

@@ -40204,7 +40204,7 @@ var require_cache3 = __commonJS({
         }
         const p = Promise.all(responsePromises);
         const responses = await p;
-        const operations = [];
+        const operations2 = [];
         let index = 0;
         for (const response of responses) {
           const operation = {
@@ -40215,13 +40215,13 @@ var require_cache3 = __commonJS({
             response
             // 7.3.4
           };
-          operations.push(operation);
+          operations2.push(operation);
           index++;
         }
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         try {
-          this.#batchCacheOperations(operations);
+          this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -40285,7 +40285,7 @@ var require_cache3 = __commonJS({
         } else {
           bodyReadPromise.resolve(void 0);
         }
-        const operations = [];
+        const operations2 = [];
         const operation = {
           type: "put",
           // 14.
@@ -40294,7 +40294,7 @@ var require_cache3 = __commonJS({
           response: clonedResponse
           // 16.
         };
-        operations.push(operation);
+        operations2.push(operation);
         const bytes = await bodyReadPromise.promise;
         if (clonedResponse.body != null) {
           clonedResponse.body.source = bytes;
@@ -40302,7 +40302,7 @@ var require_cache3 = __commonJS({
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         try {
-          this.#batchCacheOperations(operations);
+          this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -40331,18 +40331,18 @@ var require_cache3 = __commonJS({
           assert(typeof request === "string");
           r2 = getRequestState(new Request2(request));
         }
-        const operations = [];
+        const operations2 = [];
         const operation = {
           type: "delete",
           request: r2,
           options
         };
-        operations.push(operation);
+        operations2.push(operation);
         const cacheJobPromise = createDeferredPromise();
         let errorData = null;
         let requestResponses;
         try {
-          requestResponses = this.#batchCacheOperations(operations);
+          requestResponses = this.#batchCacheOperations(operations2);
         } catch (e2) {
           errorData = e2;
         }
@@ -40409,13 +40409,13 @@ var require_cache3 = __commonJS({
        * @param {CacheBatchOperation[]} operations
        * @returns {requestResponseList}
        */
-      #batchCacheOperations(operations) {
+      #batchCacheOperations(operations2) {
         const cache = this.#relevantRequestResponseList;
         const backupCache = [...cache];
         const addedItems = [];
         const resultList = [];
         try {
-          for (const operation of operations) {
+          for (const operation of operations2) {
             if (operation.type !== "delete" && operation.type !== "put") {
               throw webidl.errors.exception({
                 header: "Cache.#batchCacheOperations",
@@ -50025,7 +50025,13 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
+  dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
+  keyframes: external_exports.array(external_exports.object({
+    frame: frame.positive(),
+    path: external_exports.string().trim().min(1),
+    strength: external_exports.number().gt(0).max(1).optional()
+  }).strict()).min(1).optional().describe("Images of specific action states at interior scene frames, numbered from zero. Use the scene endpoints for the first and last frames. Each image conditions the same scene request on a compatible adapter."),
   oneTake: external_exports.boolean().optional().describe("True only for an explicitly requested uninterrupted shot."),
   audio: external_exports.object({
     mode: external_exports.enum(["conditioning", "mix"]).optional().describe("Condition generation by default, or mix this track once with native shot sound."),
@@ -50037,10 +50043,10 @@ var sceneVideoDirectionSchema = external_exports.object({
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
   camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
 }).strict();
-function openingPrompt(prompt, positions = []) {
+function openingPrompt(prompt, positions = [], imageLabel = (index) => "Image " + index) {
   if (!positions.length) return prompt;
   const header = positions.map(({ character, images, position }) => {
-    const refs = images.map((index) => "Image " + index).join(", ");
+    const refs = images.map(imageLabel).join(", ");
     return character + (refs ? " (" + refs + ")" : "") + ": " + position;
   });
   const prefix = "Opening frame, from the viewer\u2019s perspective:\n" + header.join("\n") + "\n\n";
@@ -50143,17 +50149,17 @@ function cameraDrift(prompt, movement) {
     const predicate = imperative.test(s2) ? s2 : camera ? s2.slice(camera.index) : "";
     return predicate.split(/\s+(?:while|as|so that)\s+/i)[0];
   }).filter(Boolean);
-  const holds = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
+  const holds2 = (s2) => !/\bzoom/i.test(s2) && /^(?:static|locked(?:[- ]off)?|fixed) camera\b|\bcamera[: ]+(?:(?:is|stays?|remains?) |holds? (?:a |the )?)?(?:steady|still|static|fixed|locked|put)\b|\bcamera (?:does not|doesn't|never) moves?\b/i.test(s2);
   const moves = /\b(push(?:es|ing)?|pull(?:s|ing)?|dolly|dollies|truck(?:s|ing)?|track(?:s|ing)?|follow(?:s|ing)?|pan(?:s|ning)?|tilt(?:s|ing)?|zoom(?:s|ing)?|crane(?:s)?|pedestal|orbit(?:s|ing)?|arc(?:s)?|circles?|approach(?:es)?|glides?|rises?|lowers?|handheld|body-mounted|whip|moves?|travels?|sweeps?|drifts?|recoils?|rides?|chases?|flies|swings?)\b/i;
   const negated = /^(?:camera[: ]+)?(?:never|do(?:es)? not|doesn't|don't|must not)\b/i;
-  const moving = said.filter((s2) => moves.test(s2) && !holds(s2) && !negated.test(s2));
+  const moving = said.filter((s2) => moves.test(s2) && !holds2(s2) && !negated.test(s2));
   if (heldMove.test(movement.trim())) return moving.length ? "contradicted" : null;
   const expected = directedMoves.find((re) => re.test(movement));
   if (expected && !moving.some((s2) => expected.test(s2)) && (moving.some((s2) => directedMoves.some((re) => re.test(s2))) || said.some((s2) => negated.test(s2) && expected.test(s2)))) return "contradicted";
   const fixedFrame = /\b(?:preserve|maintain|lock) the (?:opening |original |same )?(?:image )?(?:composition|framing|crop)\b/i;
   if (clauses.some((s2) => fixedFrame.test(s2) && !/\b(?:at first|initially|until|then|first frame only)\b/i.test(s2))) return "contradicted";
   if (moving.length) return null;
-  return said.some(holds) ? "contradicted" : "missing";
+  return said.some(holds2) ? "contradicted" : "missing";
 }
 function shotVisualDirection(shot, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
@@ -50294,6 +50300,108 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     ...bindings.filter((b) => b.value !== void 0 && b.via === "unmapped" && b.attribute !== "move").map((b) => `No prompt mapping for ${b.attribute}: ${JSON.stringify(b.value)}`),
     ...rack && !(rack.from && rack.to) ? ["the rack focus names no subjects \u2014 give focus.from and focus.to in shot_icons"] : []
   ] };
+}
+
+// src/scene-prompt.ts
+var transitions = {
+  hard_cut: "cut directly",
+  dissolve: "dissolve to the next view",
+  fade: "fade to the next view"
+};
+function shotHeading(shot, fps, options) {
+  const transition = shot.transition.replaceAll("_", " ");
+  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}\u2013${shot.endFrame - 1}] ${transition}.`;
+  const cut = transitions[shot.transition] ?? transition;
+  if (!options.modelPacedCuts)
+    return shot.transition === "open" ? "" : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+  const order = shot.transition === "open" ? "" : `Then ${cut}.`;
+  if (options.cutTiming !== "time_ranges") return order;
+  const seconds2 = (frame2) => Number((frame2 / fps).toFixed(2));
+  return [`[${seconds2(shot.startFrame)}\u2013${seconds2(shot.endFrame)}s]`, order].filter(Boolean).join(" ");
+}
+function deliveryDirection(lines) {
+  const physical = lines.filter((line) => line.delivery !== "voiceover");
+  if (!physical.length) return "No foreground dialogue.";
+  if (physical.every((line) => line.delivery === "off_screen")) return "The voice stays off screen. Visible mouths stay closed.";
+  if (physical.some((line) => line.delivery === "off_screen")) return "Only on-screen speakers mouth their own lines. Visible mouths stay still for off-screen voices.";
+  return "Only the named on-screen speaker mouths each line. Listeners stay quiet.";
+}
+function sceneTimelineWords(timeline, scene, options = {}) {
+  const { boundTurns, describeDelivery, modelFacing } = options;
+  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / timeline.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
+  const wholeTake = new Set(timeline.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
+  const rows = [];
+  if (!modelFacing) rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
+  let turnIndex = 0;
+  for (const shot of timeline.shots) {
+    const images = timeline.images.filter((image2) => image2.shotId === shot.shotId);
+    const cues = images.filter((image2) => image2.cue).map((image2) => `${timing(image2.frame)}: ${image2.cue}`);
+    const guides = images.flatMap((image2) => image2.reference?.scope === "shot_guide" ? [image2.reference.purpose] : []);
+    const lines = shot.dialogue ?? [];
+    const spoken = [];
+    for (const line of lines) {
+      if (boundTurns) spoken.push(boundTurns[turnIndex++]);
+      else if (options.includeDialogue !== false && line.delivery !== "voiceover") {
+        spoken.push([
+          line.frame !== void 0 && timing(line.frame) + ":",
+          line.direction,
+          `${line.speaker} (${line.delivery}): "${line.text}"`
+        ].filter(Boolean).join(" "));
+      }
+    }
+    const duration3 = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
+    const hold = describeDelivery && options.cutTiming === "approximate_holds" && `Hold this view for about ${duration3} ${duration3 === 1 ? "second" : "seconds"}.`;
+    rows.push([
+      shotHeading(shot, timeline.fps, options),
+      hold,
+      ...[shot.framing, shot.blocking, shot.action].filter((value) => value && !wholeTake.has(value)),
+      ...cues,
+      ...guides,
+      shot.sound && shot.sound !== scene.sound && "Sound: " + shot.sound,
+      describeDelivery && deliveryDirection(lines),
+      ...spoken,
+      shot.closingState && "End on " + shot.closingState
+    ].filter(Boolean).join(" "));
+  }
+  if (timeline.audio) {
+    rows.push(modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.");
+    for (const cue of timeline.audio.cues) rows.push(`${timing(cue.frame)}: ${cue.action}`);
+  }
+  return rows.filter(Boolean).join("\n");
+}
+
+// src/scene-prompt-profile.ts
+var ordered = {
+  cutTiming: "cut_order",
+  referenceLabels: "indexed",
+  allowsGeneratedVoice: false
+};
+var holds = { ...ordered, cutTiming: "approximate_holds" };
+var veo = { ...ordered, cutTiming: "time_ranges", allowsGeneratedVoice: true };
+var seedance = { ...ordered, cutTiming: "action_beats" };
+var pictureTags = { ...seedance, referenceLabels: "picture_audio_tags" };
+var operations = {
+  veo_text2video: veo,
+  veo_img2video: veo,
+  veo_reference: veo,
+  veo_extend: { ...veo, allowsGeneratedVoice: false },
+  seedance_text2video: seedance,
+  seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
+  seedance_reference: seedance,
+  astra_genai_img2video: holds,
+  astra_genai_msr: holds,
+  minimax_reference: { ...ordered, cutTiming: "action_beats", referenceLabels: "reference_indexed" },
+  fasth3_omni_reference: pictureTags,
+  heygen_reference: pictureTags
+};
+function scenePromptProfile(tool, model2) {
+  const profile = operations[tool ?? ""] ?? ordered;
+  if (tool === "seedance_reference" && typeof model2 === "string" && model2.startsWith("dreamina-seedance-2-5-"))
+    return { ...profile, referenceLabels: "at_indexed" };
+  return profile;
+}
+function usesGeneratedVoice(tool, dialogueVoice) {
+  return dialogueVoice === "model_generated" && scenePromptProfile(tool).allowsGeneratedVoice;
 }
 
 // src/image-media.ts
@@ -51278,7 +51386,7 @@ var ltx = {
   },
   frames: ["sourceImagePath", "lastImagePath"]
 };
-var veo = {
+var veo2 = {
   engine: "veo",
   deployment: "google-cloud-us-central1",
   voice: "none",
@@ -51344,7 +51452,7 @@ var HOSTED_VIDEO_ROUTES = {
     poll: (_, id) => pollLtxApi("audio-to-video", id)
   },
   veo_text2video: {
-    ...veo,
+    ...veo2,
     ...inputs(veoTextSchema, buildVeoBody, generateVeo),
     operation: "text",
     title: "Generate a Veo clip from text",
@@ -51352,7 +51460,7 @@ var HOSTED_VIDEO_ROUTES = {
     description: "Google Cloud Veo 3.1. English scene and optional native sound. Character voice samples are unsupported."
   },
   veo_img2video: {
-    ...veo,
+    ...veo2,
     ...inputs(veoImageSchema, buildVeoBody, generateVeo),
     operation: "image",
     title: "Animate a first frame with Veo",
@@ -51361,7 +51469,7 @@ var HOSTED_VIDEO_ROUTES = {
     description: "Animate a JPEG or PNG with Google Cloud Veo 3.1, optionally pinning the final frame. Use reference mode for asset pictures."
   },
   veo_reference: {
-    ...veo,
+    ...veo2,
     ...inputs(veoReferenceSchema, buildVeoBody, generateVeo),
     operation: "reference",
     title: "Generate a Veo clip from subject images",
@@ -51370,7 +51478,7 @@ var HOSTED_VIDEO_ROUTES = {
     description: "Generate eight seconds from one to three images of a subject. Standard and Fast accept assets. No pinned frames or voice samples."
   },
   veo_extend: {
-    ...veo,
+    ...veo2,
     ...inputs(veoExtendSchema, buildVeoBody, generateVeo),
     operation: "extend",
     title: "Extend an existing Veo video",
@@ -53670,9 +53778,18 @@ function sceneInputCapabilities(tool) {
     sceneAudio: ["astra_genai_audio2video", "astra_genai_desktop_audio2video", "astra_audio2video", "ltx_api_audio2video", "ltx_desktop_audio2video"].includes(tool)
   };
 }
-function speechVideoCapabilities(provider, model2, operation, subjectReferences = false) {
+function speechVideoCapabilities(provider, model2, operation, subjectReferences = false, generatedVoice = false) {
   if (provider === "omni" || provider === "veo" && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, model2) || provider === "seedance" && !Object.hasOwn(SEEDANCE_MODEL_SPECS, model2))
     throw new Error(`video_engine_unsupported: ${provider} ${model2} cannot keep a character's voice; choose a video model again with project_manage`);
+  if (generatedVoice) return {
+    provider,
+    model: model2,
+    audioConditioning: false,
+    lipSync: false,
+    postLipSync: false,
+    nativeSpeech: true,
+    evidence: "The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment."
+  };
   if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
@@ -53819,10 +53936,13 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
     const notes = sceneShotNotes(raw[index], concise);
-    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing, concise);
+    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, concise ? "" : notes.end, timeline?.framing, concise);
     const framing = shotFraming || (coverage.common.camera ? attributeWords("camera", coverage.common.camera) : members.length === 1 ? "Use the opening composition." : "");
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
+    for (const pin of scene.keyframes ?? []) {
+      if (pin.frame >= startFrame && pin.frame < endFrame) pins.push({ ...pin, role: "keyframe" });
+    }
     const frames = render.framePlan(member);
     const legacy = visual?.frames;
     const fallback = legacy?.keyframes === void 0 ? legacy?.storyboardKeyframes : void 0;
@@ -53884,8 +54004,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     const positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
     const sound = notes.sound;
-    const ordered = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
-    const lines = scoped ? ordered(member).filter((line) => line.tts?.trim()) : [];
+    const ordered2 = load5("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const lines = scoped ? ordered2(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
@@ -53896,7 +54016,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       const character = cast?.find((c) => c.id === line.speaker);
       const context = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
-      const voice = character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+      const voice = scene.dialogueVoice !== "model_generated" && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
@@ -53916,45 +54036,19 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
       transition,
       framing,
       action,
+      ...concise && notes.end ? { closingState: notes.end } : {},
       ...positions?.length ? { openingPositions: positions } : {},
       ...blocking ? { blocking } : {},
       ...sound ? { sound } : {},
       ...dialogue.length ? { dialogue } : {}
     };
   });
+  if (scene.keyframes?.some((pin) => pin.frame <= 0 || pin.frame >= cursor - 1))
+    throw new Error("scene_image_timing: scene keyframes must fall between the opening and ending frames");
   const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
   const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync2(path8.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...guides.length ? { shotReferenceImages: guides } : {}, ...audio ? { audio } : {} };
-}
-function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
-  const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
-  const transitions = {
-    hard_cut: "cut directly",
-    dissolve: "dissolve to the next view",
-    fade: "fade to the next view"
-  };
-  return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
-    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
-    const transition = s2.transition.replaceAll("_", " ");
-    const cut = transitions[s2.transition] ?? transition;
-    let heading = `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
-    if (modelFacing) {
-      heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
-    }
-    return [
-      heading,
-      ...[s2.framing, s2.blocking, s2.action].filter((text3) => text3 && !wholeTake.has(text3)),
-      ...cues,
-      ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
-      s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
-    ].filter(Boolean).join(" ");
-  }), ...t2.audio ? [
-    modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
-    ...t2.audio.cues.map((c) => `${timing(c.frame)}: ${c.action}`)
-  ] : []].filter(Boolean).join("\n");
 }
 var SceneInputError = class extends Error {
   constructor(tool, sceneRequest, missing, model2, resolution2) {
@@ -55390,7 +55484,7 @@ function measuredDuration(line) {
     return null;
   }
 }
-function speechVideoPlan(input, capabilities) {
+function speechVideoPlan(input, capabilities, sceneNo) {
   if (!capabilities) throw new Error("Supply the selected adapter capabilities and their evidence; never infer support from the model name");
   const scene = Array.isArray(input) ? { narration: input } : input;
   const lines = scene.narration || [];
@@ -55422,7 +55516,25 @@ function speechVideoPlan(input, capabilities) {
   if (promptLength?.exceeded) warnings.push(`ASTRA video prompt has ${promptLength.characters} characters; the adapter limit is ${promptLength.maxCharacters}. Shorten repeated descriptions or split at a natural action boundary while preserving necessary actions. The plan is unchanged.`);
   const performancePayload = actingContract().scenePerformancePayload(scene);
   const { performance: _performance, narration: _narration, ...reuseContext } = performancePayload;
-  return { ...timeline, ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {}, warnings, promptLength, reuseContextRevision: hash2(JSON.stringify(reuseContext)), performanceRevision: hash2(JSON.stringify(performancePayload)), videoPrompt, textPolicy: "no_visible_text", boundary: "one_shot_per_generation", instructions: "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image. " + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== "native", lineIds: lines.map((line) => line.id), review: "not_reviewed" };
+  return {
+    ...timeline,
+    ...mode === "native" && timeline.timing === "needs_audio_duration" ? { timing: "model_timed" } : {},
+    warnings,
+    promptLength,
+    reuseContextRevision: hash2(JSON.stringify(reuseContext)),
+    performanceRevision: hash2(JSON.stringify(performancePayload)),
+    videoPrompt,
+    textPolicy: "no_visible_text",
+    boundary: sceneNo === void 0 ? "one_shot_per_generation" : "one_scene_per_generation",
+    instructions: (sceneNo === void 0 ? "Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image." : "Use video_plan with sceneNo " + sceneNo + " to generate the entire scene once. This card describes its own dialogue and actions within that scene.") + " " + actingContract().VIDEO_TEXT_POLICY,
+    mode,
+    provider: capabilities.provider,
+    model: capabilities.model,
+    capabilities,
+    audioFirst: lines.length > 0 && mode !== "native",
+    lineIds: lines.map((line) => line.id),
+    review: "not_reviewed"
+  };
 }
 function manageSpeech(args) {
   args = speechManageSchema.parse(args);
@@ -55564,16 +55676,26 @@ function manageSpeech(args) {
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname6(dirname6(file));
+    const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
     if (existsSync7(join6(episode, ".work/model-settings.json"))) {
-      const { selection } = routingContext(episode, args.shotId, void 0, true);
+      const context = owner?.videoDirection?.dialogueVoice === "model_generated" ? routingContext(episode, void 0, owner.no, true) : routingContext(episode, args.shotId, void 0, true);
+      const { selection } = context;
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene));
+      const tool = args.tool ?? selectedVideoTool(selection);
+      const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
+      const verified = speechVideoCapabilities(
+        selection.engine,
+        selection.model || selection.engine,
+        adapter?.operation ?? selection.operation,
+        hasVideoSubjectReferences(scene),
+        generatedVoice
+      );
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
         throw new Error("Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot");
       args = { ...args, capabilities: verified };
     }
-    plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities);
+    plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
     const continuityContract = nodeModule4.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
     plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname6(file)) };
     if (args.action === "attach_video") {
@@ -55701,10 +55823,14 @@ function manageSpeech(args) {
   if (args.action === "plan_audio" && (!selected.length || selected.some(({ line }) => !line.id || !line.speaker || !line.delivery))) throw new Error("Prepare explicit speech before planning audio");
   if (changed) {
     const ids = /* @__PURE__ */ new Set();
-    for (const { line } of all) {
+    for (const { scene, line } of all) {
       if (!line.id || ids.has(line.id)) throw new Error("Dialogue ids must be present and unique");
       ids.add(line.id);
-      if (!character(line.speaker)?.tts) throw new Error(`Missing pinned voice for ${line.speaker}`);
+      const actor = character(line.speaker);
+      if (actor?.tts) continue;
+      const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
+      if (!actor || !["on_screen", "off_screen"].includes(line.delivery ?? "") || owner?.videoDirection?.dialogueVoice !== "model_generated")
+        throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
     const work = resolve5(dirname6(file), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
@@ -55859,7 +55985,8 @@ export {
   priceOf,
   readBoard,
   resolveVideoDuration,
-  serializeBoard
+  serializeBoard,
+  usesGeneratedVoice
 };
 /*! Bundled license information:
 

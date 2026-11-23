@@ -8,6 +8,8 @@ import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
+import { scenePromptProfile } from './scene-prompt-profile.js';
+export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 export function requiredCharacters(shot) {
     const inputs = shot.visual?.characterInputs;
@@ -74,14 +76,6 @@ export const VIDEO_ADAPTERS = Object.freeze({
  * frame in the same request, so the start image rides as the last picture.
  */
 export const VENDOR_REFERENCE_TOOLS = ['minimax_reference', 'heygen_reference'];
-/** How a prompt names the Nth picture or audio input on each reference adapter. */
-export function referenceLabel(tool, kind, n, model) {
-    if (tool === 'minimax_reference')
-        return `reference ${kind} ${n}`;
-    if (tool === 'fasth3_omni_reference' || tool === 'heygen_reference')
-        return kind === 'image' ? `<Picture ${n}>` : `<Audio ${n}>`;
-    return `${String(model).includes('2-5') ? '@' : ''}${kind === 'image' ? 'Image' : 'Audio'} ${n}`;
-}
 function keys(schema) {
     if (schema instanceof z.ZodEffects)
         return keys(schema.innerType());
@@ -139,7 +133,7 @@ export function videoCatalog() {
     return {
         version: 1,
         adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
-            sceneInputs: sceneInputCapabilities(tool), voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
+            sceneInputs: sceneInputCapabilities(tool), sceneCutTiming: scenePromptProfile(tool).cutTiming, voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
             fields: keys(a.schema), modelConstraints: HOSTED_VIDEO_ROUTES[tool] ? HOSTED_VIDEO_ROUTES[tool].modelConstraints : localVideoStrategy(tool) ? { frames: localVideoStrategy(tool).frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
                 a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
                     tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :
@@ -160,16 +154,19 @@ export function videoVoiceCapabilities(tool) {
         throw new Error('Unsupported video tool: ' + tool);
     return {
         lane: tool === 'astra_genai_img2video' ? 'conditional_reference' : adapter.voice,
-        dialogue: tool === 'astra_genai_img2video' ? 'requires_subject_references' : adapter.voice === 'none' ? 'refused' : 'allowed',
+        dialogue: scenePromptProfile(tool).allowsGeneratedVoice ? 'requires_model_generated_scene_voice' : tool === 'astra_genai_img2video' ? 'requires_subject_references' : adapter.voice === 'none' ? 'refused' : 'allowed',
         voiceReference: tool === 'astra_genai_img2video' ? 'backend_dependent_with_subject_references' : adapter.voice !== 'reference' ? 'unsupported' : ['astra_genai_msr', 'heygen_reference'].includes(tool) ? 'backend_dependent' : 'supported',
         suppliedSpeech: adapter.voice === 'supplied' ? 'audio_conditioned_reencoded' : 'unsupported',
         exactAudioPreservation: false,
         review: 'not_reviewed',
     };
 }
-export function speechVideoCapabilities(provider, model, operation, subjectReferences = false) {
+export function speechVideoCapabilities(provider, model, operation, subjectReferences = false, generatedVoice = false) {
     if (provider === 'omni' || (provider === 'veo' && !Object.hasOwn(HOSTED_VIDEO_ROUTES.veo_img2video.modelConstraints, model)) || (provider === 'seedance' && !Object.hasOwn(seedance.SEEDANCE_MODEL_SPECS, model)))
         throw new Error(`video_engine_unsupported: ${provider} ${model} cannot keep a character's voice; choose a video model again with project_manage`);
+    if (generatedVoice)
+        return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true,
+            evidence: 'The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment.' };
     // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
     // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
     if (['minimax', 'heygen'].includes(provider) && operation === 'reference')
