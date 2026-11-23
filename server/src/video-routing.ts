@@ -665,7 +665,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
         !Number.isInteger(sceneRequest.frameCount / sceneRequest.fps))
       bound.numFrames = sceneRequest.frameCount;
     if (typeof bound.numFrames === 'number') {
-      if (bound.numFrames / Number(bound.fps ?? 24) < durationPlan.requiredSeconds)
+      if (bound.numFrames / Number(bound.fps ?? 24) + 1e-9 < durationPlan.requiredSeconds)
         throw new Error('video_duration_short: numFrames does not cover the shot at the selected fps');
     } else bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
   }

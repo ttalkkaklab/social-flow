@@ -1676,6 +1676,7 @@ test('scene submission distinguishes soft shot references, temporal endpoints an
     card.scene = 1; card.duration = 2; card.shot = {size:'ms',angle:'eye'};
     card.visual = {video:{promptSource:{action:i ? 'The wheels clear the bend.' : 'The rider grips the bars.'}}};
     card.referenceImage = 'guide'+i+'.png';
+    if (i === 0) card.transition = 'dip'; // The incoming scene edit precedes the first frame of this request.
     execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c='+['blue','red'][i]+':s=320x320','-frames:v','1',path.join(dir,card.referenceImage)]);
   }
   f.save();
@@ -1745,4 +1746,22 @@ test('an optional guide cannot prevent silent distilled I2V when the background 
   const [guide]=plan.sceneRequest.shotReferenceImages;
   assert.equal(guide.submitted,false);
   assert.match(guide.reason,/requires a separate subject/);
+});
+
+
+test('a scene dip and two fractional shot lengths still fit exactly 113 frames', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
+  f.board.STRUCTURE = {scenes:[{no:1, speakers:[], frames:{start:'opening.png'},
+    videoDirection:{fps:24, openingPositions:[], emotion:'The cart picks up speed.'}}]};
+  fs.writeFileSync(path.join(f.episode, 'storyboard', 'opening.png'), png);
+  for (const [i, card] of f.board.SCENES.entries()) {
+    Object.assign(card, {scene:1, duration:[56,57][i]/24, transition:i ? 'cut' : 'dip',
+      narration:[], shot:{size:i ? 'insert' : 'ms', angle:'eye'},
+      visual:{action:i ? 'The wheel hits the curb.' : 'The cart rolls.'}});
+  }
+  f.save();
+  const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'fractional-coverage', args:{reserveUsd:0}}, false);
+  assert.equal(plan.args.numFrames, 113);
+  assert.equal(plan.sceneRequest.modelPacedCuts, true);
+  assert.deepEqual(plan.sceneRequest.cuts.map(cut => [cut.frame,cut.transition]), [[56,'hard_cut']]);
 });

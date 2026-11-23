@@ -56,7 +56,7 @@ export function sceneCoverage(members: Record<string,unknown>[], scene: Partial<
   return resolvedDirection({directionDefaults:owner?.directionDefaults, videoDirection:scene}, members);
 }
 
-export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Partial<SceneVideoDirection>, episode: string, board?: Record<string, unknown>, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode?:'composition'|'background', guideLimit?:number) {
+export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Partial<SceneVideoDirection>, episode: string, board?: Record<string, unknown>, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode?:'composition'|'background', guideLimit?:number, concise = false) {
   const render = load('../../skills/storyboard/references/render-routing.js');
   const members = raw as unknown as Member[];
   const fps = scene.fps ?? 24;
@@ -81,8 +81,8 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) ||
         (transition === 'open') !== (index === 0)) throw new Error('scene_video_timing: inconsistent frame range or transition on ' + shotId);
     cursor = endFrame;
-    const notes = sceneShotNotes(raw[index]);
-    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing);
+    const notes = sceneShotNotes(raw[index], concise);
+    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing, concise);
     const framing = shotFraming || (coverage.common.camera ? attributeWords('camera', coverage.common.camera)
       : members.length === 1 ? 'Use the opening composition.' : '');
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ''), ...notes.beats].filter(Boolean).join(' ');
@@ -229,7 +229,9 @@ export function prepareSceneRequest<T>(
   const coverage = sceneCoverage(members, scene, board, sceneNo);
   const owner = (board?.STRUCTURE as {scenes?: {no:number; speakers?:string[]; frames?:unknown}[]} | undefined)?.scenes?.find(s => s.no === sceneNo);
   load('../../skills/_shared/scene-cast.js').sceneCast(owner ?? {no:sceneNo},members);
-  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit);
+  const modelPacedCuts = owner?.frames !== undefined && !options.shotScoped && members.length > 1 &&
+    !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut'));
+  const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && options.bindDialogue);
   const common = coverage.common;
   const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
   const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)).filter(Boolean).join(' ');
@@ -241,8 +243,6 @@ export function prepareSceneRequest<T>(
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
   const text = options.bindDialogue ? scenePromptText(scene, shared, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
   const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
-  const modelPacedCuts = owner?.frames !== undefined && !options.shotScoped && members.length > 1 &&
-    !scene.audio && members.every(card=>!card.timeline && (!card.transition || card.transition === 'cut'));
   const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? {modelPacedCuts:true} : {}), sceneDirection:{emotion:scene.emotion, ...(scene.action ? {action:scene.action} : {}),
     ...(camera.instruction ? {camera:camera.instruction} : {}), ...(staging ? {staging} : {}), ...(scene.oneTake ? {oneTake:true} : {}), ...(scene.sound ? {sound:scene.sound} : {})} };
   return { request, providerPrompt, camera, mapped: mapInputs(request) };

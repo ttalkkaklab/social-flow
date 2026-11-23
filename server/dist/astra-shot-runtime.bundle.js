@@ -50155,7 +50155,7 @@ function cameraDrift(prompt, movement) {
   if (moving.length) return null;
   return said.some(holds) ? "contradicted" : "missing";
 }
-function shotVisualDirection(shot) {
+function shotVisualDirection(shot, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
   const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
   const views = load2("../../skills/storyboard/references/shot-view.js");
@@ -50174,12 +50174,13 @@ function shotVisualDirection(shot) {
   const rack = picked.find((t2) => t2.entry?.fields.focus);
   const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
   const sizeWords = sentence(sizes[text(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || "");
-  const framing = sentence([sizes[text(plan.size)], words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(", "));
+  const size = sizes[text(plan.size)];
+  const framing = sentence([concise ? size?.split(",")[0] : size, words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(", "));
   const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
   const accentWords = other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction));
   const openingView = [
-    viewWords || (text(camera.framing) ? sentence(`Opening composition: ${text(camera.framing)}`) : ""),
+    viewWords || (text(camera.framing) ? sentence(concise ? text(camera.framing) : `Opening composition: ${text(camera.framing)}`) : ""),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : ""
   ].filter(Boolean);
@@ -50193,9 +50194,9 @@ function attributeWords(key, row, camera = {}) {
   if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
   return nonEnglishOutsideQuotes(row.value) ? "" : sentence(directions().labels[key][1] + ": " + row.value);
 }
-function sceneShotNotes(card) {
+function sceneShotNotes(card, concise = false) {
   const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
-  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true);
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise);
   const actions = notes.actions.map(english2).filter(Boolean);
   return {
     action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
@@ -50205,8 +50206,8 @@ function sceneShotNotes(card) {
     beats: [...notes.beats, ...notes.motion].map(english2).filter(Boolean)
   };
 }
-function shotVisualWords(shot, rows, common7, end, framing) {
-  const dir = shotVisualDirection(shot), visual = object(shot.visual), camera = object(visual.camera);
+function shotVisualWords(shot, rows, common7, end, framing, concise = false) {
+  const dir = shotVisualDirection(shot, concise), visual = object(shot.visual), camera = object(visual.camera);
   const expression = expressionWords(shot);
   return [...new Set([
     framing,
@@ -53793,7 +53794,7 @@ function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
   return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit) {
+function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
   const render = load5("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
@@ -53817,8 +53818,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
     const transition = timeline?.transition ?? (index === 0 ? "open" : incoming);
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
-    const notes = sceneShotNotes(raw[index]);
-    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing);
+    const notes = sceneShotNotes(raw[index], concise);
+    const shotFraming = shotVisualWords(raw[index], coverage.shots[index], coverage.common, notes.end, timeline?.framing, concise);
     const framing = shotFraming || (coverage.common.camera ? attributeWords("camera", coverage.common.camera) : members.length === 1 ? "Use the opening composition." : "");
     const action = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
