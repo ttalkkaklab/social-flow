@@ -139,6 +139,18 @@ function stillsBoard(n = 9, policy = { generatedVideoMax: 0, videoBudgetUsd: 0 }
   }
   return win;
 }
+test('completed scene cuts can inherit an opening image or use their shot reference', () => {
+  const win = fixture(3);
+  win.STRUCTURE = { scenes: [{ no: 1, frames: { start: 'images/opening.png' } }, { no: 2 }] };
+  for (const [i, shot] of win.SCENES.entries()) {
+    delete shot.visual.bg;
+    shot.scene = i === 0 ? 1 : 2;
+  }
+  win.SCENES[1].referenceImage = 'images/insert.png';
+  const missing = mode.check(win).filter(line => line.includes('source image path'));
+  assert.equal(missing.length, 1);
+  assert.match(missing[0], /shot 3:/);
+});
 test('full_video reports a cut routed elsewhere, not a generated cut that waits for its video plan', () => {
   const win = fixture(2);
   delete win.SCENES[0].visual.video;

@@ -95830,7 +95830,9 @@ var require_production_mode = __commonJS({
           if (v.slide || v.source && v.source !== "stock" || v.clip)
             bad("full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice");
           if (["broll", "quote"].includes(s2.type)) bad("full_video generated cuts use ordinary narrated cards");
-          if (!text4(v.bg) || !text4(v.bgPrompt) && v.source !== "stock") bad("keep a source image path and its generation prompt");
+          const owner = win.STRUCTURE?.scenes?.find((scene) => scene.no === s2.scene);
+          const sourceImage = v.bg || s2.referenceImage || owner?.frames?.start;
+          if (!text4(sourceImage) || !text4(v.bgPrompt) && v.source !== "stock") bad("keep a source image path and its generation prompt");
           if (!text4(v.video?.prompt)) bad("store the motion prompt before generation" + (win.STORY?.authoring === "story-first" ? " (shot_prompt)" : ""));
           let selected;
           try {

@@ -75,6 +75,27 @@ test('preflight refuses unowned HTML and symlinked outputs before writing anythi
   } finally { f.clean(); }
 });
 
+test('a legacy storyboard copy can be refreshed only when the base tag is its sole change', () => {
+  const f = fixture();
+  try {
+    const canonical = readFileSync(join(f.dir, 'episodes/one/storyboard/storyboard.html'), 'utf8');
+    const file = 'storyboards/one/index.html';
+    const base = '<base href="../../episodes/one/storyboard/">';
+    const legacy = canonical.replace('</head>', base + '\n</head>');
+    for (const edited of [legacy + '<!-- editorial note -->', legacy.replace(base, '<base href="/">'), canonical]) {
+      f.write(file, edited);
+      assert.throws(() => exportChannel(f.dir), /hand-authored/);
+      assert.equal(readFileSync(join(f.dir, file), 'utf8'), edited);
+    }
+    f.write(file, legacy);
+    assert.ok(exportChannel(f.dir, { check: true }).changed.includes(join(f.dir, file)));
+    assert.equal(readFileSync(join(f.dir, file), 'utf8'), legacy);
+    exportChannel(f.dir);
+    assert.deepEqual(exportChannel(f.dir, { check: true }).changed, []);
+    assert.ok(readFileSync(join(f.dir, 'storyboards/index.html'), 'utf8').includes('href="one/index.html"'));
+  } finally { f.clean(); }
+});
+
 
 test('episode cards normalize titles and use only the main rendered thumbnail', () => {
   const f = fixture();

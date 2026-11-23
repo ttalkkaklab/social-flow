@@ -11,6 +11,34 @@ const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js
 const review = require('../../skills/storyboard/references/video-production.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('review durations preserve fractional seconds before switching to minutes', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const start = template.indexOf('  function durTxt(t)');
+  const render = runInNewContext(template.slice(start, template.indexOf('  var root =', start)) + '\ndurTxt', {
+    T: { sec: value => value + 's', min: value => value + 'm' },
+  });
+  assert.equal(render(7.75), '7.75s');
+  assert.equal(render(0.1 + 0.2), '0.3s');
+  assert.equal(render(150), '2.5m');
+});
+
+test('cast cards show the episode wardrobe and continuity when reusing a character sheet', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const cast = template.slice(template.indexOf('  if (CAST.length) {'), template.indexOf('  // One strip handler for cast'));
+  const character = {
+    physical: { outfit: { status: 'confirmed', value: 'Old uniform' } },
+    continuity: { invariants: { status: 'confirmed', value: ['Flashback only'] } },
+  };
+  const render = entry => runInNewContext(cast + '\nh', {
+    h: '', T: {}, window: {}, CAST: [{ id: 'lead', character, ...entry }], SCENES: [], esc: String, mark: String,
+  });
+  const current = render({ outfit: 'Exam uniform', continuity: ['Carries the folded shirt'] });
+  assert.ok(current.includes('Exam uniform') && current.includes('Carries the folded shirt'));
+  assert.ok(!current.includes('Old uniform') && !current.includes('Flashback only'));
+  const inherited = render({});
+  assert.ok(inherited.includes('Old uniform') && inherited.includes('Flashback only'));
+});
+
 test('offline review shows the selected Veo asset slots before and after a tool is recorded', t => {
   const directory = mkdtempSync(join(tmpdir(), 'reference-board-'));
   t.after(() => rmSync(directory, {recursive: true, force: true}));
