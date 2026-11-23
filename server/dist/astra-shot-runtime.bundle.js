@@ -55390,11 +55390,13 @@ function manageSpeech(args, options = {}) {
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object3(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      if (native || plan.mode === "audio_conditioned") {
+      const performanceSource = native || plan.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : void 0;
+      if (performanceSource) {
         const candidate = {
           id: scene.id,
+          narration: scene.narration,
           edit: native && replacement ? {} : scene.edit,
-          visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } }
+          visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
         speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate);
       }
@@ -55435,6 +55437,7 @@ function manageSpeech(args, options = {}) {
           videoPath,
           videoSha256,
           quality,
+          ...performanceSource && { performanceSource },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",

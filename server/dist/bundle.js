@@ -96954,34 +96954,59 @@ var require_speech_contract = __commonJS({
           throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
       }
     }
+    function videoPerformanceSource(file, silentConditioned = false) {
+      const picture2 = __require("node:child_process").execFileSync("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        file,
+        "-map",
+        "0:V:0",
+        "-c:v",
+        "copy",
+        "-f",
+        "hash",
+        "-hash",
+        "sha256",
+        "-"
+      ], { encoding: "utf8", timeout: 3e4 }).trim();
+      return { picture: picture2, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
+    }
     function assertVideoPerformanceOwnership(shots, boardDir, candidate2) {
       const fs26 = __require("node:fs"), path39 = __require("node:path");
-      const decoded = /* @__PURE__ */ new Map();
+      const media = /* @__PURE__ */ new Map();
       function source(shot) {
         const binding = shot.visual?.video?.speechBinding;
         if (!["native", "audio_conditioned"].includes(binding?.mode) || !binding.videoSha256 || !binding.audio?.length) return;
         const start = shot.edit?.in ?? 0, end = shot.edit?.out ?? Infinity;
         if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
           throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
-        return { id: shot.id, start, end, binding, revisions: JSON.stringify(binding.audio.map((line) => line.revision)) };
+        const visible = shot.narration?.some((line) => line.delivery === "on_screen" && line.tts?.trim());
+        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify(binding.audio.map((line) => line.revision)) };
       }
-      function soundtrack(entry2) {
-        const { videoPath, videoSha256, conditioningAudioSha256 } = entry2.binding;
-        if (conditioningAudioSha256) return;
-        if (!decoded.has(videoSha256)) {
+      function identity(entry2) {
+        const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
+        if (!media.has(videoSha256)) {
           const file = typeof videoPath === "string" && path39.resolve(boardDir, videoPath);
-          if (!file || !fs26.existsSync(file) || createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") !== videoSha256) return;
-          decoded.set(videoSha256, require_audio_signal().decodedAudioHash(file));
+          const original = file && fs26.existsSync(file) && createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
+          media.set(videoSha256, original ? videoPerformanceSource(file, Boolean(conditioningAudioSha256)) : performanceSource);
         }
-        return decoded.get(videoSha256);
+        return media.get(videoSha256);
+      }
+      function samePerformanceMedia(left, right) {
+        if (left.binding.videoSha256 === right.binding.videoSha256) return true;
+        const a = identity(left), b = identity(right);
+        if (!a || !b) return false;
+        if ((left.visible || right.visible) && a.picture && a.picture === b.picture) return true;
+        return a.audio && a.audio === b.audio;
       }
       function check2(left, right) {
         if (left.end <= right.start || right.end <= left.start) return;
         if (left.binding.mode === right.binding.mode && left.revisions === right.revisions) return;
-        const sameFile = left.binding.videoSha256 === right.binding.videoSha256;
-        const leftAudio = !sameFile && soundtrack(left);
-        if (sameFile || leftAudio && leftAudio === soundtrack(right))
-          throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign different dialogue to overlapping source audio; generate the changed take or select its own source interval");
+        if (samePerformanceMedia(left, right))
+          throw new Error("speech_video_performance_conflict: " + left.id + " and " + right.id + " assign different dialogue to the same footage or soundtrack over an overlapping source interval");
       }
       const prior = [];
       const next = candidate2 && source(candidate2);
@@ -96996,7 +97021,7 @@ var require_speech_contract = __commonJS({
         }
       }
     }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, assertVideoPerformanceOwnership };
+    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, assertVideoPerformanceOwnership, videoPerformanceSource };
   }
 });
 
@@ -147392,11 +147417,13 @@ function manageSpeech(args, options = {}) {
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object5(video2.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      if (native || plan2.mode === "audio_conditioned") {
+      const performanceSource = native || plan2.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : void 0;
+      if (performanceSource) {
         const candidate2 = {
           id: scene.id,
+          narration: scene.narration,
           edit: native && replacement ? {} : scene.edit,
-          visual: { video: { speechBinding: { mode: plan2.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } }
+          visual: { video: { speechBinding: { mode: plan2.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
         speechContract().assertVideoPerformanceOwnership(scenes, dirname11(file), candidate2);
       }
@@ -147437,6 +147464,7 @@ function manageSpeech(args, options = {}) {
           videoPath,
           videoSha256,
           quality,
+          ...performanceSource && { performanceSource },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
           ...tailTrim ? { reuse: {
             kind: "tail_trim",

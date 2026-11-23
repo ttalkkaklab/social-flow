@@ -469,10 +469,12 @@ export function manageSpeech(args, options = {}) {
                 throw new Error('Adapter does not match the selected shot model');
             const priorBinding = object(video.speechBinding);
             const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-            if (native || plan.mode === 'audio_conditioned') {
+            const performanceSource = native || plan.mode === 'audio_conditioned'
+                ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : undefined;
+            if (performanceSource) {
                 // Replacing a native clip clears trims measured on its predecessor.
-                const candidate = { id: scene.id, edit: native && replacement ? {} : scene.edit,
-                    visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, conditioningAudioSha256: driverSha256 } } } };
+                const candidate = { id: scene.id, narration: scene.narration, edit: native && replacement ? {} : scene.edit,
+                    visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } } };
                 speechContract().assertVideoPerformanceOwnership(scenes, dirname(file), candidate);
             }
             const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
@@ -510,7 +512,7 @@ export function manageSpeech(args, options = {}) {
                         note: 'The previous clip\'s trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack.' };
                 }
                 video.clip = args.videoPath;
-                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality, ...(driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {}),
+                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality, ...(performanceSource && { performanceSource }), ...(driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {}),
                     ...(tailTrim ? { reuse: { kind: 'tail_trim', sourcePerformanceRevision: priorBinding.performanceRevision,
                             sourceDurationSeconds: priorBinding.durationSeconds, selectedDurationSeconds: plan.durationSeconds,
                             review: 'not_reviewed' } } : {}) };
