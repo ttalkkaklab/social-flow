@@ -15,3 +15,5 @@ The user approved this rubric and asked to continue until at least 95/100 with z
 | Scope and compatibility | 10 | Preserve unrelated operations, historical receipts and approved input ownership. Deduct five per independent regression. |
 
 Checks: `cd server && npm run check` and `node skills/platform-guide/references/skill-lint.js`.
+
+[Iteration 17](verify-17.md) passed at 100/100 with zero P0 defects.
