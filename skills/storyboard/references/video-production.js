@@ -37,7 +37,19 @@ function read(directory, board, {verifyInputs=true} = {}) {
  const warnings=[];
  const json=file=>{try{return JSON.parse(fs.readFileSync(file,'utf8'));}catch(error){if(error.code!=='ENOENT')warnings.push('Unreadable production record: '+path.basename(file));return null;}};
  const state=json(path.join(store,'state.json')) || {jobs:{}};
- const jobs=obj(state.jobs), files=fs.existsSync(path.join(store,'plans'))?fs.readdirSync(path.join(store,'plans')).filter(f=>/^[a-f0-9]{64}\.json$/.test(f)):[];
+ const jobs=obj(state.jobs);
+ const sources=[{root:episode,store,jobs}];
+ // Finished takes may have been rendered from an episode-local production copy.
+ // Keep those records read-only. New jobs and recovery still belong to their original store.
+ const archives=json(path.join(store,'archives.json'));
+ for(const relative of Array.isArray(archives)?new Set(archives):[]) {
+  if(typeof relative!=='string'||!relative.startsWith('.work/')||relative.split('/').some(part=>!part||part==='.'||part==='..')||relative.includes('\\'))continue;
+  const root=path.join(episode,relative),archive=path.join(root,'.work/video-routing');
+  if(!fs.existsSync(archive))continue;
+  const within=path.relative(fs.realpathSync(episode),fs.realpathSync(archive));
+  if(!within.startsWith('.work'+path.sep))continue;
+  sources.push({root,store:archive,jobs:obj(json(path.join(archive,'state.json'))?.jobs)});
+ }
  const win=board || (fs.existsSync(path.join(dir,'scenes.js'))?require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir,'scenes.js')):{});
  const shots=win.SCENES || [], contexts=new Map(), hashes=new Map();
  const local=file=>{
@@ -66,12 +78,22 @@ function read(directory, board, {verifyInputs=true} = {}) {
  };
  const blockedDir=path.join(store,'blocked');
  const blocked=fs.existsSync(blockedDir)?fs.readdirSync(blockedDir).filter(f=>f.endsWith('.json')).map(f=>json(path.join(blockedDir,f))).filter(Boolean):[];
- const candidates=[];
- for(const file of files) {
-  const plan=json(path.join(store,'plans',file));
+ const candidates=[],archivedJobs=new Map(),planStores=new Map();
+ const livePlanIds=new Set(Object.values(jobs).map(job=>job.planId));
+ const records=sources.flatMap(source=>{
+  const plans=path.join(source.store,'plans');
+  return fs.existsSync(plans)?fs.readdirSync(plans).filter(f=>/^[a-f0-9]{64}\.json$/.test(f)).map(file=>({source,file,record:path.join(plans,file)})):[];
+ });
+ for(const {source,file,record} of records) {
+  const plan=json(record);
   if(!plan)continue;
-  if(plan.id!==file.slice(0,-5) || path.resolve(plan.episode || '.')!==episode) {warnings.push('Invalid production plan: '+file);continue;}
-  const job=jobs[plan.requestId]?.planId===plan.id?jobs[plan.requestId]:null;
+  if(plan.id!==file.slice(0,-5) || path.resolve(plan.episode || '.')!==source.root) {warnings.push('Invalid production plan: '+file);continue;}
+  const job=source.jobs[plan.requestId]?.planId===plan.id?source.jobs[plan.requestId]:null;
+  if(source.root!==episode) {
+   if(job?.status!=='completed'||livePlanIds.has(plan.id)||archivedJobs.has(plan.id))continue;
+   archivedJobs.set(plan.id,job);
+  }
+  planStores.set(plan.id,source.store);
   const args=obj(plan.args),shot=shots.find(s=>s.id===plan.shotId),video=obj(shot?.visual?.video);
   const output=typeof args.outputPath==='string' && typeof args.filename==='string'?path.resolve(args.outputPath,args.filename):null;
   const clip=job?.status==='completed'&&output?local(output):null;
@@ -90,7 +112,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
     return typeof file==='string' && path.resolve(dir,file)===path.resolve(dir,clip);
    })));
   candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
-   createdAt:fs.statSync(path.join(store,'plans',file)).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
+   createdAt:fs.statSync(record).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
    status:job?.status||'planned',providerStatus:job?.providerStatus||null,observedAt:job?.observedAt||null,providerId:job?.providerId||receipt?.jobId||null,endpoint,
    selection:plan.selection,generationMode:generationMode(plan.selection,plan.tool,args.references,adapters),settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',
    inputs,imageBindings:(plan.imageBindings||[]).map(b=>({id:b.id,path:path.relative(dir,b.path).split(path.sep).join('/'),role:b.role,purpose:b.purpose,preserve:b.preserve,avoid:b.avoid,submitted:b.submitted})),
@@ -104,11 +126,16 @@ function read(directory, board, {verifyInputs=true} = {}) {
  }
  candidates.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.planId.localeCompare(b.planId));
  for(const candidate of candidates) {
-  const previous=candidate.basedOnRequestId?candidates.find(c=>c.requestId===candidate.basedOnRequestId&&c.shotId===candidate.shotId&&c.planId!==candidate.planId):null;
+  const previous=candidate.basedOnRequestId?candidates.find(c=>planStores.get(c.planId)===planStores.get(candidate.planId)&&c.requestId===candidate.basedOnRequestId&&c.shotId===candidate.shotId&&c.planId!==candidate.planId):null;
   candidate.changes=changes(previous,candidate);
  }
  const unique=status=>new Set(candidates.filter(status).flatMap(c=>c.shotIds||[c.shotId])).size;
- const jobList=Object.values(jobs);
+ const jobList=[...Object.values(jobs),...archivedJobs.values()];
+ const attachedIds=new Set(candidates.filter(c=>c.selected).flatMap(c=>c.shotIds||[c.shotId]));
+ for(const shot of shots) {
+  const cuts=shot.productionPlan?.cuts;
+  if(shot.id&&local(shot.visual?.video?.clip)&&Array.isArray(cuts)&&cuts.some(c=>c?.kind==='generated_video'&&local(c.path)))attachedIds.add(shot.id);
+ }
  const sceneModes={},shotModes={};
  for(const scene of win.STRUCTURE?.scenes || []) {
   const members=shots.filter(shot=>shot.scene===scene.no);
@@ -124,7 +151,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(mode)shotModes[shot.id]=mode;
  }
  return {version:1,storyboardPath:dir,sceneModes,shotModes,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
-  summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:unique(c=>c.selected),reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
+  summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:attachedIds.size,reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
    pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,blocked,warnings,repairs};
 }
