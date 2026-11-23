@@ -83,6 +83,39 @@ function verifyReceiptOperation(receipt,suffix,plan,hashBound) {
     throw new Error('speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment');
 }
 
+function performanceKey(shot) {
+  const binding = shot.visual?.video?.speechBinding;
+  if (!binding?.videoSha256) return;
+  return JSON.stringify([shot.id,binding.mode,binding.videoSha256,binding.audio,binding.conditioningAudioSha256]);
+}
+
+// Each accepted speech edit already archives the previous board under its SHA-256.
+// Recover superseded performances, keeping the latest authored cut for each take.
+function speechHistory(board) {
+  const fs = require('node:fs'), path = require('node:path');
+  const dir = path.resolve(board,'../.work/speech-history');
+  let names;
+  try { names = fs.readdirSync(dir); } catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+  const records = new Map();
+  for (const name of names) {
+    if (!/^[a-f0-9]{64}\.js$/.test(name)) continue;
+    const file = path.join(dir,name), bytes = fs.readFileSync(file);
+    if (createHash('sha256').update(bytes).digest('hex') !== name.slice(0,-3))
+      throw new Error('speech_history_invalid: a storyboard snapshot no longer matches its content hash');
+    if (!bytes.includes('speechBinding')) continue;
+    const win = require('./scenes-vm.js').evaluateWindowScript(bytes.toString('utf8'),{filename:file});
+    const time = fs.statSync(file,{bigint:true}).mtimeNs;
+    for (const shot of win.SCENES ?? []) {
+      const performance = performanceKey(shot);
+      if (!performance) continue;
+      const key = JSON.stringify([performance,shot.visual.video.speechBinding.videoPath,shot.visual.video.clip]);
+      if (records.get(key)?.time > time) continue;
+      records.set(key,{time,shot});
+    }
+  }
+  return Array.from(records.values(),record => record.shot);
+}
+
 // Index the episode's known media folders once. A receipt belongs to the source
 // bytes, so copying a video away from its sidecar cannot erase a known operation.
 function episodeVideoReceipts(shots,board,extra) {
@@ -93,7 +126,10 @@ function episodeVideoReceipts(shots,board,extra) {
     if (typeof file === 'string' && file) dirs.add(path.dirname(path.resolve(board,file)));
   }
   directory(extra);
-  for (const shot of shots) {
+  const archived = speechHistory(board);
+  const active = new Set(shots.map(performanceKey));
+  const history = archived.filter(shot => !active.has(performanceKey(shot)));
+  for (const shot of [...shots,...archived]) {
     const video = shot.visual?.video ?? {}, binding = video.speechBinding;
     for (const file of [video.clip,binding?.videoPath,video.soundtrackRepair?.videoPath]) directory(file);
     for (const source of video.soundtrackRepair?.sources ?? []) directory(source.path);
@@ -120,7 +156,7 @@ function episodeVideoReceipts(shots,board,extra) {
       if (hasPostLipSync(receipt)) forbidden.push({sha,file});
     }
   }
-  return {hashes,forbidden};
+  return {hashes,forbidden,history};
 }
 
 // Imported native clips may have no local receipt. A matching recorded operation
@@ -201,13 +237,13 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
     }
     return media.get(videoSha256);
   }
-  function check(left,right) {
+  function check(left,right,active = false) {
     if (left.end <= right.start || right.end <= left.start) return;
     const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions &&
       left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
     if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
     const a = identity(left), b = identity(right);
-    if (candidate && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 &&
+    if (active && candidate && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 &&
         (left.visible || right.visible) && !a?.picture) {
       // Pre-fingerprint bindings need the old bytes to distinguish a new take from
       // an overdub. If those bytes are gone, require an identified completed render.
@@ -229,7 +265,7 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
     const entry = source(shot);
     if (!entry) continue;
     if (candidate) {
-      if (next && (entry.id !== next.id || entry.binding.videoSha256 !== next.binding.videoSha256)) check(entry,next);
+      if (next && (entry.id !== next.id || entry.binding.videoSha256 !== next.binding.videoSha256)) check(entry,next,true);
     } else {
       if (entry.binding.performanceSource) {
         const current = identity(entry), recorded = entry.binding.performanceSource;
@@ -241,6 +277,11 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
       for (const earlier of prior) check(earlier,entry);
       prior.push(entry);
     }
+  }
+  for (const shot of receipts?.history ?? []) {
+    const earlier = source(shot);
+    if (!earlier) continue;
+    for (const entry of next ? [next] : prior) check(earlier,entry);
   }
 }
 

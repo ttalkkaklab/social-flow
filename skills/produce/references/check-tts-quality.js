@@ -218,7 +218,7 @@ function check(work, board) {
   work=path.resolve(work); board=path.resolve(board);
   const file=path.join(board,'scenes.js');
   const win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
-  checkAssemblyRoutes(win,board);
+  const receipts = checkAssemblyRoutes(win,board);
   if(!Array.isArray(win.SCENES))throw new Error('SCENES missing');
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
@@ -313,7 +313,7 @@ function check(work, board) {
       authorizeSpeed(work,'final',receipt.playbackSpeed??1);
     }
   }
-  assertVideoPerformanceOwnership(win.SCENES,board);
+  assertVideoPerformanceOwnership(win.SCENES,board,undefined,receipts);
   fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,actedIntervals,approved:false},null,2)+'\n');
   return media;
 }

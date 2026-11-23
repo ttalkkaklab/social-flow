@@ -25,6 +25,7 @@ function checkAssemblyRoutes(win,board) {
         assertVideoSpeechProvenance(path.resolve(board,source.path),null,{},receipts);
     }
   }
+  return receipts;
 }
 
 function usesConditioningTrack(scene, board, audio) {

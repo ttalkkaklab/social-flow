@@ -96942,6 +96942,40 @@ var require_speech_contract = __commonJS({
       if (provider !== plan2.provider || (plan2.mode === "native" ? !native : !conditioned) || typeof receipt.model === "string" && receipt.model !== plan2.model)
         throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
     }
+    function performanceKey(shot) {
+      const binding = shot.visual?.video?.speechBinding;
+      if (!binding?.videoSha256) return;
+      return JSON.stringify([shot.id, binding.mode, binding.videoSha256, binding.audio, binding.conditioningAudioSha256]);
+    }
+    function speechHistory(board) {
+      const fs26 = __require("node:fs"), path39 = __require("node:path");
+      const dir = path39.resolve(board, "../.work/speech-history");
+      let names;
+      try {
+        names = fs26.readdirSync(dir);
+      } catch (error2) {
+        if (error2.code === "ENOENT") return [];
+        throw error2;
+      }
+      const records = /* @__PURE__ */ new Map();
+      for (const name of names) {
+        if (!/^[a-f0-9]{64}\.js$/.test(name)) continue;
+        const file = path39.join(dir, name), bytes = fs26.readFileSync(file);
+        if (createHash33("sha256").update(bytes).digest("hex") !== name.slice(0, -3))
+          throw new Error("speech_history_invalid: a storyboard snapshot no longer matches its content hash");
+        if (!bytes.includes("speechBinding")) continue;
+        const win = require_scenes_vm().evaluateWindowScript(bytes.toString("utf8"), { filename: file });
+        const time3 = fs26.statSync(file, { bigint: true }).mtimeNs;
+        for (const shot of win.SCENES ?? []) {
+          const performance2 = performanceKey(shot);
+          if (!performance2) continue;
+          const key = JSON.stringify([performance2, shot.visual.video.speechBinding.videoPath, shot.visual.video.clip]);
+          if (records.get(key)?.time > time3) continue;
+          records.set(key, { time: time3, shot });
+        }
+      }
+      return Array.from(records.values(), (record3) => record3.shot);
+    }
     function episodeVideoReceipts(shots, board, extra) {
       const fs26 = __require("node:fs"), path39 = __require("node:path");
       const dirs = /* @__PURE__ */ new Set([path39.resolve(board, "../.work/video"), path39.resolve(board, "../output/video/scenes")]);
@@ -96950,7 +96984,10 @@ var require_speech_contract = __commonJS({
         if (typeof file === "string" && file) dirs.add(path39.dirname(path39.resolve(board, file)));
       }
       directory2(extra);
-      for (const shot of shots) {
+      const archived = speechHistory(board);
+      const active = new Set(shots.map(performanceKey));
+      const history = archived.filter((shot) => !active.has(performanceKey(shot)));
+      for (const shot of [...shots, ...archived]) {
         const video2 = shot.visual?.video ?? {}, binding = video2.speechBinding;
         for (const file of [video2.clip, binding?.videoPath, video2.soundtrackRepair?.videoPath]) directory2(file);
         for (const source of video2.soundtrackRepair?.sources ?? []) directory2(source.path);
@@ -96988,7 +97025,7 @@ var require_speech_contract = __commonJS({
           if (hasPostLipSync(receipt)) forbidden.push({ sha: sha2, file });
         }
       }
-      return { hashes, forbidden };
+      return { hashes, forbidden, history };
     }
     function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
       const fs26 = __require("node:fs");
@@ -97057,12 +97094,12 @@ var require_speech_contract = __commonJS({
         }
         return media.get(videoSha256);
       }
-      function check2(left, right) {
+      function check2(left, right, active = false) {
         if (left.end <= right.start || right.end <= left.start) return;
         const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions && left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
         if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
         const a = identity(left), b = identity(right);
-        if (candidate2 && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 && (left.visible || right.visible) && !a?.picture) {
+        if (active && candidate2 && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 && (left.visible || right.visible) && !a?.picture) {
           const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({ receipt }) => receipt.status === "completed" && receipt.jobId && ["msr", "image-to-video", "scene-to-video", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode));
           if (!fresh) throw new Error("speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement");
         }
@@ -97078,7 +97115,7 @@ var require_speech_contract = __commonJS({
         const entry2 = source(shot);
         if (!entry2) continue;
         if (candidate2) {
-          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next);
+          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next, true);
         } else {
           if (entry2.binding.performanceSource) {
             const current = identity(entry2), recorded = entry2.binding.performanceSource;
@@ -97089,6 +97126,11 @@ var require_speech_contract = __commonJS({
           for (const earlier of prior) check2(earlier, entry2);
           prior.push(entry2);
         }
+      }
+      for (const shot of receipts?.history ?? []) {
+        const earlier = source(shot);
+        if (!earlier) continue;
+        for (const entry2 of next ? [next] : prior) check2(earlier, entry2);
       }
     }
     module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource };
@@ -104983,6 +105025,7 @@ var require_prepare_source_audio = __commonJS({
             assertVideoSpeechProvenance(path39.resolve(board, source.path), null, {}, receipts);
         }
       }
+      return receipts;
     }
     function usesConditioningTrack(scene, board, audio) {
       if (scene?.sound?.audioSource === "video" || !(scene?.narration || []).some((line) => line.delivery === "on_screen" && line.tts?.trim())) return false;
@@ -105832,7 +105875,7 @@ var require_check_tts_quality = __commonJS({
       board = path39.resolve(board);
       const file = path39.join(board, "scenes.js");
       const win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
-      checkAssemblyRoutes(win, board);
+      const receipts = checkAssemblyRoutes(win, board);
       if (!Array.isArray(win.SCENES)) throw new Error("SCENES missing");
       const rows = fs26.readFileSync(path39.join(work, "cards.tsv"), "utf8").split(/\r?\n/).filter((l) => l.trim() && !l.startsWith("#")).map((l) => l.split("	"));
       const expected = win.SCENES.map((s2, i2) => ({ s: s2, i: i2 })).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
@@ -105922,7 +105965,7 @@ var require_check_tts_quality = __commonJS({
           authorizeSpeed2(work, "final", receipt.playbackSpeed ?? 1);
         }
       }
-      assertVideoPerformanceOwnership(win.SCENES, board);
+      assertVideoPerformanceOwnership(win.SCENES, board, void 0, receipts);
       fs26.writeFileSync(path39.join(work, REPORT), JSON.stringify({ status: "not_reviewed", policy: "speech-provenance-v1", warnings, inputs: media, actedIntervals, approved: false }, null, 2) + "\n");
       return media;
     }

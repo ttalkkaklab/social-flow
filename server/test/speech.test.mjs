@@ -391,7 +391,7 @@ test('native performances own their source intervals across attachment and archi
  assert.equal(rebuilt.status,0,rebuilt.stderr);
  assert.ok(readFileSync(join(work,'reel.mp4')).length);
 });
-test('public A2V binding keeps the original driver for a line when its words stay the same',async t=>{
+function a2vFixture(t){
  const {dir,target,r}=setup(t);setupProject(dir);
  const file=join(target,'scenes.js'),line=r.lines[0];
  const board=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
@@ -410,6 +410,10 @@ test('public A2V binding keeps the original driver for a line when its words sta
  const record=audioPath=>call({action:'attach_audio',lineId:line.id,audioPath,
    generation:{generator:'tts_generate',text:line.tts,language:'ko',voiceSettings:{voiceName:'Kore',speed:1}}});
  const bind=videoPath=>call({action:'attach_video',shotId:line.shotId,videoPath});
+ return {dir,target,file,line,first,retake,original,remux,overdub,record,bind};
+}
+test('public A2V binding keeps the original driver for a line when its words stay the same',async t=>{
+ const {dir,file,first,retake,original,remux,overdub,record,bind}=a2vFixture(t);
  await record(first);
  assert.equal((await bind(original)).plan.mode,'audio_conditioned');
  assert.notDeepEqual(readFileSync(original),readFileSync(remux));
@@ -456,6 +460,86 @@ test('public A2V binding keeps the original driver for a line when its words sta
    assert.equal(attached.changed,true);
    assert.equal(require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0].visual.video.speechStatus,'current');
  });
+});
+test('a replaced A2V take retains its recording history for public attachment and assembly',async t=>{
+ const {dir,target,file,line,first,retake,original,overdub,record,bind}=a2vFixture(t);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const second=join(dir,'take-b.mov'),third=join(dir,'take-c.mov'),work=join(dir,'.work');
+ for(const [clip,color,wav] of [[second,'red',first],[third,'green',retake]])
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c='+color+':s=16x16:r=24:d=0.25','-i',wav,
+     '-map','0:v','-map','1:a','-c:v','libx264','-c:a','copy',clip]);
+ const authored=read();
+ authored.SB_DOC.speechPlanVersion=1;
+ authored.MUSIC={$timeline:[]};
+ authored.SCENES[0].duration=0.25;
+ save(authored);
+ await record(first);
+ const a=await bind(original);
+ assert.equal((await bind(second)).changed,true);
+ const past=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(join(work,'speech-history',a.revision+'.js'),'utf8'));
+ assert.equal(past.SCENES[0].visual.video.speechBinding.videoPath,original);
+ assert.equal(read().SCENES[0].visual.video.speechBinding.videoPath,second);
+ const changed=await record(retake);
+ assert.ok(changed.invalidated.video);
+ const unchanged=readFileSync(file);
+ await t.test('the superseded take cannot adopt a later recording of the same words',async()=>{
+   await assert.rejects(bind(overdub),/speech_video_performance_conflict/);
+   assert.deepEqual(readFileSync(file),unchanged);
+ });
+ writeFileSync(file,unchanged);
+ assert.equal((await bind(third)).changed,true);
+ const valid=read(),archived=structuredClone(valid),shot=archived.SCENES[0],binding=shot.visual.video.speechBinding;
+ shot.visual.video.clip=overdub;
+ shot.productionPlan.cuts[0].path=path.relative(target,overdub);
+ binding.videoPath=overdub;
+ binding.videoSha256=createHash('sha256').update(readFileSync(overdub)).digest('hex');
+ binding.performanceSource=require('../../skills/_shared/speech-contract.js').videoPerformanceSource(overdub);
+ function build(win){
+   save(win);
+   writeFileSync(join(work,'cards.tsv'),'0\tplaceholder.wav\t0\tnone\n');
+   writeFileSync(join(work,'segs.tsv'),[0,0,win.SCENES[0].visual.video.clip,line.tts,line.tts].join('\t')+'\n');
+   return spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
+     {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
+ }
+ await t.test('an archived board cannot export the earlier picture with the later recording',()=>{
+   const blocked=build(archived);
+   assert.notEqual(blocked.status,0);
+   assert.match(blocked.stderr,/speech_video_performance_conflict/);
+ });
+ const fresh=build(valid);
+ assert.equal(fresh.status,0,fresh.stderr);
+ await record(first);
+ assert.equal((await bind(original)).changed,true);
+ const restored=read().SCENES[0].visual.video;
+ assert.equal(restored.speechStatus,'current');
+ assert.equal(restored.speechBinding.audio[0].sha256,past.SCENES[0].visual.video.speechBinding.audio[0].sha256);
+});
+test('a narrowed active native trim takes precedence over the earlier full-card interval',async t=>{
+ const {dir,target}=setup(t);setupProject(dir);
+ const file=join(target,'scenes.js'),clip=join(dir,'shared.mp4');spokenClip(clip);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const win=read();
+ win.PRODUCTION={videoModel:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'reference'}};
+ for(const [index,shot] of win.SCENES.entries()){
+   shot.duration=index?0.125:0.25;
+   shot.edit=index?{in:0.125,out:0.25}:{in:0,out:0.25};
+   shot.narration[0].delivery='on_screen';
+ }
+ save(win);
+ const attach=async shotId=>JSON.parse((await ROUTES.speech_manage({path:target,action:'attach_video',shotId,videoPath:clip,
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision})).content[0].text);
+ const full=await attach(win.SCENES[0].id);
+ await attach(win.SCENES[0].id);
+ const history=readFileSync(join(dir,'.work/speech-history',full.revision+'.js'),'utf8');
+ assert.deepEqual(require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(history).SCENES[0].edit,{in:0,out:0.25});
+ const narrowed=read();
+ narrowed.SCENES[0].edit.out=0.125;
+ narrowed.SCENES[0].duration=0.125;
+ save(narrowed);
+ assert.equal((await attach(win.SCENES[1].id)).changed,true);
+ assert.deepEqual(read().SCENES.map(shot=>shot.edit),[{in:0,out:0.125},{in:0.125,out:0.25}]);
 });
 test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');
