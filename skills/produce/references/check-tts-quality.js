@@ -178,6 +178,42 @@ function retainedSoundtrack(scene, board, cast, media) {
   media[video]=repair.videoSha256;
   return true; // Provenance only: neither adapter capability nor listening/lip-sync approval.
 }
+function checkNativeVoiceCapacity(win, shot, binding, board) {
+  const {speechRenderSelection}=require('../../_shared/video-selection.js');
+  const {sceneSpeechRoute,assertRenderVoiceCapacity}=require('../../_shared/scene-cast.js');
+  const {adapters}=require('../../_shared/video-catalog.json');
+  const recorded={engine:binding.provider,model:binding.model,operation:binding.operation};
+  const episode=path.basename(board)==='storyboard' ? path.dirname(board) : undefined;
+  const {selection,saved,owner,cards,route:authored}=speechRenderSelection(win,shot,episode,recorded);
+  const scene=owner ?? {};
+  // Check the recorded engine as well when a later board selection has a different capacity.
+  const selections=[{choice:selection,sceneRoute:authored,explicit:saved?.operation,exact:owner ? undefined : saved?.operation}];
+  if(selection.engine!==recorded.engine || selection.model!==recorded.model || recorded.operation && recorded.operation!==selection.operation)
+    selections.push({choice:recorded,explicit:recorded.operation,exact:recorded.operation});
+  for(const {choice,sceneRoute,explicit,exact} of selections) {
+    const available=adapters.filter(adapter=>adapter.engine===choice.engine);
+    if(!available.length)continue; // Historical adapters outside the registry have no published capacity.
+    const route=sceneRoute ?? sceneSpeechRoute(scene,cards,choice);
+    if(!route.speakers.length)continue;
+    if(shot.visual.video.generateAudio===false || binding.generateAudio===false)
+      throw new Error('scene_dialogue_audio_required: a native speaking take requires its generated soundtrack');
+    if(explicit && (!available.some(entry=>entry.operation===explicit) || !['image','reference','audio','text'].includes(explicit)))
+      throw new Error('scene_speech_route: the selected operation cannot generate this native speaking take');
+    // Old bindings often stored only the provider, model, and native mode. Recover their
+    // speech operation from the scene; an explicitly recorded operation remains authoritative.
+    const operation=exact ?? route.operation;
+    const adapter=available.find(entry=>entry.operation===operation);
+    if(route.mode==='generated' && adapter?.voice.dialogue==='requires_model_generated_scene_voice') {
+      const spec=adapter.modelConstraints[choice.model];
+      if(!spec || spec.operations && !spec.operations.includes(operation))
+        throw new Error('scene_speech_route: this model cannot generate dialogue in the selected operation');
+      continue;
+    }
+    if(route.mode!=='reference' || !['reference','conditional_reference'].includes(adapter?.voice.lane))
+      throw new Error('scene_speech_route: this model and operation cannot supply the bound native dialogue');
+    assertRenderVoiceCapacity({tool:adapter.tool,model:choice.model,scene,cards,route});
+  }
+}
 function check(work, board) {
   work=path.resolve(work); board=path.resolve(board);
   const file=path.join(board,'scenes.js');
@@ -204,6 +240,7 @@ function check(work, board) {
       throw new Error('post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture');
     // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
     const native=binding?.mode==='native';
+    if(native)checkNativeVoiceCapacity(win,s,binding,board);
     if(native && s.sound?.audioSource!=='video')throw new Error('Native speech video needs sound.audioSource video for card '+i);
     if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding&&!retained)throw new Error('On-screen dialogue needs a video speech binding for card '+i+'; bind the clip with speech_manage attach_video');
     for(const line of native||retained?[]:s.narration||[]) {

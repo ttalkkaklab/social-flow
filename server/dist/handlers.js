@@ -1521,7 +1521,7 @@ export const ROUTES = {
         const input = parseArgs(speechManageSchema, args);
         if (input.action !== 'list')
             requireReadyProject(input.path);
-        return text(JSON.stringify(manageSpeech(input), null, 2));
+        return text(JSON.stringify(manageSpeech(input, { registeredNativeAttachment: true }), null, 2));
     },
     host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
     acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),

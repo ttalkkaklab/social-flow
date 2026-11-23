@@ -373,6 +373,10 @@ function verifyDistinctSamples(samples) {
         owners.set(digest, speaker);
     }
 }
+export function assertSpeechRenderCapacity(tool, model, scene, cards, route, rendering = route.rendering, generateAudio) {
+    load('../../skills/_shared/scene-cast.js').assertRenderVoiceCapacity({ tool, model, scene, cards, route, rendering,
+        generateAudio, limit: voiceReferenceLimit(tool, model) });
+}
 function resolvePlanContext(input) {
     assertNoPostLipSync(input);
     requireReadyProject(input.episode, { allowVideoSnapshot: true });
@@ -401,20 +405,7 @@ function resolvePlanContext(input) {
         if (Math.abs(seconds * fps - Math.round(duration * fps)) >= 0.5)
             throw new Error('scene_audio_timing: the dialogue track covers ' + seconds + 's of the ' + duration + 's scene');
     }
-    if (route.mode === 'reference') {
-        const limit = voiceReferenceLimit(tool, context.selection.model);
-        if (!limit || tool === 'astra_genai_img2video' && context.selection.model !== 'ltx-2.5-22b-distilled' || input.args.generateAudio === false)
-            throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-        const groups = rendering === 'per_shot' ? (context.sceneMembers ?? []).map(card => {
-            const lines = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech(card);
-            return [card.id, new Set(lines.filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker)).size];
-        }) : [['scene ' + input.sceneNo, route.speakers.length]];
-        const excess = groups.find(([, count]) => count > limit);
-        if (excess)
-            throw new Error('scene_render_voice_limit: ' + excess[0] + ' needs ' + excess[1] + ' pinned voices; ' + tool +
-                ' accepts ' + limit + ' per render. ' + (context.sceneDirection?.oneTake || groups.length === 1 && context.sceneMembers?.length === 1 ?
-                'The authored one-take has no cut for a split.' : 'Split at an authored cut or revise this shot.'));
-    }
+    assertSpeechRenderCapacity(tool, context.selection.model, { no: context.sceneNo, videoDirection: context.sceneDirection }, context.sceneMembers ?? [context.shot], route, rendering, input.args.generateAudio);
     if (route.mode !== 'reference' && input.shotBindings?.some(binding => binding.performanceAudio))
         throw new Error('scene_speech_route: a shot performance cannot override the scene soundtrack');
     return { context, tool };

@@ -137,13 +137,95 @@ test('public speech planning and attachment reject post lip sync on boards witho
  await assert.rejects(ROUTES.speech_manage({...base,action:'attach_video',expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:candidate}),/post_lipsync_forbidden/);
  assert.equal(manageSpeech({...base,action:'plan_video'}).plan.mode,'audio_conditioned');
 });
+test('public speech planning and attachment share the model voice limit for each authored render',async t=>{
+ const {dir,target}=setup(t); setupProject(dir);
+ const file=join(target,'scenes.js'),candidate=join(dir,'take.mp4');
+ spokenClip(candidate);
+ const actors=['one','two','three'];
+ const lines=actors.map((id,i)=>({id:'line'+i,speaker:id,delivery:'on_screen',tts:'Line '+i+'.'}));
+ const ltx={engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'reference'};
+ const board={SB_DOC:{characters:actors.map(id=>({id,tts:voice}))},PRODUCTION:{videoModel:ltx},
+   STRUCTURE:{scenes:[{no:1,speakers:actors,videoDirection:{oneTake:true}}]},SCENES:[]};
+ const card=(id,narration)=>({id,scene:1,duration:0.25,narration,visual:{}});
+ const save=(path=file)=>writeFileSync(path,Object.entries(board).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ const call=async(action,path=target,options={})=>{
+   const expectedRevision=manageSpeech({path,action:'list'}).revision;
+   const result=await ROUTES.speech_manage({path,action,shotId:'shot1',expectedRevision,videoPath:candidate,...options});
+   return JSON.parse(result.content[0].text);
+ };
+ const rejectOverflow=async(path,options)=>{
+   const bytes=readFileSync(join(path,'scenes.js'));
+   for(const action of ['plan_video','attach_video']){
+     await assert.rejects(call(action,path,options),/scene_render_voice_limit: .* needs 3 pinned voices.* accepts 2 per render/);
+     assert.deepEqual(readFileSync(join(path,'scenes.js')),bytes);
+   }
+ };
+ board.SCENES=[card('shot1',lines)];
+ save();
+ await rejectOverflow(target);
+ const standalone=join(dir,'import'); mkdirSync(standalone);
+ save(join(standalone,'scenes.js'));
+ await rejectOverflow(standalone,{tool:'astra_genai_msr'});
+ board.SCENES=lines.map((line,i)=>card('shot'+(i+1),[line]));
+ save();
+ await rejectOverflow(target);
+ board.PRODUCTION.videoModel={...ltx,operation:'image'};
+ board.STRUCTURE.scenes[0].videoDirection.oneTake=false;
+ save();
+ assert.equal((await call('plan_video')).plan.mode,'native');
+ assert.equal((await call('attach_video')).changed,true);
+ board.SCENES=[card('shot1',lines)];
+ board.PRODUCTION.videoModel={engine:'seedance',model:'dreamina-seedance-2-0-fast-260128',operation:'reference'};
+ save();
+ assert.equal((await call('plan_video')).plan.mode,'native');
+ assert.equal((await call('attach_video')).changed,true);
+ board.PRODUCTION.videoModel={...ltx,operation:'audio'};
+ save();
+ assert.equal((await call('plan_video')).plan.mode,'audio_conditioned');
+ delete board.STRUCTURE;
+ board.PRODUCTION.videoModel=ltx;
+ save(join(standalone,'scenes.js'));
+ await rejectOverflow(standalone);
+});
+test('public native attachment verifies its source and registered operation even without a snapshot',async t=>{
+ const {dir,target,r}=setup(t); setupProject(dir);
+ const file=join(target,'scenes.js'),candidate=join(dir,'unbound.mp4'),sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+ spokenClip(candidate);
+ const board=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const shot=board.SCENES[0],model='ltx-2.5-22b-distilled',tool='astra_genai_msr';
+ const native={...caps,provider:'astra-genai',model,audioConditioning:false,lipSync:false,nativeSpeech:true};
+ const save=()=>writeFileSync(file,Object.entries(board).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ const call=(action,options)=>ROUTES.speech_manage({path:target,action,shotId:r.lines[0].shotId,
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision,videoPath:candidate,...options});
+ const original=readFileSync(file);
+ await assert.rejects(call('attach_video',{capabilities:{...native,provider:'fictional'}}),/video_operation_missing/);
+ await assert.rejects(call('attach_video',{tool,capabilities:{...native,model:'ltx-2.5-22b-dev'}}),/scene_speech_references/);
+ const receipt=candidate+'.astra-genai.json';
+ writeFileSync(receipt,JSON.stringify({operation:'post_lipsync',sha256:sha(candidate),videoPath:candidate}));
+ await assert.rejects(call('attach_video',{tool,capabilities:native}),/post_lipsync_forbidden/);
+ assert.deepEqual(readFileSync(file),original);
+ Object.assign(shot.visual.video,{engine:'astra-genai',model,operation:'reference'});
+ save();
+ await assert.rejects(call('attach_video',{}),/post_lipsync_forbidden/);
+ await assert.rejects(call('attach_video',{capabilities:{...native,provider:'fictional'}}),/capabilities disagree/);
+ writeFileSync(receipt,JSON.stringify({operation:'audio-to-video',sha256:sha(candidate),videoPath:candidate}));
+ await assert.rejects(call('attach_video',{}),/speech_video_source_mismatch/);
+ shot.visual.video.generateAudio=false;save();
+ const muted=readFileSync(file);
+ for(const action of ['plan_video','attach_video'])await assert.rejects(call(action,{}),/scene_dialogue_audio_required/);
+ assert.deepEqual(readFileSync(file),muted);
+ delete shot.visual.video.generateAudio;
+ save();rmSync(receipt);
+ const ok=JSON.parse((await call('attach_video',{})).content[0].text);
+ assert.equal(ok.plan.mode,'native');assert.equal(ok.changed,true);
+});
 test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency=440:duration=0.25','-c:a','pcm_s16le',audio]);
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=0.25','-c:v','libx264','-pix_fmt','yuv420p',candidate]);
  const state=manageSpeech({path:target,action:'attach_audio',expectedRevision:r.revision,lineId:line.id,audioPath:audio,
    generation:{generator:'tts_generate',language:'ko',voiceSettings:{voiceName:'Kore',speed:1},text:line.tts}});
- const attach=(revision=state.revision)=>manageSpeech({path:target,action:'attach_video',expectedRevision:revision,shotId:line.shotId,videoPath:candidate,capabilities:caps});
+ const attach=(revision=state.revision)=>manageSpeech({path:target,action:'attach_video',expectedRevision:revision,shotId:line.shotId,videoPath:candidate,tool:'astra_audio2video'});
  assert.throws(attach,/conditioning_audio_unverified/);
  const digest=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
  const proof={status:'completed',jobId:'fresh-a2v',mode:'audio2video',videoPath:candidate,sha256:digest(candidate),
@@ -489,7 +571,7 @@ describe('scene direction', () => {
   writeFileSync(silent+'.astra-job.json',JSON.stringify({status:'completed',jobId:'phone',mode:'audio2video',videoPath:silent,
     sha256:createHash('sha256').update(readFileSync(silent)).digest('hex'),conditioningAudioSha256:stereoSha,
     submittedRequest:{mode:'audio2video',audio_upload_id:'timed-phone-wav'}}));
-  const attachSilent=()=>manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:silent,capabilities:caps});
+  const attachSilent=()=>manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:silent,tool:'astra_audio2video'});
   assert.throws(attachSilent,/conditioning_audio_unverified/,'the mono composition was not the uploaded file');
   writeFileSync(path.join(work,'cards.tsv'),'0\tphone-driver.wav\t1\tnone\n');
   state=attachSilent();

@@ -68,4 +68,26 @@ function assertNoPostLipSync(value) {
   if (hasPostLipSync(value)) throw new Error('post_lipsync_forbidden: generate a new speaking take from the approved inputs');
 }
 
-module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync };
+// Imported native clips may have no local receipt. When a receipt identifies the bytes,
+// its recorded generation operation takes precedence over an attachment label.
+function assertVideoSpeechProvenance(videoPath, sha256, plan) {
+  const fs = require('node:fs');
+  for (const suffix of ['.astra-job.json','.astra-genai.json']) {
+    let receipt;
+    try { receipt = JSON.parse(fs.readFileSync(videoPath + suffix, 'utf8')); } catch { continue; }
+    if (!receipt || (receipt.sha256 ? receipt.sha256 !== sha256 : receipt.videoPath !== videoPath)) continue;
+    assertNoPostLipSync(receipt);
+    if (receipt.sha256 !== sha256 || !['native','audio_conditioned'].includes(plan.mode)) continue;
+    const operation = receipt.operation ?? receipt.mode;
+    if (!operation) continue;
+    const provider = suffix === '.astra-job.json' ? 'astra' :
+      receipt.protocol === 'gateway-desktop-v1' ? 'astra-genai-desktop' : 'astra-genai';
+    const conditioned = ['audio-to-video','audio2video','scene-to-video'].includes(operation);
+    const native = provider === 'astra-genai' && ['image-to-video','scene-to-video','msr'].includes(operation);
+    if (provider !== plan.provider || (plan.mode === 'native' ? !native : !conditioned) ||
+        typeof receipt.model === 'string' && receipt.model !== plan.model)
+      throw new Error('speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment');
+  }
+}
+
+module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance };

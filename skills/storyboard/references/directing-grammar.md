@@ -52,9 +52,9 @@ and inspect actual source images together before video generation. Different cam
 labels or filenames do not establish different pictures.
 
 Choose boundaries when an action, discovery, relationship or emotional state changes.
-A speaker change requires a new shot; a text message or sentence boundary alone does not.
+In conventional dialogue coverage, cut to the next speaker when the change serves the scene. An authored one-take can keep the reply.
 Consecutive lines by one character can play over one coherent action. Follow
-[dialogue coverage](dialogue-coverage.md): allocate one speaking character per shot,
+[dialogue coverage](dialogue-coverage.md): choose the speaking subject for each conventional setup,
 then choose its size and angle. Use speaker-facing OTS/reverse for exchanges and keep
 listeners silent even in a two-shot. Silent/inner-thought pictures use image2video;
 inner thoughts are timed character TTS with closed mouths.

@@ -49,8 +49,9 @@ const modelSettings = fileURLToPath(new URL('../../skills/_shared/model-settings
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string; operation?: string }
+interface SpeechRoute {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; rendering?:'per_shot'; external:boolean; opening?:string}
 interface Context {
-  speechRoute?: {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; rendering?:'per_shot'; external:boolean; opening?:string};
+  speechRoute?: SpeechRoute;
   sceneNo?: number; sceneOwnsFrames?: boolean; timed?: boolean; shotIds?: string[]; sceneDirection?: SceneVideoDirection; sceneMembers?: Record<string, unknown>[];
   episode: string; shotId: string; selection: Selection; source: string; revision: string;
   snapshotRevision: string | null;
@@ -375,6 +376,12 @@ function verifyDistinctSamples(samples: {speaker:string;path:string}[]) {
   }
 }
 
+export function assertSpeechRenderCapacity(tool: string, model: string | undefined, scene: {no?:number; videoDirection?:SceneVideoDirection} | undefined,
+  cards: Record<string, unknown>[], route: Pick<SpeechRoute, 'mode'|'rendering'>, rendering = route.rendering, generateAudio?: unknown) {
+  load('../../skills/_shared/scene-cast.js').assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering,
+    generateAudio, limit:voiceReferenceLimit(tool, model)});
+}
+
 function resolvePlanContext(input: PlanInput) {
   assertNoPostLipSync(input);
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
@@ -403,19 +410,8 @@ function resolvePlanContext(input: PlanInput) {
     if (Math.abs(seconds * fps - Math.round(duration * fps)) >= 0.5)
       throw new Error('scene_audio_timing: the dialogue track covers ' + seconds + 's of the ' + duration + 's scene');
   }
-  if (route.mode === 'reference') {
-    const limit = voiceReferenceLimit(tool, context.selection.model);
-    if (!limit || tool === 'astra_genai_img2video' && context.selection.model !== 'ltx-2.5-22b-distilled' || input.args.generateAudio === false)
-      throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-    const groups = rendering === 'per_shot' ? (context.sceneMembers ?? []).map(card => {
-      const lines = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech(card) as {speaker:string;tts?:string;delivery?:string}[];
-      return [card.id, new Set(lines.filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker)).size] as const;
-    }) : [['scene ' + input.sceneNo, route.speakers.length] as const];
-    const excess = groups.find(([,count]) => count > limit);
-    if (excess) throw new Error('scene_render_voice_limit: ' + excess[0] + ' needs ' + excess[1] + ' pinned voices; ' + tool +
-      ' accepts ' + limit + ' per render. ' + (context.sceneDirection?.oneTake || groups.length === 1 && context.sceneMembers?.length === 1 ?
-        'The authored one-take has no cut for a split.' : 'Split at an authored cut or revise this shot.'));
-  }
+  assertSpeechRenderCapacity(tool, context.selection.model, {no:context.sceneNo, videoDirection:context.sceneDirection},
+    context.sceneMembers ?? [context.shot], route, rendering, input.args.generateAudio);
   if (route.mode !== 'reference' && input.shotBindings?.some(binding => binding.performanceAudio))
     throw new Error('scene_speech_route: a shot performance cannot override the scene soundtrack');
   return { context, tool };

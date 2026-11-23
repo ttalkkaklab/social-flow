@@ -96845,7 +96845,28 @@ var require_speech_contract = __commonJS({
     function assertNoPostLipSync2(value) {
       if (hasPostLipSync(value)) throw new Error("post_lipsync_forbidden: generate a new speaking take from the approved inputs");
     }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2 };
+    function assertVideoSpeechProvenance(videoPath, sha2563, plan2) {
+      const fs26 = __require("node:fs");
+      for (const suffix of [".astra-job.json", ".astra-genai.json"]) {
+        let receipt;
+        try {
+          receipt = JSON.parse(fs26.readFileSync(videoPath + suffix, "utf8"));
+        } catch {
+          continue;
+        }
+        if (!receipt || (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath)) continue;
+        assertNoPostLipSync2(receipt);
+        if (receipt.sha256 !== sha2563 || !["native", "audio_conditioned"].includes(plan2.mode)) continue;
+        const operation = receipt.operation ?? receipt.mode;
+        if (!operation) continue;
+        const provider = suffix === ".astra-job.json" ? "astra" : receipt.protocol === "gateway-desktop-v1" ? "astra-genai-desktop" : "astra-genai";
+        const conditioned = ["audio-to-video", "audio2video", "scene-to-video"].includes(operation);
+        const native = provider === "astra-genai" && ["image-to-video", "scene-to-video", "msr"].includes(operation);
+        if (provider !== plan2.provider || (plan2.mode === "native" ? !native : !conditioned) || typeof receipt.model === "string" && receipt.model !== plan2.model)
+          throw new Error("speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment");
+      }
+    }
+    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance };
   }
 });
 
@@ -98764,372 +98785,6 @@ var require_model_settings = __commonJS({
   }
 });
 
-// ../skills/channel/references/character-panels.js
-var require_character_panels = __commonJS({
-  "../skills/channel/references/character-panels.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path39 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var { execFileSync: execFileSync20 } = __require("node:child_process");
-    var { identityCharacter } = require_character_identity();
-    var sha2 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
-    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
-    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
-    function localFile(folder, name) {
-      if (typeof name !== "string" || !name || path39.isAbsolute(name)) return null;
-      const file = path39.resolve(folder, name);
-      try {
-        const relative4 = path39.relative(fs26.realpathSync(folder), fs26.realpathSync(file));
-        return relative4 && !relative4.startsWith("..") && !path39.isAbsolute(relative4) && fs26.statSync(file).isFile() ? file : null;
-      } catch {
-        return null;
-      }
-    }
-    function dimensions(file) {
-      const data = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
-      const { width, height } = data.streams?.[0] || {};
-      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
-      return { width, height };
-    }
-    function inspectPanels(folder, fallback = {}) {
-      const findings = [], slots = {}, measurements = {};
-      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
-      let manifest2;
-      const manifestFile = path39.join(folder, "panels.json");
-      if (fs26.existsSync(manifestFile)) {
-        try {
-          const safe = localFile(folder, "panels.json");
-          if (!safe) throw new Error("unsafe manifest path");
-          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
-          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
-        } catch (error2) {
-          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
-          manifest2 = { panels: {} };
-        }
-      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-      for (const [slot, spec] of Object.entries(SPECS)) {
-        const entry2 = manifest2?.panels?.[slot];
-        const name = manifest2 ? entry2?.file : fallback[slot];
-        const file = localFile(folder, name);
-        if (!file) {
-          warn("image-slot", slot + ": missing or unsafe shared reference", SLOT_LABELS[slot] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot)) {
-          warn("image-purpose", slot + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        slots[slot] = path39.relative(folder, file).split(path39.sep).join("/");
-        const hash7 = sha2(file);
-        try {
-          const size = dimensions(file);
-          measurements[slot] = size;
-          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot}: ${size.width}x${size.height}; expected ${slot === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot === "face" ? "1:1" : "2:3"}`);
-        } catch {
-          warn("image-ratio", slot + ": dimensions unavailable; not verified", SLOT_LABELS[slot] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-        }
-        const framing = entry2?.framing;
-        const box = framing?.subjectBox;
-        if (framing?.status !== "measured" || framing.sha256 !== hash7 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
-          warn("image-framing", slot + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
-        } else {
-          measurements[slot] = { ...measurements[slot], subjectHeight: box[3] };
-          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
-        }
-      }
-      const front = measurements.front, back = measurements.back;
-      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
-      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
-      return { slots, findings, measurements };
-    }
-    function boardPanelFindings(win, boardDir, channelDir) {
-      const entries = win?.SB_DOC?.characters || [];
-      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
-      for (const id of Object.keys(win?.PRODUCTION?.cast || {})) {
-        if (!chars.some((c) => c?.id === id)) chars.push({ id });
-      }
-      const findings = [];
-      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
-      const sceneHashes = new Set(sceneFiles.map((name) => localFile(boardDir, name)).filter(Boolean).map(sha2));
-      for (const c of chars) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
-        const folder = path39.join(channelDir, "assets", "characters", c.id);
-        if (!localFile(channelDir, path39.relative(channelDir, path39.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
-        let registered;
-        const manifestFile = localFile(channelDir, path39.relative(channelDir, path39.join(folder, "panels.json")));
-        if (manifestFile) {
-          try {
-            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
-          } catch {
-            registered = {};
-          }
-        }
-        for (const [slot, entry2] of Object.entries(registered || {})) {
-          if (slot === "msr") continue;
-          const source = entry2?.purpose === "character_reference" && entry2.view === slot && localFile(folder, entry2.file);
-          const linked = c.panels?.[slot] || slot === "front" && c.panels?.body;
-          if (source && !(typeof linked === "string" && linked.trim())) findings.push({
-            characterId: c.id,
-            domain: "image-reference-missing",
-            slot,
-            source,
-            field: `SB_DOC.characters.${c.id}.panels.${slot}`,
-            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source}`,
-            message: `${c.id}: shared ${slot} image exists at ${source}, but storyboard panels.${slot} is empty`
-          });
-        }
-        for (const [slot, name] of Object.entries(c.panels || {})) {
-          const file = typeof name === "string" ? path39.resolve(boardDir, name) : "";
-          const shared5 = file && localFile(channelDir, path39.relative(channelDir, file)) && localFile(folder, path39.relative(folder, file));
-          const view = slot === "body" ? "front" : slot;
-          const entry2 = registered?.[view];
-          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
-          if (!shared5 || !matches || sceneHashes.has(sha2(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
-        }
-      }
-      return findings;
-    }
-    function episodeCast(boardDir) {
-      const castFile = path39.join(boardDir, "cast.json");
-      if (!fs26.existsSync(castFile)) return [];
-      const value = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
-      return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry2]) => ({ ...entry2, id }));
-    }
-    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
-      return new Map(ids.map((id) => {
-        const entry2 = cast.find((c) => c.id === id);
-        let folder;
-        if (entry2?.source) {
-          const identity = path39.resolve(boardDir, entry2.source);
-          folder = path39.dirname(identity);
-          if (path39.basename(identity) !== "identity.md" || path39.basename(folder) !== id || path39.basename(path39.dirname(folder)) !== "characters" || path39.basename(path39.dirname(path39.dirname(folder))) !== "assets")
-            throw new Error(`cast_source_missing: ${id} needs its own assets/characters/${id}/identity.md`);
-        } else for (let dir = boardDir; ; dir = path39.dirname(dir)) {
-          const candidate2 = path39.join(dir, "assets", "characters", id);
-          if (fs26.existsSync(path39.join(candidate2, "panels.json"))) {
-            folder = candidate2;
-            break;
-          }
-          if (path39.dirname(dir) === dir) break;
-        }
-        if (folder && fs26.existsSync(folder) && path39.basename(fs26.realpathSync(folder)) !== id)
-          throw new Error(`cast_source_missing: ${id} needs its own character folder`);
-        if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
-        let manifest2;
-        try {
-          manifest2 = JSON.parse(fs26.readFileSync(path39.join(folder, "panels.json"), "utf8"));
-        } catch {
-          throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`);
-        }
-        const panels = {};
-        for (const view of requiredViews?.get(id) ?? ["face", "front", "back"]) {
-          const panel = manifest2.panels?.[view];
-          const file = localFile(folder, panel?.file);
-          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file)
-            throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
-          panels[view] = path39.relative(boardDir, file).split(path39.sep).join("/");
-        }
-        return [id, { folder, paths: panels, entries: manifest2.panels }];
-      }));
-    }
-    function sheetPanels(boardDir, ids, views) {
-      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
-    }
-    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
-      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
-      const sheets = readPanelSheets(boardDir, ids);
-      if (options.combined) return ids.map((id) => {
-        const { folder, paths: sources, entries } = sheets.get(id);
-        const entry2 = entries.msr;
-        const file = localFile(folder, entry2?.file);
-        if (!file || entry2.purpose !== "character_reference" || entry2.view !== "msr")
-          throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
-        if (entry2.sha256 !== sha2(file) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha2(path39.resolve(boardDir, sources[view]))))
-          throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
-        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
-        return {
-          id: `${shotId}-${id}-msr`,
-          path: path39.relative(boardDir, file).split(path39.sep).join("/"),
-          role: "character",
-          use,
-          purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit`
-        };
-      });
-      const views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
-      const outfits = /* @__PURE__ */ new Map();
-      for (const [id, { folder, entries }] of sheets) {
-        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
-        const source = localFile(folder, "identity.md");
-        if (!source) continue;
-        try {
-          const outfit = identityCharacter(fs26.readFileSync(source, "utf8"), { ready: false }).physical.outfit;
-          if (outfit?.status === "confirmed") outfits.set(id, outfit.value);
-        } catch {
-        }
-      }
-      return views.flatMap((view) => ids.map((id) => {
-        const { paths: paths3, entries } = sheets.get(id);
-        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
-        return {
-          id: `${shotId}-${id}-${view}`,
-          path: paths3[view],
-          role: "character",
-          use,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          ...fitting && outfits.has(id) ? { defaultOutfit: outfits.get(id) } : {},
-          purpose: view === "face" ? `${id}'s face and hair` : fitting ? `${id}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id}'s body and outfit, ${view}`
-        };
-      }));
-    }
-    function missingAppearance(shot, character, role, message) {
-      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role + ": " + message);
-      error2.report = {
-        stage: "character_inputs",
-        code: "character_input_required",
-        shotId: shot.id,
-        character,
-        role,
-        executable: false,
-        videoSubmitted: false,
-        message: error2.message
-      };
-      return error2;
-    }
-    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
-      const visual = shot.visual || {}, view = visual.camera?.view;
-      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
-      const lines = require_scene_direction().orderedSpeech(shot);
-      const explicit = visual.characterInputs;
-      let registry2;
-      if (seedance2) {
-        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
-        if (view?.subjectId && !view.subjectType) {
-          registry2 = episodeCast(boardDir);
-          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
-          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
-        }
-        if (view?.subjectType === "person") people.push(view.subjectId);
-        if (view?.mode === "ots") people.push(view.viewerId);
-        for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
-      }
-      const bodyForView = (id) => {
-        if (view?.mode === "ots" && view.viewerId === id) return "back";
-        if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
-        if (["detail", "object", "space"].includes(view?.subjectType)) return;
-        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
-        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
-      };
-      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
-      const specs = explicit ?? cast.map((character) => ({ character }));
-      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
-      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
-      for (const spec of specs) {
-        const id = spec?.character;
-        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
-          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
-        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
-          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
-        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
-          throw new Error("character_face_source_invalid: a face review must identify the selected original");
-        const body = spec.bodyView ?? bodyForView(id);
-        if (seedance2) {
-          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
-            throw missingAppearance(shot, id, "visibility", "select face_visible, body_only or hands_only");
-          if (spec.visibility === "hands_only") {
-            if (lines.some((line) => line.speaker === id && line.delivery === "on_screen" && line.tts?.trim()))
-              throw missingAppearance(shot, id, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
-            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id, "hands", "remove the face and body sources for this insert");
-            hands.add(id);
-            views.set(id, []);
-            continue;
-          }
-          if (!body) throw missingAppearance(shot, id, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
-          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id) === "back") {
-            if (spec.faceTaskId) throw missingAppearance(shot, id, "body", "a body-only view cannot use a facial original");
-            views.set(id, [body]);
-            continue;
-          }
-        }
-        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id);
-        views.set(id, spec.faceTaskId ? [body] : ["face", body]);
-      }
-      const omitted = cast.find((id) => !views.has(id));
-      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
-      if (cast.length && (cast.some((id) => !views.has(id)) || specs.some((spec) => !cast.includes(spec.character))))
-        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
-      let sheets;
-      try {
-        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id) => !hands.has(id)), views, registry2);
-      } catch (error2) {
-        if (!seedance2) throw error2;
-        const id = [...views.keys()].find((id2) => error2.message.includes(": " + id2 + " "));
-        if (!id) throw error2;
-        throw missingAppearance(shot, id, views.get(id).includes("face") ? "face" : "body", error2.message);
-      }
-      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
-      for (const { character, faceTaskId, faceReviewPath } of specs) {
-        if (hands.has(character)) continue;
-        const sheet = sheets.get(character);
-        if (faceTaskId) {
-          for (const slot2 of ["face", "msr"]) {
-            const name = sheet.entries[slot2]?.file;
-            if (typeof name === "string") replacedFaces.add(path39.resolve(sheet.folder, name));
-          }
-        }
-        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
-        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
-        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
-        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
-        const ref = { character, role: "character", use: "video" };
-        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
-        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
-        bodies.push({
-          ...ref,
-          id: shot.id + "-" + character + "-" + bodyView,
-          path: bodyPath,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
-        });
-      }
-      const pending2 = new Map([...faces, ...bodies].map((ref) => [path39.resolve(boardDir, ref.path), ref]));
-      const references = [], ids = /* @__PURE__ */ new Set();
-      for (const authored of visual.references || []) {
-        const file = authored.path && path39.resolve(boardDir, authored.path);
-        if (replacedFaces.has(file) && authored.use !== "image")
-          throw new Error("character_face_source_conflict: remove the superseded face from video references");
-        const selected = pending2.get(file);
-        if (selected && authored.use !== "image") {
-          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
-          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
-          pending2.delete(file);
-        } else references.push(authored);
-        ids.add(authored.id);
-      }
-      for (const ref of pending2.values()) {
-        let id = ref.id;
-        while (ids.has(id)) id += "-video";
-        references.push({ ...ref, id, ...seedance2 ? { resolvedPanel: true } : {} });
-        ids.add(id);
-      }
-      if (!contracts.length) return shot;
-      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
-      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
-      const slot = require_production_mode().videoSlot(shot);
-      if (slot?.referenceImagePaths !== void 0) {
-        if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
-          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
-        const referenceImagePaths = videoPaths(references);
-        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
-        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
-        normalized.video = { ...slot, referenceImagePaths };
-      }
-      return { ...shot, visual: normalized };
-    }
-    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
-  }
-});
-
 // ../skills/storyboard/references/structure-contract.js
 var require_structure_contract = __commonJS({
   "../skills/storyboard/references/structure-contract.js"(exports, module) {
@@ -100574,6 +100229,372 @@ var require_structure_contract = __commonJS({
   }
 });
 
+// ../skills/channel/references/character-panels.js
+var require_character_panels = __commonJS({
+  "../skills/channel/references/character-panels.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path39 = __require("node:path");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { execFileSync: execFileSync20 } = __require("node:child_process");
+    var { identityCharacter } = require_character_identity();
+    var sha2 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
+    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
+    function localFile(folder, name) {
+      if (typeof name !== "string" || !name || path39.isAbsolute(name)) return null;
+      const file = path39.resolve(folder, name);
+      try {
+        const relative4 = path39.relative(fs26.realpathSync(folder), fs26.realpathSync(file));
+        return relative4 && !relative4.startsWith("..") && !path39.isAbsolute(relative4) && fs26.statSync(file).isFile() ? file : null;
+      } catch {
+        return null;
+      }
+    }
+    function dimensions(file) {
+      const data = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
+      const { width, height } = data.streams?.[0] || {};
+      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
+      return { width, height };
+    }
+    function inspectPanels(folder, fallback = {}) {
+      const findings = [], slots = {}, measurements = {};
+      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
+      let manifest2;
+      const manifestFile = path39.join(folder, "panels.json");
+      if (fs26.existsSync(manifestFile)) {
+        try {
+          const safe = localFile(folder, "panels.json");
+          if (!safe) throw new Error("unsafe manifest path");
+          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
+          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
+        } catch (error2) {
+          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
+          manifest2 = { panels: {} };
+        }
+      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      for (const [slot, spec] of Object.entries(SPECS)) {
+        const entry2 = manifest2?.panels?.[slot];
+        const name = manifest2 ? entry2?.file : fallback[slot];
+        const file = localFile(folder, name);
+        if (!file) {
+          warn("image-slot", slot + ": missing or unsafe shared reference", SLOT_LABELS[slot] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot)) {
+          warn("image-purpose", slot + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        slots[slot] = path39.relative(folder, file).split(path39.sep).join("/");
+        const hash7 = sha2(file);
+        try {
+          const size = dimensions(file);
+          measurements[slot] = size;
+          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot}: ${size.width}x${size.height}; expected ${slot === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot === "face" ? "1:1" : "2:3"}`);
+        } catch {
+          warn("image-ratio", slot + ": dimensions unavailable; not verified", SLOT_LABELS[slot] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        }
+        const framing = entry2?.framing;
+        const box = framing?.subjectBox;
+        if (framing?.status !== "measured" || framing.sha256 !== hash7 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
+          warn("image-framing", slot + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
+        } else {
+          measurements[slot] = { ...measurements[slot], subjectHeight: box[3] };
+          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
+        }
+      }
+      const front = measurements.front, back = measurements.back;
+      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
+      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
+      return { slots, findings, measurements };
+    }
+    function boardPanelFindings(win, boardDir, channelDir) {
+      const entries = win?.SB_DOC?.characters || [];
+      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id, c]) => ({ ...c, id }));
+      for (const id of Object.keys(win?.PRODUCTION?.cast || {})) {
+        if (!chars.some((c) => c?.id === id)) chars.push({ id });
+      }
+      const findings = [];
+      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
+      const sceneHashes = new Set(sceneFiles.map((name) => localFile(boardDir, name)).filter(Boolean).map(sha2));
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
+        const folder = path39.join(channelDir, "assets", "characters", c.id);
+        if (!localFile(channelDir, path39.relative(channelDir, path39.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
+        let registered;
+        const manifestFile = localFile(channelDir, path39.relative(channelDir, path39.join(folder, "panels.json")));
+        if (manifestFile) {
+          try {
+            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
+          } catch {
+            registered = {};
+          }
+        }
+        for (const [slot, entry2] of Object.entries(registered || {})) {
+          if (slot === "msr") continue;
+          const source = entry2?.purpose === "character_reference" && entry2.view === slot && localFile(folder, entry2.file);
+          const linked = c.panels?.[slot] || slot === "front" && c.panels?.body;
+          if (source && !(typeof linked === "string" && linked.trim())) findings.push({
+            characterId: c.id,
+            domain: "image-reference-missing",
+            slot,
+            source,
+            field: `SB_DOC.characters.${c.id}.panels.${slot}`,
+            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source}`,
+            message: `${c.id}: shared ${slot} image exists at ${source}, but storyboard panels.${slot} is empty`
+          });
+        }
+        for (const [slot, name] of Object.entries(c.panels || {})) {
+          const file = typeof name === "string" ? path39.resolve(boardDir, name) : "";
+          const shared5 = file && localFile(channelDir, path39.relative(channelDir, file)) && localFile(folder, path39.relative(folder, file));
+          const view = slot === "body" ? "front" : slot;
+          const entry2 = registered?.[view];
+          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
+          if (!shared5 || !matches || sceneHashes.has(sha2(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
+        }
+      }
+      return findings;
+    }
+    function episodeCast(boardDir) {
+      const castFile = path39.join(boardDir, "cast.json");
+      if (!fs26.existsSync(castFile)) return [];
+      const value = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
+      return Array.isArray(value) ? value : Object.entries(value || {}).map(([id, entry2]) => ({ ...entry2, id }));
+    }
+    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
+      return new Map(ids.map((id) => {
+        const entry2 = cast.find((c) => c.id === id);
+        let folder;
+        if (entry2?.source) {
+          const identity = path39.resolve(boardDir, entry2.source);
+          folder = path39.dirname(identity);
+          if (path39.basename(identity) !== "identity.md" || path39.basename(folder) !== id || path39.basename(path39.dirname(folder)) !== "characters" || path39.basename(path39.dirname(path39.dirname(folder))) !== "assets")
+            throw new Error(`cast_source_missing: ${id} needs its own assets/characters/${id}/identity.md`);
+        } else for (let dir = boardDir; ; dir = path39.dirname(dir)) {
+          const candidate2 = path39.join(dir, "assets", "characters", id);
+          if (fs26.existsSync(path39.join(candidate2, "panels.json"))) {
+            folder = candidate2;
+            break;
+          }
+          if (path39.dirname(dir) === dir) break;
+        }
+        if (folder && fs26.existsSync(folder) && path39.basename(fs26.realpathSync(folder)) !== id)
+          throw new Error(`cast_source_missing: ${id} needs its own character folder`);
+        if (!folder) throw new Error(`character_sheet_missing: ${id} needs its shared panels.json`);
+        let manifest2;
+        try {
+          manifest2 = JSON.parse(fs26.readFileSync(path39.join(folder, "panels.json"), "utf8"));
+        } catch {
+          throw new Error(`character_sheet_missing: ${id} has an unreadable panels.json`);
+        }
+        const panels = {};
+        for (const view of requiredViews?.get(id) ?? ["face", "front", "back"]) {
+          const panel = manifest2.panels?.[view];
+          const file = localFile(folder, panel?.file);
+          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file)
+            throw new Error(`character_panel_missing: ${id} has no ${view} panel with a valid character-reference registration`);
+          panels[view] = path39.relative(boardDir, file).split(path39.sep).join("/");
+        }
+        return [id, { folder, paths: panels, entries: manifest2.panels }];
+      }));
+    }
+    function sheetPanels(boardDir, ids, views) {
+      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id, sheet]) => [id, sheet.paths]));
+    }
+    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
+      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
+      const sheets = readPanelSheets(boardDir, ids);
+      if (options.combined) return ids.map((id) => {
+        const { folder, paths: sources, entries } = sheets.get(id);
+        const entry2 = entries.msr;
+        const file = localFile(folder, entry2?.file);
+        if (!file || entry2.purpose !== "character_reference" || entry2.view !== "msr")
+          throw new Error(`character_msr_reference_missing: ${id} needs a registered unified identity/outfit reference`);
+        if (entry2.sha256 !== sha2(file) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha2(path39.resolve(boardDir, sources[view]))))
+          throw new Error(`character_msr_reference_stale: ${id} unified reference or its canonical sources changed`);
+        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
+        return {
+          id: `${shotId}-${id}-msr`,
+          path: path39.relative(boardDir, file).split(path39.sep).join("/"),
+          role: "character",
+          use,
+          purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit`
+        };
+      });
+      const views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
+      const outfits = /* @__PURE__ */ new Map();
+      for (const [id, { folder, entries }] of sheets) {
+        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
+        const source = localFile(folder, "identity.md");
+        if (!source) continue;
+        try {
+          const outfit = identityCharacter(fs26.readFileSync(source, "utf8"), { ready: false }).physical.outfit;
+          if (outfit?.status === "confirmed") outfits.set(id, outfit.value);
+        } catch {
+        }
+      }
+      return views.flatMap((view) => ids.map((id) => {
+        const { paths: paths3, entries } = sheets.get(id);
+        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
+        return {
+          id: `${shotId}-${id}-${view}`,
+          path: paths3[view],
+          role: "character",
+          use,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          ...fitting && outfits.has(id) ? { defaultOutfit: outfits.get(id) } : {},
+          purpose: view === "face" ? `${id}'s face and hair` : fitting ? `${id}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id}'s body and outfit, ${view}`
+        };
+      }));
+    }
+    function missingAppearance(shot, character, role, message) {
+      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role + ": " + message);
+      error2.report = {
+        stage: "character_inputs",
+        code: "character_input_required",
+        shotId: shot.id,
+        character,
+        role,
+        executable: false,
+        videoSubmitted: false,
+        message: error2.message
+      };
+      return error2;
+    }
+    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
+      const visual = shot.visual || {}, view = visual.camera?.view;
+      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
+      const lines = require_scene_direction().orderedSpeech(shot);
+      const explicit = visual.characterInputs;
+      let registry2;
+      if (seedance2) {
+        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
+        if (view?.subjectId && !view.subjectType) {
+          registry2 = episodeCast(boardDir);
+          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
+          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
+        }
+        if (view?.subjectType === "person") people.push(view.subjectId);
+        if (view?.mode === "ots") people.push(view.viewerId);
+        for (const id of people) if (id && !cast.includes(id) && (!sceneSpeakers || sceneSpeakers.includes(id))) cast.push(id);
+      }
+      const bodyForView = (id) => {
+        if (view?.mode === "ots" && view.viewerId === id) return "back";
+        if (view?.subjectId ? view.subjectId !== id : cast.length !== 1) return;
+        if (["detail", "object", "space"].includes(view?.subjectType)) return;
+        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
+        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
+      };
+      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
+      const specs = explicit ?? cast.map((character) => ({ character }));
+      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
+      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
+      for (const spec of specs) {
+        const id = spec?.character;
+        if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id) || views.has(id) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
+          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
+        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
+          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
+        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
+          throw new Error("character_face_source_invalid: a face review must identify the selected original");
+        const body = spec.bodyView ?? bodyForView(id);
+        if (seedance2) {
+          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
+            throw missingAppearance(shot, id, "visibility", "select face_visible, body_only or hands_only");
+          if (spec.visibility === "hands_only") {
+            if (lines.some((line) => line.speaker === id && line.delivery === "on_screen" && line.tts?.trim()))
+              throw missingAppearance(shot, id, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
+            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id, "hands", "remove the face and body sources for this insert");
+            hands.add(id);
+            views.set(id, []);
+            continue;
+          }
+          if (!body) throw missingAppearance(shot, id, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
+          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id) === "back") {
+            if (spec.faceTaskId) throw missingAppearance(shot, id, "body", "a body-only view cannot use a facial original");
+            views.set(id, [body]);
+            continue;
+          }
+        }
+        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id);
+        views.set(id, spec.faceTaskId ? [body] : ["face", body]);
+      }
+      const omitted = cast.find((id) => !views.has(id));
+      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
+      if (cast.length && (cast.some((id) => !views.has(id)) || specs.some((spec) => !cast.includes(spec.character))))
+        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
+      let sheets;
+      try {
+        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id) => !hands.has(id)), views, registry2);
+      } catch (error2) {
+        if (!seedance2) throw error2;
+        const id = [...views.keys()].find((id2) => error2.message.includes(": " + id2 + " "));
+        if (!id) throw error2;
+        throw missingAppearance(shot, id, views.get(id).includes("face") ? "face" : "body", error2.message);
+      }
+      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
+      for (const { character, faceTaskId, faceReviewPath } of specs) {
+        if (hands.has(character)) continue;
+        const sheet = sheets.get(character);
+        if (faceTaskId) {
+          for (const slot2 of ["face", "msr"]) {
+            const name = sheet.entries[slot2]?.file;
+            if (typeof name === "string") replacedFaces.add(path39.resolve(sheet.folder, name));
+          }
+        }
+        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
+        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
+        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
+        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
+        const ref = { character, role: "character", use: "video" };
+        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
+        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
+        bodies.push({
+          ...ref,
+          id: shot.id + "-" + character + "-" + bodyView,
+          path: bodyPath,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
+        });
+      }
+      const pending2 = new Map([...faces, ...bodies].map((ref) => [path39.resolve(boardDir, ref.path), ref]));
+      const references = [], ids = /* @__PURE__ */ new Set();
+      for (const authored of visual.references || []) {
+        const file = authored.path && path39.resolve(boardDir, authored.path);
+        if (replacedFaces.has(file) && authored.use !== "image")
+          throw new Error("character_face_source_conflict: remove the superseded face from video references");
+        const selected = pending2.get(file);
+        if (selected && authored.use !== "image") {
+          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
+          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
+          pending2.delete(file);
+        } else references.push(authored);
+        ids.add(authored.id);
+      }
+      for (const ref of pending2.values()) {
+        let id = ref.id;
+        while (ids.has(id)) id += "-video";
+        references.push({ ...ref, id, ...seedance2 ? { resolvedPanel: true } : {} });
+        ids.add(id);
+      }
+      if (!contracts.length) return shot;
+      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
+      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
+      const slot = require_production_mode().videoSlot(shot);
+      if (slot?.referenceImagePaths !== void 0) {
+        if (JSON.stringify(slot.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
+          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
+        const referenceImagePaths = videoPaths(references);
+        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
+        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
+        normalized.video = { ...slot, referenceImagePaths };
+      }
+      return { ...shot, visual: normalized };
+    }
+    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
+  }
+});
+
 // ../skills/_shared/scene-cast.js
 var require_scene_cast = __commonJS({
   "../skills/_shared/scene-cast.js"(exports, module) {
@@ -100644,6 +100665,26 @@ var require_scene_cast = __commonJS({
       const anchoredCuts = cards.every((card, index) => card.timeline && card.timeline.transition === (index ? "hard_cut" : "open") && card.timeline.images?.some((pin) => pin.role === "start" && pin.frame === card.timeline.startFrame) && !card.timeline.dialogueCues?.length);
       const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mode === "reference" && speakers.length > 2 || anchoredCuts);
       return { speakers, operation, mode, ...perShot ? { rendering: "per_shot" } : {}, external: !visible && physical.length > 0 };
+    }
+    function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, rendering = route.rendering, generateAudio, limit: limit2 }) {
+      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => require_production_mode().videoSlot(card)?.generateAudio === false)))
+        throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
+      if (route.mode !== "reference") return;
+      if (limit2 === void 0) {
+        const entry2 = require_video_catalog().adapters.find((adapter2) => adapter2.tool === tool2);
+        const capacity = entry2?.voice.maxPinnedVoicesPerRender;
+        limit2 = typeof capacity === "number" ? capacity : capacity?.[model2];
+      }
+      if (!limit2 || ["astra_genai_img2video", "astra_genai_msr"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled")
+        throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
+      const perShot = rendering === "per_shot" && !scene?.videoDirection?.oneTake;
+      const groups = perShot ? cards.map((card) => [card]) : [cards];
+      for (const group of groups) {
+        const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
+        if (voices.size <= limit2) continue;
+        const label = group.length === 1 || scene?.no === void 0 ? group[0].id : "scene " + scene.no;
+        throw new Error("scene_render_voice_limit: " + label + " needs " + voices.size + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (scene?.videoDirection?.oneTake || cards.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
+      }
     }
     var personRoles = /* @__PURE__ */ new Set(["character", "face", "outfit", "bystander"]);
     var castIds = (value) => [].concat(value || []).map((person) => typeof person === "string" ? person : person.id);
@@ -100824,7 +100865,7 @@ var require_scene_cast = __commonJS({
       const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(scene.videoDirection.openingPositions, openingRefs) };
       return { members, direction, speakers, identities };
     }
-    module.exports = { sceneCast, sceneSpeechRoute, projectSceneCast };
+    module.exports = { sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast };
   }
 });
 
@@ -100838,7 +100879,6 @@ var require_video_selection = __commonJS({
     var settings = require_model_settings();
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { videoSlot, resolveVideoChoice } = require_production_mode();
-    var { resolveShotCharacterInputs } = require_character_panels();
     var { videoLines } = require_structure_contract();
     var { projectSceneCast, sceneSpeechRoute } = require_scene_cast();
     var { framePlan, imageReferences, previzHandoff } = require_render_routing();
@@ -100911,19 +100951,39 @@ var require_video_selection = __commonJS({
         Object.assign(this, { members, selection, board });
       }
     };
+    function readVideoSnapshot(root) {
+      const snapshotFile = path39.join(root, settings.SNAPSHOT_FILE);
+      if (!fs26.existsSync(snapshotFile)) return void 0;
+      const snapshot = JSON.parse(fs26.readFileSync(snapshotFile, "utf8"));
+      settings.validateConfig(snapshot.config, true);
+      if (snapshot.version !== 1 || snapshot.revision !== hash7(snapshot.config) || typeof snapshot.source !== "string")
+        throw new Error("Invalid episode model snapshot");
+      return snapshot;
+    }
+    function speechRenderSelection(board, shot, episode, fallback) {
+      const snapshot = episode && readVideoSnapshot(episode);
+      const production = board.PRODUCTION ?? {}, slot = videoSlot(shot);
+      const authored = snapshot || slot?.engine || slot?.model || production.videoModel || production.videoProvider;
+      const choice2 = (card) => resolveVideoChoice(production, card, snapshot?.config.models.video).selection;
+      const saved = authored ? choice2(shot) : fallback;
+      if (!saved) return;
+      const owner = board.STRUCTURE?.scenes?.find((scene) => scene.no === shot.scene);
+      const cards = owner ? board.SCENES.filter((card) => card.scene === owner.no) : [shot];
+      if (owner && authored && cards.some((card) => JSON.stringify(choice2(card)) !== JSON.stringify(saved)))
+        throw new Error("scene_video_selection_conflict: the scene members select different video models or operations");
+      const route = owner && sceneSpeechRoute(owner, cards, saved);
+      const ungrouped = !saved.operation && fallback?.engine === saved.engine && fallback.operation ? { ...saved, operation: fallback.operation } : saved;
+      const selection = route ? { ...saved, operation: route.operation } : selectOperation(ungrouped, cards);
+      if (snapshot) settings.validateModels({ video: saved }, true, true);
+      return { saved, selection, route, owner, cards };
+    }
     function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rendering) {
+      const { resolveShotCharacterInputs } = require_character_panels();
       const root = fs26.realpathSync(episode);
       const boardFile = path39.join(root, "storyboard/scenes.js");
       const board = fs26.existsSync(boardFile) ? evaluateWindowScript2(fs26.readFileSync(boardFile, "utf8"), { filename: boardFile }) : {};
       const production = board.PRODUCTION || {};
-      const snapshotFile = path39.join(root, settings.SNAPSHOT_FILE);
-      let snapshot;
-      if (fs26.existsSync(snapshotFile)) {
-        snapshot = JSON.parse(fs26.readFileSync(snapshotFile, "utf8"));
-        settings.validateConfig(snapshot.config, true);
-        if (snapshot.version !== 1 || snapshot.revision !== hash7(snapshot.config) || typeof snapshot.source !== "string")
-          throw new Error("Invalid episode model snapshot");
-      }
+      const snapshot = readVideoSnapshot(root);
       const scenes = board.SCENES || [];
       const storedMembers = sceneNo === void 0 ? scenes.filter((s2) => String(s2.id ?? s2.shot?.id) === shotId) : scenes.filter((s2) => s2.scene === sceneNo);
       if (sceneNo === void 0 && storedMembers.length !== 1) throw new Error("shotId must identify exactly one storyboard shot");
@@ -101080,7 +101140,7 @@ var require_video_selection = __commonJS({
         shot
       };
     }
-    module.exports = { readVideoContext, MissingSceneDirection, selectOperation, seedanceMedia };
+    module.exports = { readVideoContext, readVideoSnapshot, speechRenderSelection, MissingSceneDirection, selectOperation, seedanceMedia };
   }
 });
 
@@ -105563,6 +105623,39 @@ var require_check_tts_quality = __commonJS({
       media[video2] = repair.videoSha256;
       return true;
     }
+    function checkNativeVoiceCapacity(win, shot, binding, board) {
+      const { speechRenderSelection } = require_video_selection();
+      const { sceneSpeechRoute, assertRenderVoiceCapacity } = require_scene_cast();
+      const { adapters: adapters2 } = require_video_catalog();
+      const recorded = { engine: binding.provider, model: binding.model, operation: binding.operation };
+      const episode = path39.basename(board) === "storyboard" ? path39.dirname(board) : void 0;
+      const { selection, saved, owner, cards, route: authored } = speechRenderSelection(win, shot, episode, recorded);
+      const scene = owner ?? {};
+      const selections = [{ choice: selection, sceneRoute: authored, explicit: saved?.operation, exact: owner ? void 0 : saved?.operation }];
+      if (selection.engine !== recorded.engine || selection.model !== recorded.model || recorded.operation && recorded.operation !== selection.operation)
+        selections.push({ choice: recorded, explicit: recorded.operation, exact: recorded.operation });
+      for (const { choice: choice2, sceneRoute: sceneRoute2, explicit, exact } of selections) {
+        const available = adapters2.filter((adapter3) => adapter3.engine === choice2.engine);
+        if (!available.length) continue;
+        const route = sceneRoute2 ?? sceneSpeechRoute(scene, cards, choice2);
+        if (!route.speakers.length) continue;
+        if (shot.visual.video.generateAudio === false || binding.generateAudio === false)
+          throw new Error("scene_dialogue_audio_required: a native speaking take requires its generated soundtrack");
+        if (explicit && (!available.some((entry2) => entry2.operation === explicit) || !["image", "reference", "audio", "text"].includes(explicit)))
+          throw new Error("scene_speech_route: the selected operation cannot generate this native speaking take");
+        const operation = exact ?? route.operation;
+        const adapter2 = available.find((entry2) => entry2.operation === operation);
+        if (route.mode === "generated" && adapter2?.voice.dialogue === "requires_model_generated_scene_voice") {
+          const spec = adapter2.modelConstraints[choice2.model];
+          if (!spec || spec.operations && !spec.operations.includes(operation))
+            throw new Error("scene_speech_route: this model cannot generate dialogue in the selected operation");
+          continue;
+        }
+        if (route.mode !== "reference" || !["reference", "conditional_reference"].includes(adapter2?.voice.lane))
+          throw new Error("scene_speech_route: this model and operation cannot supply the bound native dialogue");
+        assertRenderVoiceCapacity({ tool: adapter2.tool, model: choice2.model, scene, cards, route });
+      }
+    }
     function check2(work, board) {
       work = path39.resolve(work);
       board = path39.resolve(board);
@@ -105589,6 +105682,7 @@ var require_check_tts_quality = __commonJS({
         if (originalDriver && !(rows[k][4] || "").split(",").includes("sync=1"))
           throw new Error("post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture");
         const native = binding?.mode === "native";
+        if (native) checkNativeVoiceCapacity(win, s2, binding, board);
         if (native && s2.sound?.audioSource !== "video") throw new Error("Native speech video needs sound.audioSource video for card " + i2);
         if (win.SB_DOC?.speechPlanVersion === 1 && (s2.narration || []).some((n) => n.delivery === "on_screen") && s2.visual?.video && !binding && !retained) throw new Error("On-screen dialogue needs a video speech binding for card " + i2 + "; bind the clip with speech_manage attach_video");
         for (const line of native || retained ? [] : s2.narration || []) {
@@ -131112,6 +131206,18 @@ function verifyDistinctSamples(samples) {
     owners.set(digest5, speaker);
   }
 }
+function assertSpeechRenderCapacity(tool2, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
+  load7("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+    tool: tool2,
+    model: model2,
+    scene,
+    cards,
+    route,
+    rendering,
+    generateAudio,
+    limit: voiceReferenceLimit(tool2, model2)
+  });
+}
 function resolvePlanContext(input) {
   assertNoPostLipSync(input);
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
@@ -131139,17 +131245,15 @@ function resolvePlanContext(input) {
     if (Math.abs(seconds2 * fps - Math.round(duration5 * fps)) >= 0.5)
       throw new Error("scene_audio_timing: the dialogue track covers " + seconds2 + "s of the " + duration5 + "s scene");
   }
-  if (route.mode === "reference") {
-    const limit2 = voiceReferenceLimit(tool2, context2.selection.model);
-    if (!limit2 || tool2 === "astra_genai_img2video" && context2.selection.model !== "ltx-2.5-22b-distilled" || input.args.generateAudio === false)
-      throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
-    const groups = rendering === "per_shot" ? (context2.sceneMembers ?? []).map((card) => {
-      const lines = load7("../../skills/storyboard/references/scene-direction.js").orderedSpeech(card);
-      return [card.id, new Set(lines.filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker)).size];
-    }) : [["scene " + input.sceneNo, route.speakers.length]];
-    const excess = groups.find(([, count]) => count > limit2);
-    if (excess) throw new Error("scene_render_voice_limit: " + excess[0] + " needs " + excess[1] + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (context2.sceneDirection?.oneTake || groups.length === 1 && context2.sceneMembers?.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
-  }
+  assertSpeechRenderCapacity(
+    tool2,
+    context2.selection.model,
+    { no: context2.sceneNo, videoDirection: context2.sceneDirection },
+    context2.sceneMembers ?? [context2.shot],
+    route,
+    rendering,
+    input.args.generateAudio
+  );
   if (route.mode !== "reference" && input.shotBindings?.some((binding) => binding.performanceAudio))
     throw new Error("scene_speech_route: a shot performance cannot override the scene soundtrack");
   return { context: context2, tool: tool2 };
@@ -146959,7 +147063,7 @@ function speechVideoPlan(input, capabilities, sceneNo) {
     review: "not_reviewed"
   };
 }
-function manageSpeech(args) {
+function manageSpeech(args, options = {}) {
   args = speechManageSchema.parse(args);
   const { file, win, header } = readBoard(args.path);
   const before = readFileSync37(file, "utf8");
@@ -147102,34 +147206,47 @@ function manageSpeech(args) {
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname11(dirname11(file));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
-    const authoredVideo = scene.visual?.video;
-    const production = object5(win.PRODUCTION);
+    const selectedVideo = object5(scene.visual?.video);
+    speechContract().assertNoPostLipSync({
+      direction: owner?.videoDirection,
+      mode: selectedVideo.mode,
+      operation: selectedVideo.operation,
+      route: selectedVideo.route,
+      tool: selectedVideo.tool,
+      strategy: selectedVideo.strategy,
+      capabilities: selectedVideo.capabilities,
+      postLipSync: selectedVideo.postLipSync,
+      post_lipsync: selectedVideo.post_lipsync
+    });
     const episodeBoard = basename12(dirname11(file)) === "storyboard" && basename12(file) === "scenes.js";
     const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
+    const requested = adapter2 && {
+      engine: adapter2.engine,
+      operation: adapter2.operation,
+      model: args.capabilities?.model ?? (args.tool === "astra_genai_msr" ? "ltx-2.5-22b-distilled" : void 0)
+    };
+    const context2 = nodeModule7.createRequire(import.meta.url)("../../skills/_shared/video-selection.js").speechRenderSelection(win, scene, episodeBoard ? episode : void 0, requested);
     let verified;
-    if (episodeBoard && (existsSync36(join18(episode, ".work/model-settings.json")) || authoredVideo?.engine || authoredVideo?.model || production.videoModel || production.videoProvider)) {
-      const context2 = routingContext(episode, args.shotId, void 0, true);
-      const { selection } = context2;
+    const physical = selected.some(({ line }) => line.tts?.trim() && line.delivery !== "voiceover");
+    if (context2 && (context2.selection.operation || context2.route || physical || !args.capabilities || args.action === "attach_video")) {
+      const { selection, route } = context2;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
       const tool2 = selectedVideoTool(selection);
-      if (context2.speechRoute && (!tool2 || args.tool && args.tool !== tool2))
+      if ((route || args.tool) && (!tool2 || args.tool && args.tool !== tool2))
         throw new Error("scene_speech_route: the complete scene requires " + selection.operation);
       const generatedVoice = usesGeneratedVoice(tool2, owner?.videoDirection?.dialogueVoice);
       verified = speechVideoCapabilities(
         selection.engine,
         selection.model || selection.engine,
-        adapter2?.operation ?? selection.operation,
-        context2.speechRoute ? context2.speechRoute.mode === "reference" : hasVideoSubjectReferences(scene),
+        selection.operation,
+        route ? route.mode === "reference" : hasVideoSubjectReferences(scene),
         generatedVoice
       );
-    } else if (adapter2) {
-      verified = speechVideoCapabilities(
-        adapter2.engine,
-        args.capabilities?.model ?? authoredVideo?.model ?? adapter2.engine,
-        adapter2.operation,
-        hasVideoSubjectReferences(scene),
-        usesGeneratedVoice(args.tool, owner?.videoDirection?.dialogueVoice)
-      );
+      if (tool2 && (route || verified.nativeSpeech && !generatedVoice)) {
+        assertSpeechRenderCapacity(tool2, selection.model, owner, context2.cards, route ?? { mode: "reference" });
+      }
+    } else if (options.registeredNativeAttachment && args.action === "attach_video" && physical && args.capabilities?.nativeSpeech) {
+      throw new Error("video_operation_missing: select the registered video tool to verify its speech capabilities");
     }
     if (verified) {
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
@@ -147145,13 +147262,17 @@ function manageSpeech(args) {
       const bytes = readFileSync37(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash4(bytes);
+      speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan2);
       for (const card of scenes) {
         const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
-        if (!speechContract().hasPostLipSync(binding)) continue;
+        if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
         const source = binding.videoPath ?? video3.clip ?? video3.src;
         const original = typeof source === "string" ? resolve12(dirname11(file), source) : void 0;
         const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync36(original) && hash4(readFileSync37(original)) === videoSha256);
-        if (matches) throw new Error("post_lipsync_forbidden: this video belongs to a previous post lip-sync plan. Generate a new speaking take");
+        if (!matches) continue;
+        speechContract().assertNoPostLipSync(binding);
+        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan2.provider || binding.model && binding.model !== plan2.model || binding.mode && binding.mode !== plan2.mode))
+          throw new Error("speech_video_source_mismatch: this video already belongs to a different speech operation or model");
       }
       const native = plan2.mode === "native";
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
@@ -155058,7 +155179,7 @@ ${styleWarnings.join("\n")}` : head;
   speech_manage: async (args) => {
     const input = parseArgs(speechManageSchema, args);
     if (input.action !== "list") requireReadyProject(input.path);
-    return text3(JSON.stringify(manageSpeech(input), null, 2));
+    return text3(JSON.stringify(manageSpeech(input, { registeredNativeAttachment: true }), null, 2));
   },
   host_review: async (args) => text3(JSON.stringify(await hostReview(args), null, 2)),
   acting_review: async (args) => text3(JSON.stringify(await reviewActing2(parseArgs(actingReviewSchema2, args)), null, 2)),

@@ -81,6 +81,31 @@ function sceneSpeechRoute(scene, cards, selection) {
   return {speakers, operation, mode, ...(perShot ? {rendering:'per_shot'} : {}), external:!visible && physical.length > 0};
 }
 
+// Each native render binds its own speakers. A finished soundtrack uses one audio input.
+function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering = route.rendering, generateAudio, limit}) {
+  if (['reference','generated'].includes(route.mode) && (generateAudio === false || cards.some(card =>
+      require('../storyboard/references/production-mode.js').videoSlot(card)?.generateAudio === false)))
+    throw new Error('scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack');
+  if (route.mode !== 'reference') return;
+  if (limit === undefined) {
+    const entry = require('./video-catalog.json').adapters.find(adapter => adapter.tool === tool);
+    const capacity = entry?.voice.maxPinnedVoicesPerRender;
+    limit = typeof capacity === 'number' ? capacity : capacity?.[model];
+  }
+  if (!limit || ['astra_genai_img2video','astra_genai_msr'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
+    throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
+  const perShot = rendering === 'per_shot' && !scene?.videoDirection?.oneTake;
+  const groups = perShot ? cards.map(card => [card]) : [cards];
+  for (const group of groups) {
+    const voices = new Set(group.flatMap(orderedSpeech).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker));
+    if (voices.size <= limit) continue;
+    const label = group.length === 1 || scene?.no === undefined ? group[0].id : 'scene ' + scene.no;
+    throw new Error('scene_render_voice_limit: ' + label + ' needs ' + voices.size + ' pinned voices; ' + tool +
+      ' accepts ' + limit + ' per render. ' + (scene?.videoDirection?.oneTake || cards.length === 1 ?
+        'The authored one-take has no cut for a split.' : 'Split at an authored cut or revise this shot.'));
+  }
+}
+
 const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
@@ -254,4 +279,4 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   return {members, direction, speakers, identities};
 }
 
-module.exports = {sceneCast, sceneSpeechRoute, projectSceneCast};
+module.exports = {sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast};
