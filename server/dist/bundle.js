@@ -121220,7 +121220,8 @@ function prepareVideoVoice(tool2, input, context2) {
     });
     if (screenBindings.length) prompt.push("Screen positions use the viewer's left and right in the opening image. Preserve these positions and each character's appearance.");
     if (speakers.length > 1) prompt.push("Speak the following turns in order, with a brief pause between speakers and no overlapping speech.");
-    prompt.push(...script);
+    if (msr && context2.bindSceneTurns) args.prompt = context2.bindSceneTurns(String(args.prompt), script);
+    else prompt.push(...script);
   };
   if (reference2 && msr) {
     args.references = msrRefs;
@@ -121440,7 +121441,8 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns } = {}) {
+  let turnIndex = 0;
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
   const transitions = {
@@ -121462,7 +121464,7 @@ function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = f
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...boundTurns ? (s2.dialogue ?? []).map(() => boundTurns[turnIndex++]) : includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
   }), ...t2.audio ? [
     modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
@@ -121495,7 +121497,12 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     ...scene.oneTake ? { oneTake: true } : {},
     ...scene.sound ? { sound: scene.sound } : {}
   } };
-  return { request, providerPrompt, camera, mapped: mapInputs(request) };
+  const bindSceneTurns = (prompt2, turns) => {
+    if (!prompt2.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
+      throw new Error("scene_dialogue_binding: the dialogue no longer matches the planned shot sequence");
+    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns }));
+  };
+  return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }
 var SceneInputError = class extends Error {
   constructor(tool2, sceneRequest, missing, model2, resolution2) {
@@ -123197,14 +123204,20 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     return { args: { ...images2.args, ...extra.args }, imageBindings: [...images2.imageBindings ?? [], ...extra.imageBindings] };
   };
   let images = bindImages(bound);
-  let voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+  const voiceContext = {
+    ...context2,
+    shot,
+    msrVoice: genaiMsrVoiceReferences(),
+    bindSceneTurns: tool2 === "astra_genai_img2video" && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : void 0
+  };
+  let voice = prepareVideoVoice(tool2, images.args, voiceContext);
   const submittedLength = typeof voice.args.prompt === "string" ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
   if (compiled && promptLimit && typeof bound.prompt === "string" && submittedLength > promptLimit) {
     compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
     bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
     direction = directionOf(compiled);
     images = bindImages(bound);
-    voice = prepareVideoVoice(tool2, images.args, { ...context2, shot, msrVoice: genaiMsrVoiceReferences() });
+    voice = prepareVideoVoice(tool2, images.args, voiceContext);
   }
   for (const person of cast) {
     for (const panel of [person.face?.path, person.bodyPath]) {

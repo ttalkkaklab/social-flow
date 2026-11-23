@@ -27,6 +27,7 @@ const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(stab
 const fileHash = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex');
 
 interface VoiceContext {
+  bindSceneTurns?: (prompt:string, turns:string[]) => string;
   timed?: boolean;
   sceneDirection?: { openingPositions: { character: string; position: string; images: number[] }[] };
   episode: string;
@@ -384,7 +385,8 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     });
     if (screenBindings.length) prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
     if (speakers.length > 1) prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
-    prompt.push(...script);
+    if (msr && context.bindSceneTurns) args.prompt = context.bindSceneTurns(String(args.prompt),script);
+    else prompt.push(...script);
   };
   if (reference && msr) {
     args.references = msrRefs;

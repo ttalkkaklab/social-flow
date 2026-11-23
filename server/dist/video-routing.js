@@ -714,7 +714,9 @@ function buildVideoPlan(input, { context, tool }, persist) {
         return { args: { ...images.args, ...extra.args }, imageBindings: [...(images.imageBindings ?? []), ...extra.imageBindings] };
     };
     let images = bindImages(bound);
-    let voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+    const voiceContext = { ...context, shot, msrVoice: genaiMsrVoiceReferences(),
+        bindSceneTurns: tool === 'astra_genai_img2video' && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : undefined };
+    let voice = prepareVideoVoice(tool, images.args, voiceContext);
     // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
     // the board prompt is compiled once more into the room they leave.
     const submittedLength = typeof voice.args.prompt === 'string' ? openingPrompt(voice.args.prompt, voice.args.openingPositions).length : 0;
@@ -723,7 +725,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
         direction = directionOf(compiled);
         images = bindImages(bound);
-        voice = prepareVideoVoice(tool, images.args, { ...context, shot, msrVoice: genaiMsrVoiceReferences() });
+        voice = prepareVideoVoice(tool, images.args, voiceContext);
     }
     for (const person of cast) {
         for (const panel of [person.face?.path, person.bodyPath]) {

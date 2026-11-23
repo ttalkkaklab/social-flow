@@ -381,7 +381,10 @@ export function prepareVideoVoice(tool, input, context) {
             prompt.push('Screen positions use the viewer\'s left and right in the opening image. Preserve these positions and each character\'s appearance.');
         if (speakers.length > 1)
             prompt.push('Speak the following turns in order, with a brief pause between speakers and no overlapping speech.');
-        prompt.push(...script);
+        if (msr && context.bindSceneTurns)
+            args.prompt = context.bindSceneTurns(String(args.prompt), script);
+        else
+            prompt.push(...script);
     };
     if (reference && msr) {
         args.references = msrRefs;

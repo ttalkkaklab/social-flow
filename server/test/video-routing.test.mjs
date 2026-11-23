@@ -1808,3 +1808,33 @@ test('scene prompt uses a cast name without changing quoted speech or doubling t
   assert.match(spoken.prompt,/Linh \(Image 1\): On the right/);
   assert.ok(spoken.prompt.endsWith('Linh says "ep13-linh" to her friend.'));
 });
+
+test('model-paced MSR scenes keep bound dialogue inside the corresponding shot', async t => {
+  const oldKey = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = oldKey; });
+  t.mock.method(globalThis,'fetch',async () => Response.json({msr:true,voice_references:true}));
+  await refreshGenaiMsrVoice(true);
+  const f = fixture(t, {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'});
+  const dir = path.join(f.episode,'storyboard');
+  const tts = {engine:'gemini',voiceId:'Kore',language:'vi',speed:1};
+  const wav = path.join(dir,'speaker.wav');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=400:duration=1',wav]);
+  for (const file of ['opening.png','face.png']) fs.writeFileSync(path.join(dir,file),png);
+  f.board.SB_DOC = {characters:[{id:'speaker',name:'Linh',tts,voiceReference:{path:wav,tts,sha256:digest(fs.readFileSync(wav)),imagePaths:[path.join(dir,'face.png')]}}]};
+  f.board.STRUCTURE = {scenes:[{no:1,speakers:['speaker'],frames:{start:'opening.png'},
+    speakerReferences:[{character:'speaker',path:'face.png'}],videoDirection:{emotion:'Hope.',openingPositions:[{character:'speaker',images:[1],position:'On the right.'}]}}]};
+  const words = ['Will you marry me?', '', "It costs $&."];
+  f.board.SCENES = words.map((line,i) => ({id:'card'+i,scene:1,duration:[56,32,25][i]/24,
+    shot:{size:'ms',angle:'eye'},visual:{action:['She proposes.','The listener lets go.','She opens the door.'][i]},
+    narration:line?[{id:'line'+i,speaker:'speaker',delivery:'on_screen',tts:line}]:[]}));
+  f.save();
+  const plan = planVideo({episode:f.episode,sceneNo:1,requestId:'native-turn-placement',args:{reserveUsd:0}},false);
+  const {prompt} = buildGenaiVideoBody(plan.args);
+  const [opening,reaction,ending] = prompt.split('Then cut directly.');
+  assert.ok(opening.includes('speaker (Image 1, Audio 1): "'+words[0]+'"'),opening);
+  assert.doesNotMatch(reaction,/marry|costs/);
+  assert.ok(ending.includes('speaker (Image 1, Audio 1): "'+words[2]+'"'));
+  assert.equal(prompt.split(words[0]).length,2);
+  assert.equal(prompt.split(words[2]).length,2);
+});

@@ -220,7 +220,8 @@ export function bindRegisteredPanels(scene, episode, board) {
             image.character = [...ids][0];
     }
 }
-export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
+export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false, boundTurns } = {}) {
+    let turnIndex = 0;
     const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
     const timing = (frame) => modelFacing ? `At ${Number((frame / t.fps).toFixed(3))} seconds` : `Frame ${frame}`;
     const transitions = {
@@ -237,7 +238,7 @@ export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFaci
             }
             return [heading,
                 ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p => p.shotId === s.shotId && p.reference?.scope === 'shot_guide').map(p => p.reference.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : timing(l.frame) + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
+                ...(boundTurns ? (s.dialogue ?? []).map(() => boundTurns[turnIndex++]) : includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : timing(l.frame) + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
         }), ...(t.audio ? [modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.',
             ...t.audio.cues.map(c => `${timing(c.frame)}: ${c.action}`)] : [])].filter(Boolean).join('\n');
 }
@@ -263,7 +264,13 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
-    return { request, providerPrompt, camera, mapped: mapInputs(request) };
+    // The image and voice binders add reference labels around this timeline after planning.
+    const bindSceneTurns = (prompt, turns) => {
+        if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
+            throw new Error('scene_dialogue_binding: the dialogue no longer matches the planned shot sequence');
+        return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { modelFacing: true, modelPacedCuts, boundTurns: turns }));
+    };
+    return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
 }
 export class SceneInputError extends Error {
     tool;
