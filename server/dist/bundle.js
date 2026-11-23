@@ -95009,7 +95009,7 @@ var require_scene_direction = __commonJS({
         lines.forEach((_, index) => groups.add(index));
         return Array.from(groups, (index) => lines[index]);
       }
-      function notes(card, accept = Boolean, visualOnly = false, concise = false) {
+      function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
         const visual = card.visual || {}, video2 = visual.video || {}, source = video2.promptSource || {};
         const design = card.shot?.videoDesign || {}, lines = card.narration || [];
         const spoken = lines.map((line) => text4(line.tts)).filter(Boolean);
@@ -95030,8 +95030,8 @@ var require_scene_direction = __commonJS({
           if (to && accept(redact(to))) fields2.unshift((concise ? "to " : "Addressed to ") + redact(to) + ".");
           if (pauses) fields2.push(pauses);
           if (fields2.length || card.performance?.length) {
-            const who = [line.speaker, line.id].filter(Boolean).join(", ");
-            const label = concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
+            const who = [line.speaker, scenePrompt ? void 0 : line.id].filter(Boolean).join(", ");
+            const label = scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
             beats.push(label + (fields2.length ? ": " + fields2.join(" ") : "."));
           }
           groups.add(group);
@@ -95041,8 +95041,8 @@ var require_scene_direction = __commonJS({
           const cue = redact(text4(event.videoDirection) || text4(event.text));
           if (!cue || !accept(cue)) return;
           const duration5 = event.durationSeconds ? " for " + event.durationSeconds + " s" : "";
-          const withLine = event.withGroup ? " with speech group " + event.withGroup : "";
-          const label = concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
+          const withLine = event.withGroup ? scenePrompt ? " during the line" : " with speech group " + event.withGroup : "";
+          const label = scenePrompt ? [event.character, duration5.trim()].filter(Boolean).join(" ") : concise ? [event.character, event.durationSeconds && event.durationSeconds + "s"].filter(Boolean).join(" ") : "Beat " + (i2 + 1) + (event.character ? " (" + event.character + ")" : "") + duration5;
           beats.push((label || withLine ? label + withLine + ": " : "") + cue);
         });
         lines.forEach((line, i2) => {
@@ -120410,7 +120410,7 @@ function attributeWords(key, row, camera = {}) {
 }
 function sceneShotNotes(card, concise = false) {
   const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
-  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise);
+  const notes = directions().notes(card, (cue) => Boolean(english2(cue)), true, concise, true);
   const actions = notes.actions.map(english2).filter(Boolean);
   return {
     action: actions.join(" ") || notes.fallback.map(english2).find(Boolean) || "",
@@ -121332,7 +121332,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied2 && !subjectMissing) };
       if (guideMode && guide.submitted) {
         guideSlots--;
-        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose: "Framing guide for " + shotId + " only." };
+        const reference2 = { id: shotId + "-composition", role: guideMode, use: "video", scope: "shot_guide", path: member.referenceImage, purpose: "Opening composition guide for this shot." };
         add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference: reference2 });
         guides.push(guide);
       } else {
@@ -121409,19 +121409,30 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, includeDialogue = true) {
+function sceneTimelineWords(t2, scene, includeDialogue = true, modelFacing = false) {
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-  return [`Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
-    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `Frame ${p.frame}: ${p.cue}`);
+  const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
+  const transitions = {
+    hard_cut: "cut directly",
+    dissolve: "dissolve to the next view",
+    fade: "fade to the next view"
+  };
+  return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
+    const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
+    const transition = s2.transition.replaceAll("_", " ");
+    const heading = modelFacing ? s2.transition === "open" ? "" : `${timing(s2.startFrame)}, ${transitions[s2.transition] ?? transition}.` : `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
     return [
-      `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${s2.transition.replaceAll("_", " ")}.`,
+      heading,
       ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
       ...cues,
       ...t2.images.filter((p) => p.shotId === s2.shotId && p.reference?.scope === "shot_guide").map((p) => p.reference.purpose),
       s2.sound && s2.sound !== scene.sound && "Sound: " + s2.sound,
-      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : "Frame " + l.frame + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
+      ...includeDialogue ? (s2.dialogue ?? []).filter((l) => l.delivery !== "voiceover").map((l) => (l.frame === void 0 ? "" : timing(l.frame) + ": ") + (l.direction ? l.direction + " " : "") + l.speaker + " (" + l.delivery + '): "' + l.text + '"') : []
     ].filter(Boolean).join(" ");
-  }), ...t2.audio ? ["Play one continuous scene track from frame 0.", ...t2.audio.cues.map((c) => `Frame ${c.frame}: ${c.action}`)] : []].join("\n");
+  }), ...t2.audio ? [
+    modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.",
+    ...t2.audio.cues.map((c) => `${timing(c.frame)}: ${c.action}`)
+  ] : []].filter(Boolean).join("\n");
 }
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
   const coverage2 = sceneCoverage(members, scene, board, sceneNo);
@@ -121438,7 +121449,8 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const text4 = options.bindDialogue ? scenePromptText(scene, shared5, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
+  const providerTimeline = sceneTimelineWords(timeline, scene, !options.bindDialogue, true);
+  const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, sceneDirection: {
     emotion: scene.emotion,
@@ -123079,9 +123091,10 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const drift = !scene && !compiled && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
   const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut timing as prose. Check the output against the recorded cut frames."] : [];
   let direction = sceneCamera ? {
     sourcePrompt,
-    directionWarnings: sceneCamera.warnings,
+    directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
     ...sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
   } : directionOf(compiled);
   if (selection.engine === "host") {

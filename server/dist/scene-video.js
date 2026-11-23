@@ -140,7 +140,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             const guide = { shotId, path: member.referenceImage, submitted: Boolean(guideMode && guideSlots > 0 && !occupied && !subjectMissing) };
             if (guideMode && guide.submitted) {
                 guideSlots--;
-                const reference = { id: shotId + '-composition', role: guideMode, use: 'video', scope: 'shot_guide', path: member.referenceImage, purpose: 'Framing guide for ' + shotId + ' only.' };
+                const reference = { id: shotId + '-composition', role: guideMode, use: 'video', scope: 'shot_guide', path: member.referenceImage, purpose: 'Opening composition guide for this shot.' };
                 add({ path: member.referenceImage, role: guideMode, frame: startFrame, reference });
                 guides.push(guide);
             }
@@ -213,14 +213,22 @@ export function bindRegisteredPanels(scene, episode, board) {
             image.character = [...ids][0];
     }
 }
-export function sceneTimelineWords(t, scene, includeDialogue = true) {
+export function sceneTimelineWords(t, scene, includeDialogue = true, modelFacing = false) {
     const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
-    return [`Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
-            const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `Frame ${p.frame}: ${p.cue}`);
-            return [`${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${s.transition.replaceAll('_', ' ')}.`,
+    const timing = (frame) => modelFacing ? `At ${Number((frame / t.fps).toFixed(3))} seconds` : `Frame ${frame}`;
+    const transitions = {
+        hard_cut: 'cut directly', dissolve: 'dissolve to the next view', fade: 'fade to the next view',
+    };
+    return [!modelFacing && `Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
+            const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `${timing(p.frame)}: ${p.cue}`);
+            const transition = s.transition.replaceAll('_', ' ');
+            const heading = modelFacing ? (s.transition === 'open' ? '' : `${timing(s.startFrame)}, ${transitions[s.transition] ?? transition}.`) :
+                `${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${transition}.`;
+            return [heading,
                 ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p => p.shotId === s.shotId && p.reference?.scope === 'shot_guide').map(p => p.reference.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
-                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : 'Frame ' + l.frame + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
-        }), ...(t.audio ? ['Play one continuous scene track from frame 0.', ...t.audio.cues.map(c => `Frame ${c.frame}: ${c.action}`)] : [])].join('\n');
+                ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : timing(l.frame) + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
+        }), ...(t.audio ? [modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.',
+            ...t.audio.cues.map(c => `${timing(c.frame)}: ${c.action}`)] : [])].filter(Boolean).join('\n');
 }
 /** Compile once, then present the complete scene to the selected adapter's input mapper. */
 export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
@@ -239,7 +247,8 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-    const text = options.bindDialogue ? scenePromptText(scene, shared, sceneTimelineWords(timeline, scene, false), dialogue, true) : complete;
+    const providerTimeline = sceneTimelineWords(timeline, scene, !options.bindDialogue, true);
+    const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };

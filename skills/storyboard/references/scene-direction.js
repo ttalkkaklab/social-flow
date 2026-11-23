@@ -34,7 +34,7 @@
     lines.forEach((_, index) => groups.add(index));
     return Array.from(groups, index => lines[index]);
   }
-  function notes(card, accept = Boolean, visualOnly = false, concise = false) {
+  function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
     const visual = card.visual || {}, video = visual.video || {}, source = video.promptSource || {};
     const design = card.shot?.videoDesign || {}, lines = card.narration || [];
     const spoken = lines.map(line => text(line.tts)).filter(Boolean);
@@ -54,8 +54,9 @@
       if (to && accept(redact(to))) fields.unshift((concise ? 'to ' : 'Addressed to ') + redact(to) + '.');
       if (pauses) fields.push(pauses);
       if (fields.length || card.performance?.length) {
-        const who = [line.speaker, line.id].filter(Boolean).join(', ');
-        const label = concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
+        const who = [line.speaker, scenePrompt ? undefined : line.id].filter(Boolean).join(', ');
+        const label = scenePrompt ? (who ? 'As ' + who + ' speaks' : 'During dialogue') :
+          concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
         beats.push(label + (fields.length ? ': ' + fields.join(' ') : '.'));
       }
       groups.add(group);
@@ -65,8 +66,9 @@
       const cue = redact(text(event.videoDirection) || text(event.text));
       if (!cue || !accept(cue)) return;
       const duration = event.durationSeconds ? ' for ' + event.durationSeconds + ' s' : '';
-      const withLine = event.withGroup ? ' with speech group ' + event.withGroup : '';
-      const label = concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :
+      const withLine = event.withGroup ? (scenePrompt ? ' during the line' : ' with speech group ' + event.withGroup) : '';
+      const label = scenePrompt ? [event.character, duration.trim()].filter(Boolean).join(' ') :
+        concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :
         'Beat ' + (i+1) + (event.character ? ' (' + event.character + ')' : '') + duration;
       beats.push((label || withLine ? label + withLine + ': ' : '') + cue);
     });

@@ -837,7 +837,7 @@ test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogu
  const reordered=planVideo({...input,requestId:'reordered'},false);
  const prompt=reordered.args.prompt;
  assert.ok(prompt.indexOf(words[1])>=0 && prompt.indexOf(words[1])<prompt.indexOf(words[0]));
- assert.match(prompt,/Beat 1 with line 2[\s\S]*Touch the latch[\s\S]*Beat 3 with line 1/);
+ assert.match(prompt,/As witness speaks\. Touch the latch\. As heir speaks\./);
  f.board.STRUCTURE.scenes[0].directionDefaults={camera:'camera.static'};
  first.narration[0].acting={direction:'Stammer on the first syllable.',vocal:'Whisper the answer.',tags:['sighs']};
  f.save();
@@ -1755,7 +1755,7 @@ test('a scene dip and two fractional shot lengths still fit exactly 113 frames',
     videoDirection:{fps:24, openingPositions:[], emotion:'The cart picks up speed.'}}]};
   fs.writeFileSync(path.join(f.episode, 'storyboard', 'opening.png'), png);
   for (const [i, card] of f.board.SCENES.entries()) {
-    Object.assign(card, {scene:1, duration:[56,57][i]/24, transition:i ? 'cut' : 'dip',
+    Object.assign(card, {id:i ? 's0002' : 's0001', scene:1, duration:[56,57][i]/24, transition:i ? 'cut' : 'dip',
       narration:[], shot:{size:i ? 'insert' : 'ms', angle:'eye'},
       visual:{action:i ? 'The wheel hits the curb.' : 'The cart rolls.'}});
   }
@@ -1763,5 +1763,9 @@ test('a scene dip and two fractional shot lengths still fit exactly 113 frames',
   const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'fractional-coverage', args:{reserveUsd:0}}, false);
   assert.equal(plan.args.numFrames, 113);
   assert.equal(plan.sceneRequest.modelPacedCuts, true);
+  assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_cut_timing_model_paced:')));
   assert.deepEqual(plan.sceneRequest.cuts.map(cut => [cut.frame,cut.transition]), [[56,'hard_cut']]);
+  assert.match(plan.args.prompt, /The cart rolls\.[\s\S]*At 2\.333 seconds, cut directly\.[\s\S]*The wheel hits the curb\./);
+  assert.doesNotMatch(plan.args.prompt, /s\d{4}|Frame numbers start|Scene at \d+ fps/);
+  assert.deepEqual(plan.sceneRequest.shotIds, f.board.SCENES.map(card => card.id));
 });

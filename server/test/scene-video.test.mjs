@@ -128,11 +128,12 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
       openingPositions:positions, images:[{role:'start',frame:start,path:'images/'+opening+'.png'},
         {role:'face',character:speaker,frame:start,path:'images/'+face+'.png'}]};
     card.narration = [{id:id+'-l1',speaker,tts:words,delivery:'on_screen'}];
+    card.performance = [{kind:'dialogue',group:1,character:speaker,videoDirection:'Keep the gaze steady.'}];
   }
   accusation.timeline.images.push({role:'end', frame:170,path:'images/ending.png'});
   answer.timeline.dialogueCues = [{lineId:'s0001-l1',frame:171}];
   f.save();
-  const {request, mapped} = prepareSceneRequest(1,f.members,f.scene,f.episode,f.members.flatMap(m=>m.narration),
+  const {request, mapped, providerPrompt} = prepareSceneRequest(1,f.members,f.scene,f.episode,f.members.flatMap(m=>m.narration),
     {bindDialogue:false,bindOpening:false,suffix:''},captureScene);
   const wire = await readCapture(mapped);
   assert.deepEqual(wire.cuts,[{from:'s0002',to:'s0001',frame:171,transition:'hard_cut'}]);
@@ -142,10 +143,13 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   for (const [i, shot] of wire.shots.entries()) {
     assert.equal(shot.dialogue[0].speaker, setups[i][4]);
     assert.equal(shot.dialogue[0].text, setups[i][5]);
+    assert.equal(shot.dialogue[0].lineId, setups[i][1]+'-l1');
     assert.deepEqual(shot.openingPositions,setups[i][8]);
     assert.equal(wire.prompt.split(shot.dialogue[0].text).length,2);
     assert.equal(wire.prompt.split(shot.sound).length,2);
   }
+  assert.match(providerPrompt, /Keep the gaze steady/);
+  assert.doesNotMatch(providerPrompt, /s000[12]|Frame 171/);
   assert.equal(wire.shots[1].dialogue[0].frame,171);
   assert.throws(()=>planVideo(f.input), error=>{
     assert.deepEqual(error.sceneRequest.cuts,request.cuts);
@@ -388,7 +392,7 @@ test('a saved one-take A2V request keeps the original audio, five intermediate c
   f.save();
   const revised = planVideo({...f.input,args});
   assert.deepEqual(revised.args.keyframes.map(p=>[path.basename(p.imagePath),p.frameIdx,p.strength]), [['solo.png',42,0.4]]);
-  assert.match(revised.args.prompt,/Frame 42: The dancer steps forward/);
+  assert.match(revised.args.prompt,/At 1\.75 seconds: The dancer steps forward/);
 });
 
 test('a distilled I2V prop stays separate from the opening image and silent dancers',async t=>{
@@ -554,7 +558,8 @@ test('scene camera returns to its default after the insert and every shot cue re
     const {request} = build(list);
     const wire = await buildSceneWire(request,'ltx-2.5-22b-distilled','720p');
     assert.deepEqual(wire.body.shots[0].dialogue.map(l=>[l.id,l.text,l.frame]),[['question','Is it open?',1],['answer','Locked.',20]]);
-    assert.match(wire.body.shots[0].description,/Beat 1 with line 2.*question.*Beat 2.*Touch the latch.*Beat 3 with line 1.*answer/);
+    assert.match(wire.body.shots[0].description,/As miran speaks\. Touch the latch\. As miran speaks\./);
+    assert.doesNotMatch(wire.body.shots[0].description, /question|answer/);
     assert.doesNotMatch(wire.body.shots[0].description,/Is it open\?|Locked\./);
   }
   const film = (await import('../../skills/storyboard/references/film-techniques.js')).default;
