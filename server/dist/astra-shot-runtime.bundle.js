@@ -52148,7 +52148,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.127.0",
+  version: "0.128.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -53794,7 +53794,8 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
     nativeSpeech: true,
     evidence: "The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment."
   };
-  if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
+  const localReference = provider === "mlx" && LOCAL_VIDEO_MODELS.fasth3_omni_reference.acceptsModel(model2);
+  if (operation === "reference" && (localReference || ["minimax", "heygen"].includes(provider))) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
@@ -53928,7 +53929,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
   if (guideLimit !== void 0) for (const member of members) {
     for (const ref of render.imageReferences(member)) if (["both", "video"].includes(ref.use)) requiredPaths.add(ref.path);
   }
-  let guideSlots = guideLimit === void 0 ? Infinity : Math.max(0, guideLimit - requiredPaths.size);
+  let guideSlots = guideLimit === void 0 ? Infinity : Math.max(0, guideLimit - requiredPaths.size - (render.framePlan(members[0]).start ? 1 : 0));
   const guides = [];
   const shots = members.map((member, index) => {
     const { id: shotId, visual } = member;
@@ -54015,12 +54016,13 @@ function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCovera
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
     }
     const cast = board?.SB_DOC?.characters;
-    const dialogue = lines.map((line) => {
+    const dialogue = lines.filter((line) => !shotScoped || line.delivery !== "voiceover").map((line) => {
       const frame2 = timeline?.dialogueCues?.find((c) => c.lineId === line.id)?.frame;
       const character = cast?.find((c) => c.id === line.speaker);
       const context = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
-      const voice = scene.dialogueVoice !== "model_generated" && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+      const nativeVoice = line.delivery !== "voiceover" && (!scene.audio || scene.audio.mode === "mix") && scene.dialogueVoice !== "model_generated";
+      const voice = nativeVoice && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
@@ -54135,7 +54137,7 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
       missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "The last-image slot requires an opening image" });
       continue;
     }
-    const endpoint2 = p.role === "start" && p.frame === 0 && caps.openingImage || p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage;
+    const endpoint2 = p.role === "start" && p.frame === 0 && (caps.openingImage || VIDEO_ADAPTERS[tool]?.voice === "reference") || p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage;
     if (caps.timedImages || endpoint2 && (p.strength === void 0 || p.strength === 1)) continue;
     missing.push({ input: "image", shotId: p.shotId, frame: p.frame, role: p.role, path: p.path, reason: "No temporal image slot at this frame" });
   }
@@ -54154,12 +54156,12 @@ function mapSceneInputs(request, tool, model2, missing = [], resolution2) {
     })));
   }
   for (const p of refs) {
-    if (p.reference?.scope === "shot_guide" && tool === "seedance_reference" && (request.shots.length === 1 || request.modelPacedCuts)) continue;
+    if (p.reference?.scope === "shot_guide" && VIDEO_ADAPTERS[tool]?.voice === "reference" && tool !== "astra_genai_msr" && (request.shots.length === 1 || request.modelPacedCuts)) continue;
     if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== "scene") {
       missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Subject/reference slots apply across the whole generation" });
       continue;
     }
-    if (p.frame === 0 && (assets || tool === "astra_genai_msr" || tool === "seedance_reference" && (p.strength ?? 1) === 1)) continue;
+    if (p.frame === 0 && (assets || VIDEO_ADAPTERS[tool]?.voice === "reference" && (p.strength ?? 1) === 1)) continue;
     if (tool === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
     missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "No compatible subject/reference slot with this frame scope" });
   }
@@ -54411,6 +54413,8 @@ function routingContext(episode, shotId, sceneNo, selectionOnly) {
   }
 }
 function selectedVideoTool(selection, operation = selection.operation) {
+  if (operation === "image" && selection.engine === "mlx" && selection.model && localVideoStrategy("ltx_video_generate")?.acceptsModel(selection.model))
+    return "ltx_video_generate";
   return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== "mlx" || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
 }
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
@@ -55682,17 +55686,19 @@ function manageSpeech(args) {
     const episode = dirname6(dirname6(file));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
     if (existsSync7(join6(episode, ".work/model-settings.json"))) {
-      const context = owner?.videoDirection?.dialogueVoice === "model_generated" ? routingContext(episode, void 0, owner.no, true) : routingContext(episode, args.shotId, void 0, true);
+      const context = routingContext(episode, args.shotId, void 0, true);
       const { selection } = context;
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const tool = args.tool ?? selectedVideoTool(selection);
-      const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
+      const tool = selectedVideoTool(selection);
+      if (context.speechRoute && (!tool || args.tool && args.tool !== tool))
+        throw new Error("scene_speech_route: the complete scene requires " + selection.operation);
+      const generatedVoice = !context.speechRoute && usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
       const verified = speechVideoCapabilities(
         selection.engine,
         selection.model || selection.engine,
         adapter?.operation ?? selection.operation,
-        hasVideoSubjectReferences(scene),
+        context.speechRoute?.speakers.length === 2 || hasVideoSubjectReferences(scene),
         generatedVoice
       );
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))

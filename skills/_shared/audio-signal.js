@@ -24,7 +24,7 @@ function inspect(file) {
     else spans.push([start, Number(time)]);
   }
   // One millisecond covers timestamp rounding on the last decoded sample.
-  return { status: covers(spans, 0, duration, 0.001) ? 'silent' : 'signal', spans };
+  return { status: covers(spans, 0, duration, 0.001) ? 'silent' : 'signal', spans, duration };
 }
 
 function covers(spans, start, seconds, tolerance = 0) {

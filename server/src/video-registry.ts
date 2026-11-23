@@ -188,8 +188,8 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   if (generatedVoice) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true,
     evidence: 'The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment.' };
   // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
-  // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
-  if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
+  const localReference = provider === 'mlx' && LOCAL_VIDEO_MODELS.fasth3_omni_reference.acceptsModel(model);
+  if (operation === 'reference' && (localReference || ['minimax', 'heygen'].includes(provider))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
   if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
   if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' || provider === 'ltx-desktop-local' ||
     provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))

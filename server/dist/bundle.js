@@ -114939,7 +114939,7 @@ import * as path10 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.127.0",
+  version: "0.128.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -120241,7 +120241,8 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
     nativeSpeech: true,
     evidence: "The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment."
   };
-  if (["minimax", "heygen"].includes(provider) && operation === "reference") return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
+  const localReference = provider === "mlx" && LOCAL_VIDEO_MODELS.fasth3_omni_reference.acceptsModel(model2);
+  if (operation === "reference" && (localReference || ["minimax", "heygen"].includes(provider))) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
   if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
@@ -120972,7 +120973,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
       const issue2 = assetContract.validate(sent.map((ref, i2) => ({ ...ref, path: paths3[i2] })), input.model, owners);
       if (issue2) throw new Error("image_plan_unsupported: " + issue2);
     }
-    const start = (msr || vendor) && frames.start ? bind("start", frames.start, "start", "video", "Opening picture", true) : void 0;
+    const start = VIDEO_ADAPTERS[tool2]?.voice === "reference" && frames.start ? bind("start", frames.start, "start", "video", "Opening picture", true) : void 0;
     if (msr) put2("references", [...paths3.map((file, i2) => msrReference(file, sent[i2].role)), ...start ? [{ imagePath: start, background: true }] : []]);
     else {
       const caller = args.referenceImagePaths;
@@ -121476,7 +121477,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
   if (guideLimit !== void 0) for (const member of members) {
     for (const ref of render.imageReferences(member)) if (["both", "video"].includes(ref.use)) requiredPaths.add(ref.path);
   }
-  let guideSlots = guideLimit === void 0 ? Infinity : Math.max(0, guideLimit - requiredPaths.size);
+  let guideSlots = guideLimit === void 0 ? Infinity : Math.max(0, guideLimit - requiredPaths.size - (render.framePlan(members[0]).start ? 1 : 0));
   const guides = [];
   const shots = members.map((member, index) => {
     const { id: shotId, visual } = member;
@@ -121563,12 +121564,13 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
     }
     const cast = board?.SB_DOC?.characters;
-    const dialogue = lines.map((line) => {
+    const dialogue = lines.filter((line) => !shotScoped || line.delivery !== "voiceover").map((line) => {
       const frame2 = timeline?.dialogueCues?.find((c) => c.lineId === line.id)?.frame;
       const character = cast?.find((c) => c.id === line.speaker);
       const context2 = { episode, board: board ?? {}, shot: raw[index] };
       const warnings = [];
-      const voice = scene.dialogueVoice !== "model_generated" && character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
+      const nativeVoice = line.delivery !== "voiceover" && (!scene.audio || scene.audio.mode === "mix") && scene.dialogueVoice !== "model_generated";
+      const voice = nativeVoice && character && voiceReference(resolveCharacterVoice(character, context2, warnings), context2, warnings);
       const direction = sceneVoiceDirection(line.acting, line.tts);
       return {
         lineId: line.id,
@@ -121915,7 +121917,7 @@ function mapSceneInputs(request, tool2, model2, missing = [], resolution2) {
       missing.push({ input: "image", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "The last-image slot requires an opening image" });
       continue;
     }
-    const endpoint2 = p.role === "start" && p.frame === 0 && caps.openingImage || p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage;
+    const endpoint2 = p.role === "start" && p.frame === 0 && (caps.openingImage || VIDEO_ADAPTERS[tool2]?.voice === "reference") || p.role === "end" && p.frame === request.frameCount - 1 && caps.endingImage;
     if (caps.timedImages || endpoint2 && (p.strength === void 0 || p.strength === 1)) continue;
     missing.push({ input: "image", shotId: p.shotId, frame: p.frame, role: p.role, path: p.path, reason: "No temporal image slot at this frame" });
   }
@@ -121934,12 +121936,12 @@ function mapSceneInputs(request, tool2, model2, missing = [], resolution2) {
     })));
   }
   for (const p of refs) {
-    if (p.reference?.scope === "shot_guide" && tool2 === "seedance_reference" && (request.shots.length === 1 || request.modelPacedCuts)) continue;
+    if (p.reference?.scope === "shot_guide" && VIDEO_ADAPTERS[tool2]?.voice === "reference" && tool2 !== "astra_genai_msr" && (request.shots.length === 1 || request.modelPacedCuts)) continue;
     if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== "scene") {
       missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "Subject/reference slots apply across the whole generation" });
       continue;
     }
-    if (p.frame === 0 && (assets || tool2 === "astra_genai_msr" || tool2 === "seedance_reference" && (p.strength ?? 1) === 1)) continue;
+    if (p.frame === 0 && (assets || VIDEO_ADAPTERS[tool2]?.voice === "reference" && (p.strength ?? 1) === 1)) continue;
     if (tool2 === "astra_genai_img2video" && model2 === "ltx-2.5-22b-distilled" && p.frame === 0) continue;
     missing.push({ input: "reference", shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: "No compatible subject/reference slot with this frame scope" });
   }
@@ -121974,7 +121976,8 @@ function sceneImageBindings(request, tool2, bindings) {
     const index = endpoint2 ? -1 : refs.findIndex((p) => p.path === binding.path && (!p.reference || p.reference.id === binding.id));
     const image2 = endpoint2 ? request.images.find((p) => p.path === binding.path && p.frame === (binding.id === "start" ? 0 : request.frameCount - 1)) : index >= 0 ? refs.splice(index, 1)[0] : void 0;
     if (!image2) return binding;
-    const parameter = endpoint2 ? FRAME_FIELDS[tool2]?.[binding.id === "start" ? 0 : 1] : tool2 === "seedance_reference" ? "referenceImagePaths[" + slot++ + "]" : assets ? assets.parameter + "[" + slot++ + "]" : "references[" + slot++ + "].imagePath";
+    const listReference = VIDEO_ADAPTERS[tool2]?.voice === "reference" && tool2 !== "astra_genai_msr";
+    const parameter = listReference ? "referenceImagePaths[" + slot++ + "]" : endpoint2 && tool2 === "astra_genai_msr" ? "references[" + slot++ + "].imagePath" : endpoint2 ? FRAME_FIELDS[tool2]?.[binding.id === "start" ? 0 : 1] : tool2 === "seedance_reference" ? "referenceImagePaths[" + slot++ + "]" : assets ? assets.parameter + "[" + slot++ + "]" : "references[" + slot++ + "].imagePath";
     return { ...binding, shotId: image2.shotId, frame: image2.frame, role: image2.role, parameter, character: image2.character };
   });
 }
@@ -121982,6 +121985,7 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode, resoluti
   const { pins, refs, caps } = mapSceneInputs(request, tool2, model2, [], resolution2);
   const args = {};
   const sceneSeconds = request.frameCount / request.fps;
+  if (tool2 === "astra_genai_msr") args.numFrames = request.frameCount;
   for (const field2 of ["duration", "durationSeconds", "requiredSeconds"]) {
     if (tool2.startsWith("seedance_") && field2 === "durationSeconds" && input[field2] === -1) continue;
     if (input[field2] !== void 0 && input[field2] !== sceneSeconds)
@@ -122071,7 +122075,7 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode, resoluti
   });
   const projected = {
     ...visual,
-    frames: { mode: assets || tool2 === "astra_genai_msr" || tool2 === "seedance_reference" ? "reference" : end ? "first_last" : "first", start: start?.path, end: end?.path },
+    frames: { mode: assets || VIDEO_ADAPTERS[tool2]?.voice === "reference" ? "reference" : end ? "first_last" : "first", start: start?.path, end: end?.path },
     references,
     bg: start?.path,
     imagePair: void 0,
@@ -122727,6 +122731,8 @@ function routingContext(episode, shotId, sceneNo, selectionOnly) {
   }
 }
 function selectedVideoTool(selection, operation = selection.operation) {
+  if (operation === "image" && selection.engine === "mlx" && selection.model && localVideoStrategy("ltx_video_generate")?.acceptsModel(selection.model))
+    return "ltx_video_generate";
   return Object.entries(VIDEO_ADAPTERS).find(([name, a]) => a.engine === selection.engine && a.operation === operation && (a.engine !== "mlx" || !selection.model || localVideoStrategy(name)?.acceptsModel(selection.model)))?.[0];
 }
 function shotVideoTiming(context2, tool2, args) {
@@ -122990,6 +122996,11 @@ async function executeShotRenderPlan(plan2, prepared) {
   const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }), "Poll this scene request with video_status.");
   return { content: [{ type: "text", text: JSON.stringify({ ...result, receiptPath: receiptPath2 }) }] };
 }
+function requireSpeechSignal(file, code) {
+  const signal = load7("../../skills/_shared/audio-signal.js").inspect(file);
+  if (signal.status !== "signal") throw new Error(code + ": audible speech is required in " + path26.basename(file));
+  return signal.duration;
+}
 function resolvePlanContext(input) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, void 0, input.sceneNo);
@@ -122998,7 +123009,29 @@ function resolvePlanContext(input) {
     throw new Error("model_selection_mismatch: tool does not match selected engine");
   if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
     throw new Error("Tool and operation disagree");
-  const tool2 = input.tool ?? selectedVideoTool(context2.selection, input.operation ?? context2.selection.operation);
+  const route = context2.speechRoute;
+  const tool2 = selectedVideoTool(context2.selection, route.operation);
+  if (!tool2 || input.tool && input.tool !== tool2 || input.operation && input.operation !== route.operation)
+    throw new Error("scene_speech_route: scene " + input.sceneNo + " requires " + route.operation + " for " + route.speakers.length + " speaking characters on " + context2.selection.engine);
+  const adapter2 = VIDEO_ADAPTERS[tool2];
+  if (tool2 === "astra_genai_msr" && context2.selection.model !== "ltx-2.5-22b-distilled")
+    throw new Error("scene_speech_references: MSR requires the distilled LTX model");
+  const track = context2.sceneDirection?.audio;
+  if (route.speakers.length === 1 && (adapter2.voice !== "supplied" || !track || track.mode === "mix"))
+    throw new Error("scene_speech_audio: author the finished dialogue track in videoDirection.audio with conditioning mode");
+  if (route.speakers.length === 1 && track) {
+    const seconds2 = requireSpeechSignal(path26.resolve(context2.episode, "storyboard", track.path), "scene_speech_audio");
+    const duration5 = Number(context2.shot.duration);
+    const fps = context2.sceneDirection?.fps ?? 24;
+    if (Math.abs(seconds2 * fps - Math.round(duration5 * fps)) >= 0.5)
+      throw new Error("scene_audio_timing: the dialogue track covers " + seconds2 + "s of the " + duration5 + "s scene");
+  }
+  if (route.speakers.length !== 1 && track && track.mode !== "mix")
+    throw new Error("scene_speech_route: only a single speaking character takes a conditioning track");
+  if (route.speakers.length === 2 && (adapter2.voice !== "reference" && tool2 !== "astra_genai_img2video" || input.args.generateAudio === false || context2.sceneDirection?.dialogueVoice === "model_generated"))
+    throw new Error("scene_speech_references: two speakers need their own voice samples and an audible reference operation");
+  if (route.speakers.length < 2 && input.shotBindings?.some((binding) => binding.performanceAudio))
+    throw new Error("scene_speech_route: a shot performance cannot override the scene soundtrack");
   return { context: context2, tool: tool2 };
 }
 function blockedPlanFile(episode, requestId) {
@@ -123054,6 +123087,15 @@ function planVideo(raw, persist = true) {
 }
 function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const sourceArgs = input.args;
+  const speakers = context2.speechRoute.speakers;
+  const opening = context2.speechRoute.opening;
+  if (!opening) throw new Error("scene_speech_opening: author the scene opening image before planning");
+  const openingPath = fs19.realpathSync(path26.resolve(context2.episode, "storyboard", opening));
+  if (context2.sceneMembers?.some((member) => {
+    const video3 = member.visual?.video;
+    return video3?.omniReferenceTaskType && video3.omniReferenceTaskType !== "reference";
+  }) || input.args.omniReferenceTaskType && input.args.omniReferenceTaskType !== "reference")
+    throw new Error("scene_speech_route: an edit task cannot replace scene generation");
   if (context2.selection.engine === "astra-genai" && input.maxCostUsd !== void 0 && input.args.reserveUsd === void 0)
     input = { ...input, args: { ...input.args, reserveUsd: input.maxCostUsd } };
   const quoteFor = (tool3, args2) => {
@@ -123070,7 +123112,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const override2 = media.find((key) => Object.hasOwn(input.args, key));
     if (override2) throw new Error("scene_image_scope: author " + override2 + " on the storyboard before planning this scene");
   }
-  const take = { ...input.maxCostUsd !== void 0 ? { maxCostUsd: input.maxCostUsd } : {}, sceneNo: input.sceneNo, shotIds: context2.shotIds, ...scene ? { sceneDurationSeconds: Number(context2.shot.duration) } : {}, ...input.purpose ? { purpose: input.purpose } : {}, ...input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}, ...input.changeNote ? { changeNote: input.changeNote } : {} };
+  const take = { speechRoute: context2.speechRoute, ...input.maxCostUsd !== void 0 ? { maxCostUsd: input.maxCostUsd } : {}, sceneNo: input.sceneNo, shotIds: context2.shotIds, ...scene ? { sceneDurationSeconds: Number(context2.shot.duration) } : {}, ...input.purpose ? { purpose: input.purpose } : {}, ...input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}, ...input.changeNote ? { changeNote: input.changeNote } : {} };
   if (input.basedOnRequestId) {
     const directory2 = path26.join(context2.episode, ".work/video-routing/plans");
     const parent = input.basedOnRequestId !== input.requestId && fs19.existsSync(directory2) && fs19.readdirSync(directory2).filter((file) => /^[a-f0-9]{64}\.json$/.test(file)).some((file) => {
@@ -123098,8 +123140,6 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     input = { ...input, args: { ...media, ...input.args } };
   }
   const lines = (context2.shot.narration ?? []).filter((line) => line.tts?.trim());
-  if (!scene && new Set(lines.map((line) => line.speaker)).size > 1)
-    throw new Error("shot_speaker_limit: split speaker changes into separate shots, then set each shot's framing and camera angle");
   const promptProfile = scenePromptProfile(tool2, selection.model);
   const physicalSpeech = lines.some((line) => line.delivery !== "voiceover");
   const veoDialogue = selection.engine === "veo" && physicalSpeech;
@@ -123127,7 +123167,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       scene,
       context2.episode,
       lines,
-      { bindDialogue: false, bindOpening: false, suffix: "", shotScoped: true, guideMode: conditioned ? void 0 : "background" },
+      { bindDialogue: false, bindOpening: false, suffix: speakers.length ? "" : "All visible mouths stay closed. No speech or vocalization.", shotScoped: true, guideMode: conditioned ? void 0 : "background" },
       () => void 0,
       context2.board
     );
@@ -123155,14 +123195,23 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
         missing.push(at + " " + p.role + ": " + (conditioned ? "A2V cannot bind subject references" : "individual reference strength is unsupported"));
       for (const line of shot2.dialogue ?? []) {
         const label = shot2.shotId + "@" + (line.frame ?? shot2.startFrame) + " " + line.lineId + " " + line.speaker;
-        if (line.frame !== void 0 && !binding?.performanceAudio)
+        if (line.frame !== void 0 && !conditioned && !binding?.performanceAudio)
           missing.push(label + " performance_audio: supply a timed WAV to lock speech to the opening frame");
-        if (line.warnings?.length || line.delivery === "voiceover")
-          missing.push(label + " voice: " + (line.warnings?.join(" ") ?? line.delivery));
+        if (line.warnings?.length) missing.push(label + " voice: " + line.warnings.join(" "));
         if (line.voice && !subjects.slice(0, 2).some((p) => p.character === line.speaker))
           missing.push(label + " voice_reference: the speaker needs a matching panel in the first two reference slots");
       }
     }
+    if (speakers.length === 2) {
+      const performances = request.shots.flatMap((shot2) => shot2.dialogue ?? []);
+      const samples = new Set(performances.map((line) => line.voice?.sha256));
+      if (performances.some((line) => line.voice?.provenance !== "pinned_settings_and_bytes") || speakers.some((id) => !performances.some((line) => line.speaker === id)) || samples.size !== 2)
+        missing.push("Bind both pinned character voices to the scene dialogue");
+      else for (const sample of new Set(performances.map((line) => line.voice.path)))
+        requireSpeechSignal(sample, "scene_speech_references");
+    }
+    if (request.images.find((image2) => image2.role === "start" && image2.frame === 0)?.path !== openingPath)
+      missing.push("Submit the authored scene opening at frame zero");
     if (missing.length) throw new Error("scene_render_inputs_unsupported:\n" + missing.join("\n"));
     const files3 = [...request.audio ? [request.audio.path] : [], ...request.images.map((p) => p.path), ...request.shots.flatMap((s2) => (s2.dialogue ?? []).flatMap((d) => d.voice ? [d.voice.path] : []))];
     for (const binding of input.shotBindings ?? []) {
@@ -123211,7 +123260,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     throw new Error(`reference_speech_route: ${tool2} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context2.shot.visual;
   const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
-  const supportsAudioToggle = tool2 === "astra_genai_img2video" || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.soundtrack);
+  const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "seedance_img2video" && SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.audio || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.soundtrack);
   const sound = context2.shot.sound;
   const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? "").trim());
@@ -123241,7 +123290,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const subjectReferences = Boolean(timedSubject || hasVideoSubjectReferences(shot));
   const imageWithReferences = tool2 === "astra_genai_img2video" && (subjectReferences || hasSubjectInput(input.args.references));
   const bindDialogueSeparately = (imageWithReferences || tool2 === "seedance_reference") && !silentPicture && input.args.generateAudio !== false;
-  const silentSuffix = silentPicture && (supportsAudioToggle || tool2 === "minimax_img2video" || tool2 === "heygen_img2video") ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
+  const silentSuffix = silentPicture ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
   const promptLimit = tool2 === "astra_genai_msr" || imageWithReferences ? genaiMsrPromptLimit() : tool2 === "astra_genai_img2video" ? 2e3 : tool2 ? videoPromptLimit(tool2) : void 0;
   const compileFor = (budget) => compileVideoPrompt(withSceneCamera(shot, context2.board.STRUCTURE?.scenes), video2.promptSource, names, {
     mode,
@@ -123249,9 +123298,9 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     bindDialogueSeparately,
     ...budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}
   });
-  let compiled = !scene && input.args.prompt === void 0 && video2?.promptSource ? compileFor(promptLimit) : void 0;
+  let compiled = !scene && video2?.promptSource ? compileFor(promptLimit) : void 0;
   const withPrompt = (prompt) => {
-    const args2 = input.args.prompt === void 0 && typeof prompt === "string" ? { ...input.args, prompt } : input.args;
+    const args2 = typeof prompt === "string" ? { ...input.args, prompt } : input.args;
     return silentSuffix ? {
       ...args2,
       ...supportsAudioToggle ? { generateAudio: includeEffects } : {},
@@ -123259,14 +123308,14 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     } : args2;
   };
   let callArgs = withPrompt(compiled?.prompt ?? video2?.prompt);
-  if (scene && (input.args.prompt !== void 0 || input.args.shots !== void 0))
+  if (input.args.shots !== void 0 || input.args.prompt !== void 0 && (scene || input.args.prompt !== video2?.prompt))
     throw new Error("scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene");
   const members = context2.sceneMembers ?? [];
   const bindFastH3 = tool2 === "fasth3_omni_reference" && context2.sceneOwnsFrames && members.length > 1 && !silentPicture;
   const bindTurns = Boolean(bindDialogueSeparately || tool2 === "astra_genai_msr" || bindFastH3 || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2));
   const bindOpening = tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" && subjectReferences;
-  const guideMode = tool2 === "seedance_reference" ? "composition" : tool2 === "astra_genai_img2video" && selection.model === "ltx-2.5-22b-distilled" && members.length === 1 ? "background" : void 0;
-  const guideLimit = tool2 === "seedance_reference" ? SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.referenceImages[1] : void 0;
+  const guideMode = tool2 && VIDEO_ADAPTERS[tool2]?.voice === "reference" && tool2 !== "astra_genai_msr" ? "composition" : tool2 === "astra_genai_img2video" && selection.model === "ltx-2.5-22b-distilled" && members.length === 1 ? "background" : void 0;
+  const guideLimit = tool2 === "seedance_reference" ? SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.referenceImages[1] : guideMode === "composition" ? 9 : void 0;
   const prepared = scene && context2.timed ? prepareSceneRequest(
     context2.sceneNo,
     members,
@@ -123438,12 +123487,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   }
   if (Array.isArray(args.openingPositions)) {
     const positions = args.openingPositions;
-    const opening = openingPrompt(String(args.prompt), positions);
+    const opening2 = openingPrompt(String(args.prompt), positions);
     if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
-      const prose = sceneCastProse(opening, positions, voice.voiceContinuity.speakers);
+      const prose = sceneCastProse(opening2, positions, voice.voiceContinuity.speakers);
       args.openingPositions = prose.positions;
       args.prompt = prose.prompt;
-    } else args.prompt = opening;
+    } else args.prompt = opening2;
   }
   if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
     args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
@@ -123464,7 +123513,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const fps = durationPlan.limits?.frameRate ?? 1;
     const frames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && durationPlan.limits?.frameRate ? framesForSeconds(args.duration, fps) : void 0;
     const requested = frames !== void 0 ? frames / fps : args.durationSeconds;
-    if (typeof requested === "number" && requested < durationPlan.requiredSeconds)
+    if (typeof requested === "number" && requested + 1e-9 < durationPlan.requiredSeconds)
       throw new Error(`video_duration_short: ${context2.shotId} needs ${durationPlan.requiredSeconds}s but the request covers ${requested}s. Use requiredSeconds or revise the shot timing.`);
   }
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
@@ -123515,6 +123564,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     voice.voiceContinuity,
     sceneRequest?.images.filter((pin) => pin.role === "face" && pin.reference?.scope === "scene")
   ) : void 0;
+  if (!imageBindings?.some((binding) => binding.submitted && binding.path === openingPath && binding.id === "start"))
+    throw new Error("scene_speech_opening: the selected operation must submit the authored opening image");
+  const submitted = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths : args.references?.flatMap((ref) => ref.audioPath || ref.audioUri || []) ?? [];
+  if (speakers.length < 2 && submitted.length)
+    throw new Error("scene_speech_references: this route cannot carry reference voices");
+  if (speakers.length === 2) {
+    const voices = speakers.map((id) => voice.voiceContinuity?.speakers.find((entry2) => entry2.speaker === id));
+    if (submitted.length !== 2 || voices.some((v) => !submitted.includes(v?.reference?.path)) || voice.voiceContinuity?.strategy !== "reference_voice" || voices.some((v) => !v?.audioIndex || v.reference?.provenance !== "pinned_settings_and_bytes") || new Set(voices.map((v) => v?.audioIndex)).size !== 2 || new Set(voices.map((v) => v?.reference?.sha256)).size !== 2)
+      throw new Error("scene_speech_references: bind two distinct pinned character voice samples to their speakers in the submitted request");
+    for (const sample of submitted) requireSpeechSignal(sample, "scene_speech_references");
+  }
   const quote = quoteFor(tool2, args);
   const body = {
     ...take,
@@ -123600,6 +123660,8 @@ function approveVideo(raw) {
   for (const id of input.planIds ?? []) {
     const plan2 = JSON.parse(fs19.readFileSync(path26.join(episode, ".work/video-routing/plans", id + ".json"), "utf8"));
     const context2 = approvedContext(plan2);
+    if (!plan2.speechRoute || hash2(plan2.speechRoute) !== hash2(context2.speechRoute) || plan2.tool !== selectedVideoTool(context2.selection, context2.speechRoute.operation))
+      throw new Error("video_plan_stale: the stored operation conflicts with the scene speakers");
     const changedSceneInput = plan2.sceneNo !== void 0 && Object.entries(plan2.inputs).some(([file, digest5]) => !fs19.existsSync(file) || createHash20("sha256").update(fs19.readFileSync(file)).digest("hex") !== digest5);
     if (context2.revision !== plan2.contextRevision || changedSceneInput)
       throw new Error(`video_plan_stale: shot ${plan2.shotId}'s frames, prompt, lines or settings changed after this plan \u2014 plan it again and show the user the new plan`);
@@ -123663,7 +123725,7 @@ async function executeVideo(raw, dispatch) {
     }
   }
   const context2 = approvedContext(plan2);
-  if (context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: the shot's frames, prompt, lines, selection or authorization changed");
+  if (!plan2.speechRoute || hash2(plan2.speechRoute) !== hash2(context2.speechRoute) || context2.revision !== plan2.contextRevision) throw new Error("video_plan_stale: the shot's frames, prompt, lines, selection or authorization changed");
   if (plan2.tool === "astra_genai_msr" || plan2.tool === "astra_genai_img2video" && plan2.voiceContinuity?.strategy === "reference_voice") await refreshGenaiMsrVoice();
   const refreshed = rebuildPlan(plan2);
   if (refreshed.id !== id) throw new Error("video_plan_stale: inputs, price or adapter contract changed");
@@ -132144,7 +132206,7 @@ var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and 
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, veo_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. The server chooses I2V for non-speaking pictures, A2V with the finished line audio for one speaker, or the scene opening and two pinned character voices for a two-speaker exchange. Split before a third voice. Direct episode calls enforce the same rule.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -136614,7 +136676,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The server selects I2V for a non-speaking picture, A2V with the finished track for one physical speaker, or the opening plus two pinned voices for two speakers. Split before a third voice. Every model and explicit tool follows the scene rule. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
@@ -136625,7 +136687,7 @@ TOOLS.push(
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
       basedOnRequestId: { type: "string", description: "Earlier request for this shot, used to compare candidates." },
       changeNote: { type: "string", minLength: 1, maxLength: 1e3, description: "What changed for this candidate." },
-      operation: { type: "string", enum: ["text", "image", "reference", "audio", "keyframe", "control", "extend", "edit", "retake"], description: "Operation; the selected engine determines the tool." },
+      operation: { type: "string", enum: ["text", "image", "reference", "audio", "keyframe", "control", "extend", "edit", "retake"], description: "Optional assertion of the operation required by the scene speakers." },
       tool: { type: "string", description: "Optional exact installed adapter tool, checked against the saved selection." },
       args: { type: "object", additionalProperties: true, description: "Adapter-specific fields. Omit model/resolution to inherit saved selection; unknown fields fail." }
     } },
@@ -138898,17 +138960,19 @@ function manageSpeech(args) {
     const episode = dirname11(dirname11(file));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
     if (existsSync36(join18(episode, ".work/model-settings.json"))) {
-      const context2 = owner?.videoDirection?.dialogueVoice === "model_generated" ? routingContext(episode, void 0, owner.no, true) : routingContext(episode, args.shotId, void 0, true);
+      const context2 = routingContext(episode, args.shotId, void 0, true);
       const { selection } = context2;
       const adapter2 = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
       if (args.tool && adapter2?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const tool2 = args.tool ?? selectedVideoTool(selection);
-      const generatedVoice = usesGeneratedVoice(tool2, owner?.videoDirection?.dialogueVoice);
+      const tool2 = selectedVideoTool(selection);
+      if (context2.speechRoute && (!tool2 || args.tool && args.tool !== tool2))
+        throw new Error("scene_speech_route: the complete scene requires " + selection.operation);
+      const generatedVoice = !context2.speechRoute && usesGeneratedVoice(tool2, owner?.videoDirection?.dialogueVoice);
       const verified = speechVideoCapabilities(
         selection.engine,
         selection.model || selection.engine,
         adapter2?.operation ?? selection.operation,
-        hasVideoSubjectReferences(scene),
+        context2.speechRoute?.speakers.length === 2 || hasVideoSubjectReferences(scene),
         generatedVoice
       );
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model || args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync || Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
@@ -147021,7 +147085,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.127.0" },
+  { name: "social-flow", version: "0.128.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

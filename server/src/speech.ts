@@ -312,18 +312,19 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
     const episode = dirname(dirname(file));
     const owner = win.STRUCTURE?.scenes?.find(item => item.no === scene.scene);
     if (existsSync(join(episode, '.work/model-settings.json'))) {
-      const context = owner?.videoDirection?.dialogueVoice === 'model_generated'
-        ? routingContext(episode, undefined, owner.no, true)
-        : routingContext(episode, args.shotId, undefined, true);
+      const context = routingContext(episode, args.shotId, undefined, true);
       const { selection } = context;
       // The shot's video tool decides the route (MSR speaks its prompt; audio-to-video takes line audio);
       // without one, the saved default operation does, as in video_plan.
       const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error('model_selection_mismatch: tool does not match selected engine');
-      const tool = args.tool ?? selectedVideoTool(selection);
-      const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
+      const tool = selectedVideoTool(selection);
+      if (context.speechRoute && (!tool || args.tool && args.tool !== tool))
+        throw new Error('scene_speech_route: the complete scene requires ' + selection.operation);
+
+      const generatedVoice = !context.speechRoute && usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine,
-        adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene), generatedVoice);
+        adapter?.operation ?? selection.operation, context.speechRoute?.speakers.length === 2 || hasVideoSubjectReferences(scene), generatedVoice);
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
           args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
           Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))

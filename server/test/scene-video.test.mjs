@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { bindRegisteredPanels, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
+import { bindRegisteredPanels, bindSceneAdapter, checkSceneDeployment, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
 import { approveVideo, executeVideo, planManagedVideo, planVideo, videoStatus } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
@@ -33,7 +33,7 @@ function busking(t) {
  data.write('RIFF'); data.writeUInt32LE(data.length-8,4); data.write('WAVEfmt ',8);
  data.writeUInt32LE(16,16); data.writeUInt16LE(1,20); data.writeUInt16LE(1,22);
  data.writeUInt32LE(8000,24); data.writeUInt32LE(16000,28); data.writeUInt16LE(2,32); data.writeUInt16LE(16,34);
- data.write('data',36); data.writeUInt32LE(data.length-44,40); data.writeInt16LE(9000,44+14000*2);
+ data.write('data',36); data.writeUInt32LE(data.length-44,40); for (let sample=14000; sample<18000; sample++) data.writeInt16LE(Math.round(9000*Math.sin(sample/4)),44+sample*2);
  fs.writeFileSync(path.join(dir,scene.audio.path),data);
  const save = () => fs.writeFileSync(path.join(dir,'scenes.js'),
    'window.STRUCTURE='+JSON.stringify({scenes:[{no:1,videoDirection:scene}]})+';\nwindow.SCENES='+JSON.stringify(members)+';');
@@ -60,30 +60,22 @@ test('EP01 delivers one multipart request with three shots, six file parts and o
  assert.match(final.prompt,/s0001 [\s\S]*s0002 [\s\S]*s0003 [\s\S]*Seorin steps[\s\S]*Mai An joins[\s\S]*Tu Vi enters/);
  assert.deepEqual([final.audio.startFrame,final.audio.endFrame,final.audio.cues[0].frame],[0,360,42]);
  assert.equal(final.audio.sha256,createHash('sha256').update(fs.readFileSync(path.join(f.dir,f.scene.audio.path))).digest('hex'));
- const blocked=await ROUTES.video_plan({...f.input,operation:'audio'});
- assert.equal(blocked.isError,true);
- const report=JSON.parse(blocked.content[0].text);
- assert.equal(report.executable,false); assert.equal(report.planId,undefined);
- assert.deepEqual(report.sceneRequest,request);
- assert.deepEqual(report.missing.map(m=>[m.input,m.frame]),[
-   ['transition',42],['transition',52],
- ]);
+ await assert.rejects(ROUTES.video_plan({...f.input,operation:'audio'}), /scene_speech_route/);
  assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
+ assert.throws(()=>mapSceneInputs(request,'astra_genai_audio2video'), e =>
+   e.missing.filter(m=>m.input==='transition').length===2);
  f.members[2].visual.camera={movement:'pan right',target:'the dancers',end:'The dancers fill the frame.'};
  f.save();
- const moved=await ROUTES.video_plan({...f.input,operation:'audio'});
- assert.match(JSON.parse(moved.content[0].text).sceneRequest.prompt,/s0003 [^\n]*?pan[^\n]*Closing frame: The dancers fill the frame/i);
- for (const op of ['image','text']) {
-   assert.throws(()=>planVideo({...f.input,operation:op}),e=>e.missing.some(m=>m.input==='audio') &&
-     e.missing.filter(m=>m.input==='transition').length===2);
- }
- f.scene.oneTake=true; f.save();
- assert.throws(()=>planVideo(f.input),/scene_one_take/);
+ const moved=f.capture(input=>input);
+ assert.match(moved.request.prompt,/s0003 [^\n]*?pan[^\n]*Closing frame: The dancers fill the frame/i);
+ f.scene.oneTake=true;
+ assert.throws(()=>f.capture(input=>input),/scene_one_take/);
 });
 
 test('one-take endpoint board reaches the A2V body with a single audio file and both endpoint images',t=>{
  const f=busking(t);
  const first=f.members[0];
+ first.narration=[{id:'line',speaker:'seorin',delivery:'on_screen',tts:'Ready?'}];
  f.members.splice(1);
  first.duration=15;
  first.timeline.endFrame=360;
@@ -165,6 +157,13 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   const board = path.join(f.dir,'scenes.js');
   fs.appendFileSync(board, '\nwindow.PRODUCTION='+JSON.stringify({videoAuthorization:{
     reference:'Fixture scene spending approval', maxUsd:0, maxConcurrent:1, maxAttempts:1}})+';');
+  const castVoices = people.map(({character},i) => {
+    const wav = path.join(f.dir,character+'.wav');
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=frequency='+(400+100*i)+':duration=1',wav]);
+    const tts = {engine:'gemini',voiceId:i?'Kore':'Puck',language:'ko',speed:1};
+    return {id:character,tts,voiceReference:{path:wav,tts,sha256:createHash('sha256').update(fs.readFileSync(wav)).digest('hex')}};
+  });
+  fs.appendFileSync(board,'\nwindow.SB_DOC='+JSON.stringify({characters:castVoices})+';');
   const before = fs.readFileSync(board);
   const key = config.astraGenaiApiKey, originalFetch = globalThis.fetch;
   config.astraGenaiApiKey = 'fixture';
@@ -354,21 +353,25 @@ test('Desktop keyframes receive each asset index only on an active compatible de
      generation_combinations:{'720p':{fps_to_durations:{24:[4]},aspect_ratios:['16:9']}},
    }]:[]});
  };
- const input=f.input;
- assert.throws(()=>planVideo({...input,args:{...input.args,duration:8}}),/scene_video_timing/);
- await assert.rejects(planManagedVideo(input),e=>e.missing[0].input==='deployment');
- assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
+ const {request}=f.capture(input=>input);
+ const tool = 'astra_genai_desktop_keyframes';
+ assert.throws(()=>planVideo({...f.input,operation:'keyframe'}),/scene_speech_route/);
+ assert.throws(()=>planVideo(f.input),/scene_inputs_unsupported/);
+ const mapped=bindSceneAdapter(request,tool,m.visual.video.model,m,{duration:4},f.episode);
+ const args={...mapped.args,prompt:request.prompt,reserveUsd:0,model:m.visual.video.model,resolution:'720p',aspectRatio:'16:9',fps:24};
+ await assert.rejects(checkSceneDeployment(request,tool,args),e=>e.missing[0].input==='deployment');
  enabled=true;
- const plan=await planManagedVideo(input);
- const ids=Object.fromEntries(plan.args.keyframes.map(pin=>[pin.imagePath,path.basename(pin.imagePath)]));
- const body=buildDesktopBody('keyframes',plan.args,ids);
+ await checkSceneDeployment(request,tool,args);
+ const ids=Object.fromEntries(args.keyframes.map(pin=>[pin.imagePath,path.basename(pin.imagePath)]));
+ const body=buildDesktopBody('keyframes',args,ids);
  assert.deepEqual(body.keyframes.map(p=>[p.assetId,p.frameIndex]),[['opening.png',0],['play-contact.png',42],['ending.png',83]]);
- assert.throws(()=>mapSceneInputs({...plan.sceneRequest,cuts:[{from:'s1',to:'s2',frame:42,transition:'hard_cut'}]},plan.tool),
+ assert.throws(()=>mapSceneInputs({...request,cuts:[{from:'s1',to:'s2',frame:42,transition:'hard_cut'}]},tool),
    error=>error.missing.length===1 && error.missing[0].input==='transition');
 });
 
 test('a saved one-take A2V request keeps the original audio, five intermediate cues and both endpoint fields', t => {
   const f = busking(t), first = f.members[0];
+  first.narration=[{id:'line',speaker:'seorin',delivery:'on_screen',tts:'Ready?'}];
   const cards = f.members.flatMap(m => m.timeline.images);
   f.members.splice(1);
   first.duration = 15;
@@ -441,7 +444,7 @@ test('a 25-frame silent scene retains its length and excludes all three face ref
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];
   f.save();
-  assert.equal(planVideo({...f.input,operation:'text'}).args.numFrames,25);
+  assert.throws(()=>planVideo({...f.input,operation:'text'}),/scene_speech_route/);
 });
 
 test('Veo reference scenes omit silent cast panels and keep prop assets separate from temporal frames', t => {
@@ -458,25 +461,14 @@ test('Veo reference scenes omit silent cast panels and keep prop assets separate
   shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
   shot.visual.frames = {mode:'reference', start:'images/opening.png'};
   f.save();
-  assert.throws(() => planVideo({...f.input,args:{}}), e => e.sceneRequest.images.length === 0);
-  shot.timeline.images = [];
-  shot.visual.references = [{id:'wheel',role:'prop',use:'video',purpose:'The bicycle wheel.',path:'images/solo.png'}];
+  const plan=planVideo({...f.input,args:{}});
+  const [wire]=buildVeoBody(plan.args).instances;
+  assert.ok(wire.image.bytesBase64Encoded);
+  assert.equal(wire.referenceImages,undefined);
+  shot.visual.references=[{id:'wheel',role:'prop',use:'video',purpose:'Bicycle wheel.',path:'images/solo.png'}];
   f.save();
-  const plan = planVideo({...f.input,args:{}});
-  const [wire] = buildVeoBody(plan.args).instances;
-  assert.equal(wire.referenceImages.length,1);
-  assert.ok(wire.referenceImages[0].image.bytesBase64Encoded);
-  assert.equal(wire.image,undefined);
-  shot.timeline.images.push({role:'start',path:'images/opening.png',frame:0});
-  f.save();
-  assert.throws(() => planVideo({...f.input,args:{}}), /scene_inputs_unsupported/);
-  delete shot.visual.frames;
-  shot.timeline.images = [];
-  delete shot.visual.references;
-  shot.visual.video.operation='text';
-  f.scene.openingPositions[1].images=[];
-  f.save();
-  assert.throws(()=>planVideo({...f.input,args:{durationSeconds:4}}),/scene_video_timing/);
+  assert.throws(()=>planVideo({...f.input,operation:'reference',args:{}}),/scene_speech_route/);
+  assert.throws(()=>planVideo({...f.input,args:{}}),/scene_inputs_unsupported/);
 });
 
 
@@ -484,6 +476,8 @@ test('supplied scene audio binds the selected model and original file to per-sho
   for (const mode of ['mix','conditioning']) {
     const f=busking(t);
     f.scene.audio.mode=mode;
+    f.members[0].narration=[{id:'line',speaker:'seorin',delivery:mode==='conditioning'?'on_screen':'off_screen',tts:'Ready?'}];
+    f.members[0].timeline.dialogueCues=[{lineId:'line',frame:0}];
     for (const shot of f.members) {
       shot.visual.video.operation=mode==='mix' ? 'image' : 'audio';
       shot.visual.video.model=mode==='mix' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev';
@@ -493,6 +487,13 @@ test('supplied scene audio binds the selected model and original file to per-sho
     const track=plan.sceneRequest.audio;
     assert.equal(plan.inputs[track.path],createHash('sha256').update(fs.readFileSync(track.path)).digest('hex'));
     assert.equal(track.mode,mode);
+    if (mode==='mix') {
+      assert.equal(plan.sceneRequest.shots[0].dialogue,undefined);
+      assert.ok(!plan.args.prompt.includes('Ready?'));
+    } else {
+      execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=600:duration=0.25',track.path]);
+      assert.throws(()=>planVideo({...f.input,sceneRendering:'per_shot'},false),/scene_audio_timing/);
+    }
   }
 });
 

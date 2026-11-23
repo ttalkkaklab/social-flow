@@ -1065,7 +1065,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The provider tools (seedance_*, astra_*, ltx_video_generate, fasth3_omni_reference, ltx_api_*, veo_*, minimax_*, heygen_*) are the adapters that route calls; call one directly only when the user names it.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. The server chooses I2V for non-speaking pictures, A2V with the finished line audio for one speaker, or the scene opening and two pinned character voices for a two-speaker exchange. Split before a third voice. Direct episode calls enforce the same rule.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -5447,7 +5447,7 @@ for (const tool of TOOLS) {
 TOOLS.push(
   { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
     inputSchema: { type: 'object', properties: {engine:{type:'string',enum:['ltx-desktop-local']}}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
-  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.',
+  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The server selects I2V for a non-speaking picture, A2V with the finished track for one physical speaker, or the opening plus two pinned voices for two speakers. Split before a third voice. Every model and explicit tool follows the scene rule. No generation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
       sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy:'none' }),
@@ -5457,7 +5457,7 @@ TOOLS.push(
       purpose: { type: 'string', enum: ['draft','final','revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
       basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },
       changeNote: { type: 'string', minLength: 1, maxLength: 1000, description: 'What changed for this candidate.' },
-      operation: { type: 'string', enum: ['text','image','reference','audio','keyframe','control','extend','edit','retake'], description: 'Operation; the selected engine determines the tool.' },
+      operation: { type: 'string', enum: ['text','image','reference','audio','keyframe','control','extend','edit','retake'], description: 'Optional assertion of the operation required by the scene speakers.' },
       tool: { type: 'string', description: 'Optional exact installed adapter tool, checked against the saved selection.' },
       args: { type: 'object', additionalProperties: true, description: 'Adapter-specific fields. Omit model/resolution to inherit saved selection; unknown fields fail.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },

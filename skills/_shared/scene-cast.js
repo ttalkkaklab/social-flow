@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const { orderedSpeech } = require('../storyboard/references/scene-direction.js');
 
 // Keep the cast registry order stable across cuts, including off-screen replies.
-function sceneCast(scene, cards) {
+function sceneSpeech(scene, cards, planning = false) {
   const lines = cards.flatMap(card => orderedSpeech(card).filter(line => line.tts?.trim()).map(line => ({card, line})));
   const spoken = new Set(), physical = new Set();
   const declared = scene.speakers;
@@ -22,25 +22,44 @@ function sceneCast(scene, cards) {
   }
   for (const {card, line} of lines) {
     if (!line.speaker) {
-      if (declared || line.delivery === 'on_screen' || line.delivery === 'off_screen')
+      if (planning || declared || line.delivery === 'on_screen' || line.delivery === 'off_screen')
         throw new Error('scene_speaker_missing: identify the speaker in ' + card.id + ' ' + (line.id || line.tts));
       continue;
     }
+    if (planning && !['on_screen','off_screen','voiceover'].includes(line.delivery))
+      throw new Error('scene_speaker_delivery: identify the delivery of ' + line.speaker + ' in ' + card.id);
     spoken.add(line.speaker);
-    if (spoken.size > 2 || declared && !declared.includes(line.speaker)) {
+    if (spoken.size > 2)
+      throw new Error('scene_speaker_limit: split scene ' + scene.no + ' before ' + line.speaker +
+        ' speaks in shot ' + card.id + ', line ' + (line.id || line.tts));
+    if (declared && !declared.includes(line.speaker)) {
       throw new Error('scene_speaker_limit: scene ' + scene.no + ', shot ' + card.id + ', line ' +
         (line.id || line.tts) + ' names ' + line.speaker + '; declare the speaker or start a new scene');
     }
     if (line.delivery !== 'voiceover') physical.add(line.speaker);
   }
-  return (declared ?? [...spoken]).filter(id => physical.has(id));
+  if (planning && declared?.some(id => !spoken.has(id)))
+    throw new Error('scene_speaker_mismatch: the declared speakers must match the lines of scene ' + scene.no);
+  return {physical:(declared ?? [...spoken]).filter(id => physical.has(id)), visible:lines.some(({line}) => line.delivery === 'on_screen')};
+}
+
+function sceneCast(scene, cards) {
+  return sceneSpeech(scene, cards).physical;
+}
+
+function sceneSpeechRoute(scene, cards, selection) {
+  const {physical, visible} = sceneSpeech(scene, cards, true);
+  const speakers = visible ? physical : [];
+  const operation = speakers.length < 2 ? (speakers.length ? 'audio' : 'image')
+    : selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' && selection.operation !== 'reference' ? 'image' : 'reference';
+  return {speakers, operation, external:!visible && physical.length > 0};
 }
 
 const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
-function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = false) {
+function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
   const voiceOnly = new Set(actors.filter(actor => actor.voiceOnly === true).map(actor => actor.id));
@@ -88,7 +107,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = fa
     }
   }
   const references = [];
-  const conditioning = scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
+  const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
   const ltx = engine === 'astra-genai';
   for (const character of speakers) {
     const actor = actors.find(c => c.id === character);
@@ -100,10 +119,6 @@ function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = fa
     const custom = scene.speakerReferences?.find(ref => ref.character === character);
     if (ltx && conditioning && custom)
       throw new Error('scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for ' + character);
-    // A speaking character can share an opening picture with the listener. Preserve separately requested assets.
-    if (frameVoice &&
-        !custom && !candidates.length && !cards.some(card => card.visual?.characterInputs?.some(spec => spec.character === character) ||
-          card.visual?.references?.some(ref => ref.use !== 'image' && ownerOf(ref, card) === character))) continue;
     if (originals.has(character)) {
       if (custom) throw new Error('scene_reference_owner: select one facial original for ' + character);
       continue;
@@ -117,7 +132,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = fa
         throw new Error('scene_reference_owner: ' + character + ' does not own ' + face);
       if (references.some(ref => canonical(ref.path) === canonical(face))) throw new Error('scene_reference_owner: two speakers share one face path');
       references.push({id:'scene-'+scene.no+'-'+character+'-face', character, path:face, role:'character', scope:'scene', use:'video', purpose:character+' facial identity.'});
-    } else if (ltx && scene.speakers && !(scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix'))
+    } else if (ltx && scene.speakers && !conditioning)
       throw new Error('character_panel_missing: scene ' + scene.no + ' speaker ' + character + ' needs a registered face');
   }
   const positions = rows => rows?.map(row => ({...row, images:ltx ? references.flatMap((r,i)=>r.character === row.character ? [i+1] : []) : speakers.includes(row.character) ? row.images : []}));
@@ -176,4 +191,4 @@ function projectSceneCast(scene, cards, board, boardDir, engine, frameVoice = fa
   return {members, direction, speakers};
 }
 
-module.exports = {sceneCast, projectSceneCast};
+module.exports = {sceneCast, sceneSpeechRoute, projectSceneCast};

@@ -67,7 +67,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
                 if (['both', 'video'].includes(ref.use))
                     requiredPaths.add(ref.path);
         }
-    let guideSlots = guideLimit === undefined ? Infinity : Math.max(0, guideLimit - requiredPaths.size);
+    let guideSlots = guideLimit === undefined ? Infinity : Math.max(0, guideLimit - requiredPaths.size - (render.framePlan(members[0]).start ? 1 : 0));
     const guides = [];
     const shots = members.map((member, index) => {
         const { id: shotId, visual } = member;
@@ -174,12 +174,13 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
                 throw new Error('scene_dialogue_timing: ' + shotId + ' needs one spoken line with id ' + cue.lineId);
         }
         const cast = board?.SB_DOC?.characters;
-        const dialogue = lines.map(line => {
+        const dialogue = lines.filter(line => !shotScoped || line.delivery !== 'voiceover').map(line => {
             const frame = timeline?.dialogueCues?.find(c => c.lineId === line.id)?.frame;
             const character = cast?.find(c => c.id === line.speaker);
             const context = { episode, board: board ?? {}, shot: raw[index] };
             const warnings = [];
-            const voice = scene.dialogueVoice !== 'model_generated' && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
+            const nativeVoice = line.delivery !== 'voiceover' && (!scene.audio || scene.audio.mode === 'mix') && scene.dialogueVoice !== 'model_generated';
+            const voice = nativeVoice && character && voiceReference(resolveCharacterVoice(character, context, warnings), context, warnings);
             const direction = sceneVoiceDirection(line.acting, line.tts);
             return { lineId: line.id, speaker: line.speaker, delivery: line.delivery, text: line.tts,
                 ...(direction ? { direction } : {}),
@@ -460,7 +461,7 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
             missing.push({ input: 'image', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: 'The last-image slot requires an opening image' });
             continue;
         }
-        const endpoint = p.role === 'start' && p.frame === 0 && caps.openingImage ||
+        const endpoint = p.role === 'start' && p.frame === 0 && (caps.openingImage || VIDEO_ADAPTERS[tool]?.voice === 'reference') ||
             p.role === 'end' && p.frame === request.frameCount - 1 && caps.endingImage;
         if (caps.timedImages || endpoint && (p.strength === undefined || p.strength === 1))
             continue;
@@ -477,13 +478,13 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
             })));
     }
     for (const p of refs) {
-        if (p.reference?.scope === 'shot_guide' && tool === 'seedance_reference' && (request.shots.length === 1 || request.modelPacedCuts))
+        if (p.reference?.scope === 'shot_guide' && VIDEO_ADAPTERS[tool]?.voice === 'reference' && tool !== 'astra_genai_msr' && (request.shots.length === 1 || request.modelPacedCuts))
             continue;
         if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== 'scene') {
             missing.push({ input: 'reference', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role, reason: 'Subject/reference slots apply across the whole generation' });
             continue;
         }
-        if (p.frame === 0 && (assets || tool === 'astra_genai_msr' || tool === 'seedance_reference' && (p.strength ?? 1) === 1))
+        if (p.frame === 0 && (assets || VIDEO_ADAPTERS[tool]?.voice === 'reference' && (p.strength ?? 1) === 1))
             continue;
         if (tool === 'astra_genai_img2video' && model === 'ltx-2.5-22b-distilled' && p.frame === 0)
             continue;
@@ -521,9 +522,12 @@ export function sceneImageBindings(request, tool, bindings) {
             : index >= 0 ? refs.splice(index, 1)[0] : undefined;
         if (!image)
             return binding;
-        const parameter = endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1]
-            : tool === 'seedance_reference' ? 'referenceImagePaths[' + slot++ + ']'
-                : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
+        const listReference = VIDEO_ADAPTERS[tool]?.voice === 'reference' && tool !== 'astra_genai_msr';
+        const parameter = listReference ? 'referenceImagePaths[' + slot++ + ']'
+            : endpoint && tool === 'astra_genai_msr' ? 'references[' + slot++ + '].imagePath'
+                : endpoint ? FRAME_FIELDS[tool]?.[binding.id === 'start' ? 0 : 1]
+                    : tool === 'seedance_reference' ? 'referenceImagePaths[' + slot++ + ']'
+                        : assets ? assets.parameter + '[' + slot++ + ']' : 'references[' + slot++ + '].imagePath';
         return { ...binding, shotId: image.shotId, frame: image.frame, role: image.role, parameter, character: image.character };
     });
 }
@@ -533,6 +537,8 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
     const { pins, refs, caps } = mapSceneInputs(request, tool, model, [], resolution);
     const args = {};
     const sceneSeconds = request.frameCount / request.fps;
+    if (tool === 'astra_genai_msr')
+        args.numFrames = request.frameCount;
     for (const field of ['duration', 'durationSeconds', 'requiredSeconds']) {
         if (tool.startsWith('seedance_') && field === 'durationSeconds' && input[field] === -1)
             continue;
@@ -604,7 +610,7 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
         purpose: [p.character, p.role].filter(Boolean).join(' ') + ' reference only. Use the shot action for entrance timing.' });
     // Subject assets go through the shot binder, which attaches the same ordered
     // reference descriptions and preserve/avoid instructions to the provider prompt.
-    const projected = { ...visual, frames: { mode: assets || tool === 'astra_genai_msr' || tool === 'seedance_reference' ? 'reference' : end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
+    const projected = { ...visual, frames: { mode: assets || VIDEO_ADAPTERS[tool]?.voice === 'reference' ? 'reference' : end ? 'first_last' : 'first', start: start?.path, end: end?.path }, references,
         bg: start?.path, imagePair: undefined, lastImagePath: undefined };
     if (caps.timedImages || assets || !request.images.length) {
         const fields = ['images', 'keyframes', 'sourceImagePath', 'lastImagePath', 'imagePath', 'imageUri', 'lastFramePath',

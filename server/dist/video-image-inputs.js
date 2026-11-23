@@ -299,7 +299,7 @@ export function prepareVideoImages(tool, input, shot, episode, members) {
             if (issue)
                 throw new Error('image_plan_unsupported: ' + issue);
         }
-        const start = (msr || vendor) && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
+        const start = VIDEO_ADAPTERS[tool]?.voice === 'reference' && frames.start ? bind('start', frames.start, 'start', 'video', 'Opening picture', true) : undefined;
         if (msr)
             put('references', [...paths.map((file, i) => msrReference(file, sent[i].role)), ...(start ? [{ imagePath: start, background: true }] : [])]);
         else {

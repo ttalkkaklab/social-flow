@@ -331,10 +331,15 @@ test('a managed scene rejects an ambiguous copied portrait and accepts its regis
   const voice = path.join(board,'iris.wav');
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=440:duration=2','-ar','16000',voice]);
   const doc = {characters:[{id:'iris',tts,voiceReference:{path:voice,tts,sha256:createHash('sha256').update(fs.readFileSync(voice)).digest('hex')}}]};
+  const otherVoice = path.join(board,'caller.wav');
+  const otherTts = {...tts,voiceId:'Puck'};
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=750:duration=2','-ar','16000',otherVoice]);
+  doc.characters.push({id:'caller',voiceOnly:true,tts:otherTts,voiceReference:{path:otherVoice,tts:otherTts,sha256:createHash('sha256').update(fs.readFileSync(otherVoice)).digest('hex')}});
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=white:s=320x320','-frames:v','1',path.join(board,'opening.png')]);
   const shot = {
-    id: 's1', scene:1, narration:[{speaker:'iris',delivery:'off_screen',tts:'Wait.'}],
+    id: 's1', scene:1, narration:[{speaker:'iris',delivery:'on_screen',tts:'Wait.'},{speaker:'caller',delivery:'off_screen',tts:'Okay.'}],
     visual: {
-      frames: { mode: 'reference' },
+      frames: { mode: 'reference',start:'opening.png' },
       references: [{ id: 'iris', role: 'character', use: 'video', path: 'shot.png', purpose: 'The dancer.' }],
       video: { ...video, prompt: 'Iris is dancing.' },
     },
@@ -354,7 +359,7 @@ test('a managed scene rejects an ambiguous copied portrait and accepts its regis
     args: { durationSeconds: 4 },
   });
   const refusal = await plan();
-  assert.equal(refusal.structuredContent.code,'modelark_asset_ambiguous');
+  assert.equal(refusal.structuredContent.code,'character_input_required');
   assert.equal(refusal.structuredContent.videoSubmitted,false);
   assert.deepEqual(f.counters,{});
   const ledger = path.join(episode,'.work/video-routing/state.json');
