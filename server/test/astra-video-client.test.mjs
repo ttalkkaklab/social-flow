@@ -455,6 +455,9 @@ describe('mocked tool calls', () => {
       const result = await dispatchVideo('astra_audio2video', { prompt: 'x', audioPath: path.join(dir, 'a.wav'), imagePath: path.join(dir, 'face.png'), outputPath: dir });
       assert.deepEqual(uploads, ['audio', 'image']);
       assert.equal(jobs[0].audio_upload_id, 'audio-id');
+      const receipt = JSON.parse(fs.readFileSync(path.join(dir,fs.readdirSync(dir).find(file=>file.endsWith('.astra-job.json')))));
+      const {conditioningAudioSha256} = await import('../../skills/_shared/character-speech.js');
+      assert.equal(conditioningAudioSha256(receipt.videoPath),createHash('sha256').update(fs.readFileSync(path.join(dir,'a.wav'))).digest('hex'));
       assert.deepEqual(jobs[0].images, [{ upload_id: 'image-id', frame_idx: 0, strength: 0.9 }]);
       assert.match(result.content[0].text, /audioUploadId: audio-id/);
       assert.match(result.content[0].text, /Audio expires at: 2026-10-01T04:00:00Z/);

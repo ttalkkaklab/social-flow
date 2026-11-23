@@ -33,6 +33,7 @@ import {
   shotImageRequest,
   recordShotImage,
   storySceneSchema,
+  storyShotSchema,
   writeStoryScenes,
   writeStorySequences,
   storySequenceSchema,
@@ -430,6 +431,31 @@ describe('story first, then characters and lines', () => {
     assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line=>line.speaker),['mina','joon']);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
+  });
+  it('keeps all speakers, a silent visual reference and exact shot anchors across storyboard writes', () => {
+    const dir = tmp(), speakers = ['ada', 'bo', 'cy'], actors = [...speakers, 'dee'];
+    castFile(dir, actors);
+    writeStorySequences({path:dir, sequences:[{id:'q1',title:'The vote',purpose:'Reach a decision'}]});
+    const scene = {sequence:'q1', no:1, place:'Office', time:'Day', event:'The vote begins', summary:'Three members vote while Dee watches.',
+      speakers, speakerReferences:actors.map(character => ({character, path:`assets/characters/${character}/face.png`}))};
+    writeStoryScenes(storySceneSchema.parse({path:dir, scenes:[scene]}), true);
+    writeFileSync(join(dir, 'opening.png'), png);
+    const cards = [0,1,2,3,4].map(i => ({scene:1, summary:'A member considers the vote.', timeline:{
+      startFrame:i*24, endFrame:(i+1)*24, transition:i ? 'hard_cut' : 'open', framing:'Medium shot.', action:'A hand rises.',
+      images:[{role:'start',path:i ? `view-${i}.png` : 'opening.png',frame:i*24}]} }));
+    writeStoryShots(storyShotSchema.parse({path:dir,shots:cards}));
+    const ids = readBoard(dir).win.SCENES.map(card => card.id);
+    writeShotCharacters({path:dir,shots:ids.map((id,i) => ({id,characters:[actors[i % actors.length]]}))});
+    writeShotDialogue({path:dir,shots:speakers.map((speaker,i) => ({id:ids[i],lines:[{speaker,tts:'Aye.'}]}))});
+    writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{openingPositions:[],emotion:'Relief follows the vote.'}}]});
+    const result = readBoard(dir).win, saved = result.STRUCTURE.scenes[0];
+    assert.deepEqual(saved.speakers, speakers);
+    assert.deepEqual(saved.speakerReferences, scene.speakerReferences);
+    assert.deepEqual(result.SCENES.map(shot => shot.timeline.images), cards.map(shot => shot.timeline.images));
+    assert.deepEqual(result.SCENES.flatMap(shot => shot.narration ?? []).map(line => line.speaker), speakers);
+    assert.equal(saved.videoOpeningSha256, createHash('sha256').update(png).digest('hex'));
+    assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakers:speakers.slice(0,2)}]}), /scene_speaker_mismatch/);
+    assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakerReferences:[scene.speakerReferences[0],scene.speakerReferences[0]]}]}), /scene_reference_owner/);
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
@@ -1313,12 +1339,19 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), [
       's0001-mina-face', 's0001-friend-face', 's0001-mina-front', 's0001-friend-front']);
     assert.ok(win.SCENES[0].visual.references.every(r => r.use === 'image'));
+    const card = win.SCENES[0], references = card.visual.references.map(ref => ref.id === 's0001-friend-face'
+      ? {...ref, character:'friend', use:'both'} : ref);
+    applyStoryboard({path:dir,draft:true,shotsById:[{id:card.id,shot:{...card,visual:{...card.visual,references}}}]});
+    make(dir,card.id,'start',{location:'room'});
+    assert.deepEqual(readBoard(dir).win.SCENES[0].visual.references.find(ref => ref.id === 's0001-friend-face'),
+      references.find(ref => ref.id === 's0001-friend-face'));
     assert.ok(win.SB_DOC.characters.find(c => c.id === 'friend').panels.face.endsWith('/friend/face.png'));
     writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first', reason: 'Frame route' } }] });
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['friend'] }] });
     writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'reference', reason: 'MSR route' } }] });
     win = readBoard(dir).win;
-    assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), ['s0001-friend-face', 's0001-friend-front', 's0001-friend-back']);
+    assert.deepEqual(win.SCENES[0].visual.references.filter(ref => ref.role === 'character').map(ref => ref.id).sort(),
+      ['s0001-friend-back','s0001-friend-face','s0001-friend-front']);
   });
   it('known Qwen routes use identity reference roles without repeating appearance prose', () => {
     const { root, dir } = pictureBoard();
@@ -1491,7 +1524,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(owner.frames,{});
     assert.equal(owner.videoOpeningSha256,undefined);
   });
-  it('scene anchors and the optional shot reference are stored separately and image-only extras stay out of video', () => {
+  it('scene anchors and optional shot guides keep their own image roles and visible principals', () => {
     const {root,dir} = pictureBoard();
     castFile(dir,['mina','friend'],{root:join(root,'data/c')});
     const input = { sequence:'q1', no:1, place:'Room',time:'Night',event:'Meeting',summary:'Two people meet.' };
@@ -1509,7 +1542,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.ok(opening.inputs.some(file=>file.includes('/characters/friend/')));
     writeShotCharacters({path:dir,shots:[{id:last,characters:['mina','friend']}]});
     for (const generated of [make(dir,last,'start',{role:'shot_reference'}),make(dir,last,'end',{role:'scene_end'})])
-      assert.ok(generated.inputs.every(file=>!file.includes('/characters/friend/')));
+      assert.ok(generated.inputs.some(file=>file.includes('/characters/friend/')));
 
     const board=snapshot(), frames=board.STRUCTURE.scenes[0].frames;
     assert.match(frames.start,/scene_start/); assert.match(frames.end,/scene_end/);
@@ -1521,7 +1554,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,createHash('sha256').update(png).digest('hex'));
     writeStoryScenes({path:dir,scenes:[{...input,frames:{}}]});
     assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,undefined);
-    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_limit/);
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_mismatch/);
     assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina'],speakerReferences:[{character:'extra',path:'places/key.png'}]}]}),/scene_reference_owner/);
   });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
@@ -1827,8 +1860,8 @@ describe('storyboard_read inspection', () => {
       { id: 's0003', scene: 3, narration: [{ speaker: 'caller', tts: 'Hello.', delivery: 'off_screen' }] }];
     withBoard(dir => {
       const { sceneBoundaries: joins } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
-      assert.deepEqual(joins.map(row => [row.left.no, row.right.no, row.sameTime, row.speakerLimit]),
-        [[5, 2, true, 'within_two'], [2, 7, false, 'within_two'], [7, 3, true, 'exceeds_two']]);
+      assert.deepEqual(joins.map(row => [row.left.no, row.right.no, row.sameTime, row.speakersKnown]),
+        [[5, 2, true, true], [2, 7, false, true], [7, 3, true, true]]);
       assert.deepEqual(joins[0].right.shotIds, ['s0002']);
       assert.deepEqual(joins[2].speakers, ['father', 'child', 'caller']);
     }, win);
@@ -1844,18 +1877,18 @@ describe('storyboard_read inspection', () => {
     clip.visual = { reuse: { clip: 'call.mp4' } };
     clip.performance = [{ kind: 'dialogue', group: 1, character: 'caller' }];
     recorded.STORY.transcripts = [{ shot: 3, source: 'call.mp4', groups: [{ text: 'Hello.', start: 0, end: 1 }] }];
-    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'exceeds_two');
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakersKnown, true);
     recorded.STORY.transcripts[0].source = 'other.mp4';
-    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'unknown');
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakersKnown, false);
     const malformed = structuredClone(win);
     malformed.SCENES = {};
     malformed.STRUCTURE.scenes[0].speakers = 'child';
-    assert.equal(contract().sceneBoundaries(malformed)[0].speakerLimit, 'unknown');
+    assert.equal(contract().sceneBoundaries(malformed)[0].speakersKnown, false);
     delete win.STRUCTURE.scenes[0].speakers;
     delete win.SCENES[1].narration;
     withBoard(dir => {
       const report = readStoryboard(storyboardReadSchema.parse({path: dir})).boundaryReview;
-      assert.equal(report.sceneBoundaries[0].speakerLimit, 'unknown');
+      assert.equal(report.sceneBoundaries[0].speakersKnown, false);
     }, win);
   });
   it('boundary review covers changed speakers, silent action, reverse views and explicit scene changes', () => {

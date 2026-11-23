@@ -366,8 +366,8 @@ with native MSR thoughts. Existing usable clips do not require regeneration.
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-MSR dialogue has one speaking character per shot. Bind that speaker to the inspected
-start image's viewer-relative position and appearance with `shot_prompt.speakerBindings`;
+Conventional MSR coverage follows one speaker per shot. For a one-take exchange, bind both speakers to the inspected
+start image by viewer-relative position and appearance with `shot_prompt.speakerBindings`;
 repeat the identity and image/audio mapping on compiled turns. Keep dialogue in
 `shot_dialogue` and action in `shot_prompt`. Recompile saved action with current icons
 at video planning time and report each setting's delivery route. Experimental success
@@ -875,4 +875,9 @@ Write one storyboard card per shot and compile one video request per scene. A cu
 
 ## Scene production — owner directive, 2026-11-23
 
-Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. Distilled LTX can combine the opening, an optional ending, up to four subject images and one background. Its first two subjects can carry voice samples in each native render. With authored cuts, the per-shot renderer can change that pair inside one scene job. A one-take exceeding the selected model's capacity needs an authoring decision.
+- Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.

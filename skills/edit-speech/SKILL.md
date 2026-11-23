@@ -77,9 +77,9 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    Attach all current line audio, then use the speech contract's compose-speech command
    before audio-conditioned video generation; build-reel also runs it automatically.
    It materializes planned reaction time and synchronizes any requested subtitle sidecar to speech intervals.
-   On-screen dialogue requires audio-conditioned animation or an explicit post lip-sync
-   adapter. Never silently substitute closed-mouth action. Off-screen speech and narration
-   can be mixed over existing action footage. Preserve the selected model and budget; a
+   For visible dialogue, generate a fresh clip with the final WAV or regenerate native
+   speech from the authored lines. Applying TTS lip sync to previously generated video is
+   prohibited. Off-screen speech and narration can be mixed over existing action footage. Preserve the selected model and budget; a
    change request does not authorize unrelated generations or publishing.
 5. Bind the new clip with `attach_video`, current revision, selected capabilities and videoPath;
    this records the source audio hashes and clears stale status. If delivery already exists, rebuild the affected clip, audio timing, any requested sidecar and the final

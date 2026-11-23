@@ -4,7 +4,8 @@
 const fs = require('node:fs'), path = require('node:path');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const { createHash } = require('node:crypto');
-const { speechRevision } = require('../../_shared/speech-contract.js');
+const { speechRevision, assertVideoPerformanceOwnership } = require('../../_shared/speech-contract.js');
+const { usesConditioningTrack, checkAssemblyRoutes } = require('./prepare-source-audio.js');
 const { authorizeSpeed } = require('./tts-speed-policy.js');
 const hash = value => createHash('sha256').update(value).digest('hex');
 const normalize = text => text.normalize('NFKC').toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, '');
@@ -168,6 +169,8 @@ function retainedSoundtrack(scene, board, cast, media) {
     throw new Error('Retained soundtrack sources must cover the current lines in order');
   for(const source of repair.sources){
     if(!['native_video','selected_line_audio'].includes(source.kind)||typeof source.path!=='string')throw new Error('Invalid retained soundtrack source');
+    if(source.kind==='selected_line_audio' && lines.some(line=>line.delivery==='on_screen' && source.lineIds.includes(line.id)))
+      throw new Error('post_lipsync_forbidden: a soundtrack repair cannot replace on-screen speech with selected line audio');
     const file=path.resolve(board,source.path);
     if(hash(fs.readFileSync(file))!==source.sha256)throw new Error('Retained soundtrack source changed');
     media[file]=source.sha256;
@@ -175,15 +178,52 @@ function retainedSoundtrack(scene, board, cast, media) {
   media[video]=repair.videoSha256;
   return true; // Provenance only: neither adapter capability nor listening/lip-sync approval.
 }
+function checkNativeVoiceCapacity(win, shot, binding, board) {
+  const {speechRenderSelection}=require('../../_shared/video-selection.js');
+  const {sceneSpeechRoute,assertRenderVoiceCapacity}=require('../../_shared/scene-cast.js');
+  const {adapters}=require('../../_shared/video-catalog.json');
+  const recorded={engine:binding.provider,model:binding.model,operation:binding.operation};
+  const episode=path.basename(board)==='storyboard' ? path.dirname(board) : undefined;
+  const {selection,saved,owner,cards,route:authored}=speechRenderSelection(win,shot,episode,recorded);
+  const scene=owner ?? {};
+  // Check the recorded engine as well when a later board selection has a different capacity.
+  const selections=[{choice:selection,sceneRoute:authored,explicit:saved?.operation,exact:owner ? undefined : saved?.operation}];
+  if(selection.engine!==recorded.engine || selection.model!==recorded.model || recorded.operation && recorded.operation!==selection.operation)
+    selections.push({choice:recorded,explicit:recorded.operation,exact:recorded.operation});
+  for(const {choice,sceneRoute,explicit,exact} of selections) {
+    const available=adapters.filter(adapter=>adapter.engine===choice.engine);
+    if(!available.length)continue; // Historical adapters outside the registry have no published capacity.
+    const route=sceneRoute ?? sceneSpeechRoute(scene,cards,choice);
+    if(!route.speakers.length)continue;
+    if(shot.visual.video.generateAudio===false || binding.generateAudio===false)
+      throw new Error('scene_dialogue_audio_required: a native speaking take requires its generated soundtrack');
+    if(explicit && (!available.some(entry=>entry.operation===explicit) || !['image','reference','audio','text'].includes(explicit)))
+      throw new Error('scene_speech_route: the selected operation cannot generate this native speaking take');
+    // Old bindings often stored only the provider, model, and native mode. Recover their
+    // speech operation from the scene; an explicitly recorded operation remains authoritative.
+    const operation=exact ?? route.operation;
+    const adapter=available.find(entry=>entry.operation===operation);
+    if(route.mode==='generated' && adapter?.voice.dialogue==='requires_model_generated_scene_voice') {
+      const spec=adapter.modelConstraints[choice.model];
+      if(!spec || spec.operations && !spec.operations.includes(operation))
+        throw new Error('scene_speech_route: this model cannot generate dialogue in the selected operation');
+      continue;
+    }
+    if(route.mode!=='reference' || !['reference','conditional_reference'].includes(adapter?.voice.lane))
+      throw new Error('scene_speech_route: this model and operation cannot supply the bound native dialogue');
+    assertRenderVoiceCapacity({tool:adapter.tool,model:choice.model,scene,cards,route});
+  }
+}
 function check(work, board) {
   work=path.resolve(work); board=path.resolve(board);
   const file=path.join(board,'scenes.js');
   const win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
+  const receipts = checkAssemblyRoutes(win,board);
   if(!Array.isArray(win.SCENES))throw new Error('SCENES missing');
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
   if(JSON.stringify(rows.map(r=>r[0]))!==JSON.stringify(expected.map(({i})=>String(i))))throw new Error('card order differs from SCENES');
-  const media={}, warnings=[];
+  const media={}, warnings=[], actedIntervals={};
   for(const [k,{s,i}] of expected.entries()) {
     const audio=path.resolve(work,rows[k][1]);
     const bytes=fs.readFileSync(audio);
@@ -195,8 +235,14 @@ function check(work, board) {
     const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
     const binding=s.visual?.video?.speechBinding;
     const retained=retainedSoundtrack(s,board,cast,media);
+    const selectedClip=path.resolve(board,s.visual?.video?.clip ?? '');
+    const sceneRender=receipts.sceneRenders.get(selectedClip);
+    const originalDriver=usesConditioningTrack(s,board,audio,sceneRender,receipts.drivers.get(selectedClip));
+    if(originalDriver && !(rows[k][4]||'').split(',').includes('sync=1'))
+      throw new Error('post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture');
     // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
     const native=binding?.mode==='native';
+    if(native)checkNativeVoiceCapacity(win,s,binding,board);
     if(native && s.sound?.audioSource!=='video')throw new Error('Native speech video needs sound.audioSource video for card '+i);
     if(win.SB_DOC?.speechPlanVersion===1 && (s.narration||[]).some(n=>n.delivery==='on_screen') && s.visual?.video && !binding&&!retained)throw new Error('On-screen dialogue needs a video speech binding for card '+i+'; bind the clip with speech_manage attach_video');
     for(const line of native||retained?[]:s.narration||[]) {
@@ -220,6 +266,16 @@ function check(work, board) {
       if(path.resolve(board,s.visual.video.clip||'')!==path.resolve(binding.videoPath) || hash(fs.readFileSync(binding.videoPath))!==binding.videoSha256)throw new Error('Bound video changed for card '+i);
       const audio=(s.narration||[]).map(n=>native?{lineId:n.id,revision:speechRevision(n,{tts:cast.find(c=>c.id===n.speaker)?.tts})}:{lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision});
       if(JSON.stringify(binding.audio)!==JSON.stringify(audio))throw new Error('Video speech binding is stale for card '+i);
+      if(binding.mode==='audio_conditioned' && s.sound?.audioSource==='video') {
+        const known=receipts.drivers.get(path.resolve(board,binding.videoPath));
+        if(known && binding.generationAudioSha256 && known!==binding.generationAudioSha256)
+          throw new Error('conditioning_audio_unverified: the selected clip has a different generation-time driver');
+        const driver=known ?? binding.generationAudioSha256;
+        if(driver)require('./compose-speech.js').currentConditioningAudio(s,board,{index:i,work,
+          timingVersion:win.SB_DOC?.performanceTimingVersion,driverSha256:driver,includeCardAudio:false,
+          sceneRender:receipts.sceneRenders.get(path.resolve(board,binding.videoPath)),sceneCards:win.SCENES.filter(card=>card.scene===s.scene),characters:win.SB_DOC?.characters,
+          audioPath:binding.generationAudioPath,sceneAudioPath:win.STRUCTURE?.scenes?.find(owner=>owner.no===s.scene)?.videoDirection?.audio?.path});
+      }
       const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
       if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))warnings.push('card '+i+': performance plan changed since the clip was bound; inspect the clip against the current plan (stale)');
       if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');
@@ -242,6 +298,10 @@ function check(work, board) {
       warnings.push('card ' + i + ': source soundtrack retained; perceptual audio quality not_reviewed');
       continue; // Line/voice/video provenance above still applies; this WAV was extracted, not TTS-composed.
     }
+    if(originalDriver && binding) {
+      actedIntervals[i]=require('./compose-speech.js').verifyConditioningPerformance(s,win,i,board,work,audio,media[audio],sceneRender);
+      continue;
+    }
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
       if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
@@ -257,6 +317,7 @@ function check(work, board) {
       const {intervals,durationSeconds:duration}=composition.sceneTiming(s,board,win.SB_DOC?.performanceTimingVersion);
       if(JSON.stringify(receipt.intervals)!==JSON.stringify(intervals))throw new Error('Scene audio timing intervals are stale for card '+i);
       if(Math.abs(composition.duration(audio)-duration)>0.03)throw new Error('Scene audio does not preserve planned acting timing for card '+i);
+      actedIntervals[i]=intervals;
     } else if(receipt) {
       if(lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0))throw new Error('Compose planned acting timing for card '+i);
       characterVoice(win,s,receipt);
@@ -264,7 +325,8 @@ function check(work, board) {
       authorizeSpeed(work,'final',receipt.playbackSpeed??1);
     }
   }
-  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,approved:false},null,2)+'\n');
+  assertVideoPerformanceOwnership(win.SCENES,board,undefined,receipts);
+  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,actedIntervals,approved:false},null,2)+'\n');
   return media;
 }
 function checkTempo(work,speed,min=1,max=1) {

@@ -207,12 +207,13 @@ test('managed recovery completes the original Desktop request after interrupted 
   const episode = path.join(root, 'data/c/episodes/recovery');
   fs.mkdirSync(path.join(episode, 'storyboard'), { recursive: true });
   settings.snapshotSettings(root, episode);
+  fs.writeFileSync(path.join(episode,'storyboard/opening.png'),png);
   const production = {
     videoAuthorization: { reference: 'local test', maxUsd: 0, maxConcurrent: 1, maxAttempts: 1 },
   };
   fs.writeFileSync(
     path.join(episode, 'storyboard/scenes.js'),
-    'window.PRODUCTION=' + JSON.stringify(production) + ';window.STRUCTURE={scenes:[{no:1}]};window.SCENES=[{id:"s1",scene:1,duration:3,visual:{}}];'
+    'window.PRODUCTION=' + JSON.stringify(production) + ';window.STRUCTURE={scenes:[{no:1}]};window.SCENES=[{id:"s1",scene:1,duration:3,visual:{frames:{mode:"first",start:"opening.png"},video:{prompt:"A boat floats."}}}];'
   );
   const timer = globalThis.setTimeout;
   t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) => timer(fn, ms === 2500 ? 0 : ms, ...args));
@@ -226,6 +227,7 @@ test('managed recovery completes the original Desktop request after interrupted 
       ].fps_to_durations[24] = [2, 4];
       return json(localSpecs);
     }
+    if (init.method === 'POST' && url.endsWith('/assets')) return json({id:'opening-asset'});
     if (init.method === 'POST') {
       submissions++;
       return json({ id: 'native-id', lane: 'local' });

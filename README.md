@@ -133,7 +133,7 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-Each shot has one speaking character; speaker changes get separate generation units.
+Conventional dialogue coverage follows one speaker per shot. A scripted one-take may include replies within the selected model’s capacity.
 [Scene attention](skills/storyboard/references/shot-view.md#plan-attention-across-the-scene)
 chooses the visible evidence independently of the voice: faces, consequential details,
 discovery POVs or spatial relationships. Addressing someone does not pull that listener
@@ -1219,9 +1219,7 @@ are not concatenated by shared image and sliced at arbitrary audio boundaries.
 `edit-speech` repairs a requested shot/character without replacing
 unaffected takes. Speech generation has no automatic listening or human approval gate;
 outputs are marked `not_reviewed`. File, voice and timing provenance remain required.
-See [the speech contract](skills/produce/references/shot-speech.md). Video models are
-replaceable: audio-conditioned generation, post lip-sync and off-screen voiceover are separate
-routes; LTX is one adapter, not the common data model.
+On-screen speech comes from a fresh audio-conditioned take or native model speech. Off-screen narration can use a separate recording. Changing visible dialogue requires a fresh take. See the [speech contract](skills/produce/references/shot-speech.md).
 
 ### Stream a character live
 
@@ -1384,7 +1382,12 @@ See [review translations](skills/storyboard/references/review-localization.md).
 
 ### Scene video requests
 
-Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. Distilled LTX can combine the opening, an optional ending, up to four subject images and one background. Its first two subjects can carry voice samples in each native render. With authored cuts, the per-shot renderer can change that pair inside one scene job. A one-take exceeding the selected model's capacity needs an authoring decision.
+- Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 ## Contributors
 

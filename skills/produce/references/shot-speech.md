@@ -313,18 +313,36 @@ trace as proof of natural acting. Normal production still has no automatic liste
 
 For the selected provider/model, resolve and record capabilities with evidence:
 `{provider, model, audioConditioning, lipSync, postLipSync, nativeSpeech?, evidence}`.
-`plan_video` uses capabilities only:
+`postLipSync` is a compatibility field and must be false. Applying TTS lip sync to existing
+footage is prohibited, including plans saved with an older version of the plugin.
+Choose the production route from the selected adapter and the authored speech delivery.
+
+An existing native clip can serve several cards with different dialogue when their source
+intervals are disjoint. Set `edit.in` and `edit.out` on the cards to select the lines from the
+original scene. An overlapping interval with different bound speech requires a new take.
+Attachment and assembly check the active take, earlier takes in the episode's speech
+history, and local generation receipts. An audible A2V output keeps its embedded
+soundtrack. When its generation receipt identifies the driving WAV, its current
+line recordings and timing must still produce that WAV.
 
 | Speech | Route | When speech changes |
 |---|---|---|
-| one physical speaker + nativeSpeech (MSR) | native | Regenerate the clip from the edited prompt; no line audio exists |
-| voiceover/off_screen | voiceover | Replace audio, retime subtitles/edit; keep suitable action footage |
+| Authored physical dialogue within the native render’s current voice limit | native | Regenerate the speaking take from the edited lines |
+| Narration or a scene with off-screen-only speech | voiceover | Replace the external recording and update subtitle timing |
 | on_screen + audioConditioning | audio_conditioned | Regenerate from the final voice WAV and review the visible mouth timing |
-| on_screen + separate postLipSync | post_lipsync | Rerun the selected lip-sync adapter on affected footage |
-| on_screen + neither capability | unsupported | Select a suitable adapter; do not mute the character |
+| on_screen without native speech or audio conditioning | unsupported | Report the missing capability and preserve the authored dialogue |
 
-A native-speech shot has one physical speaker: on-screen speech moves that speaker's
-mouth and off-screen dialogue keeps the speaker unseen. Silent/inner-thought shots use
+For fresh audio-conditioned video, use the rendered soundtrack when audible. A silent
+render may use its original conditioning WAV when the completed generation receipt binds
+the exact WAV and video bytes. Select that WAV in the card audio plan, or provide
+`audioPath` to `attach_video` before the card plan exists. Attachment verifies the
+selected takes and their timing against the driver, including both channels of a
+stereo export. A changed line or delivery needs a new speaking take.
+
+Distilled MSR can bind two pinned voices in one native render. Each voice needs its own
+subject in the first two image slots. The speaking character's mouth moves for an on-screen
+line. For an off-screen reply, keep the visible listener's mouth closed. Across authored
+cuts, a new child render can bind a different pair of speakers. Silent/inner-thought shots use
 image2video instead. Thoughts are character `voiceover` with external pinned TTS; compose
 measured speech with lead-in/tail-out and action timing before planning video coverage.
 Keep visible mouths closed and `sound.audioSource:"speech"` for assembly. Never write

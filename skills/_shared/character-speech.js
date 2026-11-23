@@ -127,4 +127,45 @@ function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = fal
   return actual;
 }
 
-module.exports = {characterSpeech, validateSpeechContext, verifiedSpeechGeneration};
+// The per-shot renderer plays this recording directly, in place of a generated turn.
+function verifyShotPerformance(file, card, board, boardDir) {
+  const lines = (card.narration || []).filter(line => line.tts?.trim());
+  const line = lines[0], audio = line?.audio;
+  const registry = board.SB_DOC?.characters ?? [];
+  const actor = Array.isArray(registry) ? registry.find(person => person.id === line?.speaker) : registry[line?.speaker];
+  if (lines.length !== 1 || line.delivery === 'voiceover' || !actor || !audio?.path ||
+      fs.realpathSync(path.resolve(boardDir, audio.path)) !== fs.realpathSync(file) || audio.sha256 !== hash(fs.readFileSync(file)))
+    throw new Error('scene_speech_performance: attach the current recording of the speaking line before using its audio');
+  const character = characterSpeech({...actor, id:line.speaker}, {board, boardDir});
+  if (audio.revision !== require('./speech-contract.js').speechRevision(line, character) || audio.generation?.text !== line.tts)
+    throw new Error('scene_speech_performance: the recorded line has changed');
+  verifiedSpeechGeneration(file, audio.generation, character.tts, line, {required:true});
+}
+
+// Only the adapter that uploaded the driver can attest which bytes generated this picture.
+function conditioningAudioSha256(videoPath) {
+  if (!videoPath || !fs.existsSync(videoPath)) return;
+  const video = path.resolve(videoPath);
+  const receipts = ['.astra-job.json','.astra-genai.json'].map(suffix => video + suffix).filter(file => fs.existsSync(file));
+  if (receipts.length !== 1) return;
+  let receipt;
+  try { receipt = JSON.parse(fs.readFileSync(receipts[0], 'utf8')); } catch { return; }
+  if (!receipt || receipt.status !== 'completed' || !receipt.jobId || receipt.videoPath !== video ||
+      hash(fs.readFileSync(video)) !== receipt.sha256) return;
+  if (receipt.operation === 'scene-to-video') {
+    const contract = require('./scene-speech-receipt.js');
+    return contract.sceneDriver(contract.readSceneRequest(video,receipt));
+  }
+  return recordedConditioningDriver(receipt,receipts[0]);
+}
+function recordedConditioningDriver(receipt,sidecar) {
+  if (receipt?.status !== 'completed' || !receipt.jobId || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256)) return;
+  const request = receipt.submittedRequest;
+  const astra = sidecar.endsWith('.astra-job.json') && receipt.mode === 'audio2video' &&
+    request?.mode === 'audio2video' && request.audio_upload_id && !request.audio_start_time && request.audio_max_duration === undefined;
+  const gateway = sidecar.endsWith('.astra-genai.json') && receipt.version === 1 && receipt.operation === 'audio-to-video' &&
+    /^[a-f0-9]{64}$/.test(receipt.fingerprint);
+  if (astra || gateway) return receipt.conditioningAudioSha256;
+}
+
+module.exports = {characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver};

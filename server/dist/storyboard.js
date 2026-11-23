@@ -136,9 +136,10 @@ export const audienceDecisionSchema = z.discriminatedUnion('decision', [
 ]).describe('Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.');
 export const sceneFramesSchema = z.object({ start: nonEmpty.optional(), end: nonEmpty.optional() }).strict()
     .describe('Temporal anchors for the complete scene, relative to the storyboard. An empty object selects no anchors.');
-export const sceneSpeakerReferencesSchema = z.array(z.object({ character: nonEmpty, path: nonEmpty }).strict()).max(2)
-    .describe('Optional scene-wide face image for a declared speaker. Defaults to the registered face panel.');
-export const sceneSpeakersSchema = z.array(nonEmpty).max(2).refine(ids => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene. Their registered panels and voices supply video identity.");
+export const sceneSpeakerReferencesSchema = z.array(z.object({ character: nonEmpty, path: nonEmpty }).strict())
+    .describe('Optional scene-wide face images. Identify the registered cast member who owns each image, including a silent character appearing in the scene.');
+export const sceneSpeakersSchema = z.array(nonEmpty).refine(ids => new Set(ids).size === ids.length, 'List each scene speaker once')
+    .describe('Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.');
 export const sceneSchema = z
     .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
@@ -1191,21 +1192,26 @@ export function applyStoryboard(args, opts = {}) {
         if (scene.speakers !== undefined)
             scene.frames ??= {};
         const previous = win.STRUCTURE?.scenes?.find(old => old.no === scene.no);
-        if (scene.frames !== undefined && !scene.frames.start)
+        const members = (next.SCENES ?? []).filter(card => card.scene === scene.no);
+        if (scene.frames !== undefined && !scene.frames.start && !members[0]?.timeline?.images?.some(image => image.role === 'start'))
             delete scene.videoOpeningSha256;
         else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection)
             scene.videoOpeningSha256 = createHash('sha256').update(readFileSync(resolve(dirname(file), scene.frames.start))).digest('hex');
-        sceneCasting.sceneCast(scene, (next.SCENES ?? []).filter(card => card.scene === scene.no));
-        if (scene.speakers?.length) {
-            const { ids } = castRegistry(file, next);
-            for (const id of scene.speakers)
+        sceneCasting.sceneCast(scene, members);
+        if (scene.speakers?.length || scene.speakerReferences?.length) {
+            const { ids, voiceOnly } = castRegistry(file, next);
+            for (const id of scene.speakers ?? [])
                 if (!ids.has(id))
                     throw new Error('cast_unknown: scene ' + scene.no + ' speaker ' + id);
+            for (const { character } of scene.speakerReferences ?? []) {
+                if (!ids.has(character) || voiceOnly.has(character))
+                    throw new Error('scene_reference_owner: ' + character + ' needs a registered visual identity for scene ' + scene.no);
+            }
         }
     }
     const audienceResult = audienceEdit ? audienceSound().patch(next, dirname(file), args) : undefined;
     // Keep the review's panel links and the executable MSR references on the same shared sheets.
-    const panelIds = [...new Set([...(next.STRUCTURE?.scenes ?? []).flatMap(scene => scene.speakers ?? []), ...(next.SCENES ?? []).flatMap(shot => [...(contract().castOf(shot) ?? []), ...bystandersOf(shot)])])];
+    const panelIds = [...new Set([...(next.STRUCTURE?.scenes ?? []).flatMap(scene => [...(scene.speakers ?? []), ...(scene.speakerReferences ?? []).map(ref => ref.character)]), ...(next.SCENES ?? []).flatMap(shot => [...(contract().castOf(shot) ?? []), ...bystandersOf(shot)])])];
     if (panelIds.length && existsSync(join(dirname(file), 'cast.json'))) {
         const sheets = new Map();
         for (const id of panelIds) {
@@ -1251,11 +1257,12 @@ export function applyStoryboard(args, opts = {}) {
                 || !(contract().castOf(shot) ?? []).every(id => sheets.has(id)))
                 continue;
             const authored = Array.isArray(visual.references) ? visual.references : [];
-            visual.references = [...characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'image').map(ref => {
+            const designated = authored.filter(ref => ref.role !== 'character' || ref.use === 'video' || ref.use === 'both');
+            const stillPanels = characterPanels().canonicalReferences(dirname(file), String(shot.id), contract().castOf(shot) ?? [], 'image');
+            visual.references = [...stillPanels.filter(panel => !designated.some(ref => ref.id === panel.id)).map(ref => {
                     const previous = authored.find(item => item.id === ref.id || item.path === ref.path);
                     return { ...ref, ...(previous?.preserve ? { preserve: previous.preserve } : {}), ...(previous?.avoid ? { avoid: previous.avoid } : {}) };
-                }),
-                ...(Array.isArray(visual.references) ? visual.references : []).filter(ref => ref.role !== 'character')];
+                }), ...designated];
         }
     }
     const bad = findings.some((f) => f.level === 'bad');
@@ -1443,12 +1450,12 @@ export function writeStoryScenes(args, requireSceneCast = false) {
             throw new Error('scene_speakers_required: list the speakers when creating a scene, or use [] for a silent scene');
         const first = members[0];
         const anchors = scene.frames ?? existing?.frames ?? (scene.speakers !== undefined ? {} : undefined);
-        const opening = anchors !== undefined ? anchors.start : first?.timeline?.images?.find(image => image.role === 'start')?.path ??
-            first?.visual?.frames?.start;
+        const opening = anchors?.start ?? first?.timeline?.images?.find(image => image.role === 'start')?.path ??
+            (anchors === undefined ? first?.visual?.frames?.start : undefined);
         const frame = (scene.videoDirection || scene.frames !== undefined && existing?.videoDirection) && opening ? resolve(dirname(scenesPath(args.path)), opening) : undefined;
         const pin = frame ? { videoOpeningSha256: createHash('sha256').update(readFileSync(frame)).digest('hex') } : {};
         const revised = { ...existing, ...scene, ...(anchors ? { frames: anchors } : {}), ...pin };
-        if (anchors !== undefined && !anchors.start)
+        if (anchors !== undefined && !opening)
             delete revised.videoOpeningSha256;
         scenes = upsertBy(scenes, [revised], 'no');
         sequences = sequences.map((q) => q.id === sequence
@@ -1795,7 +1802,7 @@ export const shotCharactersSchema = z.object({
         expression: z.record(nonEmpty, nonEmpty).optional()
             .describe('Each listed character\'s visible state as the shot opens, in English physical cues read from the scene\'s situation: brows, eyes, mouth, posture. Silent listeners and bystanders too. An earlier call\'s entry stays when omitted.'),
         bystanders: z.array(nonEmpty).max(2).refine((ids) => new Set(ids).size === ids.length, 'a character is listed once').optional()
-            .describe('Cast members also seen in this shot who have no on-screen line and take no video reference: the start image draws them from their sheet panels and the clip keeps them from that picture. With characters, at most four of the cast on screen. An earlier call\'s list stays when omitted; [] clears it.'),
+            .describe('Additional cast members in the frame without on-screen dialogue. The start image draws them from their sheet panels. A separately designated video reference can identify a silent participant. With characters, at most four cast members appear in the shot. Omit to keep the current list, or use [] to clear it.'),
         extras: z.string().optional()
             .describe('Unnamed people in the frame, in English: how many, what they look like and what they are doing ("six children in orange bibs chasing a ball across the pitch"). The image and video prompts draw them from these words, without a reference. An earlier call\'s text stays when omitted; "" clears it.'),
     }).strict()).min(1),
@@ -1883,16 +1890,20 @@ function castRegistry(path, win) {
     if (storyFirst)
         checkCast(dir, cast);
     const ids = new Set(cast.map((entry) => entry.id));
+    const voiceOnly = new Set(cast.filter(entry => entry.voiceOnly === true).map(entry => entry.id));
     if (!storyFirst) {
         const list = win.SB_DOC?.characters;
         const entries = Array.isArray(list) ? list : Object.entries(list ?? {}).map(([id, value]) => ({ ...value, id }));
         for (const entry of entries)
-            if (typeof entry?.id === 'string')
+            if (typeof entry?.id === 'string') {
+                if (!ids.has(entry.id) && entry.voiceOnly === true)
+                    voiceOnly.add(entry.id);
                 ids.add(entry.id);
+            }
     }
     if (!ids.size)
         throw new Error('cast_required: snapshot the episode cast in storyboard/cast.json first (storyboard §1)');
-    return { ids, voiceOnly: new Set(cast.filter((entry) => entry.voiceOnly === true).map((entry) => entry.id)) };
+    return { ids, voiceOnly };
 }
 /** Cast members a shot also shows without a line or a video reference (visual.bystanders, shot_characters). */
 function bystandersOf(shot) {
@@ -2446,17 +2457,6 @@ function docEntry(win, kind, id) {
         throw new Error(`${kind === 'locations' ? 'location' : 'prop'}_unknown: ${id} is not in SB_DOC.${kind}`);
     return entry;
 }
-function imageCast(win, shot, role) {
-    const visible = contract().castOf(shot) ?? [];
-    if (!role || role === 'scene_start')
-        return visible;
-    const scene = win.STRUCTURE?.scenes.find(row => row.no === shot.scene);
-    if (!scene)
-        return visible;
-    const { sceneCast } = loadFromHere('../../skills/_shared/scene-cast.js');
-    const speakers = sceneCast(scene, (win.SCENES ?? []).filter(card => card.scene === scene.no));
-    return visible.filter(id => speakers.includes(id));
-}
 /** Plan inputs for shot_image: the ordered pictures, the assembled prompt and the adapter arguments. */
 function shotImageSourceBasis(path, id, request) {
     const { win } = readOutline(path);
@@ -2464,7 +2464,7 @@ function shotImageSourceBasis(path, id, request) {
     const doc = (win.SB_DOC ?? {});
     const rows = (value) => Array.isArray(value) ? value : [];
     const ledger = (doc.propContinuity ?? {});
-    const cast = imageCast(win, shot, request.sceneImageRole);
+    const cast = contract().castOf(shot) ?? [];
     const extras = request.sceneImageRole && request.sceneImageRole !== 'scene_start' ? [] : request.bystanders ?? bystandersOf(shot);
     const assets = { location: rows(doc.locations).find(entry => entry.id === request.location),
         props: rows(doc.props).filter(entry => request.props.includes(String(entry.id))),
@@ -2534,7 +2534,7 @@ function buildShotImageRequest(args) {
     // An end image keeps its own props (frames.endProps) — a prop handed over can appear only at the end.
     const recorded = args.frame === 'end' && Array.isArray(frames.endProps) ? frames.endProps : visual.props;
     const props = args.props ?? (Array.isArray(recorded) ? recorded.filter((id) => typeof id === 'string') : []);
-    const cast = imageCast(win, shot, args.role);
+    const cast = contract().castOf(shot) ?? [];
     // Cast members seen without a line (shot_characters bystanders) and unnamed extras: in the picture, not in the video references.
     if (args.bystanders && (args.frame !== 'start' || args.editExisting || args.role && args.role !== 'scene_start'))
         throw new Error('shot_image_scope: specify bystanders when composing a new opening image');
@@ -2873,7 +2873,9 @@ export function recordShotImage(args, request) {
         else
             delete frames.startBasis;
         frames.startPromptSha256 = createHash('sha256').update(request.prompt).digest('hex');
-        Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references: request.refs, props: request.props, ...(request.bystanders ? { bystanders: request.bystanders } : {}),
+        const videoRefs = (visual.references ?? []).filter(ref => ref.use === 'video' || ref.use === 'both');
+        const references = [...request.refs.filter(ref => !videoRefs.some(kept => kept.id === ref.id)), ...videoRefs];
+        Object.assign(visual, { bg: rel, bgPrompt: request.prompt, references, props: request.props, ...(request.bystanders ? { bystanders: request.bystanders } : {}),
             ...(request.location ? { locationId: request.location } : {}) });
         // The set render the start image was composed from: its camera, inputs and fingerprint.
         if (request.locationFrame)

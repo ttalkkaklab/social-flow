@@ -224,7 +224,7 @@ async function prepare(target, options) {
   if (video.numFrames !== undefined && video.numFrames !== args.numFrames)
     warnings.push('Stored numFrames differs from the optimized request. Refresh previz and quote before submitting a new generation.');
   const sound = { ...scene.sound };
-  if (sound.audioSource === undefined && scene.narration?.some(line => (line.tts || '').trim())) sound.audioSource = 'speech';
+  if (sound.audioSource === undefined && scene.narration?.some(line => (line.tts || '').trim())) sound.audioSource = onScreen ? 'video' : 'speech';
   const soundArgs = { ...args };
   // The legacy keyframe fallback is not an authored request to suppress sound.
   if (hasKeyframes && video.generateAudio === undefined) delete soundArgs.generateAudio;

@@ -426,10 +426,8 @@
         return first && second ? first === second : null;
       };
       const speakers = [...new Set([...left.speakers, ...right.speakers])];
-      const speakerLimit = speakers.length > 2 ? 'exceeds_two' :
-        left.speakersKnown && right.speakersKnown ? 'within_two' : 'unknown';
       return { left, right, samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
-        speakers, speakerLimit };
+        speakers, speakersKnown: left.speakersKnown && right.speakersKnown };
     });
   }
 
@@ -438,8 +436,7 @@
     return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime).map(join => ({
       level: 'warn', code: 'scene_boundary_review', where: 'scene ' + join.right.no,
       what: `scene_boundary_review: scenes ${join.left.no} and ${join.right.no} share the same place and time. ` +
-        (join.speakerLimit === 'exceeds_two' ? 'The combined cast exceeds two speakers. Keep the required production boundary and carry the ongoing action across it.' :
-        'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.') }));
+        'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.' }));
   }
 
   function check(win, opts) {

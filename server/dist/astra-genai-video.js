@@ -382,8 +382,10 @@ function checkOutput(file, expected, legacyMsr = false) {
 const receiptSchema = z.object({
     version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema, z.literal('scene-to-video')]), fingerprint: z.string(),
     expected: mediaContract.optional(), requestId: z.string().optional(), sceneShots: z.array(z.unknown()).optional(),
+    sceneRequestSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
+    conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).strict();
 // The gateway advertises LTX provider compatibility; response fields come from LTX v2 docs.
 const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']),
@@ -658,7 +660,10 @@ export async function generateGenaiVideo(operation, input, signal, polling = {})
         // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
         // The fingerprint stays on the request as written, so a resumed receipt still matches.
         const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body) : body;
-        const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting' };
+        const wav = operation === 'audio-to-video' && 'audio_uri' in body && typeof body.audio_uri === 'string' && body.audio_uri.startsWith('data:audio/wav;base64,')
+            ? Buffer.from(body.audio_uri.slice('data:audio/wav;base64,'.length), 'base64') : undefined;
+        const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting',
+            ...(wav ? { conditioningAudioSha256: createHash('sha256').update(wav).digest('hex') } : {}) };
         signal?.throwIfAborted();
         // Publish the complete claim atomically so another live session can follow it immediately.
         const claim = receiptPath + '.' + randomUUID() + '.tmp';

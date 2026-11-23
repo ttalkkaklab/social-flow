@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 import { checkedSpeechSchema, prepareGeneration, generateCheckedSpeech } from '../dist/tts-quality.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import { config } from '../dist/config.js';
@@ -85,6 +86,9 @@ test('a preserved soundtrack repair binds the actual sources and current lines w
   const extractionFile=path.join(work,'source-audio.json');
   writeFileSync(extractionFile,JSON.stringify([extraction]));
   assert.equal(legacyChecker.check(work,board)[video],sha(video));
+  repair.sources[0].kind='selected_line_audio';
+  assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/post_lipsync_forbidden/);
+  repair.sources[0].kind='native_video';
   writeFileSync(extractionFile,JSON.stringify([{...extraction,video:other,sourceSha256:sha(other)}]));
   assert.throws(()=>legacyChecker.check(work,board),/Source soundtrack differs from retained repaired video/);
   assert.throws(()=>legacyChecker.retainedSoundtrack({...scene,narration:[{...line,tts:'바뀐 대사.'}]},board,cast,{}),/dialogue or voice changed/);
@@ -93,4 +97,79 @@ test('a preserved soundtrack repair binds the actual sources and current lines w
   repair.sources[0].lineIds=[];assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/cover the current lines/);repair.sources[0].lineIds=[line.id];
   writeFileSync(source,'changed source');assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/source changed/);
   writeFileSync(video,'changed output');assert.throws(()=>legacyChecker.retainedSoundtrack(scene,board,cast,{}),/video changed/);
+});
+
+test('assembly blocks on-screen overdubs and preserves the exact driver of a silent A2V output',t=>{
+  const f=setup(t), work=path.join(f.dir,'.work'), board=path.join(f.dir,'storyboard');
+  const video=path.join(board,'take.mp4'), scenes=path.join(board,'scenes.js');
+  const cards=path.join(work,'cards.tsv'), line={id:'l1',delivery:'on_screen',speaker:'a',tts:'Wait.'};
+  const shot={id:'s1',scene:1,narration:[line],visual:{video:{clip:video}}};
+  const save=()=>writeFileSync(scenes,'window.SCENES='+JSON.stringify([shot])+';');
+  const prepare=()=>require('../../skills/produce/references/prepare-source-audio.js').prepare(work,board);
+  const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=0.25','-c:v','libx264',video]);
+  writeFileSync(f.file,pcmToWav(Buffer.alloc(12000,15),24000,1));
+  writeFileSync(path.join(work,'segs.tsv'),'0\t0\t'+video+'\tWait.\tWait.\n');
+  save();
+  assert.throws(prepare,/post_lipsync_forbidden/);
+  line.delivery='off_screen'; save(); prepare();
+  shot.visual.video.speechBinding={mode:'post_lipsync'}; save();
+  assert.throws(prepare,/post_lipsync_forbidden/);
+  delete shot.visual.video.speechBinding;
+  shot.visual.video.candidates=[{mode:'post_lipsync'}];
+  line.delivery='on_screen'; save();
+  const receipt={version:1,status:'completed',jobId:'native-a2v',operation:'audio-to-video',fingerprint:'f'.repeat(64),
+    videoPath:video,sha256:sha(video),conditioningAudioSha256:sha(f.file)};
+  writeFileSync(video+'.astra-genai.json',JSON.stringify(receipt));
+  prepare();
+  assert.match(readFileSync(cards,'utf8'),/sync=1/);
+  assert.equal(legacyChecker.check(work,board)[f.file],receipt.conditioningAudioSha256);
+  writeFileSync(f.file,pcmToWav(Buffer.alloc(12000,30),24000,1));
+  assert.throws(prepare,/post_lipsync_forbidden/);
+});
+
+test('historical native voice bindings must fit each selected render at assembly',t=>{
+  const {dir}=setup(t), board=path.join(dir,'storyboard'), work=path.join(dir,'.work');
+  const picture=path.join(board,'speech.mp4'), sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=16x16:r=24:d=0.25','-f','lavfi','-i','sine=duration=0.25','-c:v','libx264','-c:a','aac',picture]);
+  const voices=['a','b','c'], distilled={engine:'astra-genai',model:'ltx-2.5-22b-distilled'};
+  const seedance={engine:'seedance',model:'dreamina-seedance-2-0-260128'};
+  const {speechRevision}=require('../../skills/_shared/speech-contract.js');
+  const actors=voices.map(id=>({id,tts:{engine:'gemini',voiceId:'Kore',language:'en',speed:1}}));
+  const owner={no:1,speakers:voices,videoDirection:{oneTake:true}};
+  function stage(groups,selected,recorded=selected,video={}) {
+    const shots=groups.map((speakers,index)=>{
+      const narration=speakers.map((speaker,line)=>({id:'line-'+index+'-'+line,speaker,delivery:'on_screen',tts:speaker+' speaks.'}));
+      const audio=narration.map(n=>({lineId:n.id,revision:speechRevision(n,actors.find(a=>a.id===n.speaker))}));
+      const binding={mode:'native',provider:recorded.engine,model:recorded.model,operation:recorded.operation,videoPath:picture,videoSha256:sha(picture),audio};
+      const edit={in:index*0.25/groups.length,out:(index+1)*0.25/groups.length};
+      return {id:'shot-'+index,scene:1,type:'points',narration,edit,visual:{video:{clip:picture,speechStatus:'current',speechBinding:binding,...video}},sound:{audioSource:'video'}};
+    });
+    const win={SB_DOC:{characters:actors},SCENES:shots,STRUCTURE:{scenes:[owner]},PRODUCTION:{videoModel:selected}};
+    writeFileSync(path.join(board,'scenes.js'),Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+    writeFileSync(path.join(work,'cards.tsv'),shots.map((_,i)=>[i,'placeholder.wav',0,'none'].join('\t')).join('\n')+'\n');
+    writeFileSync(path.join(work,'segs.tsv'),shots.flatMap((shot,i)=>shot.narration.map((n,j)=>[i,j,picture,n.tts,n.tts].join('\t'))).join('\n')+'\n');
+    require('../../skills/produce/references/prepare-source-audio.js').prepare(work,board);
+  }
+  const check=()=>legacyChecker.check(work,board);
+  stage([voices],distilled);
+  assert.throws(check,/scene_render_voice_limit/);
+  stage([voices],distilled,seedance);
+  assert.throws(check,/scene_render_voice_limit/,'the current model selection also applies');
+  stage([voices],seedance,distilled);
+  assert.throws(check,/scene_render_voice_limit/,'the recorded model still applies after a board selection change');
+  stage([voices],seedance);assert.ok(check()[picture]);
+  const veo={engine:'veo',model:'veo-3.1-generate-001'};
+  stage([voices],veo);assert.throws(check,/scene_speech_route/);
+  owner.videoDirection.dialogueVoice='model_generated';
+  stage([voices],veo);assert.ok(check()[picture]);
+  stage([voices],veo,veo,{generateAudio:false});assert.throws(check,/scene_dialogue_audio_required/);
+  stage([voices],{engine:'veo',model:'unknown'},veo);assert.throws(check,/scene_speech_route/);
+  delete owner.videoDirection.dialogueVoice;
+  stage([voices],{engine:'ltx-api',model:'ltx-2-5-pro',operation:'audio'});
+  assert.throws(check,/scene_speech_route/);
+  stage([voices],{...seedance,operation:'extend'},seedance);assert.throws(check,/scene_speech_route/);
+  owner.videoDirection.oneTake=false;
+  stage([['a','b'],['c']],distilled);assert.ok(check()[picture]);
+  stage([voices,['a']],distilled);assert.throws(check,/scene_render_voice_limit/);
 });

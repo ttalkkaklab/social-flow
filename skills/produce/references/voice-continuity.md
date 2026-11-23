@@ -153,20 +153,16 @@ direction inside dialogue quotes. Seedance 2.5 receives the original description
 
 ## Exact speech and assembly
 
-`speech_manage plan_video` still describes synchronization with the **finished
-supplied WAV**. A reference-voice model must not be marked `audioConditioning:true`
-or `lipSync:true` merely because it imitates a sample. Its exact-WAV route remains
-unsupported without a suitable synchronization adapter. Native generation uses
-`video_plan` and the existing native-audio clip/b-roll assembly path; do not attach
-it as proof of supplied-WAV synchronization.
+`speech_manage plan_video` reports whether the adapter generates video from the finished
+WAV or speaks the authored lines with a voice reference. Set `audioConditioning:true`
+only when the supplied performance drives fresh video generation. A reference sample
+guides native voice identity. Inspect the resulting dialogue, identity and timing.
 
-`visual.video` is the motion-background route: assembly uses separate speech and
-discards its generated soundtrack. The planner warns if a native speaking request
-targets this route. Use audio-conditioned animation for exact spoken WAV timing,
-or the existing `visual.clip` native-audio slot when native dialogue is intended.
-Never quietly replace the final fixed TTS with a model-improvised voice. An ordinary
-audio replacement does not fix mouth synchronization; voice conversion/post-lipsync
-are not installed adapters and must not be advertised as available.
+Use the original video soundtrack for visible speech. A silent audio-to-video render
+can use the original conditioning WAV at its original timing when the completed
+generation receipt binds that WAV to the rendered video bytes. For a changed line or
+voice, generate a new speaking take. Applying TTS lip sync to previously generated
+footage is prohibited. Off-screen speech and narration can use external audio.
 
 No automatic listening/scoring/STT or paid regeneration is introduced. If the user
 requests review, compare voice identity, correct words, speaker assignment and

@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import { LOCAL_VIDEO_MODELS, localVideoStrategy } from './local-video-models.js';
 import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { z } from 'zod';
@@ -27,10 +28,9 @@ export interface CharacterVideoInput {
   voiceRequired: boolean;
 }
 
+const load = createRequire(import.meta.url);
 export function requiredCharacters(shot: Record<string, unknown>): CharacterVideoInput[] {
-  const inputs = (shot.visual as { characterInputs?: CharacterVideoInput[] } | undefined)?.characterInputs;
-  // Scene preview also reads authored cards before the sheet resolver has supplied local paths.
-  return Array.isArray(inputs) ? inputs.filter(person => person && typeof person.bodyPath === 'string') : [];
+  return load('../../skills/_shared/scene-cast.js').requiredCharacters(shot);
 }
 
 export interface VideoAdapter {
@@ -108,6 +108,16 @@ function keys(schema: z.ZodTypeAny): string[] {
   if (schema instanceof z.ZodObject) return Object.keys(schema.shape);
   return [];
 }
+/** Number of independently owned samples accepted in one native render. */
+export function voiceReferenceLimit(tool: string, model?:string): number {
+  if (tool === 'seedance_reference') return seedance.SEEDANCE_MODEL_SPECS[(model ?? seedance.DEFAULT_SEEDANCE_MODEL) as seedance.SeedanceModel]?.referenceAudio.maxClips ?? 0;
+  if (tool === 'astra_genai_img2video' || tool === 'astra_genai_msr') return 2;
+  let schema = VIDEO_ADAPTERS[tool]?.schema;
+  while (schema instanceof z.ZodEffects) schema = schema.innerType();
+  let field = schema instanceof z.ZodObject ? schema.shape.referenceAudioPaths : undefined;
+  while (field instanceof z.ZodOptional || field instanceof z.ZodDefault) field = field._def.innerType;
+  return field instanceof z.ZodArray ? field._def.maxLength?.value ?? 0 : 0;
+}
 /** The adapter's prompt length limit from its schema, or undefined when it states none. */
 export function videoPromptLimit(tool: string): number | undefined {
   let schema: z.ZodTypeAny | undefined = VIDEO_ADAPTERS[tool]?.schema;
@@ -142,7 +152,7 @@ export function sceneInputCapabilities(tool: string) {
     shotScopedReferences: false, frameAddressedNativeDialogue: false,
     ...(['astra_genai_img2video','astra_genai_audio2video'].includes(tool) ? { sceneRenderer: {
       model: tool === 'astra_genai_img2video' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev',
-      sceneAudioModes: tool === 'astra_genai_img2video' ? ['native','mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: true,
+      sceneAudioModes: tool === 'astra_genai_img2video' ? ['native','mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: tool !== 'astra_genai_img2video',
       capabilities: '/v1/ltx/v2/scene-to-video/capabilities', validation: '/v1/ltx/v2/scene-to-video/validate',
     } } : {}),
     openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
@@ -174,6 +184,10 @@ export function videoVoiceCapabilities(tool: string) {
   const adapter = VIDEO_ADAPTERS[tool];
   if (!adapter) throw new Error('Unsupported video tool: ' + tool);
   return {
+    maxPinnedVoicesPerRender: tool === 'seedance_reference'
+      ? Object.fromEntries(Object.entries(seedance.SEEDANCE_MODEL_SPECS).map(([model, spec]) => [model, spec.referenceAudio.maxClips]))
+      : voiceReferenceLimit(tool),
+    postLipSync: false,
     lane: tool === 'astra_genai_img2video' ? 'conditional_reference' : adapter.voice,
     dialogue: scenePromptProfile(tool).allowsGeneratedVoice ? 'requires_model_generated_scene_voice' : tool === 'astra_genai_img2video' ? 'requires_subject_references' : adapter.voice === 'none' ? 'refused' : 'allowed',
     voiceReference: tool === 'astra_genai_img2video' ? 'backend_dependent_with_subject_references' : adapter.voice !== 'reference' ? 'unsupported' : ['astra_genai_msr', 'heygen_reference'].includes(tool) ? 'backend_dependent' : 'supported',
@@ -188,8 +202,8 @@ export function speechVideoCapabilities(provider: string, model: string, operati
   if (generatedVoice) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true,
     evidence: 'The scene opts into dialogue synthesized in the clip soundtrack. Review the words and speaker assignment.' };
   // MSR voices the dialogue written in its prompt; no line audio goes in (2026-10-31).
-  // The hosted reference lanes speak the prompt's dialogue natively, as MSR does; a pinned sample sets the timbre.
-  if (['minimax', 'heygen'].includes(provider) && operation === 'reference') return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
+  const localReference = provider === 'mlx' && LOCAL_VIDEO_MODELS.fasth3_omni_reference.acceptsModel(model);
+  if (operation === 'reference' && (localReference || ['minimax', 'heygen'].includes(provider))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio' };
   if (provider === 'astra-genai' && (operation === 'reference' || (operation === 'image' && model === 'ltx-2.5-22b-distilled' && subjectReferences))) return { provider, model, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: 'MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio' };
   if (operation === 'audio' && (provider === 'astra' || provider === 'astra-genai-desktop' || provider === 'ltx-api' || provider === 'ltx-desktop-local' ||
     provider === 'astra-genai' && GENAI_VIDEO_MODELS.some(id => id === model)))
