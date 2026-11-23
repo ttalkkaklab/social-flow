@@ -71,14 +71,14 @@ function samePerformanceWav(file, mono) {
   return false;
 }
 
-function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath}) {
+function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath,
+  work = path.resolve(board, '../.work'), timing = sceneTiming(scene, board, timingVersion)}) {
   const lines = (scene.narration || []).filter(line => line.tts?.trim());
   const sources = lines.map(line => path.resolve(board, line.audio.path));
-  const timing = sceneTiming(scene, board, timingVersion);
   const interval = timing.intervals[0];
   const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 &&
     interval.speechEndSeconds === timing.durationSeconds && hash(fs.readFileSync(sources[0])) === driverSha256;
-  const work = path.resolve(board, '../.work'), cards = path.join(work, 'cards.tsv');
+  const cards = path.join(work, 'cards.tsv');
   const choices = [audioPath, sceneAudioPath].filter(Boolean).map(file => path.resolve(board, file));
   if (fs.existsSync(cards)) {
     const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/).filter(row => row.trim() && !row.startsWith('#'))
@@ -99,6 +99,17 @@ function currentConditioningAudio(scene, board, {index, timingVersion, driverSha
   return choices[0];
 }
 
+function verifyConditioningPerformance(scene, win, index, board, work, audio, digest) {
+  const binding = scene.visual?.video?.speechBinding;
+  if (binding?.mode !== 'audio_conditioned' || binding.conditioningAudioSha256 && binding.conditioningAudioSha256 !== digest)
+    throw new Error('conditioning_audio_unverified: the binding differs from the original A2V driver');
+  const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion);
+  const owner = win.STRUCTURE?.scenes?.find(row => row.no === scene.scene);
+  currentConditioningAudio(scene, board, {index, work, timing, driverSha256:digest,
+    audioPath:binding.conditioningAudioPath ?? audio, sceneAudioPath:owner?.videoDirection?.audio?.path});
+  return timing.intervals;
+}
+
 function compose(work,board) {
   work=path.resolve(work);board=path.resolve(board);
   const file=path.join(board,'scenes.js'),win=evaluateWindowScript(fs.readFileSync(file,'utf8'),{filename:file});
@@ -112,6 +123,15 @@ function compose(work,board) {
     if(scene?.sound?.audioSource==='video')continue; // Its single soundtrack is extracted by prepare-source-audio.js.
     const lines=(scene?.narration||[]).filter(n=>(n.tts||'').trim());
     if(scene)checkSilentTiming(scene,board,win.SB_DOC?.performanceTimingVersion,path.resolve(work,fields[1]));
+    // The selected A2V driver may be stereo or include renderer padding. Assembly
+    // verifies its bytes and line intervals before mixing it with the picture.
+    if(scene?.visual?.video?.speechBinding?.mode==='audio_conditioned' && lines.some(line=>line.delivery==='on_screen')) {
+      const audio=path.resolve(work,fields[1]);
+      if (!require('./prepare-source-audio.js').usesConditioningTrack(scene,board,audio))
+        throw new Error('conditioning_audio_unverified: this shot no longer uses its A2V driver');
+      verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)));
+      continue;
+    }
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
     const sources=[];
     lines.forEach(line=>{
@@ -135,5 +155,5 @@ function compose(work,board) {
   if(outputs.length)fs.writeFileSync(cards,rows.join('\n'));
   return outputs;
 }
-module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio};
+module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio,verifyConditioningPerformance};
 if(require.main===module){try{console.log(JSON.stringify(compose(process.argv[2],process.argv[3]),null,2));}catch(e){console.error(e.message);process.exitCode=1;}}

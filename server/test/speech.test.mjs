@@ -444,7 +444,8 @@ describe('scene direction', () => {
   const pinned={engine:'gemini',voiceId:'Orus',model:'gemini-3.8-flash-tts',language:'ko',speed:1};
   const {dir,board,work}=fixture(t,phone.narration,pinned),file=path.join(board,'scenes.js'),win={};
   new Function('window',readFileSync(file,'utf8'))(win);
-  win.SB_DOC.performanceTimingVersion=1;win.SCENES[0].performance=phone.performance;
+  win.SB_DOC.performanceTimingVersion=1;win.SCENES[0].performance=phone.performance;win.SCENES[0].duration=3;
+  win.MUSIC={$timeline:[]};
   writeFileSync(file,Object.entries(win).map(([k,v])=>`window.${k}=${JSON.stringify(v)};`).join('\n'));
   let state=manageSpeech({path:board,action:'list'});
   const plans=manageSpeech({path:board,action:'plan_audio'}).audioPlans;
@@ -490,10 +491,37 @@ describe('scene direction', () => {
     submittedRequest:{mode:'audio2video',audio_upload_id:'timed-phone-wav'}}));
   const attachSilent=()=>manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:silent,capabilities:caps});
   assert.throws(attachSilent,/conditioning_audio_unverified/,'the mono composition was not the uploaded file');
-  writeFileSync(path.join(work,'cards.tsv'),'0\tphone-driver.wav\t1\n');
+  writeFileSync(path.join(work,'cards.tsv'),'0\tphone-driver.wav\t1\tnone\n');
   state=attachSilent();
   const bound=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0].visual.video.speechBinding;
   assert.equal(bound.conditioningAudioPath,stereo);assert.equal(bound.conditioningAudioSha256,stereoSha);
+  const cards=path.join(work,'cards.tsv');
+  writeFileSync(path.join(work,'segs.tsv'),phone.narration.map((line,index)=>[0,index,silent,line.tts,line.sub].join('\t')).join('\n')+'\n');
+  assert.deepEqual(compose(work,board),[]);
+  require('../../skills/produce/references/prepare-source-audio.js').prepare(work,board);
+  const selected=readFileSync(cards,'utf8');
+  assert.equal(selected.split('\t')[1],'phone-driver.wav');assert.match(selected,/sync=1/);
+  assert.equal(checker.check(work,board)[stereo],stereoSha);
+  assert.deepEqual(checker.lastReport(work).actedIntervals[0].map(i=>[i.speechStartSeconds,i.speechEndSeconds]),[[0,1],[2,3]]);
+  // The old mono composition and its valid sidecar cannot replace the stereo driver.
+  writeFileSync(cards,selected.replace('phone-driver.wav','c0-speech.wav'));
+  for(const run of [compose,checker.check])assert.throws(()=>run(work,board),/post_lipsync_forbidden/);
+  writeFileSync(cards,selected);
+  const original=readFileSync(file,'utf8'),revised=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(original);
+  revised.SCENES[0].performance.find(e=>e.kind==='action').durationSeconds=0.5;
+  writeFileSync(file,Object.entries(revised).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+  for(const run of [compose,checker.check])assert.throws(()=>run(work,board),/conditioning_audio_unverified/);
+  writeFileSync(file,original);
+  setupProject(dir);
+  const rendered=require('node:child_process').spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,board],{
+    encoding:'utf8',timeout:60000,maxBuffer:8*1024*1024,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'1',SUB:'1'}});
+  assert.equal(rendered.status,0,rendered.stdout+rendered.stderr);
+  assert.equal(readFileSync(cards,'utf8'),selected);
+  assert.equal(createHash('sha256').update(readFileSync(stereo)).digest('hex'),stereoSha);
+  assert.deepEqual(readFileSync(path.join(work,'subs.srt'),'utf8').match(/\d\d:\d\d:\d\d,\d{3} --> \d\d:\d\d:\d\d,\d{3}/g),
+    ['00:00:00,000 --> 00:00:01,000','00:00:02,000 --> 00:00:03,000']);
+  const streams=JSON.parse(execFileSync('ffprobe',['-v','error','-show_entries','stream=codec_type,duration','-of','json',path.join(work,'reel.mp4')])).streams;
+  assert.deepEqual(streams.map(s=>[s.codec_type,Number(s.duration)]),[['video',3],['audio',3]]);
   const video=path.join(dir,'phone.mp4');spokenClip(video);
   state=manageSpeech({path:board,action:'attach_video',shotId,expectedRevision:state.revision,videoPath:video,capabilities:caps});
   const secondAudio=state.lines[1].audio;

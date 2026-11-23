@@ -187,7 +187,7 @@ function check(work, board) {
   const rows=fs.readFileSync(path.join(work,'cards.tsv'),'utf8').split(/\r?\n/).filter(l=>l.trim()&&!l.startsWith('#')).map(l=>l.split('\t'));
   const expected=win.SCENES.map((s,i)=>({s,i})).filter(({s})=>!['broll','outro'].includes(s.type));
   if(JSON.stringify(rows.map(r=>r[0]))!==JSON.stringify(expected.map(({i})=>String(i))))throw new Error('card order differs from SCENES');
-  const media={}, warnings=[];
+  const media={}, warnings=[], actedIntervals={};
   for(const [k,{s,i}] of expected.entries()) {
     const audio=path.resolve(work,rows[k][1]);
     const bytes=fs.readFileSync(audio);
@@ -249,6 +249,10 @@ function check(work, board) {
       warnings.push('card ' + i + ': source soundtrack retained; perceptual audio quality not_reviewed');
       continue; // Line/voice/video provenance above still applies; this WAV was extracted, not TTS-composed.
     }
+    if(originalDriver && binding) {
+      actedIntervals[i]=require('./compose-speech.js').verifyConditioningPerformance(s,win,i,board,work,audio,media[audio]);
+      continue;
+    }
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
       if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
@@ -264,6 +268,7 @@ function check(work, board) {
       const {intervals,durationSeconds:duration}=composition.sceneTiming(s,board,win.SB_DOC?.performanceTimingVersion);
       if(JSON.stringify(receipt.intervals)!==JSON.stringify(intervals))throw new Error('Scene audio timing intervals are stale for card '+i);
       if(Math.abs(composition.duration(audio)-duration)>0.03)throw new Error('Scene audio does not preserve planned acting timing for card '+i);
+      actedIntervals[i]=intervals;
     } else if(receipt) {
       if(lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0))throw new Error('Compose planned acting timing for card '+i);
       characterVoice(win,s,receipt);
@@ -271,7 +276,7 @@ function check(work, board) {
       authorizeSpeed(work,'final',receipt.playbackSpeed??1);
     }
   }
-  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,approved:false},null,2)+'\n');
+  fs.writeFileSync(path.join(work,REPORT),JSON.stringify({status:'not_reviewed',policy:'speech-provenance-v1',warnings,inputs:media,actedIntervals,approved:false},null,2)+'\n');
   return media;
 }
 function checkTempo(work,speed,min=1,max=1) {

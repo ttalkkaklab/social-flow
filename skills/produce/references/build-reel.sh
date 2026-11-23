@@ -109,7 +109,7 @@ set -euo pipefail
 export LC_ALL=en_US.UTF-8
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # grab before cd (path to reveal-timing.py)
-WORKDIR="${1:?usage: build-reel.sh <workdir>}"
+WORKDIR=$(cd "${1:?usage: build-reel.sh <workdir>}" && pwd -P)
 # Resolve the supplied board before changing directories.
 STORYBOARD=$(node -e 'console.log(require("path").resolve(process.argv[1]))' "${2:-$WORKDIR/../storyboard}")
 AUDIENCE_COMPARE=0
@@ -593,7 +593,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
   #   so then only resample.
   if head -c 4 "$SRC" | LC_ALL=C grep -q RIFF; then INARGS=(-i "$SRC")
   else INARGS=(-f s16le -ar 24000 -ac 1 -i "$SRC"); fi
-  ACTED_AUDIO=$(node -e 'const fs=require("fs");const p=process.argv[1]+".generation.json";console.log(fs.existsSync(p)&&JSON.parse(fs.readFileSync(p,"utf8")).generator==="speech_compose"?1:0)' "$SRC")
+  ACTED_INTERVALS=$(node -e 'const rows=require("./tts-warnings.json").actedIntervals?.[process.argv[1]];if(rows)process.stdout.write(JSON.stringify(rows))' "$IDX")
   if [ "$SYNC" -eq 1 ]; then
     MEANV=$(ffmpeg -hide_banner "${INARGS[@]}" -af volumedetect -f null - 2>&1 | sed -n 's/.*mean_volume: \([-0-9.]*\) dB/\1/p')
     if [ -n "$MEANV" ] && awk -v v="$MEANV" 'BEGIN{exit !(v > -50)}'; then
@@ -604,7 +604,7 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       SYNCNOTE="silent clip — normalization skipped"
     fi
     MUTE=1   # bypasses the audio machine below (rate/warnings/atempo) entirely — sound and picture are one body
-  elif [ "$ACTED_AUDIO" -eq 1 ]; then
+  elif [ -n "$ACTED_INTERVALS" ]; then
     # The composition already contains measured anticipation and reaction intervals.
     ffmpeg -y -v error "${INARGS[@]}" -af "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=48000" -ac 1 -ar 48000 "work/t$IDX.wav"
   elif [ "$MUTE" -eq 1 ]; then
@@ -671,8 +671,8 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       HB=$(python3 "$HERE/snap-boundaries.py" "$SIDE" "work/silin$IDX.txt" "$M" --tempo "$F" --wav "$SRC" 2>"work/snap$IDX.txt" || true)
       [ -z "$HB" ] && { say "⚠ card $IDX sentence sidecar did not match the detected pauses ($(head -1 "work/snap$IDX.txt")) — using the longest pauses instead."; WARN=1; }
     fi
-    if [ "$ACTED_AUDIO" -eq 1 ]; then
-      HB=$(node -e 'const r=require(require("path").resolve(process.argv[1]+".generation.json"));const n=Number(process.argv[2]);if(r.intervals.length!==n)throw Error("Composed speech intervals differ from subtitle groups");console.log(r.intervals.slice(1).map(i=>i.startSeconds).join(" "))' "$SRC" "$M")
+    if [ -n "$ACTED_INTERVALS" ]; then
+      HB=$(node -e 'const rows=JSON.parse(process.argv[1]);const n=Number(process.argv[2]);if(rows.length!==n)throw Error("Verified speech intervals differ from subtitle groups");console.log(rows.slice(1).map(i=>i.startSeconds).join(" "))' "$ACTED_INTERVALS" "$M")
     fi
     if [ -n "$HB" ]; then
       BLIST="$HB "
@@ -1097,15 +1097,14 @@ while IFS=$'\t' read -r -u 3 IDX SRC TARGET ZDIR OPTS; do
       fi
     fi
     ACTED_STARTS=(); ACTED_ENDS=()
-    if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+    if [ -n "${ACTED_INTERVALS:-}" ]; then
       # Caption only the measured speech, not its anticipation or reaction silence.
-      COMPOSED_CUES=$(node - "$SRC" "$M" "$L" <<'JS'
-const fs=require('fs');
-const [source,count,duration]=process.argv.slice(2);
-const receipt=JSON.parse(fs.readFileSync(source+'.generation.json','utf8'));
-if(receipt.generator!=='speech_compose'||!Array.isArray(receipt.intervals)||receipt.intervals.length!==Number(count))throw Error('Composed speech intervals differ from subtitle groups');
+      COMPOSED_CUES=$(node - "$ACTED_INTERVALS" "$M" "$L" <<'JS'
+const [encoded,count,duration]=process.argv.slice(2);
+const intervals=JSON.parse(encoded);
+if(intervals.length!==Number(count))throw Error('Verified speech intervals differ from subtitle groups');
 let previousEnd=0;
-for(const interval of receipt.intervals){
+for(const interval of intervals){
   const {speechStartSeconds:start,speechEndSeconds:end}=interval;
   if(!Number.isFinite(start)||!Number.isFinite(end)||start<previousEnd||end<=start||end>Number(duration)+0.001)throw Error('Invalid composed speech subtitle interval');
   console.log(start+'\t'+end);previousEnd=end;
@@ -1117,7 +1116,7 @@ JS
       done <<< "$COMPOSED_CUES"
     fi
     for ((j=0; j<M; j++)); do
-      if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+      if [ -n "${ACTED_INTERVALS:-}" ]; then
         ST=$(awk -v cs="$CS" -v p="$CPRE" -v s="${ACTED_STARTS[$j]}" 'BEGIN{printf "%.3f",cs+p+s}')
         EN=$(awk -v cs="$CS" -v p="$CPRE" -v e="${ACTED_ENDS[$j]}" 'BEGIN{printf "%.3f",cs+p+e}')
       else
@@ -1137,7 +1136,7 @@ JS
           # voice span: a detected boundary is the END of the pause (the next sentence's first
           # sound), so the window closes at that pause's START — the silin line whose end is
           # the boundary. A proportional-fallback boundary has no pause and stays as it is.
-          if [ "${ACTED_AUDIO:-0}" -eq 1 ]; then
+          if [ -n "${ACTED_INTERVALS:-}" ]; then
             SPS="$ST"; SPE="$EN"
           else
           if [ "$j" -eq 0 ]; then PB=0; else PB="${BARR[$((j-1))]}"; fi
