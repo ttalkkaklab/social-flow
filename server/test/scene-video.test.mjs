@@ -164,7 +164,6 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
     return {id:character,tts,voiceReference:{path:wav,tts,sha256:createHash('sha256').update(fs.readFileSync(wav)).digest('hex')}};
   });
   fs.appendFileSync(board,'\nwindow.SB_DOC='+JSON.stringify({characters:castVoices})+';');
-  const before = fs.readFileSync(board);
   const key = config.astraGenaiApiKey, originalFetch = globalThis.fetch;
   config.astraGenaiApiKey = 'fixture';
   t.after(()=>{globalThis.fetch=originalFetch;config.astraGenaiApiKey=key});
@@ -194,10 +193,26 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   const motionPrefix = path.join(f.episode,'camera.mp4'), performanceAudio = path.join(f.episode,'line.wav');
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=size=64x64:rate=24','-frames:v','9',motionPrefix]);
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t','4.375',performanceAudio]);
-  const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
+  const options = {...f.input,sceneRendering:'per_shot',shotBindings:[{
     shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
     motionPrefix,
-  },{shotId:'s0001',performanceAudio}]});
+  },{shotId:'s0001',performanceAudio}]};
+  await assert.rejects(planManagedVideo(options),/scene_speech_performance/);
+  execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','sine=frequency=500:sample_rate=48000','-ac','2','-t','4.375',performanceAudio]);
+  await assert.rejects(planManagedVideo(options),/scene_speech_performance/);
+  const {speechRevision,compileActing}=await import('../../skills/_shared/speech-contract.js');
+  const line=answer.narration[0], actor=castVoices[1], receiptPath=performanceAudio+'.json';
+  const {generator,generation}=compileActing(line.tts,line.acting,actor.tts);
+  const sha256=createHash('sha256').update(fs.readFileSync(performanceAudio)).digest('hex');
+  const receipt={status:'completed',result:{success:true,audioPath:performanceAudio},generator,generation,audioSha256:sha256};
+  line.audio={path:performanceAudio,sha256,revision:speechRevision(line,actor),generation:{generator,text:line.tts,language:actor.tts.language,voiceSettings:generation,receiptPath}};
+  fs.appendFileSync(board,'\nwindow.SCENES='+JSON.stringify(f.members)+';');
+  const before=fs.readFileSync(board);
+  fs.writeFileSync(receiptPath,JSON.stringify({...receipt,generation:{...generation,voiceName:castVoices[0].tts.voiceId}}));
+  await assert.rejects(planManagedVideo(options),/speech_receipt_voice_mismatch/);
+  assert.equal(validated.length,0);
+  fs.writeFileSync(receiptPath,JSON.stringify(receipt));
+  const plan=await planManagedVideo(options);
   approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
   const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
   await assert.rejects(run(), /Lost the response/);

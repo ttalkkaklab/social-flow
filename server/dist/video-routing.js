@@ -357,8 +357,6 @@ function resolvePlanContext(input) {
     requireSupportedSelection(context.selection);
     if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context.selection.engine)
         throw new Error('model_selection_mismatch: tool does not match selected engine');
-    if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
-        throw new Error('Tool and operation disagree');
     const route = context.speechRoute;
     const tool = selectedVideoTool(context.selection, route.operation);
     if (!tool || input.tool && input.tool !== tool || input.operation && input.operation !== route.operation)
@@ -582,6 +580,11 @@ function buildVideoPlan(input, { context, tool }, persist) {
                 if (!path.isAbsolute(file) || fs.statSync(file).size > 32 * 1024 * 1024)
                     throw new Error('scene_render_guide: supply an absolute path to a file of at most 32 MiB for ' + binding.shotId);
                 files.push(file);
+            }
+            if (binding.performanceAudio) {
+                requireSpeechSignal(binding.performanceAudio, 'scene_speech_performance');
+                const card = context.sceneMembers.find(member => member.id === binding.shotId);
+                load('../../skills/_shared/character-speech.js').verifyShotPerformance(binding.performanceAudio, card, context.board, path.join(context.episode, 'storyboard'));
             }
         }
         const inputs = Object.fromEntries(files.map(file => [file, createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));

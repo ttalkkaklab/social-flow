@@ -97314,7 +97314,19 @@ var require_character_speech = __commonJS({
       if (errors.length) throw new Error("speech_receipt_voice_mismatch: " + errors.join("; "));
       return actual;
     }
-    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration };
+    function verifyShotPerformance(file, card, board, boardDir) {
+      const lines = (card.narration || []).filter((line2) => line2.tts?.trim());
+      const line = lines[0], audio = line?.audio;
+      const registry2 = board.SB_DOC?.characters ?? [];
+      const actor = Array.isArray(registry2) ? registry2.find((person) => person.id === line?.speaker) : registry2[line?.speaker];
+      if (lines.length !== 1 || line.delivery === "voiceover" || !actor || !audio?.path || fs26.realpathSync(path39.resolve(boardDir, audio.path)) !== fs26.realpathSync(file) || audio.sha256 !== hash7(fs26.readFileSync(file)))
+        throw new Error("scene_speech_performance: attach the current recording of the speaking line before using its audio");
+      const character = characterSpeech({ ...actor, id: line.speaker }, { board, boardDir });
+      if (audio.revision !== require_speech_contract().speechRevision(line, character) || audio.generation?.text !== line.tts)
+        throw new Error("scene_speech_performance: the recorded line has changed");
+      verifiedSpeechGeneration(file, audio.generation, character.tts, line, { required: true });
+    }
+    module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance };
   }
 });
 
@@ -123007,8 +123019,6 @@ function resolvePlanContext(input) {
   requireSupportedSelection(context2.selection);
   if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context2.selection.engine)
     throw new Error("model_selection_mismatch: tool does not match selected engine");
-  if (input.tool && input.operation && VIDEO_ADAPTERS[input.tool]?.operation !== input.operation)
-    throw new Error("Tool and operation disagree");
   const route = context2.speechRoute;
   const tool2 = selectedVideoTool(context2.selection, route.operation);
   if (!tool2 || input.tool && input.tool !== tool2 || input.operation && input.operation !== route.operation)
@@ -123220,6 +123230,16 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
         if (!path26.isAbsolute(file) || fs19.statSync(file).size > 32 * 1024 * 1024)
           throw new Error("scene_render_guide: supply an absolute path to a file of at most 32 MiB for " + binding.shotId);
         files3.push(file);
+      }
+      if (binding.performanceAudio) {
+        requireSpeechSignal(binding.performanceAudio, "scene_speech_performance");
+        const card = context2.sceneMembers.find((member) => member.id === binding.shotId);
+        load7("../../skills/_shared/character-speech.js").verifyShotPerformance(
+          binding.performanceAudio,
+          card,
+          context2.board,
+          path26.join(context2.episode, "storyboard")
+        );
       }
     }
     const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash20("sha256").update(fs19.readFileSync(file)).digest("hex")]));

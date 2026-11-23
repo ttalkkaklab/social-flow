@@ -483,6 +483,13 @@ test('a visual reference does not turn an off-screen-only scene into model dialo
  assert.equal(plan.mode,'voiceover');
  assert.equal(plan.audioFirst,true);
 });
+test('local LTX accepts an explicit image operation together with its multi-operation tool', t => {
+ const f=fixture(t,{engine:'mlx',model:'LTX-2.3',resolution:'320x320'});
+ const input={episode:f.episode,sceneNo:1,requestId:'local-opening',tool:'ltx_video_generate',operation:'image'};
+ const plan=planVideo(input,false);
+ assert.equal(plan.tool,input.tool);
+ assert.ok(plan.imageBindings.some(image=>image.id==='start' && image.submitted));
+});
 test('FastH3 speech preparation uses the two-speaker reference capability on both shots', t => {
  const f=fixture(t,{engine:'mlx',model:'ddalcu/FastH3-Omni-MLX-Serve-8bit',operation:'reference'});
  const cast=['hero','guest'];
