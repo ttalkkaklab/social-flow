@@ -55399,7 +55399,7 @@ function manageSpeech(args, options = {}) {
           edit: native && replacement ? {} : scene.edit,
           visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
-        speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate);
+        speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate, receipts);
       }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);

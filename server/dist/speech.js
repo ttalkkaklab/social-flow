@@ -476,7 +476,7 @@ export function manageSpeech(args, options = {}) {
                 // Replacing a native clip clears trims measured on its predecessor.
                 const candidate = { id: scene.id, narration: scene.narration, edit: native && replacement ? {} : scene.edit,
                     visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } } };
-                speechContract().assertVideoPerformanceOwnership(scenes, dirname(file), candidate);
+                speechContract().assertVideoPerformanceOwnership(scenes, dirname(file), candidate, receipts);
             }
             const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
             const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);

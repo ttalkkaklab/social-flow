@@ -20,6 +20,12 @@ function spokenClip(file, frequency = 440, color = 'black') {
   execFileSync('ffmpeg',['-v','error','-y','-f','lavfi','-i',`color=c=${color}:s=16x16:r=24`,'-f','lavfi','-i',`sine=frequency=${frequency}:sample_rate=48000`,
     '-t','0.25','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',file]);
 }
+// The original unversioned record hashed compressed video packets and decoded stereo audio.
+function legacyPerformanceSource(file) {
+  const hashTrack=args=>execFileSync('ffmpeg',['-nostdin','-v','error','-xerror','-i',file,...args,
+    '-f','hash','-hash','sha256','-'],{encoding:'utf8'}).trim();
+  return {picture:hashTrack(['-map','0:V:0','-c:v','copy']),audio:hashTrack(['-map','0:a:0','-ac','2','-ar','16000','-c:a','pcm_s16le'])};
+}
 function setup(t){
  const dir=mkdtempSync(path.join(tmpdir(),'shot-speech-'));t.after(()=>rmSync(dir,{recursive:true,force:true}));
  mkdirSync(path.join(dir,'storyboard'));mkdirSync(path.join(dir,'.work'));
@@ -294,7 +300,7 @@ test('native performances own their source intervals across attachment and archi
  save(initial);
  assert.equal((await attach('s0001',first)).changed,true);
  assert.equal((await attach('s0002',copy)).changed,true);
- const archive=read();
+ const attached=read(),archive=structuredClone(attached);
  for(const shot of archive.SCENES){
    const binding=shot.visual.video.speechBinding;
    shot.visual.video.speechBinding=Object.fromEntries(['mode','provider','model','videoPath','videoSha256','audio'].map(k=>[k,binding[k]]));
@@ -313,6 +319,20 @@ test('native performances own their source intervals across attachment and archi
  stage();
  const build=(output=work)=>spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),output,target],
    {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
+ await t.test('an unversioned packet fingerprint still assembles its original adjacent native trims',()=>{
+   const historical=structuredClone(attached);
+   for(const shot of historical.SCENES){
+     const binding=shot.visual.video.speechBinding;
+     binding.performanceSource=legacyPerformanceSource(binding.videoPath);
+   }
+   const output=join(work,'unversioned');mkdirSync(output);
+   stage(historical,output);
+   const rebuilt=build(output);
+   assert.equal(rebuilt.status,0,rebuilt.stderr);
+   assert.ok(readFileSync(join(output,'reel.mp4')).length);
+   for(const shot of attached.SCENES)assert.equal(shot.visual.video.speechBinding.performanceSource.version,2);
+ });
+ stage();
  await t.test('archived overlapping source frames prevent a reel build',()=>{
    const conflict=build();
    assert.notEqual(conflict.status,0);
@@ -355,7 +375,9 @@ test('native performances own their source intervals across attachment and archi
    save(oneShot);
    assert.equal((await attach('s0001',second)).changed,true);
    assert.equal(read().SCENES[0].visual.video.clip,second);
-   save(oneShot);
+   const fingerprinted=structuredClone(oneShot);
+   fingerprinted.SCENES[0].visual.video.speechBinding.performanceSource=attached.SCENES[0].visual.video.speechBinding.performanceSource;
+   save(fingerprinted);
    const oldBytes=readFileSync(first);
    try {
      writeFileSync(first,readFileSync(second));
@@ -402,6 +424,38 @@ test('public A2V binding keeps the original driver for a line when its words sta
  const stale=readFileSync(file);
  await assert.rejects(bind(overdub),/speech_video_performance_conflict/);
  assert.deepEqual(readFileSync(file),stale);
+ await t.test('an unversioned A2V fingerprint rejects an in-place replacement driver for the same line',async()=>{
+   const historical=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(unchanged.toString('utf8'));
+   const binding=historical.SCENES[0].visual.video.speechBinding;
+   const attachedVersion=binding.performanceSource.version;
+   binding.performanceSource=legacyPerformanceSource(remux);
+   writeFileSync(file,Object.entries(historical).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+   await record(retake);
+   const afterRetake=readFileSync(file),priorMedia=readFileSync(remux);
+   try {
+     writeFileSync(remux,readFileSync(overdub));
+     await assert.rejects(bind(remux),/speech_video_performance_conflict/);
+     assert.deepEqual(readFileSync(file),afterRetake);
+   } finally { writeFileSync(remux,priorMedia); }
+   assert.equal(attachedVersion,2);
+ });
+ await t.test('a legacy binding without stream hashes needs the original for an unreceipted replacement',async()=>{
+   const historical=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(unchanged.toString('utf8'));
+   delete historical.SCENES[0].visual.video.speechBinding.performanceSource;
+   writeFileSync(file,Object.entries(historical).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+   await record(retake);
+   const stale=readFileSync(file),priorMedia=readFileSync(remux);
+   try {
+     writeFileSync(remux,readFileSync(overdub));
+     await assert.rejects(bind(remux),/speech_video_performance_conflict/);
+     assert.deepEqual(readFileSync(file),stale);
+   } finally { writeFileSync(remux,priorMedia); }
+   const fresh=join(dir,'new-performance.mov');
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=red:s=16x16:r=24:d=0.25','-i',retake,'-map','0:v','-map','1:a','-c:v','libx264','-c:a','copy',fresh]);
+   const attached=await bind(fresh);
+   assert.equal(attached.changed,true);
+   assert.equal(require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8')).SCENES[0].visual.video.speechStatus,'current');
+ });
 });
 test('a silent A2V replacement binds only its generation-time driver WAV',t=>{
  const {dir,target,r}=setup(t), line=r.lines[0], audio=join(dir,'driver.wav'), candidate=join(dir,'fresh.mp4');

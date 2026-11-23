@@ -70,8 +70,8 @@ const speechContract = () => nodeModule.createRequire(import.meta.url)('../../sk
   assertNoPostLipSync(value: unknown): void; hasPostLipSync(value: unknown): boolean;
   episodeVideoReceipts(shots:unknown[],board:string,input:string):unknown;
   assertVideoSpeechProvenance(file:string, sha256:string, plan:unknown, receipts:unknown):void;
-  videoPerformanceSource(file:string, silentConditioned:boolean):{picture:string;audio?:string};
-  assertVideoPerformanceOwnership(shots:unknown[], boardDir:string, candidate:unknown):void;
+  videoPerformanceSource(file:string, silentConditioned:boolean):{version:2;picture:string;encodedPicture:string;audio?:string};
+  assertVideoPerformanceOwnership(shots:unknown[], boardDir:string, candidate:unknown,receipts:unknown):void;
 };
 const videoSeconds = (file: string) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file],
   { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
@@ -433,7 +433,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
         // Replacing a native clip clears trims measured on its predecessor.
         const candidate = {id:scene.id, narration:scene.narration, edit:native && replacement ? {} : scene.edit,
           visual:{video:{speechBinding:{mode:plan.mode,videoPath,videoSha256,audio,performanceSource,conditioningAudioSha256:driverSha256}}}};
-        speechContract().assertVideoPerformanceOwnership(scenes,dirname(file),candidate);
+        speechContract().assertVideoPerformanceOwnership(scenes,dirname(file),candidate,receipts);
       }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);

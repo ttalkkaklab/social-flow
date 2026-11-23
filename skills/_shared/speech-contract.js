@@ -98,7 +98,7 @@ function episodeVideoReceipts(shots,board,extra) {
     for (const file of [video.clip,binding?.videoPath,video.soundtrackRepair?.videoPath]) directory(file);
     for (const source of video.soundtrackRepair?.sources ?? []) directory(source.path);
     if (binding?.videoSha256 && hasPostLipSync(binding)) forbidden.push({sha:binding.videoSha256,
-      file:typeof binding.videoPath === 'string' && path.resolve(board,binding.videoPath),picture:binding.performanceSource?.picture});
+      file:typeof binding.videoPath === 'string' && path.resolve(board,binding.videoPath),frames:binding.performanceSource});
   }
   for (const dir of dirs) {
     let entries;
@@ -144,29 +144,41 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
   if (!index || !(index.hashes.size || index.forbidden.length) || !fs.existsSync(videoPath)) return;
   sha256 ??= digest(videoPath);
   for (const {receipt,suffix} of index.hashes.get(sha256) ?? []) verifyReceiptOperation(receipt,suffix,plan,true);
-  let picture;
+  let frames;
   for (const source of index.forbidden) {
     if (source.sha === sha256) throw new Error('post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source');
-    if (!source.picture && source.file && fs.existsSync(source.file) && digest(source.file) === source.sha)
-      source.picture = videoPerformanceSource(source.file,true).picture;
-    if (!source.picture) continue;
-    picture ??= videoPerformanceSource(videoPath,true).picture;
-    if (source.picture === picture)
+    if (!source.frames && source.file && fs.existsSync(source.file) && digest(source.file) === source.sha)
+      source.frames = videoPerformanceSource(source.file,true);
+    if (!source.frames) continue;
+    frames ??= videoPerformanceSource(videoPath,true);
+    if (sameVideoFrames(source.frames,frames))
       throw new Error('post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source');
   }
 }
 
 // Keep the stream identities even when an editor saves new bytes over the same path.
 function videoPerformanceSource(file, silentConditioned = false) {
-  const picture = require('node:child_process').execFileSync('ffmpeg', ['-nostdin','-v','error','-xerror',
-    '-i',file,'-map','0:V:0','-fps_mode','passthrough','-c:v','rawvideo','-pix_fmt','yuv420p',
-    '-f','hash','-hash','sha256','-'], {encoding:'utf8',timeout:120000}).trim();
-  return {picture, ...(!silentConditioned && {audio:require('./audio-signal.js').decodedAudioHash(file)})};
+  const {execFileSync} = require('node:child_process');
+  const input = ['-nostdin','-v','error','-xerror','-i',file,'-map','0:V:0'];
+  const hash = options => execFileSync('ffmpeg',[...input,...options,'-f','hash','-hash','sha256','-'],
+    {encoding:'utf8',timeout:120000}).trim();
+  const picture = hash(['-fps_mode','passthrough','-c:v','rawvideo','-pix_fmt','yuv420p']);
+  const encodedPicture = hash(['-c:v','copy']);
+  return {version:2,picture,encodedPicture,...(!silentConditioned && {audio:require('./audio-signal.js').decodedAudioHash(file)})};
+}
+
+function sameVideoFrames(left,right) {
+  if (!left?.picture || !right?.picture) return false;
+  // Unversioned bindings stored either compressed packets or decoded frames in
+  // "picture". Retain both identities on new imports so the original can move.
+  return left.picture === right.picture || left.picture === right.encodedPicture ||
+    left.encodedPicture === right.picture ||
+    Boolean(left.encodedPicture && left.encodedPicture === right.encodedPicture);
 }
 
 // One source interval can only carry one spoken performance. Adjacent authored
 // trims may share the same scene render. Keep checks local to an episode.
-function assertVideoPerformanceOwnership(shots, boardDir, candidate) {
+function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
   const fs = require('node:fs'), path = require('node:path');
   const media = new Map();
   function source(shot) {
@@ -195,7 +207,16 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate) {
       left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
     if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
     const a = identity(left), b = identity(right);
-    const samePicture = (left.visible || right.visible) && a?.picture && a.picture === b?.picture;
+    if (candidate && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 &&
+        (left.visible || right.visible) && !a?.picture) {
+      // Pre-fingerprint bindings need the old bytes to distinguish a new take from
+      // an overdub. If those bytes are gone, require an identified completed render.
+      const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({receipt}) =>
+        receipt.status === 'completed' && receipt.jobId &&
+        ['msr','image-to-video','scene-to-video','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode));
+      if (!fresh) throw new Error('speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement');
+    }
+    const samePicture = (left.visible || right.visible) && sameVideoFrames(a,b);
     const changedSoundtrack = samePicture && a.audio !== b.audio;
     const sameMedia = samePicture || (a?.audio && a.audio === b?.audio) || left.binding.videoSha256 === right.binding.videoSha256;
     if (changedSoundtrack || (!samePlan && sameMedia))
@@ -212,7 +233,9 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate) {
     } else {
       if (entry.binding.performanceSource) {
         const current = identity(entry), recorded = entry.binding.performanceSource;
-        if (current?.picture !== recorded.picture || current?.audio !== recorded.audio)
+        const match = recorded.version === undefined ? sameVideoFrames(current,recorded) :
+          recorded.version === 2 && current?.picture === recorded.picture && current?.encodedPicture === recorded.encodedPicture;
+        if (!match || current?.audio !== recorded.audio)
           throw new Error('speech_video_performance_conflict: the source streams for ' + entry.id + ' changed after attachment');
       }
       for (const earlier of prior) check(earlier,entry);

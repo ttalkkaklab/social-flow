@@ -96957,7 +96957,7 @@ var require_speech_contract = __commonJS({
         if (binding?.videoSha256 && hasPostLipSync(binding)) forbidden.push({
           sha: binding.videoSha256,
           file: typeof binding.videoPath === "string" && path39.resolve(board, binding.videoPath),
-          picture: binding.performanceSource?.picture
+          frames: binding.performanceSource
         });
       }
       for (const dir of dirs) {
@@ -97009,42 +97009,34 @@ var require_speech_contract = __commonJS({
       if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return;
       sha2563 ??= digest5(videoPath);
       for (const { receipt, suffix } of index.hashes.get(sha2563) ?? []) verifyReceiptOperation(receipt, suffix, plan2, true);
-      let picture2;
+      let frames;
       for (const source of index.forbidden) {
         if (source.sha === sha2563) throw new Error("post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source");
-        if (!source.picture && source.file && fs26.existsSync(source.file) && digest5(source.file) === source.sha)
-          source.picture = videoPerformanceSource(source.file, true).picture;
-        if (!source.picture) continue;
-        picture2 ??= videoPerformanceSource(videoPath, true).picture;
-        if (source.picture === picture2)
+        if (!source.frames && source.file && fs26.existsSync(source.file) && digest5(source.file) === source.sha)
+          source.frames = videoPerformanceSource(source.file, true);
+        if (!source.frames) continue;
+        frames ??= videoPerformanceSource(videoPath, true);
+        if (sameVideoFrames(source.frames, frames))
           throw new Error("post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source");
       }
     }
     function videoPerformanceSource(file, silentConditioned = false) {
-      const picture2 = __require("node:child_process").execFileSync("ffmpeg", [
-        "-nostdin",
-        "-v",
-        "error",
-        "-xerror",
-        "-i",
-        file,
-        "-map",
-        "0:V:0",
-        "-fps_mode",
-        "passthrough",
-        "-c:v",
-        "rawvideo",
-        "-pix_fmt",
-        "yuv420p",
-        "-f",
-        "hash",
-        "-hash",
-        "sha256",
-        "-"
-      ], { encoding: "utf8", timeout: 12e4 }).trim();
-      return { picture: picture2, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
+      const { execFileSync: execFileSync20 } = __require("node:child_process");
+      const input = ["-nostdin", "-v", "error", "-xerror", "-i", file, "-map", "0:V:0"];
+      const hash7 = (options) => execFileSync20(
+        "ffmpeg",
+        [...input, ...options, "-f", "hash", "-hash", "sha256", "-"],
+        { encoding: "utf8", timeout: 12e4 }
+      ).trim();
+      const picture2 = hash7(["-fps_mode", "passthrough", "-c:v", "rawvideo", "-pix_fmt", "yuv420p"]);
+      const encodedPicture = hash7(["-c:v", "copy"]);
+      return { version: 2, picture: picture2, encodedPicture, ...!silentConditioned && { audio: require_audio_signal().decodedAudioHash(file) } };
     }
-    function assertVideoPerformanceOwnership(shots, boardDir, candidate2) {
+    function sameVideoFrames(left, right) {
+      if (!left?.picture || !right?.picture) return false;
+      return left.picture === right.picture || left.picture === right.encodedPicture || left.encodedPicture === right.picture || Boolean(left.encodedPicture && left.encodedPicture === right.encodedPicture);
+    }
+    function assertVideoPerformanceOwnership(shots, boardDir, candidate2, receipts) {
       const fs26 = __require("node:fs"), path39 = __require("node:path");
       const media = /* @__PURE__ */ new Map();
       function source(shot) {
@@ -97070,7 +97062,11 @@ var require_speech_contract = __commonJS({
         const samePlan = left.binding.mode === right.binding.mode && left.revisions === right.revisions && left.binding.conditioningAudioSha256 === right.binding.conditioningAudioSha256;
         if (samePlan && left.binding.videoSha256 === right.binding.videoSha256) return;
         const a = identity(left), b = identity(right);
-        const samePicture = (left.visible || right.visible) && a?.picture && a.picture === b?.picture;
+        if (candidate2 && left.id === right.id && left.binding.videoSha256 !== right.binding.videoSha256 && (left.visible || right.visible) && !a?.picture) {
+          const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({ receipt }) => receipt.status === "completed" && receipt.jobId && ["msr", "image-to-video", "scene-to-video", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode));
+          if (!fresh) throw new Error("speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement");
+        }
+        const samePicture = (left.visible || right.visible) && sameVideoFrames(a, b);
         const changedSoundtrack = samePicture && a.audio !== b.audio;
         const sameMedia = samePicture || a?.audio && a.audio === b?.audio || left.binding.videoSha256 === right.binding.videoSha256;
         if (changedSoundtrack || !samePlan && sameMedia)
@@ -97086,7 +97082,8 @@ var require_speech_contract = __commonJS({
         } else {
           if (entry2.binding.performanceSource) {
             const current = identity(entry2), recorded = entry2.binding.performanceSource;
-            if (current?.picture !== recorded.picture || current?.audio !== recorded.audio)
+            const match2 = recorded.version === void 0 ? sameVideoFrames(current, recorded) : recorded.version === 2 && current?.picture === recorded.picture && current?.encodedPicture === recorded.encodedPicture;
+            if (!match2 || current?.audio !== recorded.audio)
               throw new Error("speech_video_performance_conflict: the source streams for " + entry2.id + " changed after attachment");
           }
           for (const earlier of prior) check2(earlier, entry2);
@@ -147500,7 +147497,7 @@ function manageSpeech(args, options = {}) {
           edit: native && replacement ? {} : scene.edit,
           visual: { video: { speechBinding: { mode: plan2.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
-        speechContract().assertVideoPerformanceOwnership(scenes, dirname11(file), candidate2);
+        speechContract().assertVideoPerformanceOwnership(scenes, dirname11(file), candidate2, receipts);
       }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan2.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
