@@ -123019,6 +123019,8 @@ function resolvePlanContext(input) {
   requireSupportedSelection(context2.selection);
   if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context2.selection.engine)
     throw new Error("model_selection_mismatch: tool does not match selected engine");
+  if (input.tool && input.operation && input.tool !== selectedVideoTool(context2.selection, input.operation))
+    throw new Error("Tool and operation disagree");
   const route = context2.speechRoute;
   const tool2 = selectedVideoTool(context2.selection, route.operation);
   if (!tool2 || input.tool && input.tool !== tool2 || input.operation && input.operation !== route.operation)
