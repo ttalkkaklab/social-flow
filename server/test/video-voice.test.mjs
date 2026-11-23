@@ -70,6 +70,7 @@ test('an adapter without a voice lane refuses spoken cuts; silent narration b-ro
   assert.equal(silent.voiceContinuity.strategy,'external_tts');assert.equal(silent.args.prompt,'Act.');
   assert.equal(videoVoiceCapabilities('astra_genai_img2video').dialogue,'requires_subject_references');
   assert.equal(videoVoiceCapabilities('seedance_reference').lane,'reference');
+  for (const tool of ['seedance_img2video','veo_img2video']) assert.equal(videoVoiceCapabilities(tool).dialogue,'requires_model_generated_scene_voice');
 });
 test('supplied-audio tools keep the prompt and skip native voice guidance',t=>{
   const ctx=fixture(t);
@@ -118,6 +119,11 @@ test('FastH3 native voices use Picture and Audio labels without exact lip-sync c
   assert.equal(result.voiceContinuity.strategy,'reference_voice');
   assert.match(result.args.prompt,/hero.*<Picture 1>.*<Audio 1>/);
   assert.match(result.args.prompt,/friend.*<Picture 2>.*<Audio 2>/);
+  const withCuts = prepareVideoVoice('fasth3_omni_reference', {
+    prompt:'The first view. The second view.', referenceImagePaths:result.args.referenceImagePaths,
+  }, {...ctx, sceneDirection:{openingPositions:[]}, bindSceneTurns:(prompt, turns) =>
+    prompt.replace('The first view.', 'The first view. ' + turns[0]).replace('The second view.', 'The second view. ' + turns[1])});
+  assert.match(withCuts.args.prompt,/The first view\. [^"]*<Audio 1>[^"]*"Hello hero" The second view\. [^"]*<Audio 2>[^"]*"Hello friend"/);
   assert.equal(videoVoiceCapabilities('fasth3_omni_reference').exactAudioPreservation,false);
 });
 test('MSR attaches each pinned sample to the subject that shows its speaker', t => {

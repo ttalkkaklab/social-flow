@@ -63,6 +63,38 @@ test('local review preserves ambiguous jobs and strips provider secrets; export 
  assert.equal(review.read(board).warnings.length,1);
 });
 
+test('canonical reviews keep completed remote history and recognise a separately edited shot',t=>{
+ const episode=fs.mkdtempSync(path.join(os.tmpdir(),'sf-edit-history-'));
+ t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));
+ const board=path.join(episode,'storyboard'),store=path.join(episode,'.work/video-routing');
+ const relative='.work/render',root=path.join(episode,relative),archive=path.join(root,'.work/video-routing');
+ fs.mkdirSync(board);fs.mkdirSync(store,{recursive:true});fs.mkdirSync(path.join(archive,'plans'),{recursive:true});
+ fs.writeFileSync(path.join(store,'archives.json'),JSON.stringify([relative,relative,'../another-episode']));
+ const id='e'.repeat(64);
+ fs.writeFileSync(path.join(archive,'plans',id+'.json'),JSON.stringify({id,episode:root,shotId:'s1',requestId:'render',args:{outputPath:root,filename:'take.mp4'},inputs:{}}));
+ fs.writeFileSync(path.join(archive,'state.json'),JSON.stringify({jobs:{render:{planId:id,status:'completed',settledUsd:1}}}));
+ fs.writeFileSync(path.join(root,'take.mp4'),'provider source');
+ fs.writeFileSync(path.join(episode,'edit.mp4'),'trimmed picture');
+ const win={SCENES:[{id:'s1',visual:{video:{clip:'../edit.mp4'}},productionPlan:{cuts:[null,{kind:'generated_video',path:'../edit.mp4'}]}}]};
+ const result=review.read(board,win);
+ assert.equal(result.candidates.length,1);assert.equal(result.candidates[0].selected,false);
+ assert.equal(result.candidates[0].clip,'../.work/render/take.mp4');
+ assert.equal(result.summary.attachedShots,1);assert.equal(result.summary.reservedOrSpentUsd,1);
+ assert.equal(result.summary.completedShots,1);assert.equal(result.summary.reviewedShots,0);
+ const liveId='1'.repeat(64),revisionId='2'.repeat(64);
+ fs.mkdirSync(path.join(store,'plans'));
+ const live={id:liveId,episode,shotId:'s1',requestId:'render',args:{prompt:'live take'},inputs:{}};
+ fs.writeFileSync(path.join(store,'plans',liveId+'.json'),JSON.stringify(live));
+ fs.writeFileSync(path.join(store,'state.json'),JSON.stringify({jobs:{render:{planId:liveId,status:'completed',settledUsd:2}}}));
+ fs.writeFileSync(path.join(archive,'plans',revisionId+'.json'),JSON.stringify({id:revisionId,episode:root,shotId:'s1',requestId:'revision',basedOnRequestId:'render',args:{},inputs:{}}));
+ fs.writeFileSync(path.join(archive,'state.json'),JSON.stringify({jobs:{render:{planId:id,status:'completed',settledUsd:1},revision:{planId:revisionId,status:'completed',settledUsd:3}}}));
+ const combined=review.read(board,win);
+ assert.equal(combined.candidates.length,3);assert.equal(combined.summary.reservedOrSpentUsd,6);
+ assert.deepEqual(combined.candidates.find(c=>c.planId===revisionId).changes,[]);
+ fs.writeFileSync(path.join(archive,'state.json'),JSON.stringify({jobs:{render:{planId:id,status:'submission_unknown'}}}));
+ assert.deepEqual(review.read(board,win).candidates.map(c=>c.planId),[liveId]);
+});
+
 test('background snapshots distinguish unchecked review evidence from zero passed reviews',t=>{
  const episode=fs.mkdtempSync(path.join(os.tmpdir(),'sf-reviewed-'));
  t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));

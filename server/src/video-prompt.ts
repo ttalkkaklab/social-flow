@@ -183,7 +183,7 @@ type ResolvedAttribute = { value: string; source: 'scene' | 'shot' | 'carry'; id
 type ResolvedRows = Record<string, ResolvedAttribute>;
 const directions = () => load('../../skills/storyboard/references/scene-direction.js') as {
   resolve(scene: unknown, cards: unknown[]): { defaults:ResolvedRows; common:ResolvedRows; shots:ResolvedRows[] };
-  notes(card: unknown, accept:(cue:string)=>boolean, visualOnly:boolean, concise?:boolean): {actions:string[]; fallback:string[]; motion:string[]; blocking:string; sound:string; end:string; beats:string[]};
+  notes(card: unknown, accept:(cue:string)=>boolean, visualOnly:boolean, concise?:boolean, scenePrompt?:boolean): {actions:string[]; fallback:string[]; motion:string[]; blocking:string; sound:string; end:string; beats:string[]};
   withCameraDefaults(cards:Record<string,unknown>[], scenes:unknown): Record<string,unknown>[];
   labels:Record<string, [string,string]>; movement(id: string): string | undefined;
 };
@@ -196,7 +196,7 @@ export function attributeWords(key: string, row: ResolvedAttribute, camera: Reco
 }
 export function sceneShotNotes(card: Record<string,unknown>, concise = false) {
   const english = (s: string) => s && !nonEnglishOutsideQuotes(s) ? s : '';
-  const notes = directions().notes(card, cue => Boolean(english(cue)), true, concise);
+  const notes = directions().notes(card, cue => Boolean(english(cue)), true, concise, true);
   const actions = notes.actions.map(english).filter(Boolean);
   return { action:actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound:english(notes.sound), blocking:english(notes.blocking),
     end:english(notes.end), beats:[...notes.beats, ...notes.motion].map(english).filter(Boolean) };

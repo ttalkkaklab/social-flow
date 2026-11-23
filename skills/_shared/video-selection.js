@@ -117,13 +117,15 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   const { selection: savedSelection, source } = choice(storedMembers[0]);
   const sourceCards = storedMembers.map(raw => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine);
+  const frameVoice = scene?.videoDirection?.dialogueVoice === 'model_generated' && Boolean(scene.frames?.start) &&
+    ['veo', 'seedance'].includes(savedSelection.engine) && (!savedSelection.operation || savedSelection.operation === 'image');
+  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, frameVoice);
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
     const raw = shotWithRefs;
     const seedance = savedSelection.engine === 'seedance';
-    let shot = selectionOnly && seedance && !raw.visual?.characterInputs ? shotWithRefs :
-      cast && savedSelection.engine === 'astra-genai' ? shotWithRefs : resolveShotCharacterInputs(shotWithRefs, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.speakers);
+    const keepCast = (selectionOnly && seedance || frameVoice) && !raw.visual?.characterInputs || cast && savedSelection.engine === 'astra-genai';
+    let shot = keepCast ? raw : resolveShotCharacterInputs(raw, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.speakers);
     if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
       const slot = videoSlot(shot);
       if (slot) shot = { ...shot, visual: { ...shot.visual, video:slot } };
@@ -149,7 +151,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
     }
   }
   const first = members[0];
-  let selection = selectOperation(savedSelection, members, scene);
+  let selection = frameVoice ? {...savedSelection,operation:'image'} : selectOperation(savedSelection, members, scene);
   let shot = first;
   let timed = false;
   // Older single-card scenes retain their original camera and duration calculation.
@@ -170,7 +172,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
       .map(c => typeof c === 'string' ? c : c.id)))];
     for (const id of (scene.frames !== undefined ? cast.speakers : people)) if (!positions.some(p => p.character === id))
       throw new Error('openingPositions: describe where ' + id + ' starts, including an off-screen start');
-    timed = Boolean(scene.frames !== undefined || members.some(s => s.referenceImage) || members.length > 1 || scene.videoDirection.audio || scene.videoDirection.oneTake || scene.videoDirection.fps ||
+    timed = Boolean(scene.frames !== undefined || members.some(s => s.referenceImage) || members.length > 1 || scene.videoDirection.audio || scene.videoDirection.keyframes?.length || scene.videoDirection.oneTake || scene.videoDirection.fps ||
       members.some(s => s.timeline || s.visual?.frames?.keyframes || s.visual?.frames?.storyboardKeyframes));
     const pinned = !scene.videoDirection.audio && selection.engine === 'astra-genai' && selection.model === 'ltx-2.5-22b-distilled' &&
       ['reference','image',undefined].includes(selection.operation);

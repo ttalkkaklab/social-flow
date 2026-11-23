@@ -3,7 +3,7 @@ name: generate-cut-images
 description: >
   Makes scene openings, endings and optional shot reference images, from its characters' sheet panels, place and props; stops before the video prompt. Use when images are requested or the episode order reaches them.
 argument-hint: "[episode-or-storyboard-path]"
-allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
+allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow"]
 ---
 
 # Generate Cut Images

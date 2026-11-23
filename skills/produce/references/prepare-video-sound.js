@@ -20,7 +20,12 @@ async function prepare(board, shotId, tool, request, apply = false) {
   // MSR and the hosted reference lanes (MiniMax, HeyGen) are the exception: they speak the dialogue in
   // each speaker's sampled voice, so their own speech-and-effects soundtrack is the cut's audio.
   const spoken = (scene.narration || []).filter(line => (line.tts || '').trim());
-  if (sound.audioSource === undefined && spoken.length) sound.audioSource = ['astra_genai_msr', ...runtime.VENDOR_REFERENCE_TOOLS].includes(tool) ? 'video' : 'speech';
+  const owner = win.STRUCTURE?.scenes?.find(item => item.no === scene.scene);
+  const generatedVoice = spoken.some(line => line.delivery !== 'voiceover') &&
+    runtime.usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
+  if (sound.audioSource === undefined && spoken.length) {
+    sound.audioSource = generatedVoice || ['astra_genai_msr', ...runtime.VENDOR_REFERENCE_TOOLS].includes(tool) ? 'video' : 'speech';
+  }
   const plan = runtime.prepareVideoSound(tool, request, sound);
   if (apply) {
     scene.sound = plan.sound;

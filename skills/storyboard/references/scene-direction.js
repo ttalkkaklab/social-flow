@@ -34,12 +34,22 @@
     lines.forEach((_, index) => groups.add(index));
     return Array.from(groups, index => lines[index]);
   }
-  function notes(card, accept = Boolean, visualOnly = false, concise = false) {
+  function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
     const visual = card.visual || {}, video = visual.video || {}, source = video.promptSource || {};
     const design = card.shot?.videoDesign || {}, lines = card.narration || [];
     const spoken = lines.map(line => text(line.tts)).filter(Boolean);
     const redact = cue => spoken.reduce((result,line) => result.split(line).join('the authored line'), cue);
     const beats = [], groups = new Set();
+    function actionWords(event, i) {
+      const cue = redact(text(event.videoDirection) || text(event.text));
+      if (!cue || !accept(cue)) return;
+      const duration = event.durationSeconds && !(scenePrompt && concise) ? ' for ' + event.durationSeconds + ' s' : '';
+      const withLine = event.withGroup && !scenePrompt ? ' with speech group ' + event.withGroup : '';
+      const label = scenePrompt ? [event.character, duration.trim()].filter(Boolean).join(' ') :
+        concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :
+        'Beat ' + (i+1) + (event.character ? ' (' + event.character + ')' : '') + duration;
+      return (label || withLine ? label + withLine + ': ' : '') + cue;
+    }
     function addLine(line, group, prefix, event = {}) {
       if (!line) return;
       const acting = {...line.acting};
@@ -51,24 +61,29 @@
       const fields = actingFields(acting, line.delivery !== 'voiceover', new Set(), redact, accept);
       const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
       const to = text(event.to) || text(line.to);
-      if (to && accept(redact(to))) fields.unshift((concise ? 'to ' : 'Addressed to ') + redact(to) + '.');
+      const listener = to && accept(redact(to)) ? redact(to) : '';
+      const listenerInBeat = listener && scenePrompt && concise;
+      if (listener && !listenerInBeat) fields.unshift((concise ? 'to ' : 'Addressed to ') + listener + '.');
       if (pauses) fields.push(pauses);
-      if (fields.length || card.performance?.length) {
-        const who = [line.speaker, line.id].filter(Boolean).join(', ');
-        const label = concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
+      if (scenePrompt) for (const [index, action] of (card.performance || []).entries()) {
+        if (action.kind !== 'action' || action.withGroup !== group) continue;
+        const cue = actionWords(action, index);
+        if (cue) fields.push(cue);
+      }
+      if (fields.length || card.performance?.length || listenerInBeat) {
+        const who = [line.speaker, scenePrompt ? undefined : line.id].filter(Boolean).join(', ');
+        const label = listenerInBeat ? 'While ' + listener + ' listens, ' + (who || 'the speaker') + ' speaks' :
+          scenePrompt ? (who ? 'As ' + who + ' speaks' : 'During dialogue') :
+          concise ? (who || 'Line '+group) : prefix + 'line ' + group + (who ? ' (' + who + ')' : '');
         beats.push(label + (fields.length ? ': ' + fields.join(' ') : '.'));
       }
       groups.add(group);
     }
     (card.performance || []).forEach((event, i) => {
       if (event.kind !== 'action') return addLine(lines[event.group-1], event.group, 'Beat ' + (i+1) + ' with ', event);
-      const cue = redact(text(event.videoDirection) || text(event.text));
-      if (!cue || !accept(cue)) return;
-      const duration = event.durationSeconds ? ' for ' + event.durationSeconds + ' s' : '';
-      const withLine = event.withGroup ? ' with speech group ' + event.withGroup : '';
-      const label = concise ? [event.character, event.durationSeconds && event.durationSeconds+'s'].filter(Boolean).join(' ') :
-        'Beat ' + (i+1) + (event.character ? ' (' + event.character + ')' : '') + duration;
-      beats.push((label || withLine ? label + withLine + ': ' : '') + cue);
+      if (scenePrompt && lines[event.withGroup - 1]) return;
+      const cue = actionWords(event, i);
+      if (cue) beats.push(cue);
     });
     lines.forEach((line,i) => { if (!groups.has(i+1)) addLine(line, i+1, 'With '); });
     const seen = new Set();

@@ -6,3 +6,4 @@ export { resolveVideoDuration } from './video-duration.js';
 export { priceOf } from './usage-ledger.js';
 export { prepareVideoSound } from './video-sound.js';
 export { VIDEO_ADAPTERS, VENDOR_REFERENCE_TOOLS } from './video-registry.js';
+export { usesGeneratedVoice } from './scene-prompt-profile.js';
