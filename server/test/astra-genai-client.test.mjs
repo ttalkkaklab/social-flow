@@ -113,10 +113,13 @@ test('job history asks the gateway that took the request and marks an active-onl
     seen.push([url, options.method, options.headers.Authorization]);
     // The local gateway predates the history route.
     if (url === 'http://127.0.0.1:18081/v1/jobs?limit=5') return new Response('{"detail":"Not Found"}', { status: 404 });
-    return new Response(JSON.stringify({ jobs: [{ id: url.includes('active') ? 'still-running' : 'finished', status: 'failed' }] }));
+    // The active list is oldest first and ignores limit.
+    if (url.includes('active')) return new Response(JSON.stringify({ jobs: ['oldest', 'older', 'old', 'recent', 'newer', 'newest'].map(id => ({ id })) }));
+    return new Response(JSON.stringify({ jobs: [{ id: 'finished', status: 'failed' }] }));
   };
-  assert.deepEqual(await genaiJobs(), { gateway: 'main', history: true, jobs: [{ id: 'finished', status: 'failed' }] });
-  assert.deepEqual(await genaiJobs({ gateway: 'image', limit: 5 }), { gateway: 'image', history: false, jobs: [{ id: 'still-running', status: 'failed' }] });
+  assert.deepEqual(await genaiJobs(), { gateway: 'main', baseUrl: 'https://remote.example', history: true, jobs: [{ id: 'finished', status: 'failed' }] });
+  assert.deepEqual(await genaiJobs({ gateway: 'image', limit: 5 }), { gateway: 'image', baseUrl: 'http://127.0.0.1:18081', history: false,
+    jobs: ['newest', 'newer', 'recent', 'old', 'older'].map(id => ({ id })) });
   assert.deepEqual(seen, [['https://remote.example/v1/jobs?limit=20', 'GET', 'Bearer remote-key'],
     ['http://127.0.0.1:18081/v1/jobs?limit=5', 'GET', 'Bearer local-key'], ['http://127.0.0.1:18081/v1/jobs/active', 'GET', 'Bearer local-key']]);
   globalThis.fetch = async () => new Response('{"detail":"revoked"}', { status: 401 });

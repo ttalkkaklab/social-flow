@@ -113850,11 +113850,12 @@ var genaiJobsSchema = external_exports.object({
 async function genaiJobs(input = {}) {
   const { gateway, limit: limit2 } = genaiJobsSchema.parse(input);
   const read4 = (route) => requestGenai("GET", route, void 0, 6e4, void 0, void 0, void 0, JOB_GATEWAYS[gateway]);
+  const baseUrl = astraGenaiBaseUrl(JOB_GATEWAYS[gateway]);
   try {
-    return { gateway, history: true, jobs: (await read4("/v1/jobs?limit=" + limit2)).jobs };
+    return { gateway, baseUrl, history: true, jobs: (await read4("/v1/jobs?limit=" + limit2)).jobs };
   } catch (error2) {
     if (!(error2 instanceof GenaiRequestError) || error2.httpStatus !== 404) throw error2;
-    return { gateway, history: false, jobs: (await read4("/v1/jobs/active")).jobs };
+    return { gateway, baseUrl, history: false, jobs: (await read4("/v1/jobs/active")).jobs.reverse().slice(0, limit2) };
   }
 }
 
@@ -114872,7 +114873,7 @@ var descriptions = {
   frameIndex: "Unique zero-based output frame index, e.g. 0; must lie within requested duration/fps.",
   receiptPath: "Existing local .astra-genai.json receipt, e.g. /work/shot.mp4.astra-genai.json.",
   download: "Download and verify completed output, e.g. true; never creates another generation.",
-  gateway: "Gateway that took the lost request, e.g. image. main is ASTRA_GENAI_URL (LTX v2 and MSR video); image, speech and desktop use their own URL and key when configured, else main.",
+  gateway: "Gateway that took the lost request, e.g. image. main is ASTRA_GENAI_URL: LTX v2 and MSR video, and astra_genai_text2img / astra_genai_edit, which never leave it. image (astra_genai_image_generate / astra_genai_image_edit), speech and desktop use their own URL and key when configured, else main. The result names the baseUrl that answered.",
   limit: "Newest jobs to return, 1-100, e.g. 20."
 };
 function describeProperties(value) {
@@ -114910,7 +114911,7 @@ var NATIVE_GENAI_TOOLS = [
   ),
   tool(
     "astra_genai_jobs",
-    "List this token's recent gateway jobs, newest first, when a response was lost and no job ID or result came back. Use to tell whether an interrupted image, speech or video request is still queued or running, succeeded, failed or was cancelled before deciding anything else. Read-only: it never submits, downloads or changes a receipt or reservation. Each job has id, api, endpoint, model, status, created_at, started_at, completed_at, error {code,message}, submission_status (uncertain means a local video submission was cut while sending and needs operator recovery) and status_url; prompts are never returned, so match the lost request by endpoint, model and created_at and treat the match as evidence, not identity. queued or running means wait and read again, never resubmit. history:false means the gateway is older than GET /v1/jobs and only active jobs are listed, so a missing job is finished or failed, not known. The gateway keeps finished jobs for 24 hours; chat calls are not jobs. Do NOT use to download or reconcile: use image_status or video_status action:refresh, astra_genai_video_status or astra_genai_desktop_status with the receipt.",
+    "List this token's recent gateway jobs, newest first, when a response was lost and no job ID or result came back. Use to tell whether an interrupted image, speech or video request is still queued or running, succeeded, failed or was cancelled before deciding anything else. Read-only: it never submits, downloads or changes a receipt or reservation. Returns gateway, baseUrl, history and jobs. Each job has id, api, endpoint, model, status, created_at, started_at, completed_at, error {code,message}, submission_status (uncertain means a local video submission was cut while sending and needs operator recovery) and status_url; prompts are never returned, so match the lost request by endpoint, model and created_at and treat the match as evidence, not identity. queued or running means wait and read again, never resubmit. history:false means the gateway is older than GET /v1/jobs and only active jobs are listed, so a missing job is finished or failed, not known. The gateway keeps finished jobs for 24 hours; chat calls are not jobs. Do NOT use to download or reconcile: use image_status or video_status action:refresh, astra_genai_video_status or astra_genai_desktop_status with the receipt.",
     genaiJobsSchema,
     true
   ),

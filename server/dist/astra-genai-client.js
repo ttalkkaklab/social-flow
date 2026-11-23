@@ -211,13 +211,16 @@ export const genaiJobsSchema = z.object({
 export async function genaiJobs(input = {}) {
     const { gateway, limit } = genaiJobsSchema.parse(input);
     const read = (route) => requestGenai('GET', route, undefined, 60_000, undefined, undefined, undefined, JOB_GATEWAYS[gateway]);
+    // The answering origin shows when a lane resolved to another gateway than the one the request went to.
+    const baseUrl = astraGenaiBaseUrl(JOB_GATEWAYS[gateway]);
     try {
-        return { gateway, history: true, jobs: (await read('/v1/jobs?limit=' + limit)).jobs };
+        return { gateway, baseUrl, history: true, jobs: (await read('/v1/jobs?limit=' + limit)).jobs };
     }
     catch (error) {
         // A gateway older than GET /v1/jobs answers 404. Its active list cannot show a finished or failed job.
         if (!(error instanceof GenaiRequestError) || error.httpStatus !== 404)
             throw error;
-        return { gateway, history: false, jobs: (await read('/v1/jobs/active')).jobs };
+        // That list is oldest first and unbounded by limit.
+        return { gateway, baseUrl, history: false, jobs: (await read('/v1/jobs/active')).jobs.reverse().slice(0, limit) };
     }
 }

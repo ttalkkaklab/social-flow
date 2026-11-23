@@ -344,7 +344,10 @@ response. An interrupted image or speech POST returns no job ID; never guess a r
 When a response was lost, read `astra_genai_jobs` before deciding anything else. It lists
 the token's recent jobs on one gateway, newest first, and never submits, downloads or
 changes a receipt. Pass `gateway` for the lane that took the request: `main` for LTX v2
-and MSR video, `image`, `speech` or `desktop` where that lane has its own URL and key.
+and MSR video and for `astra_genai_text2img` / `astra_genai_edit`, whose DashScope route
+stays on `ASTRA_GENAI_URL`; `image` (`astra_genai_image_generate` / `_edit`), `speech` or
+`desktop` where that lane has its own URL and key. Check the returned `baseUrl` against
+the receipt before reading a missing row as "never submitted".
 Rows carry no prompt, so match the lost request by `endpoint`, `model` and `created_at`
 and treat the match as evidence, not identity.
 
