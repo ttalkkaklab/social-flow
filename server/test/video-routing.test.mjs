@@ -1765,7 +1765,7 @@ test('a scene dip and two fractional shot lengths still fit exactly 113 frames',
   assert.equal(plan.sceneRequest.modelPacedCuts, true);
   assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_cut_timing_model_paced:')));
   assert.deepEqual(plan.sceneRequest.cuts.map(cut => [cut.frame,cut.transition]), [[56,'hard_cut']]);
-  assert.match(plan.args.prompt, /The cart rolls\.[\s\S]*At 2\.333 seconds, cut directly\.[\s\S]*The wheel hits the curb\./);
-  assert.doesNotMatch(plan.args.prompt, /s\d{4}|Frame numbers start|Scene at \d+ fps/);
+  assert.match(plan.args.prompt, /The cart rolls\.[\s\S]*Then cut directly\.[\s\S]*The wheel hits the curb\./);
+  assert.doesNotMatch(plan.args.prompt, /s\d{4}|Frame numbers start|Scene at \d+ fps|At \d+(?:\.\d+)? seconds/);
   assert.deepEqual(plan.sceneRequest.shotIds, f.board.SCENES.map(card => card.id));
 });

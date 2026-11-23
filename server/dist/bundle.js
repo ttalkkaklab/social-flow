@@ -121409,7 +121409,7 @@ function bindRegisteredPanels(scene, episode, board) {
     if (ids?.size === 1) image2.character = [...ids][0];
   }
 }
-function sceneTimelineWords(t2, scene, includeDialogue = true, modelFacing = false) {
+function sceneTimelineWords(t2, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
   const wholeTake = new Set(t2.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const timing = (frame2) => modelFacing ? `At ${Number((frame2 / t2.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
   const transitions = {
@@ -121420,7 +121420,11 @@ function sceneTimelineWords(t2, scene, includeDialogue = true, modelFacing = fal
   return [!modelFacing && `Scene at ${t2.fps} fps. Frame numbers start at zero.`, ...t2.shots.map((s2) => {
     const cues = t2.images.filter((p) => p.shotId === s2.shotId && p.cue).map((p) => `${timing(p.frame)}: ${p.cue}`);
     const transition = s2.transition.replaceAll("_", " ");
-    const heading = modelFacing ? s2.transition === "open" ? "" : `${timing(s2.startFrame)}, ${transitions[s2.transition] ?? transition}.` : `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
+    const cut = transitions[s2.transition] ?? transition;
+    let heading = `${s2.shotId} [${s2.startFrame}\u2013${s2.endFrame - 1}] ${transition}.`;
+    if (modelFacing) {
+      heading = s2.transition === "open" ? "" : modelPacedCuts ? `Then ${cut}.` : `${timing(s2.startFrame)}, ${cut}.`;
+    }
     return [
       heading,
       ...[s2.framing, s2.blocking, s2.action].filter((text4) => text4 && !wholeTake.has(text4)),
@@ -121449,7 +121453,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTimeline = sceneTimelineWords(timeline, scene, !options.bindDialogue, true);
+  const providerTimeline = sceneTimelineWords(timeline, scene, { includeDialogue: !options.bindDialogue, modelFacing: true, modelPacedCuts });
   const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, sceneDirection: {
@@ -123091,7 +123095,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const drift = !scene && !compiled && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
   const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
-  const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut timing as prose. Check the output against the recorded cut frames."] : [];
+  const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
   let direction = sceneCamera ? {
     sourcePrompt,
     directionWarnings: [...sceneCamera.warnings, ...cutWarnings],

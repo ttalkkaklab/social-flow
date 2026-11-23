@@ -628,7 +628,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
       'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts
-    ? ['scene_cut_timing_model_paced: The generator receives cut timing as prose. Check the output against the recorded cut frames.']
+    ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
     : [];
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
     ...(sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);

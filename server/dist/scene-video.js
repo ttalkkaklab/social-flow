@@ -213,7 +213,7 @@ export function bindRegisteredPanels(scene, episode, board) {
             image.character = [...ids][0];
     }
 }
-export function sceneTimelineWords(t, scene, includeDialogue = true, modelFacing = false) {
+export function sceneTimelineWords(t, scene, { includeDialogue = true, modelFacing = false, modelPacedCuts = false } = {}) {
     const wholeTake = new Set(t.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
     const timing = (frame) => modelFacing ? `At ${Number((frame / t.fps).toFixed(3))} seconds` : `Frame ${frame}`;
     const transitions = {
@@ -222,8 +222,12 @@ export function sceneTimelineWords(t, scene, includeDialogue = true, modelFacing
     return [!modelFacing && `Scene at ${t.fps} fps. Frame numbers start at zero.`, ...t.shots.map(s => {
             const cues = t.images.filter(p => p.shotId === s.shotId && p.cue).map(p => `${timing(p.frame)}: ${p.cue}`);
             const transition = s.transition.replaceAll('_', ' ');
-            const heading = modelFacing ? (s.transition === 'open' ? '' : `${timing(s.startFrame)}, ${transitions[s.transition] ?? transition}.`) :
-                `${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${transition}.`;
+            const cut = transitions[s.transition] ?? transition;
+            let heading = `${s.shotId} [${s.startFrame}–${s.endFrame - 1}] ${transition}.`;
+            if (modelFacing) {
+                // The model can paint numeric cut cues onto the picture. The scene manifest retains the cut clock.
+                heading = s.transition === 'open' ? '' : modelPacedCuts ? `Then ${cut}.` : `${timing(s.startFrame)}, ${cut}.`;
+            }
             return [heading,
                 ...[s.framing, s.blocking, s.action].filter(text => text && !wholeTake.has(text)), ...cues, ...t.images.filter(p => p.shotId === s.shotId && p.reference?.scope === 'shot_guide').map(p => p.reference.purpose), s.sound && s.sound !== scene.sound && 'Sound: ' + s.sound,
                 ...(includeDialogue ? (s.dialogue ?? []).filter(l => l.delivery !== 'voiceover').map(l => (l.frame === undefined ? '' : timing(l.frame) + ': ') + (l.direction ? l.direction + ' ' : '') + l.speaker + ' (' + l.delivery + '): "' + l.text + '"') : []),].filter(Boolean).join(' ');
@@ -247,7 +251,7 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-    const providerTimeline = sceneTimelineWords(timeline, scene, !options.bindDialogue, true);
+    const providerTimeline = sceneTimelineWords(timeline, scene, { includeDialogue: !options.bindDialogue, modelFacing: true, modelPacedCuts });
     const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions));
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
