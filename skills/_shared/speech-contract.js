@@ -159,7 +159,7 @@ function episodeVideoReceipts(shots,board,extra) {
       if (hasPostLipSync(receipt)) forbidden.push({sha,file});
     }
   }
-  return {hashes,forbidden,history,renders,drivers:new Map()};
+  return {hashes,forbidden,history,renders,drivers:new Map(),sceneRenders:new Map()};
 }
 
 // Imported native clips may have no local receipt. A matching recorded operation
@@ -168,9 +168,18 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
   const fs = require('node:fs');
   const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   let driver;
-  function verify(receipt,suffix,hashBound) {
+  function verify(receipt,suffix,hashBound,originalFile) {
     verifyReceiptOperation(receipt,suffix,plan,hashBound);
-    const original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
+    let original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
+    if (hashBound && receipt.operation === 'scene-to-video' && ['native','audio_conditioned'].includes(plan.mode)) {
+      const contract = require('./scene-speech-receipt.js');
+      const file = [originalFile,...(index?.hashes.get(receipt.sha256) ?? [])
+        .filter(item => item.receipt.fingerprint === receipt.fingerprint).map(item => item.file)]
+        .find(path => path && fs.existsSync(path + '.scene-request.json')) ?? originalFile;
+      const wire = contract.readSceneRequest(file,receipt);
+      original = contract.verifySceneSpeech(wire,plan);
+      if (index) index.sceneRenders.set(videoPath,wire.body);
+    }
     if (!original) return;
     if (driver && original !== driver) throw new Error('conditioning_audio_unverified: conflicting drivers for the same video');
     driver = original;
@@ -186,11 +195,11 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
     }
     sha256 ??= digest(videoPath);
     if (receipt.sha256 ? receipt.sha256 !== sha256 : receipt.videoPath !== videoPath) continue;
-    verify(receipt,suffix,receipt.sha256 === sha256);
+    verify(receipt,suffix,receipt.sha256 === sha256,videoPath);
   }
   if (!index || !(index.hashes.size || index.forbidden.length) || !fs.existsSync(videoPath)) return driver;
   sha256 ??= digest(videoPath);
-  for (const {receipt,suffix} of index.hashes.get(sha256) ?? []) verify(receipt,suffix,true);
+  for (const {receipt,suffix,file} of index.hashes.get(sha256) ?? []) verify(receipt,suffix,true,file);
   let frames;
   for (const source of index.forbidden) {
     if (source.sha === sha256) throw new Error('post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source');
@@ -217,7 +226,7 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
       }
       frames ??= videoPerformanceSource(videoPath,true);
       if (!sameVideoFrames(source.frames,frames)) continue;
-      verify(source.receipt,source.suffix,true);
+      verify(source.receipt,source.suffix,true,source.file);
       source.sound ??= audio(source.file);
       sound ??= audio(videoPath);
       if (source.sound !== sound)
@@ -233,7 +242,7 @@ function videoPerformanceSource(file, silentConditioned = false) {
   const {execFileSync} = require('node:child_process');
   const input = ['-nostdin','-v','error','-xerror','-i',file,'-map','0:V:0'];
   const hash = options => execFileSync('ffmpeg',[...input,...options,'-f','hash','-hash','sha256','-'],
-    {encoding:'utf8',timeout:120000}).trim();
+    {encoding:'utf8',timeout:120000,stdio:['ignore','pipe','pipe']}).trim();
   const picture = hash(['-fps_mode','passthrough','-c:v','rawvideo','-pix_fmt','yuv420p']);
   const encodedPicture = hash(['-c:v','copy']);
   return {version:2,picture,encodedPicture,...(!silentConditioned && {audio:require('./audio-signal.js').decodedAudioHash(file)})};

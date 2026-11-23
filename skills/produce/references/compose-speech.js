@@ -35,6 +35,12 @@ function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
   // provider's frame padding; the board's duration can still be a draft estimate.
   if (duration(audio)+0.03 < timing.durationSeconds) throw new Error('Silent scene audio is shorter than planned action timing');
 }
+function silentWav(samples,channels=1) {
+  const stride=2*channels, size=samples*stride, wav=Buffer.alloc(44+size);
+  wav.write('RIFF');wav.writeUInt32LE(36+size,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(channels,22);
+  wav.writeUInt32LE(48000,24);wav.writeUInt32LE(48000*stride,28);wav.writeUInt16LE(stride,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(size,40);
+  return wav;
+}
 function mixLines(lines, sources, timing) {
   const {intervals} = timing;
   // ffmpeg only decodes each take; the delay, sum and length are set here. An amix/apad graph hung
@@ -45,9 +51,7 @@ function mixLines(lines, sources, timing) {
     const start=Math.round(intervals.find(item=>item.lineId===line.id).speechStartSeconds*48000);
     for(let k=0;k<pcm.length>>1&&start+k<total;k++)mix[start+k]+=pcm.readInt16LE(k*2);
   });
-  const wav=Buffer.alloc(44+total*2);
-  wav.write('RIFF');wav.writeUInt32LE(36+total*2,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);
-  wav.writeUInt32LE(48000,24);wav.writeUInt32LE(96000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(total*2,40);
+  const wav=silentWav(total);
   mix.forEach((sample,k)=>wav.writeInt16LE(Math.max(-32768,Math.min(32767,sample)),44+k*2));
   return wav;
 }
@@ -71,12 +75,104 @@ function samePerformanceWav(file, mono) {
   return false;
 }
 
+function currentLineSources(lines, board, cast) {
+  return lines.map(line => {
+    const character=cast.find(c=>c.id===line.speaker);
+    const voice=character?.tts ?? require('../../_shared/character-speech.js').characterSpeech(character,{boardDir:board}).tts;
+    const errors=actingErrors(line.acting);
+    errors.push(...generationVoiceErrors(voice,line.audio?.generation,line));
+    if(errors.length)throw new Error(line.id+': '+errors.join('; '));
+    if(!line.audio || line.audio.generation?.text!==line.tts || line.audio.revision!==hash(JSON.stringify(speechRevisionPayload(line,voice))))
+      throw new Error('Attach current audio for '+line.id);
+    const source=path.resolve(board,line.audio.path);
+    if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Audio changed for '+line.id);
+    require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
+    return source;
+  });
+}
+
+function fullScenePerformance(scene, board, render, cards, characters, timingVersion, driverBytes) {
+  const {shots,fps,num_frames:frames}=render;
+  if (!Number.isFinite(fps) || fps<=0 || !Number.isSafeInteger(frames) || frames<=0 ||
+      !Array.isArray(cards) || cards.length!==shots.length || !cards.some(card=>card.id===scene.id))
+    throw new Error('conditioning_audio_unverified: the scene render must cover the current storyboard shots');
+  const cast=Array.isArray(characters)?characters:Object.entries(characters ?? {}).map(([id,c])=>({...c,id}));
+  const sampleAt=frame=>Math.round(frame*48000/fps);
+  if (sampleAt(frames)*2>driverBytes) throw new Error('conditioning_audio_unverified: the original WAV is shorter than the rendered scene');
+  const wav=silentWav(sampleAt(frames));
+  let cursor=0;
+  for (const [i,shot] of shots.entries()) {
+    const card=cards[i];
+    if (card.id!==shot.shot_id || shot.start_frame!==cursor || !Number.isSafeInteger(shot.end_frame) ||
+        shot.end_frame<=cursor || shot.end_frame>frames)
+      throw new Error('conditioning_audio_unverified: the rendered frame range differs for '+card.id);
+    const lines=(card.narration || []).filter(line=>line.tts?.trim());
+    const sources=currentLineSources(lines,board,cast);
+    const timing=sceneTiming(card,board,timingVersion);
+    const start=sampleAt(cursor), end=sampleAt(shot.end_frame);
+    if (Math.round(timing.durationSeconds*48000)>end-start)
+      throw new Error('conditioning_audio_unverified: the performance exceeds the rendered shot '+card.id);
+    if (lines.length) mixLines(lines,sources,timing).copy(wav,44+start*2,44);
+    cursor=shot.end_frame;
+  }
+  if (cursor!==frames) throw new Error('conditioning_audio_unverified: the rendered shots do not cover the full scene');
+  return wav;
+}
+
+// build-reel uses the card WAV duration and seeks the picture to edit.in. Keep
+// the original driver samples from exactly the source frames shown on this card.
+function conditioningSlice(scene, render, driver) {
+  const shot=render.shots.find(shot=>shot.shot_id===scene.id), fps=render.fps;
+  if (!shot) throw new Error('conditioning_audio_unverified: the shot is absent from the original scene');
+  const startFrame=Math.ceil((scene.edit?.in ?? shot.start_frame/fps)*fps-1e-6);
+  const endSeconds=scene.edit?.out ?? shot.end_frame/fps;
+  if (startFrame<shot.start_frame || endSeconds>shot.end_frame/fps+1e-7 || !(endSeconds>startFrame/fps))
+    throw new Error('conditioning_audio_unverified: the edit falls outside the original shot '+scene.id);
+  const start=Math.round(startFrame*48000/fps), end=Math.round(endSeconds*48000);
+  return {wav:driverSamples(driver,start,end),start,end,offset:(startFrame-shot.start_frame)/fps};
+}
+
+function driverSamples(driver,start,end) {
+  const pcm=execFileSync('ffmpeg',['-nostdin','-v','error','-i',driver,'-map','0:a:0','-af',
+    'atrim=start_sample='+start+':end_sample='+end,'-f','s16le','-'],{timeout:120000,maxBuffer:1<<30});
+  const channels=pcm.length/(2*(end-start));
+  if (![1,2].includes(channels)) throw new Error('conditioning_audio_unverified: the original WAV does not cover the requested samples');
+  const wav=silentWav(end-start,channels);
+  pcm.copy(wav,44);
+  return wav;
+}
+
+function matchesConditioningSlice(scene, board, render, audio, driverSha256) {
+  const file=scene.visual?.video?.speechBinding?.conditioningAudioPath;
+  if (!file || !(render?.shots?.length>1)) return false;
+  const driver=path.resolve(board,file);
+  return fs.existsSync(driver) && hash(fs.readFileSync(driver))===driverSha256 &&
+    fs.readFileSync(audio).equals(conditioningSlice(scene,render,driver).wav);
+}
+
+// A previous build may have selected a wider trim. Recover its original WAV
+// only when the written file still contains the original samples in its name.
+function selectedDriver(scene,board,render,work,audio) {
+  const binding=scene.visual.video.speechBinding;
+  if (!binding.conditioningAudioPath || !(render?.shots?.length>1)) return audio;
+  const outputDir=path.join(work,'.source-audio');
+  if (!fs.existsSync(outputDir) || fs.realpathSync(path.dirname(audio))!==fs.realpathSync(outputDir)) return audio;
+  const name=/^([a-f0-9]{64})-(\d+)-(\d+)\.wav$/.exec(path.basename(audio));
+  if (!name || name[1]!==binding.conditioningAudioSha256) return audio;
+  const start=Number(name[2]), end=Number(name[3]), shot=render.shots.find(shot=>shot.shot_id===scene.id);
+  if (!shot || !(end>start) || start<Math.round(shot.start_frame*48000/render.fps) || end>Math.round(shot.end_frame*48000/render.fps)) return audio;
+  const driver=path.resolve(board,binding.conditioningAudioPath);
+  return hash(fs.readFileSync(driver))===name[1] && fs.readFileSync(audio).equals(driverSamples(driver,start,end)) ? driver : audio;
+}
+
 function currentConditioningAudio(scene, board, {index, timingVersion, driverSha256, audioPath, sceneAudioPath, includeCardAudio = true,
+  sceneRender, sceneCards, characters,
   work = path.resolve(board, '../.work'), timing = sceneTiming(scene, board, timingVersion)}) {
   const lines = (scene.narration || []).filter(line => line.tts?.trim());
   const sources = lines.map(line => path.resolve(board, line.audio.path));
   const interval = timing.intervals[0];
-  const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 &&
+  const multiShot = sceneRender?.shots?.length > 1;
+  const direct = !multiShot && lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 &&
     interval.speechEndSeconds === timing.durationSeconds && hash(fs.readFileSync(sources[0])) === driverSha256;
   const cards = path.join(work, 'cards.tsv');
   const choices = [audioPath, sceneAudioPath].filter(Boolean).map(file => path.resolve(board, file));
@@ -84,7 +180,11 @@ function currentConditioningAudio(scene, board, {index, timingVersion, driverSha
     const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/).filter(row => row.trim() && !row.startsWith('#'))
       .map(row => row.split('\t')).filter(fields => fields[0].trim() && Number(fields[0]) === index);
     if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error('conditioning_audio_unverified: ambiguous selected WAV in cards.tsv');
-    if (rows.length) choices.push(path.resolve(work, rows[0][1]));
+    if (rows.length) {
+      const selected=path.resolve(work, rows[0][1]);
+      const fromOriginal=multiShot && matchesConditioningSlice(scene,board,sceneRender,selected,driverSha256);
+      choices.push(fromOriginal ? path.resolve(board,scene.visual.video.speechBinding.conditioningAudioPath) : selected);
+    }
   }
   if (!choices.length) choices.push(direct ? sources[0] : path.join(work, `c${index}-speech.wav`));
   for (const file of new Set(choices)) {
@@ -92,21 +192,32 @@ function currentConditioningAudio(scene, board, {index, timingVersion, driverSha
       throw new Error('conditioning_audio_unverified: the selected WAV differs from the recorded video driver');
   }
   if (!direct) {
-    const composition = mixLines(lines, sources, timing);
+    const composition = multiShot ? fullScenePerformance(scene,board,sceneRender,sceneCards,characters,timingVersion,fs.statSync(choices[0]).size) : mixLines(lines,sources,timing);
     if (hash(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
       throw new Error('conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver');
   }
   return choices[0];
 }
 
-function verifyConditioningPerformance(scene, win, index, board, work, audio, digest) {
+function verifyConditioningPerformance(scene, win, index, board, work, audio, digest, sceneRender) {
   const binding = scene.visual?.video?.speechBinding;
-  if (binding?.mode !== 'audio_conditioned' || binding.conditioningAudioSha256 && binding.conditioningAudioSha256 !== digest)
+  const driverSha256=binding?.conditioningAudioSha256 ?? digest;
+  const multiShot=sceneRender?.shots?.length>1;
+  if (binding?.mode !== 'audio_conditioned' || (multiShot
+      ? !matchesConditioningSlice(scene,board,sceneRender,audio,driverSha256) : driverSha256 !== digest))
     throw new Error('conditioning_audio_unverified: the binding differs from the original A2V driver');
-  const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion);
+  const timingVersion=win.SB_DOC?.performanceTimingVersion, timing=sceneTiming(scene,board,timingVersion);
   const owner = win.STRUCTURE?.scenes?.find(row => row.no === scene.scene);
-  currentConditioningAudio(scene, board, {index, work, timing, driverSha256:digest,
+  currentConditioningAudio(scene, board, {index,work,timing,timingVersion,driverSha256,includeCardAudio:!multiShot,
+    sceneRender,sceneCards:win.SCENES.filter(card=>card.scene===scene.scene),characters:win.SB_DOC?.characters,
     audioPath:binding.conditioningAudioPath ?? audio, sceneAudioPath:owner?.videoDirection?.audio?.path});
+  if (multiShot) {
+    const {offset,start,end}=conditioningSlice(scene,sceneRender,path.resolve(board,binding.conditioningAudioPath));
+    const shifted=seconds=>Math.max(0,Math.min((end-start)/48000,seconds-offset));
+    return timing.intervals.map(({lineId,startSeconds,speechStartSeconds,speechEndSeconds,endSeconds})=>({
+      lineId,startSeconds:shifted(startSeconds),speechStartSeconds:shifted(speechStartSeconds),
+      speechEndSeconds:shifted(speechEndSeconds),endSeconds:shifted(endSeconds)}));
+  }
   return timing.intervals;
 }
 
@@ -117,6 +228,7 @@ function compose(work,board) {
   const cast=Array.isArray(win.SB_DOC.characters)?win.SB_DOC.characters:Object.entries(win.SB_DOC.characters||{}).map(([id,c])=>({...c,id}));
   const cards=path.join(work,'cards.tsv'),rows=fs.readFileSync(cards,'utf8').split(/\r?\n/);
   const outputs=[];
+  let receipts, sliced=false;
   for(let row=0;row<rows.length;row++) {
     if(!rows[row].trim()||rows[row].startsWith('#'))continue;
     const fields=rows[row].split('\t'),scene=win.SCENES[Number(fields[0])];
@@ -126,24 +238,28 @@ function compose(work,board) {
     // The selected A2V driver may be stereo or include renderer padding. Assembly
     // verifies its bytes and line intervals before mixing it with the picture.
     if(scene?.visual?.video?.speechBinding?.mode==='audio_conditioned' && lines.some(line=>line.delivery==='on_screen')) {
-      const audio=path.resolve(work,fields[1]);
-      if (!require('./prepare-source-audio.js').usesConditioningTrack(scene,board,audio))
+      const sourceAudio=require('./prepare-source-audio.js');
+      receipts ??= sourceAudio.checkAssemblyRoutes(win,board);
+      const binding=scene.visual.video.speechBinding;
+      const clip=path.resolve(board,binding.videoPath ?? scene.visual.video.clip), render=receipts.sceneRenders.get(clip);
+      const audio=path.resolve(work,fields[1]), selected=selectedDriver(scene,board,render,work,audio);
+      if (!sourceAudio.usesConditioningTrack(scene,board,selected,render,receipts.drivers.get(clip)))
         throw new Error('conditioning_audio_unverified: this shot no longer uses its A2V driver');
-      verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)));
+      if (render?.shots.length>1) {
+        const owner=win.STRUCTURE?.scenes?.find(row=>row.no===scene.scene);
+        const driver=currentConditioningAudio(scene,board,{index:Number(fields[0]),work,timingVersion:win.SB_DOC.performanceTimingVersion,
+          driverSha256:binding.conditioningAudioSha256,includeCardAudio:selected===audio,audioPath:binding.conditioningAudioPath,sceneAudioPath:owner?.videoDirection?.audio?.path,
+          sceneRender:render,sceneCards:win.SCENES.filter(card=>card.scene===scene.scene),characters:cast});
+        const {wav,start,end}=conditioningSlice(scene,render,driver);
+        const file=path.join(work,'.source-audio',binding.conditioningAudioSha256+'-'+start+'-'+end+'.wav');
+        fs.mkdirSync(path.dirname(file),{recursive:true});
+        if (!fs.existsSync(file) || !fs.readFileSync(file).equals(wav)) fs.writeFileSync(file,wav);
+        fields[1]=file;rows[row]=fields.join('\t');sliced=true;
+      } else verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)));
       continue;
     }
     if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
-    const sources=[];
-    lines.forEach(line=>{
-      const errors=actingErrors(line.acting),voice=cast.find(c=>c.id===line.speaker)?.tts;
-      errors.push(...generationVoiceErrors(voice,line.audio?.generation,line));
-      if(errors.length)throw new Error(line.id+': '+errors.join('; '));
-      if(!line.audio || line.audio.generation.text!==line.tts || line.audio.revision!==hash(JSON.stringify(speechRevisionPayload(line,voice))))throw new Error('Attach current audio for '+line.id);
-      const source=path.resolve(board,line.audio.path);
-      if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Audio changed for '+line.id);
-      require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
-      sources.push(source);
-    });
+    const sources=currentLineSources(lines,board,cast);
     const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion),intervals=timing.intervals;
     const wav = mixLines(lines, sources, timing);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
@@ -152,8 +268,8 @@ function compose(work,board) {
     fs.writeFileSync(output+'.generation.json',JSON.stringify(receipt,null,2)+'\n');
     fields[1]=path.basename(output);rows[row]=fields.join('\t');outputs.push({shotId:scene.id,audioPath:output,...receipt});
   }
-  if(outputs.length)fs.writeFileSync(cards,rows.join('\n'));
+  if(outputs.length || sliced)fs.writeFileSync(cards,rows.join('\n'));
   return outputs;
 }
-module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio,verifyConditioningPerformance};
+module.exports={compose,lineSources,duration,sceneTiming,checkSilentTiming,currentConditioningAudio,verifyConditioningPerformance,matchesConditioningSlice};
 if(require.main===module){try{console.log(JSON.stringify(compose(process.argv[2],process.argv[3]),null,2));}catch(e){console.error(e.message);process.exitCode=1;}}

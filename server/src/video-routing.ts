@@ -338,6 +338,7 @@ async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnTyp
   const receiptPath = target + '.astra-genai.json';
   fs.mkdirSync(path.dirname(target), {recursive:true});
   const receipt = {version:1, operation:'scene-to-video', baseUrl:astraGenaiBaseUrl(),
+    sceneRequestSha256:createHash('sha256').update(JSON.stringify(prepared)).digest('hex'),
     fingerprint:plan.id, expected:planOutputContract(plan), videoPath:target, requestId:'scene-' + plan.id, status:'submitting'};
   fs.writeFileSync(receiptPath, JSON.stringify(receipt), {flag:'wx', mode:0o600});
   atomicJson(target + '.scene-request.json', prepared);

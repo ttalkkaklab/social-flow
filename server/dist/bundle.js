@@ -96855,6 +96855,226 @@ var require_character_sheet = __commonJS({
   }
 });
 
+// ../skills/_shared/audio-signal.js
+var require_audio_signal = __commonJS({
+  "../skills/_shared/audio-signal.js"(exports, module) {
+    "use strict";
+    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
+    var SILENCE_DB = -60;
+    function inspect(file) {
+      const streams = JSON.parse(execFileSync20("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration:format=duration",
+        "-of",
+        "json",
+        file
+      ], { encoding: "utf8" }));
+      if (!streams.streams?.length) return { status: "missing", spans: [] };
+      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
+      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
+      const result = spawnSync4(
+        "ffmpeg",
+        [
+          "-hide_banner",
+          "-nostdin",
+          "-nostats",
+          "-xerror",
+          "-progress",
+          "pipe:1",
+          "-i",
+          file,
+          "-map",
+          "0:a:0",
+          "-af",
+          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
+          "-f",
+          "null",
+          "-"
+        ],
+        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
+      );
+      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
+        throw new Error("cannot decode audio signal");
+      const spans = [];
+      let start = 0;
+      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
+        if (event === "start") start = Number(time3);
+        else spans.push([start, Number(time3)]);
+      }
+      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
+      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
+      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
+      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
+    }
+    function covers(spans, start, seconds2, tolerance = 0) {
+      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
+    }
+    function decodedAudioHash(file) {
+      return execFileSync20("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-ac",
+        "2",
+        "-ar",
+        "16000",
+        "-c:a",
+        "pcm_s16le",
+        "-f",
+        "hash",
+        "-hash",
+        "sha256",
+        "-"
+      ], { encoding: "utf8", timeout: 3e4 }).trim();
+    }
+    function pcmToWav2(pcmData, sampleRate, numChannels) {
+      const bitsPerSample = 16;
+      const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+      const blockAlign = numChannels * (bitsPerSample / 8);
+      const dataSize = pcmData.length;
+      const header = Buffer.alloc(44);
+      header.write("RIFF", 0);
+      header.writeUInt32LE(36 + dataSize, 4);
+      header.write("WAVE", 8);
+      header.write("fmt ", 12);
+      header.writeUInt32LE(16, 16);
+      header.writeUInt16LE(1, 20);
+      header.writeUInt16LE(numChannels, 22);
+      header.writeUInt32LE(sampleRate, 24);
+      header.writeUInt32LE(byteRate, 28);
+      header.writeUInt16LE(blockAlign, 32);
+      header.writeUInt16LE(bitsPerSample, 34);
+      header.write("data", 36);
+      header.writeUInt32LE(dataSize, 40);
+      return Buffer.concat([header, pcmData]);
+    }
+    module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash, pcmToWav: pcmToWav2 };
+  }
+});
+
+// ../skills/_shared/scene-speech-receipt.js
+var require_scene_speech_receipt = __commonJS({
+  "../skills/_shared/scene-speech-receipt.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var sha2 = (value) => createHash33("sha256").update(value).digest("hex");
+    var shaPattern = /^[a-f0-9]{64}$/;
+    function mismatch(message) {
+      throw new Error("speech_video_source_mismatch: " + message);
+    }
+    function readSceneRequest(file, receipt) {
+      if (receipt.version !== 1 || receipt.status !== "completed" || !receipt.jobId || !shaPattern.test(receipt.fingerprint) || receipt.requestId !== "scene-" + receipt.fingerprint) mismatch("invalid completed scene receipt");
+      let wire;
+      try {
+        wire = JSON.parse(fs26.readFileSync(file + ".scene-request.json", "utf8"));
+      } catch {
+        mismatch("restore the archived scene request for this clip");
+      }
+      const body = wire?.body, bytes = JSON.stringify(body);
+      if (!bytes || wire.bodySha256 !== sha2(bytes) || wire.bytes !== Buffer.byteLength(bytes) || receipt.sceneRequestSha256 && receipt.sceneRequestSha256 !== sha2(JSON.stringify(wire)) || !Array.isArray(wire.attachments) || !Array.isArray(body.shots) || !body.shots.length || !Number.isFinite(body.fps) || body.fps <= 0 || !Number.isInteger(body.num_frames) || body.num_frames <= 0 || receipt.expected?.frames && receipt.expected.frames !== body.num_frames || receipt.expected?.fps && receipt.expected.fps !== body.fps) mismatch("the archived scene request does not match the completed render");
+      let frame2 = 0;
+      const ids = /* @__PURE__ */ new Set();
+      for (const shot of body.shots) {
+        if (!shot.shot_id || ids.has(shot.shot_id) || shot.start_frame !== frame2 || !Number.isInteger(shot.end_frame) || shot.end_frame <= frame2)
+          mismatch("invalid shot intervals in the archived scene");
+        ids.add(shot.shot_id);
+        frame2 = shot.end_frame;
+      }
+      if (frame2 !== body.num_frames) mismatch("the archived shots do not cover the video");
+      return wire;
+    }
+    function audioAttachment(wire, role, uri, shot) {
+      const rows = wire.attachments.filter((row) => row.role === role && row.shotId === shot?.shot_id);
+      const inline = typeof uri === "string" && /^data:audio\/[^,]+;base64,/.test(uri);
+      if (inline && !rows.length) return sha2(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64"));
+      if (rows.length !== 1 || rows[0].frame !== (shot?.start_frame ?? 0) || !shaPattern.test(rows[0].sha256) || !Number.isInteger(rows[0].bytes) || rows[0].bytes <= 0 || typeof uri !== "string" || !uri.startsWith("genai-file://"))
+        mismatch("missing archived " + role + " upload");
+      const id = uri.slice("genai-file://".length);
+      if (!id || shaPattern.test(id) && id !== rows[0].sha256) mismatch("scene audio URI and attachment disagree");
+      return rows[0].sha256;
+    }
+    function sceneDriver(wire) {
+      const { scene_audio: track, num_frames: frames } = wire.body;
+      if (!track || track.mode === "mix") return;
+      if (!["conditioning", void 0].includes(track.mode) || track.start_frame !== 0 || track.end_frame !== frames)
+        mismatch("invalid full-scene conditioning interval");
+      return audioAttachment(wire, "scene_audio", track.audio_uri);
+    }
+    function performanceWav(source, shotFrames, fps) {
+      const sampleRate = 48e3, channels = 2, block = 4;
+      const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
+      const samples = Math.ceil(nativeFrames * sampleRate / fps);
+      const pcm = __require("node:child_process").execFileSync("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-xerror",
+        "-i",
+        source,
+        "-map",
+        "0:a:0",
+        "-ac",
+        String(channels),
+        "-ar",
+        String(sampleRate),
+        "-f",
+        "s16le",
+        "pipe:1"
+      ], { maxBuffer: 32 * 1024 * 1024, timeout: 3e4 });
+      const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
+      if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some((byte) => byte !== 0))
+        throw new Error("scene_speech_performance: the recorded dialogue extends past the shot");
+      const padded = Buffer.alloc(samples * block);
+      pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
+      return require_audio_signal().pcmToWav(padded, sampleRate, channels);
+    }
+    function verifySceneSpeech(wire, plan2) {
+      const body = wire.body, driver = sceneDriver(wire);
+      if (body.generate_audio === false && plan2.mode === "native" || plan2.model && body.model !== plan2.model)
+        mismatch("scene model or native audio differs from the selected route");
+      if (plan2.mode === "audio_conditioned" && !driver || plan2.mode === "native" && driver)
+        mismatch("scene request used a different speech operation");
+      const card = plan2.sourceShot;
+      if (card) {
+        const lines = (card.narration ?? []).filter((line) => line.tts?.trim() && line.delivery !== "voiceover");
+        const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
+        if (!original) mismatch("the requested shot is absent from the recorded scene");
+        const dialogue = original.dialogue ?? [];
+        if (original.performance_uri) {
+          const file = lines.length === 1 && lines[0].audio?.path;
+          if (!file || !plan2.boardDir) mismatch("restore the recorded dialogue performance for this shot");
+          const bytes = performanceWav(__require("node:path").resolve(plan2.boardDir, file), original.end_frame - original.start_frame, body.fps);
+          if (sha2(bytes) !== audioAttachment(wire, "performance_audio", original.performance_uri, original))
+            mismatch("the current recording differs from the performance supplied to this shot");
+        }
+        if (plan2.assembly && body.shots.length > 1) {
+          const start = card.edit?.in ?? 0, end = card.edit?.out ?? body.num_frames / body.fps;
+          if (start < original.start_frame / body.fps - 1e-6 || end > original.end_frame / body.fps + 1e-6 || end <= start)
+            mismatch("the selected source interval extends outside the recorded shot");
+        }
+        if (plan2.mode === "native" || dialogue.length) {
+          const spoken = (row) => [row.speaker, row.text.trim(), row.delivery];
+          const assigned = lines.map((line) => spoken({ speaker: line.speaker, text: line.tts, delivery: line.delivery }));
+          if (JSON.stringify(dialogue.map(spoken)) !== JSON.stringify(assigned))
+            mismatch("recorded speakers, words or delivery do not match this shot");
+        }
+      }
+      return driver;
+    }
+    module.exports = { readSceneRequest, sceneDriver, verifySceneSpeech, performanceWav };
+  }
+});
+
 // ../skills/_shared/character-speech.js
 var require_character_speech = __commonJS({
   "../skills/_shared/character-speech.js"(exports, module) {
@@ -96990,7 +97210,11 @@ var require_character_speech = __commonJS({
       } catch {
         return;
       }
-      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256) || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
+      if (!receipt || receipt.status !== "completed" || !receipt.jobId || receipt.videoPath !== video2 || hash7(fs26.readFileSync(video2)) !== receipt.sha256) return;
+      if (receipt.operation === "scene-to-video") {
+        const contract2 = require_scene_speech_receipt();
+        return contract2.sceneDriver(contract2.readSceneRequest(video2, receipt));
+      }
       return recordedConditioningDriver(receipt, receipts[0]);
     }
     function recordedConditioningDriver(receipt, sidecar) {
@@ -97001,91 +97225,6 @@ var require_character_speech = __commonJS({
       if (astra || gateway) return receipt.conditioningAudioSha256;
     }
     module.exports = { characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver };
-  }
-});
-
-// ../skills/_shared/audio-signal.js
-var require_audio_signal = __commonJS({
-  "../skills/_shared/audio-signal.js"(exports, module) {
-    "use strict";
-    var { execFileSync: execFileSync20, spawnSync: spawnSync4 } = __require("node:child_process");
-    var SILENCE_DB = -60;
-    function inspect(file) {
-      const streams = JSON.parse(execFileSync20("ffprobe", [
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=duration:format=duration",
-        "-of",
-        "json",
-        file
-      ], { encoding: "utf8" }));
-      if (!streams.streams?.length) return { status: "missing", spans: [] };
-      const duration5 = Number(streams.streams[0].duration) || Number(streams.format?.duration);
-      if (!Number.isFinite(duration5) || duration5 <= 0) throw new Error("cannot measure audio duration");
-      const result = spawnSync4(
-        "ffmpeg",
-        [
-          "-hide_banner",
-          "-nostdin",
-          "-nostats",
-          "-xerror",
-          "-progress",
-          "pipe:1",
-          "-i",
-          file,
-          "-map",
-          "0:a:0",
-          "-af",
-          `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`,
-          "-f",
-          "null",
-          "-"
-        ],
-        { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }
-      );
-      if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
-        throw new Error("cannot decode audio signal");
-      const spans = [];
-      let start = 0;
-      for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
-        if (event === "start") start = Number(time3);
-        else spans.push([start, Number(time3)]);
-      }
-      const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
-      if (peak === void 0) throw new Error("cannot measure decoded audio peak");
-      const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
-      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
-    }
-    function covers(spans, start, seconds2, tolerance = 0) {
-      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
-    }
-    function decodedAudioHash(file) {
-      return execFileSync20("ffmpeg", [
-        "-nostdin",
-        "-v",
-        "error",
-        "-xerror",
-        "-i",
-        file,
-        "-map",
-        "0:a:0",
-        "-ac",
-        "2",
-        "-ar",
-        "16000",
-        "-c:a",
-        "pcm_s16le",
-        "-f",
-        "hash",
-        "-hash",
-        "sha256",
-        "-"
-      ], { encoding: "utf8", timeout: 3e4 }).trim();
-    }
-    module.exports = { inspect, covers, SILENCE_DB, decodedAudioHash };
   }
 });
 
@@ -97263,15 +97402,22 @@ var require_speech_contract = __commonJS({
           if (hasPostLipSync(receipt)) forbidden.push({ sha: sha2, file });
         }
       }
-      return { hashes, forbidden, history, renders, drivers: /* @__PURE__ */ new Map() };
+      return { hashes, forbidden, history, renders, drivers: /* @__PURE__ */ new Map(), sceneRenders: /* @__PURE__ */ new Map() };
     }
     function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
       const fs26 = __require("node:fs");
       const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
       let driver;
-      function verify(receipt, suffix, hashBound) {
+      function verify(receipt, suffix, hashBound, originalFile) {
         verifyReceiptOperation(receipt, suffix, plan2, hashBound);
-        const original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
+        let original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
+        if (hashBound && receipt.operation === "scene-to-video" && ["native", "audio_conditioned"].includes(plan2.mode)) {
+          const contract2 = require_scene_speech_receipt();
+          const file = [originalFile, ...(index?.hashes.get(receipt.sha256) ?? []).filter((item) => item.receipt.fingerprint === receipt.fingerprint).map((item) => item.file)].find((path39) => path39 && fs26.existsSync(path39 + ".scene-request.json")) ?? originalFile;
+          const wire = contract2.readSceneRequest(file, receipt);
+          original = contract2.verifySceneSpeech(wire, plan2);
+          if (index) index.sceneRenders.set(videoPath, wire.body);
+        }
         if (!original) return;
         if (driver && original !== driver) throw new Error("conditioning_audio_unverified: conflicting drivers for the same video");
         driver = original;
@@ -97287,11 +97433,11 @@ var require_speech_contract = __commonJS({
         }
         sha2563 ??= digest5(videoPath);
         if (receipt.sha256 ? receipt.sha256 !== sha2563 : receipt.videoPath !== videoPath) continue;
-        verify(receipt, suffix, receipt.sha256 === sha2563);
+        verify(receipt, suffix, receipt.sha256 === sha2563, videoPath);
       }
       if (!index || !(index.hashes.size || index.forbidden.length) || !fs26.existsSync(videoPath)) return driver;
       sha2563 ??= digest5(videoPath);
-      for (const { receipt, suffix } of index.hashes.get(sha2563) ?? []) verify(receipt, suffix, true);
+      for (const { receipt, suffix, file } of index.hashes.get(sha2563) ?? []) verify(receipt, suffix, true, file);
       let frames;
       for (const source of index.forbidden) {
         if (source.sha === sha2563) throw new Error("post_lipsync_forbidden: the bound video belongs to a known post-render lip-sync source");
@@ -97322,7 +97468,7 @@ var require_speech_contract = __commonJS({
           }
           frames ??= videoPerformanceSource(videoPath, true);
           if (!sameVideoFrames(source.frames, frames)) continue;
-          verify(source.receipt, source.suffix, true);
+          verify(source.receipt, source.suffix, true, source.file);
           source.sound ??= audio(source.file);
           sound ??= audio(videoPath);
           if (source.sound !== sound)
@@ -97338,7 +97484,7 @@ var require_speech_contract = __commonJS({
       const hash7 = (options) => execFileSync20(
         "ffmpeg",
         [...input, ...options, "-f", "hash", "-hash", "sha256", "-"],
-        { encoding: "utf8", timeout: 12e4 }
+        { encoding: "utf8", timeout: 12e4, stdio: ["ignore", "pipe", "pipe"] }
       ).trim();
       const picture2 = hash7(["-fps_mode", "passthrough", "-c:v", "rawvideo", "-pix_fmt", "yuv420p"]);
       const encodedPicture = hash7(["-c:v", "copy"]);
@@ -104543,7 +104689,8 @@ var require_edit_plan = __commonJS({
         const post = seconds2(edit2.post, 0.12, "edit.post");
         if (carry.test(t2) && pre !== 0) throw new Error("A split edit must start the next voice at the card boundary (pre=0)");
         if (start && s2.visual?.slide) throw new Error("Slide reveal timing cannot use edit.in; author the source animation timing");
-        const ownVoice = s2.sound?.audioSource === "video";
+        const binding = s2.visual?.video?.speechBinding;
+        const ownVoice = s2.sound?.audioSource === "video" || opts.sync === "1" && binding?.mode === "audio_conditioned" && Boolean(binding.conditioningAudioSha256);
         if (edit2.out !== void 0 && (!ownVoice || typeof edit2.out !== "number" || !Number.isFinite(edit2.out) || edit2.out <= start))
           throw new Error("shot " + (i2 + 1) + ": edit.out is the source second where a card that plays its clip soundtrack (audioSource video) ends; it must be later than edit.in");
         if (opts.sync === "1" && (start && !ownVoice || pre || edit2.post > 0 || carry.test(t2))) throw new Error("Sync footage requires cut, in=0 and no audio margins");
@@ -105045,6 +105192,331 @@ var require_check_production = __commonJS({
   }
 });
 
+// ../skills/produce/references/compose-speech.js
+var require_compose_speech = __commonJS({
+  "../skills/produce/references/compose-speech.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path39 = __require("node:path");
+    var { execFileSync: execFileSync20 } = __require("node:child_process");
+    var { createHash: createHash33 } = __require("node:crypto");
+    var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
+    var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
+    var { generationVoiceErrors } = require_character_voice();
+    var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
+    function duration5(file) {
+      const seconds2 = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
+      if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file);
+      return seconds2;
+    }
+    function lineSources(lines) {
+      return lines.map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision, leadInSeconds: n.acting?.leadInSeconds ?? 0, tailOutSeconds: n.acting?.tailOutSeconds ?? 0 }));
+    }
+    function sceneTiming(scene, board, performanceTimingVersion) {
+      const actions = (scene.performance || []).filter((event) => event.kind === "action");
+      const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
+      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration5(path39.resolve(board, line.audio.path)));
+      if (legacy) {
+        plan2.timing = "legacy_speech_only";
+        plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
+      }
+      if (plan2.durationSeconds === null) throw new Error("Plan finite action timing before composing speech: " + plan2.warnings.join("; "));
+      const intervals = plan2.performance.filter((event) => event.kind !== "action").map((event) => {
+        const { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds } = event;
+        return { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds };
+      });
+      return { ...plan2, intervals };
+    }
+    function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
+      if (performanceTimingVersion !== 1 || (scene.narration || []).length || !scene.performance?.length || scene.performance.some((event) => event.kind !== "action")) return;
+      const timing = sceneTiming(scene, board, performanceTimingVersion);
+      if (duration5(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
+    }
+    function silentWav(samples, channels = 1) {
+      const stride = 2 * channels, size = samples * stride, wav = Buffer.alloc(44 + size);
+      wav.write("RIFF");
+      wav.writeUInt32LE(36 + size, 4);
+      wav.write("WAVEfmt ", 8);
+      wav.writeUInt32LE(16, 16);
+      wav.writeUInt16LE(1, 20);
+      wav.writeUInt16LE(channels, 22);
+      wav.writeUInt32LE(48e3, 24);
+      wav.writeUInt32LE(48e3 * stride, 28);
+      wav.writeUInt16LE(stride, 32);
+      wav.writeUInt16LE(16, 34);
+      wav.write("data", 36);
+      wav.writeUInt32LE(size, 40);
+      return wav;
+    }
+    function mixLines(lines, sources, timing) {
+      const { intervals } = timing;
+      const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
+      lines.forEach((line, i2) => {
+        const pcm = execFileSync20("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+        const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
+        for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
+      });
+      const wav = silentWav(total);
+      mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
+      return wav;
+    }
+    function samePerformanceWav(file, mono) {
+      const probe5 = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,sample_rate,channels:format=format_name", "-of", "json", file], { encoding: "utf8" }));
+      const stream = probe5.streams[0];
+      if (probe5.format?.format_name !== "wav" || probe5.streams.length !== 1 || stream.codec_name !== "pcm_s16le" || Number(stream.sample_rate) !== 48e3 || ![1, 2].includes(stream.channels)) return false;
+      const options = { timeout: 12e4, maxBuffer: 1 << 30 };
+      const actual = execFileSync20("ffmpeg", ["-v", "error", "-i", file, "-f", "s16le", "-"], options);
+      const matches = (expected) => expected.length > 0 && actual.length >= expected.length && actual.subarray(0, expected.length).equals(expected) && actual.subarray(expected.length).every((sample) => sample === 0);
+      if (stream.channels === 1) return matches(mono.subarray(44));
+      for (const layout of [["-ac", "2"], ["-af", "pan=stereo|FL=c0|FR=c0"]]) {
+        const stereo = execFileSync20("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
+        if (matches(stereo)) return true;
+      }
+      return false;
+    }
+    function currentLineSources(lines, board, cast) {
+      return lines.map((line) => {
+        const character = cast.find((c) => c.id === line.speaker);
+        const voice = character?.tts ?? require_character_speech().characterSpeech(character, { boardDir: board }).tts;
+        const errors = actingErrors(line.acting);
+        errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
+        if (errors.length) throw new Error(line.id + ": " + errors.join("; "));
+        if (!line.audio || line.audio.generation?.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice))))
+          throw new Error("Attach current audio for " + line.id);
+        const source = path39.resolve(board, line.audio.path);
+        if (hash7(fs26.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
+        require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
+        return source;
+      });
+    }
+    function fullScenePerformance(scene, board, render, cards, characters, timingVersion, driverBytes) {
+      const { shots, fps, num_frames: frames } = render;
+      if (!Number.isFinite(fps) || fps <= 0 || !Number.isSafeInteger(frames) || frames <= 0 || !Array.isArray(cards) || cards.length !== shots.length || !cards.some((card) => card.id === scene.id))
+        throw new Error("conditioning_audio_unverified: the scene render must cover the current storyboard shots");
+      const cast = Array.isArray(characters) ? characters : Object.entries(characters ?? {}).map(([id, c]) => ({ ...c, id }));
+      const sampleAt = (frame2) => Math.round(frame2 * 48e3 / fps);
+      if (sampleAt(frames) * 2 > driverBytes) throw new Error("conditioning_audio_unverified: the original WAV is shorter than the rendered scene");
+      const wav = silentWav(sampleAt(frames));
+      let cursor = 0;
+      for (const [i2, shot] of shots.entries()) {
+        const card = cards[i2];
+        if (card.id !== shot.shot_id || shot.start_frame !== cursor || !Number.isSafeInteger(shot.end_frame) || shot.end_frame <= cursor || shot.end_frame > frames)
+          throw new Error("conditioning_audio_unverified: the rendered frame range differs for " + card.id);
+        const lines = (card.narration || []).filter((line) => line.tts?.trim());
+        const sources = currentLineSources(lines, board, cast);
+        const timing = sceneTiming(card, board, timingVersion);
+        const start = sampleAt(cursor), end = sampleAt(shot.end_frame);
+        if (Math.round(timing.durationSeconds * 48e3) > end - start)
+          throw new Error("conditioning_audio_unverified: the performance exceeds the rendered shot " + card.id);
+        if (lines.length) mixLines(lines, sources, timing).copy(wav, 44 + start * 2, 44);
+        cursor = shot.end_frame;
+      }
+      if (cursor !== frames) throw new Error("conditioning_audio_unverified: the rendered shots do not cover the full scene");
+      return wav;
+    }
+    function conditioningSlice(scene, render, driver) {
+      const shot = render.shots.find((shot2) => shot2.shot_id === scene.id), fps = render.fps;
+      if (!shot) throw new Error("conditioning_audio_unverified: the shot is absent from the original scene");
+      const startFrame = Math.ceil((scene.edit?.in ?? shot.start_frame / fps) * fps - 1e-6);
+      const endSeconds = scene.edit?.out ?? shot.end_frame / fps;
+      if (startFrame < shot.start_frame || endSeconds > shot.end_frame / fps + 1e-7 || !(endSeconds > startFrame / fps))
+        throw new Error("conditioning_audio_unverified: the edit falls outside the original shot " + scene.id);
+      const start = Math.round(startFrame * 48e3 / fps), end = Math.round(endSeconds * 48e3);
+      return { wav: driverSamples(driver, start, end), start, end, offset: (startFrame - shot.start_frame) / fps };
+    }
+    function driverSamples(driver, start, end) {
+      const pcm = execFileSync20("ffmpeg", [
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        driver,
+        "-map",
+        "0:a:0",
+        "-af",
+        "atrim=start_sample=" + start + ":end_sample=" + end,
+        "-f",
+        "s16le",
+        "-"
+      ], { timeout: 12e4, maxBuffer: 1 << 30 });
+      const channels = pcm.length / (2 * (end - start));
+      if (![1, 2].includes(channels)) throw new Error("conditioning_audio_unverified: the original WAV does not cover the requested samples");
+      const wav = silentWav(end - start, channels);
+      pcm.copy(wav, 44);
+      return wav;
+    }
+    function matchesConditioningSlice(scene, board, render, audio, driverSha256) {
+      const file = scene.visual?.video?.speechBinding?.conditioningAudioPath;
+      if (!file || !(render?.shots?.length > 1)) return false;
+      const driver = path39.resolve(board, file);
+      return fs26.existsSync(driver) && hash7(fs26.readFileSync(driver)) === driverSha256 && fs26.readFileSync(audio).equals(conditioningSlice(scene, render, driver).wav);
+    }
+    function selectedDriver(scene, board, render, work, audio) {
+      const binding = scene.visual.video.speechBinding;
+      if (!binding.conditioningAudioPath || !(render?.shots?.length > 1)) return audio;
+      const outputDir = path39.join(work, ".source-audio");
+      if (!fs26.existsSync(outputDir) || fs26.realpathSync(path39.dirname(audio)) !== fs26.realpathSync(outputDir)) return audio;
+      const name = /^([a-f0-9]{64})-(\d+)-(\d+)\.wav$/.exec(path39.basename(audio));
+      if (!name || name[1] !== binding.conditioningAudioSha256) return audio;
+      const start = Number(name[2]), end = Number(name[3]), shot = render.shots.find((shot2) => shot2.shot_id === scene.id);
+      if (!shot || !(end > start) || start < Math.round(shot.start_frame * 48e3 / render.fps) || end > Math.round(shot.end_frame * 48e3 / render.fps)) return audio;
+      const driver = path39.resolve(board, binding.conditioningAudioPath);
+      return hash7(fs26.readFileSync(driver)) === name[1] && fs26.readFileSync(audio).equals(driverSamples(driver, start, end)) ? driver : audio;
+    }
+    function currentConditioningAudio(scene, board, {
+      index,
+      timingVersion,
+      driverSha256,
+      audioPath,
+      sceneAudioPath,
+      includeCardAudio = true,
+      sceneRender,
+      sceneCards,
+      characters,
+      work = path39.resolve(board, "../.work"),
+      timing = sceneTiming(scene, board, timingVersion)
+    }) {
+      const lines = (scene.narration || []).filter((line) => line.tts?.trim());
+      const sources = lines.map((line) => path39.resolve(board, line.audio.path));
+      const interval = timing.intervals[0];
+      const multiShot = sceneRender?.shots?.length > 1;
+      const direct = !multiShot && lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 && interval.speechEndSeconds === timing.durationSeconds && hash7(fs26.readFileSync(sources[0])) === driverSha256;
+      const cards = path39.join(work, "cards.tsv");
+      const choices = [audioPath, sceneAudioPath].filter(Boolean).map((file) => path39.resolve(board, file));
+      if (includeCardAudio && fs26.existsSync(cards)) {
+        const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/).filter((row) => row.trim() && !row.startsWith("#")).map((row) => row.split("	")).filter((fields2) => fields2[0].trim() && Number(fields2[0]) === index);
+        if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error("conditioning_audio_unverified: ambiguous selected WAV in cards.tsv");
+        if (rows.length) {
+          const selected = path39.resolve(work, rows[0][1]);
+          const fromOriginal = multiShot && matchesConditioningSlice(scene, board, sceneRender, selected, driverSha256);
+          choices.push(fromOriginal ? path39.resolve(board, scene.visual.video.speechBinding.conditioningAudioPath) : selected);
+        }
+      }
+      if (!choices.length) choices.push(direct ? sources[0] : path39.join(work, `c${index}-speech.wav`));
+      for (const file of new Set(choices)) {
+        if (!fs26.existsSync(file) || hash7(fs26.readFileSync(file)) !== driverSha256)
+          throw new Error("conditioning_audio_unverified: the selected WAV differs from the recorded video driver");
+      }
+      if (!direct) {
+        const composition = multiShot ? fullScenePerformance(scene, board, sceneRender, sceneCards, characters, timingVersion, fs26.statSync(choices[0]).size) : mixLines(lines, sources, timing);
+        if (hash7(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
+          throw new Error("conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver");
+      }
+      return choices[0];
+    }
+    function verifyConditioningPerformance(scene, win, index, board, work, audio, digest5, sceneRender) {
+      const binding = scene.visual?.video?.speechBinding;
+      const driverSha256 = binding?.conditioningAudioSha256 ?? digest5;
+      const multiShot = sceneRender?.shots?.length > 1;
+      if (binding?.mode !== "audio_conditioned" || (multiShot ? !matchesConditioningSlice(scene, board, sceneRender, audio, driverSha256) : driverSha256 !== digest5))
+        throw new Error("conditioning_audio_unverified: the binding differs from the original A2V driver");
+      const timingVersion = win.SB_DOC?.performanceTimingVersion, timing = sceneTiming(scene, board, timingVersion);
+      const owner = win.STRUCTURE?.scenes?.find((row) => row.no === scene.scene);
+      currentConditioningAudio(scene, board, {
+        index,
+        work,
+        timing,
+        timingVersion,
+        driverSha256,
+        includeCardAudio: !multiShot,
+        sceneRender,
+        sceneCards: win.SCENES.filter((card) => card.scene === scene.scene),
+        characters: win.SB_DOC?.characters,
+        audioPath: binding.conditioningAudioPath ?? audio,
+        sceneAudioPath: owner?.videoDirection?.audio?.path
+      });
+      if (multiShot) {
+        const { offset, start, end } = conditioningSlice(scene, sceneRender, path39.resolve(board, binding.conditioningAudioPath));
+        const shifted = (seconds2) => Math.max(0, Math.min((end - start) / 48e3, seconds2 - offset));
+        return timing.intervals.map(({ lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds }) => ({
+          lineId,
+          startSeconds: shifted(startSeconds),
+          speechStartSeconds: shifted(speechStartSeconds),
+          speechEndSeconds: shifted(speechEndSeconds),
+          endSeconds: shifted(endSeconds)
+        }));
+      }
+      return timing.intervals;
+    }
+    function compose(work, board) {
+      work = path39.resolve(work);
+      board = path39.resolve(board);
+      const file = path39.join(board, "scenes.js"), win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
+      if (win.SB_DOC?.speechPlanVersion !== 1) return [];
+      const cast = Array.isArray(win.SB_DOC.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC.characters || {}).map(([id, c]) => ({ ...c, id }));
+      const cards = path39.join(work, "cards.tsv"), rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
+      const outputs = [];
+      let receipts, sliced = false;
+      for (let row = 0; row < rows.length; row++) {
+        if (!rows[row].trim() || rows[row].startsWith("#")) continue;
+        const fields2 = rows[row].split("	"), scene = win.SCENES[Number(fields2[0])];
+        if (scene?.sound?.audioSource === "video") continue;
+        const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
+        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path39.resolve(work, fields2[1]));
+        if (scene?.visual?.video?.speechBinding?.mode === "audio_conditioned" && lines.some((line) => line.delivery === "on_screen")) {
+          const sourceAudio = require_prepare_source_audio();
+          receipts ??= sourceAudio.checkAssemblyRoutes(win, board);
+          const binding = scene.visual.video.speechBinding;
+          const clip2 = path39.resolve(board, binding.videoPath ?? scene.visual.video.clip), render = receipts.sceneRenders.get(clip2);
+          const audio = path39.resolve(work, fields2[1]), selected = selectedDriver(scene, board, render, work, audio);
+          if (!sourceAudio.usesConditioningTrack(scene, board, selected, render, receipts.drivers.get(clip2)))
+            throw new Error("conditioning_audio_unverified: this shot no longer uses its A2V driver");
+          if (render?.shots.length > 1) {
+            const owner = win.STRUCTURE?.scenes?.find((row2) => row2.no === scene.scene);
+            const driver = currentConditioningAudio(scene, board, {
+              index: Number(fields2[0]),
+              work,
+              timingVersion: win.SB_DOC.performanceTimingVersion,
+              driverSha256: binding.conditioningAudioSha256,
+              includeCardAudio: selected === audio,
+              audioPath: binding.conditioningAudioPath,
+              sceneAudioPath: owner?.videoDirection?.audio?.path,
+              sceneRender: render,
+              sceneCards: win.SCENES.filter((card) => card.scene === scene.scene),
+              characters: cast
+            });
+            const { wav: wav2, start, end } = conditioningSlice(scene, render, driver);
+            const file2 = path39.join(work, ".source-audio", binding.conditioningAudioSha256 + "-" + start + "-" + end + ".wav");
+            fs26.mkdirSync(path39.dirname(file2), { recursive: true });
+            if (!fs26.existsSync(file2) || !fs26.readFileSync(file2).equals(wav2)) fs26.writeFileSync(file2, wav2);
+            fields2[1] = file2;
+            rows[row] = fields2.join("	");
+            sliced = true;
+          } else verifyConditioningPerformance(scene, win, Number(fields2[0]), board, work, audio, hash7(fs26.readFileSync(audio)));
+          continue;
+        }
+        if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
+        const sources = currentLineSources(lines, board, cast);
+        const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
+        const wav = mixLines(lines, sources, timing);
+        const output2 = path39.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
+        try {
+          fs26.writeFileSync(tmp, wav);
+          fs26.renameSync(tmp, output2);
+        } finally {
+          if (fs26.existsSync(tmp)) fs26.unlinkSync(tmp);
+        }
+        const receipt = { generator: "speech_compose", audioSha256: hash7(fs26.readFileSync(output2)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration5(output2), intervals, timing: timing.timing, warnings: timing.warnings, status: "not_reviewed" };
+        fs26.writeFileSync(output2 + ".generation.json", JSON.stringify(receipt, null, 2) + "\n");
+        fields2[1] = path39.basename(output2);
+        rows[row] = fields2.join("	");
+        outputs.push({ shotId: scene.id, audioPath: output2, ...receipt });
+      }
+      if (outputs.length || sliced) fs26.writeFileSync(cards, rows.join("\n"));
+      return outputs;
+    }
+    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming, currentConditioningAudio, verifyConditioningPerformance, matchesConditioningSlice };
+    if (__require.main === module) {
+      try {
+        console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
+      } catch (e2) {
+        console.error(e2.message);
+        process.exitCode = 1;
+      }
+    }
+  }
+});
+
 // ../skills/produce/references/prepare-source-audio.js
 var require_prepare_source_audio = __commonJS({
   "../skills/produce/references/prepare-source-audio.js"(exports, module) {
@@ -105076,7 +105548,7 @@ var require_prepare_source_audio = __commonJS({
           sound: shot.sound
         });
         for (const file of /* @__PURE__ */ new Set([video2.clip, video2.speechBinding?.videoPath, video2.soundtrackRepair?.videoPath])) {
-          if (typeof file === "string") assertVideoSpeechProvenance(path39.resolve(board, file), null, video2.speechBinding, receipts);
+          if (typeof file === "string") assertVideoSpeechProvenance(path39.resolve(board, file), null, { ...video2.speechBinding, sourceShot: shot, boardDir: board, assembly: true }, receipts);
         }
         for (const source of video2.soundtrackRepair?.sources ?? []) {
           if (source.kind === "native_video" && typeof source.path === "string")
@@ -105085,14 +105557,15 @@ var require_prepare_source_audio = __commonJS({
       }
       return receipts;
     }
-    function usesConditioningTrack(scene, board, audio) {
+    function usesConditioningTrack(scene, board, audio, sceneRender, recordedDriver) {
       if (scene?.sound?.audioSource === "video" || !(scene?.narration || []).some((line) => line.delivery === "on_screen" && line.tts?.trim())) return false;
       const visual = scene.visual ?? {};
       if (!visual.video && !visual.reuse && !visual.clip && !visual.renderedFile && scene.shot?.render?.mode !== "generated_video") return false;
       const clip2 = visual.video?.clip;
       const file = clip2 && require_check_production().assetPath(board, clip2);
-      const driver = file && require_character_speech().conditioningAudioSha256(file);
-      if (!driver || visual.video?.groupPlan || visual.reuse || !fs26.existsSync(audio) || createHash33("sha256").update(fs26.readFileSync(audio)).digest("hex") !== driver || !["missing", "silent"].includes(require_audio_signal().inspect(file).status)) {
+      const driver = recordedDriver ?? (file && require_character_speech().conditioningAudioSha256(file));
+      const original = driver && fs26.existsSync(audio) && (createHash33("sha256").update(fs26.readFileSync(audio)).digest("hex") === driver || sceneRender?.shots?.length > 1 && require_compose_speech().matchesConditioningSlice(scene, board, sceneRender, audio, driver));
+      if (!original || visual.video?.groupPlan || visual.reuse || !["missing", "silent"].includes(require_audio_signal().inspect(file).status)) {
         throw new Error("post_lipsync_forbidden: on-screen dialogue needs sound.audioSource video or the original WAV from its silent audio-to-video render");
       }
       return true;
@@ -105101,7 +105574,7 @@ var require_prepare_source_audio = __commonJS({
       work = path39.resolve(work);
       board = path39.resolve(board);
       const win = evaluateWindowScript2(fs26.readFileSync(path39.join(board, "scenes.js"), "utf8"));
-      checkAssemblyRoutes(win, board);
+      const provenance = checkAssemblyRoutes(win, board);
       const cards = path39.join(work, "cards.tsv");
       const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
       const receiptFile = path39.join(work, "source-audio.json");
@@ -105120,7 +105593,8 @@ var require_prepare_source_audio = __commonJS({
             rows[i2] = fields2.join("	");
             changed = true;
           }
-          if (usesConditioningTrack(scene, board, path39.resolve(work, fields2[1]))) {
+          const clip2 = path39.resolve(board, scene.visual?.video?.clip ?? "");
+          if (usesConditioningTrack(scene, board, path39.resolve(work, fields2[1]), provenance.sceneRenders.get(clip2), provenance.drivers.get(clip2))) {
             const options2 = (fields2[4] || "").split(",").filter((option) => option && !option.startsWith("sync="));
             fields2[4] = [...options2, "sync=1"].join(",");
             rows[i2] = fields2.join("	");
@@ -105541,196 +106015,6 @@ var require_story_contract = __commonJS({
   }
 });
 
-// ../skills/produce/references/compose-speech.js
-var require_compose_speech = __commonJS({
-  "../skills/produce/references/compose-speech.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path39 = __require("node:path");
-    var { execFileSync: execFileSync20 } = __require("node:child_process");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
-    var { generationVoiceErrors } = require_character_voice();
-    var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
-    function duration5(file) {
-      const seconds2 = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
-      if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file);
-      return seconds2;
-    }
-    function lineSources(lines) {
-      return lines.map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision, leadInSeconds: n.acting?.leadInSeconds ?? 0, tailOutSeconds: n.acting?.tailOutSeconds ?? 0 }));
-    }
-    function sceneTiming(scene, board, performanceTimingVersion) {
-      const actions = (scene.performance || []).filter((event) => event.kind === "action");
-      const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
-      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration5(path39.resolve(board, line.audio.path)));
-      if (legacy) {
-        plan2.timing = "legacy_speech_only";
-        plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
-      }
-      if (plan2.durationSeconds === null) throw new Error("Plan finite action timing before composing speech: " + plan2.warnings.join("; "));
-      const intervals = plan2.performance.filter((event) => event.kind !== "action").map((event) => {
-        const { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds } = event;
-        return { lineId, startSeconds, speechStartSeconds, speechEndSeconds, endSeconds };
-      });
-      return { ...plan2, intervals };
-    }
-    function checkSilentTiming(scene, board, performanceTimingVersion, audio) {
-      if (performanceTimingVersion !== 1 || (scene.narration || []).length || !scene.performance?.length || scene.performance.some((event) => event.kind !== "action")) return;
-      const timing = sceneTiming(scene, board, performanceTimingVersion);
-      if (duration5(audio) + 0.03 < timing.durationSeconds) throw new Error("Silent scene audio is shorter than planned action timing");
-    }
-    function mixLines(lines, sources, timing) {
-      const { intervals } = timing;
-      const total = Math.round(timing.durationSeconds * 48e3), mix = new Int32Array(total);
-      lines.forEach((line, i2) => {
-        const pcm = execFileSync20("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
-        const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
-        for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
-      });
-      const wav = Buffer.alloc(44 + total * 2);
-      wav.write("RIFF");
-      wav.writeUInt32LE(36 + total * 2, 4);
-      wav.write("WAVEfmt ", 8);
-      wav.writeUInt32LE(16, 16);
-      wav.writeUInt16LE(1, 20);
-      wav.writeUInt16LE(1, 22);
-      wav.writeUInt32LE(48e3, 24);
-      wav.writeUInt32LE(96e3, 28);
-      wav.writeUInt16LE(2, 32);
-      wav.writeUInt16LE(16, 34);
-      wav.write("data", 36);
-      wav.writeUInt32LE(total * 2, 40);
-      mix.forEach((sample, k) => wav.writeInt16LE(Math.max(-32768, Math.min(32767, sample)), 44 + k * 2));
-      return wav;
-    }
-    function samePerformanceWav(file, mono) {
-      const probe5 = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,sample_rate,channels:format=format_name", "-of", "json", file], { encoding: "utf8" }));
-      const stream = probe5.streams[0];
-      if (probe5.format?.format_name !== "wav" || probe5.streams.length !== 1 || stream.codec_name !== "pcm_s16le" || Number(stream.sample_rate) !== 48e3 || ![1, 2].includes(stream.channels)) return false;
-      const options = { timeout: 12e4, maxBuffer: 1 << 30 };
-      const actual = execFileSync20("ffmpeg", ["-v", "error", "-i", file, "-f", "s16le", "-"], options);
-      const matches = (expected) => expected.length > 0 && actual.length >= expected.length && actual.subarray(0, expected.length).equals(expected) && actual.subarray(expected.length).every((sample) => sample === 0);
-      if (stream.channels === 1) return matches(mono.subarray(44));
-      for (const layout of [["-ac", "2"], ["-af", "pan=stereo|FL=c0|FR=c0"]]) {
-        const stereo = execFileSync20("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
-        if (matches(stereo)) return true;
-      }
-      return false;
-    }
-    function currentConditioningAudio(scene, board, {
-      index,
-      timingVersion,
-      driverSha256,
-      audioPath,
-      sceneAudioPath,
-      includeCardAudio = true,
-      work = path39.resolve(board, "../.work"),
-      timing = sceneTiming(scene, board, timingVersion)
-    }) {
-      const lines = (scene.narration || []).filter((line) => line.tts?.trim());
-      const sources = lines.map((line) => path39.resolve(board, line.audio.path));
-      const interval = timing.intervals[0];
-      const direct = lines.length === 1 && timing.intervals.length === 1 && interval.speechStartSeconds === 0 && interval.speechEndSeconds === timing.durationSeconds && hash7(fs26.readFileSync(sources[0])) === driverSha256;
-      const cards = path39.join(work, "cards.tsv");
-      const choices = [audioPath, sceneAudioPath].filter(Boolean).map((file) => path39.resolve(board, file));
-      if (includeCardAudio && fs26.existsSync(cards)) {
-        const rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/).filter((row) => row.trim() && !row.startsWith("#")).map((row) => row.split("	")).filter((fields2) => fields2[0].trim() && Number(fields2[0]) === index);
-        if (rows.length > 1 || rows.length && !rows[0][1]) throw new Error("conditioning_audio_unverified: ambiguous selected WAV in cards.tsv");
-        if (rows.length) choices.push(path39.resolve(work, rows[0][1]));
-      }
-      if (!choices.length) choices.push(direct ? sources[0] : path39.join(work, `c${index}-speech.wav`));
-      for (const file of new Set(choices)) {
-        if (!fs26.existsSync(file) || hash7(fs26.readFileSync(file)) !== driverSha256)
-          throw new Error("conditioning_audio_unverified: the selected WAV differs from the recorded video driver");
-      }
-      if (!direct) {
-        const composition = mixLines(lines, sources, timing);
-        if (hash7(composition) !== driverSha256 && !samePerformanceWav(choices[0], composition))
-          throw new Error("conditioning_audio_unverified: the current line takes and timing do not produce the recorded video driver");
-      }
-      return choices[0];
-    }
-    function verifyConditioningPerformance(scene, win, index, board, work, audio, digest5) {
-      const binding = scene.visual?.video?.speechBinding;
-      if (binding?.mode !== "audio_conditioned" || binding.conditioningAudioSha256 && binding.conditioningAudioSha256 !== digest5)
-        throw new Error("conditioning_audio_unverified: the binding differs from the original A2V driver");
-      const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion);
-      const owner = win.STRUCTURE?.scenes?.find((row) => row.no === scene.scene);
-      currentConditioningAudio(scene, board, {
-        index,
-        work,
-        timing,
-        driverSha256: digest5,
-        audioPath: binding.conditioningAudioPath ?? audio,
-        sceneAudioPath: owner?.videoDirection?.audio?.path
-      });
-      return timing.intervals;
-    }
-    function compose(work, board) {
-      work = path39.resolve(work);
-      board = path39.resolve(board);
-      const file = path39.join(board, "scenes.js"), win = evaluateWindowScript2(fs26.readFileSync(file, "utf8"), { filename: file });
-      if (win.SB_DOC?.speechPlanVersion !== 1) return [];
-      const cast = Array.isArray(win.SB_DOC.characters) ? win.SB_DOC.characters : Object.entries(win.SB_DOC.characters || {}).map(([id, c]) => ({ ...c, id }));
-      const cards = path39.join(work, "cards.tsv"), rows = fs26.readFileSync(cards, "utf8").split(/\r?\n/);
-      const outputs = [];
-      for (let row = 0; row < rows.length; row++) {
-        if (!rows[row].trim() || rows[row].startsWith("#")) continue;
-        const fields2 = rows[row].split("	"), scene = win.SCENES[Number(fields2[0])];
-        if (scene?.sound?.audioSource === "video") continue;
-        const lines = (scene?.narration || []).filter((n) => (n.tts || "").trim());
-        if (scene) checkSilentTiming(scene, board, win.SB_DOC?.performanceTimingVersion, path39.resolve(work, fields2[1]));
-        if (scene?.visual?.video?.speechBinding?.mode === "audio_conditioned" && lines.some((line) => line.delivery === "on_screen")) {
-          const audio = path39.resolve(work, fields2[1]);
-          if (!require_prepare_source_audio().usesConditioningTrack(scene, board, audio))
-            throw new Error("conditioning_audio_unverified: this shot no longer uses its A2V driver");
-          verifyConditioningPerformance(scene, win, Number(fields2[0]), board, work, audio, hash7(fs26.readFileSync(audio)));
-          continue;
-        }
-        if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
-        const sources = [];
-        lines.forEach((line) => {
-          const errors = actingErrors(line.acting), voice = cast.find((c) => c.id === line.speaker)?.tts;
-          errors.push(...generationVoiceErrors(voice, line.audio?.generation, line));
-          if (errors.length) throw new Error(line.id + ": " + errors.join("; "));
-          if (!line.audio || line.audio.generation.text !== line.tts || line.audio.revision !== hash7(JSON.stringify(speechRevisionPayload(line, voice)))) throw new Error("Attach current audio for " + line.id);
-          const source = path39.resolve(board, line.audio.path);
-          if (hash7(fs26.readFileSync(source)) !== line.audio.sha256) throw new Error("Audio changed for " + line.id);
-          require_character_speech().verifiedSpeechGeneration(source, line.audio.generation, voice, line);
-          sources.push(source);
-        });
-        const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
-        const wav = mixLines(lines, sources, timing);
-        const output2 = path39.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
-        try {
-          fs26.writeFileSync(tmp, wav);
-          fs26.renameSync(tmp, output2);
-        } finally {
-          if (fs26.existsSync(tmp)) fs26.unlinkSync(tmp);
-        }
-        const receipt = { generator: "speech_compose", audioSha256: hash7(fs26.readFileSync(output2)), lineIds: lines.map((n) => n.id), lineSources: lineSources(lines), expectedText: lines.map((n) => n.tts).join(". "), durationSeconds: duration5(output2), intervals, timing: timing.timing, warnings: timing.warnings, status: "not_reviewed" };
-        fs26.writeFileSync(output2 + ".generation.json", JSON.stringify(receipt, null, 2) + "\n");
-        fields2[1] = path39.basename(output2);
-        rows[row] = fields2.join("	");
-        outputs.push({ shotId: scene.id, audioPath: output2, ...receipt });
-      }
-      if (outputs.length) fs26.writeFileSync(cards, rows.join("\n"));
-      return outputs;
-    }
-    module.exports = { compose, lineSources, duration: duration5, sceneTiming, checkSilentTiming, currentConditioningAudio, verifyConditioningPerformance };
-    if (__require.main === module) {
-      try {
-        console.log(JSON.stringify(compose(process.argv[2], process.argv[3]), null, 2));
-      } catch (e2) {
-        console.error(e2.message);
-        process.exitCode = 1;
-      }
-    }
-  }
-});
-
 // ../skills/produce/references/check-tts-quality.js
 var require_check_tts_quality = __commonJS({
   "../skills/produce/references/check-tts-quality.js"(exports, module) {
@@ -105951,7 +106235,9 @@ var require_check_tts_quality = __commonJS({
         const cast = Array.isArray(characters) ? characters : Object.entries(characters).map(([id, c]) => ({ ...c, id }));
         const binding = s2.visual?.video?.speechBinding;
         const retained = retainedSoundtrack(s2, board, cast, media);
-        const originalDriver = usesConditioningTrack(s2, board, audio);
+        const selectedClip = path39.resolve(board, s2.visual?.video?.clip ?? "");
+        const sceneRender = receipts.sceneRenders.get(selectedClip);
+        const originalDriver = usesConditioningTrack(s2, board, audio, sceneRender, receipts.drivers.get(selectedClip));
         if (originalDriver && !(rows[k][4] || "").split(",").includes("sync=1"))
           throw new Error("post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture");
         const native = binding?.mode === "native";
@@ -105990,6 +106276,9 @@ var require_check_tts_quality = __commonJS({
               timingVersion: win.SB_DOC?.performanceTimingVersion,
               driverSha256: driver,
               includeCardAudio: false,
+              sceneRender: receipts.sceneRenders.get(path39.resolve(board, binding.videoPath)),
+              sceneCards: win.SCENES.filter((card) => card.scene === s2.scene),
+              characters: win.SB_DOC?.characters,
               audioPath: binding.generationAudioPath,
               sceneAudioPath: win.STRUCTURE?.scenes?.find((owner) => owner.no === s2.scene)?.videoDirection?.audio?.path
             });
@@ -106014,7 +106303,7 @@ var require_check_tts_quality = __commonJS({
           continue;
         }
         if (originalDriver && binding) {
-          actedIntervals[i2] = require_compose_speech().verifyConditioningPerformance(s2, win, i2, board, work, audio, media[audio]);
+          actedIntervals[i2] = require_compose_speech().verifyConditioningPerformance(s2, win, i2, board, work, audio, media[audio], sceneRender);
           continue;
         }
         const receipt = read4(audio + ".generation.json") || read4(audio + ".quality.json");
@@ -110649,6 +110938,7 @@ function requireNaverKeys() {
 }
 
 // src/media-utils.ts
+import { createRequire as createRequire3 } from "node:module";
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
 var ALLOWED_EXTENSIONS = {
@@ -110690,25 +110980,7 @@ async function saveBase64Image(base64Data, filePath) {
   return { filePath: resolved, size: stats.size };
 }
 function pcmToWav(pcmData, sampleRate, numChannels) {
-  const bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = pcmData.length;
-  const header = Buffer.alloc(44);
-  header.write("RIFF", 0);
-  header.writeUInt32LE(36 + dataSize, 4);
-  header.write("WAVE", 8);
-  header.write("fmt ", 12);
-  header.writeUInt32LE(16, 16);
-  header.writeUInt16LE(1, 20);
-  header.writeUInt16LE(numChannels, 22);
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(byteRate, 28);
-  header.writeUInt16LE(blockAlign, 32);
-  header.writeUInt16LE(bitsPerSample, 34);
-  header.write("data", 36);
-  header.writeUInt32LE(dataSize, 40);
-  return Buffer.concat([header, pcmData]);
+  return createRequire3(import.meta.url)("../../skills/_shared/audio-signal.js").pcmToWav(pcmData, sampleRate, numChannels);
 }
 function resolveOutputFile(outputDir, filename, kind) {
   if (/[/\\]/.test(filename) || filename.includes("..")) {
@@ -121072,7 +121344,7 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
 }
 
 // src/msr-opening.ts
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 
 // src/prompt-language.ts
 var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
@@ -121089,7 +121361,7 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
-var load = createRequire3(import.meta.url);
+var load = createRequire4(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
   camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
   axis: sceneText.optional(),
@@ -122848,8 +123120,8 @@ import { tmpdir as tmpdir5 } from "node:os";
 import { extname as extname5, join as join9, resolve as resolve3 } from "node:path";
 
 // src/tts-models.ts
-import { createRequire as createRequire4 } from "node:module";
-var shared = () => createRequire4(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire5 } from "node:module";
+var shared = () => createRequire5(import.meta.url)("../../skills/_shared/tts-models.js");
 function getTtsModels() {
   return shared().TTS_MODELS;
 }
@@ -122980,7 +123252,7 @@ function validateSpeechSegments(value, duration5, inputs2) {
 }
 
 // src/tts-execution.ts
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 var executionId = new AsyncLocalStorage2();
 function withSpeechRequestId(id, run) {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
@@ -123029,7 +123301,7 @@ function staleSlot(slot) {
 function validateEpisodeSpeech(generator, args) {
   const context2 = args.speechContext;
   if (context2) requireReadyProject(context2.path);
-  createRequire5(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
+  createRequire6(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
 }
 async function executeSpeech(generator, args, run) {
   validateEpisodeSpeech(generator, args);
@@ -125107,6 +125379,7 @@ var receiptSchema2 = external_exports.object({
   expected: mediaContract.optional(),
   requestId: external_exports.string().optional(),
   sceneShots: external_exports.array(external_exports.unknown()).optional(),
+  sceneRequestSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
@@ -128654,9 +128927,9 @@ function isManagedVideoCall(tool2, input) {
 
 // src/character-manage.ts
 import { existsSync as existsSync17, mkdirSync as mkdirSync5, readFileSync as readFileSync18, writeFileSync as writeFileSync13 } from "node:fs";
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 import path18 from "node:path";
-var load2 = createRequire6(import.meta.url);
+var load2 = createRequire7(import.meta.url);
 var catalog = () => load2("../../skills/_shared/character-identity.js");
 var pending = external_exports.object({ status: external_exports.literal("pending"), reason: external_exports.string().trim().min(1).max(2e3) }).strict();
 var basic = external_exports.union([external_exports.string().trim().min(1).max(2e3), pending]);
@@ -128785,11 +129058,11 @@ import path21 from "node:path";
 import { createHash as createHash17 } from "node:crypto";
 import { execFileSync as execFileSync12 } from "node:child_process";
 import { existsSync as existsSync20, readFileSync as readFileSync21, realpathSync as realpathSync7, statSync as statSync13 } from "node:fs";
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire as createRequire7 } from "node:module";
-var load3 = createRequire7(import.meta.url);
+import { createRequire as createRequire8 } from "node:module";
+var load3 = createRequire8(import.meta.url);
 var videoTextPolicy = () => String(load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
@@ -129113,9 +129386,9 @@ function sceneTimelineWords(timeline, scene, options = {}) {
 import path19 from "node:path";
 import { createHash as createHash15 } from "node:crypto";
 import { existsSync as existsSync18, realpathSync as realpathSync5, readFileSync as readFileSync19 } from "node:fs";
-import { createRequire as createRequire8 } from "node:module";
+import { createRequire as createRequire9 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
-var load4 = createRequire8(import.meta.url);
+var load4 = createRequire9(import.meta.url);
 var imageRouting = () => load4(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 var characterPanels = () => load4(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 function nearestRatio(width, height) {
@@ -129499,13 +129772,13 @@ import { createHash as createHash16 } from "node:crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync20, realpathSync as realpathSync6 } from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path20 from "node:path";
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load5 = createRequire9(import.meta.url);
+var load5 = createRequire10(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
@@ -129834,7 +130107,7 @@ function prepareVideoVoice(tool2, input, context2) {
 }
 
 // src/scene-video.ts
-var load6 = createRequire10(import.meta.url);
+var load6 = createRequire11(import.meta.url);
 var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
 var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
 function bindSceneCards(members, bindings) {
@@ -130152,34 +130425,6 @@ async function inspectSceneInputContract(error2, validation) {
     return { ...deployment, status: "unverified" };
   }
 }
-function performanceWav(source, shotFrames, fps) {
-  const sampleRate = 48e3, channels = 2, block = 4;
-  const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
-  const samples = Math.ceil(nativeFrames * sampleRate / fps);
-  const pcm = execFileSync12("ffmpeg", [
-    "-nostdin",
-    "-v",
-    "error",
-    "-xerror",
-    "-i",
-    source,
-    "-map",
-    "0:a:0",
-    "-ac",
-    String(channels),
-    "-ar",
-    String(sampleRate),
-    "-f",
-    "s16le",
-    "pipe:1"
-  ], { maxBuffer: 32 * 1024 * 1024, timeout: 3e4 });
-  const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
-  if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some((byte) => byte !== 0))
-    throw new Error("scene_speech_performance: the recorded dialogue extends past the shot");
-  const padded = Buffer.alloc(samples * block);
-  pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
-  return pcmToWav(padded, sampleRate, channels);
-}
 async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings) {
   const attachments = [];
   const conditioned = model2 === "ltx-2.5-22b-dev" && scene.audio && scene.audio.mode !== "mix";
@@ -130261,7 +130506,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     for (const shot of shots) {
       const binding = bindings?.find((b) => b.shotId === shot.shot_id);
       if (binding?.performanceAudio) {
-        const wav = performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+        const wav = load6("../../skills/_shared/scene-speech-receipt.js").performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
         shot.performance_uri = await stageBytes(wav, "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
       }
       if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync21(binding.motionPrefix), "video/mp4", "motion_prefix", shot.start_frame, shot.shot_id);
@@ -130609,7 +130854,7 @@ async function checkSceneDeployment(request, tool2, args) {
 import * as fs19 from "node:fs";
 import { execFileSync as execFileSync14 } from "node:child_process";
 import path26 from "node:path";
-import { createRequire as createRequire12 } from "node:module";
+import { createRequire as createRequire13 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash20 } from "node:crypto";
 
@@ -130924,9 +131169,9 @@ import path24 from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 
 // src/video-review.ts
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import path23 from "node:path";
-var review = () => createRequire11(import.meta.url)("../../skills/storyboard/references/video-production.js");
+var review = () => createRequire12(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function readVideoProduction(episode) {
   return review().read(path23.join(episode, "storyboard"));
 }
@@ -130939,7 +131184,7 @@ function refreshVideoReview(episode) {
 }
 function refreshAudienceReview(boardDirectory) {
   try {
-    const data = createRequire11(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    const data = createRequire12(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
     data.refresh(boardDirectory);
   } catch {
     process.stderr.write("Audience audio preview needs a refresh.\n");
@@ -131164,7 +131409,7 @@ function seedanceBindings(episode, members, args, inputs2, images = [], voice, s
 }
 
 // src/video-routing.ts
-var load7 = createRequire12(import.meta.url);
+var load7 = createRequire13(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 function assertNoPostLipSync(value) {
   load7("../../skills/_shared/speech-contract.js").assertNoPostLipSync(value);
@@ -131439,6 +131684,7 @@ async function executeShotRenderPlan(plan2, prepared) {
     version: 1,
     operation: "scene-to-video",
     baseUrl: astraGenaiBaseUrl(),
+    sceneRequestSha256: createHash20("sha256").update(JSON.stringify(prepared)).digest("hex"),
     fingerprint: plan2.id,
     expected: planOutputContract(plan2),
     videoPath: target,
@@ -132538,7 +132784,7 @@ async function videoStatus(raw) {
 import * as fs21 from "node:fs";
 import path28 from "node:path";
 import os3 from "node:os";
-import { createRequire as createRequire13 } from "node:module";
+import { createRequire as createRequire14 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -132628,7 +132874,7 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load8 = createRequire13(import.meta.url);
+var load8 = createRequire14(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var imageContext = (directory2, assetId) => load8(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
@@ -145321,7 +145567,7 @@ import * as fs25 from "node:fs";
 import path33 from "node:path";
 import os4 from "node:os";
 import { execFileSync as execFileSync17 } from "node:child_process";
-import { createRequire as createRequire15 } from "node:module";
+import { createRequire as createRequire16 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
@@ -145466,7 +145712,7 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load9 = createRequire15(import.meta.url);
+var load9 = createRequire16(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 function refreshAudienceOutput(directory2, file) {
   if (path33.dirname(file) === path33.join(directory2, ".work/music/audience")) refreshAudienceReview(path33.join(directory2, "storyboard"));
@@ -146120,7 +146366,7 @@ import { createHash as createHash27, randomUUID as randomUUID12 } from "node:cry
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync34, mkdirSync as mkdirSync18, readFileSync as readFileSync35, writeFileSync as writeFileSync23, renameSync as renameSync8 } from "node:fs";
 import { basename as basename10, dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire18 } from "node:module";
+import { createRequire as createRequire19 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -146244,7 +146490,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire18(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire19(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -146253,7 +146499,7 @@ function refreshSheet(identityPath) {
   const folder = dirname9(identityPath);
   if (basename10(dirname9(folder)) !== "characters" || basename10(dirname9(dirname9(folder))) !== "assets") return void 0;
   try {
-    createRequire18(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
+    createRequire19(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
     return join15(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -146362,7 +146608,7 @@ function bindRegisteredVoice(args) {
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
   if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync35(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
-  const handoff = createRequire18(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  const handoff = createRequire19(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
   const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
   const registration = {
@@ -146507,9 +146753,9 @@ import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_proc
 import { copyFileSync as copyFileSync2, existsSync as existsSync35, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync36, realpathSync as realpathSync12, renameSync as renameSync9, rmSync as rmSync19, statSync as statSync21, writeFileSync as writeFileSync24, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { basename as basename11, dirname as dirname10, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve11, sep as sep2 } from "node:path";
-import { createRequire as createRequire20 } from "node:module";
+import { createRequire as createRequire21 } from "node:module";
 import { pathToFileURL } from "node:url";
-var load10 = createRequire20(import.meta.url);
+var load10 = createRequire21(import.meta.url);
 var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
 var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
 var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
@@ -147562,7 +147808,7 @@ function manageSpeech(args, options = {}) {
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash4(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname11(file), videoPath);
-      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan2, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan2, sourceShot: scene, boardDir: dirname11(file) }, receipts);
       for (const card of scenes) {
         const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -147600,6 +147846,9 @@ function manageSpeech(args, options = {}) {
         timingVersion: doc.performanceTimingVersion,
         driverSha256: generationDriver,
         includeCardAudio: Boolean(driverSha256),
+        sceneRender: receipts.sceneRenders.get(videoPath),
+        sceneCards: scenes.filter((card) => card.scene === scene.scene),
+        characters: doc.characters,
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
@@ -147608,12 +147857,24 @@ function manageSpeech(args, options = {}) {
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object5(video2.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
+      const trim = object5(scene.edit);
+      let sourceEdit = native && replacement ? {} : trim;
+      if (renderedShot && renderedScene) {
+        const start = renderedShot.start_frame / renderedScene.fps, end = renderedShot.end_frame / renderedScene.fps;
+        const kept = replacement ? {} : trim;
+        const from = Number(kept.in ?? start), to = Number(kept.out ?? end);
+        if (from < start - 1e-6 || to > end + 1e-6 || !(from < to))
+          throw new Error("speech_video_source_mismatch: select a source interval inside the recorded shot");
+        sourceEdit = { ...trim, in: from, out: to };
+      }
       const performanceSource = native || plan2.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
       if (performanceSource) {
         const candidate2 = {
           id: scene.id,
           narration: scene.narration,
-          edit: native && replacement ? {} : scene.edit,
+          edit: sourceEdit,
           visual: { video: { speechBinding: { mode: plan2.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
         speechContract().assertVideoPerformanceOwnership(scenes, dirname11(file), candidate2, receipts);
@@ -147638,9 +147899,9 @@ function manageSpeech(args, options = {}) {
         invalidated = { video: video2, edit: true };
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname11(file), videoPath, video2.clip, plan2.warnings);
-        const trim = object5(scene.edit);
-        if (native && replacement && (trim.in !== void 0 || trim.out !== void 0)) {
-          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+        const trim2 = object5(scene.edit);
+        if (native && replacement && (trim2.in !== void 0 || trim2.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim2;
           scene.edit = kept;
           clearedTrim = {
             ...sourceIn !== void 0 ? { in: sourceIn } : {},
@@ -147648,6 +147909,7 @@ function manageSpeech(args, options = {}) {
             note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
           };
         }
+        if (renderedShot) scene.edit = sourceEdit;
         video2.clip = args.videoPath;
         video2.speechBinding = {
           ...plan2,
@@ -147672,10 +147934,10 @@ function manageSpeech(args, options = {}) {
         try {
           const span = nativeAudio?.span;
           if (span) {
-            const trim = speechSpanContract().suggestTrim(span, scene);
-            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
-              suggestedEdit: trim.edit,
-              suggestedDurationSeconds: trim.durationSeconds,
+            const trim2 = speechSpanContract().suggestTrim(span, scene);
+            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim2 ? {
+              suggestedEdit: trim2.edit,
+              suggestedDurationSeconds: trim2.durationSeconds,
               note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
             } : {} };
             if (span.tailSilenceSeconds < 0.1) plan2.warnings.push("native_speech_end_at_boundary: audio activity reaches the clip end; inspect the final words for truncation before accepting or trimming. Energy does not verify complete dialogue.");
@@ -153895,9 +154157,9 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync42, readFileSync as readFileSync41, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire22 } from "node:module";
+import { createRequire as createRequire23 } from "node:module";
 import path38 from "node:path";
-var load12 = createRequire22(import.meta.url);
+var load12 = createRequire23(import.meta.url);
 var shared4 = (file) => load12(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),

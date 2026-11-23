@@ -50340,53 +50340,11 @@ function readImageMetadata(file) {
   return imageMetadata(readFileSync(file));
 }
 
-// src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
-};
-function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
-}
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
-  }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
-}
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
-}
-
 // src/config.ts
 import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join as join2 } from "node:path";
-function loadEnvFile(file = join2(process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join } from "node:path";
+function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
@@ -50471,15 +50429,15 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join2(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join2(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join2(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join2(snsTokenDir, "youtube-oauth-client.json"),
-  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join2(snsTokenDir, "tiktok-oauth.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, "tiktok-oauth.json")
 };
-var disabledToolsFile = join2(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -50494,6 +50452,48 @@ function requireAstraVideoKey() {
 
 // src/ltx-api-video.ts
 import { execFileSync } from "node:child_process";
+
+// src/media-utils.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
+}
 
 // src/vendor-video.ts
 import fs2 from "node:fs";
@@ -53416,6 +53416,7 @@ var receiptSchema2 = external_exports.object({
   expected: mediaContract.optional(),
   requestId: external_exports.string().optional(),
   sceneShots: external_exports.array(external_exports.unknown()).optional(),
+  sceneRequestSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
@@ -55347,7 +55348,7 @@ function manageSpeech(args, options = {}) {
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash2(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
-      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, plan, receipts);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname6(file) }, receipts);
       for (const card of scenes) {
         const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -55385,6 +55386,9 @@ function manageSpeech(args, options = {}) {
         timingVersion: doc.performanceTimingVersion,
         driverSha256: generationDriver,
         includeCardAudio: Boolean(driverSha256),
+        sceneRender: receipts.sceneRenders.get(videoPath),
+        sceneCards: scenes.filter((card) => card.scene === scene.scene),
+        characters: doc.characters,
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
@@ -55393,12 +55397,24 @@ function manageSpeech(args, options = {}) {
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object3(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
+      const trim = object3(scene.edit);
+      let sourceEdit = native && replacement ? {} : trim;
+      if (renderedShot && renderedScene) {
+        const start = renderedShot.start_frame / renderedScene.fps, end = renderedShot.end_frame / renderedScene.fps;
+        const kept = replacement ? {} : trim;
+        const from = Number(kept.in ?? start), to = Number(kept.out ?? end);
+        if (from < start - 1e-6 || to > end + 1e-6 || !(from < to))
+          throw new Error("speech_video_source_mismatch: select a source interval inside the recorded shot");
+        sourceEdit = { ...trim, in: from, out: to };
+      }
       const performanceSource = native || plan.mode === "audio_conditioned" ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
       if (performanceSource) {
         const candidate = {
           id: scene.id,
           narration: scene.narration,
-          edit: native && replacement ? {} : scene.edit,
+          edit: sourceEdit,
           visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
         speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate, receipts);
@@ -55423,9 +55439,9 @@ function manageSpeech(args, options = {}) {
         invalidated = { video, edit: true };
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file), videoPath, video.clip, plan.warnings);
-        const trim = object3(scene.edit);
-        if (native && replacement && (trim.in !== void 0 || trim.out !== void 0)) {
-          const { in: sourceIn, out: sourceOut, ...kept } = trim;
+        const trim2 = object3(scene.edit);
+        if (native && replacement && (trim2.in !== void 0 || trim2.out !== void 0)) {
+          const { in: sourceIn, out: sourceOut, ...kept } = trim2;
           scene.edit = kept;
           clearedTrim = {
             ...sourceIn !== void 0 ? { in: sourceIn } : {},
@@ -55433,6 +55449,7 @@ function manageSpeech(args, options = {}) {
             note: "The previous clip's trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack."
           };
         }
+        if (renderedShot) scene.edit = sourceEdit;
         video.clip = args.videoPath;
         video.speechBinding = {
           ...plan,
@@ -55457,10 +55474,10 @@ function manageSpeech(args, options = {}) {
         try {
           const span = nativeAudio?.span;
           if (span) {
-            const trim = speechSpanContract().suggestTrim(span, scene);
-            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim ? {
-              suggestedEdit: trim.edit,
-              suggestedDurationSeconds: trim.durationSeconds,
+            const trim2 = speechSpanContract().suggestTrim(span, scene);
+            soundtrack = { ...span, method: "audio_energy", review: "not_reviewed", ...trim2 ? {
+              suggestedEdit: trim2.edit,
+              suggestedDurationSeconds: trim2.durationSeconds,
               note: "Silent acting surrounds the line. If the pause is not the story's, set these edit.in / edit.out source seconds and the shot duration with storyboard_apply; times inside the shot (sound.effects atSeconds, music starts) then count from the trimmed start. Listen first: loudness can miss a quiet first or last syllable."
             } : {} };
             if (span.tailSilenceSeconds < 0.1) plan.warnings.push("native_speech_end_at_boundary: audio activity reaches the clip end; inspect the final words for truncation before accepting or trimming. Energy does not verify complete dialogue.");

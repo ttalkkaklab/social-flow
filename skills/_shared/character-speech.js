@@ -151,7 +151,11 @@ function conditioningAudioSha256(videoPath) {
   let receipt;
   try { receipt = JSON.parse(fs.readFileSync(receipts[0], 'utf8')); } catch { return; }
   if (!receipt || receipt.status !== 'completed' || !receipt.jobId || receipt.videoPath !== video ||
-      !/^[a-f0-9]{64}$/.test(receipt.conditioningAudioSha256) || hash(fs.readFileSync(video)) !== receipt.sha256) return;
+      hash(fs.readFileSync(video)) !== receipt.sha256) return;
+  if (receipt.operation === 'scene-to-video') {
+    const contract = require('./scene-speech-receipt.js');
+    return contract.sceneDriver(contract.readSceneRequest(video,receipt));
+  }
   return recordedConditioningDriver(receipt,receipts[0]);
 }
 function recordedConditioningDriver(receipt,sidecar) {

@@ -35706,6 +35706,7 @@ var receiptSchema = external_exports.object({
   expected: mediaContract.optional(),
   requestId: external_exports.string().optional(),
   sceneShots: external_exports.array(external_exports.unknown()).optional(),
+  sceneRequestSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),

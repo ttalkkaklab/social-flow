@@ -235,7 +235,9 @@ function check(work, board) {
     const cast=Array.isArray(characters)?characters:Object.entries(characters).map(([id,c])=>({...c,id}));
     const binding=s.visual?.video?.speechBinding;
     const retained=retainedSoundtrack(s,board,cast,media);
-    const originalDriver=usesConditioningTrack(s,board,audio);
+    const selectedClip=path.resolve(board,s.visual?.video?.clip ?? '');
+    const sceneRender=receipts.sceneRenders.get(selectedClip);
+    const originalDriver=usesConditioningTrack(s,board,audio,sceneRender,receipts.drivers.get(selectedClip));
     if(originalDriver && !(rows[k][4]||'').split(',').includes('sync=1'))
       throw new Error('post_lipsync_forbidden: keep the conditioning WAV aligned to its original picture');
     // A native-speech clip (MSR) spoke these lines from its prompt: they have no audio, and its soundtrack is the card audio.
@@ -271,6 +273,7 @@ function check(work, board) {
         const driver=known ?? binding.generationAudioSha256;
         if(driver)require('./compose-speech.js').currentConditioningAudio(s,board,{index:i,work,
           timingVersion:win.SB_DOC?.performanceTimingVersion,driverSha256:driver,includeCardAudio:false,
+          sceneRender:receipts.sceneRenders.get(path.resolve(board,binding.videoPath)),sceneCards:win.SCENES.filter(card=>card.scene===s.scene),characters:win.SB_DOC?.characters,
           audioPath:binding.generationAudioPath,sceneAudioPath:win.STRUCTURE?.scenes?.find(owner=>owner.no===s.scene)?.videoDirection?.audio?.path});
       }
       const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
@@ -296,7 +299,7 @@ function check(work, board) {
       continue; // Line/voice/video provenance above still applies; this WAV was extracted, not TTS-composed.
     }
     if(originalDriver && binding) {
-      actedIntervals[i]=require('./compose-speech.js').verifyConditioningPerformance(s,win,i,board,work,audio,media[audio]);
+      actedIntervals[i]=require('./compose-speech.js').verifyConditioningPerformance(s,win,i,board,work,audio,media[audio],sceneRender);
       continue;
     }
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');

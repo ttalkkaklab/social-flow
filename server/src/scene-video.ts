@@ -13,7 +13,6 @@ import { formatReferenceLabel, type ScenePromptProfile } from './scene-prompt-pr
 export { sceneTimelineWords } from './scene-prompt.js';
 import type { ImageBinding } from './video-image-inputs.js';
 import { verifyImageFile } from './image-media.js';
-import { pcmToWav } from './media-utils.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
@@ -331,22 +330,6 @@ export async function inspectSceneInputContract(error: SceneInputError, validati
     return {...deployment, status:'unverified'};
   }
 }
-// A timed take retains its receipted source. Stage a lossless PCM conversion with the native shot tail.
-function performanceWav(source: string, shotFrames: number, fps: number) {
-  const sampleRate = 48000, channels = 2, block = 4;
-  const nativeFrames = Math.max(25, 1 + 8 * Math.ceil((shotFrames - 1) / 8));
-  const samples = Math.ceil(nativeFrames * sampleRate / fps);
-  const pcm = execFileSync('ffmpeg', ['-nostdin','-v','error','-xerror','-i',source,'-map','0:a:0',
-    '-ac',String(channels),'-ar',String(sampleRate),'-f','s16le','pipe:1'], {maxBuffer:32 * 1024 * 1024,timeout:30000});
-  const visibleBytes = Math.ceil(shotFrames * sampleRate / fps) * block;
-  // A prepared WAV may already contain the renderer's padding. Never trim the spoken take.
-  if (pcm.length > visibleBytes && pcm.subarray(visibleBytes).some(byte => byte !== 0))
-    throw new Error('scene_speech_performance: the recorded dialogue extends past the shot');
-  const padded = Buffer.alloc(samples * block);
-  pcm.copy(padded, 0, 0, Math.min(pcm.length, padded.length));
-  return pcmToWav(padded, sampleRate, channels);
-}
-
 export async function buildSceneWire(scene: SceneRequest, model: string, resolution: string, stageFiles = false, bindings?: z.infer<typeof sceneShotBindingsSchema>) {
   const attachments: {shotId?:string; role:string; frame:number; sha256:string; bytes:number}[] = [];
   const conditioned = model === 'ltx-2.5-22b-dev' && scene.audio && scene.audio.mode !== 'mix';
@@ -398,7 +381,7 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
     for (const shot of shots) {
       const binding = bindings?.find(b=>b.shotId === shot.shot_id);
       if (binding?.performanceAudio) {
-        const wav = performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+        const wav = load('../../skills/_shared/scene-speech-receipt.js').performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
         shot.performance_uri = await stageBytes(wav, 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
       }
       if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync(binding.motionPrefix),'video/mp4','motion_prefix',shot.start_frame,shot.shot_id);

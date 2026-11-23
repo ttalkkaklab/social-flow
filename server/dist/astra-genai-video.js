@@ -382,6 +382,7 @@ function checkOutput(file, expected, legacyMsr = false) {
 const receiptSchema = z.object({
     version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema, z.literal('scene-to-video')]), fingerprint: z.string(),
     expected: mediaContract.optional(), requestId: z.string().optional(), sceneShots: z.array(z.unknown()).optional(),
+    sceneRequestSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
     conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
