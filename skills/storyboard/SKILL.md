@@ -28,6 +28,8 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 # Storyboard: make the story understandable, then plan its images
 
+Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+
 **Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story
 sentences, summaries and lines in one language: the one the user names for this episode,
 else the saved `languages.speech`, else the language the channel already works in

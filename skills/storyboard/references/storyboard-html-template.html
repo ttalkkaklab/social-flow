@@ -1013,6 +1013,19 @@
   .direction-attribute b, .direction-attribute small { display: block; overflow-wrap: anywhere; }
   .direction-attribute b { font-size: var(--t-cap); }
   .direction-attribute small { color: var(--muted); }
+  .scene-media { display: flex; align-items: flex-start; flex-wrap: wrap; gap: var(--s4); margin-block: var(--s3); }
+  .scene-media figure { width: 112px; max-width: 100%; margin: 0; }
+  .scene-media img { display: block; width: 100%; height: 112px; object-fit: contain; border-radius: 8px; background: var(--sunk); }
+  .scene-media figcaption { font-size: var(--t-cap); margin-top: 4px; }
+  .shot-body.lines-only { grid-template-columns: 1fr; }
+  .scene-direction-icons { display: flex; flex-wrap: wrap; gap: 4px; }
+  .scene-direction-icon { display: grid; place-items: center; width: 38px; height: 38px; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: inherit; cursor: pointer; }
+  .scene-direction-icon svg { width: 25px; height: 25px; }
+  .scene-direction-icon:hover, .scene-direction-icon[aria-expanded="true"] { background: var(--sunk); border-color: currentColor; }
+  .scene-direction-icon:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .scene-direction-detail { position: fixed; inset: auto; margin: 0; box-sizing: border-box; width: max-content; max-width: min(320px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; overflow-wrap: anywhere; padding: 10px 13px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 5px 18px #0002; font-size: var(--t-cap); }
+  .scene-direction-detail b { display: block; margin-bottom: 4px; }
+
   .shot-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: var(--s3) 0 var(--s2); }
   .shot-chip { display: inline-flex; border-radius: 10px; cursor: default; font-size: var(--t-cap); color: var(--muted); }
   .shot-chip .size-ico, .shot-chip svg { width: 36px; height: 36px; border-radius: 10px; flex: none; }
@@ -2748,6 +2761,56 @@ window.STORYBOARD_READY = (async function () {
   // The shared "off" tile: an input this lane does not take
   var OFF_GLYPH = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M6.5 17.5l11-11"/></svg>';
   function safeSrc(src) { return typeof src === "string" && src && !/^[a-z][a-z0-9+.-]*:|^[/\\]{2}|[\x00-\x1f]/i.test(src) ? src : ""; }
+  ;(function sceneDirectionPopovers() {
+    var active, panel, pinned = false, timer;
+    function close() {
+      clearTimeout(timer);
+      if (panel && panel.matches(':popover-open')) panel.hidePopover();
+      if (active) active.setAttribute('aria-expanded', 'false');
+      active = panel = null;
+      pinned = false;
+    }
+    function place() {
+      if (!active) return;
+      if (!active.isConnected) { close(); return; }
+      var r = active.getBoundingClientRect(), box = panel.getBoundingClientRect();
+      panel.style.left = Math.max(8, Math.min(r.left, document.documentElement.clientWidth - box.width - 8)) + 'px';
+      panel.style.top = (r.bottom + box.height <= innerHeight - 8 ? r.bottom : Math.max(8, r.top - box.height)) + 'px';
+    }
+    function show(button) {
+      clearTimeout(timer);
+      if (button === active) return;
+      close();
+      panel = document.getElementById(button.getAttribute('aria-controls'));
+      if (!panel) return;
+      active = button;
+      panel.showPopover();
+      active.setAttribute('aria-expanded', 'true');
+      place();
+    }
+    function inside(node) { return node && (node === active || active && active.contains(node) || panel && panel.contains(node)); }
+    document.addEventListener('pointerover', function(e) {
+      if (e.pointerType === 'touch') return;
+      var button = e.target.closest('.scene-direction-icon');
+      if (button) show(button); else if (inside(e.target)) clearTimeout(timer);
+    });
+    document.addEventListener('pointerout', function(e) {
+      if (active && !pinned && inside(e.target) && !inside(e.relatedTarget)) timer = setTimeout(close, 140);
+    });
+    document.addEventListener('focusin', function(e) {
+      if (e.target.matches('.scene-direction-icon')) show(e.target); else if (!inside(e.target)) close();
+    });
+    document.addEventListener('focusout', function(e) { if (!pinned && inside(e.target) && !inside(e.relatedTarget)) close(); });
+    document.addEventListener('click', function(e) {
+      var button = e.target.closest('.scene-direction-icon');
+      if (button) {
+        if (pinned && button === active) close(); else { show(button); pinned = true; }
+      } else if (!inside(e.target)) close();
+    });
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && active) close(); });
+    window.addEventListener('resize', place);
+    document.addEventListener('scroll', place, true);
+  })();
   function sceneNoteHead(kind, title, status) {
     var paths = {
       music: '<path d="M9 17V6l11-2v11M9 9l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
@@ -2761,7 +2824,7 @@ window.STORYBOARD_READY = (async function () {
   function directionAttributes(sc, rows, shot, still) {
     var ko = LANG === 'ko', at = ko ? 0 : 1, content = [];
     var labels = Object.assign({}, window.SCENE_DIRECTION.labels, {
-      positions:['시작 위치','Opening positions'], emotion:['감정 변화','Emotion'], action:['행동','Action'],
+      speakers:['대사 인물','Scene speakers'], positions:['시작 위치','Opening positions'], emotion:['감정 변화','Emotion'], action:['행동','Action'],
       sound:['현장음','Scene sound'], audio:['연속 오디오','Continuous audio'], oneTake:['원테이크','One take'],
       fps:['프레임률','Frame rate'], view:['시점·구도','View and crop'], expression:['표정','Expression'],
       blocking:['시작 자세','Opening blocking'], beats:['연기 순서','Performance beats'], end:['종료 상태','Closing state'], landing:['무빙 도착점','Camera landing'], framing:['프레이밍','Framing']
@@ -2770,7 +2833,7 @@ window.STORYBOARD_READY = (async function () {
       axis:'M4 17h24M7 8v18m18-18v18', continuity:'M5 10h9v11H5zM18 10h9v11h-9zM11 16h10',
       lighting:'M10 13a6 6 0 1 1 12 0c0 4-3 5-3 9h-6c0-4-3-5-3-9zM13 26h6',
       attention:'M3 16q13-17 26 0-13 17-26 0zM13 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0',
-      positions:'M7 27v-7h6v7m-6-15a3 3 0 1 0 6 0a3 3 0 1 0-6 0M21 24V9m-4 5 4-5 4 5',
+      speakers:'M3 18h5l3-9 5 17 5-20 4 12h5', positions:'M7 27v-7h6v7m-6-15a3 3 0 1 0 6 0a3 3 0 1 0-6 0M21 24V9m-4 5 4-5 4 5',
       emotion:'M5 15q4-5 8 0m6 0q4-5 8 0M9 20q7 9 14 0',
       action:'M9 5l17 11-17 11z', sound:'M3 17h5l3-9 5 17 5-21 3 13h5',
       audio:'M8 5v22m5-18v14m6-18v22m5-16v10', oneTake:'M5 12h17l5 4-5 4H5z',
@@ -2784,6 +2847,14 @@ window.STORYBOARD_READY = (async function () {
       var label = labels[key][at], icon = id && camIcon(id);
       if (!icon) icon = '<svg class="size-ico f-group" viewBox="0 0 32 32" aria-hidden="true"><path d="' + paths[key] + '"/></svg>';
       var caption = origin ? origin + ' · ' + label : label;
+      if (!shot) {
+        var detailId = 'scene-dir-' + sc.no + '-' + key;
+        content.push('<button type="button" class="scene-direction-icon" data-attribute="' + key +
+          '" aria-label="' + esc(caption) + '" aria-expanded="false" aria-controls="' + detailId + '" aria-describedby="' + detailId + '">' +
+          icon + '</button><div class="scene-direction-detail" popover="manual" role="tooltip" id="' + detailId + '"><b>' +
+          esc(caption) + '</b>' + esc(value) + '</div>');
+        return;
+      }
       content.push('<div class="direction-attribute" data-attribute="' + key + '">' + icon +
         '<div><b>' + esc(caption) + '</b><small>' + esc(value) + '</small></div></div>');
     }
@@ -2809,6 +2880,7 @@ window.STORYBOARD_READY = (async function () {
     var positions = shot ? tl.openingPositions || video.openingPositions : dir.openingPositions;
     if (positions) add('positions', positions.map(function (p) { return p.character + ' · ' + p.position; }).join(' / '));
     if (!shot) {
+      if (sc.speakers) add('speakers', sc.speakers.map(castName).join(' · ') || (ko ? '대사 없음' : 'No dialogue'));
       add('emotion', dir.emotion); add('action', dir.action); add('sound', dir.sound);
       if (dir.audio) add('audio', [dir.audio.path].concat((dir.audio.cues || []).map(function (cue) { return cue.frame + 'f · ' + cue.action; })).join(' / '));
       if (dir.oneTake) add('oneTake', ko ? '컷 없이 촬영' : 'Uninterrupted');
@@ -2822,7 +2894,7 @@ window.STORYBOARD_READY = (async function () {
       if (vis.expression) add('expression', Object.keys(vis.expression).map(function (id) { return id + ' · ' + vis.expression[id]; }).join(' / '));
       add('landing', cam.end); add('end', notes.end);
     }
-    return content.length ? '<div class="direction-attributes" role="group" aria-label="' +
+    return content.length ? '<div class="direction-attributes' + (shot ? '' : ' scene-direction-icons') + '" role="group" aria-label="' +
       (shot ? (ko ? '샷 연출' : 'Shot direction') : (ko ? '씬 연출' : 'Scene direction')) + '">' + content.join('') + '</div>' : '';
   }
   function sceneVideoPromptHtml(sc, grp) {
@@ -2934,37 +3006,44 @@ window.STORYBOARD_READY = (async function () {
              : emptyText === null ? '<div class="shot-frame-empty ref-off-tile">' + OFF_GLYPH + "</div>"
              : '<div class="shot-frame-empty">' + esc(emptyText) + "</div>") + "</figure>";
     }
-    // MSR flow: four character subjects, and the background slot carries the start image
-    // (characters, background and props composed by the image tool); the plain background is off
-    var msr = lane === REF_LANES.astra_genai_msr;
-    var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
-    var left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
-      frameBox(lane.assetsOnly ? "" : fp.start, ko ? "시작 이미지" : "Start image", startFlag, lane.assetsOnly ? null : T.framePending) +
-      frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image",
-               fp.mode === "first_last" && fp.endState ? [ko ? "끝 상태" : "End state", fp.endState] : null,
-               fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
-    // The frame plan shot_icons wrote (visual.frames.mode · reason)
-    var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: [lane.name + " 참조 이미지", lane.name + " reference images"] };
-    if (s.visual && s.visual.frames && FRAME_PLAN[fp.mode])
-      left += '<p class="shot-frame-plan"><b>' + esc(FRAME_PLAN[fp.mode][ko ? 0 : 1]) + "</b>" + (fp.reason ? " · " + esc(fp.reason) : "") + "</p>";
-    var n = Math.max(lane.slots, refs.length), slots = "";
-    for (var k = 0; k < n; k++) {
-      var ref = refs[k], over = k >= lane.slots, src = ref ? safeSrc(ref.path) : "", off = msr && ref && ref.role === "background";
-      if (!ref) { slots += '<div class="ref-slot empty"><span>' + (k + 1) + "</span></div>"; continue; }
-      var name = ref.path === fp.start ? (ko ? "시작 이미지" : "Start image") : refName(ref), role = (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
-      var tip = (k + 1) + ". " + name + " · " + role + (over ? (ko ? " · 지원 개수 초과" : " · over the limit") : "") +
-        (off ? (ko ? "\n비활성 — 이 칸에는 시작 이미지를 보냅니다." : "\nOff — this slot carries the start image.") : "") + (ref.purpose ? "\n" + ref.purpose : "");
-      slots += '<figure class="ref-slot' + (over ? " over" : "") + (off ? " off" : "") + '" tabindex="0" data-tip="' + esc(tip) + '">' +
-        (off ? '<div class="ref-off-tile">' + OFF_GLYPH + "</div>"
-             : src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<div class="ref-missing">?</div>') +
-        '<figcaption>' + (off ? (ko ? "비활성" : "Off") : esc(name)) + "</figcaption>" + (over ? '<span class="ref-over">' + (ko ? "초과" : "over") + "</span>" : "") + "</figure>";
+    var owner = (window.STRUCTURE && window.STRUCTURE.scenes || []).find(function (scene) { return scene.no === s.scene; });
+    var sceneFrames = owner && (owner.frames || owner.speakers) && s.shot && s.shot.render && s.shot.render.mode === 'generated_video';
+    var left = '';
+    if (sceneFrames) {
+      if (s.referenceImage) left = '<div class="shot-frames">' + frameBox(s.referenceImage, ko ? "샷 참조 이미지" : "Shot reference", null, "") + '</div>';
+    } else {
+      // MSR flow: four character subjects, and the background slot carries the start image
+      // (characters, background and props composed by the image tool); the plain background is off
+      var msr = lane === REF_LANES.astra_genai_msr;
+      var startFlag = msr ? [ko ? "MSR 5번 칸으로 전송" : "sent to MSR slot 5", ko ? "MSR의 배경 칸에 이 시작 이미지를 보냅니다. 첫 프레임으로 고정하지는 않습니다." : "MSR takes this start image in its background slot; it does not pin the first frame."] : null;
+      left = '<div class="shot-frames' + (WIDE ? " wide" : "") + '">' +
+        frameBox(lane.assetsOnly ? "" : fp.start, ko ? "시작 이미지" : "Start image", startFlag, lane.assetsOnly ? null : T.framePending) +
+        frameBox(fp.mode === "first_last" ? fp.end : "", ko ? "종료 이미지" : "End image",
+                 fp.mode === "first_last" && fp.endState ? [ko ? "끝 상태" : "End state", fp.endState] : null,
+                 fp.mode === "first_last" ? T.framePending : msr ? null : (ko ? "종료 이미지 없음" : "No end image")) + "</div>";
+      // The frame plan shot_icons wrote (visual.frames.mode · reason)
+      var FRAME_PLAN = { first: ["시작 이미지에서 시작", "Opens on the start image"], first_last: ["시작·종료 이미지 사이", "Runs from the start to the end image"], reference: [lane.name + " 참조 이미지", lane.name + " reference images"] };
+      if (s.visual && s.visual.frames && FRAME_PLAN[fp.mode])
+        left += '<p class="shot-frame-plan"><b>' + esc(FRAME_PLAN[fp.mode][ko ? 0 : 1]) + "</b>" + (fp.reason ? " · " + esc(fp.reason) : "") + "</p>";
+      var n = Math.max(lane.slots, refs.length), slots = "";
+      for (var k = 0; k < n; k++) {
+        var ref = refs[k], over = k >= lane.slots, src = ref ? safeSrc(ref.path) : "", off = msr && ref && ref.role === "background";
+        if (!ref) { slots += '<div class="ref-slot empty"><span>' + (k + 1) + "</span></div>"; continue; }
+        var name = ref.path === fp.start ? (ko ? "시작 이미지" : "Start image") : refName(ref), role = (REF_ROLE[ref.role] || [ref.role, ref.role])[ko ? 0 : 1];
+        var tip = (k + 1) + ". " + name + " · " + role + (over ? (ko ? " · 지원 개수 초과" : " · over the limit") : "") +
+          (off ? (ko ? "\n비활성 — 이 칸에는 시작 이미지를 보냅니다." : "\nOff — this slot carries the start image.") : "") + (ref.purpose ? "\n" + ref.purpose : "");
+        slots += '<figure class="ref-slot' + (over ? " over" : "") + (off ? " off" : "") + '" tabindex="0" data-tip="' + esc(tip) + '">' +
+          (off ? '<div class="ref-off-tile">' + OFF_GLYPH + "</div>"
+               : src ? '<img src="' + esc(src) + '" alt="" loading="lazy">' : '<div class="ref-missing">?</div>') +
+          '<figcaption>' + (off ? (ko ? "비활성" : "Off") : esc(name)) + "</figcaption>" + (over ? '<span class="ref-over">' + (ko ? "초과" : "over") + "</span>" : "") + "</figure>";
+      }
+      left += '<div class="shot-refs' + (msr ? " msr" : "") + '"><div class="shot-refs-head"><b>' + (ko ? "참조 이미지" : "Reference images") + "</b><span>" +
+        esc(lane.name) + (lane.slots ? (ko ? " · 최대 " + lane.slots + "장" : " · up to " + lane.slots) + (lane.note ? " · " + lane.note[ko ? "ko" : "en"] : "") : "") +
+        "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
+        : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
+        (slots ? '<div class="ref-slots">' + slots + "</div>"
+               : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
     }
-    left += '<div class="shot-refs' + (msr ? " msr" : "") + '"><div class="shot-refs-head"><b>' + (ko ? "참조 이미지" : "Reference images") + "</b><span>" +
-      esc(lane.name) + (lane.slots ? (ko ? " · 최대 " + lane.slots + "장" : " · up to " + lane.slots) + (lane.note ? " · " + lane.note[ko ? "ko" : "en"] : "") : "") +
-      "</span>" + (lane.slots ? '<span class="shot-refs-count">' + (msr ? Math.min(refs.filter(function (r) { return r.role !== "background"; }).length, 4) + (fp.start ? 1 : 0)
-      : Math.min(refs.length, lane.slots)) + " / " + lane.slots + "</span>" : "") + "</div>" +
-      (slots ? '<div class="ref-slots">' + slots + "</div>"
-             : '<p class="shot-refs-none">' + (ko ? "이 모델의 현재 설정에는 참조 이미지 입력이 없습니다." : "This model and operation take no reference images.") + "</p>") + "</div>";
     // Shot cards carry story, lines and camera direction. Image prompts stay with their frames.
     var story = s.summary ? '<p class="shot-story">' + copy(s.summary) + "</p>" : "";
     // The place and props shot_image composed into the start image (SB_DOC.locations · SB_DOC.props)
@@ -2987,7 +3066,7 @@ window.STORYBOARD_READY = (async function () {
       [vis.frames && vis.frames.start && vis.frames.start === vis.bg ? (ko ? "시작 이미지 프롬프트" : "Start image prompt") : (ko ? "배경 프롬프트" : "Background prompt"), vis.bgPrompt],
       [ko ? "종료 이미지 프롬프트" : "End image prompt", vis.endPrompt]
     ]);
-    if (images) left += '<details class="production-review"><summary>' + (ko ? "이미지 제작 정보" : "Image generation details") + "</summary>" + images + "</details>";
+    if (images && !sceneFrames) left += '<details class="production-review"><summary>' + (ko ? "이미지 제작 정보" : "Image generation details") + "</summary>" + images + "</details>";
     var lines = narr.length ? narr.map(function (line, j) { return speechHtml(line, j); }).join("") : '<div class="speech-silent">' + esc(T.speechSilent) + "</div>";
     var bindings = Array.isArray(video.speakerBindings) ? video.speakerBindings : [];
     if (bindings.length) lines += fields([[ko ? "MSR 화자 위치" : "MSR speaker positions", bindings.map(function (b) {
@@ -3006,7 +3085,7 @@ window.STORYBOARD_READY = (async function () {
     }).join("") + '<div class="shot-tab-nav" role="tablist">' + tabs.map(function (t, k) {
       return '<label for="' + tabName + "-" + k + '">' + t[0] + "</label>";
     }).join("") + '</div><div class="shot-tab-panels">' + tabs.map(function (t) { return '<div class="shot-tab-panel">' + t[1] + "</div>"; }).join("") + "</div></div>";
-    return '<div class="shot-body"><div class="shot-media">' + left + '</div><div class="shot-lines">' + right + "</div></div>";
+    return '<div class="shot-body' + (left ? '' : ' lines-only') + '">' + (left ? '<div class="shot-media">' + left + '</div>' : '') + '<div class="shot-lines">' + right + "</div></div>";
   }
   /* The user's yes to a generated_video shot's video (video_approve → video-approvals.js). A prompt or
      frame changed after the yes makes a new plan, and video_execute asks for a new yes unless auto is on. */
@@ -5526,7 +5605,7 @@ window.STORYBOARD_READY = (async function () {
     if (choice.reason) body += '<p>' + copy(choice.reason) + '</p>';
     return '<section class="scene-note scene-score">' + sceneNoteHead("music", T.cMusic, status) + body + '</section>';
   }
-  if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG);
+  if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG, CONTENT.language);
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
     var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
@@ -5576,9 +5655,24 @@ window.STORYBOARD_READY = (async function () {
         return vis.video || vis.clip && vis.clip.prompt || renderModeOf(it.s, it.g) === "generated_video";
       });
       if (sc) h += directionAttributes(sc, coverage.defaults);
+      if (sc && (sc.frames || sc.speakerReferences)) {
+        var media = [];
+        function addSceneImage(file, label) {
+          if (!safeSrc(file)) return;
+          media.push('<figure><a href="' + esc(file) + '" target="_blank" rel="noopener"><img loading="lazy" src="' +
+            esc(file) + '" alt="' + esc(label) + '"></a><figcaption>' + esc(label) + '</figcaption></figure>');
+        }
+        var frames = sc.frames || {};
+        addSceneImage(frames.start, LANG === 'ko' ? '씬 시작 이미지' : 'Scene opening');
+        addSceneImage(frames.end, LANG === 'ko' ? '씬 종료 이미지' : 'Scene ending');
+        (sc.speakerReferences || []).forEach(function (ref) {
+          addSceneImage(ref.path, (LANG === 'ko' ? '화자 참조 · ' : 'Speaker reference · ') + castName(ref.character));
+        });
+        if (media.length) h += '<div class="scene-media">' + media.join('') + '</div>';
+      }
       h += sceneNotesHtml(grp, musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow),
         hasPrompt ? sceneVideoPromptHtml(sc, grp) : "");
-      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene);
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene, CONTENT.language);
     }
     grp.items.forEach(function (item, memberIndex) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;

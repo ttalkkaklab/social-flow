@@ -196,7 +196,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
   if (errors.length) throw new Error('image_plan_invalid: ' + errors.join('; '));
   let references = routing.imageReferences(shot);
   const rawCast = (shot.visual as Record<string, unknown> | undefined)?.character;
-  const canonicalMsr = !visual.characterInputs && tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
+  const canonicalMsr = !(shot.visual as Record<string,unknown>)?.sceneSpeakerReferences && !visual.characterInputs && tool === 'astra_genai_msr' && frames.mode === 'reference' && rawCast !== undefined
     && existsSync(path.join(episode, 'storyboard', 'cast.json'));
   if (canonicalMsr) {
     const ids = ([] as unknown[]).concat(rawCast ?? []).map(entry => typeof entry === 'string' ? entry : (entry as { id: string }).id);

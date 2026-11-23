@@ -11,7 +11,7 @@ import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
-import { audienceDecisionSchema, audienceEndForSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
+import { audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 /** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
@@ -4658,7 +4658,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after story_sequence to upsert scenes by number into a sequence: place, time, the one event, and a one- or two-sentence summary of the scene's story. On story-led work also give turn, charge and out, so the scenes can be read in a row for pressure that changes and ends that hand over the next question (skills/storyboard/references/story-interest.md). A scene moved to another sequence leaves its old one. Refused (story_order) before any sequence exists or for an unknown sequence id, and on a story-first episode board by story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
+Declare speakers at scene authoring, in stable reference order. Use [] for silence. Split before a third distinct speaker, including an off-screen speaker. Silent people can share the frame. Before making shot images, set directionDefaults for a shared camera technique, axis, continuity, lighting and attention. A shot can choose its own move, side or light. For generated scenes, videoDirection records the opening positions, shared direction, scene fps and one continuous audio file with beat cues. Set oneTake only for an explicitly uninterrupted camera view. Place every setup on its own story_shot card.
 
 A new scene starts with audienceSound.decision undecided. Set use or none with the dramatic reason. For use, perspective identifies whose experience we hear. The shift names the line or action that reveals a change of feeling or expectation and how the cue follows it. The exit names the beat where it ends. All three notes are optional. Plan and time each chosen effect on its shot with storyboard_apply.audienceEffects.
 
@@ -4677,6 +4677,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             event: { type: 'string', description: 'The one thing that happens in this scene' },
                             summary: { type: 'string', description: "The scene's story in one sentence" },
                             turn: { type: 'string', description: 'What flipped between the open and the close' },
+                            frames: zodToJsonSchema(sceneFramesSchema, { $refStrategy: 'none' }),
+                            speakerReferences: zodToJsonSchema(sceneSpeakerReferencesSchema, { $refStrategy: 'none' }),
+                            speakers: zodToJsonSchema(sceneSpeakersSchema, { $refStrategy: 'none' }),
                             directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: 'none' }),
                             videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: 'none' }),
                             audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: 'none' }),
@@ -4694,7 +4697,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         name: 'story_shot',
         title: 'Write shot stories (story step 3 of 3)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-        description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Supply timeline with scene-relative frame range, incoming transition, English framing/action and each video image’s role and frame. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+        description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Set duration for model-paced cuts or supply timeline for exact frame ranges and dialogue cues. Use referenceImage for an optional composition guide. Set temporal anchors on story_scene.frames. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001…); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Use timeline.framing for video direction. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title — the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -4707,6 +4710,8 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             id: { type: 'string', pattern: '^s\\d{4,}$', description: 'Stable shot id to revise; omit to add a shot' },
                             scene: { type: 'integer', minimum: 1, description: 'The scene number' },
                             summary: { type: 'string', description: 'The story this shot tells, in one sentence' },
+                            duration: { type: 'number', exclusiveMinimum: 0, description: 'Target duration in seconds for a model-paced shot. Use timeline for exact cuts.' },
+                            referenceImage: { type: 'string', description: 'Optional composition reference for this shot on a compatible adapter.' },
                             timeline: zodToJsonSchema(shotTimelineSchema, { $refStrategy: 'none' }),
                         } } },
             },
@@ -4991,6 +4996,8 @@ Do NOT use it just to inspect a shot — use storyboard_read. Do NOT use it for 
                     }, required: ['x', 'y', 'width', 'height'] },
                 preserve: { type: 'string', description: 'Details to preserve during editExisting, e.g. Keep the navy blazer.' },
                 location: { type: 'string', description: 'SB_DOC.locations id of the place (e.g. studio), for the start image; an earlier choice stays when omitted, and an end image keeps the start\'s place (refused there)' },
+                role: { type: 'string', enum: ['shot_reference', 'scene_start', 'scene_end'], description: 'One optional guide per shot, or the whole scene opening/ending from its first/last card.' },
+                bystanders: { type: 'array', uniqueItems: true, items: { type: 'string' }, description: 'Additional cast IDs visible in the opening image. Their portraits condition only this still.' },
                 props: { type: 'array', items: { type: 'string' }, description: 'SB_DOC.props ids seen in the frame (e.g. ["cup"]); an earlier choice stays when omitted' },
                 size: { type: 'string', pattern: '^\\d{3,4}x\\d{3,4}$', description: 'Output WIDTHxHEIGHT; default 1536x864 on a 16:9 board, 864x1536 otherwise; fixed-size GPT models use their supported preset with a warning' },
                 reserveUsd: { type: 'number', minimum: 0, description: 'API reservation estimate in USD, as in image_plan; e.g. 0 for an authorized local run' },
@@ -5191,21 +5198,21 @@ export const SNS_PLATFORM_BY_TOOL = {
 const videoContextSchema = {
     type: 'object', additionalProperties: false,
     properties: { episode: { type: 'string', description: 'Absolute episode directory.' },
-        shotId: { type: 'string', description: 'Stable storyboard shot ID.' },
+        sceneNo: { type: 'integer', minimum: 1, description: 'Complete storyboard scene, including a one-shot scene.' },
         requestId: { type: 'string', description: 'Stable logical attempt ID; reuse after timeout, never invent a retry ID.' } },
-    required: ['episode', 'shotId', 'requestId'],
+    required: ['episode', 'sceneNo', 'requestId'],
 };
 for (const tool of TOOLS) {
     if (VIDEO_ADAPTERS[tool.name]) {
         // Legacy direct entrypoints: the routing contract comes first in every description.
-        tool.description = `Video generation requires a selected, ready project. Episode video goes through video_plan → video_execute; direct calls need videoContext (episode, shotId, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
+        tool.description = `Video generation requires a selected, ready project. Episode video goes through video_plan → video_execute; direct calls need videoContext (episode, sceneNo, requestId), except channel assets under data/<channel>/assets/, which must still match the saved model. ${tool.description}`;
         tool.inputSchema.properties = { ...tool.inputSchema.properties,
             videoContext: { ...videoContextSchema, description: 'Production context. Required for configured episodes; applies saved selection, spending authorization, concurrency and duplicate-submission protection.' } };
     }
 }
 TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
-    inputSchema: { type: 'object', properties: { engine: { type: 'string', enum: ['ltx-desktop-local'] } }, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Use shotId for an explicitly requested single-shot or legacy plan. Saved model, limits and authorization apply. No generation.',
-    inputSchema: { ...videoContextSchema, required: ['episode', 'requestId'], oneOf: [{ required: ['sceneNo'] }, { required: ['shotId'] }], properties: { ...videoContextSchema.properties,
+    inputSchema: { type: 'object', properties: { engine: { type: 'string', enum: ['ltx-desktop-local'] } }, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. Always select the scene, including a one-shot scene. Saved model, limits and authorization apply. No generation.',
+    inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
             sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Select only after user approval. Submit one scene job that renders shot intervals separately and joins the picture and native or supplied scene audio.' },

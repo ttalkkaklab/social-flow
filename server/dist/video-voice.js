@@ -72,6 +72,11 @@ export function resolveCharacterVoice(character, context, warnings) {
     const reference = object(resolved.voiceReference);
     if (required)
         return { ...resolved, voiceReference: { ...reference, imagePaths: [required.face?.path, required.bodyPath].filter(Boolean) } };
+    const sceneRefs = object(context.shot.visual).references;
+    const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object) : [])
+        .filter(ref => ref.scope === 'scene' && ref.character === id && ref.role === 'character').map(ref => text(ref.path));
+    if (facePaths.length)
+        return { ...resolved, voiceReference: { ...reference, imagePaths: facePaths } };
     // Existing ownership wins. Otherwise use only authored character images inside this character's folder.
     if (!Array.isArray(reference.imagePaths) && existsSync(folder)) {
         const root = realpathSync(folder) + path.sep;
@@ -134,7 +139,9 @@ function msrSubject(character, refs, context) {
     let ownedPaths;
     const declared = [].concat(object(context.shot.visual).character ?? [])
         .map(entry => typeof entry === 'string' ? entry : text(object(entry).id));
-    if (requiredCharacters(context.shot).some(person => person.character === character.id)) {
+    const visualReferences = object(context.shot.visual).references;
+    const sceneFace = Array.isArray(visualReferences) && visualReferences.some(ref => ref.scope === 'scene' && ref.character === character.id);
+    if (sceneFace || requiredCharacters(context.shot).some(person => person.character === character.id)) {
         ownedPaths = owned.map(file => realpathSync(path.resolve(context.episode, 'storyboard', file)));
     }
     else if ((declared.includes(text(character.id)) || context.sceneDirection?.openingPositions.some(p => p.character === character.id && p.images.length)) && existsSync(path.join(context.episode, 'storyboard', 'cast.json'))) {

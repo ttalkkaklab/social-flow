@@ -34526,8 +34526,7 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
   motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
   performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
-  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
-  references: external_exports.array(external_exports.object({ id: external_exports.string().min(1), character: external_exports.string().min(1), role: external_exports.enum(["face", "outfit", "character"]) }).strict()).optional()
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional()
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,

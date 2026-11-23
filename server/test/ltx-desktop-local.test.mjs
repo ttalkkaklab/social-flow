@@ -212,7 +212,7 @@ test('managed recovery completes the original Desktop request after interrupted 
   };
   fs.writeFileSync(
     path.join(episode, 'storyboard/scenes.js'),
-    'window.PRODUCTION=' + JSON.stringify(production) + ';window.SCENES=[{id:"s1",duration:3,visual:{}}];'
+    'window.PRODUCTION=' + JSON.stringify(production) + ';window.STRUCTURE={scenes:[{no:1}]};window.SCENES=[{id:"s1",scene:1,duration:3,visual:{}}];'
   );
   const timer = globalThis.setTimeout;
   t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) => timer(fn, ms === 2500 ? 0 : ms, ...args));
@@ -242,12 +242,12 @@ test('managed recovery completes the original Desktop request after interrupted 
   });
   const request = { episode, requestId: 'resume' };
   const plan = JSON.parse(
-    (await ROUTES.video_plan({ ...request, shotId: 's1', args: { prompt: 'A boat floats.' } })).content[0]
+    (await ROUTES.video_plan({ ...request, sceneNo: 1, args: { prompt: 'A boat floats.' } })).content[0]
       .text
   );
   assert.equal(plan.args.durationSeconds, 4);
   await assert.rejects(
-    ROUTES.video_plan({ ...request, shotId: 's1', args: { prompt: 'A boat floats.', durationSeconds: 3 } }),
+    ROUTES.video_plan({ ...request, sceneNo: 1, args: { prompt: 'A boat floats.', durationSeconds: 3 } }),
     /unavailable/
   );
   await ROUTES.video_approve({ episode, planIds: [plan.id], request: 'Approve local test' });

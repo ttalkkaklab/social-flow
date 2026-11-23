@@ -66,6 +66,15 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   assert.match(card, /Image generation details.*Paint the plaza.*Shot direction.*Step left/s);
   assert.doesNotMatch(card, /Earlier single-shot prompt|>Prompt<|>Video prompt</);
   assert.match(render('shotBodyHtml(first, [], false)'), /Earlier single-shot prompt/);
+  context.window.STRUCTURE = {scenes:[{no:1,speakers:[],frames:{start:'opening.png'}}]};
+  Object.assign(first,{scene:1,shot:{render:{mode:'generated_video'}}});
+  const sceneCard = () => render('shotBodyHtml(first, [], true)');
+  assert.match(sceneCard(),/shot-body lines-only/);
+  assert.doesNotMatch(sceneCard(),/shot-refs|Start image|End image/);
+  first.referenceImage = 'guide.png';
+  context.safeSrc = file => file;
+  assert.match(sceneCard(),/Shot reference.*guide.png/s);
+  assert.doesNotMatch(sceneCard(),/shot-refs|opening.png/);
 });
 
 test('offline direction icons identify inherited shots and show the middle override in both languages', () => {
@@ -89,6 +98,8 @@ test('offline direction icons identify inherited shots and show the middle overr
     const header = render('directionAttributes(sc,rows.defaults)');
     assert.match(header,/data-camera="camera.static"/); assert.match(header,/Window &lt;light>/);
     assert.match(header,/data-attribute="emotion"/);
+    assert.match(header,/class="scene-direction-icon"[^>]*aria-expanded="false"[^>]*aria-controls="([^"]+)"[^>]*>[\s\S]*?popover="manual" role="tooltip" id="\1"/);
+
     const html = cards.map((_,i) => render('directionAttributes(sc,rows.shots['+i+'],cards['+i+'])'));
     assert.equal(html.filter(value=>value.includes('camera.static')).length,2);
     assert.match(html[1],/camera.dolly-in/); assert.match(html[1],/slow · the letter/);

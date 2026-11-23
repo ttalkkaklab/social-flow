@@ -20,7 +20,7 @@ import { ltxApiAudioSeconds } from './ltx-api-video.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { buildMinimaxBody, minimaxImg2VideoSchema, minimaxReferenceSchema } from './minimax-video.js';
 import { checkHeygenInputs, heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
-import { checkSeedanceReferenceTasks, seedanceReferenceSchema, pollSeedanceTask, probeVideo, verifySeedanceVideo, SEEDANCE_MODEL_SPECS } from './seedance-client.js';
+import { checkSeedanceReferenceTasks, seedanceReferenceSchema, pollSeedanceTask, probeVideo, verifySeedanceVideo, SEEDANCE_MODEL_SPECS, DEFAULT_SEEDANCE_MODEL } from './seedance-client.js';
 import { saveVendorOutput } from './vendor-video.js';
 import { resolveOutputFile } from './media-utils.js';
 import { quoteVideo } from './video-pricing.js';
@@ -66,7 +66,7 @@ function selectedVideoTool(selection, operation = selection.operation) {
 function shotVideoTiming(context, tool, args) {
     const { shot } = context;
     let coverage;
-    if (context.sceneNo !== undefined) {
+    if (context.sceneDirection) {
         coverage = { requiredSeconds: Number(shot.duration) };
     }
     else if (shot.duration !== undefined) {
@@ -159,12 +159,12 @@ function stable(value) {
 }
 const hash = (value) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
-export const videoPlanSchema = z.object({ episode: z.string().min(1), shotId: z.string().min(1).optional(), sceneNo: z.number().int().positive().optional(), requestId: idSchema,
+export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z.number().int().positive(), requestId: idSchema,
     validateScenePayload: z.boolean().optional(), sceneRendering: z.literal('per_shot').optional(), shotBindings: sceneShotBindingsSchema.optional(),
     purpose: z.enum(['draft', 'final', 'revision']).optional(),
     basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
     maxCostUsd: z.number().nonnegative().finite().optional(),
-    operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict().refine(v => Boolean(v.shotId) !== (v.sceneNo !== undefined), 'Choose sceneNo or shotId');
+    operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
     const relative = path.relative(root, file);
@@ -340,20 +340,7 @@ async function executeShotRenderPlan(plan, prepared) {
 }
 function resolvePlanContext(input) {
     requireReadyProject(input.episode, { allowVideoSnapshot: true });
-    let context = routingContext(input.episode, input.shotId, input.sceneNo);
-    if (input.shotId && context.shot.scene !== undefined) {
-        const sceneNo = Number(context.shot.scene);
-        const owner = context.board.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
-        const members = context.board.SCENES
-            .filter(shot => shot.scene === sceneNo);
-        const timed = (owner?.videoDirection && (members.length > 1 || owner.directionDefaults)) || owner?.videoDirection?.oneTake || owner?.videoDirection?.audio || owner?.videoDirection?.fps ||
-            members.some(shot => shot.timeline || shot.visual?.frames?.storyboardKeyframes || owner?.videoDirection && shot.visual?.frames?.keyframes);
-        if (timed) {
-            if (members.length !== 1)
-                throw new Error('scene_video_scope: plan the timed shot and its scene inputs with sceneNo ' + sceneNo);
-            context = routingContext(input.episode, undefined, sceneNo);
-        }
-    }
+    const context = routingContext(input.episode, undefined, input.sceneNo);
     requireSupportedSelection(context.selection);
     if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context.selection.engine)
         throw new Error('model_selection_mismatch: tool does not match selected engine');
@@ -416,7 +403,6 @@ export function planVideo(raw, persist = true) {
 }
 function buildVideoPlan(input, { context, tool }, persist) {
     const sourceArgs = input.args;
-    input = { ...input, sceneNo: context.sceneNo };
     // Gateway pricing needs a declared reservation. Hosted adapters compute their quote
     // from the catalogue and must never receive this accounting field on the wire.
     if (context.selection.engine === 'astra-genai' && input.maxCostUsd !== undefined && input.args.reserveUsd === undefined)
@@ -428,7 +414,15 @@ function buildVideoPlan(input, { context, tool }, persist) {
         return quote;
     };
     const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
-    const take = { ...(input.maxCostUsd !== undefined ? { maxCostUsd: input.maxCostUsd } : {}), ...(scene ? { sceneNo: context.sceneNo, sceneDurationSeconds: Number(context.shot.duration), shotIds: context.shotIds } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
+    if (context.sceneOwnsFrames) {
+        const media = ['references', 'images', 'keyframes', 'imagePath', 'imageUri', 'lastFramePath', 'lastFrameUri', 'sourceImagePath', 'lastImagePath', 'firstFramePath', 'firstFrameImagePath', 'lastFrameImagePath', 'referenceImagePaths', 'referenceImageUrls', 'referenceVideoTaskIds', 'referenceVideoUrls', 'referenceVideoPaths', 'referenceAudioPaths'];
+        if (input.shotBindings?.some(binding => binding.keyframes || binding.openingPositions))
+            throw new Error('scene_image_scope: author scene endpoints and scene reference positions on the storyboard');
+        const override = media.find(key => Object.hasOwn(input.args, key));
+        if (override)
+            throw new Error('scene_image_scope: author ' + override + ' on the storyboard before planning this scene');
+    }
+    const take = { ...(input.maxCostUsd !== undefined ? { maxCostUsd: input.maxCostUsd } : {}), sceneNo: input.sceneNo, shotIds: context.shotIds, ...(scene ? { sceneDurationSeconds: Number(context.shot.duration) } : {}), ...(input.purpose ? { purpose: input.purpose } : {}), ...(input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {}), ...(input.changeNote ? { changeNote: input.changeNote } : {}) };
     if (input.basedOnRequestId) {
         const directory = path.join(context.episode, '.work/video-routing/plans');
         const parent = input.basedOnRequestId !== input.requestId && fs.existsSync(directory) && fs.readdirSync(directory)
@@ -448,7 +442,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         throw new Error('character_face_source_unsupported: the selected adapter cannot use a Seedance original for facial identity');
     if (selection.engine === 'seedance') {
         const { seedanceMedia } = load(shared);
-        const media = seedanceMedia(context.shot);
+        const media = seedanceMedia(context.shot, context.sceneMembers);
         if (input.args.realFaceInput === false && (media.realFaceInput === true || cast.some(person => person.face) && media.realFaceInput !== false))
             throw new Error('character_inputs_mismatch: the request cannot disable the storyboard portrait declaration');
         for (const key of ['referenceVideoPaths', 'referenceAudioPaths']) {
@@ -475,7 +469,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('scene_render_selection: use saved dev audio-to-video for conditioning or distilled I2V for native or mixed sound');
         const settings = z.object({ reserveUsd: z.number().nonnegative().finite(), outputPath: z.string().optional(),
             filename: z.string().optional() }).strict().parse(input.args);
-        const { request } = prepareSceneRequest(input.sceneNo, bindSceneCards(context.sceneMembers, input.shotBindings), scene, context.episode, lines, { bindDialogue: false, bindOpening: false, suffix: '', shotScoped: true }, () => undefined, context.board);
+        const { request } = prepareSceneRequest(input.sceneNo, bindSceneCards(context.sceneMembers, input.shotBindings), scene, context.episode, lines, { bindDialogue: false, bindOpening: false, suffix: '', shotScoped: true, guideMode: conditioned ? undefined : 'background' }, () => undefined, context.board);
         bindRegisteredPanels(request, context.episode, context.board);
         const missing = [];
         for (const member of context.sceneMembers) {
@@ -492,6 +486,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
         for (const shot of request.shots) {
             const binding = input.shotBindings?.find(b => b.shotId === shot.shotId);
             const at = shot.shotId + '@' + shot.startFrame;
+            if (!request.images.some(p => p.shotId === shot.shotId && p.role === 'start'))
+                missing.push(at + ' opening: this per-shot renderer requires a temporal start for each interval; a composition guide cannot replace it');
             if (!shot.framing || !shot.action)
                 missing.push(at + ' direction: supply framing and action');
             if (shot.transition !== 'open' && shot.transition !== 'hard_cut')
@@ -602,7 +598,11 @@ function buildVideoPlan(input, { context, tool }, persist) {
     const members = context.sceneMembers ?? [];
     const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
     const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
-    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix, namedReferencesOnly: tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
+    const guideMode = tool === 'seedance_reference' ? 'composition' :
+        tool === 'astra_genai_img2video' && selection.model === 'ltx-2.5-22b-distilled' && members.length === 1 ? 'background' : undefined;
+    const guideLimit = tool === 'seedance_reference'
+        ? SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL)]?.referenceImages[1] : undefined;
+    const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo, members, scene, context.episode, lines, { bindDialogue: bindTurns, bindOpening, suffix: silentSuffix, guideMode, guideLimit, namedReferencesOnly: tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
     const sceneRequest = prepared?.request;
     const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
     const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
@@ -818,13 +818,14 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
+    const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings;
     const characterBindings = tool === 'seedance_reference'
-        ? seedanceBindings(context.episode, context.sceneMembers ?? [context.shot], args, inputs, images.imageBindings, voice.voiceContinuity)
+        ? seedanceBindings(context.episode, context.sceneMembers ?? [context.shot], args, inputs, imageBindings, voice.voiceContinuity, sceneRequest?.images.filter(pin => pin.role === 'face' && pin.reference?.scope === 'scene'))
         : undefined;
     const quote = quoteFor(tool, args);
     const body = { ...take, ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
-        ...(images.imageBindings ? { imageBindings: sceneRequest ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings } : {}),
+        ...(imageBindings ? { imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body) };
@@ -928,6 +929,8 @@ async function adaptiveSeedanceOutputError(plan) {
         return 'scene_video_timing: the adaptive output differs from the authored scene frame count';
 }
 function approvedContext(plan) {
+    if (!plan.sceneNo)
+        throw new Error('scene_video_scope: use video_status for a historical shot receipt; new generation requires a scene plan');
     try {
         return routingContext(plan.episode, plan.shotId, plan.sceneNo);
     }
@@ -1145,7 +1148,7 @@ export async function routeLegacyVideo(tool, raw, dispatch) {
         throw new Error('video_tool_disabled: ' + gate.reason);
     const { videoContext, ...args } = z.record(z.unknown()).parse(raw);
     if (videoContext !== undefined) {
-        const ctx = z.object({ episode: z.string().min(1), shotId: z.string().min(1), requestId: idSchema }).strict().parse(videoContext);
+        const ctx = z.object({ episode: z.string().min(1), sceneNo: z.number().int().positive(), requestId: idSchema }).strict().parse(videoContext);
         const plan = await planManagedVideo({ ...ctx, tool, args });
         return executeVideo({ episode: plan.episode, planId: plan.id }, dispatch);
     }

@@ -5,6 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
@@ -1311,7 +1312,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     let win = readBoard(dir).win;
     assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), [
       's0001-mina-face', 's0001-friend-face', 's0001-mina-front', 's0001-friend-front']);
-    assert.ok(win.SCENES[0].visual.references.every(r => r.use === 'both'));
+    assert.ok(win.SCENES[0].visual.references.every(r => r.use === 'image'));
     assert.ok(win.SB_DOC.characters.find(c => c.id === 'friend').panels.face.endsWith('/friend/face.png'));
     writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first', reason: 'Frame route' } }] });
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['friend'] }] });
@@ -1479,6 +1480,50 @@ describe('images and the video prompt follow the icon attributes', () => {
     castFile(dir, ['mina'], { root: join(root, 'library') });
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }).inputs[1], /library\/assets\/characters\/mina\/face\.png$/);
   });
+  it('adopting scene speakers removes the checksum of a retired per-shot opening', () => {
+    const {dir}=pictureBoard(); icons(dir);
+    const input={sequence:'q1',no:1,place:'Room',time:'Night',event:'Meeting',summary:'Two people meet.'};
+    make(dir,'s0001');
+    writeStoryScenes({path:dir,scenes:[{...input,videoDirection:{openingPositions:[],emotion:'Anticipation.'}}]});
+    assert.ok(readBoard(dir).win.STRUCTURE.scenes[0].videoOpeningSha256);
+    writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina']}]});
+    const owner=readBoard(dir).win.STRUCTURE.scenes[0];
+    assert.deepEqual(owner.frames,{});
+    assert.equal(owner.videoOpeningSha256,undefined);
+  });
+  it('scene anchors and the optional shot reference are stored separately and image-only extras stay out of video', () => {
+    const {root,dir} = pictureBoard();
+    castFile(dir,['mina','friend'],{root:join(root,'data/c')});
+    const input = { sequence:'q1', no:1, place:'Room',time:'Night',event:'Meeting',summary:'Two people meet.' };
+    writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina'],frames:{}}]});
+    icons(dir);
+    const snapshot = () => readBoard(dir).win;
+    const first = 's0001', last = 's0002';
+    assert.deepEqual(createRequire(import.meta.url)('../../skills/storyboard/references/structure-contract.js').imageGaps(snapshot()),[]);
+    assert.throws(()=>make(dir,last,'start',{role:'scene_start'}),/first card/);
+    assert.throws(()=>make(dir,first,'start',{role:'shot_reference',bystanders:['mina']}),/scope/);
+    const independentEnd = make(dir,last,'end',{role:'scene_end',location:'room'});
+    assert.deepEqual(Object.keys(snapshot().STRUCTURE.scenes[0].frames),['end']);
+    assert.doesNotMatch(independentEnd.prompt,/opens on Image 1|Image 1 supplies the opening/);
+    const opening = make(dir,first,'start',{role:'scene_start',bystanders:['friend']});
+    assert.ok(opening.inputs.some(file=>file.includes('/characters/friend/')));
+    writeShotCharacters({path:dir,shots:[{id:last,characters:['mina','friend']}]});
+    for (const generated of [make(dir,last,'start',{role:'shot_reference'}),make(dir,last,'end',{role:'scene_end'})])
+      assert.ok(generated.inputs.every(file=>!file.includes('/characters/friend/')));
+
+    const board=snapshot(), frames=board.STRUCTURE.scenes[0].frames;
+    assert.match(frames.start,/scene_start/); assert.match(frames.end,/scene_end/);
+    assert.match(board.SCENES[1].referenceImage,/shot_reference/);
+    assert.ok(board.SCENES.every(card=>!card.visual.frames?.start && !card.visual.frames?.end));
+    const direction = {openingPositions:[],emotion:'Hope returns.'};
+    writeStoryScenes({path:dir,scenes:[{...input,videoDirection:direction}]});
+    writeStoryScenes({path:dir,scenes:[{...input,frames:{start:'places/key.png'}}]});
+    assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,createHash('sha256').update(png).digest('hex'));
+    writeStoryScenes({path:dir,scenes:[{...input,frames:{}}]});
+    assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,undefined);
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_limit/);
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina'],speakerReferences:[{character:'extra',path:'places/key.png'}]}]}),/scene_reference_owner/);
+  });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'p', location: 'room' }), /story_order.*no render route/);
@@ -1489,7 +1534,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const shot = readBoard(dir).win.SCENES[0];
     assert.equal(shot.visual.frames.start, 'images/s0001-start-v1.png');
     assert.equal(shot.visual.bg, shot.visual.frames.start);
-    assert.deepEqual(shot.visual.references.map((r) => [r.role, r.use]), [['character', 'both'], ['character', 'both'], ['character', 'both'], ['background', 'image']]);
+    assert.deepEqual(shot.visual.references.map((r) => [r.role, r.use]), [['character', 'image'], ['character', 'image'], ['character', 'image'], ['background', 'image']]);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0001', frame: 'end', prompt: 'p' }), /story_order.*first_last/);
     assert.equal(make(dir, 's0001').requestId, 's0001-start-v2');
     chooseEpisodeImage(dir, { engine: 'astra-genai', model: 'z-image-turbo' }, 'Fixture: a one-picture image model');
@@ -1647,7 +1692,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     const msrShot = readBoard(dir).win.SCENES[1];
     assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end', 'prompt']);
     assert.deepEqual([msrShot.visual.frames.end, msrShot.visual.frames.endState, msrShot.visual.endPrompt], [undefined, undefined, undefined]);
-    assert.deepEqual([...new Set(msrShot.visual.references.filter((r) => r.role === 'character').map((r) => r.use))], ['both']);
+    assert.deepEqual([...new Set(msrShot.visual.references.filter((r) => r.role === 'character').map((r) => r.use))], ['image']);
     // A new cast leaves the start image behind; the tool says so. A departed panel goes by its folder or its shot_image id.
     const moved = readBoard(dir).win.SCENES[1];
     applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...moved, visual: { ...moved.visual,
