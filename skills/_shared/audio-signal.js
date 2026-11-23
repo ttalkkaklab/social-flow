@@ -13,7 +13,7 @@ function inspect(file) {
   if (!Number.isFinite(duration) || duration <= 0) throw new Error('cannot measure audio duration');
   const result = spawnSync('ffmpeg', ['-hide_banner', '-nostdin', '-nostats', '-xerror',
     '-progress', 'pipe:1', '-i', file,
-    '-map', '0:a:0', '-af', `silencedetect=n=${SILENCE_DB}dB:d=0.01`, '-f', 'null', '-'],
+    '-map', '0:a:0', '-af', `silencedetect=n=${SILENCE_DB}dB:d=0.01,astats=measure_perchannel=none:measure_overall=Peak_level`, '-f', 'null', '-'],
   { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
   if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
     throw new Error('cannot decode audio signal');
@@ -23,8 +23,11 @@ function inspect(file) {
     if (event === 'start') start = Number(time);
     else spans.push([start, Number(time)]);
   }
-  // One millisecond covers timestamp rounding on the last decoded sample.
-  return { status: covers(spans, 0, duration, 0.001) ? 'silent' : 'signal', spans, duration };
+  // A complete clip may be shorter than the ten-millisecond window used for spans.
+  const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
+  if (peak === undefined) throw new Error('cannot measure decoded audio peak');
+  const silent = peak === '-inf' || Number(peak) <= SILENCE_DB;
+  return { status: silent ? 'silent' : 'signal', spans, duration };
 }
 
 function covers(spans, start, seconds, tolerance = 0) {

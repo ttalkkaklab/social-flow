@@ -324,7 +324,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>) {
 
       const generatedVoice = !context.speechRoute && usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
       const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine,
-        adapter?.operation ?? selection.operation, context.speechRoute?.speakers.length === 2 || hasVideoSubjectReferences(scene), generatedVoice);
+        adapter?.operation ?? selection.operation, context.speechRoute ? context.speechRoute.speakers.length === 2 : hasVideoSubjectReferences(scene), generatedVoice);
       if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
           args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
           Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))

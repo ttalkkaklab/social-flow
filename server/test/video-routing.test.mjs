@@ -472,6 +472,17 @@ test('managed speech derives A2V from the scene even with a saved reference oper
  const allFalse={provider:'astra-genai',model:'ltx-2.5-22b-distilled',audioConditioning:false,lipSync:false,postLipSync:false,evidence:'old caller'};
  assert.throws(()=>manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1',capabilities:allFalse}),/disagree/);
 });
+test('a visual reference does not turn an off-screen-only scene into model dialogue', t => {
+ const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',operation:'image',resolution:'576x1024'});
+ const shot=f.board.SCENES[0];
+ shot.narration=[{id:'line',speaker:'caller',delivery:'off_screen',tts:'Wait for me.'}];
+ shot.visual.references=[{id:'phone',role:'prop',use:'video',path:'phone.png'}];
+ f.board.SB_DOC={characters:[{id:'caller',name:'Caller',tts:{engine:'gemini',voiceId:'Kore',language:'en',speed:1}}]};
+ f.save();
+ const {plan}=manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:shot.id});
+ assert.equal(plan.mode,'voiceover');
+ assert.equal(plan.audioFirst,true);
+});
 test('FastH3 speech preparation uses the two-speaker reference capability on both shots', t => {
  const f=fixture(t,{engine:'mlx',model:'ddalcu/FastH3-Omni-MLX-Serve-8bit',operation:'reference'});
  const cast=['hero','guest'];
@@ -1571,7 +1582,7 @@ test('one Seedance scene binds the original on each speaking card, including the
   const input={episode:f.episode,sceneNo:1,requestId:'changed-two-voices'};
   assert.throws(()=>planVideo({...input,operation:'audio'},false),/scene_speech_route/);
   const [first,second]=f.board.SB_DOC.characters;
-  execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','anullsrc=r=16000:cl=mono','-t','2',second.voiceReference.path]);
+  execFileSync('ffmpeg',['-y','-v','error','-f','lavfi','-i','anullsrc=r=16000:cl=mono','-t','0.005',second.voiceReference.path]);
   second.voiceReference.sha256=digest(fs.readFileSync(second.voiceReference.path));
   f.save();
   assert.throws(()=>planVideo(input,false),/scene_speech_references/);
