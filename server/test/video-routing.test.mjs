@@ -2230,11 +2230,15 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     edit('Hero — {guest.face}\nGuest — {hero.face}'),
     edit('Hero:\n{guest.face} waits by the door.'),
     edit('Hero takes on Guest’s voice throughout.'),
+    edit('The actor in {guest.face} delivers the first spoken line. The actor in {hero.face} delivers the second spoken line.'),
+    edit('Give line two to Hero. The opening words belong to Guest.'),
+    edit('Guest mouths Hero’s words. Hero recites Guest’s lines.'),
+    edit('Switch the faces of Hero and Guest for every shot.'),
   ]) {
     await saveDraft(invalid);
     await assert.rejects(get('refused'),/scene_dialogue_speaker/);
   }
-  const focus = 'Keep Hero’s face sharp as Guest steps back.';
+  const focus = 'Keep Hero’s face sharp as Guest steps back. Hero and Guest exchange a glance across the doorway.';
   await saveDraft(edit(focus + ' Hero ({hero.face}) waits by the door.'));
   const accepted = await get('focus');
   assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(accepted.args)).prompt,accepted.sceneRequest.prompt);

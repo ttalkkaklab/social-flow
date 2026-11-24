@@ -250,9 +250,24 @@ function changesCastBinding(text: string, cast: PromptCast): boolean {
   const bound = (text.match(TOKEN) ?? []).some(token => cast.some(person => NAME.exec(token)?.[1] === word(person.speaker)));
   if (bound && owners.size > 1) return true;
   const identity = bound || /\b(?:faces?|facial|likeness(?:es)?|portraits?|identit(?:y|ies)|appearances?)\b/iu.test(text);
-  const assigns = /\b(?:assign\w*|belongs?|portrays?|impersonat\w*|swap\w*|exchang\w*|borrow\w*|imitat\w*|stands? in for|doubles? as|takes? on)\b/iu;
-  const designates = /\b(?:use|uses|cast|casts)\b.+\s(?:for|as)\s|\b(?:identity|face|likeness)\s+(?:is|of)\s/iu;
-  return (identity || owners.size > 1) && (assigns.test(text) || designates.test(text));
+  const transfer = /\b(?:assign\w*|belongs?|portrays?|impersonat\w*|swap\w*|switch\w*|exchang\w*|revers\w*|trad(?:e|es|ing)|borrow\w*|imitat\w*|stands? in for|doubles? as|takes? on)\b/iu;
+  const designate = /\b(?:use|uses|cast|casts)\b.+\s(?:for|as)\s|\b(?:identity|face|likeness)\s+(?:is|of)\s/iu;
+  return identity && (transfer.test(text) || designate.test(text));
+
+}
+
+/** Native actor and line order come from the approved script. A direction that allocates speech
+ * belongs to a quoted turn, including when the author calls the line by its position or function.
+ */
+function assignsSpokenTurn(text: string, cast: PromptCast): boolean {
+  const speech = /\b(?:dialogue|utterances?|spoken|speakers?|speaking|conversation|monologue|opening (?:words?|line)|closing (?:words?|line)|repl(?:y|ies)|questions?|answers?)\b/iu;
+  const ordinal = /\b(?:first|second|third|fourth|next|last|final|opening|closing|previous|later|earlier|\d+(?:st|nd|rd|th)?)\s+(?:[\w-]+\s+){0,2}(?:lines?|turns?|words?|sentences?)\b|\b(?:line|turn|sentence)\s*(?:#?\d+|one|two|three)\b/iu;
+  const attributes = /\b(?:says?|asks?|adds?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|speaks?|murmurs?|yells?|calls?|tells?|mutters?)\b/iu;
+  if (ordinal.test(text)) return true;
+  const perform = /\b(?:mouths?|lip[- ]?sync\w*|voices?|recites?|utters?|reads?|delivers?|performs?|sings?)\b/iu;
+  if (perform.test(text) && /\b(?:lines?|words?|verses?|sentences?|turns?|dialogue|script|speech)\b/iu.test(text)) return true;
+  if (!attributes.test(text) && !speech.test(text)) return false;
+  return castMentions(text,cast).size > 0 || /[:,]\s*\S|\b(?:delivers?|speaks?|actor|performer|character|belongs?|assign\w*)\b/iu.test(text);
 }
 
 /** Check the ordered script before rendering the provider's numbered references. */
@@ -264,8 +279,6 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const approvedDirections = new Set(spans(composed,script).filter(span => !span.quoted)
     .flatMap(span => splitSentences(span.text)).map(text => text.trim()));
-  const speechCue = /\b(?:says?|asks?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|adds?|murmurs?|speaks?|yells?|calls?|tells?|mutters?)\b[^.!?\n]{0,70}[:,]\s*\S/iu;
-  const spokenAction = /\b(?:says?|asks?|adds?|repl(?:y|ies)|whispers?|shouts?|speaks?|murmurs?|yells?|mutters?)\b/iu;
   let index = 0;
   let clause = '';
   const parts = spans(template,script);
@@ -278,7 +291,7 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
         if (approvedDirections.has(text)) continue;
         if (changesCastBinding(text,cast))
           throw new Error('scene_dialogue_speaker: preserve cast declarations, use cast names for interactions and keep voice directions with their turn');
-        if (nativeDialogue && (speechCue.test(text) || spokenAction.test(text) && castMentions(text,cast).size > 0))
+        if (nativeDialogue && assignsSpokenTurn(text,cast))
           throw new Error('scene_dialogue_mismatch: put every spoken line in quotes with its approved speaker');
       }
       continue;
