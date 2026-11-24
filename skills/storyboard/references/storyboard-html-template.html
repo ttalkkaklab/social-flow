@@ -3049,7 +3049,10 @@ window.STORYBOARD_READY = (async function () {
     var sceneFrames = owner && (owner.frames || owner.speakers) && s.shot && s.shot.render && s.shot.render.mode === 'generated_video';
     var left = '';
     if (sceneFrames) {
-      if (s.referenceImage) left = '<div class="shot-frames">' + frameBox(s.referenceImage, ko ? "샷 참조 이미지" : "Shot reference", null, "") + '</div>';
+      var contract = window.STRUCTURE_CONTRACT;
+      var shotImage = contract ? contract.shotImage(window, s) : s.referenceImage;
+      left = '<div class="shot-frames">' + frameBox(shotImage, ko ? "샷 참조 이미지" : "Shot reference", null,
+        ko ? "샷 이미지 필요" : "Shot image required") + '</div>';
     } else {
       // MSR flow: four character subjects, and the background slot carries the start image
       // (characters, background and props composed by the image tool); the plain background is off

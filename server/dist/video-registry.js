@@ -10,6 +10,7 @@ import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
 import { scenePromptProfile } from './scene-prompt-profile.js';
+import { SCENE_ROUTE } from './genai-scene.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 const load = createRequire(import.meta.url);
@@ -136,7 +137,7 @@ export function sceneInputCapabilities(tool) {
         ...(['astra_genai_img2video', 'astra_genai_audio2video'].includes(tool) ? { sceneRenderer: {
                 model: tool === 'astra_genai_img2video' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev',
                 sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: tool !== 'astra_genai_img2video',
-                capabilities: '/v1/ltx/v2/scene-to-video/capabilities', validation: '/v1/ltx/v2/scene-to-video/validate',
+                capabilities: SCENE_ROUTE + '/capabilities', validation: SCENE_ROUTE + '/validate',
             } } : {}),
         openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
         shotDescriptions: ['astra_genai_text2video', 'astra_genai_img2video'].includes(tool) ? 'gateway_prompt_only' : 'prompt',

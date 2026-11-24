@@ -54,6 +54,7 @@ export const sceneShotBindingsSchema = z.array(z.object({
   motionPrefix:z.string().trim().min(1).optional().describe('Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion.'),
   performanceAudio:z.string().trim().min(1).optional().describe('Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening.'),
   dialogueCues:z.array(z.object({lineId:z.string().min(1),frame:z.number().int().nonnegative()}).strict()).optional(),
+  seed:z.number().int().min(0).max(2147483647).optional().describe('Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.'),
 }).strict()).min(1);
 export const sceneVideoDirectionSchema = z.object({
   openingPositions: openingPositionsSchema,

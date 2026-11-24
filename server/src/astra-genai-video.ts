@@ -12,6 +12,7 @@ import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
+import { SCENE_ROUTE, sceneRequestId } from './genai-scene.js';
 
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'] as const;
 /** Preserve selected geometry; the live gateway validates its current backend's supported sizes. */
@@ -397,10 +398,10 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
     throw new Error('GenAI receipt conflicts with the approved media contract');
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
   if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
-    if (receipt.requestId !== 'scene-' + receipt.fingerprint)
+    if (receipt.requestId !== sceneRequestId(receipt.fingerprint))
       throw new Error('Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.');
     const found = statusSchema.extend({request_id:z.literal(receipt.requestId)}).parse(
-      await requestGenai('GET', '/v1/ltx/v2/scene-to-video/requests/' + encodeURIComponent(receipt.requestId)));
+      await requestGenai('GET', SCENE_ROUTE + '/requests/' + encodeURIComponent(receipt.requestId)));
     if (binding?.jobId && binding.jobId !== found.id) throw new Error('GenAI recovery job ID mismatch');
     receipt.jobId = found.id;
     receipt.status = 'submitted';
@@ -416,7 +417,7 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
       checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
     return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
   }
-  const route = `${receipt.operation === 'scene-to-video' ? '/v1/ltx/v2/scene-to-video' : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+  const route = `${receipt.operation === 'scene-to-video' ? SCENE_ROUTE : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema.parse(await requestGenai('GET', route));
   if (job.id !== receipt.jobId) throw new Error('GenAI status job ID mismatch');
   if (receipt.operation === 'scene-to-video' && Array.isArray(job.shots)) {

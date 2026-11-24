@@ -1305,25 +1305,49 @@
   }
   // A picture route draws its shot from a generated start image (and an end image when first_last).
   const imageRoute = s => ['still_camera', 'generated_video'].includes(s.shot && s.shot.render && s.shot.render.mode);
-  function sceneOwnsFrames(win, shot) {
-    return shot.shot?.render?.mode === 'generated_video' &&
-      win.STRUCTURE?.scenes?.some(scene => scene.no === shot.scene && scene.frames !== undefined);
+  function frameOwner(win, shot) {
+    if (shot.shot?.render?.mode !== 'generated_video') return undefined;
+    return win.STRUCTURE?.scenes?.find(scene => scene.no === shot.scene &&
+      (scene.frames !== undefined || scene.speakers !== undefined));
+  }
+  function framePlan(shot) {
+    const routing = typeof module === 'object' && module.exports ? require('./render-routing.js') : root.RENDER_ROUTING;
+    return routing.framePlan(shot);
+  }
+  function shotImage(win, shot) {
+    const owner = frameOwner(win, shot);
+    if (owner) {
+      if (text(shot.referenceImage)) return shot.referenceImage;
+      const opening = shot.timeline?.images?.find(pin => pin.role === 'start' && pin.frame === shot.timeline.startFrame);
+      if (text(opening?.path)) return opening.path;
+      const first = win.SCENES.find(card => card?.scene === owner.no);
+      return first === shot ? owner.frames?.start : undefined;
+    }
+    return shot.timeline?.images?.find(pin => pin.role === 'start')?.path || framePlan(shot).start;
   }
   /** Shots still waiting for icon attributes: a render route, and for a picture route its size, angle and frame plan. */
   function iconGaps(win) {
     return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type)).flatMap(s => {
       const p = s.shot || {}, frames = s.visual && s.visual.frames;
       if (!(p.render && p.render.mode)) return ['shot ' + (s.id || '?') + ' has no render route'];
-      return imageRoute(s) && !(p.size && p.angle && (sceneOwnsFrames(win, s) || frames && frames.mode)) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
+      return imageRoute(s) && !(p.size && p.angle && (frameOwner(win, s) || frames && frames.mode)) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
     });
   }
-  /** Picture-route shots still waiting for their start image, or the end image a first_last plan needs. */
-  function imageGaps(win) {
-    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type) && imageRoute(s)).flatMap(s => {
-      if (sceneOwnsFrames(win, s)) return [];
-      const frames = s.visual && s.visual.frames || {};
-      return !text(frames.start) ? ['shot ' + (s.id || '?') + ' has no start image']
-        : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];
+  /** Picture-route cards without their own image or any required legacy endpoint. */
+  function imageGaps(win, sceneNo, available = () => true) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s =>
+      PLACED(s) && imageRoute(s) && (sceneNo === undefined || s.scene === sceneNo)).flatMap(s => {
+      const id = 'shot ' + (s.id || '?');
+      const image = shotImage(win, s);
+      const owner = frameOwner(win, s);
+      const label = owner ? 'shot image' : 'start image';
+      if (!text(image)) return [id + ' has no ' + label];
+      if (!available(image)) return [id + ' has an unreadable ' + label + ' (' + image + ')'];
+      if (owner) return [];
+      const frames = framePlan(s);
+      if (frames.mode !== 'first_last') return [];
+      if (!text(frames.end)) return [id + ' has no end image'];
+      return available(frames.end) ? [] : [id + ' has an unreadable end image (' + frames.end + ')'];
     });
   }
   /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
@@ -1364,7 +1388,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
+                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);
