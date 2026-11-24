@@ -443,6 +443,18 @@ test('audio-to-video follows the gateway AudioVideo contract and its data URI li
   assert.ok(Object.keys(body).every(key => Object.hasOwn(schema.properties, key)));
   assert.equal(body.audio_uri, `data:audio/wav;base64,${fs.readFileSync(wav).toString('base64')}`);
   assert.equal(body.fps, 24); assert.equal(body.last_frame_uri, 'https://example.com/b.png');
+  globalThis.fetch=async (url,options)=>{
+    if(options.method==='POST') {
+      assert.ok(String(url).endsWith('/audio-to-video'));
+      assert.equal(JSON.parse(options.body).audio_uri,body.audio_uri);
+      return Response.json({id:'a2v-job'});
+    }
+    return Response.json({id:'a2v-job',status:'failed',error:'fixture'});
+  };
+  await assert.rejects(generateGenaiVideo('audio-to-video',{...audio,audioPath:wav,outputPath:dir,filename:'take.mp4'}),e=>e.terminal);
+  const receipt=JSON.parse(fs.readFileSync(path.join(dir,'take.mp4.astra-genai.json')));
+  const {createHash}=await import('node:crypto');
+  assert.equal(receipt.conditioningAudioSha256,createHash('sha256').update(fs.readFileSync(wav)).digest('hex'));
   for (const extra of [{}, { audioPath: wav, audioUri: 'https://example.com/a.wav' }, { audioPath: wav, model: 'ltx-2.5-22b-distilled', negativePrompt: 'subtitle' },
     { audioPath: wav, prompt: '  ' }, { audioPath: wav, duration: 6 }, { audioPath: wav, generateAudio: true }, { audioPath: wav, cameraMotion: 'static' },
     { audioPath: wav, lastFrameUri: 'https://example.com/b.png' }, { audioPath: wav, fps: 30 }])

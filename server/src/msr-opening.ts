@@ -4,7 +4,7 @@ import { nonEnglishOutsideQuotes } from './prompt-language.js';
 
 export const openingPositionsSchema = z.array(z.object({
   character: z.string().trim().min(1).describe('Cast ID, or an English character name for a standalone render.'),
-  images: z.array(z.number().int().min(1).max(4)).describe('1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference.'),
+  images: z.array(z.number().int().positive()).describe('1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference.'),
   position: z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Describe the opening position in English')
     .describe('Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.'),
 }).strict(), { required_error: 'openingPositions required: inspect the opening image and describe each character and its reference images' }).describe('Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.');

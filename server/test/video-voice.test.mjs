@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { prepareVideoVoice, resolveCharacterVoice } from '../dist/video-voice.js';
 import { videoVoiceCapabilities } from '../dist/video-registry.js';
+import { currentSceneVoice } from '../../skills/_shared/scene-voice.js';
 
 const tts = { engine:'gemini', model:'gemini-2.5-flash-preview-tts', voiceId:'Kore', language:'ko', speed:1, voiceDirection:'Low dry voice, Seoul accent.' };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -166,6 +167,10 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   assert.match(result.args.prompt, /other visible mouths stay closed/);
   assert.deepEqual(ctx.board.SB_DOC.characters, [{ id: 'hero', name: 'Hero' }], 'planning does not rewrite the board');
 
+  const selected=()=>currentSceneVoice(ctx.board,path.join(ctx.episode,'storyboard'),ctx.shot,'hero');
+  assert.deepEqual(selected(),result.voiceContinuity.speakers[0].reference);
+  ctx.board.SB_DOC.characters[0].tts=tts;
+  assert.deepEqual(selected(),result.voiceContinuity.speakers[0].reference);
   ctx.board.SB_DOC.characters[0].tts = { ...tts, voiceId: 'Orus' };
   const override = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.equal(override.voiceContinuity.speakers[0].tts.voiceId, 'Orus');
@@ -177,6 +182,7 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   const missing = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.equal(missing.args.references[0].audioPath, undefined, 'missing selected evidence cannot fall back to old voice.wav');
   assert.match(missing.voiceContinuity.warnings.join('\n'), /instead of substituting/);
+  assert.throws(selected,/voice_reference_stale/);
 });
 test('MSR compiles ordered speaker/image/voice/position bindings and refuses ambiguous embedded scripts', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
@@ -310,4 +316,13 @@ test('id-only voice-only speakers resolve pinned speech with pending body detail
  const warnings=[],resolved=resolveCharacterVoice({id:'caller',voiceOnly:true},ctx,warnings);
  assert.deepEqual(resolved.tts,tts);
  assert.deepEqual(warnings,[]);
+ ctx.board.SB_DOC.characters={caller:{voiceOnly:true}};
+ const sample=path.join(folder,'voice.wav');fs.writeFileSync(sample,'original caller sample');
+ const selected=()=>currentSceneVoice(ctx.board,path.join(ctx.episode,'storyboard'),ctx.shot,'caller');
+ assert.deepEqual(selected(),{path:sample,sha256:digest('original caller sample'),provenance:'legacy_sample_unverified'});
+ const caller=ctx.board.SB_DOC.characters.caller;
+ caller.voiceReference={path:'../assets/characters/caller/voice.wav',tts,sha256:digest('original caller sample')};
+ assert.equal(selected().provenance,'pinned_settings_and_bytes');
+ fs.writeFileSync(sample,'second caller sample');
+ assert.throws(selected,/voice_reference_stale/);
 });

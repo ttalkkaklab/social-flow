@@ -1,12 +1,12 @@
 import { usesGeneratedVoice } from './scene-prompt-profile.js';
 import { hasVideoSubjectReferences } from './video-image-inputs.js';
-import { routingContext, selectedVideoTool } from './video-routing.js';
+import { assertSpeechRenderCapacity, selectedVideoTool } from './video-routing.js';
 import { resolveCharacterVoice } from './video-voice.js';
 import { speechVideoCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 /** Model-independent dialogue addressing, revision tracking and media dependencies. */
 import { createHash, randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync } from 'node:fs';
-import { dirname, resolve, join, relative } from 'node:path';
+import { basename, dirname, resolve, join, relative } from 'node:path';
 import { z } from 'zod';
 import * as nodeModule from 'node:module';
 import { execFileSync } from 'node:child_process';
@@ -21,6 +21,24 @@ import { compileVideoPrompt } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js');
 const audioSignalContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/audio-signal.js');
+function requireNativeVideo(file) {
+    let signal;
+    try {
+        // Uppercase V excludes an album cover embedded in an audio file.
+        const frame = execFileSync('ffmpeg', ['-v', 'error', '-nostdin', '-xerror', '-i', file, '-map', '0:V:0',
+            '-frames:v', '1', '-vf', 'scale=1:1', '-pix_fmt', 'gray', '-f', 'rawvideo', '-'], { timeout: 30000, stdio: ['ignore', 'pipe', 'pipe'] });
+        if (frame.length !== 1)
+            throw new Error('No decoded frame');
+        signal = audioSignalContract().inspect(file).status;
+    }
+    catch {
+        throw new Error('native_speech_media_invalid: supply a decodable video with its original audible soundtrack');
+    }
+    if (signal === 'missing')
+        throw new Error('native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip');
+    if (signal === 'silent')
+        throw new Error('native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip');
+}
 const actingContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/scene-acting.js');
 export { actingSchema } from './speech-acting.js';
 const delivery = z.enum(['voiceover', 'on_screen', 'off_screen']);
@@ -38,6 +56,7 @@ export const speechManageSchema = z.object({
 }).strict();
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
+const speechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-contract.js');
 const videoSeconds = (file) => Number(execFileSync('ffprobe', ['-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=duration', '-of', 'default=nw=1:nk=1', file], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim());
 /** Keep the storyboard player on the bound clip without replacing authored multi-cut edits. */
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
@@ -161,6 +180,7 @@ function measuredDuration(line) {
 export function speechVideoPlan(input, capabilities, sceneNo) {
     if (!capabilities)
         throw new Error('Supply the selected adapter capabilities and their evidence; never infer support from the model name');
+    speechContract().assertNoPostLipSync(capabilities);
     const scene = Array.isArray(input) ? { narration: input } : input;
     const lines = scene.narration || [];
     const onScreen = lines.some(line => line.delivery === 'on_screen');
@@ -168,7 +188,7 @@ export function speechVideoPlan(input, capabilities, sceneNo) {
     const physicalSpeech = lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
     if (capabilities.nativeSpeech && physicalSpeech && lines.some(line => line.delivery === 'voiceover'))
         throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
-    const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning ? 'audio_conditioned' : capabilities.postLipSync ? 'post_lipsync' : null;
+    const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning ? 'audio_conditioned' : null;
     if (!mode)
         throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
     const saved = object(object(object(scene.visual).video).promptSource);
@@ -199,7 +219,7 @@ export function speechVideoPlan(input, capabilities, sceneNo) {
             ? 'Generate only this shot. Preserve the ordered actions, addressees and reactions, including silent events. Concurrent actions share their speech interval. Match the source frame to the opening state; do not concatenate other shots sharing a reference image.'
             : 'Use video_plan with sceneNo ' + sceneNo + ' to generate the entire scene once. This card describes its own dialogue and actions within that scene.') + ' ' + actingContract().VIDEO_TEXT_POLICY, mode, provider: capabilities.provider, model: capabilities.model, capabilities, audioFirst: lines.length > 0 && mode !== 'native', lineIds: lines.map(line => line.id), review: 'not_reviewed' };
 }
-export function manageSpeech(args) {
+export function manageSpeech(args, options = {}) {
     args = speechManageSchema.parse(args);
     const { file, win, header } = readBoard(args.path);
     const before = readFileSync(file, 'utf8');
@@ -337,6 +357,9 @@ export function manageSpeech(args) {
         changed = true;
     }
     if (args.action === 'plan_video' || args.action === 'attach_video') {
+        speechContract().assertNoPostLipSync({ tool: args.tool, capabilities: args.capabilities });
+        if (args.tool && !Object.hasOwn(VIDEO_ADAPTERS, args.tool))
+            throw new Error('video_tool_unknown: ' + args.tool);
         const scene = scenes.find(item => item.id === args.shotId);
         if (!args.shotId || !scene)
             throw new Error('Select one existing shot');
@@ -348,23 +371,39 @@ export function manageSpeech(args) {
             actingSchema.nullable().optional().parse(line.acting);
         const episode = dirname(dirname(file));
         const owner = win.STRUCTURE?.scenes?.find(item => item.no === scene.scene);
-        if (existsSync(join(episode, '.work/model-settings.json'))) {
-            const context = owner?.videoDirection?.dialogueVoice === 'model_generated'
-                ? routingContext(episode, undefined, owner.no, true)
-                : routingContext(episode, args.shotId, undefined, true);
-            const { selection } = context;
-            // The shot's video tool decides the route (MSR speaks its prompt; audio-to-video takes line audio);
-            // without one, the saved default operation does, as in video_plan.
-            const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
+        const selectedVideo = object(scene.visual?.video);
+        speechContract().assertNoPostLipSync({ direction: owner?.videoDirection, mode: selectedVideo.mode, operation: selectedVideo.operation,
+            route: selectedVideo.route, tool: selectedVideo.tool, strategy: selectedVideo.strategy, capabilities: selectedVideo.capabilities,
+            postLipSync: selectedVideo.postLipSync, post_lipsync: selectedVideo.post_lipsync });
+        const episodeBoard = basename(dirname(file)) === 'storyboard' && basename(file) === 'scenes.js';
+        const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : undefined;
+        const requested = adapter && { engine: adapter.engine, operation: adapter.operation,
+            model: args.capabilities?.model ?? (args.tool === 'astra_genai_msr' ? 'ltx-2.5-22b-distilled' : undefined) };
+        const context = nodeModule.createRequire(import.meta.url)('../../skills/_shared/video-selection.js')
+            .speechRenderSelection(win, scene, episodeBoard ? episode : undefined, requested);
+        let verified;
+        const physical = selected.some(({ line }) => line.tts?.trim() && line.delivery !== 'voiceover');
+        if (context && (context.selection.operation || context.route || physical || !args.capabilities || args.action === 'attach_video')) {
+            const { selection, route } = context;
             if (args.tool && adapter?.engine !== selection.engine)
                 throw new Error('model_selection_mismatch: tool does not match selected engine');
-            const tool = args.tool ?? selectedVideoTool(selection);
+            const tool = selectedVideoTool(selection);
+            if ((route || args.tool) && (!tool || args.tool && args.tool !== tool))
+                throw new Error('scene_speech_route: the complete scene requires ' + selection.operation);
             const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
-            const verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, adapter?.operation ?? selection.operation, hasVideoSubjectReferences(scene), generatedVoice);
+            verified = speechVideoCapabilities(selection.engine, selection.model || selection.engine, selection.operation, route ? route.mode === 'reference' : hasVideoSubjectReferences(scene), generatedVoice);
+            if (tool && (route || verified.nativeSpeech && !generatedVoice)) {
+                assertSpeechRenderCapacity(tool, selection.model, owner, context.cards, route ?? { mode: 'reference' });
+            }
+        }
+        else if (options.registeredNativeAttachment && args.action === 'attach_video' && physical && args.capabilities?.nativeSpeech) {
+            throw new Error('video_operation_missing: select the registered video tool to verify its speech capabilities');
+        }
+        if (verified) {
             if (args.capabilities && (args.capabilities.provider !== verified.provider || args.capabilities.model !== verified.model ||
                 args.capabilities.audioConditioning !== verified.audioConditioning || args.capabilities.lipSync !== verified.lipSync || args.capabilities.postLipSync !== verified.postLipSync ||
                 Boolean(args.capabilities.nativeSpeech) !== Boolean(verified.nativeSpeech)))
-                throw new Error('Caller capabilities disagree with selected adapter registry; omit capabilities when the episode has a model snapshot');
+                throw new Error('Caller capabilities disagree with selected adapter registry; use the registered video operation');
             args = { ...args, capabilities: verified };
         }
         plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : undefined })) }, args.capabilities, owner?.videoDirection ? owner.no : undefined);
@@ -377,15 +416,40 @@ export function manageSpeech(args) {
             const bytes = readFileSync(videoPath);
             if (!bytes.length)
                 throw new Error('Video file is empty');
+            const videoSha256 = hash(bytes);
+            const receipts = speechContract().episodeVideoReceipts(scenes, dirname(file), videoPath);
+            const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname(file), board: win }, receipts);
+            for (const card of scenes) {
+                const video = object(card.visual?.video), binding = object(video.speechBinding);
+                if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding))
+                    continue;
+                const source = binding.videoPath ?? video.clip ?? video.src;
+                const original = typeof source === 'string' ? resolve(dirname(file), source) : undefined;
+                const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 :
+                    original && (original === videoPath || existsSync(original) && hash(readFileSync(original)) === videoSha256);
+                if (!matches)
+                    continue;
+                speechContract().assertNoPostLipSync(binding);
+                if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider ||
+                    binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode))
+                    throw new Error('speech_video_source_mismatch: this video already belongs to a different speech operation or model');
+            }
             const native = plan.mode === 'native';
+            if (native)
+                requireNativeVideo(videoPath);
             const nativeAudio = native ? speechSpanContract().inspect(videoPath) : undefined;
-            if (nativeAudio?.status === 'missing')
-                throw new Error('native_speech_missing: the video has no audio stream; regenerate the missing dialogue before attaching this clip');
-            if (nativeAudio?.status === 'silent')
-                throw new Error('native_speech_silent: the decoded soundtrack is below -60 dBFS throughout; regenerate the missing dialogue before attaching this clip');
             const sound = object(scene.sound);
             if (native && sound.audioSource === 'speech')
                 throw new Error('Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it');
+            let driverSha256;
+            if (plan.mode === 'audio_conditioned') {
+                const signal = audioSignalContract().inspect(videoPath).status;
+                if (signal !== 'signal') {
+                    driverSha256 = recordedDriver ?? characterSpeechContract().conditioningAudioSha256(videoPath);
+                    if (!driverSha256)
+                        throw new Error('conditioning_audio_unverified: a silent A2V clip needs its completed generation receipt binding these video bytes to the original conditioning WAV');
+                }
+            }
             const audio = selected.map(({ line }) => {
                 // The clip spoke the line text, so the binding records the line revision; there is no line audio.
                 if (native)
@@ -397,12 +461,37 @@ export function manageSpeech(args) {
                     throw new Error('Speech generation evidence changed: ' + errors.join('; '));
                 return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
             });
+            const generationDriver = plan.mode === 'audio_conditioned' ? recordedDriver ?? driverSha256 : undefined;
+            const driverPath = generationDriver && nodeModule.createRequire(import.meta.url)('../../skills/produce/references/compose-speech.js')
+                .currentConditioningAudio(scene, dirname(file), { index: scenes.indexOf(scene), timingVersion: doc.performanceTimingVersion,
+                driverSha256: generationDriver, includeCardAudio: Boolean(driverSha256), sceneRender: receipts.sceneRenders.get(videoPath),
+                sceneCards: scenes.filter(card => card.scene === scene.scene), characters: doc.characters, audioPath: args.audioPath, sceneAudioPath: owner?.videoDirection?.audio?.path });
             const visual = object(scene.visual);
             const video = object(visual.video);
             if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model))
                 throw new Error('Adapter does not match the selected shot model');
             const priorBinding = object(video.speechBinding);
-            const videoSha256 = hash(bytes);
+            const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
+            const renderedScene = receipts.sceneRenders.get(videoPath);
+            const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find(shot => shot.shot_id === scene.id);
+            const trim = object(scene.edit);
+            let sourceEdit = native && replacement ? {} : trim;
+            if (renderedShot && renderedScene) {
+                const start = renderedShot.start_frame / renderedScene.fps, end = renderedShot.end_frame / renderedScene.fps;
+                const kept = replacement ? {} : trim;
+                const from = Number(kept.in ?? start), to = Number(kept.out ?? end);
+                if (from < start - 1e-6 || to > end + 1e-6 || !(from < to))
+                    throw new Error('speech_video_source_mismatch: select a source interval inside the recorded shot');
+                sourceEdit = { ...trim, in: from, out: to };
+            }
+            const performanceSource = native || plan.mode === 'audio_conditioned'
+                ? speechContract().videoPerformanceSource(videoPath, Boolean(driverSha256)) : speechContract().externalPictureSource(videoPath);
+            if (performanceSource) {
+                // Replacing a native clip clears trims measured on its predecessor.
+                const candidate = { id: scene.id, narration: scene.narration, edit: sourceEdit,
+                    visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } } };
+                speechContract().assertVideoPerformanceOwnership(scenes, dirname(file), candidate, receipts);
+            }
             const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
             const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
             const retiming = nodeModule.createRequire(import.meta.url)('../../skills/_shared/performance-retiming.js');
@@ -431,14 +520,17 @@ export function manageSpeech(args) {
                     boundSeconds = syncProductionClip(scene, dirname(file), videoPath, video.clip, plan.warnings);
                 // edit.in / edit.out were measured on the clip they trimmed; on other bytes they would cut somewhere else, perhaps into the line.
                 const trim = object(scene.edit);
-                if (native && priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256 && (trim.in !== undefined || trim.out !== undefined)) {
+                if (native && replacement && (trim.in !== undefined || trim.out !== undefined)) {
                     const { in: sourceIn, out: sourceOut, ...kept } = trim;
                     scene.edit = kept;
                     clearedTrim = { ...(sourceIn !== undefined ? { in: sourceIn } : {}), ...(sourceOut !== undefined ? { out: sourceOut } : {}),
                         note: 'The previous clip\'s trim was removed: it was measured on other footage. Set the shot duration and a new trim from soundtrack.' };
                 }
+                if (renderedShot)
+                    scene.edit = sourceEdit;
                 video.clip = args.videoPath;
-                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality,
+                video.speechBinding = { ...plan, audio, videoPath, videoSha256, quality, ...(performanceSource && { performanceSource }),
+                    ...(generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath }), ...(driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {}),
                     ...(tailTrim ? { reuse: { kind: 'tail_trim', sourcePerformanceRevision: priorBinding.performanceRevision,
                             sourceDurationSeconds: priorBinding.durationSeconds, selectedDurationSeconds: plan.durationSeconds,
                             review: 'not_reviewed' } } : {}) };
@@ -465,6 +557,9 @@ export function manageSpeech(args) {
                 for (const { line } of selected)
                     if (line.mediaStatus === 'needs_audio')
                         delete line.mediaStatus;
+            }
+            else if (plan.mode === 'audio_conditioned') {
+                scene.sound = { ...sound, audioSource: driverSha256 ? 'speech' : 'video' };
             }
             else if (selected.length && plan.mode === 'voiceover') {
                 scene.sound = { ...sound, audioSource: 'speech' };

@@ -19,6 +19,8 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -257,6 +259,8 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -498,6 +502,14 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": {
+          "dreamina-seedance-2-5-260628": 10,
+          "dreamina-seedance-2-5-flash-261115": 5,
+          "dreamina-seedance-2-0-260128": 3,
+          "dreamina-seedance-2-0-fast-260128": 3,
+          "dreamina-seedance-2-0-mini-260615": 3
+        },
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -743,6 +755,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -788,6 +802,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -834,6 +850,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -888,6 +906,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -930,6 +950,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -973,6 +995,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1020,6 +1044,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1072,7 +1098,7 @@
             "mix"
           ],
           "sceneRendering": "per_shot",
-          "requiresUserChoice": true,
+          "requiresUserChoice": false,
           "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
           "validation": "/v1/ltx/v2/scene-to-video/validate"
         },
@@ -1083,6 +1109,8 @@
       },
       "sceneCutTiming": "approximate_holds",
       "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
         "lane": "conditional_reference",
         "dialogue": "requires_subject_references",
         "voiceReference": "backend_dependent_with_subject_references",
@@ -1170,6 +1198,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1223,6 +1253,8 @@
       },
       "sceneCutTiming": "approximate_holds",
       "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "backend_dependent",
@@ -1274,6 +1306,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1323,6 +1357,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1374,6 +1410,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1419,6 +1457,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1472,6 +1512,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1519,6 +1561,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1558,6 +1602,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1608,6 +1654,8 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -1660,6 +1708,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1712,6 +1762,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1753,6 +1805,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1796,6 +1850,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1838,6 +1894,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2034,6 +2092,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -2229,6 +2289,8 @@
       },
       "sceneCutTiming": "time_ranges",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2353,6 +2415,8 @@
       },
       "sceneCutTiming": "time_ranges",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2479,6 +2543,8 @@
       },
       "sceneCutTiming": "time_ranges",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2604,6 +2670,8 @@
       },
       "sceneCutTiming": "time_ranges",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2728,6 +2796,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2773,6 +2843,8 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -2819,6 +2891,8 @@
       },
       "sceneCutTiming": "cut_order",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2862,6 +2936,8 @@
       },
       "sceneCutTiming": "action_beats",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "backend_dependent",

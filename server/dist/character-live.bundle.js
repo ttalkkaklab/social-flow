@@ -34403,6 +34403,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
         active = pull();
         offset = 0;
         if (active) {
+          if (!motion || !active.motion) throw Error("post_lipsync_forbidden: play the speaking video with its own audio");
           motion?.startSpeech();
           log("speech_start", { source: active.source, id: active.id, text: active.text, frame: frame2, replay: !!active.replay });
         }
@@ -34414,7 +34415,7 @@ async function encode(frames, archive, destinations, seconds, signal, pull, log,
       }
       const blink = frame2 % (FPS * 4) < 3;
       audio.write(pcm);
-      video.write(motion ? motion.next(active?.motion) : frames[(blink ? 4 : 0) + mouthLevel(pcm)]);
+      video.write(motion ? motion.next(active?.motion) : frames[blink ? 4 : 0]);
       if (active && offset >= active.pcm.length) {
         log("speech_end", { source: active.source, id: active.id, frame: frame2, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
         if (finishedSpeaking) finishedSpeaking(active);
@@ -34474,7 +34475,7 @@ function nonEnglishOutsideQuotes(prompt) {
 // src/msr-opening.ts
 var openingPositionsSchema = external_exports.array(external_exports.object({
   character: external_exports.string().trim().min(1).describe("Cast ID, or an English character name for a standalone render."),
-  images: external_exports.array(external_exports.number().int().min(1).max(4)).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
+  images: external_exports.array(external_exports.number().int().positive()).describe("1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference."),
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
@@ -34599,7 +34600,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.127.0",
+  version: "0.128.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -35705,10 +35706,12 @@ var receiptSchema = external_exports.object({
   expected: mediaContract.optional(),
   requestId: external_exports.string().optional(),
   sceneShots: external_exports.array(external_exports.unknown()).optional(),
+  sceneRequestSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
-  sha256: external_exports.string().optional()
+  sha256: external_exports.string().optional(),
+  conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).strict();
 var statusSchema2 = external_exports.object({
   id: external_exports.string().min(1),
@@ -35971,7 +35974,17 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
     if (operation === "msr" && args.references.some((ref) => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
       throw new Error("msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)");
     const submitted = usesReferences || "keyframes" in body ? await prepareGenaiMsrSources(body) : body;
-    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: "submitting" };
+    const wav = operation === "audio-to-video" && "audio_uri" in body && typeof body.audio_uri === "string" && body.audio_uri.startsWith("data:audio/wav;base64,") ? Buffer.from(body.audio_uri.slice("data:audio/wav;base64,".length), "base64") : void 0;
+    const receipt = {
+      version: 1,
+      baseUrl: astraGenaiBaseUrl(),
+      operation,
+      fingerprint,
+      videoPath,
+      expected: msrOutputContract(operation, args),
+      status: "submitting",
+      ...wav ? { conditioningAudioSha256: createHash5("sha256").update(wav).digest("hex") } : {}
+    };
     signal?.throwIfAborted();
     const claim = receiptPath + "." + randomUUID4() + ".tmp";
     try {
@@ -36257,7 +36270,6 @@ import {
   closeSync as closeSync2,
   readSync,
   statSync as statSync3,
-  writeFileSync as writeFileSync6,
   rmSync as rmSync3,
   realpathSync as realpathSync3
 } from "node:fs";
@@ -36918,7 +36930,7 @@ function createTikTokPlatform({ config: config2, out, log }) {
 
 // src/live-youtube-platform.ts
 import { randomUUID as randomUUID8 } from "node:crypto";
-import { mkdirSync as mkdirSync6, readFileSync as readFileSync8, writeFileSync as writeFileSync7 } from "node:fs";
+import { mkdirSync as mkdirSync6, readFileSync as readFileSync8, writeFileSync as writeFileSync6 } from "node:fs";
 import { join as join7 } from "node:path";
 import { setTimeout as sleep5 } from "node:timers/promises";
 
@@ -37342,7 +37354,7 @@ function createYoutubePlatform(options, openApi = youtubeApi) {
     else if (action === "cancel-unstarted") {
       state = await cancelUnstarted(api, receipt, () => {
         if (receipt.cancellation === "requested")
-          writeFileSync7(join7(out, "cancel-requested"), receipt.broadcastId, { mode: 384, flag: "wx" });
+          writeFileSync6(join7(out, "cancel-requested"), receipt.broadcastId, { mode: 384, flag: "wx" });
         save();
       });
     } else state = await broadcastStatus(api, receipt);
@@ -37380,7 +37392,7 @@ function createYoutubePlatform(options, openApi = youtubeApi) {
       let target;
       if (resumeFrom) {
         target = await resumeUnstarted(api, receipt);
-        writeFileSync7(join7(resumeFrom, "resume-claimed"), out, { flag: "wx", mode: 384 });
+        writeFileSync6(join7(resumeFrom, "resume-claimed"), out, { flag: "wx", mode: 384 });
         ownsRun = true;
         save();
       } else {
