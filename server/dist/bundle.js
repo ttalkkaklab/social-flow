@@ -1223,7 +1223,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load15;
+    exports.load = load16;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1359,7 +1359,7 @@ var require_browser = __commonJS({
       } catch (error2) {
       }
     }
-    function load15() {
+    function load16() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1397,7 +1397,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save3;
-    exports.load = load15;
+    exports.load = load16;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1539,7 +1539,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load15() {
+    function load16() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -91191,7 +91191,7 @@ var require_signal_exit = __commonJS({
         }
         assert2.equal(typeof cb, "function", "a callback must be provided for exit handler");
         if (loaded === false) {
-          load15();
+          load16();
         }
         var ev = "exit";
         if (opts && opts.alwaysLast) {
@@ -91251,7 +91251,7 @@ var require_signal_exit = __commonJS({
         return signals;
       };
       loaded = false;
-      load15 = function load16() {
+      load16 = function load17() {
         if (loaded || !processOk(global.process)) {
           return;
         }
@@ -91268,7 +91268,7 @@ var require_signal_exit = __commonJS({
         process3.emit = processEmit;
         process3.reallyExit = processReallyExit;
       };
-      module.exports.load = load15;
+      module.exports.load = load16;
       originalProcessReallyExit = process3.reallyExit;
       processReallyExit = function processReallyExit2(code) {
         if (!processOk(global.process)) {
@@ -91304,7 +91304,7 @@ var require_signal_exit = __commonJS({
     var emit;
     var sigListeners;
     var loaded;
-    var load15;
+    var load16;
     var originalProcessReallyExit;
     var processReallyExit;
     var originalProcessEmit;
@@ -95123,7 +95123,7 @@ var require_scene_direction = __commonJS({
       function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
         const visual = card.visual || {}, video2 = visual.video || {}, source = video2.promptSource || {};
         const design = card.shot?.videoDesign || {}, lines = card.narration || [];
-        const spoken = lines.map((line) => text4(line.tts)).filter(Boolean);
+        const spoken = lines.filter((line) => line.delivery !== "voiceover").map((line) => text4(line.tts)).filter(Boolean);
         const redact = (cue) => spoken.reduce((result, line) => result.split(line).join("the authored line"), cue);
         const beats = [], groups = /* @__PURE__ */ new Set();
         function actionWords(event, i2) {
@@ -95143,9 +95143,9 @@ var require_scene_direction = __commonJS({
             delete acting.direction;
             delete acting.tags;
           }
-          const fields2 = actingFields(acting, line.delivery !== "voiceover", /* @__PURE__ */ new Set(), redact, accept);
+          const fields2 = actingFields(line.delivery === "voiceover" ? { visual: acting.visual } : acting, line.delivery !== "voiceover", /* @__PURE__ */ new Set(), redact, accept);
           const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
-          const to = text4(event.to) || text4(line.to);
+          const to = line.delivery === "voiceover" ? "" : text4(event.to) || text4(line.to);
           const listener = to && accept(redact(to)) ? redact(to) : "";
           const listenerInBeat = listener && scenePrompt && concise;
           if (listener && !listenerInBeat) fields2.unshift((concise ? "to " : "Addressed to ") + listener + ".");
@@ -95155,7 +95155,9 @@ var require_scene_direction = __commonJS({
             const cue = actionWords(action, index);
             if (cue) fields2.push(cue);
           }
-          if (fields2.length || card.performance?.length || listenerInBeat) {
+          if (line.delivery === "voiceover") {
+            if (fields2.length) beats.push(fields2.join(" "));
+          } else if (fields2.length || card.performance?.length || listenerInBeat) {
             const who = [line.speaker, scenePrompt ? void 0 : line.id].filter(Boolean).join(", ");
             const label = listenerInBeat ? "While " + listener + " listens, " + (who || "the speaker") + " speaks" : scenePrompt ? who ? "As " + who + " speaks" : "During dialogue" : concise ? who || "Line " + group : prefix + "line " + group + (who ? " (" + who + ")" : "");
             beats.push(label + (fields2.length ? ": " + fields2.join(" ") : "."));
@@ -96188,9 +96190,18 @@ var require_scene_acting = __commonJS({
       return { seconds: Math.round((units / SPEECH_RATES[spoken] + 0.35 * pauses + 0.4) * 100) / 100, language: spoken, calibrated: spoken === "ko" };
     }
     var estimateSpeechSeconds = (text4, language) => estimateSpeech(text4, language)?.seconds ?? null;
+    function hasCuedThought(scene) {
+      return scene.timeline?.dialogueCues?.some((cue) => scene.narration?.some((line) => line.id === cue.lineId && line.voiceoverKind === "inner_thought" && line.delivery === "voiceover")) === true;
+    }
+    function withThoughtClock(scene, owners) {
+      if (!hasCuedThought(scene)) return scene;
+      return { ...scene, timelineFps: owners?.find((owner) => owner.no === scene.scene)?.videoDirection?.fps ?? scene.timelineFps ?? 24 };
+    }
     function planScenePerformance(input, measureAudio = () => null) {
       const scene = Array.isArray(input) ? { narration: input } : input;
       const lines = scene.narration || [], warnings = [];
+      const timedThought = hasCuedThought(scene);
+      const fps = scene.timelineFps ?? 24;
       const explicit = Array.isArray(scene.performance) && scene.performance.length > 0;
       const events = explicit ? scene.performance.map((event) => ({ ...event })) : lines.map((line, index) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 }));
       const groups = /* @__PURE__ */ new Set();
@@ -96227,7 +96238,17 @@ var require_scene_acting = __commonJS({
         const leadInSeconds = acting.leadInSeconds ?? 0, tailOutSeconds = acting.tailOutSeconds ?? 0;
         const measured = measureAudio(line);
         const audioSeconds2 = Number.isFinite(measured) && measured > 0 ? measured : null;
-        const startSeconds = cursor, speechStartSeconds = add(cursor, leadInSeconds);
+        let startSeconds = cursor, speechStartSeconds = add(cursor, leadInSeconds);
+        const cue = timedThought && line.voiceoverKind === "inner_thought" && scene.timeline.dialogueCues.find((cue2) => cue2.lineId === line.id);
+        if (cue) {
+          const { startFrame, endFrame } = scene.timeline;
+          if (!(fps > 0) || !Number.isInteger(cue.frame) || !(cue.frame >= startFrame && cue.frame < endFrame))
+            throw new Error("thought_timing: speech onset is outside the shot for " + line.id);
+          speechStartSeconds = (cue.frame - startFrame) / fps;
+          startSeconds = speechStartSeconds - leadInSeconds;
+          if (startSeconds < (cursor ?? 0) - 1e-7)
+            throw new Error("thought_timing: the speech cue overlaps the preceding action, line or lead-in for " + line.id);
+        }
         const speechEndSeconds = add(speechStartSeconds, audioSeconds2);
         cursor = add(speechEndSeconds, tailOutSeconds);
         for (const action of events.filter((item) => item.kind === "action" && item.withGroup === event.group)) {
@@ -96243,6 +96264,13 @@ var require_scene_acting = __commonJS({
         event.startSeconds = anchor.speechStartSeconds;
         event.endSeconds = event.durationSeconds === void 0 ? anchor.speechEndSeconds : add(event.startSeconds, event.durationSeconds);
       }
+      if (timedThought && performance2.some((event) => event.kind === "action" && event.withGroup === void 0 && event.durationSeconds === void 0))
+        cursor = null;
+      if (timedThought && cursor !== null) {
+        const window2 = (scene.timeline.endFrame - scene.timeline.startFrame) / fps;
+        if (cursor > window2 + 1e-7) throw new Error("thought_timing: the measured performance extends beyond the shot; revise its timing or source interval");
+        cursor = window2;
+      }
       const hasActions = performance2.some((event) => event.kind === "action");
       const timing = cursor === null ? warnings.some((item) => item.startsWith("Action timing")) ? "needs_action_timing" : "needs_audio_duration" : hasActions ? speech.size ? "planned_actions_with_measured_audio" : "planned_actions" : "measured";
       for (const event of performance2.filter((e2) => e2.kind !== "action")) {
@@ -96252,7 +96280,15 @@ var require_scene_acting = __commonJS({
       return { performance: performance2, durationSeconds: cursor, timing, warnings };
     }
     function scenePerformancePayload(scene) {
-      return { performance: scene.performance, narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })), videoDesign: scene.shot?.videoDesign, techniques: scene.shot?.techniques, camera: scene.visual?.camera, source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location } };
+      return {
+        performance: scene.performance,
+        narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })),
+        ...hasCuedThought(scene) && { externalVoiceTiming: { fps: scene.timelineFps ?? 24, start: scene.timeline.startFrame, end: scene.timeline.endFrame, cues: scene.timeline.dialogueCues } },
+        videoDesign: scene.shot?.videoDesign,
+        techniques: scene.shot?.techniques,
+        camera: scene.visual?.camera,
+        source: { bg: scene.visual?.bg, character: scene.visual?.character, location: scene.shot?.location }
+      };
     }
     function cameraLock(camera = {}) {
       return require_production_mode().moveOf(camera)?.family === "static" ? "Locked camera: preserve the opening framing, camera angle, focal length and background scale throughout; animate the planned subject action." : "";
@@ -96285,7 +96321,7 @@ var require_scene_acting = __commonJS({
     var VIDEO_TEXT_POLICY = "Keep the entire video image text-free: no subtitles, captions, dialogue text, typography, letters, logos or watermarks, including during speech.";
     function performanceBeats(performance2, mode, includeDialogue = true, { brief = false } = {}) {
       const { actingFields, actingPauses } = require_scene_direction();
-      const dialogue = performance2.filter((line) => line.kind !== "action").map((line) => line.text).filter((text4) => typeof text4 === "string" && text4.length);
+      const dialogue = performance2.filter((line) => line.kind !== "action" && line.delivery !== "voiceover").map((line) => line.text).filter((text4) => typeof text4 === "string" && text4.length);
       const visualDirection = (value) => {
         let text4 = String(value);
         for (const words of dialogue) text4 = text4.split(words).join("the supplied speech");
@@ -96300,7 +96336,12 @@ var require_scene_acting = __commonJS({
         }
         const acting = { ...line.acting, ...line.videoDirection ? { visual: line.videoDirection } : {} };
         const delivery2 = line.delivery || "voiceover";
-        const mouth = delivery2 === "on_screen" && mode === "native" && includeDialogue ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.` : delivery2 === "on_screen" && mode === "native" ? "Only this speaker speaks the separately mapped authored line; other visible mouths stay closed." : delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : delivery2 === "off_screen" ? "Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait." : "This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.";
+        if (delivery2 === "voiceover") {
+          const visual = !brief && acting.visual && !said.has(acting.visual) ? visualDirection(acting.visual) : "";
+          const timing2 = line.speechStartSeconds == null || line.speechEndSeconds == null ? "" : `Hold from ${line.speechStartSeconds} to ${line.speechEndSeconds} seconds.`;
+          return ["All visible mouths stay closed.", visual, timing2, actingPauses(line.leadInSeconds, line.tailOutSeconds)].filter(Boolean).join(" ");
+        }
+        const mouth = delivery2 === "on_screen" && mode === "native" && includeDialogue ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.` : delivery2 === "on_screen" && mode === "native" ? "Only this speaker speaks the separately mapped authored line; other visible mouths stay closed." : delivery2 === "on_screen" ? "Show this speaker physically speaking; synchronize only this speaker's mouth to their supplied audio during this interval using the selected synchronization route." : "Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait.";
         const fields2 = brief ? [] : actingFields(acting, mode === "native", new Set(said), visualDirection);
         const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? mode === "native" ? "The model paces this line within the shot." : "" : `Speech interval ${line.speechStartSeconds}\u2013${line.speechEndSeconds} seconds.`;
         const pauses = actingPauses(line.leadInSeconds, line.tailOutSeconds);
@@ -96321,7 +96362,7 @@ var require_scene_acting = __commonJS({
       const visualDirection = (value) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats };
+    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats, hasCuedThought, withThoughtClock };
   }
 });
 
@@ -96765,6 +96806,127 @@ var require_character_voice = __commonJS({
       return errors;
     }
     module.exports = { normalizeLanguage, voiceErrors, generationVoiceErrors, identityVoice, boardVoiceErrors };
+  }
+});
+
+// ../skills/_shared/voiceover-direction.js
+var require_voiceover_direction = __commonJS({
+  "../skills/_shared/voiceover-direction.js"(exports, module) {
+    "use strict";
+    var utterance = new RegExp([
+      String.raw`\b(?:talk|comment|remark|announce|gossip|whisper|murmur|mutter|utter|shout|yell|blurt|rasp|chant|ask|scream|snarl|growl|bellow|croon|plead|stammer|stutter|repeat|exclaim)(?:s|ed|ing)?\b`,
+      String.raw`\b(?:say|says|saying|said|tell|tells|telling|told|speak|speaks|speaking|spoke|spoken|sing|sings|singing|sang|sung|reply|replies|replied|replying|hiss|hisses|hissed|hissing)\b`,
+      String.raw`\b(?:vocaliz|pronounc|enunciat|articulat|recit|inton)(?:e|es|ed|ing)\b`,
+      String.raw`\b(?:chat|chats|chatted|chatting|converse|converses|conversed|conversing|gossips|gossiped|gossiping|addresses? (?:him|her|them)|calls? (?:out|after)|utters? a sound|addresses the|delivers? (?:a|the|her|his) line|exchanges? words|breaks? (?:her|his|the) silence|raises? (?:her|his|their) voice|in (?:a|an) (?:\w+ ){0,3}voice|narrates?|narrating)\b`,
+      String.raw`\b(?:lips?|mouth)\s+(?:form|shape|synchroniz|mimic)(?:e|es|s|ed|ing)?\b|\b(?:mouths|mouthed|mouthing|lip[- ]syncs?|voice repeats|out loud|aloud|under (?:his|her|their) breath)\b`
+    ].join("|"), "iu");
+    var proseFields = /* @__PURE__ */ new Set([
+      "prompt",
+      "negativePrompt",
+      "negative_prompt",
+      "description",
+      "position",
+      "action",
+      "emotion",
+      "camera",
+      "staging",
+      "framing",
+      "blocking",
+      "sound",
+      "audio",
+      "closingState",
+      "direction",
+      "cue",
+      "purpose",
+      "text",
+      "state"
+    ]);
+    function* pictureProse(value, positiveOnly = false) {
+      if (typeof value === "string") yield value;
+      else if (Array.isArray(value)) {
+        for (const item of value) yield* pictureProse(item, positiveOnly);
+      } else if (value && typeof value === "object") {
+        for (const [key, item] of Object.entries(value)) {
+          if (positiveOnly && (key === "negativePrompt" || key === "negative_prompt")) continue;
+          if (typeof item !== "string" || proseFields.has(key)) yield* pictureProse(item, positiveOnly);
+        }
+      }
+    }
+    function checkVoiceoverDirection2(direction, lines, compiled = false) {
+      const fixed = compiled ? [
+        require_scene_acting().VIDEO_TEXT_POLICY,
+        "Start from the given first frame.",
+        "Audio: no music.",
+        "All visible mouths stay closed.",
+        "No speech or vocalization.",
+        "All visible mouths stay closed; perform the planned silent action."
+      ] : [];
+      const normalize2 = (text4) => text4.normalize("NFKC").replace(/[‘’ʼ]/gu, "'").replace(/[‐‑‒–—]/gu, "-").replace(/[^\S\n]+/gu, " ").trim();
+      const scripts = lines.flatMap((line) => {
+        if (line.delivery !== "voiceover" || typeof line.tts !== "string") return [];
+        const words = normalize2(line.tts);
+        const tokens = words.match(/[\p{L}\p{M}\p{N}]+(?:'[\p{L}\p{M}\p{N}]+)*/gu) || [];
+        if (!tokens.length) return [];
+        const occurrence = new RegExp(`(?<![\\p{L}\\p{N}])${tokens.join("[\\p{P}\\s]+")}(?![\\p{L}\\p{N}])`, "giu");
+        return [{ id: line.id, tokens, occurrence }];
+      });
+      const clauseBreak = /[.!?…。！？;\n]|\b(?:while|whereas|as|when|and|then|but)\b/iu;
+      const article = /^(?:the|an?|my|our|your|his|her|their|this|that|these|those)$/iu;
+      const objectLead = /\b(?:the|an?|one|another|each|my|our|your|his|her|their|at|to|from|towards?|on|near|behind|beside|under|over|with|of|in|through|around|into|against)$/iu;
+      const motion = /\b(?:clos|open|unlatch|latch|slam|fasten|unfasten|push|pull|lift|lower|unlock|lock|touch|grab|grasp|take|took|tak|reach|point|turn|walk|run|step|stand|stood|sit|sat|lean|glanc|look|watch|mov|slid|rais|drop|press|hold|held|brush|plac|set|tap|swing|swung|sway|draw|drew|fold|unfold|paint|repaint|trac|squeez|grip|clutch|cross|enter|leav|left|cover|reveal|shut|catch|caught|pass|rest|shift|tilt|pan|rack|fram|track|follow|focus|cut|linger|hang|hung|lie|lay|fall|fell)\w*\b/iu;
+      const perception = /\b(?:watch(?:es|ed|ing)?|see(?:s|ing)?|saw|feel(?:s|ing)?|felt|notice[ds]?|observ(?:e[ds]?|ing))\s+/iu;
+      const subject = /^(?:he|she|it|they|we|you|I|(?:(?:the|an?|his|her|their|both|those|these|its|our|my|two|three|four|several|some|many)\s+(?:[\p{L}-]+\s+){0,3})?(?:hands?|feet|footsteps?|wheels?|eyes?|fingers?|needles?|clocks?|trains?|cars?|buses|friends?|children|kids?|women|men|actors?|people|crowds?|doors?|lights?))$/iu;
+      const visiblePredicate = /^(?:stops?|waits?|moves?|turns?|opens?|closes?|falls?|rises?|shakes?|trembles?|drifts?|pauses?|lifts?|drops?|stills?|freezes?|slows?|starts?|settles?)$/iu;
+      const performanceMedium = /\b(?:lips?|mouth|voice|throat|tongue|lyrics?|text|subtitles?|captions?|lettering|words?)\b/iu;
+      function copiedScript(picture2, script) {
+        for (const hit of picture2.matchAll(script.occurrence)) {
+          const before = picture2.slice(0, hit.index).split(clauseBreak).pop().trim();
+          const after = picture2.slice(hit.index + hit[0].length).split(clauseBreak, 1)[0].trim();
+          if (/["“'「:,\-]$/u.test(before) || /^["”'」,:\-]/u.test(after) || utterance.test(before) || utterance.test(after) || performanceMedium.test(before) || performanceMedium.test(after)) return true;
+          const tail = before.split(motion);
+          const complement = tail.at(-1).trim();
+          const governed = tail.length > 1 && (!complement || objectLead.test(complement) && !/\b(?:and|that|which|who|reading|written|displaying|saying|singing)\b/iu.test(complement));
+          if (governed && (article.test(script.tokens[0]) || objectLead.test(before))) continue;
+          if (!before && article.test(script.tokens[0]) && motion.test(after)) continue;
+          if (script.tokens.length === 1 && visiblePredicate.test(hit[0]) && before) {
+            const observed = before.split(perception).pop();
+            const namedPair = /(?:^|[.!?;\n]\s*)\p{Lu}[\p{L}'-]* and \p{Lu}[\p{L}'-]*\s*$/u.test(picture2.slice(0, hit.index));
+            if ((subject.test(observed) || namedPair) && (!after || /^(?:at|on|in|for|by|near|beside|behind|under|over|until|outside|inside|together|still|slowly)\b/iu.test(after))) continue;
+          }
+          return true;
+        }
+        return false;
+      }
+      if (!scripts.length) return;
+      for (const value of pictureProse(direction)) {
+        const picture2 = normalize2(fixed.length ? value.split(/(?<=[.!?])\s+|\n+/u).filter((sentence2) => !fixed.includes(sentence2.trim())).map((sentence2) => sentence2.startsWith("Audio: ") ? sentence2.replace(/, no music\.$/u, ".") : sentence2).join("\n") : value);
+        const match2 = scripts.find((script) => copiedScript(picture2, script));
+        if (match2) throw new Error("video_voiceover_embedded: rewrite the picture direction as an observable action separate from the voiceover for " + (match2.id || "this line"));
+      }
+    }
+    function checkThoughtPerformance(direction) {
+      for (const words of pictureProse(direction, true)) {
+        for (const clause of words.split(/[.!?;\n]|\b(?:while|whereas|as|and|but)\b/iu)) {
+          const prose = clause.replace(/\b(?:mouths?|lips?)\s+(?:stay|stays|remain|remains|are|is) (?:closed|still)\b/giu, "").replace(/\brepeat(?:s|ed|ing)? (?:the|a|his|her|their) (?:gesture|movement|action|step|motion)\b/giu, "");
+          const signals = prose.matchAll(new RegExp(utterance.source, "giu"));
+          const positive = Array.from(signals).some((hit) => !/\b(?:never|without|not|doesn't|don't|no)\s*$/iu.test(prose.slice(0, hit.index)));
+          const quotation = /["“「]|(?:^|[\s:,])['‘](?=[\p{L}\p{N}])/u.test(prose);
+          if (!quotation && /^\s*(?:the |a )?(?:radio|kettle|steam|wind|leaves|engine|pipes)\b/iu.test(prose)) continue;
+          if (positive || quotation && !/\b(?:sign|label|poster|printed|inscription|engraved)\b/iu.test(prose))
+            throw new Error("video_voiceover_embedded: the thought interval directs an audible or mouthed line");
+        }
+      }
+    }
+    function checkRecordedThoughtPicture(globalDirection, shot, lines) {
+      const directions2 = [globalDirection, shot];
+      try {
+        checkVoiceoverDirection2(directions2, lines, true);
+        checkThoughtPerformance(directions2);
+      } catch (error2) {
+        throw new Error("speech_video_source_mismatch: " + error2.message);
+      }
+    }
+    module.exports = { checkVoiceoverDirection: checkVoiceoverDirection2, checkThoughtPerformance, checkRecordedThoughtPicture };
   }
 });
 
@@ -97242,6 +97404,8 @@ var require_scene_cast = __commonJS({
         }
         if (planning && !["on_screen", "off_screen", "voiceover"].includes(line.delivery))
           throw new Error("scene_speaker_delivery: identify the delivery of " + line.speaker + " in " + card.id);
+        if (line.voiceoverKind === "inner_thought" && line.delivery !== "voiceover")
+          throw new Error("scene_speaker_delivery: inner thought " + (line.id || line.speaker) + " requires voiceover delivery");
         spoken.add(line.speaker);
         if (declared && !declared.includes(line.speaker)) {
           throw new Error("scene_speaker_mismatch: scene " + scene.no + ", shot " + card.id + ", line " + (line.id || line.tts) + " names undeclared speaker " + line.speaker);
@@ -97289,11 +97453,17 @@ var require_scene_cast = __commonJS({
       else if (mode === "reference") operation = distilled && selection.operation !== "reference" ? "image" : "reference";
       else if (mode === "generated" && selection.engine === "veo" && selection.operation === "reference") operation = "reference";
       const anchoredCuts = cards.every((card, index) => card.timeline && card.timeline.transition === (index ? "hard_cut" : "open") && card.timeline.images?.some((pin) => pin.role === "start" && pin.frame === card.timeline.startFrame) && !card.timeline.dialogueCues?.length);
-      const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mode === "reference" && speakers.length > 2 || anchoredCuts);
+      const cutVoiceover = cards.some((card) => {
+        const lines = orderedSpeech(card).filter((line) => line.tts?.trim());
+        return lines.length && lines.every((line) => line.delivery === "voiceover");
+      });
+      const mixedCuts = distilled && mode === "reference" && !direction.oneTake && cutVoiceover;
+      if (mixedCuts) operation = "image";
+      const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mixedCuts || mode === "reference" && speakers.length > 2 || anchoredCuts);
       return { speakers, operation, mode, ...perShot ? { rendering: "per_shot" } : {}, external: !visible && physical.length > 0 };
     }
     function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, rendering = route.rendering, generateAudio, limit: limit2 }) {
-      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => require_production_mode().videoSlot(card)?.generateAudio === false)))
+      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => orderedSpeech(card).some((line) => line.delivery !== "voiceover" && line.tts?.trim()) && require_production_mode().videoSlot(card)?.generateAudio === false)))
         throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
       if (route.mode !== "reference") return;
       if (limit2 === void 0) {
@@ -98492,9 +98662,16 @@ var require_scene_speech_receipt = __commonJS({
         const cues = card.timeline?.dialogueCues ?? [];
         if (cues.some((cue) => turns.filter((line) => line.id === cue.lineId).length !== 1))
           mismatch("a dialogue cue must identify one authored line");
-        const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
+        const privatePicture = turns.some((line) => line.voiceoverKind === "inner_thought");
+        const original = body.shots.find((shot) => shot.shot_id === card.id) ?? (!privatePicture && body.shots.length === 1 && body.shots[0]);
         if (!original) mismatch("the requested shot is absent from the recorded scene");
         const dialogue = original.dialogue ?? [];
+        if (privatePicture && (driver || original.performance_uri || dialogue.length))
+          mismatch("the recorded thought interval contains a speaking performance");
+        if (privatePicture) {
+          const cues2 = (body.scene_audio?.cues ?? []).filter((cue) => cue.frame == null || cue.frame >= original.start_frame && cue.frame < original.end_frame);
+          require_voiceover_direction().checkRecordedThoughtPicture([body.prompt, cues2], original, turns);
+        }
         if (original.performance_uri) {
           const file = lines.length === 1 && lines[0].audio?.path;
           if (!file || !plan2.boardDir) mismatch("restore the recorded dialogue performance for this shot");
@@ -98772,7 +98949,10 @@ var require_speech_contract = __commonJS({
     function performanceKey(shot) {
       const binding = shot.visual?.video?.speechBinding;
       if (!binding?.videoSha256) return;
-      return JSON.stringify([shot.id, binding.mode, binding.videoSha256, binding.audio, binding.conditioningAudioSha256]);
+      return JSON.stringify([shot.id, binding.mode, binding.videoSha256, binding.audio, binding.conditioningAudioSha256, privateBinding(shot, binding)]);
+    }
+    function privateBinding(shot, binding) {
+      return binding.mode === "voiceover" && (binding.voiceoverKind === "inner_thought" || shot.narration?.some((line) => line.voiceoverKind === "inner_thought") === true);
     }
     function speechHistory(board) {
       const fs26 = __require("node:fs"), path40 = __require("node:path");
@@ -98860,16 +99040,23 @@ var require_speech_contract = __commonJS({
       const fs26 = __require("node:fs");
       const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
       let driver;
+      const thought = plan2.sourceShot?.narration?.some((line) => line.voiceoverKind === "inner_thought");
       function verify(receipt, suffix, hashBound, originalFile) {
         verifyReceiptOperation(receipt, suffix, plan2, hashBound);
+        if (hashBound && thought && ["msr", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode))
+          throw new Error("speech_video_source_mismatch: the private thought requires a non-speaking picture");
+        if (hashBound && thought && (receipt.operation ?? receipt.mode) !== "scene-to-video" && (receipt.submittedRequest?.prompt || receipt.prompt))
+          require_voiceover_direction().checkRecordedThoughtPicture(void 0, receipt.submittedRequest?.prompt ? receipt.submittedRequest : { prompt: receipt.prompt }, plan2.sourceShot.narration);
         let original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
         const performance2 = ["native", "audio_conditioned"].includes(plan2.mode);
-        const scenePicture = plan2.mode === "voiceover" && receipt.sceneRequestSha256 && plan2.sourceShot;
+        if (hashBound && thought && receipt.operation === "scene-to-video" && !receipt.sceneRequestSha256)
+          throw new Error("speech_video_source_mismatch: restore the recorded scene request to verify the thought interval");
+        const scenePicture = (plan2.mode === "voiceover" || thought) && receipt.sceneRequestSha256 && plan2.sourceShot;
         if (hashBound && receipt.operation === "scene-to-video" && (performance2 || scenePicture)) {
           const contract2 = require_scene_speech_receipt();
           const file = [originalFile, ...(index?.hashes.get(receipt.sha256) ?? []).filter((item) => item.receipt.fingerprint === receipt.fingerprint).map((item) => item.file)].find((path40) => path40 && fs26.existsSync(path40 + ".scene-request.json")) ?? originalFile;
           const wire = contract2.readSceneRequest(file, receipt);
-          if (performance2) original = contract2.verifySceneSpeech(wire, plan2);
+          if (performance2 || thought) original = contract2.verifySceneSpeech(wire, plan2);
           if (index && (performance2 || wire.body.shots.some((shot) => shot.shot_id === plan2.sourceShot.id)))
             index.sceneRenders.set(videoPath, receipt.sceneRequestSha256 && wire.conditioningInputs ? { ...wire.body, conditioningInputs: wire.conditioningInputs } : wire.body);
         }
@@ -98903,7 +99090,7 @@ var require_speech_contract = __commonJS({
         if (sameVideoFrames(source.frames, frames))
           throw new Error("post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source");
       }
-      if (["native", "audio_conditioned"].includes(plan2.mode)) {
+      if (thought || ["native", "audio_conditioned"].includes(plan2.mode)) {
         let sound;
         const audio = (file) => {
           const signal = require_audio_signal();
@@ -98924,6 +99111,7 @@ var require_speech_contract = __commonJS({
           frames ??= videoPerformanceSource(videoPath, true);
           if (!sameVideoFrames(source.frames, frames)) continue;
           verify(source.receipt, source.suffix, true, source.file);
+          if (thought && plan2.mode === "voiceover") continue;
           source.sound ??= audio(source.file);
           sound ??= audio(videoPath);
           if (source.sound !== sound)
@@ -98971,7 +99159,15 @@ var require_speech_contract = __commonJS({
         if (!Number.isFinite(start) || start < 0 || !(end > start) || end !== Infinity && !Number.isFinite(end))
           throw new Error("speech_video_performance_conflict: invalid dialogue source interval for " + shot.id);
         const visible = shot.narration?.some((line) => line.delivery === "on_screen" && line.tts?.trim());
-        return { id: shot.id, start, end, visible, binding, revisions: JSON.stringify((binding.audio ?? []).map((line) => [line.revision, line.sha256])) };
+        return {
+          id: shot.id,
+          start,
+          end,
+          visible,
+          privatePicture: privateBinding(shot, binding),
+          binding,
+          revisions: JSON.stringify((binding.audio ?? []).map((line) => [line.revision, line.sha256]))
+        };
       }
       function identity(entry2) {
         const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
@@ -98993,7 +99189,10 @@ var require_speech_contract = __commonJS({
           const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({ receipt }) => receipt.status === "completed" && receipt.jobId && ["msr", "image-to-video", "scene-to-video", "audio-to-video", "audio2video"].includes(receipt.operation ?? receipt.mode));
           if (!fresh) throw new Error("speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement");
         }
-        const samePicture = (left.visible || right.visible) && sameVideoFrames(a, b);
+        const privateTransition = left.binding.mode !== right.binding.mode && (left.privatePicture || right.privatePicture);
+        const samePicture = (privateTransition || left.visible || right.visible) && sameVideoFrames(a, b);
+        if (privateTransition && (samePicture || left.binding.videoSha256 === right.binding.videoSha256))
+          throw new Error("speech_video_performance_conflict: a private thought and a recorded physical performance cannot share the same picture interval");
         const changedSoundtrack = samePicture && a.audio !== b.audio;
         const sameMedia = samePicture || a?.audio && a.audio === b?.audio || left.binding.videoSha256 === right.binding.videoSha256;
         const external = left.binding.mode === "voiceover" || right.binding.mode === "voiceover";
@@ -99006,7 +99205,7 @@ var require_speech_contract = __commonJS({
         const entry2 = source(shot);
         if (!entry2) continue;
         if (candidate2) {
-          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256)) check2(entry2, next, true);
+          if (next && (entry2.id !== next.id || entry2.binding.videoSha256 !== next.binding.videoSha256 || entry2.binding.mode !== next.binding.mode && (entry2.privatePicture || next.privatePicture))) check2(entry2, next, true);
         } else {
           if (entry2.binding.performanceSource) {
             const current = identity(entry2), recorded = entry2.binding.performanceSource;
@@ -99024,7 +99223,24 @@ var require_speech_contract = __commonJS({
         for (const entry2 of next ? [next] : prior) check2(earlier, entry2);
       }
     }
-    module.exports = { speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
+    function invalidateVoiceoverChange(shot, before) {
+      if (!shot.visual?.video?.speechBinding && shot.sound?.audioSource !== "video") return false;
+      const lines = (shot.narration ?? []).filter((line) => line.tts?.trim());
+      const old = before.filter((line) => line.tts?.trim());
+      const physical = (line) => line.delivery !== "voiceover";
+      const crossed = lines.some((line) => {
+        const previous = line.id && old.find((item) => item.id === line.id);
+        return previous && physical(previous) !== physical(line);
+      }) || old.length && lines.length && old.some(physical) !== lines.some(physical);
+      if (!crossed) return false;
+      shot.visual ??= {};
+      const video2 = shot.visual.video ??= {};
+      video2.speechStatus = "stale";
+      if (lines.every((line) => !physical(line))) shot.sound = { ...shot.sound, audioSource: "speech" };
+      else if (shot.sound?.audioSource === "speech") delete shot.sound.audioSource;
+      return true;
+    }
+    module.exports = { invalidateVoiceoverChange, speechRevision: speechRevision2, compileActing: compileActing2, hasPostLipSync, assertNoPostLipSync: assertNoPostLipSync2, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
   }
 });
 
@@ -104163,7 +104379,7 @@ var require_location_assets = __commonJS({
       if (realAncestor !== realRoot && !realAncestor.startsWith(realRoot + path40.sep)) throw new Error("asset symlink escapes root");
       return p;
     }
-    function load15(manifestPath) {
+    function load16(manifestPath) {
       const m2 = read4(manifestPath);
       assert2(C.validate(m2));
       if (!m2.assets) throw new Error("location has no built assets");
@@ -104208,7 +104424,7 @@ var require_location_assets = __commonJS({
       const s2 = win.SCENES?.[index], b = s2?.shot?.location;
       if (!b) return null;
       if (typeof b.manifest !== "string" || path40.isAbsolute(b.manifest)) throw new Error("location manifest must be relative to storyboard");
-      const p = path40.resolve(dir, b.manifest), m2 = load15(p);
+      const p = path40.resolve(dir, b.manifest), m2 = load16(p);
       assert2(C.bindingErrors(b, m2));
       if (fileHash2(p) !== b.manifestSha256) throw new Error("location manifest changed; bind an explicit revision");
       const camera = b.camera || m2.cameras[b.cameraId];
@@ -104305,7 +104521,7 @@ var require_location_assets = __commonJS({
       };
     }
     function bind(win, index, dir, { manifest: manifest2, stateId, endStateId, cameraId, mustShow = [], continuityGroup, continuityBreak, blocking }) {
-      const p = path40.resolve(manifest2), m2 = load15(p), s2 = win.SCENES[index];
+      const p = path40.resolve(manifest2), m2 = load16(p), s2 = win.SCENES[index];
       if (!s2) throw new Error("unknown shot");
       const b = { id: m2.id, revision: m2.revision, manifest: path40.relative(dir, p), manifestSha256: fileHash2(p), stateId, cameraId, mustShow, ...continuityGroup !== void 0 ? { continuityGroup } : {}, ...endStateId !== void 0 ? { endStateId } : {}, ...continuityBreak !== void 0 ? { continuityBreak } : {}, ...blocking !== void 0 ? { blocking } : {} };
       assert2(C.bindingErrors(b, m2));
@@ -104404,7 +104620,7 @@ var require_location_assets = __commonJS({
       return cameras;
     }
     function sheet({ manifest: manifest2, stateId, output: output2, cameras = {} }) {
-      const p = path40.resolve(manifest2), m2 = load15(p);
+      const p = path40.resolve(manifest2), m2 = load16(p);
       if (!Object.hasOwn(m2.states, stateId)) throw new Error("unknown state");
       const managed = output2 === void 0, out = managed ? path40.join(path40.dirname(p), "angles", stateId) : path40.resolve(output2);
       if (!managed && fs26.existsSync(out)) throw new Error("sheet output exists; use a new output directory");
@@ -104638,7 +104854,7 @@ var require_location_assets = __commonJS({
     }
     function shotFrame(win, index, dir, { manifest: manifest2, cast = [], size, angle, width, height }) {
       if (typeof manifest2 !== "string" || path40.isAbsolute(manifest2)) throw new Error("location manifest must be relative to storyboard");
-      const p = path40.resolve(dir, manifest2), m2 = load15(p), s2 = win.SCENES?.[index];
+      const p = path40.resolve(dir, manifest2), m2 = load16(p), s2 = win.SCENES?.[index];
       if (!s2?.id || !/^s\d{4,}$/.test(s2.id)) throw new Error("stable shot id required");
       const warnings = [], b = s2.shot?.location, bound = b && b.id === m2.id && b.revision === m2.revision ? b : null;
       if (b && !bound) warnings.push(`the shot is bound to ${b.id} v${b.revision}, not the sheet's ${m2.id} v${m2.revision}, so its blocking stays out of the render`);
@@ -104770,7 +104986,7 @@ var require_location_assets = __commonJS({
     function sheetView(manifestPath) {
       const p = path40.resolve(manifestPath);
       try {
-        const m2 = load15(p), stateId = Object.keys(m2.states)[0], cameraId = Object.keys(m2.cameras)[0];
+        const m2 = load16(p), stateId = Object.keys(m2.states)[0], cameraId = Object.keys(m2.cameras)[0];
         return {
           sheet: true,
           shotId: "sheet-" + m2.id,
@@ -104839,7 +105055,7 @@ var require_location_assets = __commonJS({
       const { action } = args;
       if (action === "build") return build(args);
       if (action === "sheet") return sheet(args);
-      if (action === "read") return load15(args.manifest);
+      if (action === "read") return load16(args.manifest);
       const p = path40.resolve(args.board), dir = path40.dirname(p), win = readBoard2(p), index = win.SCENES.findIndex((s2) => s2.id === args.shotId);
       if (["bind", "render", "previz", "approve", "references", "receipt", "review"].includes(action) && index < 0) throw new Error("unknown shot id");
       let result;
@@ -104859,7 +105075,7 @@ var require_location_assets = __commonJS({
     function detailFilename(topic, id) {
       return digest5([topic, id]).slice(0, 24) + ".html";
     }
-    module.exports = { detailFilename, angleCameras, shotCamera, shotViewpoint, shotFrame, locationPrompt, digest: digest5, fileHash: fileHash2, load: load15, build, sheet, sheetView, context: context2, signature, plan: plan2, bind, render, previz, renderJob, approve, references, receipt, reviewResult, applyCamera, check: check2, preview: preview2, run, saveBoard };
+    module.exports = { detailFilename, angleCameras, shotCamera, shotViewpoint, shotFrame, locationPrompt, digest: digest5, fileHash: fileHash2, load: load16, build, sheet, sheetView, context: context2, signature, plan: plan2, bind, render, previz, renderJob, approve, references, receipt, reviewResult, applyCamera, check: check2, preview: preview2, run, saveBoard };
     if (__require.main === module) run(read4(process.argv[2])).then((r2) => console.log(JSON.stringify(r2, null, 2))).catch((e2) => {
       console.error(e2.message);
       process.exitCode = 1;
@@ -105422,7 +105638,7 @@ var require_compose_speech = __commonJS({
     var { execFileSync: execFileSync20 } = __require("node:child_process");
     var { createHash: createHash33 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
+    var { actingErrors, speechRevisionPayload, planScenePerformance, hasCuedThought, withThoughtClock } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
     function duration5(file) {
@@ -105433,10 +105649,11 @@ var require_compose_speech = __commonJS({
     function lineSources(lines) {
       return lines.map((n) => ({ lineId: n.id, sha256: n.audio?.sha256, revision: n.audio?.revision, leadInSeconds: n.acting?.leadInSeconds ?? 0, tailOutSeconds: n.acting?.tailOutSeconds ?? 0 }));
     }
-    function sceneTiming(scene, board, performanceTimingVersion) {
+    function sceneTiming(scene, board, performanceTimingVersion, owners) {
       const actions = (scene.performance || []).filter((event) => event.kind === "action");
       const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some((event) => event.durationSeconds !== void 0 || event.withGroup !== void 0);
-      const plan2 = planScenePerformance(legacy ? scene.narration : scene, (line) => duration5(path40.resolve(board, line.audio.path)));
+      const card = withThoughtClock(scene, owners);
+      const plan2 = planScenePerformance(legacy ? { ...card, performance: void 0 } : card, (line) => duration5(path40.resolve(board, line.audio.path)));
       if (legacy) {
         plan2.timing = "legacy_speech_only";
         plan2.warnings.push("Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.");
@@ -105768,9 +105985,9 @@ var require_compose_speech = __commonJS({
           } else verifyConditioningPerformance(scene, win, Number(fields2[0]), board, work, audio, hash7(fs26.readFileSync(audio)), render);
           continue;
         }
-        if (!lines.length || lines.length === 1 && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
+        if (!lines.length || lines.length === 1 && !hasCuedThought(scene) && !lines.some((n) => n.acting != null) && !scene.performance?.some((event) => event.kind === "action")) continue;
         const sources = currentLineSources(lines, board, cast);
-        const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion), intervals = timing.intervals;
+        const timing = sceneTiming(scene, board, win.SB_DOC?.performanceTimingVersion, win.STRUCTURE?.scenes), intervals = timing.intervals;
         const wav = mixLines(lines, sources, timing);
         const output2 = path40.join(work, `c${fields2[0]}-speech.wav`), tmp = output2 + ".tmp.wav";
         try {
@@ -105816,6 +106033,9 @@ var require_prepare_source_audio = __commonJS({
       for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync2(scene.videoDirection);
       for (const shot of win.SCENES ?? []) {
         const video2 = shot.visual?.video ?? {};
+        const thought = shot.narration?.some((line) => line.voiceoverKind === "inner_thought");
+        if (thought && (video2.speechStatus === "stale" || shot.sound?.audioSource === "video" || ["native", "audio_conditioned"].includes(video2.speechBinding?.mode)))
+          throw new Error("speech_video_source_mismatch: bind the current non-speaking picture and external thought before assembly");
         assertNoPostLipSync2({
           mode: video2.mode,
           operation: video2.operation,
@@ -106566,7 +106786,8 @@ var require_check_tts_quality = __commonJS({
               sceneAudioPath: win.STRUCTURE?.scenes?.find((owner) => owner.no === s2.scene)?.videoDirection?.audio?.path
             });
           }
-          const payload = require_scene_acting().scenePerformancePayload(s2);
+          const acting = require_scene_acting();
+          const payload = acting.scenePerformancePayload(acting.withThoughtClock(s2, win.STRUCTURE?.scenes));
           if (binding.performanceRevision && binding.performanceRevision !== hash7(JSON.stringify(payload))) warnings.push("card " + i2 + ": performance plan changed since the clip was bound; inspect the clip against the current plan (stale)");
           if (!binding.performanceRevision) warnings.push("card " + i2 + ": legacy video performance binding is unverified");
           media[binding.videoPath] = binding.videoSha256;
@@ -106590,17 +106811,19 @@ var require_check_tts_quality = __commonJS({
           continue;
         }
         const receipt = read4(audio + ".generation.json") || read4(audio + ".quality.json");
+        if (require_scene_acting().hasCuedThought(s2) && receipt?.generator !== "speech_compose")
+          throw new Error("Compose the private speech at its authored frame for card " + i2);
         if (win.SB_DOC?.speechPlanVersion === 1 && lines.length && win.VOICE !== "user") {
           if (new Set(lines.map((n) => n.speaker)).size !== 1 && receipt?.generator !== "speech_compose") throw new Error("Multi-speaker shots need separately attached lines and speech_compose receipt");
           const padded = lines.some((n) => (n.acting?.leadInSeconds ?? 0) > 0 || (n.acting?.tailOutSeconds ?? 0) > 0) || s2.performance?.some((event) => event.kind === "action" && (win.SB_DOC?.performanceTimingVersion === 1 || event.durationSeconds !== void 0 || event.withGroup !== void 0));
-          const direct = !padded && lines.length === 1 && lines[0].audio?.sha256 === media[audio];
+          const direct = !padded && !require_scene_acting().hasCuedThought(s2) && lines.length === 1 && lines[0].audio?.sha256 === media[audio];
           if (!direct && (!receipt || receipt.audioSha256 !== media[audio] || JSON.stringify(receipt.lineIds) !== JSON.stringify(lines.map((n) => n.id)) || receipt.expectedText !== lines.map((n) => n.tts).join(". "))) throw new Error("Scene WAV has no current line-bound generation receipt for card " + i2);
         }
         if (receipt?.generator === "speech_compose") {
           const composition = require_compose_speech();
           if (JSON.stringify(receipt.lineSources) !== JSON.stringify(composition.lineSources(lines))) throw new Error("Scene audio composition is stale for card " + i2);
           if (receipt.audioSha256 !== media[audio]) throw new Error("Scene audio composition changed for card " + i2);
-          const { intervals, durationSeconds: duration5 } = composition.sceneTiming(s2, board, win.SB_DOC?.performanceTimingVersion);
+          const { intervals, durationSeconds: duration5 } = composition.sceneTiming(s2, board, win.SB_DOC?.performanceTimingVersion, win.STRUCTURE?.scenes);
           if (JSON.stringify(receipt.intervals) !== JSON.stringify(intervals)) throw new Error("Scene audio timing intervals are stale for card " + i2);
           if (Math.abs(composition.duration(audio) - duration5) > 0.03) throw new Error("Scene audio does not preserve planned acting timing for card " + i2);
           actedIntervals[i2] = intervals;
@@ -110937,10 +111160,10 @@ function manageWorkflow(raw) {
 function requireStoryOutline(episode) {
   const file = path2.join(episode, "storyboard/scenes.js");
   if (!fs2.existsSync(file)) return;
-  const load15 = nodeModule2.createRequire(import.meta.url);
-  const board = load15(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
+  const load16 = nodeModule2.createRequire(import.meta.url);
+  const board = load16(fileURLToPath2(new URL("../../skills/_shared/scenes-vm.js", import.meta.url))).evaluateWindowScript(fs2.readFileSync(file, "utf8"), { filename: file });
   if (board.STORY?.version !== "story-v2") return;
-  const contract2 = load15(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
+  const contract2 = load16(fileURLToPath2(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url)));
   const gaps = [...contract2.outlineGaps(board), ...contract2.castGaps(board)];
   if (gaps.length) throw new Error("story_outline_required: " + gaps.join("; "));
 }
@@ -121627,14 +121850,22 @@ function describeToolGate(knownNames, env2 = process.env, jsonPatterns = []) {
 }
 
 // src/msr-opening.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 
 // src/prompt-language.ts
+import { createRequire as createRequire4 } from "node:module";
 var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
 function nonEnglishOutsideQuotes(prompt) {
   const match2 = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
   return match2 ? match2[0] : null;
+}
+var load = createRequire4(import.meta.url);
+function checkVoiceoverDirection(direction, lines, compiled = false) {
+  const contract2 = load("../../skills/_shared/voiceover-direction.js");
+  contract2.checkVoiceoverDirection(direction, lines, compiled);
+  if (compiled && lines.some((line) => line.voiceoverKind === "inner_thought") && lines.every((line) => line.delivery === "voiceover"))
+    contract2.checkThoughtPerformance(direction);
 }
 
 // src/msr-opening.ts
@@ -121644,9 +121875,9 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
-var load = createRequire4(import.meta.url);
+var load2 = createRequire5(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
-  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  camera: sceneText.refine((id) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
@@ -123411,8 +123642,8 @@ import { tmpdir as tmpdir5 } from "node:os";
 import { extname as extname5, join as join9, resolve as resolve3 } from "node:path";
 
 // src/tts-models.ts
-import { createRequire as createRequire5 } from "node:module";
-var shared = () => createRequire5(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire6 } from "node:module";
+var shared = () => createRequire6(import.meta.url)("../../skills/_shared/tts-models.js");
 function getTtsModels() {
   return shared().TTS_MODELS;
 }
@@ -123543,7 +123774,7 @@ function validateSpeechSegments(value, duration5, inputs2) {
 }
 
 // src/tts-execution.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 var executionId = new AsyncLocalStorage2();
 function withSpeechRequestId(id, run) {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
@@ -123592,7 +123823,7 @@ function staleSlot(slot) {
 function validateEpisodeSpeech(generator, args) {
   const context2 = args.speechContext;
   if (context2) requireReadyProject(context2.path);
-  createRequire6(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
+  createRequire7(import.meta.url)("../../skills/_shared/character-speech.js").validateSpeechContext(generator, args);
 }
 async function executeSpeech(generator, args, run) {
   validateEpisodeSpeech(generator, args);
@@ -125298,16 +125529,16 @@ async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
 import path11 from "node:path";
 import { createHash as createHash11 } from "node:crypto";
 import { readFileSync as readFileSync12, statSync as statSync8 } from "node:fs";
-import { createRequire as createRequire8 } from "node:module";
+import { createRequire as createRequire9 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire as createRequire7 } from "node:module";
-var load2 = createRequire7(import.meta.url);
-var videoTextPolicy = () => String(load2("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
+import { createRequire as createRequire8 } from "node:module";
+var load3 = createRequire8(import.meta.url);
+var videoTextPolicy = () => String(load3("../../skills/_shared/scene-acting.js").VIDEO_TEXT_POLICY);
 var object3 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function planVideoPerformance(shot, options = {}) {
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const timeline = acting.planScenePerformance(shot, options.measureAudio);
   return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
 }
@@ -125323,10 +125554,10 @@ function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
   if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const travels = load3("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
     const path40 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
@@ -125412,12 +125643,12 @@ function cameraDrift(prompt, movement) {
 }
 function shotVisualDirection(shot, concise = false) {
   const plan2 = object3(shot.shot), camera = object3(object3(shot.visual).camera);
-  const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load2("../../skills/storyboard/references/shot-view.js");
+  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load3("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load2("../../skills/storyboard/references/structure-contract.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
   const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object3).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -125441,12 +125672,12 @@ function shotVisualDirection(shot, concise = false) {
   ].filter(Boolean);
   return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
 }
-var directions = () => load2("../../skills/storyboard/references/scene-direction.js");
+var directions = () => load3("../../skills/storyboard/references/scene-direction.js");
 function resolvedDirection(scene, cards) {
   return directions().resolve(scene, cards);
 }
 function withSceneCamera(shot, scenes) {
-  return directions().withCameraDefaults([shot], scenes)[0];
+  return load3("../../skills/_shared/scene-acting.js").withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
 }
 function attributeWords(key, row, camera = {}) {
   if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
@@ -125490,7 +125721,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const motion = object3(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object3(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -125523,6 +125754,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   let step = 0, prompt = parts(0).join(" ");
   while (limit2 && prompt.length > limit2 && step < dropped.length) prompt = parts(++step).join(" ");
   const fitWarnings = !limit2 || !step ? [] : [prompt.length > limit2 ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit2}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit2} characters; the camera, action and lines are whole`];
+  for (const value of [source.action, source.end, source.sound]) if (value) checkVoiceoverDirection(value, lines);
+  if (mode === "voiceover") checkVoiceoverDirection(prompt, lines, true);
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -125555,7 +125788,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
 }
 
 // src/genai-scene.ts
-var load3 = createRequire8(import.meta.url);
+var load4 = createRequire9(import.meta.url);
 var SCENE_ROUTE = "/v1/ltx/v2/scene-to-video";
 var sceneRequestId = (planId) => "scene-" + planId;
 var SCENE_LIMITS = { subjects: 4, backgrounds: 1, voiceSpeakers: 2 };
@@ -125705,7 +125938,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     for (const shot of shots) {
       const binding = bindings?.find((b) => b.shotId === shot.shot_id);
       if (binding?.performanceAudio) {
-        const wav = load3("../../skills/_shared/scene-speech-receipt.js").performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
+        const wav = load4("../../skills/_shared/scene-speech-receipt.js").performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
         shot.performance_uri = await stageBytes(wav, "audio/wav", "performance_audio", shot.start_frame, shot.shot_id);
       }
       if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync12(binding.motionPrefix), "video/mp4", "motion_prefix", shot.start_frame, shot.shot_id);
@@ -127229,7 +127462,7 @@ function isManagedImageCall(tool2, args) {
 }
 
 // src/video-registry.ts
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 
 // src/local-video-models.ts
 var LOCAL_VIDEO_MODELS = {
@@ -129493,9 +129726,9 @@ function formatReferenceLabel(style, kind, index) {
 }
 
 // src/video-registry.ts
-var load4 = createRequire9(import.meta.url);
+var load5 = createRequire10(import.meta.url);
 function requiredCharacters(shot) {
-  return load4("../../skills/_shared/scene-cast.js").requiredCharacters(shot);
+  return load5("../../skills/_shared/scene-cast.js").requiredCharacters(shot);
 }
 var entry = (engine, deployment, operation, schema2) => ({ engine, deployment, operation, schema: schema2, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema2) => ({ ...entry(engine, deployment, "reference", schema2), voice: "reference" });
@@ -129685,10 +129918,10 @@ function isManagedVideoCall(tool2, input) {
 
 // src/character-manage.ts
 import { existsSync as existsSync17, mkdirSync as mkdirSync5, readFileSync as readFileSync19, writeFileSync as writeFileSync13 } from "node:fs";
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 import path19 from "node:path";
-var load5 = createRequire10(import.meta.url);
-var catalog = () => load5("../../skills/_shared/character-identity.js");
+var load6 = createRequire11(import.meta.url);
+var catalog = () => load6("../../skills/_shared/character-identity.js");
 var pending = external_exports.object({ status: external_exports.literal("pending"), reason: external_exports.string().trim().min(1).max(2e3) }).strict();
 var basic = external_exports.union([external_exports.string().trim().min(1).max(2e3), pending]);
 var field = external_exports.union([
@@ -129765,18 +129998,18 @@ ${source}`;
   mkdirSync5(folder, { recursive: true });
   writeFileSync13(file, source);
   const basics = [...REQUIRED.identity.map((k) => ["identity", k]), ["physical", "heightCm"]].filter(([g, k]) => character[g][k].status === "pending").map(([g, k]) => `${g}.${k}`);
-  const { inspectPanels } = load5("../../skills/channel/references/character-panels.js");
+  const { inspectPanels } = load6("../../skills/channel/references/character-panels.js");
   const images = ["face", "front", "back"].filter((view) => !inspectPanels(folder).slots[view]);
   let voice = "missing";
   try {
-    voice = load5("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
+    voice = load6("../../skills/_shared/character-voice.js").identityVoice(source, { optional: true }) ? "selected" : "missing";
   } catch {
     voice = "invalid";
   }
   const channel = path19.resolve(folder, "../../..");
   let sheet;
   try {
-    const result = load5("../../skills/channel/references/review-library.js").exportChannel(channel);
+    const result = load6("../../skills/channel/references/review-library.js").exportChannel(channel);
     sheet = { path: path19.join(folder, "index.html"), warnings: result.contentWarnings.filter((w) => w.characterId === id).map((w) => w.message) };
   } catch (error2) {
     sheet = { error: error2.message };
@@ -129815,7 +130048,7 @@ function characterFieldsProperty() {
 import path22 from "node:path";
 import { execFileSync as execFileSync12 } from "node:child_process";
 import { existsSync as existsSync20, realpathSync as realpathSync7 } from "node:fs";
-import { createRequire as createRequire13 } from "node:module";
+import { createRequire as createRequire14 } from "node:module";
 
 // src/scene-prompt.ts
 var transitions = {
@@ -129889,11 +130122,11 @@ function sceneTimelineWords(timeline, scene, options = {}) {
 import path20 from "node:path";
 import { createHash as createHash16 } from "node:crypto";
 import { existsSync as existsSync18, realpathSync as realpathSync5, readFileSync as readFileSync20 } from "node:fs";
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
-var load6 = createRequire11(import.meta.url);
-var imageRouting = () => load6(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
-var characterPanels = () => load6(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
+var load7 = createRequire12(import.meta.url);
+var imageRouting = () => load7(fileURLToPath4(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var characterPanels = () => load7(fileURLToPath4(new URL("../../skills/channel/references/character-panels.js", import.meta.url)));
 function nearestRatio(width, height) {
   const ratios = ["21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
   const value = (ratio) => {
@@ -130275,13 +130508,13 @@ import { createHash as createHash17 } from "node:crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync21, realpathSync as realpathSync6 } from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path21 from "node:path";
-import { createRequire as createRequire12 } from "node:module";
+import { createRequire as createRequire13 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load7 = createRequire12(import.meta.url);
+var load8 = createRequire13(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
@@ -130302,13 +130535,13 @@ function voiceDescription(character) {
   ].filter(Boolean).join(". ");
 }
 function resolveCharacterVoice(character, context2, warnings) {
-  return load7("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path21.join(context2.episode, "storyboard"), context2.shot, warnings);
+  return load8("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path21.join(context2.episode, "storyboard"), context2.shot, warnings);
 }
 function voiceReference(character, context2, warnings) {
-  return load7("../../skills/_shared/scene-voice.js").voiceReference(character, path21.join(context2.episode, "storyboard"), warnings);
+  return load8("../../skills/_shared/scene-voice.js").voiceReference(character, path21.join(context2.episode, "storyboard"), warnings);
 }
 function currentSceneVoice(board, boardDir, shot, id, warnings) {
-  return load7("../../skills/_shared/scene-voice.js").currentSceneVoice(board, boardDir, shot, id, warnings);
+  return load8("../../skills/_shared/scene-voice.js").currentSceneVoice(board, boardDir, shot, id, warnings);
 }
 function msrSubject(character, refs, context2) {
   const owned = object4(character.voiceReference).imagePaths;
@@ -130319,7 +130552,7 @@ function msrSubject(character, refs, context2) {
   if (sceneFace || requiredCharacters(context2.shot).some((person) => person.character === character.id)) {
     ownedPaths = owned.map((file) => realpathSync6(path21.resolve(context2.episode, "storyboard", file)));
   } else if ((declared.includes(text2(character.id)) || context2.sceneDirection?.openingPositions.some((p) => p.character === character.id && p.images.length)) && existsSync19(path21.join(context2.episode, "storyboard", "cast.json"))) {
-    const { sheetPanels, canonicalReferences } = load7("../../skills/channel/references/character-panels.js");
+    const { sheetPanels, canonicalReferences } = load8("../../skills/channel/references/character-panels.js");
     const dir = path21.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
     const combined = object4(object4(context2.shot.visual).video).referenceLayout === "combined";
@@ -130355,7 +130588,7 @@ function afterImageBlock(prompt, lines) {
 }
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
-  const ordered2 = load7("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+  const ordered2 = load8("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
   const lines = ordered2(context2.shot).map(object4).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
@@ -130377,14 +130610,16 @@ function prepareVideoVoice(tool2, input, context2) {
   const supplied = lane === "supplied";
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const sceneDialogue = context2.sceneDirection && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
-  const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
-  if (!context2.modelVoice && lane === "none" && (native || onScreen))
+  const nativeAudioRequested = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
+  const native = nativeAudioRequested && lines.some((line) => line.delivery !== "voiceover");
+  if (!context2.modelVoice && lane === "none" && (nativeAudioRequested || onScreen))
     throw new Error(`voice_lane_required: ${tool2} cannot keep a character's voice. Render this spoken cut with a reference adapter (astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? "" : ", or set generateAudio:false and keep the lines as TTS voiceover"}.`);
   const reference2 = native && lane === "reference";
   const strategy = context2.modelVoice ? "model_generated" : supplied ? "supplied_audio" : reference2 ? "reference_voice" : "external_tts";
   const warnings = [];
   const speakers = [];
-  const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter((line) => line.delivery === "on_screen");
+  const physicalLines = lines.filter((line) => line.delivery !== "voiceover");
+  const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? physicalLines : physicalLines.filter((line) => line.delivery === "on_screen");
   const ids = [...new Set((native ? nativeLines : lines).map((line) => text2(line.speaker) || text2(doc.narratorCharacterId)))];
   const prompt = [];
   const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file) => path21.resolve(context2.episode, String(file)))) : 0;
@@ -130473,17 +130708,17 @@ function prepareVideoVoice(tool2, input, context2) {
     const img = (n) => referenceLabel(tool2, "image", n, args.model), aud = (n) => referenceLabel(tool2, "audio", n, args.model);
     const quoted = [...String(args.prompt).matchAll(/"([^"]*)"|“([^”]*)”|「([^」]*)」/g)].map((match2) => match2[1] ?? match2[2] ?? match2[3]);
     if (tool2 === "seedance_reference") {
-      const authored = lines.map((line) => text2(line.tts));
+      const authored = nativeLines.map((line) => text2(line.tts));
       const embedded = quoted.filter((words) => authored.includes(words));
       if (embedded.length === authored.length && embedded.every((words, i2) => words === authored[i2])) return;
     }
-    if (lines.some((line) => quoted.some((words) => words.includes(text2(line.tts)))))
+    if (nativeLines.some((line) => quoted.some((words) => words.includes(text2(line.tts)))))
       throw new Error("video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order");
     const bySpeaker = new Map(speakers.map((speaker) => [speaker.speaker, speaker]));
     const owners = object4(context2.board.STRUCTURE).scenes;
     const owner = Array.isArray(owners) && owners.find((scene) => scene.no === context2.shot.scene);
     const legacyScene = !context2.timed && !owner?.directionDefaults;
-    const script = lines.map((line, turn) => {
+    const script = nativeLines.map((line, turn) => {
       const id = text2(line.speaker) || text2(doc.narratorCharacterId), speaker = bySpeaker.get(id);
       const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text2(object4(line.acting).direction);
       const label = nonEnglishOutsideQuotes(speaker?.name ?? "") ? id : speaker?.name ?? id;
@@ -130545,7 +130780,7 @@ function prepareVideoVoice(tool2, input, context2) {
 }
 
 // src/scene-video.ts
-var load8 = createRequire13(import.meta.url);
+var load9 = createRequire14(import.meta.url);
 var temporal = (image2) => ["start", "keyframe", "end"].includes(image2.role) && !image2.reference;
 var english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : "";
 function bindSceneCards(members, bindings) {
@@ -130560,7 +130795,14 @@ function bindSceneCards(members, bindings) {
     if (binding.action) timeline.action = binding.action;
     if (binding.keyframes) timeline.images = [...timeline.images ?? [], ...binding.keyframes.map((pin) => ({ ...pin, role: "keyframe" }))];
     if (binding.openingPositions) timeline.openingPositions = binding.openingPositions;
-    if (binding.dialogueCues) timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter((c) => !binding.dialogueCues.some((b) => b.lineId === c.lineId)), ...binding.dialogueCues];
+    if (binding.dialogueCues) {
+      for (const cue of binding.dialogueCues) {
+        const line = raw.narration?.find((line2) => line2.id === cue.lineId);
+        if (line?.voiceoverKind === "inner_thought" && !timeline.dialogueCues?.some((saved) => saved.lineId === cue.lineId && saved.frame === cue.frame))
+          throw new Error("thought_timing: save " + cue.lineId + " at frame " + cue.frame + " in " + binding.shotId + ".timeline.dialogueCues so external speech assembly uses the same onset");
+      }
+      timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter((c) => !binding.dialogueCues.some((b) => b.lineId === c.lineId)), ...binding.dialogueCues];
+    }
     raw.timeline = timeline;
   }
   return cards;
@@ -130570,7 +130812,7 @@ function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
   return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
 function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
-  const render = load8("../../skills/storyboard/references/render-routing.js");
+  const render = load9("../../skills/storyboard/references/render-routing.js");
   const members = raw;
   const fps = scene.fps ?? 24;
   if (scene.oneTake && members.length !== 1) throw new Error("scene_one_take: an uninterrupted camera setup must have one shot");
@@ -130662,13 +130904,13 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
     const sound = notes.sound;
-    const ordered2 = load8("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
+    const ordered2 = load9("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
     const lines = scoped ? ordered2(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
       if (lines.filter((line) => line.id === cue.lineId).length !== 1)
         throw new Error("scene_dialogue_timing: " + shotId + " needs one spoken line with id " + cue.lineId);
     }
-    const dialogue = lines.filter((line) => !shotScoped || line.delivery !== "voiceover").map((line) => {
+    const dialogue = lines.filter((line) => line.delivery !== "voiceover").map((line) => {
       const frame2 = timeline?.dialogueCues?.find((c) => c.lineId === line.id)?.frame;
       const warnings = [];
       const nativeVoice = line.delivery !== "voiceover" && (!scene.audio || scene.audio.mode === "mix") && scene.dialogueVoice !== "model_generated";
@@ -130740,7 +130982,7 @@ function bindRegisteredPanels(scene, episode, board) {
 function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options, mapInputs, board) {
   const coverage2 = sceneCoverage(members, scene, board, sceneNo);
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
-  load8("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
+  load9("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
   const ownsFrames = owner?.frames !== void 0 || owner?.speakers !== void 0;
   const modelPacedCuts = ownsFrames && !options.shotScoped && members.length > 1 && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut"));
   const cutTiming = options.profile?.cutTiming;
@@ -130782,6 +131024,25 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     ...scene.oneTake ? { oneTake: true } : {},
     ...scene.sound ? { sound: scene.sound } : {}
   } };
+  const cards = members;
+  const authored = cards.flatMap((card) => card.narration ?? []);
+  const sharedPicture = [request.sceneDirection, scene.openingPositions];
+  checkVoiceoverDirection(sharedPicture, authored);
+  const canonical4 = (value) => value?.normalize("NFKC").toLowerCase().replace(/[’‘]/gu, "'").replace(/[\p{P}\s]+/gu, "");
+  for (const { dialogue: turns, ...shot } of timeline.shots) {
+    const spoken = new Set(turns?.map((turn) => canonical4(turn.text)));
+    const privateLines = authored.filter((line) => line.delivery === "voiceover" && !spoken.has(canonical4(line.tts)));
+    const picture2 = [
+      shot,
+      turns?.map((turn) => turn.direction),
+      timeline.images.filter((image2) => image2.shotId === shot.shotId),
+      timeline.audio?.cues?.filter((cue) => cue.frame >= shot.startFrame && cue.frame < shot.endFrame)
+    ];
+    checkVoiceoverDirection(picture2, privateLines);
+    const lines = cards.find((card) => card.id === shot.shotId)?.narration ?? [];
+    if (!turns?.length && lines.some((line) => line.voiceoverKind === "inner_thought"))
+      checkVoiceoverDirection([sharedPicture, picture2], lines, true);
+  }
   const bindSceneTurns = (prompt2, turns, describeDelivery = true) => {
     if (!prompt2.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
       throw new Error("scene_dialogue_binding: the dialogue no longer matches the planned shot sequence");
@@ -131176,7 +131437,7 @@ async function checkSceneDeployment(request, tool2, args) {
 import * as fs19 from "node:fs";
 import { execFileSync as execFileSync14 } from "node:child_process";
 import path27 from "node:path";
-import { createRequire as createRequire15 } from "node:module";
+import { createRequire as createRequire16 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
 import { createHash as createHash20 } from "node:crypto";
 
@@ -131491,9 +131752,9 @@ import path25 from "node:path";
 import { fileURLToPath as fileURLToPath6 } from "node:url";
 
 // src/video-review.ts
-import { createRequire as createRequire14 } from "node:module";
+import { createRequire as createRequire15 } from "node:module";
 import path24 from "node:path";
-var review = () => createRequire14(import.meta.url)("../../skills/storyboard/references/video-production.js");
+var review = () => createRequire15(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function readVideoProduction(episode) {
   return review().read(path24.join(episode, "storyboard"));
 }
@@ -131506,7 +131767,7 @@ function refreshVideoReview(episode) {
 }
 function refreshAudienceReview(boardDirectory) {
   try {
-    const data = createRequire14(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
+    const data = createRequire15(import.meta.url)("../../skills/storyboard/references/audience-review-data.js");
     data.refresh(boardDirectory);
   } catch {
     process.stderr.write("Audience audio preview needs a refresh.\n");
@@ -131731,16 +131992,16 @@ function seedanceBindings(episode, members, args, inputs2, images = [], voice, s
 }
 
 // src/video-routing.ts
-var load9 = createRequire15(import.meta.url);
+var load10 = createRequire16(import.meta.url);
 var shared2 = fileURLToPath7(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 function assertNoPostLipSync(value) {
-  load9("../../skills/_shared/speech-contract.js").assertNoPostLipSync(value);
+  load10("../../skills/_shared/speech-contract.js").assertNoPostLipSync(value);
 }
 var modelSettings = fileURLToPath7(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath7(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 function routingContext(episode, shotId, sceneNo, selectionOnly, rendering) {
-  const reader = load9(shared2);
+  const reader = load10(shared2);
   try {
     return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly, rendering);
   } catch (error2) {
@@ -131767,10 +132028,10 @@ function shotVideoTiming(context2, tool2, args) {
   if (context2.sceneDirection) {
     coverage2 = { requiredSeconds: Number(shot.duration) };
   } else if (shot.duration !== void 0) {
-    const edit2 = load9(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
+    const edit2 = load10(fileURLToPath7(new URL("../../skills/produce/references/edit-plan.js", import.meta.url))).preview(context2.board.SCENES, { videoWarningsApproved: true });
     const cards = context2.board.SCENES;
     const index = cards.findIndex((card) => String(card.id ?? card.shot?.id) === context2.shotId);
-    const timing = load9(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
+    const timing = load10(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url)));
     const planned = edit2.find((entry2) => entry2.card === index);
     const ownVoice = shot.sound?.audioSource === "video";
     coverage2 = timing.shotTiming(shot, { edit: ownVoice && planned ? { ...planned, in: 0 } : planned });
@@ -131789,7 +132050,7 @@ function shotVideoTiming(context2, tool2, args) {
   };
 }
 function nativeSpeechTiming(shot, language) {
-  const acting = load9(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
+  const acting = load10(fileURLToPath7(new URL("../../skills/_shared/scene-acting.js", import.meta.url)));
   let estimatedSeconds, unmeasuredRate = false;
   try {
     estimatedSeconds = acting.planScenePerformance(shot, (line) => {
@@ -131810,7 +132071,7 @@ function nativeSpeechFit(shot, requestedSeconds, limits, language) {
   const unmeasuredRate = speechRate === "uncalibrated";
   let shortest;
   try {
-    shortest = load9(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
+    shortest = load10(fileURLToPath7(new URL("../../skills/_shared/video-duration.js", import.meta.url))).minimumDuration(estimatedSeconds, limits);
   } catch {
     return void 0;
   }
@@ -132023,7 +132284,7 @@ async function executeShotRenderPlan(plan2, prepared) {
   return { content: [{ type: "text", text: JSON.stringify({ ...result, receiptPath: receiptPath2 }) }] };
 }
 function requireSpeechSignal(file, code) {
-  const signal = load9("../../skills/_shared/audio-signal.js").inspect(file);
+  const signal = load10("../../skills/_shared/audio-signal.js").inspect(file);
   if (signal.status !== "signal") throw new Error(code + ": audible speech is required in " + path27.basename(file));
   return signal.duration;
 }
@@ -132037,14 +132298,14 @@ function verifyDistinctSamples(samples) {
     }
     seen.set(file, speaker);
     requireSpeechSignal(file, "scene_speech_references");
-    const digest5 = load9("../../skills/_shared/audio-signal.js").decodedAudioHash(file);
+    const digest5 = load10("../../skills/_shared/audio-signal.js").decodedAudioHash(file);
     if (owners.has(digest5) && owners.get(digest5) !== speaker)
       throw new Error("scene_speech_references: different characters need distinct decoded voice samples");
     owners.set(digest5, speaker);
   }
 }
 function assertSpeechRenderCapacity(tool2, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
-  load9("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+  load10("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
     tool: tool2,
     model: model2,
     scene,
@@ -132060,7 +132321,7 @@ function resolvePlanContext(input) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, void 0, input.sceneNo, false, input.sceneRendering);
   requireSupportedSelection(context2.selection);
-  const structure = load9(structurePath);
+  const structure = load10(structurePath);
   const gaps = structure.imageGaps(context2.board, input.sceneNo, (file) => {
     try {
       readImageMetadata(path27.resolve(context2.episode, "storyboard", file));
@@ -132201,7 +132462,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (cast.some((person) => person.face?.taskId) && !sourceBinder)
     throw new Error("character_face_source_unsupported: the selected adapter cannot use a Seedance original for facial identity");
   if (selection.engine === "seedance") {
-    const { seedanceMedia } = load9(shared2);
+    const { seedanceMedia } = load10(shared2);
     const media = seedanceMedia(context2.shot, context2.sceneMembers);
     if (input.args.realFaceInput === false && (media.realFaceInput === true || cast.some((person) => person.face) && media.realFaceInput !== false))
       throw new Error("character_inputs_mismatch: the request cannot disable the storyboard portrait declaration");
@@ -132224,6 +132485,13 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     throw new Error("scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue");
   if (input.shotBindings && !input.sceneRendering) throw new Error("scene_render_bindings: select per_shot rendering");
   if (input.sceneRendering) {
+    for (const card of context2.sceneMembers ?? []) {
+      const turns = card.narration?.filter((line) => line.tts?.trim()) ?? [];
+      if (turns.some((line) => line.delivery === "voiceover") && turns.some((line) => line.delivery !== "voiceover"))
+        throw new Error("scene_video_mixed_delivery: split physical dialogue and voiceover at an authored cut in " + card.id);
+      if (turns.some((line) => line.delivery === "voiceover") && scene?.audio && scene.audio.mode !== "mix")
+        throw new Error("scene_video_mixed_delivery: keep the voiceover outside the performance-conditioning track in " + card.id);
+    }
     const conditioned = scene?.audio && scene.audio.mode !== "mix";
     const tool3 = conditioned ? "astra_genai_audio2video" : "astra_genai_img2video";
     if (!scene || !context2.sceneMembers || !input.sceneNo || selection.engine !== "astra-genai" || selection.model !== (conditioned ? "ltx-2.5-22b-dev" : "ltx-2.5-22b-distilled") || !selection.resolution || selectedVideoTool(selection) !== tool3 || input.tool && input.tool !== tool3 || input.operation && input.operation !== (conditioned ? "audio" : "image"))
@@ -132243,6 +132511,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       () => void 0,
       context2.board
     );
+    checkVoiceoverDirection(input.shotBindings?.map((binding) => binding.guidance?.negativePrompt), lines);
     bindRegisteredPanels(request, context2.episode, context2.board);
     const missing = [];
     for (const member of context2.sceneMembers) {
@@ -132296,7 +132565,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       if (binding.performanceAudio) {
         requireSpeechSignal(binding.performanceAudio, "scene_speech_performance");
         const card = context2.sceneMembers.find((member) => member.id === binding.shotId);
-        load9("../../skills/_shared/character-speech.js").verifyShotPerformance(
+        load10("../../skills/_shared/character-speech.js").verifyShotPerformance(
           binding.performanceAudio,
           card,
           context2.board,
@@ -132306,7 +132575,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     }
     const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash20("sha256").update(fs19.readFileSync(file)).digest("hex")]));
     const doc = context2.board.SB_DOC;
-    const conditioningInputs = conditioned && request.audio ? load9("../../skills/produce/references/compose-speech.js").conditioningInputs(
+    const conditioningInputs = conditioned && request.audio ? load10("../../skills/produce/references/compose-speech.js").conditioningInputs(
       context2.sceneMembers,
       path27.join(context2.episode, "storyboard"),
       request.shots,
@@ -132459,6 +132728,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (input.args.generateAudio === false) throw new Error("scene_dialogue_audio_required: this shot has native spoken dialogue");
     callArgs = { ...callArgs, generateAudio: true };
   }
+  if (silentPicture) checkVoiceoverDirection(String(callArgs.prompt ?? ""), lines, true);
   const sourcePrompt = scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
   const boardCamera = shot.visual?.camera ?? {};
   const rawPrompt = input.args.prompt ?? video2?.prompt;
@@ -132571,6 +132841,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       throw new Error("character_voice_required: " + tool2 + " cannot bind the selected voice sample for " + person.character);
   }
   const args = parseVideoArgs(tool2, voice.args);
+  if (silentPicture) checkVoiceoverDirection(args, lines, true);
   const adaptiveDuration = selection.engine === "seedance" && args.durationSeconds === -1;
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
     const frames = typeof args.numFrames === "number" ? args.numFrames : typeof args.durationSeconds === "number" ? Math.round(args.durationSeconds * sceneRequest.fps) : typeof args.duration === "number" ? Math.round(args.duration * sceneRequest.fps) : void 0;
@@ -132712,7 +132983,7 @@ function authorization(context2) {
   const approval = external_exports.object({ kind: external_exports.enum(["user", "standing"]), reference: external_exports.string().min(1), at: external_exports.string().min(1), quoteFingerprint: external_exports.string().min(1) }).passthrough().parse(p.approval);
   if (!Number.isFinite(Date.parse(approval.at))) throw new Error("Invalid spending approval date");
   const helper2 = fileURLToPath7(new URL("../../skills/autoproduce/references/production-cost.js", import.meta.url));
-  const quote = load9(helper2).quote(context2.board);
+  const quote = load10(helper2).quote(context2.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error("Existing quote changed; spending authorization does not cover this plan");
   return {
     maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd),
@@ -132954,7 +133225,7 @@ async function executeVideo(raw, dispatch) {
   }
 }
 async function dispatchChannelAsset(tool2, args, root, output2, dispatch) {
-  const read4 = load9(modelSettings).readSettings(root);
+  const read4 = load10(modelSettings).readSettings(root);
   const selection = read4.config?.models?.video;
   if (!selection) throw new Error(`project_setup_required: ${read4.status}; save .social-flow/models.json before generating channel assets`);
   requireSupportedSelection(selection);
@@ -133126,7 +133397,7 @@ async function videoStatus(raw) {
 import * as fs21 from "node:fs";
 import path29 from "node:path";
 import os3 from "node:os";
-import { createRequire as createRequire16 } from "node:module";
+import { createRequire as createRequire17 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
 
 // src/image-pricing.ts
@@ -133216,9 +133487,9 @@ function imageTransaction(directory2, openingSpendUsd, update) {
 }
 
 // src/image-routing.ts
-var load10 = createRequire16(import.meta.url);
+var load11 = createRequire17(import.meta.url);
 var selectionHelper = fileURLToPath8(new URL("../../skills/_shared/image-selection.js", import.meta.url));
-var imageContext = (directory2, assetId) => load10(selectionHelper).readImageContext(directory2, assetId);
+var imageContext = (directory2, assetId) => load11(selectionHelper).readImageContext(directory2, assetId);
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -133776,7 +134047,7 @@ var shotSchema = external_exports.object({
   timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
+  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), voiceoverKind: external_exports.literal("inner_thought").optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough().refine((line) => !line.voiceoverKind || line.delivery === "voiceover", "An inner thought requires voiceover delivery")).optional(),
   visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
@@ -134681,6 +134952,12 @@ function applyStoryboard(args, opts = {}) {
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error("head_moved: propSheet requires the current expectedSha256 from storyboard_read");
   const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
+  const previousShots = new Map((win.SCENES ?? []).map((card) => [card.id, card]));
+  const speech = loadFromHere2("../../skills/_shared/speech-contract.js");
+  for (const card of next.SCENES ?? []) {
+    const previous = previousShots.get(card.id);
+    if (previous) speech.invalidateVoiceoverChange(card, previous.narration ?? []);
+  }
   const sceneCasting = loadFromHere2("../../skills/_shared/scene-cast.js");
   for (const scene of next.STRUCTURE?.scenes ?? []) {
     if (scene.speakers !== void 0) scene.frames ??= {};
@@ -135258,6 +135535,7 @@ var shotDialogueSchema = external_exports.object({
       speaker: nonEmpty.describe("The character who speaks \u2014 a narrator is a character too"),
       tts: nonEmpty.describe("The spoken line, in the video's language"),
       sub: external_exports.string().optional().describe("The written notation when it differs from tts"),
+      voiceoverKind: external_exports.literal("inner_thought").nullable().optional().describe("Private thought in this character\u2019s voice; null clears the designation"),
       delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional().describe("Default: on_screen for one of the shot's characters, voiceover for anyone else")
     }).strict()).describe("Every line of the shot in spoken order; [] makes it silent")
   }).strict()).min(1)
@@ -135407,14 +135685,21 @@ function writeShotDialogue(args) {
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n) => {
       if (!known.ids.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
-      const delivery2 = line.delivery ?? (cast.includes(line.speaker) ? "on_screen" : "voiceover");
+      const previous = line.id ? old.find((entry2) => entry2.id === line.id) : void 0;
+      if (line.voiceoverKind && line.delivery && line.delivery !== "voiceover")
+        throw new Error("An inner thought requires voiceover delivery");
+      const kind = line.voiceoverKind === void 0 ? previous?.voiceoverKind : line.voiceoverKind;
+      const delivery2 = line.delivery ?? (kind || previous?.voiceoverKind ? "voiceover" : cast.includes(line.speaker) ? "on_screen" : "voiceover");
       if (delivery2 === "on_screen" && !cast.includes(line.speaker))
         throw new Error(`story_order: ${line.speaker} speaks on screen in ${id} but is not among its characters \u2014 add them with shot_characters`);
       let lineId = line.id;
       for (let k = n + 1; !lineId; k++) if (!used.has(`${id}-l${k}`)) lineId = `${id}-l${k}`;
       if (used.has(lineId)) throw new Error(`shot_dialogue: line id ${lineId} is already used`);
       used.add(lineId);
-      return { ...line.id ? old.find((o) => o.id === line.id) : void 0, id: lineId, speaker: line.speaker, delivery: delivery2, tts: line.tts, sub: line.sub };
+      const updated = { ...previous, id: lineId, speaker: line.speaker, delivery: delivery2, tts: line.tts, sub: line.sub };
+      if (kind && delivery2 === "voiceover") updated.voiceoverKind = kind;
+      else delete updated.voiceoverKind;
+      return updated;
     });
     shots[index] = { ...shots[index], narration: next };
     notes.push(...promptNotes(shots[index]));
@@ -145151,6 +145436,7 @@ Returns revision, ordered matching lines with generationPlan and voice/audio has
           sub: { type: "string", description: "Subtitle display text" },
           speaker: { type: "string", description: "Stable character id" },
           delivery: { type: "string", description: "Narration, visible speech, or speech outside frame", enum: ["voiceover", "on_screen", "off_screen"] },
+          voiceoverKind: { type: ["string", "null"], enum: ["inner_thought", null], description: "Private thought in the character voice. Implies voiceover delivery. Null clears the designation." },
           acting: { type: ["object", "null"], description: "Replace this line's entire acting object; null clears it. Does not change the character voice. Omitted fields use no scene override or zero reaction time.", additionalProperties: false, properties: {
             ...ACTING_PROPERTY.properties,
             context: { type: "string", minLength: 1, maxLength: 1e3, description: "Immediate situation, e.g. The applicant mistook a sales result for a job offer." },
@@ -145528,7 +145814,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Before writing, read the exchange in order from each speaker's current knowledge: who hears this, what earlier event triggers it, and what response does the speaker want now? A future proposal or scene outcome cannot motivate an earlier reply. Set the actual addressee in performance.to through storyboard_apply; do not assume every line addresses the audience. Use check-story.js --text/--map for review so listeners and event order survive export. See storyboard's causal-dialogue reference. This guidance is editorial, not an automated judgment of meaning.
 
-Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. For conventional dialogue coverage split at speaker changes (shot_speaker_limit). An explicitly requested one-take keeps the ordered lines on the same shot, including replies. Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. Inner thoughts use the character's speaker id and voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. For conventional dialogue coverage split at speaker changes (shot_speaker_limit). An explicitly requested one-take keeps the ordered lines on the same shot, including replies. Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. For a private thought set voiceoverKind to inner_thought and use the character's speaker id. The line uses voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT write a line the approved scenario does not give: where it reports that someone speaks without the words, write no line for that moment \u2014 stage it so the words are not needed (the listener's face, the speaker's back, distance) or ask. Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
@@ -145545,6 +145831,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
             speaker: { type: "string", description: "Character id of the speaker" },
             tts: { type: "string", description: "The spoken line, in the video's language" },
             sub: { type: "string", description: "Written notation when it differs from tts" },
+            voiceoverKind: { type: ["string", "null"], enum: ["inner_thought", null], description: "Private thought in the character voice. Implies voiceover delivery. Null clears the designation." },
             delivery: { type: "string", enum: ["voiceover", "on_screen", "off_screen"], description: "on_screen needs the speaker among the shot's characters" }
           } } }
         } } }
@@ -146042,7 +146329,7 @@ import * as fs25 from "node:fs";
 import path34 from "node:path";
 import os4 from "node:os";
 import { execFileSync as execFileSync17 } from "node:child_process";
-import { createRequire as createRequire18 } from "node:module";
+import { createRequire as createRequire19 } from "node:module";
 import { fileURLToPath as fileURLToPath10 } from "node:url";
 
 // src/music-state.ts
@@ -146187,12 +146474,12 @@ function normalizeMusicFile(source, target) {
 }
 
 // src/music-routing.ts
-var load11 = createRequire18(import.meta.url);
+var load12 = createRequire19(import.meta.url);
 var selectionHelper2 = fileURLToPath10(new URL("../../skills/_shared/music-selection.js", import.meta.url));
 function refreshAudienceOutput(directory2, file) {
   if (path34.dirname(file) === path34.join(directory2, ".work/music/audience")) refreshAudienceReview(path34.join(directory2, "storyboard"));
 }
-var musicContext = (directory2, assetId) => load11(selectionHelper2).readMusicContext(directory2, assetId);
+var musicContext = (directory2, assetId) => load12(selectionHelper2).readMusicContext(directory2, assetId);
 var idSchema3 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var musicPlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
@@ -146841,7 +147128,7 @@ import { createHash as createHash27, randomUUID as randomUUID12 } from "node:cry
 import { appendFileSync as appendFileSync3, copyFileSync, existsSync as existsSync34, mkdirSync as mkdirSync18, readFileSync as readFileSync35, writeFileSync as writeFileSync23, renameSync as renameSync8 } from "node:fs";
 import { basename as basename10, dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { createRequire as createRequire21 } from "node:module";
+import { createRequire as createRequire22 } from "node:module";
 
 // src/voice-lock-config.ts
 var VOICE_LOCK_MODEL = "eleven_multilingual_sts_v2";
@@ -146965,7 +147252,7 @@ function compileSample(text4, acting, voice, turns) {
   const normalize2 = (value) => value.replace(/\s+/g, " ").trim();
   if (acting || normalize2(turns.map((turn) => turn.text).join(" ")) !== normalize2(text4)) throw new Error("Sample turns must reproduce sampleText with per-turn acting only");
   if (voice.engine !== "gemini" || !String(voice.model).startsWith("gemini-3.8-")) throw new Error("Per-turn sample acting requires Gemini 3.8 TTS");
-  const { directionSupport } = createRequire21(import.meta.url)("../../skills/_shared/scene-acting.js");
+  const { directionSupport } = createRequire22(import.meta.url)("../../skills/_shared/scene-acting.js");
   if (turns.some((turn) => !directionSupport(voice, turn.acting).supported)) throw new Error("Per-turn resolved vocal style exceeds the Gemini 3.8 limit of 500 characters; shorten the controls");
   const compiled = turns.map((turn) => compileActing(turn.text, turn.acting, voice));
   return { generator: "tts_gemini_38", generation: { ...compiled[0].generation, turns: compiled.flatMap((turn) => turn.generation.turns) } };
@@ -146974,7 +147261,7 @@ function refreshSheet(identityPath) {
   const folder = dirname9(identityPath);
   if (basename10(dirname9(folder)) !== "characters" || basename10(dirname9(dirname9(folder))) !== "assets") return void 0;
   try {
-    createRequire21(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
+    createRequire22(import.meta.url)("../../skills/channel/references/review-library.js").exportChannel(resolve10(folder, "../../.."));
     return join15(folder, "index.html");
   } catch (error2) {
     return `sheet refresh failed: ${error2 instanceof Error ? error2.message : String(error2)}`;
@@ -147083,7 +147370,7 @@ function bindRegisteredVoice(args) {
   const chosen = audition.candidates.find((candidate2) => candidate2.id === selection.candidateId);
   if (!chosen || audition.status !== "selected" || chosen.tts.engine !== "astra-genai" || chosen.audioSha256 !== selection.audioSha256 || hash3(readFileSync35(chosen.audioPath)) !== chosen.audioSha256)
     throw new Error("voice_registration_sample_stale: the selected gateway sample or its bytes changed");
-  const handoff = createRequire21(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
+  const handoff = createRequire22(import.meta.url)("../../skills/channel/references/character-sheet.js").selectedVoiceReference(source, ttsSchema.parse(value.tts));
   if (handoff.voiceReference?.sha256 !== chosen.audioSha256) throw new Error("voice_registration_sample_stale: restore the selected sample settings before binding");
   const tts = ttsSchema.parse({ ...chosen.tts, voiceId: args.registeredVoiceId });
   const registration = {
@@ -147228,9 +147515,9 @@ import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_proc
 import { copyFileSync as copyFileSync2, existsSync as existsSync35, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync7, readFileSync as readFileSync36, realpathSync as realpathSync12, renameSync as renameSync9, rmSync as rmSync19, statSync as statSync21, writeFileSync as writeFileSync24, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
 import { basename as basename11, dirname as dirname10, isAbsolute as isAbsolute2, join as join17, relative as relative2, resolve as resolve11, sep as sep2 } from "node:path";
-import { createRequire as createRequire23 } from "node:module";
+import { createRequire as createRequire24 } from "node:module";
 import { pathToFileURL } from "node:url";
-var load12 = createRequire23(import.meta.url);
+var load13 = createRequire24(import.meta.url);
 var COVER_REFS = join17(PLUGIN_ROOT, "skills", "generate-cover", "references");
 var TEMPLATE_FILE = join17(COVER_REFS, "cover-template.html");
 var MOTION_FONT_DIR = join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-fonts");
@@ -147268,7 +147555,7 @@ function episodeOf(path40) {
   const board = readBoard(path40);
   const storyboard = realpathSync12(dirname10(scenesPath(path40)));
   const format = String(board.win.FORMAT ?? "shorts-9x16");
-  const formats = load12(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
+  const formats = load13(join17(PLUGIN_ROOT, "skills", "platform-guide", "references", "formats.js")).FORMATS;
   const spec = formats[format]?.cover;
   if (!spec) throw new Error(`cover_format_unknown: ${format} has no cover block in formats.js`);
   return { board, storyboard, episode: dirname10(storyboard), format, spec };
@@ -147470,8 +147757,8 @@ function regionFor(spec, focus) {
   return focus.y <= 0.5 ? { x0: x2.x0, x1: x2.x1, y0: 0.5, y1: core.y1, align: "center" } : { x0: x2.x0, x1: x2.x1, y0: core.y0, y1: 0.5, align: "center" };
 }
 function pickFont(text4, language) {
-  const motion = load12(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
-  const cjk = load12(join17(COVER_REFS, "cover-font-data.js"));
+  const motion = load13(join17(PLUGIN_ROOT, "skills", "storyboard", "references", "motion-font-data.js"));
+  const cjk = load13(join17(COVER_REFS, "cover-font-data.js"));
   const all = { ...motion, ...cjk };
   const lang = language.split("-")[0];
   const order = lang === "ja" ? ["notosansjp", "pretendard"] : lang === "zh" ? ["notosanssc", "notosanstc"] : /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3]/.test(text4) ? ["paperlogy", "pretendard"] : ["pretendard", "paperlogy"];
@@ -147745,7 +148032,7 @@ async function renderCover(path40) {
     const episodesDir = dirname10(ep.episode);
     if (basename11(ep.storyboard) === "storyboard" && basename11(episodesDir) === "episodes") {
       try {
-        const library = load12(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
+        const library = load13(join17(PLUGIN_ROOT, "skills", "channel", "references", "review-library.js"));
         library.exportChannel(dirname10(episodesDir));
       } catch (error2) {
         const message = error2 instanceof Error ? error2.message : String(error2);
@@ -147921,7 +148208,7 @@ var speechManageSchema = external_exports.object({
   speaker: external_exports.string().optional(),
   query: external_exports.string().optional(),
   expectedRevision: external_exports.string().optional(),
-  patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
+  patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional(), voiceoverKind: external_exports.literal("inner_thought").nullable().optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
   audioPath: external_exports.string().optional(),
   videoPath: external_exports.string().optional(),
   tool: external_exports.string().optional(),
@@ -148037,7 +148324,7 @@ function speechVideoPlan(input, capabilities, sceneNo) {
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
-  if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
+  if (physicalSpeech && lines.some((line) => line.delivery === "voiceover") && (capabilities.nativeSpeech || onScreen && capabilities.audioConditioning))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
@@ -148097,6 +148384,7 @@ function manageSpeech(args, options = {}) {
   const character = (id) => characters.find((c) => c.id === id);
   const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname11(file), board: win });
   const scenes = win.SCENES;
+  const timedShot = (scene) => actingContract().withThoughtClock(scene, object5(win.STRUCTURE).scenes);
   let changed = false;
   let timing;
   let soundtrack;
@@ -148134,7 +148422,12 @@ function manageSpeech(args, options = {}) {
       const prior = speechRevision(line, character(line.speaker));
       const oldAudio = line.audio;
       const oldDelivery = line.delivery;
+      const priorLines = (scene.narration || []).map((entry2) => ({ ...entry2 }));
+      if (args.patch.voiceoverKind && args.patch.delivery && args.patch.delivery !== "voiceover")
+        throw new Error("An inner thought requires voiceover delivery");
       Object.assign(line, args.patch);
+      if (args.patch.voiceoverKind) line.delivery = "voiceover";
+      if (line.voiceoverKind === null || line.delivery !== "voiceover") delete line.voiceoverKind;
       if (args.patch.acting === null) delete line.acting;
       if (args.patch.speaker && object5(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
@@ -148147,9 +148440,10 @@ function manageSpeech(args, options = {}) {
       if (speechRevision(line, character(line.speaker)) !== prior) {
         const video2 = object5(object5(scene.visual).video);
         const binding = object5(video2.speechBinding);
-        invalidated = { audio: oldAudio || null, video: Object.keys(video2).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video2 : null, edit: true };
+        const changedRoute = speechContract().invalidateVoiceoverChange(scene, priorLines);
+        invalidated = { audio: oldAudio || null, video: changedRoute || Object.keys(video2).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video2 : null, edit: true };
         delete line.audio;
-        if (binding.mode !== "native") line.mediaStatus = "needs_audio";
+        if (binding.mode !== "native" || line.delivery === "voiceover") line.mediaStatus = "needs_audio";
         if (invalidated.video) video2.speechStatus = "stale";
         scene.speechRevision = (Number(scene.speechRevision) || 0) + 1;
       }
@@ -148181,7 +148475,7 @@ function manageSpeech(args, options = {}) {
       line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation: generation2 };
       line.mediaStatus = "audio_ready";
     }
-    const clock = actingContract().planScenePerformance(scene, measuredDuration);
+    const clock = actingContract().planScenePerformance(timedShot(scene), measuredDuration);
     timing = {
       shotId: scene.id,
       storedSeconds: scene.duration,
@@ -148199,7 +148493,7 @@ function manageSpeech(args, options = {}) {
       if (!currentAudio(line, character(line.speaker))) throw new Error("Attach current speech before retiming");
     }
     const contract2 = nodeModule7.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
-    const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
+    const result = contract2.retime(timedShot(scene), args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
     const video2 = object5(object5(scene.visual).video);
@@ -148273,7 +148567,7 @@ function manageSpeech(args, options = {}) {
         throw new Error("Caller capabilities disagree with selected adapter registry; use the registered video operation");
       args = { ...args, capabilities: verified };
     }
-    plan2 = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
+    plan2 = speechVideoPlan({ ...timedShot(scene), narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
     const continuityContract = nodeModule7.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
     plan2 = { ...plan2, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname11(file)) };
     if (args.action === "attach_video") {
@@ -148395,6 +148689,7 @@ function manageSpeech(args, options = {}) {
           videoPath,
           videoSha256,
           quality,
+          ...plan2.mode === "voiceover" && scene.narration?.some((line) => line.voiceoverKind === "inner_thought") && { voiceoverKind: "inner_thought" },
           ...performanceSource && { performanceSource },
           ...generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
@@ -148490,7 +148785,7 @@ function manageSpeech(args, options = {}) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync37(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname11(file), board: win }), audioProvenanceStatus: object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync37(file)), changed, invalidated, plan: plan2, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname11(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object5(object5(scene.visual).video).speechStatus !== "stale" && object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts
@@ -149007,7 +149302,7 @@ function save2(draft) {
   writeFileSync27(temp, JSON.stringify(draft), { mode: 384 });
   renameSync12(temp, file);
 }
-function load13(id) {
+function load14(id) {
   const value = JSON.parse(readFileSync39(draftLocation(id).file, "utf8"));
   draftSchema.parse(value);
   if (value.draftId !== id || value.channel !== draftLocation(id).channel || threadsBodyHash(value.body, value.selfReply) !== value.bodyHash) {
@@ -149048,7 +149343,7 @@ function createThreadsDraft(args) {
 function submitThreadsReview(args) {
   return gateCall("threads_review_submit", args, () => {
     const input = reviewSchema2.strict().parse(args);
-    const draft = load13(input.draftId);
+    const draft = load14(input.draftId);
     if (input.bodyHash !== draft.bodyHash) throw new Error("Review body hash mismatch");
     if (draft.surface === "reply" && input.axis !== "voice") throw new Error("Reply drafts use voice review only");
     const surfaces = (input.axis !== "voice" ? [draft.body] : [draft.body, draft.selfReply ?? ""]).map(whitespace);
@@ -149069,7 +149364,7 @@ function submitThreadsReview(args) {
 function checkThreadsGate(input) {
   return gateCall("threads_publish", input, () => {
     if (!input.draftId) throw new Error("Growth publishing requires draftId");
-    const draft = load13(input.draftId);
+    const draft = load14(input.draftId);
     if (input.channel !== draft.channel) throw new Error("Draft channel mismatch");
     if (input.replyToId !== draft.replyToId) throw new Error("Draft reply target mismatch");
     const bodyHash = threadsBodyHash(input.caption, input.selfReply);
@@ -154635,10 +154930,10 @@ function renderCapabilityStatus() {
 
 // src/character-panel.ts
 import { existsSync as existsSync42, readFileSync as readFileSync41, writeFileSync as writeFileSync30 } from "node:fs";
-import { createRequire as createRequire25 } from "node:module";
+import { createRequire as createRequire26 } from "node:module";
 import path39 from "node:path";
-var load14 = createRequire25(import.meta.url);
-var shared4 = (file) => load14(`../../skills/${file}`);
+var load15 = createRequire26(import.meta.url);
+var shared4 = (file) => load15(`../../skills/${file}`);
 var characterPanelSchema = external_exports.object({
   identityPath: external_exports.string().min(1).describe("<channel>/assets/characters/<id>/identity.md"),
   view: external_exports.enum(["face", "front", "back"]),

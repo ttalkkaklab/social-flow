@@ -155,9 +155,17 @@ function verifySceneSpeech(wire,plan) {
     const cues = card.timeline?.dialogueCues ?? [];
     if (cues.some(cue => turns.filter(line => line.id === cue.lineId).length !== 1))
       mismatch('a dialogue cue must identify one authored line');
-    const original = body.shots.find(shot => shot.shot_id === card.id) ?? (body.shots.length === 1 && body.shots[0]);
+    const privatePicture = turns.some(line => line.voiceoverKind === 'inner_thought');
+    const original = body.shots.find(shot => shot.shot_id === card.id) ?? (!privatePicture && body.shots.length === 1 && body.shots[0]);
     if (!original) mismatch('the requested shot is absent from the recorded scene');
     const dialogue = original.dialogue ?? [];
+    if (privatePicture && (driver || original.performance_uri || dialogue.length))
+      mismatch('the recorded thought interval contains a speaking performance');
+    if (privatePicture) {
+      const cues = (body.scene_audio?.cues ?? []).filter(cue => cue.frame == null ||
+        cue.frame >= original.start_frame && cue.frame < original.end_frame);
+      require('./voiceover-direction.js').checkRecordedThoughtPicture([body.prompt,cues],original,turns);
+    }
     if (original.performance_uri) {
       const file = lines.length === 1 && lines[0].audio?.path;
       if (!file || !plan.boardDir) mismatch('restore the recorded dialogue performance for this shot');

@@ -1998,7 +1998,7 @@ window.STORYBOARD_READY = (async function () {
       revealNo: function (n) { return "reveal " + n; },
       screenText: "Screen text", noScreenText: "no screen text — the picture alone",
       audioSec: "Dialogue / voice", subtitleLabel: "Subtitle",
-      speechDelivery: { on_screen: "On-screen dialogue", off_screen: "Off-screen dialogue", voiceover: "Voiceover", unspecified: "Delivery not specified" },
+      speechDelivery: { on_screen: "On-screen dialogue", off_screen: "Off-screen dialogue", voiceover: "Voiceover", inner_thought: "Inner thought", unspecified: "Delivery not specified" },
       speechUnassigned: "Unassigned speaker", speechNarrator: "Narrator", speechSilent: "No dialogue",
       carryNote: function (states, lines) {
         return "The screen changes " + states + " times but there are " + lines +
@@ -2360,7 +2360,7 @@ window.STORYBOARD_READY = (async function () {
       revealNo: function (n) { return "공개 " + n; },
       screenText: "화면 글자", noScreenText: "화면 글자 없음 — 그림만",
       audioSec: "대사·음성", subtitleLabel: "자막",
-      speechDelivery: { on_screen: "화면 속 대사", off_screen: "화면 밖 대사", voiceover: "보이스오버", unspecified: "발화 방식 미지정" },
+      speechDelivery: { on_screen: "화면 속 대사", off_screen: "화면 밖 대사", voiceover: "보이스오버", inner_thought: "속마음", unspecified: "발화 방식 미지정" },
       speechUnassigned: "화자 미지정", speechNarrator: "나레이터", speechSilent: "대사 없음",
       carryNote: function (states, lines) {
         return "화면은 " + states + "번 바뀌는데 문장은 " + lines +
@@ -3177,7 +3177,7 @@ window.STORYBOARD_READY = (async function () {
     return '<div class="speech-turn" data-speaker="' + esc(speakerId || '') + '" data-delivery="' + esc(delivery) + '"' +
       (n.id ? ' data-line-id="' + esc(n.id) + '"' : '') + '>' + avatar + '<div class="speech-content">' +
       '<div class="speech-meta"><b>' + esc(name) + '</b>' + (narrator ? '<span>' + esc(T.speechNarrator) + '</span>' : '') +
-      '<span class="speech-delivery">' + esc(T.speechDelivery[delivery] || delivery) + '</span></div>' +
+      '<span class="speech-delivery">' + esc(T.speechDelivery[n.voiceoverKind === 'inner_thought' && delivery === 'voiceover' ? 'inner_thought' : delivery] || delivery) + '</span></div>' +
       '<div class="speech-bubble"><p class="speech-text">' + copy(n.tts || n.sub || '') + '</p>' +
       (n.sub && strip(n.tts) !== strip(n.sub) ? '<div class="sub-diff"><b>' + esc(T.subtitleLabel) + '</b> ' + '<span class="speech-subtitle">' + copy(n.sub) + '</span></div>' : '') + '</div>' +
       (n.deliveryReason ? '<p class="speech-reason">' + copy(n.deliveryReason) + '</p>' : '') +

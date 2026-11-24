@@ -276,7 +276,8 @@ function check(work, board) {
           sceneRender:receipts.sceneRenders.get(path.resolve(board,binding.videoPath)),sceneCards:win.SCENES.filter(card=>card.scene===s.scene),characters:win.SB_DOC?.characters,
           audioPath:binding.generationAudioPath,sceneAudioPath:win.STRUCTURE?.scenes?.find(owner=>owner.no===s.scene)?.videoDirection?.audio?.path});
       }
-      const payload=require('../../_shared/scene-acting.js').scenePerformancePayload(s);
+      const acting=require('../../_shared/scene-acting.js');
+      const payload=acting.scenePerformancePayload(acting.withThoughtClock(s,win.STRUCTURE?.scenes));
       if(binding.performanceRevision && binding.performanceRevision!==hash(JSON.stringify(payload)))warnings.push('card '+i+': performance plan changed since the clip was bound; inspect the clip against the current plan (stale)');
       if(!binding.performanceRevision)warnings.push('card '+i+': legacy video performance binding is unverified');
       media[binding.videoPath]=binding.videoSha256;
@@ -303,10 +304,12 @@ function check(work, board) {
       continue;
     }
     const receipt=read(audio+'.generation.json')||read(audio+'.quality.json');
+    if(require('../../_shared/scene-acting.js').hasCuedThought(s) && receipt?.generator!=='speech_compose')
+      throw new Error('Compose the private speech at its authored frame for card '+i);
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
       if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
       const padded=lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0) || s.performance?.some(event=>event.kind==='action' && (win.SB_DOC?.performanceTimingVersion===1 || event.durationSeconds!==undefined || event.withGroup!==undefined));
-      const direct=!padded && lines.length===1 && lines[0].audio?.sha256===media[audio];
+      const direct=!padded && !require('../../_shared/scene-acting.js').hasCuedThought(s) && lines.length===1 && lines[0].audio?.sha256===media[audio];
       if(!direct && (!receipt || receipt.audioSha256!==media[audio] || JSON.stringify(receipt.lineIds)!==JSON.stringify(lines.map(n=>n.id)) || receipt.expectedText!==lines.map(n=>n.tts).join('. ')))throw new Error('Scene WAV has no current line-bound generation receipt for card '+i);
     }
     // Generation receipts validate voice and speed, never a listening score.
@@ -314,7 +317,7 @@ function check(work, board) {
       const composition=require('./compose-speech.js');
       if(JSON.stringify(receipt.lineSources)!==JSON.stringify(composition.lineSources(lines)))throw new Error('Scene audio composition is stale for card '+i);
       if(receipt.audioSha256!==media[audio])throw new Error('Scene audio composition changed for card '+i);
-      const {intervals,durationSeconds:duration}=composition.sceneTiming(s,board,win.SB_DOC?.performanceTimingVersion);
+      const {intervals,durationSeconds:duration}=composition.sceneTiming(s,board,win.SB_DOC?.performanceTimingVersion,win.STRUCTURE?.scenes);
       if(JSON.stringify(receipt.intervals)!==JSON.stringify(intervals))throw new Error('Scene audio timing intervals are stale for card '+i);
       if(Math.abs(composition.duration(audio)-duration)>0.03)throw new Error('Scene audio does not preserve planned acting timing for card '+i);
       actedIntervals[i]=intervals;

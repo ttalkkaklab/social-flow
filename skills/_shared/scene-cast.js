@@ -20,6 +20,8 @@ function sceneSpeech(scene, cards, planning = false) {
     }
     if (planning && !['on_screen','off_screen','voiceover'].includes(line.delivery))
       throw new Error('scene_speaker_delivery: identify the delivery of ' + line.speaker + ' in ' + card.id);
+    if (line.voiceoverKind === 'inner_thought' && line.delivery !== 'voiceover')
+      throw new Error('scene_speaker_delivery: inner thought ' + (line.id || line.speaker) + ' requires voiceover delivery');
     spoken.add(line.speaker);
     if (declared && !declared.includes(line.speaker)) {
       throw new Error('scene_speaker_mismatch: scene ' + scene.no + ', shot ' + card.id + ', line ' +
@@ -76,14 +78,21 @@ function sceneSpeechRoute(scene, cards, selection) {
     card.timeline.transition === (index ? 'hard_cut' : 'open') &&
     card.timeline.images?.some(pin => pin.role === 'start' && pin.frame === card.timeline.startFrame) &&
     !card.timeline.dialogueCues?.length);
+  const cutVoiceover = cards.some(card => {
+    const lines = orderedSpeech(card).filter(line => line.tts?.trim());
+    return lines.length && lines.every(line => line.delivery === 'voiceover');
+  });
+  const mixedCuts = distilled && mode === 'reference' && !direction.oneTake && cutVoiceover;
+  if (mixedCuts) operation = 'image';
   const perShot = distilled && operation === 'image' && cards.length > 1 && !direction.oneTake &&
-    (mode === 'reference' && speakers.length > 2 || anchoredCuts);
+    (mixedCuts || mode === 'reference' && speakers.length > 2 || anchoredCuts);
   return {speakers, operation, mode, ...(perShot ? {rendering:'per_shot'} : {}), external:!visible && physical.length > 0};
 }
 
 // Each native render binds its own speakers. A finished soundtrack uses one audio input.
 function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering = route.rendering, generateAudio, limit}) {
   if (['reference','generated'].includes(route.mode) && (generateAudio === false || cards.some(card =>
+      orderedSpeech(card).some(line => line.delivery !== 'voiceover' && line.tts?.trim()) &&
       require('../storyboard/references/production-mode.js').videoSlot(card)?.generateAudio === false)))
     throw new Error('scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack');
   if (route.mode !== 'reference') return;

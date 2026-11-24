@@ -105,7 +105,7 @@ approved videos.
 For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
 while preparing sheets and shots. Plan img2img for whole-image changes, inpaint for
 local corrections and MSR for one character's physical dialogue. Silent shots and
-inner thoughts use image2video; thoughts get timed character TTS.
+inner thoughts use image2video. Set `voiceoverKind:"inner_thought"` in `shot_dialogue` and use the thinking character’s timed TTS.
 Record the source, mask or numbered reference roles and the intended operation.
 MSR references are not first/last frames. Preserve the GPT Image 2 rule for readable
 text; do not generate assets merely to test a planning choice.

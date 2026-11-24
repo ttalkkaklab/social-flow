@@ -313,6 +313,10 @@ test('EP13 keeps five Linh face pins and only her third-shot voice in one native
       timeline:{startFrame,endFrame,transition:i?'hard_cut':'open',framing:'Fixed shot.',action,images},
       narration:i===2?[{id:'s0002-l1',speaker:linh.id,delivery:'on_screen',tts:'Anh Bơ, cưới em nha?'}]:[]};
   });
+  const thought = 'The key is still there.';
+  members[1].narration = [{id:'linh-private',speaker:linh.id,delivery:'voiceover',voiceoverKind:'inner_thought',tts:thought,
+    acting:{visual:'Her fingers cover the key.',vocal:'A wavering whisper.'}}];
+  members[1].performance = [{kind:'narration',character:linh.id,group:1,to:'self'}];
   f.members.splice(0,f.members.length,...members);
   f.save();
   const board = path.join(f.dir,'scenes.js');
@@ -347,6 +351,33 @@ test('EP13 keeps five Linh face pins and only her third-shot voice in one native
     submitted.push(JSON.parse(options.body));
     throw new Error('Captured scene submission');
   };
+  const boardText = fs.readFileSync(board,'utf8');
+  const cueBinding = {shotId:'s0038',dialogueCues:[{lineId:'linh-private',frame:97}]};
+  const cuedPlan = (frame=97) => planManagedVideo({...f.input,requestId:'thought-cue',sceneRendering:'per_shot',
+    shotBindings:[{...cueBinding,dialogueCues:[{lineId:'linh-private',frame}]}]});
+  await assert.rejects(cuedPlan, /thought_timing.*timeline.dialogueCues/);
+  assert.equal(validated.length,0);
+  fs.writeFileSync(board,boardText+'\nwindow.SCENES[1].timeline.dialogueCues='+JSON.stringify(cueBinding.dialogueCues)+';');
+  await assert.rejects(()=>cuedPlan(110), /thought_timing.*timeline.dialogueCues/);
+  const savedCue = await cuedPlan();
+  assert.equal(savedCue.sceneRequest.shots[1].dialogue,undefined);
+  fs.writeFileSync(board,boardText);
+  validated.length=0;
+  fs.appendFileSync(board, '\nwindow.SCENES[1].timeline.openingPositions=' + JSON.stringify([{
+    character:linh.id, images:[1], position:'At the rail. She whispers: “' + thought + '”',
+  }]) + ';');
+  await assert.rejects(planManagedVideo({...f.input,requestId:'private-direction'}), /video_voiceover_embedded/);
+  fs.writeFileSync(board,boardText + '\nwindow.SCENES[1].timeline.action="She leans in and murmurs The key is still there.";');
+  await assert.rejects(planManagedVideo({...f.input,requestId:'private-action'}), /video_voiceover_embedded/);
+  fs.writeFileSync(board,boardText + '\nwindow.SCENES[2].narration[0].tts=' + JSON.stringify(thought) +
+    ';\nwindow.SCENES[2].timeline.action=' + JSON.stringify('She says “' + thought + '”') + ';');
+  const echoed = await planManagedVideo({...f.input,requestId:'spoken-echo-after-thought'});
+  const echoWire = await buildSceneWire(echoed.sceneRequest,selected,'720x1280');
+  assert.equal(echoWire.body.shots[1].dialogue,undefined);
+  assert.ok(!echoWire.body.shots[1].description.includes(thought));
+  assert.equal(echoWire.body.shots[2].dialogue[0].text,thought);
+  validated.length = 0;
+  fs.writeFileSync(board,boardText);
   const plan = await planManagedVideo({...f.input,requestId:'ep13-s01-right-rear-native-v4'});
   assert.deepEqual([plan.tool,plan.selection.model,plan.selection.operation],['astra_genai_img2video',selected,'image']);
   assert.deepEqual(plan.sceneRequest.shots.map(s=>[s.shotId,s.startFrame,s.endFrame]),shots.map(s=>s.slice(0,3)));
@@ -364,6 +395,10 @@ test('EP13 keeps five Linh face pins and only her third-shot voice in one native
   await assert.rejects(executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected child submission')),/Captured scene submission/);
   assert.equal(submitted.length,1);
   const [wire] = submitted;
+  assert.doesNotMatch(JSON.stringify(wire), /The key is still there|wavering whisper/i);
+  assert.match(wire.shots[1].description, /Her fingers cover the key/);
+  assert.doesNotMatch(wire.shots[1].description, /speaks|listens/i);
+  assert.equal(wire.shots[1].dialogue, undefined);
   assert.deepEqual(validated,[wire,wire]);
   assert.deepEqual([wire.model,wire.num_frames,wire.scene_audio],[selected,267,undefined]);
   const pins = wire.shots.flatMap(s=>s.images.map(p=>[s.shot_id,p.role,p.frame,p.image_uri]));
@@ -808,6 +843,68 @@ test('scene camera returns to its default after the insert and every shot cue re
   assert.match(legacy.shots[2].framing,/locked/);
 });
 
+
+test('private words stay out of speech instructions while a visual object can share a short thought', async t => {
+  const f = busking(t), card = f.members[0];
+  delete f.scene.audio;
+  const line = {id:'private', speaker:'mai-an', delivery:'voiceover', voiceoverKind:'inner_thought', tts:'Stop.'};
+  card.narration = [line];
+  const plan = () => prepareSceneRequest(1,[card],f.scene,f.episode,[line],
+    {bindDialogue:false,bindOpening:false,suffix:'',shotScoped:true},()=>null).request;
+  const sceneAction = f.scene.action;
+  card.timeline.action = 'She talks to Ben in a low voice.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She leans toward Ben.';
+  f.scene.action = 'In the opening shot she says: “Goodbye.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  f.scene.action = sceneAction;
+  card.timeline.action = 'She mutters Stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She hisses stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She whispers under her breath, stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'Stop, she whispers under her breath.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'Her lips form Stop slowly.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She pushes the stop button as the radio whispers.';
+  assert.match((await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024')).body.shots[0].description,/stop button/);
+  line.tts = 'Wait.';
+  for (const action of ['She sings Wait twice.', 'She shapes Wait with her lips.',
+    'His mouth forms Wait.', 'Her lips shape Wait.', 'Her voice repeats Wait.']) {
+    card.timeline.action = action;
+    assert.throws(plan, /video_voiceover_embedded/);
+  }
+  card.timeline.action = 'Two friends wait at the door.';
+  assert.match((await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024')).body.shots[0].description,/Two friends wait at the door/);
+  card.timeline.action = 'Mia and Ben wait at the door.';
+  assert.match((await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024')).body.shots[0].description,/Mia and Ben wait at the door/);
+  line.tts = 'Stop.';
+  card.timeline.action = 'She watches the second hand stop.';
+  const clock = await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024');
+  assert.match(clock.body.shots[0].description, /She watches the second hand stop/);
+  line.tts = "I can't trust him.";
+  card.timeline.action = 'She whispers, “I can’t trust him.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  line.tts = 'Please, stop.';
+  card.timeline.action = 'She whispers “Please stop.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  line.tts = 'Stop.';
+  card.timeline.action = 'She looks at the door.';
+  line.acting = {visual:'She mutters Stop.'};
+  assert.throws(plan, /video_voiceover_embedded/);
+  delete line.acting;
+  line.tts = 'The door.';
+  card.timeline.action = 'She closes the door.';
+  const {body} = await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024');
+  assert.match(body.shots[0].description,/She closes the door/);
+  assert.equal(body.shots[0].dialogue,undefined);
+  line.tts = 'The red front door.';
+  card.timeline.action = 'She closes the red front door.';
+  const longerObject = await buildSceneWire(plan(),'ltx-2.5-22b-distilled','576x1024');
+  assert.match(longerObject.body.shots[0].description,/She closes the red front door/);
+});
 
 test('keeps simultaneous actions with the correct spoken turn in provider prose', async () => {
   const {default: {notes: sceneDirectionNotes}} = await import('../../skills/storyboard/references/scene-direction.js');
