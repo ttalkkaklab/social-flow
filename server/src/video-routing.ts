@@ -2,7 +2,7 @@ import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneReque
 import { readSceneCapabilities, sceneRequestId, sceneRequestIssues, SCENE_LIMITS, submitSceneBody, validateSceneBody } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
-import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
+import { buildFasth3Body, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
@@ -190,6 +190,7 @@ export interface VideoPlan {
   promptProfile?: Readonly<ScenePromptProfile>;
   /** The submitted prompt with reference numbers as names; an author edits it and plans again with `prompt`. */
   promptTemplate?: string;
+  promptSlots?: {key: string; label: string}[];
   /** Opening positions the LTX lanes state ahead of the prompt; not part of the template. */
   promptHeader?: string; authoredPrompt?: string; promptIssues?: PromptIssue[];
   conditioningInputs?: {version:1; driverSha256:string; shots:unknown[]};
@@ -297,7 +298,7 @@ function saveVideoPlan(plan: VideoPlan) {
   const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
   if (!fs.existsSync(file)) {
     // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
-    const {promptProfile: _profile, promptTemplate: _template, promptHeader: _header, ...manifest} = plan;
+    const {promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest} = plan;
     atomicJson(file, manifest);
   }
   fs.rmSync(blockedPlanFile(plan.episode, plan.requestId), {force:true});
@@ -921,9 +922,41 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   }
   const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings;
   // The numbers in a prompt follow the request as it is finally submitted, so names resolve against these bindings.
+  const mediaSlots: {name: string; role: 'motion' | 'soundtrack'; index: number}[] = [];
+  let videoAudioCount = 0;
+  if (Array.isArray(voice.args.referenceVideoPaths)) {
+    for (const [index, file] of voice.args.referenceVideoPaths.entries()) {
+      const name = path.parse(String(file)).name;
+      mediaSlots.push({name, role:'motion', index:index + 1});
+      if (tool === 'fasth3_omni_reference' && fasth3VideoAudioCount([path.resolve(context.episode, String(file))]))
+        mediaSlots.push({name, role:'soundtrack', index:++videoAudioCount});
+    }
+  }
+  if (tool === 'seedance_reference') {
+    let index = mediaSlots.filter(slot => slot.role === 'motion').length;
+    for (const key of ['referenceVideoUrls','referenceVideoTaskIds']) {
+      const files = voice.args[key];
+      if (Array.isArray(files)) for (const file of files) {
+        const name = key === 'referenceVideoTaskIds' ? String(file) : 'clip-' + createHash('sha256').update(String(file)).digest('hex').slice(0,12);
+        mediaSlots.push({name, role:'motion', index:++index});
+      }
+    }
+  }
+  if (Array.isArray(voice.args.referenceAudioPaths)) {
+    for (const [index, file] of voice.args.referenceAudioPaths.entries()) {
+      const slot = videoAudioCount + index + 1;
+      if (!voice.voiceContinuity?.speakers.some(speaker => speaker.audioIndex === slot))
+        mediaSlots.push({name:path.parse(String(file)).name, role:'soundtrack', index:slot});
+    }
+  }
   const promptSlots = scenePromptSlots(promptProfile.referenceLabels,
     numberedImages(voice.args, imageBindings, voice.voiceContinuity?.speakers, cast, context.episode, String(context.sceneMembers?.[0]?.id ?? shot.id ?? '')),
-    voice.voiceContinuity?.speakers);
+    voice.voiceContinuity?.speakers, mediaSlots);
+  if (motionReferences?.length) {
+    const labels = motionReferences.map((_, i) => formatReferenceLabel(promptProfile.referenceLabels, 'video', i + 1));
+    voice = {...voice, args:{...voice.args, prompt:String(voice.args.prompt) + '\nUse ' + labels.join(', ') +
+      ' for camera movement and motion timing. Keep the cast, setting and dialogue from the storyboard.'}};
+  }
   const authored = input.prompt !== undefined;
   let promptIssues: PromptIssue[] | undefined;
   if (authored) {
@@ -934,14 +967,15 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       ? sceneCastProse('', listed.data, voice.voiceContinuity.speakers).positions : listed.data;
     // A line or sentence the planner's own prompt carries is one this model's prompt is expected to carry.
     const carried = (text?: string) => Boolean(text && composed.includes(text));
-    if ((input.wholeScene || savedDraft) && ['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy || ''))
-      assertSceneDialogue(input.prompt!, lines.filter(line => line.delivery !== 'voiceover'));
-    const resolved = resolveScenePrompt(input.prompt!, promptSlots, {composed, header:openingPrompt('', positions),
+    const resolved = resolveScenePrompt(input.prompt!, promptSlots, {composed, strictReferences:Boolean(input.wholeScene || savedDraft), header:openingPrompt('', positions),
       limit:promptLimit, schemaLimit:videoPromptLimit(tool),
       lines:lines.map(line => line.tts?.trim()).filter((text): text is string => carried(text)),
       sentences:[{code:'text_policy_missing', text:videoTextPolicy()}, {code:'silent_direction_missing', text:silentSuffix}].filter(sentence => carried(sentence.text))});
     const refused = resolved.issues.filter(issue => issue.level === 'error');
     if (refused.length) throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
+    if (['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy || ''))
+      assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'),
+        voice.voiceContinuity!.speakers, composed);
     promptIssues = resolved.issues;
     // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
     voice = {...voice, args:{...voice.args, prompt:resolved.body, ...(positions ? {openingPositions:positions} : {})}};
@@ -954,8 +988,8 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (!issue) throw error;
     throw new Error(/^[a-z_]+: /.test(issue.message) ? issue.message : 'prompt_refused: ' + issue.message);
   }
-  // Some adapter schemas trim their prompt. The author's text goes out as written, white space at its edges included.
-  if (authored) args.prompt = voice.args.prompt;
+  if (authored && args.prompt !== voice.args.prompt)
+    promptIssues!.push({level:'warning', code:'prompt_whitespace_normalized', detail:'The preview uses the whitespace accepted by the selected adapter.'});
   if (silentPicture) checkVoiceoverDirection(args, lines, true);
   const adaptiveDuration = selection.engine === 'seedance' && args.durationSeconds === -1;
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
@@ -1062,9 +1096,9 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     ...(authored ? {authoredPrompt:input.prompt, ...(promptIssues!.length ? {promptIssues} : {})} : {}),
     version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
     ...(imageBindings ? {imageBindings} : {}),
-    sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
+    sourceArgs: selection.engine === 'seedance' || motionReferences ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
-  const plan = { ...body, id: hash(body), ...(prepared ? {promptProfile} : {}),
+  const plan = { ...body, id: hash(body), ...(prepared ? {promptProfile, promptSlots:promptSlots.slots} : {}),
     ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions as OpeningPosition[] | undefined)) : {}) };
   return persist ? saveVideoPlan(plan) : plan;
 }

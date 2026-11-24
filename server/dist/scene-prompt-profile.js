@@ -60,9 +60,10 @@ export function referenceLabel(tool, kind, index, model) {
     return formatReferenceLabel(scenePromptProfile(tool, model).referenceLabels, kind, index);
 }
 export function formatReferenceLabel(style, kind, index) {
+    const label = kind[0].toUpperCase() + kind.slice(1);
     if (style === 'picture_audio_tags')
-        return '<' + (kind === 'image' ? 'Picture' : 'Audio') + ' ' + index + '>';
+        return '<' + (kind === 'image' ? 'Picture' : label) + ' ' + index + '>';
     if (style === 'reference_indexed')
         return 'reference ' + kind + ' ' + index;
-    return (style === 'at_indexed' ? '@' : '') + (kind === 'image' ? 'Image' : 'Audio') + ' ' + index;
+    return (style === 'at_indexed' ? '@' : '') + label + ' ' + index;
 }

@@ -129963,9 +129963,10 @@ function referenceLabel(tool2, kind, index, model2) {
   return formatReferenceLabel(scenePromptProfile(tool2, model2).referenceLabels, kind, index);
 }
 function formatReferenceLabel(style, kind, index) {
-  if (style === "picture_audio_tags") return "<" + (kind === "image" ? "Picture" : "Audio") + " " + index + ">";
+  const label = kind[0].toUpperCase() + kind.slice(1);
+  if (style === "picture_audio_tags") return "<" + (kind === "image" ? "Picture" : label) + " " + index + ">";
   if (style === "reference_indexed") return "reference " + kind + " " + index;
-  return (style === "at_indexed" ? "@" : "") + (kind === "image" ? "Image" : "Audio") + " " + index;
+  return (style === "at_indexed" ? "@" : "") + label + " " + index;
 }
 
 // src/video-registry.ts
@@ -130379,7 +130380,7 @@ var spans = (text4) => {
 };
 var loneBrace = (text4) => /[{}]/.test(text4.replace(TOKEN, ""));
 var word = (text4) => text4.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "");
-function scenePromptSlots(style, images = [], voices = []) {
+function scenePromptSlots(style, images = [], voices = [], media = []) {
   const slots = [], unlabeled = /* @__PURE__ */ new Set();
   const owned = /* @__PURE__ */ new Map();
   for (const image2 of images) {
@@ -130388,26 +130389,35 @@ function scenePromptSlots(style, images = [], voices = []) {
       continue;
     }
     const label = formatReferenceLabel(style, "image", image2.number);
-    if (image2.owner) owned.set(image2.owner, [...owned.get(image2.owner) ?? [], { role: word(image2.role ?? "") || "image", label }]);
+    if (image2.owner) owned.set(image2.owner, [...owned.get(image2.owner) ?? [], { role: word(image2.role ?? "") || "image", label, id: image2.id }]);
     else slots.push({ key: word((image2.guide ? image2.shotId : void 0) ?? image2.id ?? "reference" + image2.number) + ".image", label });
   }
   for (const [owner, rows] of owned) {
-    const seen = /* @__PURE__ */ new Map();
     for (const row of rows) {
-      const count2 = (seen.get(row.role) ?? 0) + 1;
-      seen.set(row.role, count2);
-      slots.push({ key: word(owner) + "." + row.role + (count2 > 1 ? count2 : ""), label: row.label });
+      const repeated = rows.some((other) => other !== row && other.role === row.role);
+      const role = repeated && row.id ? row.role + "-" + word(row.id) : row.role;
+      slots.push({ key: word(owner) + "." + role, label: row.label });
     }
     if (rows.length === 1 && rows[0].role !== "image" && !unlabeled.has(word(owner) + ".image")) slots.push({ key: word(owner) + ".image", label: rows[0].label });
   }
   for (const voice of voices) if (voice.audioIndex) slots.push({ key: word(voice.speaker) + ".voice", label: formatReferenceLabel(style, "audio", voice.audioIndex) });
-  const keys2 = /* @__PURE__ */ new Set();
+  for (const item of media) slots.push({
+    key: word(item.name) + "." + item.role,
+    label: formatReferenceLabel(style, item.role === "motion" ? "video" : "audio", item.index)
+  });
+  const keys2 = /* @__PURE__ */ new Map();
+  const ambiguous = /* @__PURE__ */ new Set();
+  for (const { key, label } of slots) {
+    if (keys2.has(key) && keys2.get(key) !== label) ambiguous.add(key);
+    keys2.set(key, label);
+  }
   return {
-    slots: slots.filter((slot) => NAME2.test("{" + slot.key + "}") && !keys2.has(slot.key) && keys2.add(slot.key)),
+    slots: [...keys2].filter(([key]) => NAME2.test("{" + key + "}") && !ambiguous.has(key)).map(([key, label]) => ({ key, label })),
+    ambiguous: [...ambiguous],
     unlabeled: [...unlabeled].filter((key) => !keys2.has(key))
   };
 }
-function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) {
+function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, checks = {}) {
   const labels = new Map(slots.map((slot) => [slot.key, slot.label]));
   const named = /* @__PURE__ */ new Map();
   for (const slot of slots) if (!named.has(slot.label)) named.set(slot.label, slot.key);
@@ -130421,14 +130431,22 @@ function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) {
   const board = new Set(checks.composed?.match(TOKEN) ?? []);
   const body = spans(template).map((span) => {
     if (!span.quoted) {
-      for (const [label, key] of named) if (labelPattern(label).test(span.text))
-        report("warning", "label_literal", `"${label}" is written as a number; write {${key}} so it follows the submitted order`);
+      for (const match2 of span.text.matchAll(/(?<![\p{L}\p{N}_])(?:<(?:Picture|Audio|Video) \d+>|(?:reference |@)?(?:Image|Audio|Video) \d+)(?!\d|\.\d)/giu)) {
+        const label = match2[0], key = named.get(label);
+        if (!key) report("error", "reference_unknown", label + " does not identify a named input in this request");
+        else report(
+          checks.strictReferences ? "error" : "warning",
+          "label_literal",
+          label + " depends on input order; use {" + key + "}"
+        );
+      }
     }
     return span.text.replace(TOKEN, (token) => {
       const name = NAME2.exec(token), key = name ? name[1] + "." + name[2] : "", label = labels.get(key);
       if (board.has(token) && (span.quoted || !label)) return token;
       if (label) return label;
-      if (unlabeled.includes(key)) report("error", "placeholder_unlabeled", `${token} is sent as a timed frame, which this model's prompt cannot name`);
+      if (ambiguous.includes(key)) report("error", "placeholder_ambiguous", token + " matches multiple inputs; give the assets distinct names");
+      else if (unlabeled.includes(key)) report("error", "placeholder_unlabeled", `${token} is sent as a timed frame, which this model's prompt cannot name`);
       else if (name) report("error", "placeholder_unresolved", `${token} names no submitted reference; available: ${slots.map((slot) => "{" + slot.key + "}").join(" ") || "none"}`);
       else report("error", "placeholder_unresolved", `${token} is not a reference name; braces are kept for {id.role}, {id.image} and {id.voice}`);
       return token;
@@ -130459,9 +130477,8 @@ function scenePromptTemplate(prompt, { slots }, header = "") {
   const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt).map((span) => span.quoted ? span.text : longestFirst.reduce((text4, [label, key]) => text4.replace(labelPattern(label), "{" + key + "}"), span.text)).join("");
   return { promptTemplate, ...headed ? { promptHeader: header } : {} };
 }
-function assertSceneDialogue(template, expected) {
-  if (!expected.length) return;
-  const wanted = new Set(expected.map((line) => line.tts));
+function assertSceneDialogue(template, expected, cast, composed) {
+  const visualQuotes = spans(composed).filter((span) => span.quoted && !expected.some((line) => line.tts === span.text.slice(1, -1))).map((span) => span.text.slice(1, -1));
   let index = 0;
   let lead = "";
   for (const span of spans(template)) {
@@ -130470,13 +130487,28 @@ function assertSceneDialogue(template, expected) {
       continue;
     }
     const words = span.text.slice(1, -1);
-    if (!wanted.has(words)) continue;
+    const clause = lead.trimEnd().split(/(?:[.!?](?=\s)|\n)\s*/u).at(-1) ?? "";
+    const visual = visualQuotes.indexOf(words);
+    if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
+      visualQuotes.splice(visual, 1);
+      continue;
+    }
     const line = expected[index++];
-    if (line?.tts !== words)
-      throw new Error("scene_dialogue_mismatch: preserve the approved spoken lines in scene order");
-    const voice = lead.match(/\{([\p{L}\p{N}_-]+)\.voice\}\s*(?:,\s*off screen)?\)?\s*:\s*$/u);
-    if (voice && line.speaker && voice[1] !== line.speaker)
-      throw new Error("scene_dialogue_speaker: the voice immediately introducing this line belongs to another character");
+    if (!line || line.tts !== words)
+      throw new Error("scene_dialogue_mismatch: keep exactly the approved spoken lines in scene order");
+    const owners = /* @__PURE__ */ new Set();
+    const plain = clause.replace(TOKEN, (token) => {
+      const parsed = NAME2.exec(token);
+      if (parsed && cast.some((person) => word(person.speaker) === parsed[1])) owners.add(parsed[1]);
+      return " ";
+    });
+    for (const person of cast) {
+      const aliases = [person.speaker, person.name].filter(Boolean).map(escaped).join("|");
+      if (new RegExp("(?<![\\p{L}\\p{N}_-])(?:" + aliases + ")(?![\\p{L}\\p{N}_-])", "iu").test(plain))
+        owners.add(word(person.speaker));
+    }
+    if (line.speaker && (owners.size !== 1 || !owners.has(word(line.speaker))))
+      throw new Error("scene_dialogue_speaker: introduce each quote with its approved speaker and matching face or voice");
   }
   if (index !== expected.length)
     throw new Error("scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes");
@@ -132575,7 +132607,7 @@ function checkVideoEnvironment(tool2) {
 function saveVideoPlan(plan2) {
   const file2 = path27.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file2)) {
-    const { promptProfile: _profile, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
+    const { promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
     atomicJson(file2, manifest2);
   }
   fs19.rmSync(blockedPlanFile(plan2.episode, plan2.requestId), { force: true });
@@ -133252,11 +133284,43 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       throw new Error("character_voice_required: " + tool2 + " cannot bind the selected voice sample for " + person.character);
   }
   const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings;
+  const mediaSlots = [];
+  let videoAudioCount = 0;
+  if (Array.isArray(voice.args.referenceVideoPaths)) {
+    for (const [index, file2] of voice.args.referenceVideoPaths.entries()) {
+      const name = path27.parse(String(file2)).name;
+      mediaSlots.push({ name, role: "motion", index: index + 1 });
+      if (tool2 === "fasth3_omni_reference" && fasth3VideoAudioCount([path27.resolve(context2.episode, String(file2))]))
+        mediaSlots.push({ name, role: "soundtrack", index: ++videoAudioCount });
+    }
+  }
+  if (tool2 === "seedance_reference") {
+    let index = mediaSlots.filter((slot) => slot.role === "motion").length;
+    for (const key of ["referenceVideoUrls", "referenceVideoTaskIds"]) {
+      const files3 = voice.args[key];
+      if (Array.isArray(files3)) for (const file2 of files3) {
+        const name = key === "referenceVideoTaskIds" ? String(file2) : "clip-" + createHash21("sha256").update(String(file2)).digest("hex").slice(0, 12);
+        mediaSlots.push({ name, role: "motion", index: ++index });
+      }
+    }
+  }
+  if (Array.isArray(voice.args.referenceAudioPaths)) {
+    for (const [index, file2] of voice.args.referenceAudioPaths.entries()) {
+      const slot = videoAudioCount + index + 1;
+      if (!voice.voiceContinuity?.speakers.some((speaker) => speaker.audioIndex === slot))
+        mediaSlots.push({ name: path27.parse(String(file2)).name, role: "soundtrack", index: slot });
+    }
+  }
   const promptSlots = scenePromptSlots(
     promptProfile.referenceLabels,
     numberedImages(voice.args, imageBindings, voice.voiceContinuity?.speakers, cast, context2.episode, String(context2.sceneMembers?.[0]?.id ?? shot.id ?? "")),
-    voice.voiceContinuity?.speakers
+    voice.voiceContinuity?.speakers,
+    mediaSlots
   );
+  if (motionReferences?.length) {
+    const labels = motionReferences.map((_, i2) => formatReferenceLabel(promptProfile.referenceLabels, "video", i2 + 1));
+    voice = { ...voice, args: { ...voice.args, prompt: String(voice.args.prompt) + "\nUse " + labels.join(", ") + " for camera movement and motion timing. Keep the cast, setting and dialogue from the storyboard." } };
+  }
   const authored = input.prompt !== void 0;
   let promptIssues;
   if (authored) {
@@ -133264,10 +133328,9 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const listed = openingPositionsSchema.safeParse(voice.args.openingPositions);
     const positions = !listed.success ? void 0 : sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length ? sceneCastProse("", listed.data, voice.voiceContinuity.speakers).positions : listed.data;
     const carried = (text4) => Boolean(text4 && composed.includes(text4));
-    if ((input.wholeScene || savedDraft) && ["reference_voice", "model_generated"].includes(voice.voiceContinuity?.strategy || ""))
-      assertSceneDialogue(input.prompt, lines.filter((line) => line.delivery !== "voiceover"));
     const resolved = resolveScenePrompt(input.prompt, promptSlots, {
       composed,
+      strictReferences: Boolean(input.wholeScene || savedDraft),
       header: openingPrompt("", positions),
       limit: promptLimit,
       schemaLimit: videoPromptLimit(tool2),
@@ -133276,6 +133339,13 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     });
     const refused = resolved.issues.filter((issue2) => issue2.level === "error");
     if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
+    if (["reference_voice", "model_generated"].includes(voice.voiceContinuity?.strategy || ""))
+      assertSceneDialogue(
+        scenePromptTemplate(resolved.body, promptSlots).promptTemplate,
+        lines.filter((line) => line.delivery !== "voiceover"),
+        voice.voiceContinuity.speakers,
+        composed
+      );
     promptIssues = resolved.issues;
     voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...positions ? { openingPositions: positions } : {} } };
   }
@@ -133287,7 +133357,8 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!issue2) throw error2;
     throw new Error(/^[a-z_]+: /.test(issue2.message) ? issue2.message : "prompt_refused: " + issue2.message);
   }
-  if (authored) args.prompt = voice.args.prompt;
+  if (authored && args.prompt !== voice.args.prompt)
+    promptIssues.push({ level: "warning", code: "prompt_whitespace_normalized", detail: "The preview uses the whitespace accepted by the selected adapter." });
   if (silentPicture) checkVoiceoverDirection(args, lines, true);
   const adaptiveDuration = selection.engine === "seedance" && args.durationSeconds === -1;
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
@@ -133400,7 +133471,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     tool: tool2,
     args,
     ...imageBindings ? { imageBindings } : {},
-    sourceArgs: selection.engine === "seedance" ? sourceArgs : input.args,
+    sourceArgs: selection.engine === "seedance" || motionReferences ? sourceArgs : input.args,
     durationPlan,
     ...selection.engine === "veo" ? { providerProject: config.googleCloudProject } : {},
     ...speechFit ? { speechFit } : {},
@@ -133416,7 +133487,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const plan2 = {
     ...body,
     id: hash2(body),
-    ...prepared ? { promptProfile } : {},
+    ...prepared ? { promptProfile, promptSlots: promptSlots.slots } : {},
     ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions)) : {}
   };
   return persist ? saveVideoPlan(plan2) : plan2;

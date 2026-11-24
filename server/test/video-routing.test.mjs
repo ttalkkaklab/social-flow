@@ -11,7 +11,7 @@ import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo
 import { buildLtxApiBody } from '../dist/ltx-api-video.js';
 import { generateWithReferences, seedanceReferenceSchema } from '../dist/seedance-client.js';
 import { buildVeoBody } from '../dist/veo-video.js';
-import { buildGenaiVideoBody } from '../dist/astra-genai-video.js';
+import { buildGenaiVideoBody, buildGenaiMsrBody, genaiMsrSchema } from '../dist/astra-genai-video.js';
 import { openingPrompt, sceneCastProse } from '../dist/msr-opening.js';
 import { VIDEO_ADAPTERS, videoCatalog, speechVideoCapabilities } from '../dist/video-registry.js';
 import { videoTransaction } from '../dist/video-state.js';
@@ -2003,9 +2003,9 @@ test('an authored scene prompt names its references and takes the numbers of the
  assert.equal(again.args.prompt,compiled.args.prompt);
  assert.equal(again.promptIssues,undefined);
  // The author's sentences go out as written; only the names change, after the opening positions this lane always states.
- const own='{guest.face} waits by the left door and says with {guest.voice}, "I stayed." {hero.image} answers with {hero.voice}, "You came."';
+ const own='{hero.face} waits by the left door and says with {hero.voice}, "You came." {guest.image} answers with {guest.voice}, "I stayed."';
  const authored=planVideo({...input,prompt:own});
- assert.equal(authored.args.prompt,compiled.promptHeader+'Image 2 waits by the left door and says with Audio 2, "I stayed." Image 1 answers with Audio 1, "You came."');
+ assert.equal(authored.args.prompt,compiled.promptHeader+'Image 1 waits by the left door and says with Audio 1, "You came." Image 2 answers with Audio 2, "I stayed."');
  assert.deepEqual(authored.promptIssues.map(issue=>issue.code).sort(),['reference_unmentioned','text_policy_missing']);
  assert.equal(authored.sceneRequest.prompt,authored.args.prompt);
  // The names follow the request itself: the picture's place in the list and the sample riding on it.
@@ -2019,10 +2019,13 @@ test('an authored scene prompt names its references and takes the numbers of the
  let sent;
  await f.execute(authored,async(tool,args)=>{sent=args.prompt;return result;});
  assert.equal(sent,authored.args.prompt);
- // White space is the author's too, on a lane whose adapter trims its own prompt.
+ // The author can retrieve the original edit. Approval uses the adapter's canonical bytes.
  const spaced=' \n'+own.replace(' waits','  waits\n')+'  \n';
- assert.equal(planVideo({...input,prompt:spaced},false).args.prompt,
-  compiled.promptHeader+' \n'+authored.args.prompt.slice(compiled.promptHeader.length).replace(' waits','  waits\n')+'  \n');
+ const normalized=planVideo({...input,prompt:spaced},false);
+ assert.equal(normalized.authoredPrompt,spaced);
+ assert.ok(normalized.promptIssues.some(issue => issue.code === 'prompt_whitespace_normalized'));
+ assert.equal(normalized.args.prompt,compiled.promptHeader+authored.args.prompt.slice(compiled.promptHeader.length).replace(' waits','  waits\n'));
+ assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(normalized.args)).prompt,normalized.sceneRequest.prompt);
  assert.throws(()=>planVideo({...input,prompt:' \n '},false),/^Error: scene_prompt_empty: /);
  assert.throws(()=>planVideo({...input,prompt:'{friend.face} speaks.'},false),/placeholder_unresolved: \{friend\.face\}/);
  assert.throws(()=>planVideo({...input,prompt:own+' {sigh}'},false),/placeholder_unresolved: \{sigh\} is not a reference name/);
@@ -2073,6 +2076,16 @@ test('storyboard edits are scoped to the selected scene model and operation', as
   assert.throws(() => planVideo({...input,prompt:draft.prompt.replace('You came.','Wrong line.')}, false), /scene_dialogue_mismatch/);
   assert.throws(() => planVideo({...input,prompt:draft.prompt + ' {missing.face}'}, false), /placeholder_unresolved/);
   assert.throws(() => planVideo({...input,prompt:'{guest.face} with {guest.voice}: "You came." {hero.face} with {hero.voice}: "I stayed."'}, false), /scene_dialogue_speaker/);
+  for (const changed of [
+    '{guest.face} speaks with {guest.voice}, "You came." {hero.face} answers with {hero.voice}, "I stayed."',
+    '{guest.face} speaks with {hero.voice}: "You came." {guest.face} answers with {guest.voice}: "I stayed."',
+    'Guest says, "You came." Hero answers, "I stayed."',
+  ]) assert.throws(() => planVideo({...input,prompt:changed},false), /scene_dialogue_speaker/);
+  assert.throws(() => planVideo({...input,prompt:draft.prompt + ' Hero says, "Extra."'},false), /scene_dialogue_mismatch/);
+  assert.throws(() => planVideo({...input,prompt:draft.prompt + ' Match Audio 99 and Image 88.'},false), /reference_unknown/);
+  assert.throws(() => planVideo({...input,prompt:draft.prompt + ' Match Image 1.'},false), /label_literal/);
+  const padded = planVideo({...input,prompt:draft.prompt + '  '},false);
+  assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(padded.args)).prompt, padded.sceneRequest.prompt);
   assert.equal(owner.promptDrafts[0].prompt, 'Other approved scene.');
 });
 
@@ -2100,6 +2113,27 @@ test('the same authored names take picture and audio tags on the H3 reference la
  assert.deepEqual(voiceMap, [['hero',2],['guest',3]]);
  const rebound = planVideo({...input,wholeScene:true,prompt:shifted.promptTemplate,args:{trimReferenceVideos:true}},false);
  assert.equal(rebound.args.prompt,shifted.args.prompt);
+ const clips = f.board.STRUCTURE.scenes[0].videoDirection;
+ const dolly = path.join(path.dirname(motion),'dolly.mp4');
+ fs.copyFileSync(motion,dolly);
+ clips.motionReferencePaths.push('dolly.mp4');
+ const edit = shifted.promptTemplate + '\nFollow {motion-with-audio.motion}. Match {motion-with-audio.soundtrack}.';
+ clips.promptDrafts = [{...compiled.selection,operation:'reference',prompt:edit}];
+ f.save();
+ const options = {...input,wholeScene:true,args:{trimReferenceVideos:true}};
+ assert.match(planVideo(options,false).args.prompt,/Follow <Video 1>. Match <Audio 1>/);
+ clips.motionReferencePaths.reverse();
+ f.save();
+ const reordered = planVideo(options);
+ assert.match(reordered.args.prompt,/Follow <Video 2>. Match <Audio 2>/);
+ assert.equal(reordered.args.referenceVideoPaths[1],motion);
+ let submitted;
+ await f.execute(reordered,async (_tool,args) => {submitted=args; return result;});
+ assert.equal(submitted.prompt, reordered.sceneRequest.prompt);
+ assert.deepEqual(submitted.referenceVideoPaths,reordered.args.referenceVideoPaths);
+ assert.ok(reordered.promptSlots.some(slot => slot.key === 'dolly.motion' && slot.label === '<Video 1>'));
+ assert.throws(() => planVideo({...options,prompt:edit + ' Follow <Video 1>.'},false), /label_literal/);
+ delete clips.promptDrafts;
  delete f.board.STRUCTURE.scenes[0].videoDirection.motionReferencePaths;
  f.save();
  assert.equal(compiled.tool,'fasth3_omni_reference');
@@ -2107,4 +2141,33 @@ test('the same authored names take picture and audio tags on the H3 reference la
  assert.equal(planVideo({...input,prompt:compiled.promptTemplate},false).args.prompt,compiled.args.prompt);
  const authored=planVideo({...input,prompt:'{hero.face} speaks with {hero.voice}: "You came." {guest.face} replies with {guest.voice}: "I stayed." Match {s1.image}.'},false);
  assert.match(authored.args.prompt,/^<Picture 1> speaks with <Audio 1>: "You came\." <Picture 2> replies with <Audio 2>: "I stayed\." Match <Picture \d>\.$/);
+});
+
+test('Seedance scene previews bind local motion to the selected model dialect', async t => {
+  for (const [model,prefix] of [['dreamina-seedance-2-0-260128',''],['dreamina-seedance-2-5-flash-261115','@']]) {
+    await t.test(model, async t => {
+      const f = await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'seedance',model,resolution:'720p'},[60,60],3);
+      for (const card of f.board.SCENES) {
+        const character = card.narration[0].speaker;
+        const sheet = path.join(f.root,'assets/characters',character);
+        fs.mkdirSync(sheet,{recursive:true});
+        for (const view of ['face','front']) fs.copyFileSync(path.join(f.episode,'storyboard',character+'.png'),path.join(sheet,view+'.png'));
+        fs.writeFileSync(path.join(sheet,'panels.json'),JSON.stringify({panels:{face:{file:'face.png'},front:{file:'front.png'}}}));
+        registeredFace(t,sheet,'asset-'+character);
+        f.board.SB_DOC.characters.find(person => person.id === character).voiceReference.imagePaths = [path.join(sheet,'face.png')];
+        card.visual.character = character;
+        card.visual.characterInputs = [{character,bodyView:'front'}];
+      }
+      delete f.board.STRUCTURE.scenes[0].speakerReferences;
+      writeTinyMp4(path.join(f.episode,'storyboard'),'pan.mp4',3);
+      f.board.STRUCTURE.scenes[0].videoDirection.motionReferencePaths = ['pan.mp4'];
+      f.save();
+      const input = {episode:f.episode, sceneNo:1, requestId:'scene-dialect', wholeScene:true};
+      const preview = planVideo(input,false);
+      for (const [key,label] of [['hero.face','Image 1'],['guest.voice','Audio 2'],['pan.motion','Video 1']])
+        assert.ok(preview.promptSlots.some(slot => slot.key === key && slot.label === prefix + label),key);
+      assert.ok(preview.promptTemplate.includes('{pan.motion}'));
+      assert.equal(planVideo({...input,prompt:preview.promptTemplate},false).args.prompt,preview.args.prompt);
+    });
+  }
 });

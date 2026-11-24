@@ -76,8 +76,9 @@ export function referenceLabel(tool: string, kind: 'image' | 'audio', index: num
   return formatReferenceLabel(scenePromptProfile(tool, model).referenceLabels, kind, index);
 }
 
-export function formatReferenceLabel(style: ScenePromptProfile['referenceLabels'], kind: 'image' | 'audio', index: number): string {
-  if (style === 'picture_audio_tags') return '<' + (kind === 'image' ? 'Picture' : 'Audio') + ' ' + index + '>';
+export function formatReferenceLabel(style: ScenePromptProfile['referenceLabels'], kind: 'image' | 'audio' | 'video', index: number): string {
+  const label = kind[0].toUpperCase() + kind.slice(1);
+  if (style === 'picture_audio_tags') return '<' + (kind === 'image' ? 'Picture' : label) + ' ' + index + '>';
   if (style === 'reference_indexed') return 'reference ' + kind + ' ' + index;
-  return (style === 'at_indexed' ? '@' : '') + (kind === 'image' ? 'Image' : 'Audio') + ' ' + index;
+  return (style === 'at_indexed' ? '@' : '') + label + ' ' + index;
 }

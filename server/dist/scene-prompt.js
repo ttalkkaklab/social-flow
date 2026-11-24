@@ -92,7 +92,7 @@ const spans = (text) => {
 const loneBrace = (text) => /[{}]/.test(text.replace(TOKEN, ''));
 const word = (text) => text.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '');
 /** Name every numbered input of the final request. `unlabeled` lists pictures a prompt cannot point at. */
-export function scenePromptSlots(style, images = [], voices = []) {
+export function scenePromptSlots(style, images = [], voices = [], media = []) {
     const slots = [], unlabeled = new Set();
     const owned = new Map();
     for (const image of images) {
@@ -104,16 +104,15 @@ export function scenePromptSlots(style, images = [], voices = []) {
         }
         const label = formatReferenceLabel(style, 'image', image.number);
         if (image.owner)
-            owned.set(image.owner, [...owned.get(image.owner) ?? [], { role: word(image.role ?? '') || 'image', label }]);
+            owned.set(image.owner, [...owned.get(image.owner) ?? [], { role: word(image.role ?? '') || 'image', label, id: image.id }]);
         else
             slots.push({ key: word((image.guide ? image.shotId : undefined) ?? image.id ?? 'reference' + image.number) + '.image', label });
     }
     for (const [owner, rows] of owned) {
-        const seen = new Map();
         for (const row of rows) {
-            const count = (seen.get(row.role) ?? 0) + 1;
-            seen.set(row.role, count);
-            slots.push({ key: word(owner) + '.' + row.role + (count > 1 ? count : ''), label: row.label });
+            const repeated = rows.some(other => other !== row && other.role === row.role);
+            const role = repeated && row.id ? row.role + '-' + word(row.id) : row.role;
+            slots.push({ key: word(owner) + '.' + role, label: row.label });
         }
         // The short name is unambiguous only for a single picture, and it never takes the name of a shot's own picture.
         if (rows.length === 1 && rows[0].role !== 'image' && !unlabeled.has(word(owner) + '.image'))
@@ -122,18 +121,25 @@ export function scenePromptSlots(style, images = [], voices = []) {
     for (const voice of voices)
         if (voice.audioIndex)
             slots.push({ key: word(voice.speaker) + '.voice', label: formatReferenceLabel(style, 'audio', voice.audioIndex) });
-    // Two inputs that would share a name keep the first, and a name a placeholder cannot spell is not offered;
-    // such an input stays a number in the template.
-    const keys = new Set();
-    return { slots: slots.filter(slot => NAME.test('{' + slot.key + '}') && !keys.has(slot.key) && keys.add(slot.key)),
-        unlabeled: [...unlabeled].filter(key => !keys.has(key)) };
+    for (const item of media)
+        slots.push({ key: word(item.name) + '.' + item.role,
+            label: formatReferenceLabel(style, item.role === 'motion' ? 'video' : 'audio', item.index) });
+    const keys = new Map();
+    const ambiguous = new Set();
+    for (const { key, label } of slots) {
+        if (keys.has(key) && keys.get(key) !== label)
+            ambiguous.add(key);
+        keys.set(key, label);
+    }
+    return { slots: [...keys].filter(([key]) => NAME.test('{' + key + '}') && !ambiguous.has(key)).map(([key, label]) => ({ key, label })),
+        ambiguous: [...ambiguous], unlabeled: [...unlabeled].filter(key => !keys.has(key)) };
 }
 /**
  * Fill the names of an authored prompt with the numbers of the submitted request. Problems are reported; no
  * sentence is reworded or shortened. `composed` is the planner's own prompt for the same request: a line, a
  * sentence or a brace it carries is the board's text, which calibrates what is reported and what is left alone.
  */
-export function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) {
+export function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, checks = {}) {
     const labels = new Map(slots.map(slot => [slot.key, slot.label]));
     // A label can have two names; the first is the one a report offers.
     const named = new Map();
@@ -150,10 +156,15 @@ export function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) 
     const board = new Set(checks.composed?.match(TOKEN) ?? []);
     const body = spans(template).map(span => {
         // A number inside a spoken line is speech. Outside one it is a reference typed by hand.
-        if (!span.quoted)
-            for (const [label, key] of named)
-                if (labelPattern(label).test(span.text))
-                    report('warning', 'label_literal', `"${label}" is written as a number; write {${key}} so it follows the submitted order`);
+        if (!span.quoted) {
+            for (const match of span.text.matchAll(/(?<![\p{L}\p{N}_])(?:<(?:Picture|Audio|Video) \d+>|(?:reference |@)?(?:Image|Audio|Video) \d+)(?!\d|\.\d)/giu)) {
+                const label = match[0], key = named.get(label);
+                if (!key)
+                    report('error', 'reference_unknown', label + ' does not identify a named input in this request');
+                else
+                    report(checks.strictReferences ? 'error' : 'warning', 'label_literal', label + ' depends on input order; use {' + key + '}');
+            }
+        }
         return span.text.replace(TOKEN, token => {
             const name = NAME.exec(token), key = name ? name[1] + '.' + name[2] : '', label = labels.get(key);
             // Braces the board itself uses stay as written: always inside a spoken line, elsewhere unless they spell a submitted reference.
@@ -161,7 +172,9 @@ export function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) 
                 return token;
             if (label)
                 return label;
-            if (unlabeled.includes(key))
+            if (ambiguous.includes(key))
+                report('error', 'placeholder_ambiguous', token + ' matches multiple inputs; give the assets distinct names');
+            else if (unlabeled.includes(key))
                 report('error', 'placeholder_unlabeled', `${token} is sent as a timed frame, which this model's prompt cannot name`);
             else if (name)
                 report('error', 'placeholder_unresolved', `${token} names no submitted reference; available: ${slots.map(slot => '{' + slot.key + '}').join(' ') || 'none'}`);
@@ -206,11 +219,10 @@ export function scenePromptTemplate(prompt, { slots }, header = '') {
         : longestFirst.reduce((text, [label, key]) => text.replace(labelPattern(label), '{' + key + '}'), span.text)).join('');
     return { promptTemplate, ...(headed ? { promptHeader: header } : {}) };
 }
-/** Compare explicit dialogue turns. Only a voice token in a direct attribution establishes ownership. */
-export function assertSceneDialogue(template, expected) {
-    if (!expected.length)
-        return;
-    const wanted = new Set(expected.map(line => line.tts));
+/** Check the ordered script before rendering the provider's numbered references. */
+export function assertSceneDialogue(template, expected, cast, composed) {
+    const visualQuotes = spans(composed).filter(span => span.quoted && !expected.some(line => line.tts === span.text.slice(1, -1)))
+        .map(span => span.text.slice(1, -1));
     let index = 0;
     let lead = '';
     for (const span of spans(template)) {
@@ -219,15 +231,30 @@ export function assertSceneDialogue(template, expected) {
             continue;
         }
         const words = span.text.slice(1, -1);
-        if (!wanted.has(words))
+        // Limit attribution to this sentence. A period inside a named slot is part of the identifier.
+        const clause = lead.trimEnd().split(/(?:[.!?](?=\s)|\n)\s*/u).at(-1) ?? '';
+        const visual = visualQuotes.indexOf(words);
+        if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
+            visualQuotes.splice(visual, 1);
             continue;
+        }
         const line = expected[index++];
-        if (line?.tts !== words)
-            throw new Error('scene_dialogue_mismatch: preserve the approved spoken lines in scene order');
-        // An adjacent "with {cast.voice}:" or "({cast.face}, {cast.voice}):" is unambiguous.
-        const voice = lead.match(/\{([\p{L}\p{N}_-]+)\.voice\}\s*(?:,\s*off screen)?\)?\s*:\s*$/u);
-        if (voice && line.speaker && voice[1] !== line.speaker)
-            throw new Error('scene_dialogue_speaker: the voice immediately introducing this line belongs to another character');
+        if (!line || line.tts !== words)
+            throw new Error('scene_dialogue_mismatch: keep exactly the approved spoken lines in scene order');
+        const owners = new Set();
+        const plain = clause.replace(TOKEN, token => {
+            const parsed = NAME.exec(token);
+            if (parsed && cast.some(person => word(person.speaker) === parsed[1]))
+                owners.add(parsed[1]);
+            return ' ';
+        });
+        for (const person of cast) {
+            const aliases = [person.speaker, person.name].filter(Boolean).map(escaped).join('|');
+            if (new RegExp('(?<![\\p{L}\\p{N}_-])(?:' + aliases + ')(?![\\p{L}\\p{N}_-])', 'iu').test(plain))
+                owners.add(word(person.speaker));
+        }
+        if (line.speaker && (owners.size !== 1 || !owners.has(word(line.speaker))))
+            throw new Error('scene_dialogue_speaker: introduce each quote with its approved speaker and matching face or voice');
     }
     if (index !== expected.length)
         throw new Error('scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes');

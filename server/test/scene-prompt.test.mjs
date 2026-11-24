@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { scenePromptProfile, sceneWritingGuide, referenceLabel } from '../dist/scene-prompt-profile.js';
-import { sceneTimelineWords } from '../dist/scene-prompt.js';
+import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
   const timeline = {fps:24, images:[], shots:[
@@ -33,4 +33,14 @@ test('model writers use the scene clock, reference dialect and supplied performa
   const timeline = {fps:24,images:[],shots:[],audio:{cues:[{frame:24,action:'Jun looks up.'}]}};
   const profile = scenePromptProfile('ltx_api_audio2video');
   assert.match(sceneTimelineWords(timeline,scene,{modelFacing:true,writer:profile.writer}), /supplied recording[\s\S]+At 1 seconds: Jun looks up/);
+});
+
+test('two panels of the same role bind by asset identity across reorderings', () => {
+  const bind = ids => scenePromptSlots('indexed',ids.map((id,i) => ({owner:'mina',id,role:'face',number:i+1})));
+  const first = bind(['profile','frontal']), reversed = bind(['frontal','profile']);
+  const draft = 'Use {mina.face-profile}.';
+  assert.equal(resolveScenePrompt(draft,first).prompt,'Use Image 1.');
+  assert.equal(resolveScenePrompt(draft,reversed).prompt,'Use Image 2.');
+  assert.ok(resolveScenePrompt('Use {mina.face}.',reversed).issues.some(issue => issue.level === 'error'));
+  assert.ok(resolveScenePrompt(draft,bind(['profile','profile'])).issues.some(issue => issue.code === 'placeholder_ambiguous'));
 });
