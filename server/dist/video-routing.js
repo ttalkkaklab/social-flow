@@ -1,4 +1,5 @@
 import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords } from './scene-video.js';
+import { readSceneCapabilities, sceneRequestId, sceneRequestIssues, SCENE_LIMITS, submitSceneBody, validateSceneBody } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
@@ -29,7 +30,7 @@ import { checkRegisteredBindings, seedanceBindings } from './seedance-bindings.j
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { recordVideoSubmission, videoEvents } from './video-events.js';
 import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
-import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob, requestGenai } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects } from './video-image-inputs.js';
 import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
 import { prepareVideoVoice } from './video-voice.js';
@@ -286,7 +287,6 @@ function saveVideoPlan(plan) {
     refreshVideoReview(plan.episode);
     return plan;
 }
-const sceneRoute = '/v1/ltx/v2/scene-to-video';
 function planOutputContract(plan) {
     if (plan.sceneRendering && plan.sceneRequest)
         return msrOutputContract('scene-to-video', {
@@ -315,24 +315,25 @@ async function checkCompletedMedia(plan, jobId) {
         throw new Error('Completed video has no verified local output');
 }
 async function validateShotRenderPlan(plan) {
-    const capabilities = await requestGenai('GET', sceneRoute + '/capabilities', undefined, 15_000);
-    z.object({ version: z.literal(1), execution: z.literal('per_shot'), transitions: z.array(z.string()).refine(values => values.includes('hard_cut')) }).parse(capabilities);
-    const guides = z.object({ motion_prefix: z.boolean().optional(), timed_dialogue: z.string().nullish() }).parse(capabilities);
+    const scene = plan.sceneRequest, model = String(plan.selection.model);
+    const capabilities = await readSceneCapabilities();
     for (const binding of plan.shotBindings ?? []) {
-        if (binding.motionPrefix && !guides.motion_prefix || binding.performanceAudio && guides.timed_dialogue !== 'supplied_performance')
+        if (binding.motionPrefix && !capabilities.motionPrefix || binding.performanceAudio && capabilities.timedDialogue !== 'supplied_performance')
             throw new Error('scene_render_guide: ' + binding.shotId + ' requests an unavailable performance or motion guide');
     }
-    if (plan.sceneRequest?.audio) {
-        const mode = plan.sceneRequest.audio.mode ?? 'conditioning';
-        const contract = z.object({ scene_audio_modes: z.record(z.string()) }).safeParse(capabilities);
-        if (!contract.success || contract.data.scene_audio_modes[mode] !== plan.selection.model)
+    if (scene.audio) {
+        const mode = scene.audio.mode ?? 'conditioning';
+        if (capabilities.audioModes[mode] !== plan.selection.model)
             throw new Error('scene_audio@0: gateway does not advertise ' + mode + ' for the selected model');
     }
-    const prepared = await buildSceneWire(plan.sceneRequest, String(plan.selection.model), String(plan.selection.resolution), true, plan.shotBindings);
+    // Nothing is uploaded for a scene this deployment would refuse.
+    const refused = sceneRequestIssues(scene, capabilities, { bindings: plan.shotBindings, model });
+    if (refused.length)
+        throw new Error('scene_render_inputs_unsupported:\n' + refused.join('\n'));
+    const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings);
     if (plan.conditioningInputs && prepared.attachments.find(file => file.role === 'scene_audio')?.sha256 !== plan.conditioningInputs.driverSha256)
         throw new Error('video_plan_stale: the staged conditioning master differs from the approved scene');
-    const validation = await requestGenai('POST', sceneRoute + '/validate', prepared.body, 120000, undefined, undefined, 'scene-' + plan.id);
-    z.object({ schema_valid: z.literal(true), model: z.literal(String(plan.selection.model)), shots: z.literal(plan.shotIds.length) }).parse(validation);
+    await validateSceneBody(prepared.body, sceneRequestId(plan.id), { model, shots: plan.shotIds.length });
     return plan.conditioningInputs ? { ...prepared, conditioningInputs: plan.conditioningInputs } : prepared;
 }
 async function executeShotRenderPlan(plan, prepared) {
@@ -341,11 +342,10 @@ async function executeShotRenderPlan(plan, prepared) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const receipt = { version: 1, operation: 'scene-to-video', baseUrl: astraGenaiBaseUrl(),
         sceneRequestSha256: createHash('sha256').update(JSON.stringify(prepared)).digest('hex'),
-        fingerprint: plan.id, expected: planOutputContract(plan), videoPath: target, requestId: 'scene-' + plan.id, status: 'submitting' };
+        fingerprint: plan.id, expected: planOutputContract(plan), videoPath: target, requestId: sceneRequestId(plan.id), status: 'submitting' };
     fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
     atomicJson(target + '.scene-request.json', prepared);
-    const response = await requestGenai('POST', sceneRoute, prepared.body, 120000, undefined, undefined, 'scene-' + plan.id);
-    const accepted = z.object({ id: z.string().min(1), request_id: z.literal(receipt.requestId) }).parse(response);
+    const accepted = await submitSceneBody(prepared.body, receipt.requestId);
     atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
     recordVideoSubmission(accepted.id);
     const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true }), 'Poll this scene request with video_status.');
@@ -574,7 +574,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
                 missing.push(at + ' transition: ' + shot.transition);
             const refs = request.images.filter(p => p.shotId === shot.shotId && (p.reference || ['face', 'outfit'].includes(p.role)));
             const subjects = refs.filter(p => !['location', 'background'].includes(p.role));
-            if (subjects.length > 4 || refs.length - subjects.length > 1 || refs.length && !subjects.length)
+            if (subjects.length > SCENE_LIMITS.subjects || refs.length - subjects.length > SCENE_LIMITS.backgrounds || refs.length && !subjects.length)
                 missing.push(at + ' MSR accepts one to four subject references and at most one background');
             for (const p of refs)
                 if (conditioned || p.strength !== undefined && p.strength !== 1)
@@ -585,7 +585,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
                     missing.push(label + ' performance_audio: supply a timed WAV to lock speech to the opening frame');
                 if (line.warnings?.length)
                     missing.push(label + ' voice: ' + line.warnings.join(' '));
-                if (line.voice && !subjects.slice(0, 2).some(p => p.character === line.speaker))
+                if (line.voice && !subjects.slice(0, SCENE_LIMITS.voiceSpeakers).some(p => p.character === line.speaker))
                     missing.push(label + ' voice_reference: the speaker needs a matching panel in the first two reference slots');
             }
         }

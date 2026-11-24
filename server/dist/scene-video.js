@@ -1,22 +1,22 @@
 // Frame numbers throughout this module are relative to the scene. Shot ends are exclusive.
 import path from 'node:path';
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
-import { videoTextPolicy, resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
+import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
 export { sceneTimelineWords } from './scene-prompt.js';
 import { verifyImageFile } from './image-media.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
-import { astraGenaiBaseUrl, GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
+import { astraGenaiBaseUrl, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { currentSceneVoice } from './video-voice.js';
-import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
+import { validateScenePayload } from './genai-scene.js';
+export { buildSceneWire } from './genai-scene.js';
 const load = createRequire(import.meta.url);
 const temporal = (image) => ['start', 'keyframe', 'end'].includes(image.role) && !image.reference;
 const english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : '';
@@ -338,96 +338,6 @@ export async function inspectSceneInputContract(error, validation) {
     }
     catch {
         return { ...deployment, status: 'unverified' };
-    }
-}
-export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings) {
-    const attachments = [];
-    const conditioned = model === 'ltx-2.5-22b-dev' && scene.audio && scene.audio.mode !== 'mix';
-    const shots = scene.shots.map(shot => {
-        const binding = bindings?.find(item => item.shotId === shot.shotId);
-        const guidance = binding?.guidance;
-        const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
-            frame: image.frame, role: image.role, character: image.character, cue: image.cue, strength: image.strength,
-            ...(image.reference ? { reference_id: image.reference.id, purpose: image.reference.purpose } : {}),
-            image_uri: genaiSourceUri(undefined, image.path),
-        }));
-        let delivery;
-        if (scene.silentPicture || !shot.dialogue?.length && !conditioned)
-            delivery = 'All visible mouths stay closed. No speech or vocalization.';
-        else if (shot.dialogue?.length && shot.dialogue.every(line => line.delivery === 'off_screen'))
-            delivery = 'All visible mouths stay closed while the off-screen speaker talks.';
-        return { ...(binding?.motionPrefix ? { motion_uri: '' } : {}),
-            ...(binding?.performanceAudio ? { performance_uri: '' } : {}), shot_id: shot.shotId, start_frame: shot.startFrame, end_frame: shot.endFrame,
-            ...(guidance ? { negative_prompt: guidance.negativePrompt, guidance_scale: guidance.guidanceScale } : {}),
-            ...(shot.transition === 'open' ? {} : { transition: shot.transition }),
-            description: [shot.framing, shot.action, delivery, videoTextPolicy()].filter(Boolean).join(' '), opening_positions: shot.openingPositions,
-            blocking: shot.blocking, audio: shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
-            dialogue: shot.dialogue?.map(line => ({ id: line.lineId, speaker: line.speaker, text: line.text, delivery: line.delivery,
-                direction: line.direction, frame: conditioned ? undefined : line.frame, ...(line.voice ? { voice_uri: genaiAudioUri(undefined, line.voice.path) } : {}) })),
-        };
-    });
-    const direction = scene.sceneDirection;
-    const prompt = direction ? [direction.emotion, direction.action, direction.camera, direction.staging, direction.sound, direction.oneTake && 'One continuous take. No cuts.'].filter(Boolean).join(' ') : '';
-    const trackBytes = scene.audio ? statSync(scene.audio.path).size : 0;
-    if (trackBytes > 32 * 1024 * 1024)
-        throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
-    const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
-    const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
-        image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
-        ...(scene.audio ? { scene_audio: { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), audio_uri: stageTrack ? '' : genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
-                end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
-    let wire = JSON.stringify(body);
-    if (stageFiles || stageTrack || bindings?.some(b => b.motionPrefix || b.performanceAudio) || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
-        const staged = new Map();
-        const stageBytes = async (bytes, mime, role, frame, shotId) => {
-            const sha256 = createHash('sha256').update(bytes).digest('hex');
-            const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, mime);
-            if (!id)
-                throw new Error('Gateway could not stage the original ' + role + ' file for validation');
-            staged.set(sha256, id);
-            attachments.push({ shotId, role, frame, sha256, bytes: bytes.length });
-            return id;
-        };
-        const stage = (uri, role, frame, shotId) => stageBytes(Buffer.from(uri.slice(uri.indexOf(',') + 1), 'base64'), uri.slice(5, uri.indexOf(';')), role, frame, shotId);
-        for (const shot of shots) {
-            const binding = bindings?.find(b => b.shotId === shot.shot_id);
-            if (binding?.performanceAudio) {
-                const wav = load('../../skills/_shared/scene-speech-receipt.js').performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
-                shot.performance_uri = await stageBytes(wav, 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
-            }
-            if (binding?.motionPrefix)
-                shot.motion_uri = await stageBytes(readFileSync(binding.motionPrefix), 'video/mp4', 'motion_prefix', shot.start_frame, shot.shot_id);
-            for (const image of shot.images)
-                image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
-            for (const line of shot.dialogue ?? [])
-                if (line.voice_uri)
-                    line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
-        }
-        body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
-        if (body.scene_audio && scene.audio) {
-            const mime = GENAI_AUDIO_TYPES[path.extname(scene.audio.path).toLowerCase()];
-            if (!mime)
-                throw new Error('scene_audio@0: unsupported audio format');
-            body.scene_audio.audio_uri = await stageBytes(readFileSync(scene.audio.path), mime, 'scene_audio', 0);
-        }
-        wire = JSON.stringify(body);
-    }
-    return { body, attachments, bodySha256: createHash('sha256').update(wire).digest('hex'), bytes: Buffer.byteLength(wire) };
-}
-/** Send the full scene to the authenticated validation-only route. A schema pass never authorizes execution. */
-async function validateScenePayload(endpoint, scene, model, resolution, requestId) {
-    let sent;
-    try {
-        const { body, attachments, bytes, bodySha256 } = await buildSceneWire(scene, model, resolution);
-        sent = { bodySha256, bytes, ...(attachments.length ? { requestBody: body, attachments } : {}) };
-        const result = await requestGenai('POST', endpoint, body, 120000, undefined, undefined, requestId);
-        const accepted = z.object({ schema_valid: z.literal(true), model: z.literal(model) }).safeParse(result);
-        return { endpoint, requestId, ...sent, status: accepted.success ? 'schema_accepted' : 'unverified', result: accepted.data };
-    }
-    catch (error) {
-        if (error instanceof GenaiRequestError && [400, 422].includes(error.httpStatus))
-            return { endpoint, requestId, ...sent, status: 'schema_rejected', httpStatus: error.httpStatus, detail: error.message };
-        return { endpoint, requestId, ...sent, status: 'unverified', detail: error instanceof Error ? error.message : String(error) };
     }
 }
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */
