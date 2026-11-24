@@ -1,3 +1,4 @@
+import { quotedSegments } from './prompt-language.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
 const transitions = {
     hard_cut: 'cut directly', dissolve: 'dissolve to the next view', fade: 'fade to the next view',
@@ -77,13 +78,11 @@ const NAME = /^\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}$/u;
 const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 /** A label is its whole number: "Image 1" is not read inside "Image 10", "Image 1.5" or "KeyImage 1". */
 const labelPattern = (label) => new RegExp('(?<![\\p{L}\\p{N}])' + escaped(label) + '(?!\\d|\\.\\d)', 'gu');
-// A spoken line sits inside quotation marks on one line, so a stray mark cannot swallow the lines after it.
-const QUOTED = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」/g;
 /** The text outside and inside quotation marks, in order. */
-const spans = (text) => {
+const spans = (text, lines) => {
     const parts = [];
     let at = 0;
-    for (const quote of text.matchAll(QUOTED)) {
+    for (const quote of quotedSegments(text, lines)) {
         parts.push({ text: text.slice(at, quote.index), quoted: false }, { text: quote[0], quoted: true });
         at = quote.index + quote[0].length;
     }
@@ -154,7 +153,7 @@ export function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, ch
         }
     };
     const board = new Set(checks.composed?.match(TOKEN) ?? []);
-    const body = spans(template).map(span => {
+    const body = spans(template, checks.lines).map(span => {
         // A number inside a spoken line is speech. Outside one it is a reference typed by hand.
         if (!span.quoted) {
             for (const match of span.text.matchAll(/(?<![\p{L}\p{N}_])(?:<(?:Picture|Audio|Video) \d+>|(?:reference |@)?(?:Image|Audio|Video) \d+)(?!\d|\.\d)/giu)) {
@@ -206,7 +205,7 @@ export function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, ch
     return { prompt, body, issues };
 }
 /** The submitted prompt with its numbers turned back into names: what an author edits and sends as `prompt`. */
-export function scenePromptTemplate(prompt, { slots }, header = '') {
+export function scenePromptTemplate(prompt, { slots }, header = '', lines) {
     const names = new Map();
     // A character's single picture has two names; the role name is the one that stays valid when a second picture is added.
     for (const slot of slots)
@@ -215,24 +214,39 @@ export function scenePromptTemplate(prompt, { slots }, header = '') {
     const headed = Boolean(header) && prompt.startsWith(header);
     const longestFirst = [...names].sort((a, b) => b[0].length - a[0].length);
     // A spoken line keeps its words, so a number inside quotation marks is never turned into a name.
-    const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt).map(span => span.quoted ? span.text
+    const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt, lines).map(span => span.quoted ? span.text
         : longestFirst.reduce((text, [label, key]) => text.replace(labelPattern(label), '{' + key + '}'), span.text)).join('');
     return { promptTemplate, ...(headed ? { promptHeader: header } : {}) };
 }
 /** Check the ordered script before rendering the provider's numbered references. */
 export function assertSceneDialogue(template, expected, cast, composed) {
-    const visualQuotes = spans(composed).filter(span => span.quoted && !expected.some(line => line.tts === span.text.slice(1, -1)))
+    const script = expected.flatMap(line => line.tts ? [line.tts] : []);
+    const visualQuotes = spans(composed, script).filter(span => span.quoted && !script.includes(span.text.slice(1, -1)))
         .map(span => span.text.slice(1, -1));
+    const splitSentences = (text) => text.trimEnd().split(/(?:[.!?](?=\s|$)|\n)\s*/u);
+    const approvedDirections = new Set(spans(composed, script).filter(span => !span.quoted)
+        .flatMap(span => splitSentences(span.text)).map(text => text.trim()));
+    const speechCue = /\b(?:says?|asks?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|adds?|murmurs?|speaks?|yells?|calls?|tells?|mutters?)\b[^.!?\n]{0,70}[:,]\s*\S/iu;
     let index = 0;
-    let lead = '';
-    for (const span of spans(template)) {
+    let clause = '';
+    const parts = spans(template, script);
+    for (const [partIndex, span] of parts.entries()) {
         if (!span.quoted) {
-            lead = span.text;
+            const sentences = splitSentences(span.text);
+            clause = parts[partIndex + 1]?.quoted ? sentences.pop() ?? '' : '';
+            for (const sentence of sentences) {
+                const text = sentence.trim();
+                if (approvedDirections.has(text))
+                    continue;
+                if (/\{[^{}]+\.voice\}/u.test(text))
+                    throw new Error('scene_dialogue_speaker: keep a voice sample with its quoted turn or retain its compiled ownership direction');
+                if (speechCue.test(text))
+                    throw new Error('scene_dialogue_mismatch: put every spoken line in quotes with its approved speaker');
+            }
             continue;
         }
         const words = span.text.slice(1, -1);
         // Limit attribution to this sentence. A period inside a named slot is part of the identifier.
-        const clause = lead.trimEnd().split(/(?:[.!?](?=\s)|\n)\s*/u).at(-1) ?? '';
         const visual = visualQuotes.indexOf(words);
         if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
             visualQuotes.splice(visual, 1);
@@ -250,8 +264,11 @@ export function assertSceneDialogue(template, expected, cast, composed) {
         });
         for (const person of cast) {
             const aliases = [person.speaker, person.name].filter(Boolean).map(escaped).join('|');
-            if (new RegExp('(?<![\\p{L}\\p{N}_-])(?:' + aliases + ')(?![\\p{L}\\p{N}_-])', 'iu').test(plain))
-                owners.add(word(person.speaker));
+            const mentions = new RegExp('(?<![\\p{L}\\p{N}_-])(?:' + aliases + ')(?![\\p{L}\\p{N}_-])', 'giu');
+            for (const mention of plain.matchAll(mentions)) {
+                if (!/\b(?:to|at|towards?|past)\s+$/iu.test(plain.slice(0, mention.index)))
+                    owners.add(word(person.speaker));
+            }
         }
         if (line.speaker && (owners.size !== 1 || !owners.has(word(line.speaker))))
             throw new Error('scene_dialogue_speaker: introduce each quote with its approved speaker and matching face or voice');

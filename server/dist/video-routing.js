@@ -976,6 +976,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         voice = { ...voice, args: { ...voice.args, prompt: String(voice.args.prompt) + '\nUse ' + labels.join(', ') +
                     ' for camera movement and motion timing. Keep the cast, setting and dialogue from the storyboard.' } };
     }
+    const script = lines.flatMap(line => line.tts ? [line.tts] : []);
     const authored = input.prompt !== undefined;
     let promptIssues;
     if (authored) {
@@ -994,7 +995,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (refused.length)
             throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
         if (['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy || ''))
-            assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), voice.voiceContinuity.speakers, composed);
+            assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), voice.voiceContinuity.speakers, scenePromptTemplate(composed, promptSlots, '', script).promptTemplate);
         promptIssues = resolved.issues;
         // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
         voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...(positions ? { openingPositions: positions } : {}) } };
@@ -1062,7 +1063,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
     const speechFit = durationPlan.speech && playSeconds !== undefined && playSeconds > 0 && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
         ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context.board.STORY?.language) : undefined;
-    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
+    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt, script) : null;
     if (foreign)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
@@ -1135,7 +1136,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         sourceArgs: selection.engine === 'seedance' || motionReferences ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
     const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile, promptSlots: promptSlots.slots } : {}),
-        ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions)) : {}) };
+        ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions), script) : {}) };
     return persist ? saveVideoPlan(plan) : plan;
 }
 function authorization(context) {

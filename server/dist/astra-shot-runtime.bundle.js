@@ -49956,10 +49956,22 @@ var NEVER = INVALID;
 
 // src/prompt-language.ts
 import { createRequire } from "node:module";
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var QUOTED_SEGMENT = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」|『[^』\n]*』|«[^»\n]*»|‘[^\n]*?’(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])'[^\n]*?'(?![\p{L}\p{N}])/gu;
+var delimiters = [['"', '"'], ["\u201C", "\u201D"], ["\u300C", "\u300D"], ["\u300E", "\u300F"], ["\xAB", "\xBB"], ["\u2018", "\u2019"], ["'", "'"]];
+function quotedSegments(prompt, lines = []) {
+  const literals = [...new Set(lines.filter(Boolean))].sort((a, b) => b.length - a.length).flatMap((line) => delimiters.map(([open, close]) => (open + line + close).replace(/[$.*+?^{}()|[\]\\]/g, "\\$&")));
+  const pattern = literals.length ? new RegExp(literals.join("|") + "|" + QUOTED_SEGMENT.source, "gu") : QUOTED_SEGMENT;
+  return prompt.matchAll(pattern);
+}
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+function nonEnglishOutsideQuotes(prompt, lines = []) {
+  let start = 0;
+  for (const quote of quotedSegments(prompt, lines)) {
+    const outside = prompt.slice(start, quote.index).match(NON_LATIN_RUN);
+    if (outside) return outside[0];
+    start = quote.index + quote[0].length;
+  }
+  const match = prompt.slice(start).match(NON_LATIN_RUN);
   return match ? match[0] : null;
 }
 var load = createRequire(import.meta.url);

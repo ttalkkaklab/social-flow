@@ -40052,7 +40052,7 @@ var init_node = __esm({
           try {
             let buffer = "";
             const dataPrefix = "data:";
-            const delimiters = ["\n\n", "\r\r", "\r\n\r\n"];
+            const delimiters2 = ["\n\n", "\r\r", "\r\n\r\n"];
             while (true) {
               const { done, value } = yield __await(reader.read());
               if (done) {
@@ -40089,7 +40089,7 @@ var init_node = __esm({
               while (true) {
                 delimiterIndex = -1;
                 delimiterLength = 0;
-                for (const delimiter2 of delimiters) {
+                for (const delimiter2 of delimiters2) {
                   const index = buffer.indexOf(delimiter2);
                   if (index !== -1 && (delimiterIndex === -1 || index < delimiterIndex)) {
                     delimiterIndex = index;
@@ -121932,10 +121932,22 @@ import { createRequire as createRequire5 } from "node:module";
 
 // src/prompt-language.ts
 import { createRequire as createRequire4 } from "node:module";
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var QUOTED_SEGMENT = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」|『[^』\n]*』|«[^»\n]*»|‘[^\n]*?’(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])'[^\n]*?'(?![\p{L}\p{N}])/gu;
+var delimiters = [['"', '"'], ["\u201C", "\u201D"], ["\u300C", "\u300D"], ["\u300E", "\u300F"], ["\xAB", "\xBB"], ["\u2018", "\u2019"], ["'", "'"]];
+function quotedSegments(prompt, lines = []) {
+  const literals = [...new Set(lines.filter(Boolean))].sort((a, b) => b.length - a.length).flatMap((line) => delimiters.map(([open3, close]) => (open3 + line + close).replace(/[$.*+?^{}()|[\]\\]/g, "\\$&")));
+  const pattern = literals.length ? new RegExp(literals.join("|") + "|" + QUOTED_SEGMENT.source, "gu") : QUOTED_SEGMENT;
+  return prompt.matchAll(pattern);
+}
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match2 = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+function nonEnglishOutsideQuotes(prompt, lines = []) {
+  let start = 0;
+  for (const quote of quotedSegments(prompt, lines)) {
+    const outside = prompt.slice(start, quote.index).match(NON_LATIN_RUN);
+    if (outside) return outside[0];
+    start = quote.index + quote[0].length;
+  }
+  const match2 = prompt.slice(start).match(NON_LATIN_RUN);
   return match2 ? match2[0] : null;
 }
 var load = createRequire4(import.meta.url);
@@ -130368,11 +130380,10 @@ var TOKEN = /\{[^{}\n]*\}/g;
 var NAME2 = /^\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}$/u;
 var escaped = (text4) => text4.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 var labelPattern = (label) => new RegExp("(?<![\\p{L}\\p{N}])" + escaped(label) + "(?!\\d|\\.\\d)", "gu");
-var QUOTED = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」/g;
-var spans = (text4) => {
+var spans = (text4, lines) => {
   const parts = [];
   let at = 0;
-  for (const quote of text4.matchAll(QUOTED)) {
+  for (const quote of quotedSegments(text4, lines)) {
     parts.push({ text: text4.slice(at, quote.index), quoted: false }, { text: quote[0], quoted: true });
     at = quote.index + quote[0].length;
   }
@@ -130429,7 +130440,7 @@ function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, checks = 
     }
   };
   const board = new Set(checks.composed?.match(TOKEN) ?? []);
-  const body = spans(template).map((span) => {
+  const body = spans(template, checks.lines).map((span) => {
     if (!span.quoted) {
       for (const match2 of span.text.matchAll(/(?<![\p{L}\p{N}_])(?:<(?:Picture|Audio|Video) \d+>|(?:reference |@)?(?:Image|Audio|Video) \d+)(?!\d|\.\d)/giu)) {
         const label = match2[0], key = named.get(label);
@@ -130469,25 +130480,38 @@ function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, checks = 
     report("error", "prompt_too_long", `${prompt.length} UTF-16 units; this adapter takes ${checks.schemaLimit}`);
   return { prompt, body, issues };
 }
-function scenePromptTemplate(prompt, { slots }, header = "") {
+function scenePromptTemplate(prompt, { slots }, header = "", lines) {
   const names = /* @__PURE__ */ new Map();
   for (const slot of slots) if (!names.has(slot.label)) names.set(slot.label, slot.key);
   const headed = Boolean(header) && prompt.startsWith(header);
   const longestFirst = [...names].sort((a, b) => b[0].length - a[0].length);
-  const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt).map((span) => span.quoted ? span.text : longestFirst.reduce((text4, [label, key]) => text4.replace(labelPattern(label), "{" + key + "}"), span.text)).join("");
+  const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt, lines).map((span) => span.quoted ? span.text : longestFirst.reduce((text4, [label, key]) => text4.replace(labelPattern(label), "{" + key + "}"), span.text)).join("");
   return { promptTemplate, ...headed ? { promptHeader: header } : {} };
 }
 function assertSceneDialogue(template, expected, cast, composed) {
-  const visualQuotes = spans(composed).filter((span) => span.quoted && !expected.some((line) => line.tts === span.text.slice(1, -1))).map((span) => span.text.slice(1, -1));
+  const script = expected.flatMap((line) => line.tts ? [line.tts] : []);
+  const visualQuotes = spans(composed, script).filter((span) => span.quoted && !script.includes(span.text.slice(1, -1))).map((span) => span.text.slice(1, -1));
+  const splitSentences2 = (text4) => text4.trimEnd().split(/(?:[.!?](?=\s|$)|\n)\s*/u);
+  const approvedDirections = new Set(spans(composed, script).filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map((text4) => text4.trim()));
+  const speechCue = /\b(?:says?|asks?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|adds?|murmurs?|speaks?|yells?|calls?|tells?|mutters?)\b[^.!?\n]{0,70}[:,]\s*\S/iu;
   let index = 0;
-  let lead = "";
-  for (const span of spans(template)) {
+  let clause = "";
+  const parts = spans(template, script);
+  for (const [partIndex, span] of parts.entries()) {
     if (!span.quoted) {
-      lead = span.text;
+      const sentences = splitSentences2(span.text);
+      clause = parts[partIndex + 1]?.quoted ? sentences.pop() ?? "" : "";
+      for (const sentence2 of sentences) {
+        const text4 = sentence2.trim();
+        if (approvedDirections.has(text4)) continue;
+        if (/\{[^{}]+\.voice\}/u.test(text4))
+          throw new Error("scene_dialogue_speaker: keep a voice sample with its quoted turn or retain its compiled ownership direction");
+        if (speechCue.test(text4))
+          throw new Error("scene_dialogue_mismatch: put every spoken line in quotes with its approved speaker");
+      }
       continue;
     }
     const words = span.text.slice(1, -1);
-    const clause = lead.trimEnd().split(/(?:[.!?](?=\s)|\n)\s*/u).at(-1) ?? "";
     const visual = visualQuotes.indexOf(words);
     if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
       visualQuotes.splice(visual, 1);
@@ -130504,8 +130528,10 @@ function assertSceneDialogue(template, expected, cast, composed) {
     });
     for (const person of cast) {
       const aliases = [person.speaker, person.name].filter(Boolean).map(escaped).join("|");
-      if (new RegExp("(?<![\\p{L}\\p{N}_-])(?:" + aliases + ")(?![\\p{L}\\p{N}_-])", "iu").test(plain))
-        owners.add(word(person.speaker));
+      const mentions = new RegExp("(?<![\\p{L}\\p{N}_-])(?:" + aliases + ")(?![\\p{L}\\p{N}_-])", "giu");
+      for (const mention of plain.matchAll(mentions)) {
+        if (!/\b(?:to|at|towards?|past)\s+$/iu.test(plain.slice(0, mention.index))) owners.add(word(person.speaker));
+      }
     }
     if (line.speaker && (owners.size !== 1 || !owners.has(word(line.speaker))))
       throw new Error("scene_dialogue_speaker: introduce each quote with its approved speaker and matching face or voice");
@@ -133321,6 +133347,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const labels = motionReferences.map((_, i2) => formatReferenceLabel(promptProfile.referenceLabels, "video", i2 + 1));
     voice = { ...voice, args: { ...voice.args, prompt: String(voice.args.prompt) + "\nUse " + labels.join(", ") + " for camera movement and motion timing. Keep the cast, setting and dialogue from the storyboard." } };
   }
+  const script = lines.flatMap((line) => line.tts ? [line.tts] : []);
   const authored = input.prompt !== void 0;
   let promptIssues;
   if (authored) {
@@ -133341,10 +133368,10 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
     if (["reference_voice", "model_generated"].includes(voice.voiceContinuity?.strategy || ""))
       assertSceneDialogue(
-        scenePromptTemplate(resolved.body, promptSlots).promptTemplate,
+        scenePromptTemplate(resolved.body, promptSlots, "", script).promptTemplate,
         lines.filter((line) => line.delivery !== "voiceover"),
         voice.voiceContinuity.speakers,
-        composed
+        scenePromptTemplate(composed, promptSlots, "", script).promptTemplate
       );
     promptIssues = resolved.issues;
     voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...positions ? { openingPositions: positions } : {} } };
@@ -133400,7 +133427,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const playFps = durationPlan.limits?.frameRate, playFrames = typeof args.numFrames === "number" ? args.numFrames : typeof args.duration === "number" && playFps ? framesForSeconds(args.duration, playFps) : tool2 === "astra_genai_msr" ? 121 : void 0;
   const playSeconds = playFrames !== void 0 && playFps ? playFrames / playFps : typeof args.durationSeconds === "number" ? args.durationSeconds : void 0;
   const speechFit = durationPlan.speech && playSeconds !== void 0 && playSeconds > 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
-  const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt) : null;
+  const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(args.prompt, script) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const output2 = canonical2(path27.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
   if (!within(context2.episode, output2)) throw new Error("Video output must stay inside the selected episode");
@@ -133488,7 +133515,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     ...body,
     id: hash2(body),
     ...prepared ? { promptProfile, promptSlots: promptSlots.slots } : {},
-    ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions)) : {}
+    ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions), script) : {}
   };
   return persist ? saveVideoPlan(plan2) : plan2;
 }

@@ -2086,7 +2086,20 @@ test('storyboard edits are scoped to the selected scene model and operation', as
   assert.throws(() => planVideo({...input,prompt:draft.prompt + ' Match Image 1.'},false), /label_literal/);
   const padded = planVideo({...input,prompt:draft.prompt + '  '},false);
   assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(padded.args)).prompt, padded.sceneRequest.prompt);
+  const sameTurns = 'Hero looks at Guest and asks, “You came.” Guest replies to Hero, “I stayed.”';
+  assert.ok(planVideo({...input,prompt:sameTurns}, false).args.prompt.endsWith(sameTurns));
+  assert.throws(() => planVideo({...input,prompt:'Use {guest.voice} for Hero in {hero.face}. Use {hero.voice} for Guest in {guest.face}. ' + sameTurns},false), /scene_dialogue_speaker/);
+  for (const extra of ["Guest whispers, ‘Come inside.’", "Guest adds: Come inside.", "Guest says, 'Come inside.'"])
+    assert.throws(() => planVideo({...input,prompt:sameTurns + ' ' + extra},false), /scene_dialogue_mismatch/);
   assert.equal(owner.promptDrafts[0].prompt, 'Other approved scene.');
+  const nested = 'Did he say "wait here by Image 1"?';
+  f.board.SCENES[0].narration[0].tts = nested;
+  delete owner.promptDrafts;
+  f.save();
+  const nestedPreview = planVideo(input,false);
+  const nestedEdit = planVideo({...input,prompt:nestedPreview.promptTemplate},false);
+  assert.ok(nestedEdit.args.prompt.includes(nested));
+  assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(nestedEdit.args)).prompt,nestedPreview.args.prompt);
 });
 
 test('a shot image sent as a timed frame has no name in the prompt',async t=>{
