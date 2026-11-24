@@ -31,12 +31,26 @@ function sourceFiles(input: string): string[] {
   return stat.isFile() && supported.test(input) ? [input] : [];
 }
 
+export function ocrLanguages(language: string, installed: string[]) {
+  const locale = new Intl.Locale(language).maximize();
+  const pack = installed.find(name => {
+    if (locale.language === 'zh') return name === (locale.script === 'Hant' ? 'chi_tra' : 'chi_sim');
+    // Tesseract names packs with ISO 639-3 codes, sometimes followed by a script.
+    if (!/^[a-z]{3}(?:_[a-z]{4})?$/i.test(name)) return false;
+    const candidate = new Intl.Locale(name.replace('_', '-')).maximize();
+    return candidate.language === locale.language && candidate.script === locale.script;
+  });
+  if (!pack) throw Error('Install the Tesseract OCR language pack for ' + language + ' to read the scanned pages.');
+  return pack !== 'eng' && installed.includes('eng') ? pack + '+eng' : pack;
+}
+
 function extract(file: string, language: string) {
   if (extname(file).toLowerCase() !== '.pdf') return readFileSync(file, 'utf8');
   const options = { encoding: 'utf8' as const, timeout: 120000, maxBuffer: 32 * 1024 * 1024 };
   const pages = execFileSync('pdftotext', ['-layout', file, '-'], options).split('\f');
   if (!pages.at(-1)?.trim()) pages.pop();
   const temp = mkdtempSync(join(tmpdir(), 'live-knowledge-'));
+  let ocr: string | undefined;
   try {
     return pages
       .map((page, index) => {
@@ -48,16 +62,10 @@ function extract(file: string, language: string) {
           ['-f', num, '-l', num, '-singlefile', '-scale-to', '2200', '-png', file, prefix],
           options
         );
-        const languages: Record<string, string> = {
-          ko: 'kor+eng',
-          en: 'eng',
-          vi: 'vie+eng',
-          ja: 'jpn+eng',
-          zh: 'chi_sim+eng'
-        };
+        ocr ??= ocrLanguages(language, execFileSync('tesseract', ['--list-langs'], options).trim().split(/\r?\n/));
         return execFileSync(
           'tesseract',
-          [prefix + '.png', 'stdout', '-l', languages[language.split('-')[0]] ?? 'eng'],
+          [prefix + '.png', 'stdout', '-l', ocr],
           options
         );
       })
@@ -82,7 +90,10 @@ export class LiveKnowledge {
         })
       )
     ].sort();
-    const hash = createHash('sha256').update('live-index-v1:' + language);
+    const parts = new Intl.Locale(language);
+    const correctedOcr = files.some(file => /\.pdf$/i.test(file)) &&
+      (!['en','ko','vi','ja','zh'].includes(parts.language) || parts.language === 'zh' && parts.maximize().script === 'Hant');
+    const hash = createHash('sha256').update((correctedOcr ? 'live-index-v2:' : 'live-index-v1:') + language);
     for (const file of files)
       hash.update(JSON.stringify([file, createHash('sha256').update(readFileSync(file)).digest('hex')]));
     this.fingerprint = hash.digest('hex');

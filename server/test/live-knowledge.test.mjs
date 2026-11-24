@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { LiveKnowledge } from '../dist/live-knowledge.js';
+import { LiveKnowledge, ocrLanguages } from '../dist/live-knowledge.js';
 
 test('an explicit empty knowledge base is valid, missing sources fail, and edits rebuild the searchable index', (t) => {
   const project = mkdtempSync(join(tmpdir(), 'knowledge-'));
@@ -47,4 +47,13 @@ test('preparation walks past high-ranking and duplicate-only source batches to r
   });
   assert.equal(rows.length,10);
   assert.deepEqual(batches,[0,1,2]);
+});
+
+test('scanned sources use their installed language and script or report the missing pack', () => {
+  const installed = ['eng','fra','rus','ara','chi_sim','chi_tra','kor','srp','srp_latn'];
+  for (const [language, pack] of [['fr-CA','fra'],['ru','rus'],['ar','ara'],['zh-TW','chi_tra'],
+    ['zh-CN','chi_sim'],['ko','kor'],['sr-Latn','srp_latn']]) {
+    assert.equal(ocrLanguages(language, installed), pack + '+eng');
+  }
+  assert.throws(() => ocrLanguages('vi', ['eng']), /vi/);
 });

@@ -14,7 +14,13 @@ import type { LiveProgram } from './live-program.js';
 
 const point = z.number().finite().min(0).max(1);
 const feature = z.object({ x: point, y: point, width: point.positive(), height: point.positive() }).strict();
-const languageTag = z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
+export const liveLanguageTag = z.string().regex(/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i).transform((tag, ctx) => {
+  try { return Intl.getCanonicalLocales(tag)[0]; }
+  catch {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid language tag' });
+    return z.NEVER;
+  }
+});
 const slug = z.string().regex(/^[a-zA-Z0-9_-]+$/);
 export const liveConfig = z
   .object({
@@ -22,8 +28,8 @@ export const liveConfig = z
     channel: slug,
     youtubeCredentialChannel: slug.optional(),
     tiktokChat: z.enum(['stdin', 'tikfinity']).default('stdin'),
-    speechLanguage: languageTag.optional(),
-    knowledgeLanguage: languageTag.optional(),
+    speechLanguage: liveLanguageTag.optional(),
+    knowledgeLanguage: liveLanguageTag.optional(),
     broadcastConcept: z.string().trim().min(1).max(600).optional(),
     talkPrompt: z.string().trim().min(1).max(2000).optional(),
     motionVideo: z.string().min(1).optional(),

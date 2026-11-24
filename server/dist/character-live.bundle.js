@@ -33975,15 +33975,22 @@ function saveLiveReceipt(path6, receipt) {
 // src/live-character.ts
 var point = external_exports.number().finite().min(0).max(1);
 var feature = external_exports.object({ x: point, y: point, width: point.positive(), height: point.positive() }).strict();
-var languageTag = external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
+var liveLanguageTag = external_exports.string().regex(/^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i).transform((tag, ctx) => {
+  try {
+    return Intl.getCanonicalLocales(tag)[0];
+  } catch {
+    ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message: "Invalid language tag" });
+    return external_exports.NEVER;
+  }
+});
 var slug = external_exports.string().regex(/^[a-zA-Z0-9_-]+$/);
 var liveConfig = external_exports.object({
   project: external_exports.string().min(1),
   channel: slug,
   youtubeCredentialChannel: slug.optional(),
   tiktokChat: external_exports.enum(["stdin", "tikfinity"]).default("stdin"),
-  speechLanguage: languageTag.optional(),
-  knowledgeLanguage: languageTag.optional(),
+  speechLanguage: liveLanguageTag.optional(),
+  knowledgeLanguage: liveLanguageTag.optional(),
   broadcastConcept: external_exports.string().trim().min(1).max(600).optional(),
   talkPrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   motionVideo: external_exports.string().min(1).optional(),
@@ -36884,12 +36891,8 @@ ${menu}
     }
   }
   if (value === void 0) throw Error("Choose the broadcast language for this session and set speechLanguage in its config.");
-  if (typeof value === "string" && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value)) {
-    try {
-      return Intl.getCanonicalLocales(value)[0];
-    } catch {
-    }
-  }
+  const parsed = liveLanguageTag.safeParse(value);
+  if (parsed.success) return parsed.data;
   throw Error("Invalid speechLanguage. Use a language tag such as ko, en-US or vi.");
 }
 var faqCounts = [10, 30, 50, 100];
@@ -36966,12 +36969,24 @@ function sourceFiles(input) {
     return readdirSync2(input).filter((name) => !name.startsWith(".")).sort().flatMap((name) => sourceFiles(join5(input, name)));
   return stat2.isFile() && supported.test(input) ? [input] : [];
 }
+function ocrLanguages(language, installed) {
+  const locale = new Intl.Locale(language).maximize();
+  const pack = installed.find((name) => {
+    if (locale.language === "zh") return name === (locale.script === "Hant" ? "chi_tra" : "chi_sim");
+    if (!/^[a-z]{3}(?:_[a-z]{4})?$/i.test(name)) return false;
+    const candidate = new Intl.Locale(name.replace("_", "-")).maximize();
+    return candidate.language === locale.language && candidate.script === locale.script;
+  });
+  if (!pack) throw Error("Install the Tesseract OCR language pack for " + language + " to read the scanned pages.");
+  return pack !== "eng" && installed.includes("eng") ? pack + "+eng" : pack;
+}
 function extract(file, language) {
   if (extname4(file).toLowerCase() !== ".pdf") return readFileSync7(file, "utf8");
   const options = { encoding: "utf8", timeout: 12e4, maxBuffer: 32 * 1024 * 1024 };
   const pages = execFileSync2("pdftotext", ["-layout", file, "-"], options).split("\f");
   if (!pages.at(-1)?.trim()) pages.pop();
   const temp = mkdtempSync3(join5(tmpdir2(), "live-knowledge-"));
+  let ocr;
   try {
     return pages.map((page, index) => {
       if (page.trim()) return page;
@@ -36981,16 +36996,10 @@ function extract(file, language) {
         ["-f", num, "-l", num, "-singlefile", "-scale-to", "2200", "-png", file, prefix],
         options
       );
-      const languages = {
-        ko: "kor+eng",
-        en: "eng",
-        vi: "vie+eng",
-        ja: "jpn+eng",
-        zh: "chi_sim+eng"
-      };
+      ocr ??= ocrLanguages(language, execFileSync2("tesseract", ["--list-langs"], options).trim().split(/\r?\n/));
       return execFileSync2(
         "tesseract",
-        [prefix + ".png", "stdout", "-l", languages[language.split("-")[0]] ?? "eng"],
+        [prefix + ".png", "stdout", "-l", ocr],
         options
       );
     }).join("\n\n");
@@ -37012,7 +37021,9 @@ var LiveKnowledge = class {
         })
       )
     ].sort();
-    const hash2 = createHash8("sha256").update("live-index-v1:" + language);
+    const parts = new Intl.Locale(language);
+    const correctedOcr = files.some((file) => /\.pdf$/i.test(file)) && (!["en", "ko", "vi", "ja", "zh"].includes(parts.language) || parts.language === "zh" && parts.maximize().script === "Hant");
+    const hash2 = createHash8("sha256").update((correctedOcr ? "live-index-v2:" : "live-index-v1:") + language);
     for (const file of files)
       hash2.update(JSON.stringify([file, createHash8("sha256").update(readFileSync7(file)).digest("hex")]));
     this.fingerprint = hash2.digest("hex");

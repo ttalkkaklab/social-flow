@@ -1,4 +1,5 @@
 import { nativeHeight, idleCount } from './live-idle.js';
+import { liveLanguageTag } from './live-character.js';
 import { createInterface } from 'node:readline/promises';
 
 const speechLanguages = [
@@ -21,9 +22,8 @@ ${menu}
     } finally { rl.close(); }
   }
   if (value === undefined) throw Error('Choose the broadcast language for this session and set speechLanguage in its config.');
-  if (typeof value === 'string' && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value)) {
-    try { return Intl.getCanonicalLocales(value)[0]; } catch { /* Report invalid tags consistently. */ }
-  }
+  const parsed = liveLanguageTag.safeParse(value);
+  if (parsed.success) return parsed.data;
   throw Error('Invalid speechLanguage. Use a language tag such as ko, en-US or vi.');
 }
 
