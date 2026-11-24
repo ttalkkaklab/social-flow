@@ -97214,7 +97214,10 @@ var require_character_speech = __commonJS({
     var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
     var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
     function explicitVoiceOverride(board, voice, current) {
-      const override2 = board?.PRODUCTION?.modelSettings?.overrides?.speech;
+      const overrides = board?.PRODUCTION?.modelSettings?.overrides;
+      if (Array.isArray(overrides))
+        return overrides.some((entry2) => entry2?.scope === "episode" && typeof entry2.request === "string" && entry2.request.trim() && entry2.speech?.engine === voice.engine && entry2.speech.model === voice.model && entry2.speech.voiceId === voice.voiceId);
+      const override2 = overrides?.speech;
       return typeof override2?.request === "string" && override2.request.trim() && override2.engine === voice?.engine && override2.model === voice?.model && (override2.voiceId === voice?.voiceId || voice?.voiceId !== "default" && (voice?.engine !== current?.tts?.engine || voice?.model !== current?.tts?.model));
     }
     function characterSpeech(character, { boardDir, board } = {}) {

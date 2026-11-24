@@ -48,6 +48,11 @@ test('shared voice changes are visible before a new take without migrating snaps
   assert.throws(() => characterSpeech(f.character, context), /character_voice_stale/); // Same-model exceptions must name the voice.
   f.board.PRODUCTION.modelSettings.overrides.speech.voiceId = 'hero';
   assert.equal(characterSpeech(f.character, context).tts.voiceId, 'hero');
+  const speech = {engine:voice.engine, model:voice.model, voiceId:'hero'};
+  f.board.PRODUCTION.modelSettings.overrides = [{scope:'shot', request:'Use this voice for one shot', speech}];
+  assert.throws(() => characterSpeech(f.character, context), /character_voice_stale/);
+  f.board.PRODUCTION.modelSettings.overrides.push({scope:'episode', request:'Keep the approved voice', speech});
+  assert.equal(characterSpeech(f.character, context).tts.voiceId, 'hero');
   assert.equal(characterSpeech({id:'hero'}, context).tts.voiceId, 'new-hero');
 });
 test('episode gateway preflight refuses context omission, argument substitution, stale plans and output symlinks', t => {
