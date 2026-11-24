@@ -33830,13 +33830,15 @@ function requireAstraGenaiKey(route = "") {
 var waiters = /* @__PURE__ */ new Map();
 var waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new import_undici.Agent({ headersTimeout: ms, bodyTimeout: ms })).get(ms);
 var GenaiRequestError = class extends Error {
-  constructor(message, terminal, httpStatus) {
+  constructor(message, terminal, httpStatus, retryAfterSeconds) {
     super(message);
     this.terminal = terminal;
     this.httpStatus = httpStatus;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
   terminal;
   httpStatus;
+  retryAfterSeconds;
 };
 async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId, credentialRoute = route) {
   const key = requireAstraGenaiKey(credentialRoute);
@@ -33944,11 +33946,15 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
     headers: { Authorization: `Bearer ${key}`, ...body && !form ? { "Content-Type": "application/json" } : {} },
     ...body === void 0 ? {} : { body: form ? body : JSON.stringify(body) }
   });
-  if (!response.ok) throw new GenaiRequestError(
-    `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
-    response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
-    response.status
-  );
+  if (!response.ok) {
+    const retryAfter = response.headers.get("retry-after");
+    throw new GenaiRequestError(
+      `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
+      response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
+      response.status,
+      response.status === 429 && retryAfter !== null && /^\d+$/.test(retryAfter) ? Number(retryAfter) : void 0
+    );
+  }
   return Buffer.from(await response.arrayBuffer());
 }
 var genaiJobsSchema = external_exports.object({
