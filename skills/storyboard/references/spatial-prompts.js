@@ -201,10 +201,11 @@ function assemble(win, index, dir) {
       (event.withGroup ? ` (concurrent with speech group ${event.withGroup})` : '');
     const line = scene.narration?.[event.group - 1];
     const direction = event.videoDirection || line?.acting?.visual;
+    if (line?.delivery === 'voiceover') return direction || '';
     return `Event ${index + 1}: ${event.character} ${line?.delivery || 'voiceover'}` +
       (event.to ? ` addressed to ${event.to}; preserve the listener and eyeline` : '') +
       (direction ? `; ${direction}` : '');
-  }).join('. ');
+  }).filter(Boolean).join('. ');
   if (!missingSlots.length && engine === 'astra') {
     const astraAppearance = activeCast.filter(({ entry }) => text(entry.sheet))
       .map(({ entry }) => 'Appearance to preserve on visible parts only: ' + clause(entry.sheet) + '.');
@@ -226,6 +227,7 @@ function assemble(win, index, dir) {
     motionPrompt = clip.prompt;
   }
   // The vendor rejects the request above this length, so it stays a hard stop.
+  if (motionPrompt) require('../../_shared/voiceover-direction.js').checkVoiceoverDirection(motionPrompt, scene.narration || []);
   if (engine === 'astra' && motionPrompt?.length > 2000)
     throw new Error('ASTRA motion prompt including performance exceeds 2000 characters; shorten descriptions or split at a natural action boundary, preserving every action');
   const structuredImages = require('./render-routing.js').hasStructuredImages(scene);

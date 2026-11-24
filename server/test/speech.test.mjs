@@ -105,9 +105,36 @@ test('a speechless replacement binds audible effects and reports missing or sile
  assert.equal(read().SCENES[0].edit.out,0.25);
  assert.throws(()=>attach(shorter),/cannot cover edit.out/);
 });
+test('editing a private thought keeps the exact words on the character audio plan', t => {
+ const {target,r}=setup(t), lineId=r.lines[0].id;
+ const update=patch=>manageSpeech({path:target,action:'update',lineId,patch,expectedRevision:manageSpeech({path:target,action:'list'}).revision});
+ const file=join(target,'scenes.js'), board={};
+ new Function('window',readFileSync(file,'utf8'))(board);
+ const shot=board.SCENES[0];
+ shot.narration[0].delivery='off_screen';
+ shot.visual.video.speechBinding={mode:'native'};
+ shot.visual.video.speechStatus='current';
+ shot.sound={audioSource:'video'};
+ writeFileSync(file,Object.entries(board).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ const thought=update({voiceoverKind:'inner_thought',tts:'I left the key.',acting:{vocal:'Quiet realization.',visual:'Her fingers cover the key.'}}).lines[0];
+ assert.equal(thought.mediaStatus,'needs_audio');
+ assert.equal(thought.audioProvenanceStatus,'missing');
+ new Function('window',readFileSync(file,'utf8'))(board);
+ assert.equal(board.SCENES[0].visual.video.speechStatus,'stale');
+ assert.equal(board.SCENES[0].sound.audioSource,'speech');
+ assert.equal(thought.speaker,'hero');
+ assert.equal(thought.delivery,'voiceover');
+ assert.equal(thought.generationPlan.expectedText,thought.tts);
+ const picture=speechVideoPlan([thought],caps);
+ assert.match(picture.videoPrompt,/fingers cover the key/);
+ assert.doesNotMatch(picture.videoPrompt,/I left the key|Quiet realization|Addressed to/i);
+ assert.throws(()=>update({delivery:'off_screen',voiceoverKind:'inner_thought'}), /requires voiceover/);
+ assert.equal(update({delivery:'off_screen'}).lines[0].voiceoverKind,undefined);
+});
 test('video adapters select by capabilities, never a provider name',()=>{
  const lines=[{id:'a',speaker:'hero',delivery:'on_screen',tts:'Hello'}];
  assert.equal(speechVideoPlan(lines,caps).mode,'audio_conditioned');
+ assert.throws(()=>speechVideoPlan([...lines,{...lines[0],id:'private',delivery:'voiceover'}],caps),/split physical dialogue/);
  assert.equal(speechVideoPlan(lines,{...caps,provider:'another',model:'second'}).mode,'audio_conditioned');
  assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false,postLipSync:true}),/post_lipsync_forbidden/);
  assert.throws(()=>speechVideoPlan(lines,{...caps,audioConditioning:false}),/cannot synchronize/);
@@ -423,6 +450,49 @@ function buildOneShotReel(work,target,win){
  return spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
    {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
 }
+test('a private line cannot reclaim the overlapping native picture by copying or remuxing its clip',async t=>{
+ const {dir,target,file,line,first,original,remux,record,bind}=a2vFixture(t);
+ const win=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ win.SCENES[0].scene=1;
+ win.STRUCTURE={scenes:[{no:1,speakers:['hero'],videoDirection:{dialogueVoice:'model_generated'}}]};
+ win.PRODUCTION.videoModel={engine:'seedance',model:'dreamina-seedance-2-0-fast-260128',operation:'image'};
+ writeFileSync(file,Object.entries(win).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ assert.equal((await bind(original)).plan.mode,'native');
+ await ROUTES.speech_manage({path:target,action:'update',lineId:line.id,patch:{voiceoverKind:'inner_thought'},
+   expectedRevision:manageSpeech({path:target,action:'list'}).revision});
+ await record(first);
+ const before=readFileSync(file);
+ for(const clip of [original,remux]){
+   await assert.rejects(bind(clip),/speech_video_performance_conflict/);
+   assert.deepEqual(readFileSync(file),before);
+ }
+ const replacement=join(dir,'private-picture.mov');
+ execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=c=red:s=16x16:r=24:d=0.25','-c:v','libx264',replacement]);
+ assert.equal((await bind(replacement)).plan.mode,'voiceover');
+});
+test('the mixed thought track starts on its scene-frame cue and carries the full picture interval',async t=>{
+ const {dir,target,file,line,first,record}=a2vFixture(t);
+ const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const save=win=>writeFileSync(file,Object.entries(win).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ const win=read(),shot=win.SCENES[0],work=join(dir,'.work');
+ shot.scene=1;shot.duration=2;shot.narration[0].delivery='voiceover';shot.narration[0].voiceoverKind='inner_thought';
+ shot.timeline={startFrame:24,endFrame:72,dialogueCues:[{lineId:line.id,frame:48}]};
+ win.STRUCTURE={scenes:[{no:1,videoDirection:{fps:24}}]};save(win);
+ await record(first);
+ const {compose}=require('../../skills/produce/references/compose-speech.js');
+ for(const fps of [24,30]){
+   const current=read();current.STRUCTURE.scenes[0].videoDirection.fps=fps;save(current);
+   writeFileSync(join(work,'cards.tsv'),'0\t'+first+'\t1\n');
+   const output=compose(work,target)[0],onset=24/fps;
+   assert.equal(output.intervals[0].speechStartSeconds,onset);
+   assert.equal(output.durationSeconds,48/fps);
+   const pcm=execFileSync('ffmpeg',['-v','error','-i',output.audioPath,'-ac','1','-ar','48000','-f','s16le','pipe:1']);
+   const offset=Math.round(onset*48000)*2;
+   assert.ok(pcm.subarray(0,offset).every(byte=>byte===0));
+   assert.ok(pcm.subarray(offset,offset+960).some(byte=>byte!==0));
+   assert.ok(pcm.subarray(offset+24000).every(byte=>byte===0));
+ }
+});
 test('public A2V binding keeps the original driver for a line when its words stay the same',async t=>{
  const {dir,file,first,retake,original,remux,overdub,record,bind}=a2vFixture(t);
  await record(first);
@@ -710,14 +780,14 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
  shot.narration=(ensemble?['hero','guest','hero']:['hero']).map((speaker,i)=>({
    id:'line'+i,speaker,delivery:'on_screen',tts:['Hello.','Welcome.','Thanks.'][i]}));
  const inputs=actors.map((character,i)=>({shotId:shot.id,role:'face',character,frame:0,path:faces[i]}));
- async function receipt(pins,opening){
+ async function receipt(pins,opening,openingAction='She listens.',globalAction,imageCue){
    const start=opening?3:0;
    const dialogue=shot.narration.map((line,i)=>({lineId:line.id,speaker:line.speaker,text:line.tts,delivery:line.delivery,
      frame:start,...(pins[i] && {voice:voicePin(pins[i])})}));
-   const leads=opening?[{shotId:opening,startFrame:0,endFrame:start,transition:'open',action:'She listens.',openingPositions:[],blocking:[]}]:[];
+   const leads=opening?[{shotId:opening,startFrame:0,endFrame:start,transition:'open',action:openingAction,openingPositions:[],blocking:[]}]:[];
    const images=[{shotId:shot.id,role:'start',frame:start,path:faces[0]},...inputs.map(pin=>({...pin,frame:start}))];
-   if(opening)images.unshift({shotId:opening,role:'start',frame:0,path:faces[0]});
-   const wire=await captureSceneRequest({sceneNo:1,fps:24,frameCount:6,images,
+   if(opening)images.unshift({shotId:opening,role:'start',frame:0,path:faces[0],cue:imageCue});
+   const wire=await captureSceneRequest({sceneNo:1,fps:24,frameCount:6,images,sceneDirection:{action:globalAction},
      shots:[...leads,{shotId:shot.id,startFrame:start,endFrame:6,transition:opening?'hard_cut':'open',action:'They speak.',openingPositions:[],blocking:[],dialogue}]},model);
    assert.deepEqual(wire.attachments.filter(row=>row.role==='voice_reference').map(row=>row.sha256),pins.filter(Boolean).map(sha));
    const fingerprint='7'.repeat(64);
@@ -768,7 +838,27 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
      const opening={...structuredClone(shot),id:'opening',duration:3/24,narration:[]};
      const reply={...structuredClone(shot),duration:3/24};
      await receipt([first],opening.id);
+     const {assertVideoSpeechProvenance}=require('../../skills/_shared/speech-contract.js');
+     const privateShot=id=>({id,narration:[{id:'thought',speaker:'hero',delivery:'voiceover',voiceoverKind:'inner_thought',tts:'Hello.'}]});
+     const picture=id=>assertVideoSpeechProvenance(source,sha(source),{mode:'voiceover',sourceShot:privateShot(id)});
+     assert.doesNotThrow(()=>picture(opening.id));
+     assert.throws(()=>picture(reply.id),wrong);
+     assert.throws(()=>picture('absent-shot'),wrong);
+     opening.narration=privateShot(opening.id).narration;
      save({...win,SCENES:[opening,reply]});
+     const manage=input=>ROUTES.speech_manage({path:target,expectedRevision:manageSpeech({path:target,action:'list'}).revision,...input});
+     await manage({action:'attach_audio',lineId:'thought',audioPath:first,
+       generation:{generator:'tts_generate',text:'Hello.',language:'ko',voiceSettings:{voiceName:'Kore',speed:1}}});
+     for(const directions of [['She leans in and whispers Hello.'],['She whispers another line.'],
+       ['She says: "Goodbye."'],['She speaks the words “Give it here.”'],['She talks to Ben in a low voice.'],
+       [undefined,'In the opening shot she says: “Goodbye.”'],[undefined,undefined,'She says: “Goodbye.”']]){
+       await receipt([first],opening.id,...directions);
+       assert.throws(()=>picture(opening.id),wrong);
+       const before=readFileSync(file);
+       await assert.rejects(manage({action:'attach_video',shotId:opening.id,videoPath:source}),wrong);
+       assert.deepEqual(readFileSync(file),before);
+     }
+     await receipt([first],opening.id);
      const attached=await ROUTES.speech_manage({action:'attach_video',path:target,shotId:opening.id,videoPath:source,
        expectedRevision:manageSpeech({path:target,action:'list'}).revision});
      assert.equal(JSON.parse(attached.content[0].text).plan.mode,'voiceover');

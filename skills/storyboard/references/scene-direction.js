@@ -37,7 +37,7 @@
   function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
     const visual = card.visual || {}, video = visual.video || {}, source = video.promptSource || {};
     const design = card.shot?.videoDesign || {}, lines = card.narration || [];
-    const spoken = lines.map(line => text(line.tts)).filter(Boolean);
+    const spoken = lines.filter(line => line.delivery !== 'voiceover').map(line => text(line.tts)).filter(Boolean);
     const redact = cue => spoken.reduce((result,line) => result.split(line).join('the authored line'), cue);
     const beats = [], groups = new Set();
     function actionWords(event, i) {
@@ -58,9 +58,9 @@
       if (visualOnly || line.delivery === 'voiceover') {
         delete acting.vocal; delete acting.direction; delete acting.tags;
       }
-      const fields = actingFields(acting, line.delivery !== 'voiceover', new Set(), redact, accept);
+      const fields = actingFields(line.delivery === 'voiceover' ? {visual:acting.visual} : acting, line.delivery !== 'voiceover', new Set(), redact, accept);
       const pauses = actingPauses(acting.leadInSeconds, acting.tailOutSeconds);
-      const to = text(event.to) || text(line.to);
+      const to = line.delivery === 'voiceover' ? '' : text(event.to) || text(line.to);
       const listener = to && accept(redact(to)) ? redact(to) : '';
       const listenerInBeat = listener && scenePrompt && concise;
       if (listener && !listenerInBeat) fields.unshift((concise ? 'to ' : 'Addressed to ') + listener + '.');
@@ -70,7 +70,9 @@
         const cue = actionWords(action, index);
         if (cue) fields.push(cue);
       }
-      if (fields.length || card.performance?.length || listenerInBeat) {
+      if (line.delivery === 'voiceover') {
+        if (fields.length) beats.push(fields.join(' '));
+      } else if (fields.length || card.performance?.length || listenerInBeat) {
         const who = [line.speaker, scenePrompt ? undefined : line.id].filter(Boolean).join(', ');
         const label = listenerInBeat ? 'While ' + listener + ' listens, ' + (who || 'the speaker') + ' speaks' :
           scenePrompt ? (who ? 'As ' + who + ' speaks' : 'During dialogue') :

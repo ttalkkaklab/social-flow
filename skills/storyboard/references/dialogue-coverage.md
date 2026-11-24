@@ -100,12 +100,17 @@ Separate a character's physical speech and inner thoughts into shots with their 
 route. Outside explicit one-take scenes, the single-shot tools report `shot_speaker_limit` for multiple speakers;
 explicit silent/voiceover MSR plans report `msr_speech_route` before generation.
 
-Mark an inner thought `delivery:"voiceover"` with the character's own speaker ID, not
+Set `voiceoverKind:"inner_thought"` on the line in `shot_dialogue`. It sets
+`delivery:"voiceover"` and keeps the thought out of model dialogue. Use the character's own speaker ID, not
 the narrator's. Retain its acting/performance metadata and explain the thought in the
-story/action. Keep visible mouths closed and omit speech text from the video prompt.
+story/action. Give the visual prompt the gesture that triggers the thought and the other character’s ongoing action. Omit the words, vocal direction and an addressee from the picture prompt. Keep visible mouths closed during the thought. Let the listener react to the next audible line.
 Generate each line with the pinned character voice using the saved TTS provider, attach
 its real audio and measure it. Use `speech_manage` timing and `compose-speech.js` to
 place it at the authored lead-in, speech interval and tail-out alongside action beats.
+For a frame-specific onset, set the thought's line ID in `timeline.dialogueCues`.
+The mixer subtracts the shot's start frame and uses the scene frame rate. It retains
+the surrounding silence through the end of the shot. Save that cue on the storyboard
+before planning video. Render-time bindings may repeat the saved frame.
 Retime from measured audio before `video_plan`; plan video for the full composed/action
 duration and split if it exceeds the adapter limit. Never truncate a thought, accelerate
 speech silently, loop footage or freeze-pad a short clip to cover missing action.

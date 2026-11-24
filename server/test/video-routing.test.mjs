@@ -767,6 +767,10 @@ test('MSR projects use I2V for silent and thought shots and require bindings for
   assert.equal(manageSpeech({path:path.join(f.episode,'storyboard'),action:'plan_video',shotId:'s1'}).plan.mode,'voiceover');
   assert.throws(()=>planVideo({episode:f.episode,sceneNo:1,requestId:'wrong',tool:'astra_genai_msr'}),/scene_speech_route/);
  }
+ shot.visual.video.promptSource.action='She thinks: “A secret thought.”';
+ f.save();
+ assert.throws(plan,/video_voiceover_embedded/);
+ shot.visual.video.promptSource.action='The character notices the open door.';
  shot.duration=5.1;f.save();
  assert.throws(plan,/video_duration_short/);
  const timed=planVideo({episode:f.episode,sceneNo:1,requestId:'timed-thought',args:{reserveUsd:0.25}});

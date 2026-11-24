@@ -71,6 +71,15 @@ test('temporal action, measured speech and reactions use one timeline; MSR dialo
   assert.doesNotMatch(measured.prompt,/"Wait\."/);
 });
 
+test('a one-word thought can coincide with the standard subtitle and audio policies', () => {
+  for (const tts of ['No.', 'No music.', 'Closed.']) {
+    const shot = { narration: [{speaker:'hero', delivery:'voiceover', voiceoverKind:'inner_thought', tts}] };
+    const {prompt} = compileVideoPrompt(shot, {action:'She hides the key.',sound:'Gentle wind'});
+    assert.match(prompt, /She hides the key/);
+    assert.doesNotMatch(prompt, /["“]No\./i);
+  }
+});
+
 test('the shot expression is named and held in the video prompt', () => {
   const shot = { shot: { size: 'mcu', angle: 'eye' }, visual: { frames: { mode: 'first' }, camera: { movement: 'static' },
     expression: { 'na-ri': 'brows drawn together, lips pressed shut.' } } };

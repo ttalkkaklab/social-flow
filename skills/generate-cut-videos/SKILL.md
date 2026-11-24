@@ -67,7 +67,7 @@ ambience and action-timed effects. Use `generateAudio:false` when the edit suppl
 sound separately, and carry those cues into assembly. Thoughts use image2video with
 `generateAudio:false` and character `voiceover`: generate and attach pinned
 TTS, compose measured speech/action intervals and lead-in/tail-out, then plan the full
-video duration. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
+video duration. Send the visible reaction and ongoing action to the video model. Keep the thought text and vocal direction with TTS. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
 If speech is disabled, report missing TTS setup rather than sending thoughts to MSR.
 See [shot speech](../produce/references/shot-speech.md).
 

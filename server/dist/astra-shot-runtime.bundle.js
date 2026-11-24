@@ -915,7 +915,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load9;
+    exports.load = load10;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1051,7 +1051,7 @@ var require_browser = __commonJS({
       } catch (error) {
       }
     }
-    function load9() {
+    function load10() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1089,7 +1089,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load9;
+    exports.load = load10;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1231,7 +1231,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load9() {
+    function load10() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -45346,7 +45346,7 @@ var require_signal_exit = __commonJS({
         }
         assert.equal(typeof cb, "function", "a callback must be provided for exit handler");
         if (loaded === false) {
-          load9();
+          load10();
         }
         var ev = "exit";
         if (opts && opts.alwaysLast) {
@@ -45406,7 +45406,7 @@ var require_signal_exit = __commonJS({
         return signals;
       };
       loaded = false;
-      load9 = function load10() {
+      load10 = function load11() {
         if (loaded || !processOk(global.process)) {
           return;
         }
@@ -45423,7 +45423,7 @@ var require_signal_exit = __commonJS({
         process2.emit = processEmit;
         process2.reallyExit = processReallyExit;
       };
-      module.exports.load = load9;
+      module.exports.load = load10;
       originalProcessReallyExit = process2.reallyExit;
       processReallyExit = function processReallyExit2(code) {
         if (!processOk(global.process)) {
@@ -45459,7 +45459,7 @@ var require_signal_exit = __commonJS({
     var emit;
     var sigListeners;
     var loaded;
-    var load9;
+    var load10;
     var originalProcessReallyExit;
     var processReallyExit;
     var originalProcessEmit;
@@ -45911,7 +45911,7 @@ var require_video_duration = __commonJS({
 });
 
 // src/msr-opening.ts
-import { createRequire } from "node:module";
+import { createRequire as createRequire2 } from "node:module";
 
 // node_modules/zod/v3/external.js
 var external_exports = {};
@@ -49955,11 +49955,19 @@ var coerce = {
 var NEVER = INVALID;
 
 // src/prompt-language.ts
+import { createRequire } from "node:module";
 var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
 function nonEnglishOutsideQuotes(prompt) {
   const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
   return match ? match[0] : null;
+}
+var load = createRequire(import.meta.url);
+function checkVoiceoverDirection(direction, lines, compiled = false) {
+  const contract2 = load("../../skills/_shared/voiceover-direction.js");
+  contract2.checkVoiceoverDirection(direction, lines, compiled);
+  if (compiled && lines.some((line) => line.voiceoverKind === "inner_thought") && lines.every((line) => line.delivery === "voiceover"))
+    contract2.checkThoughtPerformance(direction);
 }
 
 // src/msr-opening.ts
@@ -49969,9 +49977,9 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
-var load = createRequire(import.meta.url);
+var load2 = createRequire2(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
-  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  camera: sceneText.refine((id) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
@@ -50078,15 +50086,15 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 }
 
 // src/scene-video.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 
 // src/video-prompt.ts
-import { createRequire as createRequire2 } from "node:module";
-var load2 = createRequire2(import.meta.url);
+import { createRequire as createRequire3 } from "node:module";
+var load3 = createRequire3(import.meta.url);
 var object = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text = (value) => typeof value === "string" ? value.trim() : "";
 function planVideoPerformance(shot, options = {}) {
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const timeline = acting.planScenePerformance(shot, options.measureAudio);
   return { ...timeline, timing: options.mode === "native" && timeline.timing === "needs_audio_duration" ? "model_timed" : timeline.timing };
 }
@@ -50102,10 +50110,10 @@ function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
   if (heldMove.test(movement)) return "The camera holds a static frame.";
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
   const pace = { slow: "slowly", steady: "steadily", fast: "quickly" }[speed];
-  const travels = load2("../../skills/storyboard/references/production-mode.js").travels(camera);
+  const travels = load3("../../skills/storyboard/references/production-mode.js").travels(camera);
   const ends = travels ? ", with a short pause on the opening and closing pictures" : "";
   if (move) {
     const path9 = /[;.!?]\s|^(?:after|when|once|follow|track|pan|tilt|dolly|orbit|keep|start|end)\b/i.test(target);
@@ -50151,12 +50159,12 @@ function cameraDrift(prompt, movement) {
 }
 function shotVisualDirection(shot, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
-  const words = load2("../../skills/storyboard/references/assemble-bg-prompt.js");
-  const views = load2("../../skills/storyboard/references/shot-view.js");
+  const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
+  const views = load3("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
   const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
-  const catalogue = load2("../../skills/storyboard/references/film-techniques.js");
-  const contract2 = load2("../../skills/storyboard/references/structure-contract.js");
+  const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
+  const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -50190,7 +50198,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const motion = object(design.motion);
   const states = [...new Set((Array.isArray(motion.beats) ? motion.beats : []).map((beat) => text(object(beat).state)).filter(Boolean))];
   const performance2 = planVideoPerformance(shot, { ...options, mode });
-  const acting = load2("../../skills/_shared/scene-acting.js");
+  const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
   const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
@@ -50223,6 +50231,8 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   let step = 0, prompt = parts(0).join(" ");
   while (limit && prompt.length > limit && step < dropped.length) prompt = parts(++step).join(" ");
   const fitWarnings = !limit || !step ? [] : [prompt.length > limit ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(", ")}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt` : `prompt_fitted: left out the ${dropped.slice(0, step).join(", ")} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
+  for (const value of [source.action, source.end, source.sound]) if (value) checkVoiceoverDirection(value, lines);
+  if (mode === "voiceover") checkVoiceoverDirection(prompt, lines, true);
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings = [
@@ -51375,7 +51385,7 @@ var HOSTED_VIDEO_ROUTES = {
 };
 
 // src/video-registry.ts
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 
 // src/mlx-serve-client.ts
 import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
@@ -53580,7 +53590,7 @@ function resolveVideoDuration(tool, input) {
 }
 
 // src/video-registry.ts
-var load3 = createRequire3(import.meta.url);
+var load4 = createRequire4(import.meta.url);
 var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
 var VIDEO_ADAPTERS = Object.freeze({
@@ -53688,32 +53698,32 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
 }
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath } from "node:url";
-var load4 = createRequire4(import.meta.url);
-var imageRouting = () => load4(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var load5 = createRequire5(import.meta.url);
+var imageRouting = () => load5(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 function hasVideoSubjectReferences(shot) {
   return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
 }
 
 // src/video-voice.ts
 import path7 from "node:path";
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load5 = createRequire5(import.meta.url);
+var load6 = createRequire6(import.meta.url);
 function resolveCharacterVoice(character, context, warnings) {
-  return load5("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
+  return load6("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
 }
 
 // src/scene-video.ts
-var load6 = createRequire6(import.meta.url);
+var load7 = createRequire7(import.meta.url);
 
 // src/video-routing.ts
-import { createRequire as createRequire9 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/video-pricing.ts
@@ -53905,8 +53915,8 @@ function charUnits(args) {
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-review.ts
-import { createRequire as createRequire7 } from "node:module";
-var review = () => createRequire7(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire8 } from "node:module";
+var review = () => createRequire8(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function refreshVideoReview(episode) {
   try {
     review().write(episode);
@@ -53923,7 +53933,7 @@ var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/video-routing.ts
-var load7 = createRequire9(import.meta.url);
+var load8 = createRequire10(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
@@ -53950,7 +53960,7 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function assertSpeechRenderCapacity(tool, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
-  load7("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+  load8("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
     tool,
     model: model2,
     scene,
@@ -54019,7 +54029,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -54225,7 +54235,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load8 = createRequire10(import.meta.url);
+var load9 = createRequire11(import.meta.url);
 var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -54461,7 +54471,7 @@ var shotSchema = external_exports.object({
   timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
-  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough()).optional(),
+  narration: external_exports.array(external_exports.object({ id: external_exports.string().trim().min(1).optional(), delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional(), voiceoverKind: external_exports.literal("inner_thought").optional(), tts: external_exports.string(), sub: external_exports.string().optional(), speaker: external_exports.string().trim().min(1).optional() }).passthrough().refine((line) => !line.voiceoverKind || line.delivery === "voiceover", "An inner thought requires voiceover delivery")).optional(),
   visual: visualSchema.optional(),
   duration: external_exports.number().positive().optional(),
   scene: external_exports.number().int().positive().optional(),
@@ -54798,6 +54808,7 @@ var shotDialogueSchema = external_exports.object({
       speaker: nonEmpty.describe("The character who speaks \u2014 a narrator is a character too"),
       tts: nonEmpty.describe("The spoken line, in the video's language"),
       sub: external_exports.string().optional().describe("The written notation when it differs from tts"),
+      voiceoverKind: external_exports.literal("inner_thought").nullable().optional().describe("Private thought in this character\u2019s voice; null clears the designation"),
       delivery: external_exports.enum(["voiceover", "on_screen", "off_screen"]).optional().describe("Default: on_screen for one of the shot's characters, voiceover for anyone else")
     }).strict()).describe("Every line of the shot in spoken order; [] makes it silent")
   }).strict()).min(1)
@@ -54890,8 +54901,8 @@ function compileActing(text2, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire13 } from "node:module";
-var shared2 = () => createRequire13(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire14 } from "node:module";
+var shared2 = () => createRequire14(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
@@ -54941,7 +54952,7 @@ var speechManageSchema = external_exports.object({
   speaker: external_exports.string().optional(),
   query: external_exports.string().optional(),
   expectedRevision: external_exports.string().optional(),
-  patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
+  patch: external_exports.object({ tts: external_exports.string().min(1).optional(), sub: external_exports.string().optional(), speaker: external_exports.string().min(1).optional(), delivery: delivery.optional(), voiceoverKind: external_exports.literal("inner_thought").nullable().optional(), acting: actingSchema.nullable().optional() }).strict().optional(),
   audioPath: external_exports.string().optional(),
   videoPath: external_exports.string().optional(),
   tool: external_exports.string().optional(),
@@ -55057,7 +55068,7 @@ function speechVideoPlan(input, capabilities, sceneNo) {
   const lines = scene.narration || [];
   const onScreen = lines.some((line) => line.delivery === "on_screen");
   const physicalSpeech = lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
-  if (capabilities.nativeSpeech && physicalSpeech && lines.some((line) => line.delivery === "voiceover"))
+  if (physicalSpeech && lines.some((line) => line.delivery === "voiceover") && (capabilities.nativeSpeech || onScreen && capabilities.audioConditioning))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
@@ -55117,6 +55128,7 @@ function manageSpeech(args, options = {}) {
   const character = (id) => characters.find((c) => c.id === id);
   const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname6(file), board: win });
   const scenes = win.SCENES;
+  const timedShot = (scene) => actingContract().withThoughtClock(scene, object2(win.STRUCTURE).scenes);
   let changed = false;
   let timing;
   let soundtrack;
@@ -55154,7 +55166,12 @@ function manageSpeech(args, options = {}) {
       const prior = speechRevision(line, character(line.speaker));
       const oldAudio = line.audio;
       const oldDelivery = line.delivery;
+      const priorLines = (scene.narration || []).map((entry2) => ({ ...entry2 }));
+      if (args.patch.voiceoverKind && args.patch.delivery && args.patch.delivery !== "voiceover")
+        throw new Error("An inner thought requires voiceover delivery");
       Object.assign(line, args.patch);
+      if (args.patch.voiceoverKind) line.delivery = "voiceover";
+      if (line.voiceoverKind === null || line.delivery !== "voiceover") delete line.voiceoverKind;
       if (args.patch.acting === null) delete line.acting;
       if (args.patch.speaker && object2(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
@@ -55167,9 +55184,10 @@ function manageSpeech(args, options = {}) {
       if (speechRevision(line, character(line.speaker)) !== prior) {
         const video = object2(object2(scene.visual).video);
         const binding = object2(video.speechBinding);
-        invalidated = { audio: oldAudio || null, video: Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
+        const changedRoute = speechContract().invalidateVoiceoverChange(scene, priorLines);
+        invalidated = { audio: oldAudio || null, video: changedRoute || Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
         delete line.audio;
-        if (binding.mode !== "native") line.mediaStatus = "needs_audio";
+        if (binding.mode !== "native" || line.delivery === "voiceover") line.mediaStatus = "needs_audio";
         if (invalidated.video) video.speechStatus = "stale";
         scene.speechRevision = (Number(scene.speechRevision) || 0) + 1;
       }
@@ -55201,7 +55219,7 @@ function manageSpeech(args, options = {}) {
       line.audio = { path: audioPath, sha256: audioHash, revision: lineRevision, status: "not_reviewed", generation };
       line.mediaStatus = "audio_ready";
     }
-    const clock = actingContract().planScenePerformance(scene, measuredDuration);
+    const clock = actingContract().planScenePerformance(timedShot(scene), measuredDuration);
     timing = {
       shotId: scene.id,
       storedSeconds: scene.duration,
@@ -55219,7 +55237,7 @@ function manageSpeech(args, options = {}) {
       if (!currentAudio(line, character(line.speaker))) throw new Error("Attach current speech before retiming");
     }
     const contract2 = nodeModule4.createRequire(import.meta.url)("../../skills/_shared/performance-retiming.js");
-    const result = contract2.retime(scene, args.timingPatch || {}, measuredDuration);
+    const result = contract2.retime(timedShot(scene), args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
     const video = object2(object2(scene.visual).video);
@@ -55293,7 +55311,7 @@ function manageSpeech(args, options = {}) {
         throw new Error("Caller capabilities disagree with selected adapter registry; use the registered video operation");
       args = { ...args, capabilities: verified };
     }
-    plan = speechVideoPlan({ ...scene, narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
+    plan = speechVideoPlan({ ...timedShot(scene), narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
     const continuityContract = nodeModule4.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
     plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname6(file)) };
     if (args.action === "attach_video") {
@@ -55415,6 +55433,7 @@ function manageSpeech(args, options = {}) {
           videoPath,
           videoSha256,
           quality,
+          ...plan.mode === "voiceover" && scene.narration?.some((line) => line.voiceoverKind === "inner_thought") && { voiceoverKind: "inner_thought" },
           ...performanceSource && { performanceSource },
           ...generationDriver && { generationAudioSha256: generationDriver, generationAudioPath: driverPath },
           ...driverSha256 ? { conditioningAudioSha256: driverSha256, conditioningAudioPath: driverPath } : {},
@@ -55510,7 +55529,7 @@ function manageSpeech(args, options = {}) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object2(object2(scene.visual).video).speechStatus !== "stale" && object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

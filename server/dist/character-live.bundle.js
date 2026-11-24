@@ -34462,15 +34462,17 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 // src/msr-opening.ts
-import { createRequire } from "node:module";
+import { createRequire as createRequire2 } from "node:module";
 
 // src/prompt-language.ts
+import { createRequire } from "node:module";
 var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
 function nonEnglishOutsideQuotes(prompt) {
   const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
   return match ? match[0] : null;
 }
+var load = createRequire(import.meta.url);
 
 // src/msr-opening.ts
 var openingPositionsSchema = external_exports.array(external_exports.object({
@@ -34479,9 +34481,9 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
   position: external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Describe the opening position in English").describe("Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.")
 }).strict(), { required_error: "openingPositions required: inspect the opening image and describe each character and its reference images" }).describe("Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.");
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
-var load = createRequire(import.meta.url);
+var load2 = createRequire2(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
-  camera: sceneText.refine((id) => !!load("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  camera: sceneText.refine((id) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
@@ -36260,7 +36262,7 @@ import { createHash as createHash7, randomUUID as randomUUID6 } from "node:crypt
 import { existsSync as existsSync5, mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync4 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
-import { createRequire as createRequire2 } from "node:module";
+import { createRequire as createRequire3 } from "node:module";
 import { promisify as promisify2 } from "node:util";
 
 // src/live-motion.ts
@@ -36432,7 +36434,7 @@ var LiveProgram = class {
 
 // src/live-native.ts
 var execute2 = promisify2(execFile2);
-var { estimateSpeechSeconds } = createRequire2(import.meta.url)("../../skills/_shared/scene-acting.js");
+var { estimateSpeechSeconds } = createRequire3(import.meta.url)("../../skills/_shared/scene-acting.js");
 var talkPrompt = "Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.";
 function speechFrames(text, language) {
   const seconds = estimateSpeechSeconds(text, language) ?? Math.max(2, Array.from(text).length / 7);

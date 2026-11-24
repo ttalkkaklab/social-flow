@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 const load = createRequire(import.meta.url);
 export const videoTextPolicy = () => String(load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -161,7 +161,9 @@ export function shotVisualDirection(shot, concise = false) {
 }
 const directions = () => load('../../skills/storyboard/references/scene-direction.js');
 export function resolvedDirection(scene, cards) { return directions().resolve(scene, cards); }
-export function withSceneCamera(shot, scenes) { return directions().withCameraDefaults([shot], scenes)[0]; }
+export function withSceneCamera(shot, scenes) {
+    return load('../../skills/_shared/scene-acting.js').withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
+}
 export function attributeWords(key, row, camera = {}) {
     if (key === 'camera')
         return row.id || row.source === 'shot'
@@ -231,6 +233,13 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const fitWarnings = !limit || !step ? [] : [prompt.length > limit
             ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(', ')}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt`
             : `prompt_fitted: left out the ${dropped.slice(0, step).join(', ')} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
+    // The shot compiler can also preview several deliveries. The native line is allowed
+    // to have the same words as a thought; inspect the authored direction before adding it.
+    for (const value of [source.action, source.end, source.sound])
+        if (value)
+            checkVoiceoverDirection(value, lines);
+    if (mode === 'voiceover')
+        checkVoiceoverDirection(prompt, lines, true);
     const foreign = nonEnglishOutsideQuotes(prompt);
     if (foreign && options.validateLanguage !== false)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);

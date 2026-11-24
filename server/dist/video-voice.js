@@ -117,7 +117,7 @@ export function prepareVideoVoice(tool, input, context) {
     const msr = tool === 'astra_genai_msr' || pinnedMsr;
     // The hosted reference lanes speak the shot's dialogue from the prompt as MSR does (reference-frame prompts carry no lines).
     const vendor = VENDOR_REFERENCE_TOOLS.includes(tool);
-    // MSR renders authored dialogue and voiceover into its own soundtrack; a pinned sample, when the
+    // MSR renders authored physical dialogue into its own soundtrack; a pinned sample, when the
     // gateway takes one, sets the timbre (user directive 2026-10-31). A cut without dialogue is fine.
     if (msr) {
         if (object(context.shot.visual).video && object(object(context.shot.visual).video).voice !== undefined)
@@ -137,17 +137,19 @@ export function prepareVideoVoice(tool, input, context) {
     const supplied = lane === 'supplied';
     const onScreen = lines.some(line => line.delivery === 'on_screen');
     const sceneDialogue = context.sceneDirection && lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
-    const native = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
+    const nativeAudioRequested = !supplied && audible && (msr || vendor || nativeSlot || onScreen || Boolean(sceneDialogue));
+    const native = nativeAudioRequested && lines.some(line => line.delivery !== 'voiceover');
     // Voice gate (owner directive 2026-10-31): a character the viewer hears or sees speak needs a voice
     // lane. An adapter without one renders only cuts whose lines are external TTS over a non-speaking picture.
-    if (!context.modelVoice && lane === 'none' && (native || onScreen))
+    if (!context.modelVoice && lane === 'none' && (nativeAudioRequested || onScreen))
         throw new Error(`voice_lane_required: ${tool} cannot keep a character's voice. Render this spoken cut with a reference adapter ` +
             `(astra_genai_msr, seedance_reference, fasth3_omni_reference, minimax_reference, heygen_reference) or an audio2video adapter${onScreen ? '' : ', or set generateAudio:false and keep the lines as TTS voiceover'}.`);
     const reference = native && lane === 'reference';
     const strategy = context.modelVoice ? 'model_generated' : supplied ? 'supplied_audio' : reference ? 'reference_voice' : 'external_tts';
     const warnings = [];
     const speakers = [];
-    const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? lines : lines.filter(line => line.delivery === 'on_screen');
+    const physicalLines = lines.filter(line => line.delivery !== 'voiceover');
+    const nativeLines = msr || vendor || nativeSlot || sceneDialogue ? physicalLines : physicalLines.filter(line => line.delivery === 'on_screen');
     const ids = [...new Set((native ? nativeLines : lines).map(line => text(line.speaker) || text(doc.narratorCharacterId)))];
     const prompt = [];
     const audioOffset = tool === 'fasth3_omni_reference' && Array.isArray(args.referenceVideoPaths)
@@ -259,18 +261,18 @@ export function prepareVideoVoice(tool, input, context) {
         // Older Seedance boards sometimes store the whole script in the provider prompt.
         // Keep it when every authored turn is already quoted once and in order.
         if (tool === 'seedance_reference') {
-            const authored = lines.map(line => text(line.tts));
+            const authored = nativeLines.map(line => text(line.tts));
             const embedded = quoted.filter(words => authored.includes(words));
             if (embedded.length === authored.length && embedded.every((words, i) => words === authored[i]))
                 return;
         }
-        if (lines.some(line => quoted.some(words => words.includes(text(line.tts)))))
+        if (nativeLines.some(line => quoted.some(words => words.includes(text(line.tts)))))
             throw new Error('video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order');
         const bySpeaker = new Map(speakers.map(speaker => [speaker.speaker, speaker]));
         const owners = object(context.board.STRUCTURE).scenes;
         const owner = Array.isArray(owners) && owners.find(scene => scene.no === context.shot.scene);
         const legacyScene = !context.timed && !owner?.directionDefaults;
-        const script = lines.map((line, turn) => {
+        const script = nativeLines.map((line, turn) => {
             const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
             const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
             const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;

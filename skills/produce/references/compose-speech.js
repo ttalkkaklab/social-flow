@@ -2,7 +2,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process'),{createHash}=require('node:crypto');
 const {evaluateWindowScript}=require('../../_shared/scenes-vm.js');
-const {actingErrors,speechRevisionPayload,planScenePerformance}=require('../../_shared/scene-acting.js');
+const {actingErrors,speechRevisionPayload,planScenePerformance,hasCuedThought,withThoughtClock}=require('../../_shared/scene-acting.js');
 const {generationVoiceErrors}=require('../../_shared/character-voice.js');
 const hash=value=>createHash('sha256').update(value).digest('hex');
 function duration(file) {
@@ -13,10 +13,11 @@ function duration(file) {
 function lineSources(lines) {
   return lines.map(n=>({lineId:n.id,sha256:n.audio?.sha256,revision:n.audio?.revision,leadInSeconds:n.acting?.leadInSeconds??0,tailOutSeconds:n.acting?.tailOutSeconds??0}));
 }
-function sceneTiming(scene, board, performanceTimingVersion) {
+function sceneTiming(scene, board, performanceTimingVersion, owners) {
   const actions = (scene.performance || []).filter(event => event.kind === 'action');
   const legacy = performanceTimingVersion !== 1 && actions.length > 0 && !actions.some(event => event.durationSeconds !== undefined || event.withGroup !== undefined);
-  const plan = planScenePerformance(legacy ? scene.narration : scene,line => duration(path.resolve(board,line.audio.path)));
+  const card = withThoughtClock(scene,owners);
+  const plan = planScenePerformance(legacy ? {...card,performance:undefined} : card,line => duration(path.resolve(board,line.audio.path)));
   if (legacy) {
     plan.timing = 'legacy_speech_only';
     plan.warnings.push('Legacy speech clock preserved; independent action timing is unverified. Stage actions and set durationSeconds/withGroup before adopting scene timing.');
@@ -306,9 +307,9 @@ function compose(work,board) {
       } else verifyConditioningPerformance(scene,win,Number(fields[0]),board,work,audio,hash(fs.readFileSync(audio)),render);
       continue;
     }
-    if(!lines.length||(lines.length===1&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
+    if(!lines.length||(lines.length===1&&!hasCuedThought(scene)&&!lines.some(n=>n.acting!=null)&&!scene.performance?.some(event=>event.kind==='action')))continue;
     const sources=currentLineSources(lines,board,cast);
-    const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion),intervals=timing.intervals;
+    const timing=sceneTiming(scene,board,win.SB_DOC?.performanceTimingVersion,win.STRUCTURE?.scenes),intervals=timing.intervals;
     const wav = mixLines(lines, sources, timing);
     const output=path.join(work,`c${fields[0]}-speech.wav`),tmp=output+'.tmp.wav';
     try {fs.writeFileSync(tmp,wav);fs.renameSync(tmp,output);} finally {if(fs.existsSync(tmp))fs.unlinkSync(tmp);}

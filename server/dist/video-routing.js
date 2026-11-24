@@ -34,7 +34,7 @@ import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registe
 import { readImageMetadata } from './image-media.js';
 import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
 import { prepareVideoVoice } from './video-voice.js';
-import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText } from './video-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
@@ -555,6 +555,13 @@ function buildVideoPlan(input, { context, tool }, persist) {
     if (input.shotBindings && !input.sceneRendering)
         throw new Error('scene_render_bindings: select per_shot rendering');
     if (input.sceneRendering) {
+        for (const card of context.sceneMembers ?? []) {
+            const turns = card.narration?.filter(line => line.tts?.trim()) ?? [];
+            if (turns.some(line => line.delivery === 'voiceover') && turns.some(line => line.delivery !== 'voiceover'))
+                throw new Error('scene_video_mixed_delivery: split physical dialogue and voiceover at an authored cut in ' + card.id);
+            if (turns.some(line => line.delivery === 'voiceover') && scene?.audio && scene.audio.mode !== 'mix')
+                throw new Error('scene_video_mixed_delivery: keep the voiceover outside the performance-conditioning track in ' + card.id);
+        }
         const conditioned = scene?.audio && scene.audio.mode !== 'mix';
         const tool = conditioned ? 'astra_genai_audio2video' : 'astra_genai_img2video';
         if (!scene || !context.sceneMembers || !input.sceneNo || selection.engine !== 'astra-genai' ||
@@ -564,6 +571,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const settings = z.object({ reserveUsd: z.number().nonnegative().finite(), outputPath: z.string().optional(),
             filename: z.string().optional() }).strict().parse(input.args);
         const { request } = prepareSceneRequest(input.sceneNo, bindSceneCards(context.sceneMembers, input.shotBindings), scene, context.episode, lines, { bindDialogue: false, bindOpening: false, suffix: speakers.length ? '' : 'All visible mouths stay closed. No speech or vocalization.', shotScoped: true, guideMode: conditioned ? undefined : 'background' }, () => undefined, context.board);
+        checkVoiceoverDirection(input.shotBindings?.map(binding => binding.guidance?.negativePrompt), lines);
         bindRegisteredPanels(request, context.episode, context.board);
         const missing = [];
         for (const member of context.sceneMembers) {
@@ -757,6 +765,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('scene_dialogue_audio_required: this shot has native spoken dialogue');
         callArgs = { ...callArgs, generateAudio: true };
     }
+    if (silentPicture)
+        checkVoiceoverDirection(String(callArgs.prompt ?? ''), lines, true);
     const sourcePrompt = scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
     const boardCamera = shot.visual?.camera ?? {};
     const rawPrompt = input.args.prompt ?? video?.prompt;
@@ -870,6 +880,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('character_voice_required: ' + tool + ' cannot bind the selected voice sample for ' + person.character);
     }
     const args = parseVideoArgs(tool, voice.args);
+    if (silentPicture)
+        checkVoiceoverDirection(args, lines, true);
     const adaptiveDuration = selection.engine === 'seedance' && args.durationSeconds === -1;
     if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
         const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.durationSeconds === 'number'
