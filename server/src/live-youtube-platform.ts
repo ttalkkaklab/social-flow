@@ -14,7 +14,7 @@ export function createYoutubePlatform(options: PlatformOptions, openApi = youtub
   const channelId = config.youtubeChannelId;
   if (!channelId) throw Error('Set youtubeChannelId before connecting');
   const receiptFile = join(out, 'youtube.json');
-  let receipt: YoutubeReceipt = { channelId, marker: randomUUID(), topic: config.topic, faqCount: options.faqCount, knowledgeFingerprint: options.knowledgeFingerprint };
+  let receipt: YoutubeReceipt = { channelId, marker: randomUUID(), topic: config.topic, speechLanguage: config.speechLanguage, faqCount: options.faqCount, knowledgeFingerprint: options.knowledgeFingerprint };
   const save = () => saveLiveReceipt(receiptFile, receipt);
   let client: ReturnType<typeof youtubeApi> | undefined;
   const connect = () => client ??= openApi(config.youtubeCredentialChannel ?? config.channel);
@@ -44,6 +44,10 @@ export function createYoutubePlatform(options: PlatformOptions, openApi = youtub
     });
     if (!closed) throw Error('The prior encoder has not confirmed an unstarted shutdown');
     if (receipt.topic) config.topic = receipt.topic;
+    if (receipt.speechLanguage && config.speechLanguage && receipt.speechLanguage !== config.speechLanguage)
+      throw Error('The selected speechLanguage differs from the reserved broadcast language.');
+    config.speechLanguage ??= receipt.speechLanguage;
+    receipt.speechLanguage ??= config.speechLanguage;
   }
 
   async function recover(action: Exclude<RoomCommand, 'reserve'>) {

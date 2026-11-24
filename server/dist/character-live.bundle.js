@@ -33969,13 +33969,15 @@ function saveLiveReceipt(path6, receipt) {
 // src/live-character.ts
 var point = external_exports.number().finite().min(0).max(1);
 var feature = external_exports.object({ x: point, y: point, width: point.positive(), height: point.positive() }).strict();
+var languageTag = external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
 var slug = external_exports.string().regex(/^[a-zA-Z0-9_-]+$/);
 var liveConfig = external_exports.object({
   project: external_exports.string().min(1),
   channel: slug,
   youtubeCredentialChannel: slug.optional(),
   tiktokChat: external_exports.enum(["stdin", "tikfinity"]).default("stdin"),
-  speechLanguage: external_exports.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/).optional(),
+  speechLanguage: languageTag.optional(),
+  knowledgeLanguage: languageTag.optional(),
   broadcastConcept: external_exports.string().trim().min(1).max(600).optional(),
   talkPrompt: external_exports.string().trim().min(1).max(2e3).optional(),
   motionVideo: external_exports.string().min(1).optional(),
@@ -34058,8 +34060,8 @@ async function planViewerReply(config2, actor, library, event, context, selectiv
     const keywords = await spokenLine(
       config2,
       actor,
-      "Act as the search planner for search_answers. Return up to six short search terms separated by commas. Include the product, attribute and synonyms in the language of the show. Resolve follow-ups from the conversation. Never answer the question here.",
-      { question: event.text, context },
+      "Act as the search planner for search_answers. Return up to six short search terms separated by commas. Include the product, attribute and synonyms in the show language and the source language when they differ. Resolve follow-ups from the conversation. Never answer the question here.",
+      { question: event.text, context, sourceLanguage: config2.knowledgeLanguage },
       signal,
       true
     );
@@ -36855,6 +36857,35 @@ var NativeTalk = class {
 
 // src/live-options.ts
 import { createInterface as createInterface2 } from "node:readline/promises";
+var speechLanguages = [
+  { tag: "ko", label: "\uD55C\uAD6D\uC5B4" },
+  { tag: "en", label: "English" },
+  { tag: "vi", label: "Ti\u1EBFng Vi\u1EC7t" },
+  { tag: "ja", label: "\u65E5\u672C\u8A9E" },
+  { tag: "zh", label: "\u4E2D\u6587" }
+];
+async function liveSpeechLanguage(value) {
+  if (value === void 0 && process.stdin.isTTY && process.stderr.isTTY) {
+    const rl = createInterface2({ input: process.stdin, output: process.stderr });
+    try {
+      const menu = speechLanguages.map(({ label }, i) => `${i + 1}. ${label}`).join(" \xB7 ");
+      const answer = (await rl.question(`\uC5B4\uB5A4 \uC5B8\uC5B4\uB85C \uBC29\uC1A1\uD560\uAE4C\uC694?
+${menu}
+\uBC88\uD638\uB098 \uC5B8\uC5B4 \uCF54\uB4DC(\uC608: fr-CA)\uB97C \uC785\uB825\uD558\uC138\uC694: `)).trim();
+      value = speechLanguages.find((_, i) => answer === String(i + 1))?.tag ?? answer;
+    } finally {
+      rl.close();
+    }
+  }
+  if (value === void 0) throw Error("Choose the broadcast language for this session and set speechLanguage in its config.");
+  if (typeof value === "string" && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value)) {
+    try {
+      return Intl.getCanonicalLocales(value)[0];
+    } catch {
+    }
+  }
+  throw Error("Invalid speechLanguage. Use a language tag such as ko, en-US or vi.");
+}
 var faqCounts = [10, 30, 50, 100];
 async function liveFaqCount(value) {
   if (!value && process.stdin.isTTY && process.stderr.isTTY) {
@@ -36870,6 +36901,7 @@ async function liveFaqCount(value) {
   return count2;
 }
 var liveStartChoices = {
+  speechLanguages,
   faqCounts,
   format: "locked-camera conversation",
   generation: "GenAI LTX 2.5 picture and native dialogue",
@@ -37813,7 +37845,7 @@ function createYoutubePlatform(options, openApi = youtubeApi) {
   const channelId = config2.youtubeChannelId;
   if (!channelId) throw Error("Set youtubeChannelId before connecting");
   const receiptFile = join9(out, "youtube.json");
-  let receipt = { channelId, marker: randomUUID10(), topic: config2.topic, faqCount: options.faqCount, knowledgeFingerprint: options.knowledgeFingerprint };
+  let receipt = { channelId, marker: randomUUID10(), topic: config2.topic, speechLanguage: config2.speechLanguage, faqCount: options.faqCount, knowledgeFingerprint: options.knowledgeFingerprint };
   const save = () => saveLiveReceipt(receiptFile, receipt);
   let client;
   const connect = () => client ??= openApi(config2.youtubeCredentialChannel ?? config2.channel);
@@ -37839,6 +37871,10 @@ function createYoutubePlatform(options, openApi = youtubeApi) {
     });
     if (!closed) throw Error("The prior encoder has not confirmed an unstarted shutdown");
     if (receipt.topic) config2.topic = receipt.topic;
+    if (receipt.speechLanguage && config2.speechLanguage && receipt.speechLanguage !== config2.speechLanguage)
+      throw Error("The selected speechLanguage differs from the reserved broadcast language.");
+    config2.speechLanguage ??= receipt.speechLanguage;
+    receipt.speechLanguage ??= config2.speechLanguage;
   }
   async function recover(action) {
     receipt = readOwned(out);
@@ -38053,13 +38089,34 @@ async function main() {
     ...v.tiktok ? ["tiktok"] : []
   ]);
   const destination = selected.length > 0;
-  const start = action === "run" || action === "reserve" ? await liveStartChoice(v.start ?? (action === "run" && !destination ? "preview" : void 0)) : void 0;
+  const startsShow = action === "run" || action === "reserve";
+  const startFlag = v.start ?? (action === "run" && !destination ? "preview" : void 0);
+  const promptStart = startsShow && startFlag === void 0 && process.stdin.isTTY && process.stderr.isTTY;
+  let start = startsShow && !promptStart ? await liveStartChoice(startFlag) : void 0;
   if (start === "cancel") {
     console.log(JSON.stringify({ state: "cancelled" }));
     return;
   }
+  const resumed = v["resume-from"] && join10(resolve5(v["resume-from"]), "youtube.json");
+  const receipt = resumed && existsSync8(resumed) ? JSON.parse(readFileSync11(resumed, "utf8")) : void 0;
+  const session = JSON.parse(readFileSync11(v.config, "utf8"));
+  if (startsShow || ["knowledge", "estimate", "warm"].includes(action)) {
+    const existing = session.speechLanguage ?? receipt?.speechLanguage;
+    const language = await liveSpeechLanguage(existing);
+    if (receipt?.speechLanguage && language !== receipt.speechLanguage)
+      throw Error("The selected speechLanguage differs from the reserved broadcast language.");
+    session.speechLanguage = language;
+    if (existing === void 0) atomicJson(v.config, session);
+  }
+  if (promptStart) {
+    start = await liveStartChoice();
+    if (start === "cancel") {
+      console.log(JSON.stringify({ state: "cancelled" }));
+      return;
+    }
+  }
   if (start === "ready" && !destination) throw Error("Choose a live destination or --start preview");
-  const cfg = liveConfig.parse(JSON.parse(readFileSync11(v.config, "utf8")));
+  const cfg = liveConfig.parse(session);
   if (!v.out && !["knowledge", "estimate", "warm", "check", "prepare-idle"].includes(action))
     throw Error("Set --out to a unique session directory");
   const out = resolve5(v.out ?? ".");
@@ -38079,15 +38136,13 @@ async function main() {
   if (intake && !cfg.topic) throw Error("Ask for the broadcast topic and save it as topic.");
   if (intake && cfg.knowledgeBase === void 0) throw Error("Ask for knowledge files or directories. Save knowledgeBase: [] for an explicit choice of no sources.");
   const paths = recovery ? [] : cfg.knowledgeBase ?? [];
-  const sourceLanguage = !paths.length ? "und" : cfg.speechLanguage ?? JSON.parse(readFileSync11(join10(cfg.project, ".social-flow/models.json"), "utf8")).languages?.speech;
+  const sourceLanguage = !paths.length ? "und" : cfg.knowledgeLanguage ?? cfg.speechLanguage ?? JSON.parse(readFileSync11(join10(cfg.project, ".social-flow/models.json"), "utf8")).languages?.speech;
   if (!sourceLanguage) throw Error("Set the project or session speech language for knowledge extraction.");
   const knowledge = new LiveKnowledge(cfg.project, paths, sourceLanguage);
   if (action === "knowledge") {
-    console.log(JSON.stringify({ topic: cfg.topic, sources: cfg.knowledgeBase, passages: knowledge.passages.length, fingerprint: knowledge.fingerprint }));
+    console.log(JSON.stringify({ speechLanguage: cfg.speechLanguage, topic: cfg.topic, sources: cfg.knowledgeBase, passages: knowledge.passages.length, fingerprint: knowledge.fingerprint }));
     return;
   }
-  const resumed = v["resume-from"] && join10(resolve5(v["resume-from"]), "youtube.json");
-  const receipt = resumed && existsSync8(resumed) ? JSON.parse(readFileSync11(resumed, "utf8")) : void 0;
   const count2 = intake || v["faq-count"] ? await liveFaqCount(v["faq-count"] ?? receipt?.faqCount?.toString()) : void 0;
   if (receipt?.faqCount && (receipt.faqCount !== count2 || receipt.topic !== cfg.topic || receipt.knowledgeFingerprint !== knowledge.fingerprint))
     throw Error("Reserved topic, knowledge or FAQ count differs from this session.");
@@ -38119,7 +38174,7 @@ async function main() {
         const { opening, standby } = await broadcastLines(cfg, estimateActor);
         spoken = 1 + [...openingParts(opening, estimateActor.language), ...standby].filter((text) => !estimator.hasCompleted(text)).length;
       }
-      estimate = catalog.estimate(count2, (text) => estimator.hasCompleted(text), idle + spoken);
+      estimate = { ...catalog.estimate(count2, (text) => estimator.hasCompleted(text), idle + spoken), speechLanguage: estimateActor.language };
       console.error(JSON.stringify({ event: "preparation_estimate", ...estimate }));
     } finally {
       estimator.close();
@@ -38331,7 +38386,7 @@ async function main() {
       pendingHost.add(tracked);
       if (preflight) await tracked;
     }
-    log("native_opening_preparing", { ...liveStartChoices, maxConcurrentVideos: pool.limit, topic: cfg.topic });
+    log("native_opening_preparing", { ...liveStartChoices, maxConcurrentVideos: pool.limit, speechLanguage: actor.language, topic: cfg.topic });
     const { opening, standby } = await broadcastLines(cfg, actor, signal);
     const prepared = await Promise.allSettled([
       (async () => {

@@ -57,6 +57,7 @@ test('each external launch needs a start decision before looking up assets or cr
   const cli = fileURLToPath(new URL('../dist/character-live.bundle.js', import.meta.url));
   const choices = JSON.parse(execFileSync(process.execPath, [cli, 'choices'], { encoding: 'utf8' }));
   assert.deepEqual(choices.choices.map(choice => choice.id), ['ready', 'preview', 'cancel']);
+  assert.ok(choices.speechLanguages.some(item => item.tag === 'vi' && item.label));
   assert.deepEqual(choices.output, [720, 1280]);
   assert.equal(choices.spatialUpscale, false);
   assert.equal(choices.faceComposite, false);

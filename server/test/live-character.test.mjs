@@ -175,3 +175,37 @@ test('FAQ drafting checks the same source grounds before a body can enter prefli
   assert.deepEqual(result, [{questions:['What temperature?'],answer:'Brew at 70 degrees.'}]);
   assert.deepEqual(replies, []);
 });
+
+test('a Vietnamese show uses its selected language for the opening, FAQ, chat and native video with Korean sources', async t => {
+  const { broadcastLines, draftExpectedAnswers, planViewerReply } = await import('../dist/live-character.js');
+  const { spokenVideoRequest } = await import('../dist/live-native.js');
+  const { config } = await import('../dist/config.js');
+  const key = config.astraGenaiApiKey;
+  t.after(() => { config.astraGenaiApiKey = key; });
+  config.astraGenaiApiKey = 'fixture';
+  const cfg = liveConfig.parse({ project:'/fixture', channel:'tea', character:'host', chatModel:'local',
+    topic:'Trà hoa', speechLanguage:'vi', knowledgeLanguage:'ko', standbyLines:['Xin chào.', 'Mời bạn ngồi.'] });
+  const actor = {language:cfg.speechLanguage, persona:'Tea host'};
+  const source = {file:'tea.txt', text:'꽃차는 따뜻하게 마셔요.'};
+  const knowledge = {passages:[source], sample:()=>[source], search:()=>[source]};
+  const line = 'Uống trà khi còn ấm.';
+  const replies = ['Hôm nay mình nói về trà hoa.', JSON.stringify([{question:'Uống trà thế nào?', answer:line}]),
+    'SUPPORTED', 'trà, 꽃차', '[SAVE] ' + line, 'SUPPORTED'];
+  const messages = [];
+  t.mock.method(globalThis, 'fetch', async (_url, init) => {
+    messages.push(JSON.parse(init.body).messages);
+    return Response.json({choices:[{message:{content:replies.shift()}}]});
+  });
+  const signal = new AbortController().signal;
+  const opening = await broadcastLines(cfg, actor, signal);
+  const rows = await draftExpectedAnswers(cfg, actor, knowledge, 1, [], signal);
+  const reply = await planViewerReply(cfg, actor, {empty:true,search:()=>[]},
+    {text:'Uống lúc nào?'}, {}, false, signal, knowledge);
+  assert.match(opening.opening, /trà hoa/);
+  assert.equal(rows[0].answer, line);
+  assert.equal(reply.text, line);
+  assert.ok(messages.every(([system]) => /\bvi\b/.test(system.content)));
+  assert.equal(JSON.parse(messages[3][1].content).sourceLanguage, 'ko');
+  assert.match(spokenVideoRequest(actor, 'Locked shot.', reply.text).prompt, /in Vietnamese/);
+  assert.deepEqual(replies, []);
+});

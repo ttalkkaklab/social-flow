@@ -10,23 +10,23 @@ argument-hint: "[channel] [character] [platforms] [duration]"
 # Character LIVE
 
 Use the project, channel and character the user selected. The runner uses the channel's approved
-sheet, the character’s selected voice.wav and the project’s speech language. Choose a text model
+sheet, the character’s selected voice.wav and the broadcast language chosen for this session. Choose a text model
 served by the configured gateway. This renderer animates a character portrait and speaks generated
 answers. Its input is a portrait with a visible mouth. It needs Node 20+ and FFmpeg with libx264,
 AAC and Python 3 with FFmpeg shared libraries (avformat and avutil) for RTMPS output. Set `SOCIAL_FLOW_LIVE_PYTHON` when that interpreter is outside PATH. Use a local
-preview before sending video. Set `speechLanguage` for a session in a different language,
-and write the opening and any prepared answers in that language. A guest character can
+preview before sending video. Write the topic as spoken, opening, welcomes and authored answers in the selected language. A guest character can
 use `youtubeCredentialChannel` to select the destination channel's OAuth connection.
 
 ## Start a show
 
 Use the host's human-input control or chat. Reuse answers the operator already supplied for this broadcast.
 
-1. Ask what the show is about. Save the answer as `topic` in this session's config.
-2. Ask for knowledge files or directories, or an explicit choice to use no sources. Save paths in `knowledgeBase` or save an empty array for no sources. Use `node server/dist/character-live.bundle.js knowledge --config FILE` to build the local index before asking for a count. The reader accepts text, Markdown, CSV, JSON and PDF. Text PDFs need Poppler. Scanned pages also need Tesseract and the source language pack. Resolve unreadable inputs with the operator.
-3. Run `choices` and ask how many distinct question-and-answer videos to prepare. Offer exactly **10, 30, 50 and 100**. More questions cover more viewer requests and take longer to render. Record the operator's choice with `--faq-count N`. A preset from a previous show cannot select for this one.
-4. Run `estimate --config FILE --faq-count N` and **tell the operator** the chosen count, cached and missing FAQ clips, estimated generation time, buffer and expected start in their local timezone. The initial estimate assumes 150 seconds per missing clip, then uses the observed upper-quartile duration for this show configuration. The buffer is 20 percent with a two-minute minimum. The estimate is approximate. Relay revised times if preparation slips.
-5. Honor the start choice for this broadcast. **Ready** starts ingest after every chosen FAQ body, ten listening clips, two welcomes, the opener and the first topic segment pass preparation. **Preview** records locally and waits for a separate start request. **Cancel** stops before creating a room. A request to start this session is already a ready choice. Share the real watch link and report the live transition.
+1. First ask which language the host should speak. Run `choices` for common options and allow a different language or regional variant. The project language can be suggested. Wait for the operator’s choice unless their request already names the spoken language for this show. A previous show or the language of their message does not count as a choice. Save the selected language tag in the session config as `speechLanguage` and reuse it for preparation, preview and the reserved show.
+2. Ask what the show is about. Save the answer as `topic` in this session's config.
+3. Ask for knowledge files or directories, or an explicit choice to use no sources. Save paths in `knowledgeBase` or save an empty array for no sources. Use `node server/dist/character-live.bundle.js knowledge --config FILE` to build the local index before asking for a count. If the sources are in a different language, set `knowledgeLanguage` to their language for OCR and search. The reader accepts text, Markdown, CSV, JSON and PDF. Text PDFs need Poppler. Scanned pages also need Tesseract and the source language pack. Resolve unreadable inputs with the operator.
+4. Run `choices` and ask how many distinct question-and-answer videos to prepare. Offer exactly **10, 30, 50 and 100**. More questions cover more viewer requests and take longer to render. Record the operator's choice with `--faq-count N`. A preset from a previous show cannot select for this one.
+5. Run `estimate --config FILE --faq-count N` and **tell the operator** the chosen count, cached and missing FAQ clips, estimated generation time, buffer and expected start in their local timezone. The initial estimate assumes 150 seconds per missing clip, then uses the observed upper-quartile duration for this show configuration. The buffer is 20 percent with a two-minute minimum. The estimate is approximate. Relay revised times if preparation slips.
+6. Honor the start choice for this broadcast. **Ready** starts ingest after every chosen FAQ body, ten listening clips, two welcomes, the opener and the first topic segment pass preparation. **Preview** records locally and waits for a separate start request. **Cancel** stops before creating a room. A request to start this session is already a ready choice. Share the real watch link and report the live transition.
 
 The live host searches a private file-backed answer library. Exact configured phrases skip text generation. For other questions the model supplies search terms. It sees up to eight candidate answers and source excerpts, checks the subject, units and context, and can choose an existing clip. After a new standalone reply renders, save its question, body and local video path. Personal or context-dependent replies stay out of the shared library. The topic, character and source fingerprint scope reuse. A viewer's available display name is spoken in a separate address clip on the first use of a body in the show. Subsequent viewers hear only the body. Missing or unusable names fall back to the body alone.
 
@@ -83,7 +83,7 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
     "broadcastConcept":"Late-night radio in a softly lit studio.",
     "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the authored dialogue.",
-    "knowledgeBase":[],"chatModel":"gateway-text-model","topic":"books we read before bed","maxConcurrentVideos":3,
+    "speechLanguage":"en","knowledgeBase":[],"chatModel":"gateway-text-model","topic":"books we read before bed","maxConcurrentVideos":3,
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
 

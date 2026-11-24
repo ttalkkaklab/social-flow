@@ -14,6 +14,7 @@ interface Stream {
   cdn: { ingestionInfo: { rtmpsIngestionAddress: string; streamName: string } };
 }
 export interface YoutubeReceipt {
+  speechLanguage?: string;
   topic?: string;
   faqCount?: number;
   knowledgeFingerprint?: string;

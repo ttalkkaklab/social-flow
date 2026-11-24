@@ -17,7 +17,8 @@ import { GenaiRequestError, requestGenai } from './astra-genai-client.js';
 import { checkLiveRelay, encode, type RelayTarget } from './live-encoder.js';
 import { prepareIdleClips, idleCount, idleCacheReady } from './live-idle.js';
 import { NativeTalk, fitsLiveShot, openingParts, talkPrompt } from './live-native.js';
-import { liveStartChoice, liveStartChoices, liveFaqCount } from './live-options.js';
+import { liveSpeechLanguage, liveStartChoice, liveStartChoices, liveFaqCount } from './live-options.js';
+import { atomicJson } from './routing-files.js';
 import { faqPassagesPerBatch, LiveKnowledge } from './live-knowledge.js';
 import { LiveAnswers, spokenAddress } from './live-answers.js';
 import { FaqRotation, LiveProgram, LiveRenderPool, isReply } from './live-program.js';
@@ -55,12 +56,28 @@ async function main() {
     ...(v.platform ?? []), ...(v.youtube ? ['youtube'] : []), ...(v.tiktok ? ['tiktok'] : [])
   ]);
   const destination = selected.length > 0;
-  const start = action === 'run' || action === 'reserve'
-    ? await liveStartChoice(v.start ?? (action === 'run' && !destination ? 'preview' : undefined))
-    : undefined;
+  const startsShow = action === 'run' || action === 'reserve';
+  const startFlag = v.start ?? (action === 'run' && !destination ? 'preview' : undefined);
+  const promptStart = startsShow && startFlag === undefined && process.stdin.isTTY && process.stderr.isTTY;
+  let start = startsShow && !promptStart ? await liveStartChoice(startFlag) : undefined;
   if (start === 'cancel') { console.log(JSON.stringify({ state: 'cancelled' })); return; }
+  const resumed = v['resume-from'] && join(resolve(v['resume-from']), 'youtube.json');
+  const receipt = resumed && existsSync(resumed) ? JSON.parse(readFileSync(resumed, 'utf8')) : undefined;
+  const session = JSON.parse(readFileSync(v.config, 'utf8'));
+  if (startsShow || ['knowledge', 'estimate', 'warm'].includes(action)) {
+    const existing = session.speechLanguage ?? receipt?.speechLanguage;
+    const language = await liveSpeechLanguage(existing);
+    if (receipt?.speechLanguage && language !== receipt.speechLanguage)
+      throw Error('The selected speechLanguage differs from the reserved broadcast language.');
+    session.speechLanguage = language;
+    if (existing === undefined) atomicJson(v.config, session);
+  }
+  if (promptStart) {
+    start = await liveStartChoice();
+    if (start === 'cancel') { console.log(JSON.stringify({ state: 'cancelled' })); return; }
+  }
   if (start === 'ready' && !destination) throw Error('Choose a live destination or --start preview');
-  const cfg = liveConfig.parse(JSON.parse(readFileSync(v.config, 'utf8')));
+  const cfg = liveConfig.parse(session);
   if (!v.out && !['knowledge', 'estimate', 'warm', 'check', 'prepare-idle'].includes(action))
     throw Error('Set --out to a unique session directory');
   const out = resolve(v.out ?? '.');
@@ -83,16 +100,14 @@ async function main() {
   if (intake && !cfg.topic) throw Error('Ask for the broadcast topic and save it as topic.');
   if (intake && cfg.knowledgeBase === undefined) throw Error('Ask for knowledge files or directories. Save knowledgeBase: [] for an explicit choice of no sources.');
   const paths = recovery ? [] : cfg.knowledgeBase ?? [];
-  const sourceLanguage = !paths.length ? 'und' : cfg.speechLanguage ??
+  const sourceLanguage = !paths.length ? 'und' : cfg.knowledgeLanguage ?? cfg.speechLanguage ??
     JSON.parse(readFileSync(join(cfg.project, '.social-flow/models.json'), 'utf8')).languages?.speech;
   if (!sourceLanguage) throw Error('Set the project or session speech language for knowledge extraction.');
   const knowledge = new LiveKnowledge(cfg.project, paths, sourceLanguage);
   if (action === 'knowledge') {
-    console.log(JSON.stringify({topic:cfg.topic, sources:cfg.knowledgeBase, passages:knowledge.passages.length, fingerprint:knowledge.fingerprint}));
+    console.log(JSON.stringify({speechLanguage:cfg.speechLanguage, topic:cfg.topic, sources:cfg.knowledgeBase, passages:knowledge.passages.length, fingerprint:knowledge.fingerprint}));
     return;
   }
-  const resumed = v['resume-from'] && join(resolve(v['resume-from']),'youtube.json');
-  const receipt = resumed && existsSync(resumed) ? JSON.parse(readFileSync(resumed,'utf8')) : undefined;
   const count = intake || v['faq-count'] ? await liveFaqCount(v['faq-count'] ?? receipt?.faqCount?.toString()) : undefined;
   if (receipt?.faqCount && (receipt.faqCount !== count || receipt.topic !== cfg.topic || receipt.knowledgeFingerprint !== knowledge.fingerprint))
     throw Error('Reserved topic, knowledge or FAQ count differs from this session.');
@@ -113,7 +128,7 @@ async function main() {
         const {opening,standby} = await broadcastLines(cfg,estimateActor);
         spoken = 1 + [...openingParts(opening,estimateActor.language), ...standby].filter(text => !estimator.hasCompleted(text)).length;
       }
-      estimate = catalog.estimate(count,text=>estimator.hasCompleted(text),idle + spoken);
+      estimate = { ...catalog.estimate(count,text=>estimator.hasCompleted(text),idle + spoken), speechLanguage:estimateActor.language };
       console.error(JSON.stringify({event:'preparation_estimate',...estimate}));
     } finally { estimator.close(); }
     if (action === 'estimate') { console.log(JSON.stringify(estimate)); return; }
@@ -302,7 +317,7 @@ async function main() {
       pendingHost.add(tracked);
       if (preflight) await tracked;
     }
-    log('native_opening_preparing', { ...liveStartChoices, maxConcurrentVideos: pool.limit, topic: cfg.topic });
+    log('native_opening_preparing', { ...liveStartChoices, maxConcurrentVideos: pool.limit, speechLanguage:actor.language, topic: cfg.topic });
     const { opening, standby } = await broadcastLines(cfg, actor, signal);
     const prepared = await Promise.allSettled([
       (async () => {

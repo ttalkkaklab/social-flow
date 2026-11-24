@@ -25,6 +25,13 @@ test('bundled CLI enforces intake order and computes a buffered estimate before 
       { encoding: 'utf8' }
     );
   };
+  for (const action of ['knowledge', 'estimate', 'warm', 'run', 'reserve']) {
+    const args = ['run','reserve'].includes(action) ? ['--youtube', '--start', 'ready', '--out', project] : [];
+    assert.match(run(action, ...args).stderr, /Choose the broadcast language/);
+  }
+  cfg.speechLanguage = '123';
+  assert.match(run('knowledge').stderr, /Invalid speechLanguage/);
+  cfg.speechLanguage = 'fr-ca';
   assert.match(run('estimate').stderr, /broadcast topic/);
   cfg.topic = 'Tea';
   assert.match(run('estimate').stderr, /knowledge files/);
@@ -44,5 +51,13 @@ test('bundled CLI enforces intake order and computes a buffered estimate before 
   assert.equal(result.status, 0, result.stderr);
   const estimate = JSON.parse(result.stdout);
   assert.equal(estimate.faqCount, 30);
+  assert.equal(estimate.speechLanguage, 'fr-CA');
+  cfg.madeForKids = false;
+  writeFileSync(join(project, 'youtube.json'), JSON.stringify({speechLanguage:'fr-CA'}));
+  const resume = () => run('run', '--youtube', '--start', 'ready', '--resume-from', project, '--out', project);
+  cfg.speechLanguage = 'en';
+  assert.match(resume().stderr, /differs from the reserved broadcast language/);
+  delete cfg.speechLanguage;
+  assert.match(resume().stderr, /--faq-count/);
   assert.ok(Date.parse(estimate.expectedStartTime) > Date.now() + estimate.generationSeconds * 1000);
 });

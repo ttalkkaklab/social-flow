@@ -14,6 +14,7 @@ import type { LiveProgram } from './live-program.js';
 
 const point = z.number().finite().min(0).max(1);
 const feature = z.object({ x: point, y: point, width: point.positive(), height: point.positive() }).strict();
+const languageTag = z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
 const slug = z.string().regex(/^[a-zA-Z0-9_-]+$/);
 export const liveConfig = z
   .object({
@@ -21,10 +22,8 @@ export const liveConfig = z
     channel: slug,
     youtubeCredentialChannel: slug.optional(),
     tiktokChat: z.enum(['stdin', 'tikfinity']).default('stdin'),
-    speechLanguage: z
-      .string()
-      .regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/)
-      .optional(),
+    speechLanguage: languageTag.optional(),
+    knowledgeLanguage: languageTag.optional(),
     broadcastConcept: z.string().trim().min(1).max(600).optional(),
     talkPrompt: z.string().trim().min(1).max(2000).optional(),
     motionVideo: z.string().min(1).optional(),
@@ -217,8 +216,8 @@ export async function planViewerReply(config: LiveConfig, actor: Character, libr
   let terms: string[] = [];
   if (!library.empty || knowledge?.passages.length) {
     const keywords = await spokenLine(config, actor,
-      'Act as the search planner for search_answers. Return up to six short search terms separated by commas. Include the product, attribute and synonyms in the language of the show. Resolve follow-ups from the conversation. Never answer the question here.',
-      {question:event.text, context}, signal, true);
+      'Act as the search planner for search_answers. Return up to six short search terms separated by commas. Include the product, attribute and synonyms in the show language and the source language when they differ. Resolve follow-ups from the conversation. Never answer the question here.',
+      {question:event.text, context, sourceLanguage:config.knowledgeLanguage}, signal, true);
     terms = keywords.split(/[,，\n]/u).map(t => t.trim().slice(0,80)).filter(Boolean).slice(0,6);
   }
   const candidates = library.search([event.text, ...terms]);

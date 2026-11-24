@@ -1,6 +1,32 @@
 import { nativeHeight, idleCount } from './live-idle.js';
 import { createInterface } from 'node:readline/promises';
 
+const speechLanguages = [
+  { tag: 'ko', label: '한국어' },
+  { tag: 'en', label: 'English' },
+  { tag: 'vi', label: 'Tiếng Việt' },
+  { tag: 'ja', label: '日本語' },
+  { tag: 'zh', label: '中文' }
+];
+
+export async function liveSpeechLanguage(value?: string) {
+  if (value === undefined && process.stdin.isTTY && process.stderr.isTTY) {
+    const rl = createInterface({ input: process.stdin, output: process.stderr });
+    try {
+      const menu = speechLanguages.map(({ label }, i) => `${i + 1}. ${label}`).join(' · ');
+      const answer = (await rl.question(`어떤 언어로 방송할까요?
+${menu}
+번호나 언어 코드(예: fr-CA)를 입력하세요: `)).trim();
+      value = speechLanguages.find((_, i) => answer === String(i + 1))?.tag ?? answer;
+    } finally { rl.close(); }
+  }
+  if (value === undefined) throw Error('Choose the broadcast language for this session and set speechLanguage in its config.');
+  if (typeof value === 'string' && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(value)) {
+    try { return Intl.getCanonicalLocales(value)[0]; } catch { /* Report invalid tags consistently. */ }
+  }
+  throw Error('Invalid speechLanguage. Use a language tag such as ko, en-US or vi.');
+}
+
 export const faqCounts = [10, 30, 50, 100] as const;
 export async function liveFaqCount(value?: string) {
   if (!value && process.stdin.isTTY && process.stderr.isTTY) {
@@ -14,6 +40,7 @@ export async function liveFaqCount(value?: string) {
 }
 
 export const liveStartChoices = {
+  speechLanguages,
   faqCounts,
   format: 'locked-camera conversation',
   generation: 'GenAI LTX 2.5 picture and native dialogue',
