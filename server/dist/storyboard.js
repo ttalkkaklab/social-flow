@@ -217,7 +217,7 @@ export const shotSchema = z
     timeline: shotTimelineSchema.optional(),
     type: tuple(V.TYPES),
     title: z.string().optional(),
-    narration: z.array(z.object({ id: z.string().trim().min(1).optional(), delivery: z.enum(['voiceover', 'on_screen', 'off_screen']).optional(), tts: z.string(), sub: z.string().optional(), speaker: z.string().trim().min(1).optional() }).passthrough()).optional(),
+    narration: z.array(z.object({ id: z.string().trim().min(1).optional(), delivery: z.enum(['voiceover', 'on_screen', 'off_screen']).optional(), voiceoverKind: z.literal('inner_thought').optional(), tts: z.string(), sub: z.string().optional(), speaker: z.string().trim().min(1).optional() }).passthrough().refine(line => !line.voiceoverKind || line.delivery === 'voiceover', 'An inner thought requires voiceover delivery')).optional(),
     visual: visualSchema.optional(),
     duration: z.number().positive().optional(),
     scene: z.number().int().positive().optional(),
@@ -1188,6 +1188,13 @@ export function applyStoryboard(args, opts = {}) {
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
+    const previousShots = new Map((win.SCENES ?? []).map(card => [card.id, card]));
+    const speech = loadFromHere('../../skills/_shared/speech-contract.js');
+    for (const card of next.SCENES ?? []) {
+        const previous = previousShots.get(card.id);
+        if (previous)
+            speech.invalidateVoiceoverChange(card, previous.narration ?? []);
+    }
     const sceneCasting = loadFromHere('../../skills/_shared/scene-cast.js');
     for (const scene of next.STRUCTURE?.scenes ?? []) {
         if (scene.speakers !== undefined)
@@ -1817,6 +1824,7 @@ export const shotDialogueSchema = z.object({
             speaker: nonEmpty.describe('The character who speaks — a narrator is a character too'),
             tts: nonEmpty.describe('The spoken line, in the video\'s language'),
             sub: z.string().optional().describe('The written notation when it differs from tts'),
+            voiceoverKind: z.literal('inner_thought').nullable().optional().describe('Private thought in this character’s voice; null clears the designation'),
             delivery: z.enum(['voiceover', 'on_screen', 'off_screen']).optional()
                 .describe('Default: on_screen for one of the shot\'s characters, voiceover for anyone else'),
         }).strict()).describe('Every line of the shot in spoken order; [] makes it silent'),
@@ -2007,7 +2015,11 @@ export function writeShotDialogue(args) {
         const next = lines.map((line, n) => {
             if (!known.ids.has(line.speaker))
                 throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
-            const delivery = line.delivery ?? (cast.includes(line.speaker) ? 'on_screen' : 'voiceover');
+            const previous = line.id ? old.find(entry => entry.id === line.id) : undefined;
+            if (line.voiceoverKind && line.delivery && line.delivery !== 'voiceover')
+                throw new Error('An inner thought requires voiceover delivery');
+            const kind = line.voiceoverKind === undefined ? previous?.voiceoverKind : line.voiceoverKind;
+            const delivery = line.delivery ?? (kind || previous?.voiceoverKind ? 'voiceover' : cast.includes(line.speaker) ? 'on_screen' : 'voiceover');
             if (delivery === 'on_screen' && !cast.includes(line.speaker))
                 throw new Error(`story_order: ${line.speaker} speaks on screen in ${id} but is not among its characters — add them with shot_characters`);
             let lineId = line.id;
@@ -2018,7 +2030,12 @@ export function writeShotDialogue(args) {
                 throw new Error(`shot_dialogue: line id ${lineId} is already used`);
             used.add(lineId);
             // A line revised by its id keeps its acting and audio binding; a changed text makes that audio stale.
-            return { ...(line.id ? old.find((o) => o.id === line.id) : undefined), id: lineId, speaker: line.speaker, delivery, tts: line.tts, sub: line.sub };
+            const updated = { ...previous, id: lineId, speaker: line.speaker, delivery, tts: line.tts, sub: line.sub };
+            if (kind && delivery === 'voiceover')
+                updated.voiceoverKind = kind;
+            else
+                delete updated.voiceoverKind;
+            return updated;
         });
         shots[index] = { ...shots[index], narration: next };
         notes.push(...promptNotes(shots[index]));

@@ -29,7 +29,7 @@ test('YouTube adapter keeps ownership, live readiness, native chat, completion a
     if (path === 'liveBroadcasts/transition') { state = 'complete'; return {}; }
     assert.fail(path);
   };
-  const p = createYoutubePlatform({ config: { channel: 'test', youtubeChannelId: channelId, madeForKids: false, topic: 'Night reading' },
+  const p = createYoutubePlatform({ config: { channel: 'test', youtubeChannelId: channelId, madeForKids: false, topic: 'Night reading', speechLanguage:'vi' },
     out, title: 'test', log() {} }, async () => api);
   await p.check(true);
   assert.deepEqual(await p.prepare(controller.signal), { platform:'youtube', url:'rtmps://media.example/live/fake-key' });
@@ -37,11 +37,16 @@ test('YouTube adapter keeps ownership, live readiness, native chat, completion a
   assert.doesNotMatch(readFileSync(join(out, 'youtube.json'), 'utf8'), /fake-key/);
   const saved = JSON.parse(readFileSync(join(out, 'youtube.json'), 'utf8'));
   assert.equal(saved.topic, 'Night reading');
+  assert.equal(saved.speechLanguage, 'vi');
   writeFileSync(join(out, 'events.jsonl'), JSON.stringify({event:'youtube_reserved', id:saved.broadcastId}) + '\n');
   const resumedConfig = {channel:'test', youtubeChannelId:channelId, madeForKids:false, topic:'Other topic'};
   const resumed = createYoutubePlatform({config:resumedConfig, resumeFrom:out, out:join(out,'session'), title:'test', log() {}}, async () => api);
   await resumed.check(true);
   assert.equal(resumedConfig.topic, saved.topic);
+  assert.equal(resumedConfig.speechLanguage, 'vi');
+  const conflicting = createYoutubePlatform({config:{...resumedConfig, speechLanguage:'ja'}, resumeFrom:out,
+    out:join(out,'other'), title:'test', log() {}}, async () => assert.fail('Room contacted before language check'));
+  await assert.rejects(conflicting.check(true), /reserved broadcast language/);
   state = 'live';
   const intake = [];
   await p.observe({ signal: controller.signal, stop: () => controller.abort(), acceptingUntil: Date.now() + 5000,

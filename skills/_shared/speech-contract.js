@@ -86,7 +86,12 @@ function verifyReceiptOperation(receipt,suffix,plan,hashBound) {
 function performanceKey(shot) {
   const binding = shot.visual?.video?.speechBinding;
   if (!binding?.videoSha256) return;
-  return JSON.stringify([shot.id,binding.mode,binding.videoSha256,binding.audio,binding.conditioningAudioSha256]);
+  return JSON.stringify([shot.id,binding.mode,binding.videoSha256,binding.audio,binding.conditioningAudioSha256,privateBinding(shot,binding)]);
+}
+
+function privateBinding(shot,binding) {
+  return binding.mode === 'voiceover' && (binding.voiceoverKind === 'inner_thought' ||
+    shot.narration?.some(line => line.voiceoverKind === 'inner_thought') === true);
 }
 
 // Each accepted speech edit already archives the previous board under its SHA-256.
@@ -168,18 +173,27 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
   const fs = require('node:fs');
   const digest = file => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
   let driver;
+  const thought = plan.sourceShot?.narration?.some(line => line.voiceoverKind === 'inner_thought');
   function verify(receipt,suffix,hashBound,originalFile) {
     verifyReceiptOperation(receipt,suffix,plan,hashBound);
+    if (hashBound && thought && ['msr','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode))
+      throw new Error('speech_video_source_mismatch: the private thought requires a non-speaking picture');
+    if (hashBound && thought && (receipt.operation ?? receipt.mode) !== 'scene-to-video' &&
+        (receipt.submittedRequest?.prompt || receipt.prompt))
+      require('./voiceover-direction.js').checkRecordedThoughtPicture(undefined,receipt.submittedRequest?.prompt
+        ? receipt.submittedRequest : {prompt:receipt.prompt},plan.sourceShot.narration);
     let original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
     const performance = ['native','audio_conditioned'].includes(plan.mode);
-    const scenePicture = plan.mode === 'voiceover' && receipt.sceneRequestSha256 && plan.sourceShot;
+    if (hashBound && thought && receipt.operation === 'scene-to-video' && !receipt.sceneRequestSha256)
+      throw new Error('speech_video_source_mismatch: restore the recorded scene request to verify the thought interval');
+    const scenePicture = (plan.mode === 'voiceover' || thought) && receipt.sceneRequestSha256 && plan.sourceShot;
     if (hashBound && receipt.operation === 'scene-to-video' && (performance || scenePicture)) {
       const contract = require('./scene-speech-receipt.js');
       const file = [originalFile,...(index?.hashes.get(receipt.sha256) ?? [])
         .filter(item => item.receipt.fingerprint === receipt.fingerprint).map(item => item.file)]
         .find(path => path && fs.existsSync(path + '.scene-request.json')) ?? originalFile;
       const wire = contract.readSceneRequest(file,receipt);
-      if (performance) original = contract.verifySceneSpeech(wire,plan);
+      if (performance || thought) original = contract.verifySceneSpeech(wire,plan);
       if (index && (performance || wire.body.shots.some(shot => shot.shot_id === plan.sourceShot.id)))
         index.sceneRenders.set(videoPath,receipt.sceneRequestSha256 && wire.conditioningInputs
         ? {...wire.body,conditioningInputs:wire.conditioningInputs} : wire.body);
@@ -214,7 +228,7 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
     if (sameVideoFrames(source.frames,frames))
       throw new Error('post_lipsync_forbidden: these video frames belong to a known post-render lip-sync source');
   }
-  if (['native','audio_conditioned'].includes(plan.mode)) {
+  if (thought || ['native','audio_conditioned'].includes(plan.mode)) {
     let sound;
     const audio = file => {
       const signal = require('./audio-signal.js');
@@ -231,6 +245,7 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
       frames ??= videoPerformanceSource(videoPath,true);
       if (!sameVideoFrames(source.frames,frames)) continue;
       verify(source.receipt,source.suffix,true,source.file);
+      if (thought && plan.mode === 'voiceover') continue;
       source.sound ??= audio(source.file);
       sound ??= audio(videoPath);
       if (source.sound !== sound)
@@ -283,7 +298,8 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
     if (!Number.isFinite(start) || start < 0 || !(end > start) || (end !== Infinity && !Number.isFinite(end)))
       throw new Error('speech_video_performance_conflict: invalid dialogue source interval for ' + shot.id);
     const visible = shot.narration?.some(line => line.delivery === 'on_screen' && line.tts?.trim());
-    return {id:shot.id, start, end, visible, binding, revisions:JSON.stringify((binding.audio ?? []).map(line => [line.revision,line.sha256]))};
+    return {id:shot.id, start, end, visible, privatePicture:privateBinding(shot,binding), binding,
+      revisions:JSON.stringify((binding.audio ?? []).map(line => [line.revision,line.sha256]))};
   }
   function identity(entry) {
     const {videoPath,videoSha256,performanceSource,conditioningAudioSha256} = entry.binding;
@@ -314,7 +330,10 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
         ['msr','image-to-video','scene-to-video','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode));
       if (!fresh) throw new Error('speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement');
     }
-    const samePicture = (left.visible || right.visible) && sameVideoFrames(a,b);
+    const privateTransition = left.binding.mode !== right.binding.mode && (left.privatePicture || right.privatePicture);
+    const samePicture = (privateTransition || left.visible || right.visible) && sameVideoFrames(a,b);
+    if (privateTransition && (samePicture || left.binding.videoSha256 === right.binding.videoSha256))
+      throw new Error('speech_video_performance_conflict: a private thought and a recorded physical performance cannot share the same picture interval');
     const changedSoundtrack = samePicture && a.audio !== b.audio;
     const sameMedia = samePicture || (a?.audio && a.audio === b?.audio) || left.binding.videoSha256 === right.binding.videoSha256;
     const external = left.binding.mode === 'voiceover' || right.binding.mode === 'voiceover';
@@ -328,7 +347,8 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
     const entry = source(shot);
     if (!entry) continue;
     if (candidate) {
-      if (next && (entry.id !== next.id || entry.binding.videoSha256 !== next.binding.videoSha256)) check(entry,next,true);
+      if (next && (entry.id !== next.id || entry.binding.videoSha256 !== next.binding.videoSha256 ||
+          entry.binding.mode !== next.binding.mode && (entry.privatePicture || next.privatePicture))) check(entry,next,true);
     } else {
       if (entry.binding.performanceSource) {
         const current = identity(entry), recorded = entry.binding.performanceSource;
@@ -348,4 +368,24 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
   }
 }
 
-module.exports = { speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };
+// A recorded physical turn cannot supply a private voiceover, even when the same actor
+// and words remain. Keep the old receipt so attachment can verify the replacement.
+function invalidateVoiceoverChange(shot, before) {
+  if (!shot.visual?.video?.speechBinding && shot.sound?.audioSource !== 'video') return false;
+  const lines = (shot.narration ?? []).filter(line => line.tts?.trim());
+  const old = before.filter(line => line.tts?.trim());
+  const physical = line => line.delivery !== 'voiceover';
+  const crossed = lines.some(line => {
+    const previous = line.id && old.find(item => item.id === line.id);
+    return previous && physical(previous) !== physical(line);
+  }) || (old.length && lines.length && old.some(physical) !== lines.some(physical));
+  if (!crossed) return false;
+  shot.visual ??= {};
+  const video = shot.visual.video ??= {};
+  video.speechStatus = 'stale';
+  if (lines.every(line => !physical(line))) shot.sound = {...shot.sound, audioSource:'speech'};
+  else if (shot.sound?.audioSource === 'speech') delete shot.sound.audioSource;
+  return true;
+}
+
+module.exports = { invalidateVoiceoverChange, speechRevision, compileActing, hasPostLipSync, assertNoPostLipSync, assertVideoSpeechProvenance, episodeVideoReceipts, assertVideoPerformanceOwnership, videoPerformanceSource, externalPictureSource };

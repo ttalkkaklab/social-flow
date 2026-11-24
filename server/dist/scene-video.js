@@ -7,7 +7,7 @@ import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
 import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
-import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
 export { sceneTimelineWords } from './scene-prompt.js';
@@ -40,8 +40,14 @@ export function bindSceneCards(members, bindings) {
             timeline.images = [...(timeline.images ?? []), ...binding.keyframes.map(pin => ({ ...pin, role: 'keyframe' }))];
         if (binding.openingPositions)
             timeline.openingPositions = binding.openingPositions;
-        if (binding.dialogueCues)
+        if (binding.dialogueCues) {
+            for (const cue of binding.dialogueCues) {
+                const line = raw.narration?.find(line => line.id === cue.lineId);
+                if (line?.voiceoverKind === 'inner_thought' && !timeline.dialogueCues?.some(saved => saved.lineId === cue.lineId && saved.frame === cue.frame))
+                    throw new Error('thought_timing: save ' + cue.lineId + ' at frame ' + cue.frame + ' in ' + binding.shotId + '.timeline.dialogueCues so external speech assembly uses the same onset');
+            }
             timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter(c => !binding.dialogueCues.some(b => b.lineId === c.lineId)), ...binding.dialogueCues];
+        }
         raw.timeline = timeline;
     }
     return cards;
@@ -174,7 +180,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             if (lines.filter(line => line.id === cue.lineId).length !== 1)
                 throw new Error('scene_dialogue_timing: ' + shotId + ' needs one spoken line with id ' + cue.lineId);
         }
-        const dialogue = lines.filter(line => !shotScoped || line.delivery !== 'voiceover').map(line => {
+        const dialogue = lines.filter(line => line.delivery !== 'voiceover').map(line => {
             const frame = timeline?.dialogueCues?.find(c => c.lineId === line.id)?.frame;
             const warnings = [];
             const nativeVoice = line.delivery !== 'voiceover' && (!scene.audio || scene.audio.mode === 'mix') && scene.dialogueVoice !== 'model_generated';
@@ -265,6 +271,23 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
+    const cards = members;
+    const authored = cards.flatMap(card => card.narration ?? []);
+    const sharedPicture = [request.sceneDirection, scene.openingPositions];
+    checkVoiceoverDirection(sharedPicture, authored);
+    const canonical = (value) => value?.normalize('NFKC').toLowerCase().replace(/[’‘]/gu, "'").replace(/[\p{P}\s]+/gu, '');
+    for (const { dialogue: turns, ...shot } of timeline.shots) {
+        // A physical turn can deliberately repeat the preceding thought. Only its
+        // own interval may carry those words as dialogue or physical acting.
+        const spoken = new Set(turns?.map(turn => canonical(turn.text)));
+        const privateLines = authored.filter(line => line.delivery === 'voiceover' && !spoken.has(canonical(line.tts)));
+        const picture = [shot, turns?.map(turn => turn.direction), timeline.images.filter(image => image.shotId === shot.shotId),
+            timeline.audio?.cues?.filter(cue => cue.frame >= shot.startFrame && cue.frame < shot.endFrame)];
+        checkVoiceoverDirection(picture, privateLines);
+        const lines = cards.find(card => card.id === shot.shotId)?.narration ?? [];
+        if (!turns?.length && lines.some(line => line.voiceoverKind === 'inner_thought'))
+            checkVoiceoverDirection([sharedPicture, picture], lines, true);
+    }
     // The image and voice binders add reference labels around this timeline after planning.
     const bindSceneTurns = (prompt, turns, describeDelivery = true) => {
         if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))

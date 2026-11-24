@@ -227,7 +227,9 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   assert.equal(silent.args.prompt, input.prompt);
   ctx.shot.narration[0].delivery = 'voiceover';
   const voiceover = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
-  assert.match(voiceover.args.prompt, /hero speaks in voiceover/);
+  assert.doesNotMatch(voiceover.args.prompt, /hero speaks in voiceover|Hello hero/);
+  assert.match(voiceover.args.prompt, /"문 닫아"/);
+  assert.deepEqual(voiceover.voiceContinuity.speakers.map(entry => entry.speaker), ['friend']);
   assert.doesNotMatch(voiceover.args.prompt, /Image 3 speaks with visible lip movement/);
   ctx.shot.visual.video = { voice: 'prompt' };
   assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /retired/);

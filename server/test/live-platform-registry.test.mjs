@@ -18,7 +18,7 @@ test('shipped CLI routes TikTok-only recovery locally and requires a selection f
   const dir = mkdtempSync(join(tmpdir(), 'live-room-status-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   const cfg = join(dir, 'config.json');
-  writeFileSync(cfg, JSON.stringify({ project: dir, character: 'host', channel: 'my-room', opening: 'Hello', chatModel: 'local' }));
+  writeFileSync(cfg, JSON.stringify({ project: dir, character: 'host', channel: 'my-room', opening: 'Hello', chatModel: 'local', speechLanguage: 'EN-us' }));
   const receipt = { platform: 'tiktok', channel: 'my-room', state: 'encoder_finished', broadcastState: 'unverified' };
   writeFileSync(join(dir, 'tiktok.json'), JSON.stringify(receipt));
   const run = (...args) => spawnSync(process.execPath, [cli, ...args, '--out', dir, '--config', cfg], { encoding: 'utf8' });

@@ -94,11 +94,21 @@ function estimateSpeech(text, language) {
   return { seconds: Math.round((units / SPEECH_RATES[spoken] + 0.35 * pauses + 0.4) * 100) / 100, language: spoken, calibrated: spoken === 'ko' };
 }
 const estimateSpeechSeconds = (text, language) => estimateSpeech(text, language)?.seconds ?? null;
+function hasCuedThought(scene) {
+  return scene.timeline?.dialogueCues?.some(cue => scene.narration?.some(line =>
+    line.id === cue.lineId && line.voiceoverKind === 'inner_thought' && line.delivery === 'voiceover')) === true;
+}
+function withThoughtClock(scene, owners) {
+  if (!hasCuedThought(scene)) return scene;
+  return {...scene,timelineFps:owners?.find(owner => owner.no === scene.scene)?.videoDirection?.fps ?? scene.timelineFps ?? 24};
+}
 // One performance timeline serves video prompts and audio composition. Drafts retain
 // unknown durations; production must supply measured speech and authored action timing.
 function planScenePerformance(input, measureAudio = () => null) {
   const scene = Array.isArray(input) ? {narration:input} : input;
   const lines = scene.narration || [], warnings = [];
+  const timedThought = hasCuedThought(scene);
+  const fps = scene.timelineFps ?? 24;
   const explicit = Array.isArray(scene.performance) && scene.performance.length > 0;
   const events = explicit ? scene.performance.map(event => ({...event}))
     : lines.map((line, index) => ({kind:line.delivery === 'voiceover' ? 'narration' : 'dialogue', character:line.speaker, group:index + 1}));
@@ -136,7 +146,17 @@ function planScenePerformance(input, measureAudio = () => null) {
     const leadInSeconds = acting.leadInSeconds ?? 0, tailOutSeconds = acting.tailOutSeconds ?? 0;
     const measured = measureAudio(line);
     const audioSeconds = Number.isFinite(measured) && measured > 0 ? measured : null;
-    const startSeconds = cursor, speechStartSeconds = add(cursor,leadInSeconds);
+    let startSeconds = cursor, speechStartSeconds = add(cursor,leadInSeconds);
+    const cue = timedThought && line.voiceoverKind === 'inner_thought' && scene.timeline.dialogueCues.find(cue => cue.lineId === line.id);
+    if (cue) {
+      const {startFrame,endFrame} = scene.timeline;
+      if (!(fps > 0) || !Number.isInteger(cue.frame) || !(cue.frame >= startFrame && cue.frame < endFrame))
+        throw new Error('thought_timing: speech onset is outside the shot for ' + line.id);
+      speechStartSeconds = (cue.frame - startFrame) / fps;
+      startSeconds = speechStartSeconds - leadInSeconds;
+      if (startSeconds < (cursor ?? 0) - 1e-7)
+        throw new Error('thought_timing: the speech cue overlaps the preceding action, line or lead-in for ' + line.id);
+    }
     const speechEndSeconds = add(speechStartSeconds,audioSeconds);
     cursor = add(speechEndSeconds,tailOutSeconds);
     for (const action of events.filter(item => item.kind === 'action' && item.withGroup === event.group)) {
@@ -152,6 +172,13 @@ function planScenePerformance(input, measureAudio = () => null) {
     event.startSeconds = anchor.speechStartSeconds;
     event.endSeconds = event.durationSeconds === undefined ? anchor.speechEndSeconds : add(event.startSeconds,event.durationSeconds);
   }
+  if (timedThought && performance.some(event => event.kind === 'action' && event.withGroup === undefined && event.durationSeconds === undefined))
+    cursor = null;
+  if (timedThought && cursor !== null) {
+    const window = (scene.timeline.endFrame - scene.timeline.startFrame) / fps;
+    if (cursor > window + 1e-7) throw new Error('thought_timing: the measured performance extends beyond the shot; revise its timing or source interval');
+    cursor = window;
+  }
   const hasActions = performance.some(event => event.kind === 'action');
   const timing = cursor === null ? (warnings.some(item => item.startsWith('Action timing')) ? 'needs_action_timing' : 'needs_audio_duration') : hasActions ? (speech.size ? 'planned_actions_with_measured_audio' : 'planned_actions') : 'measured';
   for (const event of performance.filter(e => e.kind !== 'action')) {
@@ -161,7 +188,9 @@ function planScenePerformance(input, measureAudio = () => null) {
   return {performance,durationSeconds:cursor,timing,warnings};
 }
 function scenePerformancePayload(scene) {
-  return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})), videoDesign:scene.shot?.videoDesign,techniques:scene.shot?.techniques,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
+  return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})),
+    ...(hasCuedThought(scene) && {externalVoiceTiming:{fps:scene.timelineFps ?? 24,start:scene.timeline.startFrame,end:scene.timeline.endFrame,cues:scene.timeline.dialogueCues}}),
+    videoDesign:scene.shot?.videoDesign,techniques:scene.shot?.techniques,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
 }
 function cameraLock(camera = {}) {
   return require('../storyboard/references/production-mode.js').moveOf(camera)?.family === 'static'
@@ -198,7 +227,7 @@ const VIDEO_TEXT_POLICY = 'Keep the entire video image text-free: no subtitles, 
 // ran past the 2,000 characters the GenAI image lane takes). brief leaves the acting fields out.
 function performanceBeats(performance, mode, includeDialogue = true, { brief = false } = {}) {
   const {actingFields, actingPauses} = require('../storyboard/references/scene-direction.js');
-  const dialogue = performance.filter(line => line.kind !== 'action').map(line => line.text).filter(text => typeof text === 'string' && text.length);
+  const dialogue = performance.filter(line => line.kind !== 'action' && line.delivery !== 'voiceover').map(line => line.text).filter(text => typeof text === 'string' && text.length);
   const visualDirection = value => {
     let text = String(value);
     for (const words of dialogue) text = text.split(words).join('the supplied speech');
@@ -213,15 +242,19 @@ function performanceBeats(performance, mode, includeDialogue = true, { brief = f
     }
     const acting = {...line.acting, ...(line.videoDirection ? {visual:line.videoDirection} : {})};
     const delivery = line.delivery || 'voiceover';
+    if (delivery === 'voiceover') {
+      const visual = !brief && acting.visual && !said.has(acting.visual) ? visualDirection(acting.visual) : '';
+      const timing = line.speechStartSeconds == null || line.speechEndSeconds == null ? '' :
+        `Hold from ${line.speechStartSeconds} to ${line.speechEndSeconds} seconds.`;
+      return ['All visible mouths stay closed.', visual, timing, actingPauses(line.leadInSeconds, line.tailOutSeconds)].filter(Boolean).join(' ');
+    }
     const mouth = delivery === 'on_screen' && mode === 'native' && includeDialogue
       ? `Show this speaker physically saying "${line.text}"; every other visible mouth stays closed.`
       : delivery === 'on_screen' && mode === 'native'
       ? 'Only this speaker speaks the separately mapped authored line; other visible mouths stay closed.'
       : delivery === 'on_screen'
       ? 'Show this speaker physically speaking; synchronize only this speaker\'s mouth to their supplied audio during this interval using the selected synchronization route.'
-      : delivery === 'off_screen'
-        ? 'Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait.'
-        : 'This is voiceover or narration, not visible physical speech. All visible mouths stay closed during this interval; show the planned action.';
+      : 'Keep the speaking face outside the authored crop; retain any planned hands or body detail. All visible mouths stay closed during this interval; show the planned reaction, detail or action without adding a portrait.';
     // Voice direction reaches the model only when the model voices the line; text an action beat
     // or an earlier field already says is not said again.
     const fields = brief ? [] : actingFields(acting, mode === 'native', new Set(said), visualDirection);
@@ -249,4 +282,4 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   const visualDirection = value => performance.filter(line => line.kind !== 'action' && line.text).reduce((text,line) => text.split(line.text).join('the supplied speech'), String(value));
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={estimateSpeechSeconds,estimateSpeech,speechLanguage,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats};
+module.exports={estimateSpeechSeconds,estimateSpeech,speechLanguage,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats,hasCuedThought,withThoughtClock};

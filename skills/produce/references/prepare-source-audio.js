@@ -14,6 +14,10 @@ function checkAssemblyRoutes(win,board) {
   for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync(scene.videoDirection);
   for (const shot of win.SCENES ?? []) {
     const video = shot.visual?.video ?? {};
+    const thought = shot.narration?.some(line => line.voiceoverKind === 'inner_thought');
+    if (thought && (video.speechStatus === 'stale' || shot.sound?.audioSource === 'video' ||
+        ['native','audio_conditioned'].includes(video.speechBinding?.mode)))
+      throw new Error('speech_video_source_mismatch: bind the current non-speaking picture and external thought before assembly');
     assertNoPostLipSync({mode:video.mode, operation:video.operation, tool:video.tool, strategy:video.strategy, route:video.route,
       postLipSync:video.postLipSync, post_lipsync:video.post_lipsync, capabilities:video.capabilities, speechBinding:video.speechBinding,
       soundtrackRepair:video.soundtrackRepair, reuse:shot.visual?.reuse, sound:shot.sound});

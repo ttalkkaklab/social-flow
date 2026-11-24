@@ -1,6 +1,6 @@
 import type { SceneVideoDirection } from './msr-opening.js';
 import { createRequire } from 'node:module';
-import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 
 const load = createRequire(import.meta.url);
 export const videoTextPolicy = () => String(load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY);
@@ -188,7 +188,9 @@ const directions = () => load('../../skills/storyboard/references/scene-directio
   labels:Record<string, [string,string]>; movement(id: string): string | undefined;
 };
 export function resolvedDirection(scene: unknown, cards: unknown[]) { return directions().resolve(scene, cards); }
-export function withSceneCamera(shot:Record<string,unknown>, scenes:unknown) { return directions().withCameraDefaults([shot], scenes)[0]; }
+export function withSceneCamera(shot:Record<string,unknown>, scenes:unknown) {
+  return load('../../skills/_shared/scene-acting.js').withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
+}
 export function attributeWords(key: string, row: ResolvedAttribute, camera: Record<string,unknown> = {}) {
   if (key === 'camera') return row.id || row.source === 'shot'
     ? cameraMoveWords({...(row.source === 'shot' ? camera : {}), speed:row.speed, movement:row.source === 'shot' ? row.value : directions().movement(row.id!)}) : row.value;
@@ -257,6 +259,10 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   const fitWarnings = !limit || !step ? [] : [prompt.length > limit
     ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(', ')}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt`
     : `prompt_fitted: left out the ${dropped.slice(0, step).join(', ')} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
+  // The shot compiler can also preview several deliveries. The native line is allowed
+  // to have the same words as a thought; inspect the authored direction before adding it.
+  for (const value of [source.action, source.end, source.sound]) if (value) checkVoiceoverDirection(value, lines);
+  if (mode === 'voiceover') checkVoiceoverDirection(prompt, lines, true);
   const foreign = nonEnglishOutsideQuotes(prompt);
   if (foreign && options.validateLanguage !== false) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);
   const bindings: DirectionBinding[] = [

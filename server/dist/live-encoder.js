@@ -225,7 +225,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
                     if (!motion || !active.motion)
                         throw Error('post_lipsync_forbidden: play the speaking video with its own audio');
                     motion?.startSpeech();
-                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay });
+                    log('speech_start', { source: active.source, id: active.id, text: active.text, frame, replay: !!active.replay, ...(active.address && { address: true }) });
                 }
             }
             let pcm = silence;
@@ -237,7 +237,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             audio.write(pcm);
             video.write(motion ? motion.next(active?.motion) : frames[blink ? 4 : 0]);
             if (active && offset >= active.pcm.length) {
-                log('speech_end', { source: active.source, id: active.id, frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
+                log('speech_end', { source: active.source, id: active.id, ...(active.address && { address: true }), frame, samplesSent: offset / 2, totalSamples: active.pcm.length / 2 });
                 if (finishedSpeaking)
                     finishedSpeaking(active);
                 else if (active.motion)
@@ -275,6 +275,7 @@ export async function encode(frames, archive, destinations, seconds, signal, pul
             log('speech_interrupted', {
                 source: active.source,
                 id: active.id,
+                ...(active.address && { address: true }),
                 frame,
                 samplesSent: offset / 2,
                 totalSamples: active.pcm.length / 2
