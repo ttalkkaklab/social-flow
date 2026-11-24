@@ -146733,10 +146733,10 @@ TOOLS.push(
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       wholeScene: { type: "boolean", enum: [true], description: "Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it." },
-      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional complete scene prompt. Edit the returned promptTemplate, using its named face, voice and image slots. Overrides the saved draft for this plan." },
+      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional complete scene prompt. Edit the returned promptTemplate, using the names in promptSlots for cast, images, motion and soundtracks. Overrides the saved draft for this plan." },
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: "none" }),
-      sceneRendering: { type: "string", enum: ["per_shot"], description: "Use the saved model\u2019s per-shot renderer for one scene job. The planner can select this for compatible multi-shot dialogue that needs different voice references across cuts. Review the render plan before approval." },
+      sceneRendering: { type: "string", enum: ["per_shot"], description: "Explicitly request the saved model\u2019s per-shot renderer for one scene job. This transport can use different voices across cuts. Incompatible with wholeScene or a scene prompt edit. Review the render plan before approval." },
       maxCostUsd: { type: "number", minimum: 0, description: "Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval." },
       validateScenePayload: { type: "boolean", description: "On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation." },
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
