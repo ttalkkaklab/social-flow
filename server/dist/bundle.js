@@ -77937,10 +77937,10 @@ var init_values = __esm({
 });
 
 // node_modules/openai/internal/utils/sleep.mjs
-var sleep7;
+var sleep8;
 var init_sleep = __esm({
   "node_modules/openai/internal/utils/sleep.mjs"() {
-    sleep7 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
+    sleep8 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
   }
 });
 
@@ -85972,7 +85972,7 @@ var init_runs = __esm({
                   }
                 }
               }
-              await sleep7(sleepInterval);
+              await sleep8(sleepInterval);
               break;
             //We return the run in any terminal state.
             case "requires_action":
@@ -86711,7 +86711,7 @@ var init_files2 = __esm({
         const start = Date.now();
         let file = await this.retrieve(id);
         while (!file.status || !TERMINAL_STATES.has(file.status)) {
-          await sleep7(pollInterval);
+          await sleep8(pollInterval);
           file = await this.retrieve(id);
           if (Date.now() - start > maxWait) {
             throw new APIConnectionTimeoutError2({
@@ -88651,7 +88651,7 @@ var init_file_batches = __esm({
                   }
                 }
               }
-              await sleep7(sleepInterval);
+              await sleep8(sleepInterval);
               break;
             case "failed":
             case "cancelled":
@@ -88801,7 +88801,7 @@ var init_files3 = __esm({
                   }
                 }
               }
-              await sleep7(sleepInterval);
+              await sleep8(sleepInterval);
               break;
             case "failed":
             case "completed":
@@ -89719,7 +89719,7 @@ var init_client = __esm({
           const maxRetries = options.maxRetries ?? this.maxRetries;
           timeoutMillis = this.calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries);
         }
-        await sleep7(timeoutMillis);
+        await sleep8(timeoutMillis);
         return this.makeRequest(options, retriesRemaining - 1, requestLogID);
       }
       calculateDefaultRetryTimeoutMillis(retriesRemaining, maxRetries) {
@@ -122625,13 +122625,15 @@ function requireAstraGenaiKey(route = "") {
 var waiters = /* @__PURE__ */ new Map();
 var waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new import_undici.Agent({ headersTimeout: ms, bodyTimeout: ms })).get(ms);
 var GenaiRequestError = class extends Error {
-  constructor(message, terminal, httpStatus) {
+  constructor(message, terminal, httpStatus, retryAfterSeconds) {
     super(message);
     this.terminal = terminal;
     this.httpStatus = httpStatus;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
   terminal;
   httpStatus;
+  retryAfterSeconds;
 };
 async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId, credentialRoute = route) {
   const key = requireAstraGenaiKey(credentialRoute);
@@ -122739,11 +122741,15 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
     headers: { Authorization: `Bearer ${key}`, ...body && !form ? { "Content-Type": "application/json" } : {} },
     ...body === void 0 ? {} : { body: form ? body : JSON.stringify(body) }
   });
-  if (!response.ok) throw new GenaiRequestError(
-    `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
-    response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
-    response.status
-  );
+  if (!response.ok) {
+    const retryAfter = response.headers.get("retry-after");
+    throw new GenaiRequestError(
+      `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
+      response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
+      response.status,
+      response.status === 429 && retryAfter !== null && /^\d+$/.test(retryAfter) ? Number(retryAfter) : void 0
+    );
+  }
   return Buffer.from(await response.arrayBuffer());
 }
 async function genaiCatalog(kind) {
@@ -123395,6 +123401,7 @@ async function generateDesktopVideo(operation, input) {
 // src/astra-genai-speech.ts
 import * as fs10 from "node:fs";
 import path9 from "node:path";
+import { setTimeout as sleep5 } from "node:timers/promises";
 
 // src/tts-execution.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
@@ -123717,10 +123724,22 @@ function buildGenaiSpeechBody(input) {
     ...args.maxTokens === void 0 ? {} : { max_tokens: args.maxTokens }
   };
 }
+async function synthesize(body) {
+  const deadline = Date.now() + 30 * 6e4;
+  for (; ; ) {
+    try {
+      return await requestGenaiMedia("/v1/audio/speech", body);
+    } catch (error2) {
+      const seconds2 = error2 instanceof GenaiRequestError ? error2.retryAfterSeconds : void 0;
+      if (seconds2 === void 0 || Date.now() + seconds2 * 1e3 > deadline) throw error2;
+      await sleep5(seconds2 * 1e3);
+    }
+  }
+}
 async function generateGenaiSpeech(input) {
   const args = genaiSpeechSchema.parse(input);
   const run = () => executeSpeech("tts_astra_genai", args, async (output2) => {
-    const bytes = await requestGenaiMedia("/v1/audio/speech", buildGenaiSpeechBody(args));
+    const bytes = await synthesize(buildGenaiSpeechBody(args));
     validateSpeechAudio(bytes, args.outputFormat);
     const audioPath = path9.join(output2.outputPath, output2.filename);
     fs10.writeFileSync(audioPath, bytes, { flag: "wx", mode: 384 });
@@ -124812,7 +124831,7 @@ function buildJobBody(mode, args) {
   }
   return body;
 }
-function sleep5(ms) {
+function sleep6(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 var submitTimestamps = [];
@@ -124827,7 +124846,7 @@ async function waitForSubmitSlot() {
     }
     const minuteWait = recentMinute.length >= ASTRA_VIDEO_SUBMITS_PER_MINUTE ? 6e4 - (now - recentMinute[0]) : 0;
     const hourWait = submitTimestamps.length >= ASTRA_VIDEO_SUBMITS_PER_HOUR ? 36e5 - (now - submitTimestamps[0]) : 0;
-    await sleep5(Math.max(minuteWait, hourWait) + 250);
+    await sleep6(Math.max(minuteWait, hourWait) + 250);
   }
 }
 var uploadTimestamps = [];
@@ -124839,7 +124858,7 @@ async function waitForUploadSlot() {
       uploadTimestamps.push(now);
       return;
     }
-    await sleep5(6e4 - (now - uploadTimestamps[0]) + 250);
+    await sleep6(6e4 - (now - uploadTimestamps[0]) + 250);
   }
 }
 function redactedFailure(what, status, body) {
@@ -124868,7 +124887,7 @@ async function withBackoff(what, call2, baseDelayMs = 2e3) {
     const result = await call2();
     if (result.ok || result.status !== 429 && result.status !== 503) return result;
     last = result;
-    await sleep5(delay3);
+    await sleep6(delay3);
     delay3 *= 2;
   }
   return last;
@@ -124966,7 +124985,7 @@ async function awaitResult(jobId, signal) {
     );
     if (!status.ok) {
       if (isTerminalStatus(status.status)) throw redactedFailure(`status of job ${jobId}`, status.status, status.body);
-      await sleep5(POLL_INTERVAL_MS2);
+      await sleep6(POLL_INTERVAL_MS2);
       continue;
     }
     const job = JSON.parse(status.body);
@@ -124991,7 +125010,7 @@ async function awaitResult(jobId, signal) {
         }
       });
       if (download.status === 409) {
-        await sleep5(POLL_INTERVAL_MS2);
+        await sleep6(POLL_INTERVAL_MS2);
         continue;
       }
       if (!download.ok) {
@@ -125003,7 +125022,7 @@ async function awaitResult(jobId, signal) {
         elapsedSeconds: Math.round((Date.now() - startedAt) / 1e3)
       };
     }
-    await sleep5(POLL_INTERVAL_MS2);
+    await sleep6(POLL_INTERVAL_MS2);
   }
 }
 function atomicVideoFile(file, contents) {
@@ -125160,7 +125179,7 @@ import { createHash as createHash12, randomUUID as randomUUID6 } from "node:cryp
 import * as fs12 from "node:fs";
 import * as path12 from "node:path";
 import { execFileSync as execFileSync8 } from "node:child_process";
-import { setTimeout as sleep6 } from "node:timers/promises";
+import { setTimeout as sleep7 } from "node:timers/promises";
 
 // src/astra-genai-upload.ts
 import { createHash as createHash10 } from "node:crypto";
@@ -126352,7 +126371,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
         return finish();
       }
       if (!signal || Date.now() >= deadline) throw new Error("GenAI submission identity is unknown; inspect usage before retrying.");
-      await sleep6(250, void 0, { signal });
+      await sleep7(250, void 0, { signal });
     }
   }
   if (fs12.existsSync(receiptPath2)) return followSubmission();
@@ -128115,7 +128134,7 @@ var seedanceReferenceSchema = external_exports.object({
     });
   }
 }).transform((data) => ({ ...data, durationSeconds: data.durationSeconds ?? (data.omniReferenceTaskType === "edit" ? -1 : DEFAULT_SEEDANCE_DURATION) }));
-function sleep8(ms) {
+function sleep9(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 function describeHttpError(status, body) {
@@ -128230,7 +128249,7 @@ async function awaitVideoAndSave(apiKey, taskId, outputPath, filename) {
   let retried2 = false;
   for (let poll = 1; poll <= MAX_POLLS2; poll += 1) {
     console.error(`[Seedance] Generation in progress... (polling ${poll}/${MAX_POLLS2})`);
-    await sleep8(POLL_INTERVAL_MS3);
+    await sleep9(POLL_INTERVAL_MS3);
     let task;
     try {
       task = await getTask(apiKey, taskId);
@@ -137553,7 +137572,7 @@ function describeElevenLabsError(httpStatus, bodyText) {
 function isRetryable(httpStatus) {
   return httpStatus === 429 || httpStatus >= 500;
 }
-function sleep9(ms) {
+function sleep10(ms) {
   return new Promise((resolve15) => setTimeout(resolve15, ms));
 }
 function timeoutFor(textLength) {
@@ -137573,7 +137592,7 @@ async function elevenFetch(pathAndQuery, init, timeoutMs, attempts = MAX_ATTEMPT
     const bodyText = await response.text();
     lastError = Object.assign(new Error(describeElevenLabsError(response.status, bodyText)), { httpStatus: response.status });
     if (!isRetryable(response.status) || attempt === attempts - 1) break;
-    await sleep9(RETRY_BASE_DELAY_MS * (attempt + 1));
+    await sleep10(RETRY_BASE_DELAY_MS * (attempt + 1));
   }
   throw lastError ?? new Error("ElevenLabs request failed");
 }
@@ -150424,7 +150443,7 @@ var FB_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 var DEFAULT_POLL_INTERVAL_MS = 2e3;
 var DEFAULT_POLL_MAX_TRIES = 60;
 var REELS_POLL = { pollIntervalMs: 1e4, pollMaxTries: 30 };
-var sleep10 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
+var sleep11 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
 function fail2(status, message) {
   return { ok: false, status, body: message };
 }
@@ -150493,7 +150512,7 @@ async function pollContainer(baseUrl, containerId, accessToken, statusField, opt
       const detail = body?.[detailField] ? ` \u2014 ${String(body[detailField])}` : "";
       return fail2(502, `Media container ${containerId} failed: ${status}${detail}`);
     }
-    await sleep10(interval);
+    await sleep11(interval);
   }
   return fail2(504, `Media container ${containerId} not FINISHED after ${maxTries} tries`);
 }
@@ -150940,7 +150959,7 @@ async function publishFacebookReel(pageId, token, input, opts) {
       }
       last = `video_status=${videoStatus2 || "?"}, publishing=${String(publishing.status ?? "?")}`;
     }
-    await sleep10(opts.pollIntervalMs);
+    await sleep11(opts.pollIntervalMs);
   }
   return { videoId, postId, processing: `Reel accepted but still processing (${last}); check the Page before doing anything \u2014 do not publish again` };
 }
@@ -151340,7 +151359,7 @@ async function waitForYoutubeProcessing(token, videoId, opts) {
     const status = String(details?.processingStatus ?? "");
     if (status === "succeeded") return null;
     if (status === "failed" || status === "terminated") return `YouTube processing ${status} \u2014 check the video in Studio`;
-    await sleep10(opts.pollIntervalMs);
+    await sleep11(opts.pollIntervalMs);
   }
   return `processing not finished after ${Math.round(opts.pollMaxTries * opts.pollIntervalMs / 1e3)}s \u2014 thumbnail set anyway; on a Short it may not apply, so set it again in Studio if the cover is wrong`;
 }

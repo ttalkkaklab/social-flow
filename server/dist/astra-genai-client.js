@@ -54,10 +54,12 @@ const waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new Agent({ headersTi
 export class GenaiRequestError extends Error {
     terminal;
     httpStatus;
-    constructor(message, terminal, httpStatus) {
+    retryAfterSeconds;
+    constructor(message, terminal, httpStatus, retryAfterSeconds) {
         super(message);
         this.terminal = terminal;
         this.httpStatus = httpStatus;
+        this.retryAfterSeconds = retryAfterSeconds;
     }
 }
 /** No automatic POST retries: a disconnected request may already be generating. */
@@ -190,8 +192,11 @@ export async function requestGenaiMedia(route, body, credentialRoute = route, si
         headers: { Authorization: `Bearer ${key}`, ...(body && !form ? { 'Content-Type': 'application/json' } : {}) },
         ...(body === undefined ? {} : { body: form ? body : JSON.stringify(body) }),
     });
-    if (!response.ok)
-        throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, '[redacted]').slice(0, 2000)}`, response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status), response.status);
+    if (!response.ok) {
+        // A 429 with Retry-After means the model is busy and nothing was generated; quota 429s carry none.
+        const retryAfter = response.headers.get('retry-after');
+        throw new GenaiRequestError(`ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, '[redacted]').slice(0, 2000)}`, response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status), response.status, response.status === 429 && retryAfter !== null && /^\d+$/.test(retryAfter) ? Number(retryAfter) : undefined);
+    }
     return Buffer.from(await response.arrayBuffer());
 }
 /** Read deployment configuration without performing inference. */
