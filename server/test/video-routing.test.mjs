@@ -2092,6 +2092,12 @@ test('storyboard edits are scoped to the selected scene model and operation', as
   for (const extra of ["Guest whispers, ‘Come inside.’", "Guest adds: Come inside.", "Guest says, 'Come inside.'"])
     assert.throws(() => planVideo({...input,prompt:sameTurns + ' ' + extra},false), /scene_dialogue_mismatch/);
   assert.equal(owner.promptDrafts[0].prompt, 'Other approved scene.');
+  for (const cue of ["Hero speaks in Guest's voice.", "Use {guest.face} for Hero's face.", "Guest says goodbye."])
+    assert.throws(() => planVideo({...input,prompt:preview.promptTemplate + '\n' + cue},false), /scene_dialogue_/);
+  const blocking = "Use a wide shot of Hero and Guest. Hero is standing behind Guest. Hero watches Guest's face.";
+  assert.ok(planVideo({...input,prompt:blocking + ' ' + sameTurns},false).args.prompt.includes(blocking));
+  const addressed = sameTurns.replace('Hero looks at Guest and asks,','Hero reassures Guest, using {hero.voice}:');
+  assert.ok(planVideo({...input,prompt:addressed},false).args.prompt.includes('Hero reassures Guest, using Audio 1:'));
   const nested = 'Did he say "wait here by Image 1"?';
   f.board.SCENES[0].narration[0].tts = nested;
   delete owner.promptDrafts;
@@ -2183,4 +2189,37 @@ test('Seedance scene previews bind local motion to the selected model dialect', 
       assert.equal(planVideo({...input,prompt:preview.promptTemplate},false).args.prompt,preview.args.prompt);
     });
   }
+});
+
+test('a stored cast declaration cannot silently reverse the submitted face bindings', async t => {
+  const f=await pinnedSpeakerScene(t,'reference');
+  const dir=path.join(f.episode,'storyboard');
+  const characters=['hero','guest'].map(id=>{
+    const sheet=path.join(f.root,'assets','characters',id);
+    fs.mkdirSync(sheet,{recursive:true});fs.writeFileSync(path.join(sheet,'identity.md'),'# '+id);
+    const panels={};
+    for(const k of ['face','front','back']) {fs.copyFileSync(path.join(dir,id+'.png'),path.join(sheet,k+'.png'));panels[k]={file:k+'.png'};}
+    fs.writeFileSync(path.join(sheet,'panels.json'),JSON.stringify({panels}));
+    return {id,source:path.relative(dir,path.join(sheet,'identity.md'))};
+  });
+  fs.writeFileSync(path.join(dir,'cast.json'),JSON.stringify({characters}));
+  f.board.STRUCTURE.version='structure-v1';
+  f.board.STRUCTURE.sequences=[{id:'q1',title:'The visitor',purpose:'A reunion',scenes:[1]}];
+  f.board.SCENES.forEach((s,i)=>{s.id='s000'+(i+1);s.summary=s.visual.action;s.type='hooking';s.visual.character=s.narration[0].speaker;});
+  f.save();
+  const input={episode:f.episode,sceneNo:1,wholeScene:true,args:{reserveUsd:0}};
+  const get=async id=>JSON.parse((await ROUTES.video_plan({...input,requestId:id})).content[0].text);
+  const original = await get('opening');
+  const wire = buildGenaiMsrBody(genaiMsrSchema.parse(original.args));
+  assert.equal(wire.prompt,original.sceneRequest.prompt);
+  assert.deepEqual(original.args.references.slice(0,2).map(ref => path.basename(ref.imagePath)),['hero.png','guest.png']);
+  const swapped = original.promptTemplate.replace('{hero.face}: character, hero','{guest.face}: character, hero')
+    .replace('{guest.face}: character, guest','{hero.face}: character, guest');
+  assert.notEqual(swapped,original.promptTemplate);
+  const scene = f.board.STRUCTURE.scenes[0];
+  const draft = {engine:original.selection.engine,model:original.selection.model,operation:'reference',prompt:swapped};
+  const stored = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
+    event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,promptDrafts:[draft]}}]});
+  assert.ok(!stored.isError);
+  await assert.rejects(get('edited'),/scene_dialogue_speaker/);
 });

@@ -994,8 +994,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const refused = resolved.issues.filter(issue => issue.level === 'error');
         if (refused.length)
             throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
-        if (['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy || ''))
-            assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), voice.voiceContinuity.speakers, scenePromptTemplate(composed, promptSlots, '', script).promptTemplate);
+        assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), voice.voiceContinuity?.speakers ?? [], scenePromptTemplate(composed, promptSlots, '', script).promptTemplate, ['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy ?? ''));
         promptIssues = resolved.issues;
         // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
         voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...(positions ? { openingPositions: positions } : {}) } };
