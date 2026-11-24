@@ -2224,19 +2224,19 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     assert.ok(!stored.isError);
   }
   const edit = text => original.promptTemplate + '\n' + text;
-  for (const invalid of [
-    swapped,
-    edit('Hero ({guest.face}) waits by the door. Guest ({hero.face}) stands beside the lamp.'),
-    edit('Hero — {guest.face}\nGuest — {hero.face}'),
-    edit('Hero:\n{guest.face} waits by the door.'),
-    edit('Hero takes on Guest’s voice throughout.'),
-    edit('The actor in {guest.face} delivers the first spoken line. The actor in {hero.face} delivers the second spoken line.'),
-    edit('Give line two to Hero. The opening words belong to Guest.'),
-    edit('Guest mouths Hero’s words. Hero recites Guest’s lines.'),
-    edit('Switch the faces of Hero and Guest for every shot.'),
+  for (const [invalid,reason] of [
+    [swapped,/scene_dialogue_speaker/],
+    [edit('Hero ({guest.face}) waits by the door. Guest ({hero.face}) stands beside the lamp.'),/scene_dialogue_speaker/],
+    [edit('Hero — {guest.face}\nGuest — {hero.face}'),/scene_dialogue_speaker/],
+    [edit('Hero:\n{guest.face} waits by the door.'),/scene_dialogue_speaker/],
+    [edit('Hero takes on Guest’s voice throughout.'),/scene_dialogue_speaker/],
+    [edit('The actor in {guest.face} delivers the first spoken line. The actor in {hero.face} delivers the second spoken line.'),/scene_dialogue_mismatch/],
+    [edit('Give line two to Hero. The opening words belong to Guest.'),/scene_dialogue_mismatch/],
+    [edit('Guest mouths Hero’s words. Hero recites Guest’s lines.'),/scene_dialogue_mismatch/],
+    [edit('Switch the faces of Hero and Guest for every shot.'),/scene_dialogue_speaker/],
   ]) {
     await saveDraft(invalid);
-    await assert.rejects(get('refused'),/scene_dialogue_speaker/);
+    await assert.rejects(get('refused'),reason);
   }
   const focus = 'Keep Hero’s face sharp as Guest steps back. Hero and Guest exchange a glance across the doorway.';
   await saveDraft(edit(focus + ' Hero ({hero.face}) waits by the door.'));
