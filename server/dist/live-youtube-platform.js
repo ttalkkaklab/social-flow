@@ -10,7 +10,7 @@ export function createYoutubePlatform(options, openApi = youtubeApi) {
     if (!channelId)
         throw Error('Set youtubeChannelId before connecting');
     const receiptFile = join(out, 'youtube.json');
-    let receipt = { channelId, marker: randomUUID(), topic: config.topic };
+    let receipt = { channelId, marker: randomUUID(), topic: config.topic, faqCount: options.faqCount, knowledgeFingerprint: options.knowledgeFingerprint };
     const save = () => saveLiveReceipt(receiptFile, receipt);
     let client;
     const connect = () => client ??= openApi(config.youtubeCredentialChannel ?? config.channel);
@@ -76,6 +76,7 @@ export function createYoutubePlatform(options, openApi = youtubeApi) {
                 const name = checkedTitle();
                 const api = await connect();
                 mkdirSync(out, { mode: 0o700 });
+                receipt.scheduledStartTime = options.scheduledStartTime;
                 save();
                 await prepareYoutube(api, config, name, receipt, save);
                 log('youtube_reserved', { id: receipt.broadcastId });
@@ -185,7 +186,7 @@ export function createYoutubePlatform(options, openApi = youtubeApi) {
             }
         },
         onEvent(event, fields) {
-            if (event === 'speech_end' && probeId && fields.id === probeId && fields.source === 'youtube')
+            if (event === 'speech_end' && !fields.address && probeId && fields.id === probeId && fields.source === 'youtube')
                 probeSpoken = true;
         },
         async close() {

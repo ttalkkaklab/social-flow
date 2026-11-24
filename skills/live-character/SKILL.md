@@ -18,17 +18,17 @@ preview before sending video. Set `speechLanguage` for a session in a different 
 and write the opening and any prepared answers in that language. A guest character can
 use `youtubeCredentialChannel` to select the destination channel's OAuth connection.
 
-Before each broadcast, run `node server/dist/character-live.bundle.js choices` and
-present the returned choices in the user's language using the host's human-input
-control (or ask in chat). Wait for the answer. An explicit choice for this
-broadcast in the user's request counts. A previous broadcast, a saved config,
-an unattended schedule or silence cannot choose for the user.
+## Start a show
 
-- **Start when ready** (`--start ready`): prepare ten moving listening clips, two short spoken welcomes, the opening and the first topic segment before ingest. Send the watch link as soon as YouTube reports live.
-- **Preview first** (`--start preview`): produce a local recording with sound and stop.
-  Show it and wait for a start decision. When the user selects start, use a fresh run
-  directory. The renderer can reuse the same generated opening.
-- **Cancel** (`--start cancel`): leave the broadcast unopened.
+Use the host's human-input control or chat. Reuse answers the operator already supplied for this broadcast.
+
+1. Ask what the show is about. Save the answer as `topic` in this session's config.
+2. Ask for knowledge files or directories, or an explicit choice to use no sources. Save paths in `knowledgeBase` or save an empty array for no sources. Use `node server/dist/character-live.bundle.js knowledge --config FILE` to build the local index before asking for a count. The reader accepts text, Markdown, CSV, JSON and PDF. Text PDFs need Poppler. Scanned pages also need Tesseract and the source language pack. Resolve unreadable inputs with the operator.
+3. Run `choices` and ask how many distinct question-and-answer videos to prepare. Offer exactly **10, 30, 50 and 100**. More questions cover more viewer requests and take longer to render. Record the operator's choice with `--faq-count N`. A preset from a previous show cannot select for this one.
+4. Run `estimate --config FILE --faq-count N` and **tell the operator** the chosen count, cached and missing FAQ clips, estimated generation time, buffer and expected start in their local timezone. The initial estimate assumes 150 seconds per missing clip, then uses the observed upper-quartile duration for this show configuration. The buffer is 20 percent with a two-minute minimum. The estimate is approximate. Relay revised times if preparation slips.
+5. Honor the start choice for this broadcast. **Ready** starts ingest after every chosen FAQ body, ten listening clips, two welcomes, the opener and the first topic segment pass preparation. **Preview** records locally and waits for a separate start request. **Cancel** stops before creating a room. A request to start this session is already a ready choice. Share the real watch link and report the live transition.
+
+The live host searches a private file-backed answer library. Exact configured phrases skip text generation. For other questions the model supplies search terms. It sees up to eight candidate answers and source excerpts, checks the subject, units and context, and can choose an existing clip. After a new standalone reply renders, save its question, body and local video path. Personal or context-dependent replies stay out of the shared library. The topic, character and source fingerprint scope reuse. A viewer's available display name is spoken in a separate address clip on the first use of a body in the show. Subsequent viewers hear only the body. Missing or unusable names fall back to the body alone.
 
 Use a calm chest-up portrait with a complete face. Set `broadcastConcept` to the
 setting and mood for this show. Use `talkPrompt` for speaking directions. The plugin
@@ -36,18 +36,18 @@ prepares ten silent listening clips, each 3–5 seconds at 24 fps. It pins the s
 portrait to both ends of every shot. The host should visibly look down to read, nod or
 shift their shoulders gently. The runner checks for a held pose across each clip. If a replacement still freezes between identical anchors, it generates a short outward gesture and plays its frames back to the exact starting pose. All ten clips must pass the framing and motion checks before ingest. Ready speech interrupts standby on the
 next output frame. If the queue stays empty, shuffle all ten before repeating a clip.
-A new shuffle starts with a different clip from the last one played. Once the room is live, play ready viewer replies first, then fresh host segments. While rendering, rotate audience-wide welcomes and previously aired self-contained topic lines. Finish each spoken line. Keep viewer answers and the opener out of this rotation.
+A new shuffle starts with a different clip from the last one played. Once the room is live, play ready viewer replies first, then fresh host segments. While rendering, play verified general FAQ bodies in shuffled order. Newly learned standalone bodies join the current rotation. Welcomes and self-contained topic lines fill decode gaps. Finish each spoken line. Keep personal answers, name clips and the opener out of this rotation.
 To prepare these assets earlier and list their paths, run
 `node server/dist/character-live.bundle.js prepare-idle --config FILE`. This command
 needs no streaming destination. The normal broadcast start also prepares the set.
 Before opening ingest the runner prepares the listening pool, a greeting that opens the show
-and a first topic segment. Save a chosen subject as `topic` when reserving the room. The opener names it and invites comments, and the receipt keeps it when resuming. Existing configs without a topic use their authored `opening`. Optional `standbyLines` supplies two short, distinct welcomes for anyone joining, in the broadcast language.
+and a first topic segment. Save a chosen subject as `topic` when reserving the room. The opener names it and invites comments, and the receipt keeps it when resuming. Local previews can still use the authored `opening` from an older config. Set a `topic` before reserving a room or starting a broadcast. Optional `standbyLines` supplies two short, distinct welcomes for anyone joining, in the broadcast language.
 During the YouTube handshake the encoder plays moving standby. Once the room is live it plays
 the greeting. While speech plays, the planner uses the current line, recent spoken exchanges,
 real viewer chat and any queued host line to generate the next segment. Optional `hostLines` give
 topic cues. The host continues after the last cue.
 
-One model call decides whether a viewer message merits an answer and writes it. Set `maxConcurrentVideos` to a positive integer (default 3). During playout the host leaves one slot for chat when at least two are available. Selected replies take the next free slots. Plan the next line against recent chat and pending replies. Discard obsolete host results, let submitted jobs finish and keep replies from a single viewer in order. An on-air line always finishes, including
+For a free-form message the model supplies search terms and judges the retrieved answers. When it proposes a new sourced answer, verify its factual claims against the retrieved passages. If the material cannot support the answer, say so and keep it out of the reusable library. Set `maxConcurrentVideos` to a positive integer (default 3). During playout the host leaves one slot for chat when at least two are available. Selected replies take the next free slots. Plan the next line against recent chat and pending replies. Discard obsolete host results, let submitted jobs finish and keep replies from a single viewer in order. An on-air line always finishes, including
 when the chat intake window closes. Standby fills only gaps between ready spoken segments.
 If repeated status checks leave a video submission unresolved, the runner pauses new video requests
 and keeps playing available clips. The `live_video_unresolved` event records the receipt for recovery.
@@ -83,13 +83,13 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    {"project":"/path/to/project","channel":"my-channel","character":"host","panel":"face",
     "broadcastConcept":"Late-night radio in a softly lit studio.",
     "talkPrompt":"Locked camera, quiet conversation, shoulders relaxed, speaking the authored dialogue.",
-    "chatModel":"gateway-text-model","topic":"books we read before bed","maxConcurrentVideos":3,
+    "knowledgeBase":[],"chatModel":"gateway-text-model","topic":"books we read before bed","maxConcurrentVideos":3,
     "youtubeChannelId":"UCxxxxxxxxxxxxxxxxxxxxxx","madeForKids":false}
    ```
 
 4. Optionally configure reactions as an array of objects with a questions array and a short spoken
-   answer. An exact configured question uses its authored answer directly. Only add unconditional answers here. Greetings and sound checks are good candidates. Use
-   `warm --config /path/to/config.json` to generate the opening, spoken welcomes and prepared response clips
+   answer. An exact configured question uses its authored answer directly. The live runner fills the remaining selected slots with distinct answers grounded in the show material. Only add unconditional answers here. Greetings and sound checks are good candidates. Use
+   `warm --config /path/to/config.json --faq-count N` to generate the opening, spoken welcomes and prepared response clips
    before going live. Already completed configured replies play from the local video cache. For a new message the chat model writes the answer and GenAI renders
    the spoken clip. Exact repeated requests reuse the saved clip and receipt.
 
@@ -111,11 +111,11 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
 
    ```sh
    node server/dist/character-live.bundle.js check --config /path/to/config.json --youtube
-   node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-run --seconds 180 --youtube --start ready --title 'AI character · live test'
+   node server/dist/character-live.bundle.js run --config /path/to/config.json --out /path/to/new-run --seconds 180 --youtube --start ready --faq-count 10 --title 'AI character · live test'
    ```
 
    If the user wants a link during generation, reserve the unlisted room once after the
-   start choice. Use `reserve --youtube --start ready --config FILE --out ROOM --title TITLE`,
+   start choice. Use `reserve --youtube --start ready --faq-count N --config FILE --out ROOM --title TITLE`,
    share the returned video ID as an upcoming watch link, then run with
    `--resume-from ROOM --out NEW_RUN --youtube --start ready` and the same config and title.
    Report the actual live transition separately.
@@ -148,7 +148,7 @@ When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` 
    remains available in both modes. Viewer replies are spoken in the stream.
 
    ```sh
-   node server/dist/character-live.bundle.js run --platform tiktok --start ready --config FILE --out NEW_SESSION --seconds 180
+   node server/dist/character-live.bundle.js run --platform tiktok --start ready --faq-count N --config FILE --out NEW_SESSION --seconds 180
    node server/dist/character-live.bundle.js status --platform tiktok --config FILE --out NEW_SESSION
    ```
 

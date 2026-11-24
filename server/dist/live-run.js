@@ -3,13 +3,15 @@ import { spawn } from 'node:child_process';
 import { resolve, join } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, appendFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
-import { answer, broadcastLines, ChatQueue, listenChatInput, continueBroadcast, liveConfig, loadCharacter, preparedReply } from './live-character.js';
+import { planViewerReply, draftExpectedAnswers, broadcastLines, ChatQueue, listenChatInput, continueBroadcast, liveConfig, loadCharacter } from './live-character.js';
 import { GenaiRequestError, requestGenai } from './astra-genai-client.js';
 import { checkLiveRelay, encode } from './live-encoder.js';
-import { prepareIdleClips, idleCount } from './live-idle.js';
-import { NativeTalk, openingParts, talkPrompt } from './live-native.js';
-import { liveStartChoice, liveStartChoices } from './live-options.js';
-import { LiveProgram, LiveRenderPool, isReply } from './live-program.js';
+import { prepareIdleClips, idleCount, idleCacheReady } from './live-idle.js';
+import { NativeTalk, fitsLiveShot, openingParts, talkPrompt } from './live-native.js';
+import { liveStartChoice, liveStartChoices, liveFaqCount } from './live-options.js';
+import { faqPassagesPerBatch, LiveKnowledge } from './live-knowledge.js';
+import { LiveAnswers, spokenAddress } from './live-answers.js';
+import { FaqRotation, LiveProgram, LiveRenderPool, isReply } from './live-program.js';
 import { livePlatformIds } from './live-platform.js';
 import { livePlatforms, selectPlatforms } from './live-platform-registry.js';
 async function main() {
@@ -19,6 +21,7 @@ async function main() {
             config: { type: 'string' },
             out: { type: 'string' },
             seconds: { type: 'string', default: '120' },
+            'faq-count': { type: 'string' },
             platform: { type: 'string', multiple: true },
             youtube: { type: 'boolean' },
             tiktok: { type: 'boolean' },
@@ -34,8 +37,8 @@ async function main() {
         return;
     }
     const recovery = ['status', 'end', 'cancel-unstarted'].includes(action);
-    if ((!['check', 'warm', 'prepare-idle', 'run', 'reserve'].includes(action) && !recovery) || !v.config || positionals.length !== 1)
-        throw Error('Use choices|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--platform youtube|tiktok] [--youtube] [--tiktok]');
+    if ((!['knowledge', 'estimate', 'check', 'warm', 'prepare-idle', 'run', 'reserve'].includes(action) && !recovery) || !v.config || positionals.length !== 1)
+        throw Error('Use choices|knowledge|estimate|check|warm|prepare-idle|reserve|run|status|end|cancel-unstarted --config file [--out directory] [--platform youtube|tiktok] [--youtube] [--tiktok]');
     const selected = selectPlatforms([
         ...(v.platform ?? []), ...(v.youtube ? ['youtube'] : []), ...(v.tiktok ? ['tiktok'] : [])
     ]);
@@ -50,7 +53,7 @@ async function main() {
     if (start === 'ready' && !destination)
         throw Error('Choose a live destination or --start preview');
     const cfg = liveConfig.parse(JSON.parse(readFileSync(v.config, 'utf8')));
-    if (!v.out && !['warm', 'check', 'prepare-idle'].includes(action))
+    if (!v.out && !['knowledge', 'estimate', 'warm', 'check', 'prepare-idle'].includes(action))
         throw Error('Set --out to a unique session directory');
     const out = resolve(v.out ?? '.');
     const platforms = [];
@@ -72,7 +75,54 @@ async function main() {
         throw Error('Resume requires a YouTube run with live chat enabled');
     if (['warm', 'prepare-idle'].includes(action) && destination)
         throw Error('Prepare clips locally');
-    const options = { config: cfg, out, title: v.title, probe,
+    const intake = start === 'ready' || ['knowledge', 'estimate'].includes(action) || (action === 'warm' && !!v['faq-count']);
+    if (intake && !cfg.topic)
+        throw Error('Ask for the broadcast topic and save it as topic.');
+    if (intake && cfg.knowledgeBase === undefined)
+        throw Error('Ask for knowledge files or directories. Save knowledgeBase: [] for an explicit choice of no sources.');
+    const paths = recovery ? [] : cfg.knowledgeBase ?? [];
+    const sourceLanguage = !paths.length ? 'und' : cfg.speechLanguage ??
+        JSON.parse(readFileSync(join(cfg.project, '.social-flow/models.json'), 'utf8')).languages?.speech;
+    if (!sourceLanguage)
+        throw Error('Set the project or session speech language for knowledge extraction.');
+    const knowledge = new LiveKnowledge(cfg.project, paths, sourceLanguage);
+    if (action === 'knowledge') {
+        console.log(JSON.stringify({ topic: cfg.topic, sources: cfg.knowledgeBase, passages: knowledge.passages.length, fingerprint: knowledge.fingerprint }));
+        return;
+    }
+    const resumed = v['resume-from'] && join(resolve(v['resume-from']), 'youtube.json');
+    const receipt = resumed && existsSync(resumed) ? JSON.parse(readFileSync(resumed, 'utf8')) : undefined;
+    const count = intake || v['faq-count'] ? await liveFaqCount(v['faq-count'] ?? receipt?.faqCount?.toString()) : undefined;
+    if (receipt?.faqCount && (receipt.faqCount !== count || receipt.topic !== cfg.topic || receipt.knowledgeFingerprint !== knowledge.fingerprint))
+        throw Error('Reserved topic, knowledge or FAQ count differs from this session.');
+    const estimateActor = count && loadCharacter(cfg, 'native');
+    const scope = (actor) => ['grounded-faq-v2', cfg.channel, cfg.character, actor.identityHash, actor.language,
+        cfg.topic, cfg.opening, cfg.broadcastConcept, cfg.persona, cfg.hostLines, cfg.reactions, knowledge.fingerprint];
+    const answerLibrary = (actor) => new LiveAnswers(cfg.reactions, cfg.project, scope(actor), text => fitsLiveShot(text, actor.language));
+    let estimate;
+    if (count && estimateActor) {
+        const estimator = new NativeTalk(estimateActor, cfg.project, cfg.talkPrompt ?? talkPrompt);
+        try {
+            const catalog = answerLibrary(estimateActor);
+            const concept = cfg.broadcastConcept ?? (cfg.talkPrompt ?? cfg.persona ?? talkPrompt).slice(0, 600);
+            const idle = idleCacheReady(estimateActor.asset, cfg.project, concept) ? 0 : idleCount;
+            let spoken = 4;
+            if (['ko', 'en'].includes(estimateActor.language.split('-')[0])) {
+                const { opening, standby } = await broadcastLines(cfg, estimateActor);
+                spoken = 1 + [...openingParts(opening, estimateActor.language), ...standby].filter(text => !estimator.hasCompleted(text)).length;
+            }
+            estimate = catalog.estimate(count, text => estimator.hasCompleted(text), idle + spoken);
+            console.error(JSON.stringify({ event: 'preparation_estimate', ...estimate }));
+        }
+        finally {
+            estimator.close();
+        }
+        if (action === 'estimate') {
+            console.log(JSON.stringify(estimate));
+            return;
+        }
+    }
+    const options = { config: cfg, out, title: v.title, probe, faqCount: count, knowledgeFingerprint: knowledge.fingerprint, scheduledStartTime: estimate?.expectedStartTime,
         resumeFrom: v['resume-from'] && resolve(v['resume-from']), log };
     if ((recovery || action === 'reserve') && ids.length !== 1)
         throw Error('Choose one --platform for room management');
@@ -124,14 +174,29 @@ async function main() {
         }));
         return;
     }
+    async function prepareFaq(renderer, library, selectedCount, signal, report) {
+        let ready = 0;
+        return library.prepare(selectedCount, (needed, existing, batchIndex) => draftExpectedAnswers(cfg, actor, knowledge, needed, existing, signal, batchIndex * faqPassagesPerBatch), async (text) => {
+            signal.throwIfAborted();
+            const started = Date.now();
+            const cached = renderer.hasCompleted(text);
+            const clip = await renderer.render(text, signal);
+            renderer.release(clip.motion);
+            if (!cached)
+                library.recordDuration((Date.now() - started) / 1000);
+            report(++ready, cached, renderer.fileFor(text), text);
+        }, text => renderer.hasCompleted(text), Math.max(3, Math.ceil(knowledge.passages.length / faqPassagesPerBatch)));
+    }
     if (action === 'warm') {
         const renderer = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt);
         try {
             const { opening, standby } = await broadcastLines(cfg, actor);
-            for (const text of new Set([...openingParts(opening, actor.language), ...standby, ...cfg.reactions.map(r => r.answer)])) {
+            for (const text of new Set([...openingParts(opening, actor.language), ...standby, ...(count ? [] : cfg.reactions.map(r => r.answer))])) {
                 const { motion } = await renderer.render(text, new AbortController().signal);
                 renderer.release(motion);
             }
+            if (count)
+                await prepareFaq(renderer, answerLibrary(actor), count, new AbortController().signal, ready => console.error(`FAQ videos ready: ${ready}/${count}`));
         }
         finally {
             renderer.close();
@@ -150,6 +215,9 @@ async function main() {
     const motion = new NativeTalk(actor, cfg.project, cfg.talkPrompt ?? talkPrompt, log);
     const program = new LiveProgram(clip => { if (clip.motion)
         motion.release(clip.motion); });
+    const library = answerLibrary(actor);
+    const faqRotation = new FaqRotation();
+    const answerOrder = new Map();
     const { ready } = program;
     const queue = new ChatQueue(event => {
         program.hear(event);
@@ -184,9 +252,9 @@ async function main() {
     };
     const onLog = (kind, fields) => {
         log(kind, fields);
-        if (kind === 'speech_interrupted' && isReply(String(fields.source)))
+        if (kind === 'speech_interrupted' && !fields.address && isReply(String(fields.source)))
             unfinishedReplies++;
-        if (kind === 'speech_end' && isReply(String(fields.source)))
+        if (kind === 'speech_end' && !fields.address && isReply(String(fields.source)))
             spokenReplies++;
     };
     let stopInput;
@@ -210,7 +278,7 @@ async function main() {
             const reusable = !context.scheduledReplies.length &&
                 (!context.recentChat.length || (hostLine % 2 === 0 && !context.onAir.at(-1)?.answering));
             log('host_generation_started', { id, onAir: context.onAir.length, upcoming: context.scheduledHost.length });
-            const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal, reusable);
+            const text = await continueBroadcast(cfg, actor, context, cfg.hostLines[hostLine], signal, reusable, knowledge);
             if (stale())
                 return;
             if ([...context.scheduledHost, ...context.onAir.map(turn => turn.host)].includes(text))
@@ -268,6 +336,13 @@ async function main() {
                 throw result.reason;
         if (controller.signal.aborted)
             return;
+        if (count) {
+            await prepareFaq(motion, library, count, signal, (ready, cached, videoPath, text) => {
+                faqRotation.add(text);
+                log('faq_video_ready', { ready, count, cached, videoPath });
+            });
+            log('faq_pool_ready', { count });
+        }
         const destinations = [];
         for (const platform of platforms) {
             controller.signal.throwIfAborted();
@@ -284,6 +359,27 @@ async function main() {
         stopInput = listenChatInput(process.stdin, source => Date.now() < acceptingUntil &&
             (source === 'operator' || platforms.some(p => p.acceptsStdin && p.id === source)), queue);
         acceptingUntil = Date.now() + seconds * 1000;
+        observers.push((async () => {
+            while (!signal.aborted && Date.now() < acceptingUntil) {
+                if (!program.faqStandby) {
+                    const text = faqRotation.next();
+                    if (text) {
+                        try {
+                            const clip = await motion.cached(text, signal);
+                            if (clip)
+                                program.faqStandby = { ...clip, source: 'standby', id: 'faq-standby', text, replay: true };
+                        }
+                        catch (error) {
+                            if (!signal.aborted)
+                                log('faq_standby_unavailable', { reason: error instanceof Error ? error.name : 'error' });
+                        }
+                        if (!program.faqStandby)
+                            await wait(1000);
+                    }
+                }
+                await wait(100);
+            }
+        })());
         hosting = (async () => {
             while (!controller.signal.aborted && Date.now() < acceptingUntil) {
                 try {
@@ -326,38 +422,50 @@ async function main() {
                     log('reply_failed', { source: event.source, id: event.id, stage, reason });
                 };
                 try {
-                    const prepared = preparedReply(cfg, event.text);
                     const selective = event.source !== 'operator' && !(event.source === 'youtube' && event.text === probe);
-                    const text = prepared ?? await answer(cfg, actor, event.text, signal, program.context(), event.speaker, selective);
+                    const { text, matched, learn } = await planViewerReply(cfg, actor, library, event, program.context(), selective, signal, knowledge);
                     if (selective && text === '[SKIP]') {
                         log('chat_skipped', { source: event.source, id: event.id });
                         continue;
                     }
                     program.changeContext();
                     program.draftingReplies.set(key, { host: text, answering: question });
-                    log('reply_generated', { source: event.source, id: event.id, prepared: !!prepared });
+                    log('reply_generated', { source: event.source, id: event.id, matched });
                     stage = 'generating_av';
-                    const render = async () => {
-                        const cached = prepared && await motion.cached(text, signal);
-                        if (cached)
-                            return cached;
-                        return pool.run(true, () => {
-                            signal.throwIfAborted();
-                            return motion.render(text, signal);
-                        });
-                    };
                     const previous = speakerOrder.get(speaker);
-                    const job = Promise.allSettled([previous, render()]).then(([, result]) => {
+                    const previousAnswer = answerOrder.get(text);
+                    const render = async () => {
+                        const cached = await motion.cached(text, signal);
+                        return cached ?? pool.run(true, () => motion.render(text, signal));
+                    };
+                    const job = Promise.allSettled([previous, previousAnswer, render()]).then(async ([, , result]) => {
                         if (result.status === 'rejected')
                             throw result.reason;
-                        program.queueReply({ source: event.source, id: event.id, text, question, ...result.value }, true);
+                        const body = { source: event.source, id: event.id, text, question, ...result.value };
+                        try {
+                            if (learn) {
+                                library.remember(event.text, text, motion.fileFor(text));
+                                faqRotation.add(text);
+                            }
+                            await program.offerReply(body, spokenAddress(event.displayName, actor.language), async (name) => await motion.cached(name, signal) ?? pool.run(true, () => motion.render(name, signal)), error => {
+                                signal.throwIfAborted();
+                                log('reply_address_unavailable', { source: event.source, id: event.id, reason: error instanceof Error ? error.name : 'error' });
+                            });
+                        }
+                        catch (error) {
+                            motion.release(body.motion);
+                            throw error;
+                        }
                     }).catch(failure);
                     const tracked = job.finally(() => {
                         pendingReplies.delete(tracked);
-                        program.draftingReplies.delete(key);
                         if (speakerOrder.get(speaker) === tracked)
                             speakerOrder.delete(speaker);
+                        if (answerOrder.get(text) === tracked)
+                            answerOrder.delete(text);
+                        program.draftingReplies.delete(key);
                     });
+                    answerOrder.set(text, tracked);
                     pendingReplies.add(tracked);
                     speakerOrder.set(speaker, tracked);
                 }
@@ -400,7 +508,7 @@ async function main() {
         wake?.kill();
         motion.close();
         for (const event of ready)
-            if (isReply(event.source))
+            if (!event.address && isReply(event.source))
                 unfinished(event.source, event.id, 'awaiting_playback');
         for (let event = queue.next(); event; event = queue.next())
             unfinished(event.source, event.id, 'queued');

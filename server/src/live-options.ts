@@ -1,7 +1,20 @@
 import { nativeHeight, idleCount } from './live-idle.js';
 import { createInterface } from 'node:readline/promises';
 
+export const faqCounts = [10, 30, 50, 100] as const;
+export async function liveFaqCount(value?: string) {
+  if (!value && process.stdin.isTTY && process.stderr.isTTY) {
+    const rl = createInterface({input:process.stdin, output:process.stderr});
+    try { value = (await rl.question('미리 준비할 예상 질문 수를 고르세요 (10 / 30 / 50 / 100): ')).trim(); }
+    finally { rl.close(); }
+  }
+  const count = faqCounts.find(candidate => String(candidate) === value);
+  if (!count) throw Error('Select the number of prepared FAQ videos for this show with --faq-count 10|30|50|100.');
+  return count;
+}
+
 export const liveStartChoices = {
+  faqCounts,
   format: 'locked-camera conversation',
   generation: 'GenAI LTX 2.5 picture and native dialogue',
   modelCanvas: [720, nativeHeight],
@@ -12,7 +25,7 @@ export const liveStartChoices = {
   spatialUpscale: false,
   faceComposite: false,
   choices: [
-    { id: 'ready', label: '준비되면 방송 · 주제 소개와 첫 멘트, 환영 인사 두 편, 대기 영상 10개를 준비하고 시작해요.' },
+    { id: 'ready', label: '준비되면 방송 · 선택한 예상 답변 영상과 오프닝, 첫 멘트, 환영 인사 두 편, 대기 영상 열 편을 준비하고 시작해요.' },
     { id: 'preview', label: '미리보기 먼저 · 첫 장면을 보고 방송할지 정해요.' },
     { id: 'cancel', label: '취소 · 이번 방송을 시작하지 않아요.' }
   ]
