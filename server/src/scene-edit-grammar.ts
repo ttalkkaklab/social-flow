@@ -85,7 +85,7 @@ export class SceneEditGrammar {
     const visual = cue.replace(/Ⓢ\s*\(Ⓢ\)/gu,actor);
     if (stage.test(visual)) return;
     if (modelReference.test(visual)) {
-      if (visual.toLowerCase().endsWith(' and its ' + media)) {
+      if (/ and its Ⓜ$/iu.test(visual)) {
         const [first,second] = inputs;
         const roles = new Set(inputs.map(input => input.role));
         if (!second || first.source !== second.source || !roles.has('motion') || !roles.has('soundtrack'))
