@@ -1,7 +1,7 @@
 import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords } from './scene-video.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
-import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
+import { buildFasth3Body, fasth3OmniSchema, fasth3RenderFrames } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
@@ -11,7 +11,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
-import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured } from './config.js';
+import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured, mlxServeUrl } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { framesForSeconds } from './astra-video-client.js';
 import { assessVideoDuration, DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
@@ -295,7 +295,81 @@ function planOutputContract(plan) {
     const operation = plan.tool === 'astra_genai_msr' ? 'msr' : plan.tool === 'astra_genai_img2video' ? 'image-to-video' : '';
     return msrOutputContract(operation, plan.args);
 }
+function fasth3Files(plan) {
+    const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
+    const folder = path.join(plan.episode, '.work/fasth3', plan.id);
+    return { target, folder, raw: path.join(folder, 'native.mp4'), receipt: path.join(folder, 'delivery.json') };
+}
+const mediaHash = (file) => createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+function verifyFasth3Delivery(plan) {
+    const { target, raw, receipt } = fasth3Files(plan);
+    const saved = JSON.parse(fs.readFileSync(receipt, 'utf8'));
+    if (saved.planId !== plan.id || saved.requestId !== plan.requestId ||
+        saved.sha256 !== mediaHash(target) || saved.nativeSha256 !== mediaHash(raw))
+        throw new Error('FastH3 output differs from the approved receipt');
+    return saved;
+}
+async function deliverFasth3(plan, dispatch) {
+    const { target, folder, raw } = fasth3Files(plan);
+    if (fs.existsSync(raw) || fs.existsSync(target))
+        throw new Error('FastH3 output already exists; inspect the existing request');
+    const result = await dispatch(plan.tool, { ...plan.args, outputPath: folder, filename: 'native.mp4' });
+    if (result.isError)
+        return result;
+    const delivered = finalizeFasth3(plan);
+    return { content: [{ type: 'text', text: JSON.stringify(delivered) }] };
+}
+function finalizeFasth3(plan) {
+    const { target, raw, receipt } = fasth3Files(plan);
+    if (fs.existsSync(receipt))
+        return verifyFasth3Delivery(plan);
+    const scene = plan.sceneRequest;
+    const duration = scene.frameCount / scene.fps;
+    const inspect = (file, frames) => {
+        const report = JSON.parse(execFileSync('ffprobe', ['-v', 'error', '-show_entries',
+            'stream=codec_type,width,height,nb_frames,avg_frame_rate,duration', '-of', 'json', file], { encoding: 'utf8' }));
+        const video = report.streams.find((stream) => stream.codec_type === 'video');
+        const audio = report.streams.find((stream) => stream.codec_type === 'audio');
+        if (Number(video?.nb_frames) !== frames || video?.avg_frame_rate !== '24/1' ||
+            video.width !== plan.args.width || video.height !== plan.args.height ||
+            !audio || !Number.isFinite(Number(audio.duration)) || Number(audio.duration) < frames / scene.fps - 0.05)
+            throw new Error('FastH3 output differs from the approved picture or audio timing');
+    };
+    inspect(raw, Number(plan.args.numFrames));
+    const scratch = fs.mkdtempSync(path.join(path.dirname(target), '.fasth3-delivery-'));
+    const temporary = path.join(scratch, 'delivery.mp4');
+    try {
+        if (scene.frameCount !== plan.args.numFrames) {
+            execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-n', '-i', raw, '-map', '0:v:0', '-map', '0:a:0',
+                '-t', String(duration), '-c:v', 'libx264', '-crf', '16', '-preset', 'fast', '-c:a', 'aac', '-b:a', '192k',
+                '-movflags', '+faststart', temporary], { timeout: 120_000 });
+            inspect(temporary, scene.frameCount);
+        }
+        else
+            fs.copyFileSync(raw, temporary, fs.constants.COPYFILE_EXCL);
+        try {
+            fs.linkSync(temporary, target);
+        }
+        catch (error) {
+            if (error.code !== 'EEXIST' || mediaHash(target) !== mediaHash(temporary))
+                throw error;
+        }
+    }
+    finally {
+        fs.rmSync(scratch, { recursive: true, force: true });
+    }
+    const delivered = { success: true, path: target, nativePath: raw, model: plan.args.model,
+        planId: plan.id, requestId: plan.requestId, frames: scene.frameCount, nativeFrames: plan.args.numFrames,
+        fps: scene.fps, width: plan.args.width, height: plan.args.height, hasAudio: true, durationSeconds: duration,
+        deployment: plan.mlxDeployment, inputs: plan.inputs, sha256: mediaHash(target), nativeSha256: mediaHash(raw) };
+    atomicJson(receipt, delivered);
+    return delivered;
+}
 async function checkCompletedMedia(plan, jobId) {
+    if (plan.mlxDeployment) {
+        verifyFasth3Delivery(plan);
+        return;
+    }
     if (plan.selection.engine === 'seedance' && jobId) {
         const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
         try {
@@ -677,7 +751,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     const timedSubject = scene && context.sceneMembers?.some(member => member.timeline?.images?.some(p => ['face', 'outfit'].includes(p.role)));
     const subjectReferences = Boolean(timedSubject || hasVideoSubjectReferences(shot));
     const imageWithReferences = tool === 'astra_genai_img2video' && (subjectReferences || hasSubjectInput(input.args.references));
-    const bindDialogueSeparately = (imageWithReferences || tool === 'seedance_reference') && !silentPicture && input.args.generateAudio !== false;
+    const bindDialogueSeparately = (imageWithReferences || tool === 'seedance_reference' || tool === 'fasth3_omni_reference') && !silentPicture && input.args.generateAudio !== false;
     const silentSuffix = silentPicture
         ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects
             ? 'include natural ambience for the location and sound effects from the visible actions.'
@@ -698,8 +772,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     if (input.args.shots !== undefined || input.args.prompt !== undefined && (scene || input.args.prompt !== video?.prompt))
         throw new Error('scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene');
     const members = context.sceneMembers ?? [];
-    const bindFastH3 = tool === 'fasth3_omni_reference' && context.sceneOwnsFrames && members.length > 1 && !silentPicture;
-    const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || bindFastH3 || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
+    const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
     const bindOpening = tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' && subjectReferences;
     const guideMode = tool && VIDEO_ADAPTERS[tool]?.voice === 'reference' && tool !== 'astra_genai_msr' ? 'composition' :
         tool === 'astra_genai_img2video' && selection.model === 'ltx-2.5-22b-distilled' && members.length === 1 ? 'background' : undefined;
@@ -860,7 +933,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
     if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
         const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.durationSeconds === 'number'
             ? Math.round(args.durationSeconds * sceneRequest.fps) : typeof args.duration === 'number' ? Math.round(args.duration * sceneRequest.fps) : undefined;
-        if (frames !== undefined && frames !== sceneRequest.frameCount)
+        const renderFrames = tool === 'fasth3_omni_reference' ? fasth3RenderFrames(sceneRequest.frameCount) : sceneRequest.frameCount;
+        if (frames !== undefined && frames !== renderFrames)
             throw new Error('scene_video_timing: adapter ends at frame ' + (frames - 1) + ', storyboard ends at ' + (sceneRequest.frameCount - 1));
     }
     if (Array.isArray(args.openingPositions)) {
@@ -904,7 +978,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     const playSeconds = playFrames !== undefined && playFps ? playFrames / playFps : typeof args.durationSeconds === 'number' ? args.durationSeconds : undefined;
     const speechFit = durationPlan.speech && playSeconds !== undefined && playSeconds > 0 && durationPlan.limits && lines.some(line => line.delivery !== 'voiceover')
         ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context.board.STORY?.language) : undefined;
-    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(args.prompt) : null;
+    const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(tool === 'fasth3_omni_reference' ? args.prompt.replace(/<d>[^<>]*<\/d>/g, '') : args.prompt) : null;
     if (foreign)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
     const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
@@ -971,7 +1045,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         verifyDistinctSamples(voices.map(v => ({ speaker: v.speaker, path: v.reference.path })));
     }
     const quote = quoteFor(tool, args);
-    const body = { ...take, ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+    const body = { ...take, ...(tool === 'fasth3_omni_reference' && sceneRequest ? { mlxDeployment: { endpoint: mlxServeUrl(), renderFrames: Number(args.numFrames), deliveryFrames: sceneRequest.frameCount } } : {}), ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
         ...(imageBindings ? { imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
@@ -1213,7 +1287,8 @@ export async function executeVideo(raw, dispatch) {
                     throw new Error('Invalid provider usage');
                 update({ tokens, ...(plan.quote.tokenRate !== undefined ? { settledUsd: tokens * plan.quote.tokenRate / 1e6 } : {}) });
             },
-        }, () => plan.sceneRendering ? executeShotRenderPlan(plan, stagedScene) : dispatch(plan.tool, plan.args));
+        }, () => plan.sceneRendering ? executeShotRenderPlan(plan, stagedScene) :
+            plan.mlxDeployment ? deliverFasth3(plan, dispatch) : dispatch(plan.tool, plan.args));
         if (result.isError) {
             if (plan.selection.engine === 'seedance' && ['modelark_portrait', 'seedance_original_lookup', 'seedance_inputs'].includes(String(result.structuredContent?.stage)) && result.structuredContent?.videoSubmitted === false) {
                 videoTransaction(episode, state => {
@@ -1353,15 +1428,26 @@ export async function videoStatus(raw) {
         if (job.status === 'failed')
             throw new Error('video_request_failed: nothing to recover; plan a new requestId');
         const seedance = job.tool.startsWith('seedance_');
-        if (job.status === 'completed' && !seedance && !['astra_genai_msr', 'astra_genai_img2video', 'astra_genai_audio2video'].includes(job.tool))
+        const localH3 = job.tool === 'fasth3_omni_reference';
+        if (job.status === 'completed' && !seedance && !localH3 && !['astra_genai_msr', 'astra_genai_img2video', 'astra_genai_audio2video'].includes(job.tool))
             return job;
         const hosted = HOSTED_VIDEO_ROUTES[job.tool];
-        if (!hosted && !seedance && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
+        if (!hosted && !seedance && !localH3 && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool))
             throw new Error('video_refresh_unsupported: use provider-specific recovery');
         const plan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
         const { id, ...body } = plan;
         if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool)
             throw new Error('Invalid recovery plan');
+        if (localH3 && job.status !== 'completed') {
+            const files = fasth3Files(plan);
+            if (!plan.mlxDeployment || !fs.existsSync(files.raw))
+                return job;
+            const delivered = finalizeFasth3(plan);
+            const result = { content: [{ type: 'text', text: JSON.stringify(delivered) }] };
+            return videoTransaction(episode, state => ({ ...Object.assign(state.jobs[plan.requestId], {
+                    status: 'completed', result, updatedAt: new Date().toISOString(), finishedAt: new Date().toISOString(),
+                }) }));
+        }
         if (job.status === 'completed') {
             if (!seedance) {
                 await checkCompletedMedia(plan, job.providerId);

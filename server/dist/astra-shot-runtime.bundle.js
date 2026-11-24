@@ -1376,7 +1376,7 @@ var require_dist = __commonJS({
     var https_1 = __require("https");
     __exportStar(require_helpers(), exports);
     var INTERNAL = /* @__PURE__ */ Symbol("AgentBaseInternalState");
-    var Agent2 = class extends http3.Agent {
+    var Agent3 = class extends http3.Agent {
       constructor(opts) {
         super(opts);
         this[INTERNAL] = {};
@@ -1487,7 +1487,7 @@ var require_dist = __commonJS({
         }
       }
     };
-    exports.Agent = Agent2;
+    exports.Agent = Agent3;
   }
 });
 
@@ -6532,7 +6532,7 @@ var require_node_domexception = __commonJS({
 });
 
 // node_modules/fetch-blob/from.js
-import { statSync as statSync2, createReadStream, promises as fs3 } from "node:fs";
+import { statSync as statSync3, createReadStream, promises as fs3 } from "node:fs";
 import { basename } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
@@ -6541,10 +6541,10 @@ var init_from = __esm({
     init_file();
     init_fetch_blob();
     ({ stat } = fs3);
-    blobFromSync = (path9, type) => fromBlob(statSync2(path9), path9, type);
+    blobFromSync = (path9, type) => fromBlob(statSync3(path9), path9, type);
     blobFrom = (path9, type) => stat(path9).then((stat2) => fromBlob(stat2, path9, type));
     fileFrom = (path9, type) => stat(path9).then((stat2) => fromFile(stat2, path9, type));
-    fileFromSync = (path9, type) => fromFile(statSync2(path9), path9, type);
+    fileFromSync = (path9, type) => fromFile(statSync3(path9), path9, type);
     fromBlob = (stat2, path9, type = "") => new fetch_blob_default([new BlobDataItem({
       path: path9,
       size: stat2.size,
@@ -28147,7 +28147,7 @@ var require_agent = __commonJS({
     function defaultFactory(origin, opts) {
       return opts && opts.connections === 1 ? new Client(origin, opts) : new Pool(origin, opts);
     }
-    var Agent2 = class extends DispatcherBase {
+    var Agent3 = class extends DispatcherBase {
       constructor({ factory = defaultFactory, maxOrigins = Infinity, connect, ...options } = {}) {
         if (typeof factory !== "function") {
           throw new InvalidArgumentError("factory must be a function.");
@@ -28256,7 +28256,7 @@ var require_agent = __commonJS({
         return allClientStats;
       }
     };
-    module.exports = Agent2;
+    module.exports = Agent3;
   }
 });
 
@@ -28962,7 +28962,7 @@ var require_proxy_agent = __commonJS({
   "node_modules/undici/lib/dispatcher/proxy-agent.js"(exports, module) {
     "use strict";
     var { kProxy, kClose, kDestroy, kDispatch } = require_symbols();
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     var Pool = require_pool();
     var DispatcherBase = require_dispatcher_base();
     var { InvalidArgumentError, RequestAbortedError, SecureProxyConnectionError } = require_errors();
@@ -29093,7 +29093,7 @@ var require_proxy_agent = __commonJS({
         } else {
           this[kClient] = clientFactory(url, { connect });
         }
-        this[kAgent] = new Agent2({
+        this[kAgent] = new Agent3({
           ...opts,
           factory,
           connect: async (opts2, callback) => {
@@ -29221,7 +29221,7 @@ var require_env_http_proxy_agent = __commonJS({
     var DispatcherBase = require_dispatcher_base();
     var { kClose, kDestroy, kClosed, kDestroyed, kDispatch, kNoProxyAgent, kHttpProxyAgent, kHttpsProxyAgent } = require_symbols();
     var ProxyAgent = require_proxy_agent();
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     var DEFAULT_PORTS = {
       "http:": 80,
       "https:": 443
@@ -29234,7 +29234,7 @@ var require_env_http_proxy_agent = __commonJS({
         super();
         this.#opts = opts;
         const { httpProxy, httpsProxy, noProxy, ...agentOpts } = opts;
-        this[kNoProxyAgent] = new Agent2(agentOpts);
+        this[kNoProxyAgent] = new Agent3(agentOpts);
         const HTTP_PROXY = httpProxy ?? process.env.http_proxy ?? process.env.HTTP_PROXY;
         if (HTTP_PROXY) {
           this[kHttpProxyAgent] = new ProxyAgent({ ...agentOpts, uri: HTTP_PROXY });
@@ -31932,7 +31932,7 @@ var require_mock_agent = __commonJS({
   "node_modules/undici/lib/mock/mock-agent.js"(exports, module) {
     "use strict";
     var { kClients } = require_symbols();
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     var {
       kAgent,
       kMockAgentSet,
@@ -31970,7 +31970,7 @@ var require_mock_agent = __commonJS({
         if (opts?.agent && typeof opts.agent.dispatch !== "function") {
           throw new InvalidArgumentError("Argument opts.agent must implement Agent");
         }
-        const agent = opts?.agent ? opts.agent : new Agent2(opts);
+        const agent = opts?.agent ? opts.agent : new Agent3(opts);
         this[kAgent] = agent;
         this[kClients] = agent[kClients];
         this[kOptions] = mockOptions;
@@ -32577,7 +32577,7 @@ var require_snapshot_recorder = __commonJS({
 var require_snapshot_agent = __commonJS({
   "node_modules/undici/lib/mock/snapshot-agent.js"(exports, module) {
     "use strict";
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     var MockAgent = require_mock_agent();
     var { SnapshotRecorder } = require_snapshot_recorder();
     var WrapHandler = require_wrap_handler();
@@ -32628,7 +32628,7 @@ var require_snapshot_agent = __commonJS({
         });
         this[kSnapshotLoaded] = false;
         if (this[kSnapshotMode] === "record" || this[kSnapshotMode] === "update" || this[kSnapshotMode] === "playback" && opts.excludeUrls && opts.excludeUrls.length > 0) {
-          this[kRealAgent] = new Agent2(opts);
+          this[kRealAgent] = new Agent3(opts);
         }
         if ((this[kSnapshotMode] === "playback" || this[kSnapshotMode] === "update") && this[kSnapshotPath]) {
           this.loadSnapshots().catch(() => {
@@ -32867,9 +32867,9 @@ var require_global2 = __commonJS({
     var globalDispatcher = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.2");
     var legacyGlobalDispatcher = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
     var { InvalidArgumentError } = require_errors();
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     if (getGlobalDispatcher() === void 0) {
-      setGlobalDispatcher(new Agent2());
+      setGlobalDispatcher(new Agent3());
     }
     function setGlobalDispatcher(agent) {
       if (!agent || typeof agent.dispatch !== "function") {
@@ -44084,7 +44084,7 @@ var require_undici = __commonJS({
     var Pool = require_pool();
     var BalancedPool = require_balanced_pool();
     var RoundRobinPool = require_round_robin_pool();
-    var Agent2 = require_agent();
+    var Agent3 = require_agent();
     var ProxyAgent = require_proxy_agent();
     var Socks5ProxyAgent = require_socks5_proxy_agent();
     var EnvHttpProxyAgent = require_env_http_proxy_agent();
@@ -44111,7 +44111,7 @@ var require_undici = __commonJS({
     module.exports.Pool = Pool;
     module.exports.BalancedPool = BalancedPool;
     module.exports.RoundRobinPool = RoundRobinPool;
-    module.exports.Agent = Agent2;
+    module.exports.Agent = Agent3;
     module.exports.ProxyAgent = ProxyAgent;
     module.exports.Socks5ProxyAgent = Socks5ProxyAgent;
     module.exports.EnvHttpProxyAgent = EnvHttpProxyAgent;
@@ -50077,6 +50077,201 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
     issue("The prompt including openingPositions exceeds " + maxChars + " characters; shorten the action or placement descriptions");
 }
 
+// src/fasth3-omni.ts
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync as readFileSync2, readdirSync, rmSync, statSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join as join2 } from "node:path";
+
+// src/media-utils.ts
+import * as fs from "node:fs";
+import * as path from "node:path";
+var ALLOWED_EXTENSIONS = {
+  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
+  video: [".mp4", ".webm", ".mov", ".avi"],
+  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
+  json: [".json"],
+  mesh: [".glb"]
+};
+function validateFilePath(filePath, options) {
+  const resolved = path.resolve(filePath);
+  if (filePath.includes("..")) {
+    throw new Error(`Path traversal detected: ${filePath}`);
+  }
+  if (options?.allowedExtensions) {
+    const ext = path.extname(resolved).toLowerCase();
+    if (!options.allowedExtensions.includes(ext)) {
+      throw new Error(
+        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
+      );
+    }
+  }
+}
+function resolveOutputFile(outputDir, filename, kind) {
+  if (/[/\\]/.test(filename) || filename.includes("..")) {
+    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
+  }
+  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
+  const dir = path.resolve(outputDir);
+  fs.mkdirSync(dir, { recursive: true });
+  return path.join(dir, filename);
+}
+function bareFilenameSchema(kind) {
+  const allowed = ALLOWED_EXTENSIONS[kind];
+  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
+    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
+  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
+    message: `filename extension must be one of: ${allowed.join(", ")}`
+  });
+}
+
+// src/image-media.ts
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+function imageMetadata(bytes) {
+  let width = 0, height = 0, mimeType = "";
+  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
+    width = bytes.readUInt32BE(16);
+    height = bytes.readUInt32BE(20);
+    mimeType = "image/png";
+  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
+    mimeType = "image/jpeg";
+    for (let i2 = 2; i2 + 8 < bytes.length; ) {
+      if (bytes[i2] !== 255) break;
+      const marker = bytes[i2 + 1];
+      if (marker === 255) {
+        i2++;
+        continue;
+      }
+      if (marker === 217 || marker === 218) break;
+      const length = bytes.readUInt16BE(i2 + 2);
+      if (length < 2 || i2 + 2 + length > bytes.length) break;
+      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
+        height = bytes.readUInt16BE(i2 + 5);
+        width = bytes.readUInt16BE(i2 + 7);
+        break;
+      }
+      i2 += 2 + length;
+    }
+  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
+    mimeType = "image/webp";
+    const kind = bytes.toString("ascii", 12, 16);
+    if (kind === "VP8X") {
+      width = bytes.readUIntLE(24, 3) + 1;
+      height = bytes.readUIntLE(27, 3) + 1;
+    }
+    if (kind === "VP8L" && bytes[20] === 47) {
+      const bits = bytes.readUInt32LE(21);
+      width = (bits & 16383) + 1;
+      height = (bits >>> 14 & 16383) + 1;
+    }
+    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
+      width = bytes.readUInt16LE(26) & 16383;
+      height = bytes.readUInt16LE(28) & 16383;
+    }
+  }
+  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
+  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+}
+function readImageMetadata(file) {
+  return imageMetadata(readFileSync(file));
+}
+
+// src/fasth3-omni.ts
+var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
+var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
+var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
+var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
+var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
+var fasth3OmniSchema = external_exports.object({
+  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
+  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
+  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
+  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
+  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
+  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
+  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
+  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
+  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each and 15 seconds total. Voice imitation does not preserve exact speech timing.'),
+  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
+  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
+  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
+  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
+}).strict().superRefine((v, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
+  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
+  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
+  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
+});
+function probe(file) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+  const duration3 = Number(data.format?.duration);
+  if (!Number.isFinite(duration3) || duration3 < 2 || duration3 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  return { duration: duration3, hasAudio: data.streams?.some((s2) => s2.codec_type === "audio") === true };
+}
+function ffmpeg(args) {
+  execFileSync("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function buildFasth3Body(raw) {
+  const r2 = fasth3OmniSchema.parse(raw);
+  const temp = mkdtempSync(join2(tmpdir(), "fasth3-refs-"));
+  let encodedBytes = 0;
+  const encode = (file) => {
+    encodedBytes += 4 * Math.ceil(statSync(file).size / 3);
+    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
+    return readFileSync2(file).toString("base64");
+  };
+  const audio = (file, name, seconds2) => {
+    const target = join2(temp, name + ".wav");
+    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
+    return encode(target);
+  };
+  try {
+    const images = r2.referenceImagePaths.map((file) => {
+      if (statSync(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file);
+      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
+      return encode(file);
+    });
+    let videoSeconds2 = 0;
+    const videos = r2.referenceVideoPaths.map((file, i2) => {
+      const meta = probe(file);
+      videoSeconds2 += meta.duration;
+      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
+      const prefix = `video-${i2}-`;
+      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
+      const files = readdirSync(temp).filter((f3) => f3.startsWith(prefix)).sort();
+      const count = Math.min(files.length, r2.numFrames);
+      const accepted = count - (count - 5) % 17;
+      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
+      if (accepted < files.length && !r2.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
+      return { frames: files.slice(0, accepted).map((f3) => encode(join2(temp, f3))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i2}`, accepted / 24) } : {} };
+    });
+    const audioSeconds = r2.referenceAudioPaths.reduce((sum, file) => sum + probe(file).duration, 0);
+    if (audioSeconds > 15) throw new Error("Reference audio clips exceed fifteen seconds total");
+    const audios = r2.referenceAudioPaths.map((file, i2) => audio(file, `audio-${i2}`));
+    return {
+      stream: true,
+      model: r2.model,
+      prompt: r2.prompt,
+      width: r2.width,
+      height: r2.height,
+      num_frames: r2.numFrames,
+      steps: r2.steps,
+      ...r2.seed === void 0 ? {} : { seed: r2.seed },
+      ref_image_size: r2.referenceSize,
+      ref_images: images,
+      ref_videos: videos,
+      ref_audios: audios
+    };
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
 // src/scene-video.ts
 import { createRequire as createRequire6 } from "node:module";
 
@@ -50288,69 +50483,17 @@ function usesGeneratedVoice(tool, dialogueVoice) {
   return dialogueVoice === "model_generated" && scenePromptProfile(tool).allowsGeneratedVoice;
 }
 
-// src/image-media.ts
-import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
-function imageMetadata(bytes) {
-  let width = 0, height = 0, mimeType = "";
-  if (bytes.length >= 33 && bytes.subarray(0, 8).equals(Buffer.from("89504e470d0a1a0a", "hex")) && bytes.toString("ascii", 12, 16) === "IHDR") {
-    width = bytes.readUInt32BE(16);
-    height = bytes.readUInt32BE(20);
-    mimeType = "image/png";
-  } else if (bytes.length > 12 && bytes[0] === 255 && bytes[1] === 216) {
-    mimeType = "image/jpeg";
-    for (let i2 = 2; i2 + 8 < bytes.length; ) {
-      if (bytes[i2] !== 255) break;
-      const marker = bytes[i2 + 1];
-      if (marker === 255) {
-        i2++;
-        continue;
-      }
-      if (marker === 217 || marker === 218) break;
-      const length = bytes.readUInt16BE(i2 + 2);
-      if (length < 2 || i2 + 2 + length > bytes.length) break;
-      if ([192, 193, 194, 195, 197, 198, 199, 201, 202, 203, 205, 206, 207].includes(marker)) {
-        height = bytes.readUInt16BE(i2 + 5);
-        width = bytes.readUInt16BE(i2 + 7);
-        break;
-      }
-      i2 += 2 + length;
-    }
-  } else if (bytes.length >= 30 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP") {
-    mimeType = "image/webp";
-    const kind = bytes.toString("ascii", 12, 16);
-    if (kind === "VP8X") {
-      width = bytes.readUIntLE(24, 3) + 1;
-      height = bytes.readUIntLE(27, 3) + 1;
-    }
-    if (kind === "VP8L" && bytes[20] === 47) {
-      const bits = bytes.readUInt32LE(21);
-      width = (bits & 16383) + 1;
-      height = (bits >>> 14 & 16383) + 1;
-    }
-    if (kind === "VP8 " && bytes.subarray(23, 26).equals(Buffer.from([157, 1, 42]))) {
-      width = bytes.readUInt16LE(26) & 16383;
-      height = bytes.readUInt16LE(28) & 16383;
-    }
-  }
-  if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
-  return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
-}
-function readImageMetadata(file) {
-  return imageMetadata(readFileSync(file));
-}
-
 // src/config.ts
-import { accessSync, constants, existsSync, readFileSync as readFileSync2, readdirSync, statSync } from "node:fs";
+import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join } from "node:path";
-function loadEnvFile(file = join(process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow"), ".env")) {
+import { delimiter, join as join3 } from "node:path";
+function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text2;
   try {
-    text2 = readFileSync2(file, "utf8");
+    text2 = readFileSync3(file, "utf8");
   } catch {
     return [];
   }
@@ -50429,15 +50572,15 @@ var config = {
   youtubeApiKey: process.env.YOUTUBE_API_KEY || "",
   requestTimeoutMs: 15e3
 };
-var snsTokenDir = process.env.SNS_TOKEN_DIR || join(homedir(), ".config", "social-flow");
+var snsTokenDir = process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow");
 var defaultSnsCredentialFiles = {
-  THREADS: process.env.THREADS_TOKEN_FILE || join(snsTokenDir, "threads_token"),
-  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join(snsTokenDir, "instagram_token"),
-  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join(snsTokenDir, "facebook_page_token"),
-  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join(snsTokenDir, "youtube-oauth-client.json"),
-  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join(snsTokenDir, "tiktok-oauth.json")
+  THREADS: process.env.THREADS_TOKEN_FILE || join3(snsTokenDir, "threads_token"),
+  INSTAGRAM: process.env.INSTAGRAM_TOKEN_FILE || join3(snsTokenDir, "instagram_token"),
+  FACEBOOK: process.env.FACEBOOK_PAGE_TOKEN_FILE || join3(snsTokenDir, "facebook_page_token"),
+  YOUTUBE: process.env.YOUTUBE_OAUTH_FILE || join3(snsTokenDir, "youtube-oauth-client.json"),
+  TIKTOK: process.env.TIKTOK_OAUTH_FILE || join3(snsTokenDir, "tiktok-oauth.json")
 };
-var disabledToolsFile = join(snsTokenDir, "disabled-tools.json");
+var disabledToolsFile = join3(snsTokenDir, "disabled-tools.json");
 function astraVideoBaseUrl() {
   return (process.env.ASTRA_VIDEO_URL || "https://video.astravision.co.kr").replace(/\/+$/, "");
 }
@@ -50451,49 +50594,7 @@ function requireAstraVideoKey() {
 }
 
 // src/ltx-api-video.ts
-import { execFileSync } from "node:child_process";
-
-// src/media-utils.ts
-import * as fs from "node:fs";
-import * as path from "node:path";
-var ALLOWED_EXTENSIONS = {
-  image: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"],
-  video: [".mp4", ".webm", ".mov", ".avi"],
-  audio: [".wav", ".mp3", ".ogg", ".webm", ".aac", ".flac"],
-  json: [".json"],
-  mesh: [".glb"]
-};
-function validateFilePath(filePath, options) {
-  const resolved = path.resolve(filePath);
-  if (filePath.includes("..")) {
-    throw new Error(`Path traversal detected: ${filePath}`);
-  }
-  if (options?.allowedExtensions) {
-    const ext = path.extname(resolved).toLowerCase();
-    if (!options.allowedExtensions.includes(ext)) {
-      throw new Error(
-        `File extension "${ext}" is not allowed. Allowed: ${options.allowedExtensions.join(", ")}`
-      );
-    }
-  }
-}
-function resolveOutputFile(outputDir, filename, kind) {
-  if (/[/\\]/.test(filename) || filename.includes("..")) {
-    throw new Error(`filename must be a bare file name without path separators: "${filename}"`);
-  }
-  validateFilePath(filename, { allowedExtensions: ALLOWED_EXTENSIONS[kind] });
-  const dir = path.resolve(outputDir);
-  fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, filename);
-}
-function bareFilenameSchema(kind) {
-  const allowed = ALLOWED_EXTENSIONS[kind];
-  return external_exports.string().min(1).refine((name) => !/[/\\]/.test(name) && !name.includes(".."), {
-    message: "filename must be a bare file name without path separators (use outputPath for the directory)"
-  }).refine((name) => allowed.includes(path.extname(name).toLowerCase()), {
-    message: `filename extension must be one of: ${allowed.join(", ")}`
-  });
-}
+import { execFileSync as execFileSync2 } from "node:child_process";
 
 // src/vendor-video.ts
 import fs2 from "node:fs";
@@ -50658,7 +50759,7 @@ var ltxApiAudio2VideoSchema = external_exports.object({
     ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
 });
 function ltxApiAudioSeconds(file) {
-  const seconds2 = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
+  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
   if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
   return seconds2;
 }
@@ -50721,7 +50822,7 @@ async function generateLtxApiVideo(request) {
 var import_google_auth_library = __toESM(require_src5(), 1);
 import fs4 from "node:fs";
 import path3 from "node:path";
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 var VEO_MODELS = ["veo-3.1-generate-001", "veo-3.1-fast-generate-001", "veo-3.1-lite-generate-001"];
 var [standard, fast, lite] = VEO_MODELS;
 var VEO_CONSTRAINTS = Object.fromEntries(VEO_MODELS.map((model2) => [model2, {
@@ -50799,7 +50900,7 @@ function buildVeoBody(request) {
     instance.referenceImages = request.referenceImagePaths.map((file) => ({ referenceType: "asset", image: image(file) }));
   } else if ("sourceVideoPath" in request) {
     const file = request.sourceVideoPath;
-    const probe3 = JSON.parse(execFileSync2("ffprobe", [
+    const probe3 = JSON.parse(execFileSync3("ffprobe", [
       "-v",
       "error",
       "-select_streams",
@@ -50886,7 +50987,7 @@ function veoPriceKey(model2, resolution2, audio) {
 }
 
 // src/ltx-desktop-local.ts
-import { statSync as statSync3 } from "node:fs";
+import { statSync as statSync4 } from "node:fs";
 import path4 from "node:path";
 
 // src/astra-genai-client.ts
@@ -51139,7 +51240,7 @@ function validateDesktopFiles(args) {
       file,
       field === "audioPath" ? [".mp3", ".wav", ".ogg", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
     );
-    const stat2 = statSync3(file);
+    const stat2 = statSync4(file);
     if (!stat2.isFile() || stat2.size === 0) throw new Error("Expected a nonempty local media file: " + file);
   }
   if ("audioPath" in args) desktopAudioWindow(args, ltxApiAudioSeconds(args.audioPath));
@@ -51378,7 +51479,8 @@ var HOSTED_VIDEO_ROUTES = {
 import { createRequire as createRequire3 } from "node:module";
 
 // src/mlx-serve-client.ts
-import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
+import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
+var import_undici2 = __toESM(require_undici(), 1);
 
 // src/image-models.ts
 var GPT_IMAGE_MODELS = [
@@ -51453,6 +51555,8 @@ var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
 var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
 var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
 var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
+var FASTH3_TIMEOUT_MS = 90 * 6e4;
+var fasth3Transport = new import_undici2.Agent({ headersTimeout: FASTH3_TIMEOUT_MS, bodyTimeout: FASTH3_TIMEOUT_MS });
 var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
 var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
 var MLX_IMAGE_DIMENSION_STEP = 16;
@@ -51604,7 +51708,7 @@ function videoMemoryMessage(width, height, frames) {
 function fileToBase64(filePath) {
   if (!existsSync2(filePath)) return { ok: false, error: `File not found: ${filePath}` };
   try {
-    return { ok: true, b64: readFileSync3(filePath).toString("base64") };
+    return { ok: true, b64: readFileSync4(filePath).toString("base64") };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -51632,106 +51736,6 @@ function buildLtxVideoBody(request) {
     body.last_frame_image = img.b64;
   }
   return body;
-}
-
-// src/fasth3-omni.ts
-import { execFileSync as execFileSync3 } from "node:child_process";
-import { mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, readdirSync as readdirSync2, rmSync as rmSync2, statSync as statSync4 } from "node:fs";
-import { tmpdir } from "node:os";
-import { join as join3 } from "node:path";
-var FASTH3_OMNI_MODEL = "ddalcu/FastH3-Omni-MLX-Serve-8bit";
-var FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
-var FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
-var MAX_REQUEST_BYTES = 60 * 1024 * 1024;
-var dimension = external_exports.number().int().min(256).max(1536).refine((n) => n % 32 === 0, "Dimensions must be multiples of 32");
-var paths = (max) => external_exports.array(external_exports.string().min(1)).max(max).default([]);
-var fasth3OmniSchema = external_exports.object({
-  prompt: external_exports.string().min(1).max(32e3).describe("Scene and sound, e.g. The person in <Picture 1> waves; birds chirp. References are numbered per type."),
-  model: external_exports.literal(FASTH3_OMNI_MODEL).default(FASTH3_OMNI_MODEL).describe("Installed FastH3 Omni MLX-Serve pack."),
-  width: dimension.default(768).describe("Output width in pixels, e.g. 768."),
-  height: dimension.default(448).describe("Output height in pixels, e.g. 448."),
-  numFrames: external_exports.number().int().min(124).max(362).default(124).describe("Exact 17k+5 frame count at 24 fps, e.g. 124, 243, 362; RGB output must fit 256 MiB."),
-  steps: external_exports.literal(8).default(8).describe("The trained eight-step schedule."),
-  seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe("Reproducible seed, e.g. 2026."),
-  referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
-  referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2\u201315 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2\u201315 seconds each. Voice imitation does not preserve exact speech timing.'),
-  trimReferenceVideos: external_exports.boolean().default(false).describe("Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim."),
-  referenceSize: external_exports.enum(["match", "max"]).default("match").describe("match caps references to output area; max preserves more detail at higher memory/time cost."),
-  outputPath: external_exports.string().optional().describe("Output directory, e.g. /tmp/video-test."),
-  filename: bareFilenameSchema("video").optional().describe("MP4 filename, e.g. fasth3.mp4.")
-}).strict().superRefine((v, ctx) => {
-  const issue = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (!(v.referenceImagePaths.length + v.referenceVideoPaths.length)) issue("FastH3 Omni needs at least one image or video reference");
-  if (v.referenceImagePaths.length + v.referenceVideoPaths.length + v.referenceAudioPaths.length > 12) issue("At most twelve reference files are supported");
-  if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
-  if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
-});
-function probe(file) {
-  const data = JSON.parse(execFileSync3("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
-  const duration3 = Number(data.format?.duration);
-  if (!Number.isFinite(duration3) || duration3 < 2 || duration3 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
-  return { duration: duration3, hasAudio: data.streams?.some((s2) => s2.codec_type === "audio") === true };
-}
-function ffmpeg(args) {
-  execFileSync3("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
-}
-function buildFasth3Body(raw) {
-  const r2 = fasth3OmniSchema.parse(raw);
-  const temp = mkdtempSync2(join3(tmpdir(), "fasth3-refs-"));
-  let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync4(file).size / 3);
-    if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync4(file).toString("base64");
-  };
-  const audio = (file, name, seconds2) => {
-    const target = join3(temp, name + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
-    return encode(target);
-  };
-  try {
-    const images = r2.referenceImagePaths.map((file) => {
-      if (statSync4(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
-      if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
-    });
-    let videoSeconds2 = 0;
-    const videos = r2.referenceVideoPaths.map((file, i2) => {
-      const meta = probe(file);
-      videoSeconds2 += meta.duration;
-      if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
-      const prefix = `video-${i2}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
-      const files = readdirSync2(temp).filter((f3) => f3.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r2.numFrames);
-      const accepted = count - (count - 5) % 17;
-      if (accepted < 5) throw new Error("Reference video has too few decoded frames");
-      if (accepted < files.length && !r2.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f3) => encode(join3(temp, f3))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i2}`, accepted / 24) } : {} };
-    });
-    const audios = r2.referenceAudioPaths.map((file, i2) => {
-      probe(file);
-      return audio(file, `audio-${i2}`);
-    });
-    return {
-      stream: true,
-      model: r2.model,
-      prompt: r2.prompt,
-      width: r2.width,
-      height: r2.height,
-      num_frames: r2.numFrames,
-      steps: r2.steps,
-      ...r2.seed === void 0 ? {} : { seed: r2.seed },
-      ref_image_size: r2.referenceSize,
-      ref_images: images,
-      ref_videos: videos,
-      ref_audios: audios
-    };
-  } finally {
-    rmSync2(temp, { recursive: true, force: true });
-  }
 }
 
 // src/local-video-models.ts
@@ -53998,13 +54002,14 @@ var workflowSchema = external_exports.object({
 var nativeImageSchema = external_exports.object({
   model: external_exports.string().trim().min(1).max(200),
   prompt: external_exports.string().trim().min(1).max(16e3),
-  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).default("1024x1024"),
+  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).optional(),
   seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
   steps: external_exports.number().int().min(0).max(100).optional(),
   guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
   negativePrompt: external_exports.string().max(16e3).optional(),
   transparent: external_exports.boolean().optional(),
   loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r2) => r2.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
+  requestId: external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
 }).strict();

@@ -116,6 +116,7 @@ test('missing selected audition evidence warns without substituting an older sam
 
 test('FastH3 native voices use Picture and Audio labels without exact lip-sync claims', t => {
   const ctx=fixture(t), [hero,friend]=ctx.board.SB_DOC.characters;
+  ctx.board.STORY = {language:'vi'};
   const result=prepareVideoVoice('fasth3_omni_reference', {prompt:'Act.', referenceImagePaths:[hero.voiceReference.imagePaths[0],friend.voiceReference.imagePaths[0]]},ctx);
   assert.equal(result.voiceContinuity.strategy,'reference_voice');
   assert.match(result.args.prompt,/hero.*<Picture 1>.*<Audio 1>/);
@@ -124,7 +125,8 @@ test('FastH3 native voices use Picture and Audio labels without exact lip-sync c
     prompt:'The first view. The second view.', referenceImagePaths:result.args.referenceImagePaths,
   }, {...ctx, sceneDirection:{openingPositions:[]}, bindSceneTurns:(prompt, turns) =>
     prompt.replace('The first view.', 'The first view. ' + turns[0]).replace('The second view.', 'The second view. ' + turns[1])});
-  assert.match(withCuts.args.prompt,/The first view\. [^"]*<Audio 1>[^"]*"Hello hero" The second view\. [^"]*<Audio 2>[^"]*"Hello friend"/);
+  assert.match(withCuts.args.prompt, /The first view\. <Subject 1>.*<Audio 1>.*\(S1\) says <d>\[Vietnamese\] Hello hero<\/d> The second view\. <Subject 2>.*<Audio 2>.*\(S2\) says <d>\[Vietnamese\] Hello friend<\/d>/);
+  assert.equal(withCuts.args.prompt.split('Hello hero').length, 2);
   assert.equal(videoVoiceCapabilities('fasth3_omni_reference').exactAudioPreservation,false);
 });
 test('MSR attaches each pinned sample to the subject that shows its speaker', t => {

@@ -4,10 +4,13 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fasth3OmniSchema, buildFasth3Body, FASTH3_OMNI_MODEL } from '../dist/fasth3-omni.js';
+import { fasth3OmniSchema, buildFasth3Body, fasth3RenderFrames, FASTH3_OMNI_MODEL } from '../dist/fasth3-omni.js';
 import { resolveVideoDuration } from '../dist/video-duration.js';
 const request = { prompt: 'The person in <Picture 1> waves.', referenceImagePaths: ['/tmp/person.png'] };
 test('FastH3 validates its schedule, visual references and backend output budget', () => {
+  assert.equal(fasth3RenderFrames(240), 243);
+  assert.equal(fasth3RenderFrames(243), 243);
+  assert.throws(() => fasth3RenderFrames(363), /split/);
   assert.equal(fasth3OmniSchema.parse(request).model, FASTH3_OMNI_MODEL);
   for (const patch of [{ steps: 4 }, { numFrames: 121 }, { model: 'ltx' }, { referenceImagePaths: [] }, { firstFrameImagePath: 'a.png' },
     { referenceImagePaths: Array(9).fill('x'), referenceVideoPaths: Array(3).fill('x'), referenceAudioPaths: ['x'] },
@@ -29,5 +32,8 @@ test('FastH3 serializes images, audio and video; video tail trimming is explicit
   assert.equal(body.ref_images.length, 1); assert.equal(body.ref_videos[0].frames.length, 39);
   assert.equal(Buffer.from(body.ref_audios[0], 'base64').subarray(0,4).toString(), 'RIFF');
   assert.equal(body.first_frame_image, undefined);
+  const longVoice = join(dir, 'eight.wav');
+  execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i','sine=duration=8',longVoice]);
+  assert.throws(() => buildFasth3Body({...input, referenceVideoPaths:[], referenceAudioPaths:[longVoice,longVoice]}), /audio clips exceed/);
   writeFileSync(img, 'invalid'); assert.throws(() => buildFasth3Body(input));
 });

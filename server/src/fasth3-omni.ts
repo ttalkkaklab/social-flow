@@ -8,6 +8,13 @@ import { readImageMetadata } from './image-media.js';
 
 export const FASTH3_OMNI_MODEL = 'ddalcu/FastH3-Omni-MLX-Serve-8bit';
 export const FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+/** The raw take includes the shortest tail that covers the authored 24 fps edit. */
+export function fasth3RenderFrames(editFrames: number): number {
+  const { min, max, frameOffset, step } = FASTH3_FRAME_LIMITS;
+  const frames = Math.max(min, frameOffset + step * Math.ceil((editFrames - frameOffset) / step));
+  if (frames > max) throw new Error('FastH3 scene exceeds 362 frames; split the shot before planning');
+  return frames;
+}
 export const FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 60 * 1024 * 1024;
 const dimension = z.number().int().min(256).max(1536).refine(n => n % 32 === 0, 'Dimensions must be multiples of 32');
@@ -22,7 +29,7 @@ export const fasth3OmniSchema = z.object({
   seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe('Reproducible seed, e.g. 2026.'),
   referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
   referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2–15 seconds each, 15 seconds total. Video sound is included.'),
-  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2–15 seconds each. Voice imitation does not preserve exact speech timing.'),
+  referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2–15 seconds each and 15 seconds total. Voice imitation does not preserve exact speech timing.'),
   trimReferenceVideos: z.boolean().default(false).describe('Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim.'),
   referenceSize: z.enum(['match', 'max']).default('match').describe('match caps references to output area; max preserves more detail at higher memory/time cost.'),
   outputPath: z.string().optional().describe('Output directory, e.g. /tmp/video-test.'),
@@ -86,7 +93,9 @@ export function buildFasth3Body(raw: Fasth3OmniRequest): Record<string, unknown>
       if (accepted < files.length && !r.trimReferenceVideos) throw new Error('Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting');
       return { frames: files.slice(0, accepted).map(f => encode(join(temp, f))), ...(meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {}) };
     });
-    const audios = r.referenceAudioPaths.map((file, i) => { probe(file); return audio(file, `audio-${i}`); });
+    const audioSeconds = r.referenceAudioPaths.reduce((sum, file) => sum + probe(file).duration, 0);
+    if (audioSeconds > 15) throw new Error('Reference audio clips exceed fifteen seconds total');
+    const audios = r.referenceAudioPaths.map((file, i) => audio(file, `audio-${i}`));
     return { stream: true, model: r.model, prompt: r.prompt, width: r.width, height: r.height, num_frames: r.numFrames,
       steps: r.steps, ...(r.seed === undefined ? {} : { seed: r.seed }), ref_image_size: r.referenceSize,
       ref_images: images, ref_videos: videos, ref_audios: audios };

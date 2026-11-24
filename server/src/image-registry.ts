@@ -1,4 +1,4 @@
-import { nativeImageSchema, nativeImageEditSchema } from './astra-genai-native-image.js';
+import { nativeImageSchema, nativeImageEditSchema, validateNativeImageArgs } from './astra-genai-native-image.js';
 import { z } from 'zod';
 import { genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
@@ -28,6 +28,11 @@ export function parseImageArgs(tool: string, input: Record<string, unknown>): Re
   if (!adapter) throw new Error('image_adapter_unsupported');
   for (const key of Object.keys(input)) if (!fields(adapter.schema).includes(key)) throw new Error('image_argument_unsupported: ' + key);
   const args = adapter.schema.parse(input) as Record<string, unknown>;
+  if (adapter.engine === 'astra-genai-native') {
+    const edit = adapter.operation === 'edit';
+    validateNativeImageArgs(args, edit);
+    if (!(edit && args.model === 'h3-image')) args.size ??= '1024x1024';
+  }
   if (adapter.engine === 'gpt-image') {
     assertImageModelAvailable(String(args.model));
     const refs = (args.sourceImagesBase64 ?? []) as string[];
@@ -49,6 +54,9 @@ export function imageCatalog() {
   return { version: 1, revision: '2026-10-18',
     adapters: Object.entries(IMAGE_ADAPTERS).map(([tool, entry]) => ({ tool, engine: entry.engine, operation: entry.operation, fields: fields(entry.schema) })),
     genai: { edits: ['img2img', 'inpaint'], sourceImages: 1, steps: [1, 12], promptExtend: 'Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.', note: 'Use GPT Image 2 for readable text. No multi-image fusion.' },
+    nativeH3Image: { engine: 'astra-genai-native', model: 'h3-image', profile: 'minimax-h3-image', protocol: 'mlx-serve',
+      operations: ['text', 'edit'], referenceImages: 10, fixedSteps: 6, editSize: 'source',
+      availability: 'Check astra_genai_catalog kind image for the configured gateway binding.' },
     gptModels: GPT_IMAGE_MODELS, gptContracts: GPT_IMAGE_CONTRACTS,
     mlx: { families: ['flux-klein', 'krea', 'mage', 'mage-edit', 'qwen-2.1'],
       note: 'Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan.' },

@@ -15,6 +15,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { z } from 'zod';
+import { Agent } from 'undici';
+import { FASTH3_OMNI_MODEL } from './fasth3-omni.js';
 import { validateMlxImageOperation } from './image-models.js';
 import { readImageMetadata } from './image-media.js';
 import { mlxServeApiKey, mlxServeUrl } from './config.js';
@@ -26,6 +28,8 @@ export const MLX_LOAD_TIMEOUT_MS = 10 * 60_000;
 export const MLX_IMAGE_TIMEOUT_MS = 15 * 60_000;
 export const MLX_MUSIC_TIMEOUT_MS = 10 * 60_000;
 export const MLX_VIDEO_TIMEOUT_MS = 20 * 60_000;
+const FASTH3_TIMEOUT_MS = 90 * 60_000;
+const fasth3Transport = new Agent({ headersTimeout: FASTH3_TIMEOUT_MS, bodyTimeout: FASTH3_TIMEOUT_MS });
 export const MLX_MESH_TIMEOUT_MS = 15 * 60_000;
 /** Node heap ceiling for decoded RGB — 1088×1920×8s at 24fps is ~1.2GB and is refused. */
 export const MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
@@ -655,8 +659,10 @@ export async function requestMlxVideo(body) {
     if (!body.stream)
         return requestRaw('post', url, authHeaders(), body, MLX_VIDEO_TIMEOUT_MS);
     try {
+        const fastH3 = body.model === FASTH3_OMNI_MODEL;
         const response = await fetch(url, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify(body), signal: AbortSignal.timeout(MLX_VIDEO_TIMEOUT_MS) });
+            ...(fastH3 ? { dispatcher: fasth3Transport } : {}), body: JSON.stringify(body),
+            signal: AbortSignal.timeout(fastH3 ? FASTH3_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS) });
         if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream'))
             return { ok: response.ok, status: response.status, body: await response.text() };
         if (!response.body)
@@ -732,6 +738,8 @@ export async function executeMlxVideo(request, body, acceptsModel) {
     const parsed = parseVideoResponse(res.body);
     if ('error' in parsed)
         return { success: false, error: parsed.error };
+    if (Array.isArray(body.ref_audios) && body.ref_audios.length && !parsed.audio)
+        return { success: false, error: 'FastH3 returned no audio for the approved voice references' };
     if (acceptsModel && (parsed.width !== body.width || parsed.height !== body.height || parsed.frames !== body.num_frames || parsed.fps !== 24))
         return { success: false, error: 'Backend output geometry or frame count differs from the validated request' };
     const outFile = resolveOutputFile(request.outputPath || process.cwd(), request.filename || `video_${Date.now()}.mp4`, 'video');

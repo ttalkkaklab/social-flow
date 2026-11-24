@@ -1,3 +1,4 @@
+import { astraGenaiBaseUrl } from './astra-genai-client.js';
 import { requireReadyProject } from './project.js';
 import { buildNativeImageBody, recoverNativeImage } from './astra-genai-native-image.js';
 import { GenaiRequestError } from './astra-genai-client.js';
@@ -97,6 +98,10 @@ export function planImage(raw: unknown): ImagePlan {
     gate(tool);
     const expected = IMAGE_ADAPTERS[tool]?.operation;
     if (input.operation && expected !== (input.operation === 'variation' ? 'text' : input.operation)) throw new Error('image_operation_mismatch');
+    if (selection.engine === 'astra-genai-native' && selection.model === 'h3-image') {
+      if (args.requestId !== undefined && args.requestId !== input.requestId) throw new Error('image_request_id_conflict');
+      args.requestId = input.requestId;
+    }
     args = parseImageArgs(tool, bindSelection(tool, args, selection));
     if (input.operation === 'variation' && (selection.engine !== 'mlx' || !args.imagePath)) throw new Error('image_variation_requires_source');
     const ext = args.outputFormat === 'jpeg' ? 'jpg' : String(args.outputFormat || 'png');
@@ -120,7 +125,7 @@ export function planImage(raw: unknown): ImagePlan {
   const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
   const body = { version: 1 as const, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
     tool: tool as string, args, sourceArgs: input.args, selection, source: context.source, contextRevision: context.revision,
-    inputs, ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' as const : 'server' as const };
+    inputs, ...(selection.engine === 'astra-genai-native' && selection.model === 'h3-image' ? {gateway:astraGenaiBaseUrl('/v1/images/')} : {}), ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' as const : 'server' as const };
   const plan = { ...body, id: routingHash(body) };
   atomicJson(path.join(context.directory, '.work/image-routing/plans', plan.id + '.json'), plan);
   return plan;
