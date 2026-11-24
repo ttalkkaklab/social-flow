@@ -2,7 +2,8 @@
 import { z } from 'zod';
 import * as fs from 'node:fs';
 import path from 'node:path';
-import { requestGenaiMedia } from './astra-genai-client.js';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { GenaiRequestError, requestGenaiMedia } from './astra-genai-client.js';
 import { executeSpeech, withSpeechRequestId } from './tts-execution.js';
 import { bareFilenameSchema } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
@@ -24,10 +25,25 @@ export function buildGenaiSpeechBody(input) {
         ...(args.instructions === undefined ? {} : { instructions: args.instructions }),
         ...(args.maxTokens === undefined ? {} : { max_tokens: args.maxTokens }) };
 }
+/** The gateway answers 429 + Retry-After before generating when the GPU has no room; wait up to 30 minutes. */
+async function synthesize(body) {
+    const deadline = Date.now() + 30 * 60_000;
+    for (;;) {
+        try {
+            return await requestGenaiMedia('/v1/audio/speech', body);
+        }
+        catch (error) {
+            const seconds = error instanceof GenaiRequestError ? error.retryAfterSeconds : undefined;
+            if (seconds === undefined || Date.now() + seconds * 1000 > deadline)
+                throw error;
+            await sleep(seconds * 1000);
+        }
+    }
+}
 export async function generateGenaiSpeech(input) {
     const args = genaiSpeechSchema.parse(input);
     const run = () => executeSpeech('tts_astra_genai', args, async (output) => {
-        const bytes = await requestGenaiMedia('/v1/audio/speech', buildGenaiSpeechBody(args));
+        const bytes = await synthesize(buildGenaiSpeechBody(args));
         validateSpeechAudio(bytes, args.outputFormat);
         const audioPath = path.join(output.outputPath, output.filename);
         fs.writeFileSync(audioPath, bytes, { flag: 'wx', mode: 0o600 });

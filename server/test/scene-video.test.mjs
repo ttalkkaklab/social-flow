@@ -174,7 +174,7 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   const route = '/v1/ltx/v2/scene-to-video', submitted = [], validated = [];
   const requestId = f.input.requestId;
   const file = '11'.repeat(16), jobId = '22'.repeat(16);
-  let providerStatus = 'processing';
+  let providerStatus = 'processing', seedModes;
   const stagedWavs=[];
   globalThis.fetch = async (url,options) => {
     const pathname = new URL(url).pathname;
@@ -185,7 +185,8 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
       return Response.json({});
     }
     if (pathname.endsWith('/complete')) return Response.json({file_id:file,uri:'genai-file://'+file});
-    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],motion_prefix:true,timed_dialogue:'supplied_performance'});
+    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],motion_prefix:true,timed_dialogue:'supplied_performance',
+      ...(seedModes ? {seed:seedModes} : {})});
     if (pathname === route+'/validate') {
       validated.push(JSON.parse(options.body));
       return Response.json({schema_valid:true, model:'ltx-2.5-22b-distilled', shots:2});
@@ -251,6 +252,15 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.equal((await videoStatus({episode:f.episode,requestId,action:'refresh'})).status,'failed');
   assert.equal(submitted.length,1);
   assert.deepEqual(fs.readFileSync(board),before);
+  // A seed is sent only to a gateway that lists one for the shot's render mode, under its own plan.
+  const seeded = {...options,requestId:requestId+'-seed',shotBindings:[options.shotBindings[0],{...options.shotBindings[1],seed:7}]};
+  const sent = validated.length;
+  await assert.rejects(planManagedVideo(seeded),/s0001@171 seed: this gateway does not take a seed for msr rendering/);
+  assert.equal(validated.length,sent);
+  seedModes = ['msr'];
+  const retake = await planManagedVideo(seeded);
+  assert.notEqual(retake.id,plan.id);
+  assert.deepEqual(validated.at(-1).shots.map(s=>s.seed),[undefined,7]);
   const legacy = structuredClone(request);
   const panel = legacy.images.find(i=>i.role==='face');
   delete panel.character;

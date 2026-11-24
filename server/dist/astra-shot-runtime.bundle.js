@@ -915,7 +915,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load10;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1051,7 +1051,7 @@ var require_browser = __commonJS({
       } catch (error) {
       }
     }
-    function load10() {
+    function load11() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1089,7 +1089,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load10;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1231,7 +1231,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load10() {
+    function load11() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -11318,8 +11318,8 @@ var require_crypto = __commonJS({
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return base64js.fromByteArray(new Uint8Array(outputBuffer));
       }
-      randomBytesBase64(count) {
-        const array = new Uint8Array(count);
+      randomBytesBase64(count2) {
+        const array = new Uint8Array(count2);
         window.crypto.getRandomValues(array);
         return base64js.fromByteArray(array);
       }
@@ -11406,8 +11406,8 @@ var require_crypto2 = __commonJS({
       async sha256DigestBase64(str2) {
         return crypto2.createHash("sha256").update(str2).digest("base64");
       }
-      randomBytesBase64(count) {
-        return crypto2.randomBytes(count).toString("base64");
+      randomBytesBase64(count2) {
+        return crypto2.randomBytes(count2).toString("base64");
       }
       async verify(pubkey, data, signature) {
         const verifier = crypto2.createVerify("RSA-SHA256");
@@ -43710,15 +43710,15 @@ ${value}`;
           pos = 0;
         }
       }
-      discardLeadingBytes(count) {
-        while (count > 0 && this.lineChunkIndex < this.chunks.length) {
+      discardLeadingBytes(count2) {
+        while (count2 > 0 && this.lineChunkIndex < this.chunks.length) {
           const chunk = this.chunks[this.lineChunkIndex];
           const remaining = chunk.length - this.linePos;
-          if (count < remaining) {
-            this.linePos += count;
-            count = 0;
+          if (count2 < remaining) {
+            this.linePos += count2;
+            count2 = 0;
           } else {
-            count -= remaining;
+            count2 -= remaining;
             this.lineChunkIndex++;
             this.linePos = 0;
           }
@@ -45166,11 +45166,11 @@ var require_retry_operation = __commonJS({
       for (var i2 = 0; i2 < this._errors.length; i2++) {
         var error = this._errors[i2];
         var message = error.message;
-        var count = (counts[message] || 0) + 1;
-        counts[message] = count;
-        if (count >= mainErrorCount) {
+        var count2 = (counts[message] || 0) + 1;
+        counts[message] = count2;
+        if (count2 >= mainErrorCount) {
           mainError = error;
-          mainErrorCount = count;
+          mainErrorCount = count2;
         }
       }
       return mainError;
@@ -45346,7 +45346,7 @@ var require_signal_exit = __commonJS({
         }
         assert.equal(typeof cb, "function", "a callback must be provided for exit handler");
         if (loaded === false) {
-          load10();
+          load11();
         }
         var ev = "exit";
         if (opts && opts.alwaysLast) {
@@ -45406,7 +45406,7 @@ var require_signal_exit = __commonJS({
         return signals;
       };
       loaded = false;
-      load10 = function load11() {
+      load11 = function load12() {
         if (loaded || !processOk(global.process)) {
           return;
         }
@@ -45423,7 +45423,7 @@ var require_signal_exit = __commonJS({
         process2.emit = processEmit;
         process2.reallyExit = processReallyExit;
       };
-      module.exports.load = load10;
+      module.exports.load = load11;
       originalProcessReallyExit = process2.reallyExit;
       processReallyExit = function processReallyExit2(code) {
         if (!processOk(global.process)) {
@@ -45459,7 +45459,7 @@ var require_signal_exit = __commonJS({
     var emit;
     var sigListeners;
     var loaded;
-    var load10;
+    var load11;
     var originalProcessReallyExit;
     var processReallyExit;
     var originalProcessEmit;
@@ -50029,7 +50029,8 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
   motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
   performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
-  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional()
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
+  seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
@@ -50086,7 +50087,7 @@ function validateOpening(prompt, positions, references, issue, maxChars = 2e3) {
 }
 
 // src/scene-video.ts
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire8 } from "node:module";
 
 // src/video-prompt.ts
 import { createRequire as createRequire3 } from "node:module";
@@ -51385,7 +51386,7 @@ var HOSTED_VIDEO_ROUTES = {
 };
 
 // src/video-registry.ts
-import { createRequire as createRequire4 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 
 // src/mlx-serve-client.ts
 import { existsSync as existsSync2, mkdtempSync, readFileSync as readFileSync3, rmSync, writeFileSync as writeFileSync2 } from "node:fs";
@@ -51715,8 +51716,8 @@ function buildFasth3Body(raw) {
       const prefix = `video-${i2}-`;
       ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join3(temp, prefix + "%04d.jpg")]);
       const files = readdirSync2(temp).filter((f3) => f3.startsWith(prefix)).sort();
-      const count = Math.min(files.length, r2.numFrames);
-      const accepted = count - (count - 5) % 17;
+      const count2 = Math.min(files.length, r2.numFrames);
+      const accepted = count2 - (count2 - 5) % 17;
       if (accepted < 5) throw new Error("Reference video has too few decoded frames");
       if (accepted < files.length && !r2.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
       return { frames: files.slice(0, accepted).map((f3) => encode(join3(temp, f3))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i2}`, accepted / 24) } : {} };
@@ -53189,6 +53190,26 @@ var sessionSchema = external_exports.object({
 var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
 var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
 
+// src/genai-scene.ts
+import { createRequire as createRequire4 } from "node:module";
+var load4 = createRequire4(import.meta.url);
+var count = external_exports.number().int().positive();
+var capabilitiesSchema = external_exports.object({
+  version: external_exports.literal(1),
+  execution: external_exports.literal("per_shot"),
+  transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
+  motion_prefix: external_exports.boolean().optional(),
+  timed_dialogue: external_exports.string().nullish(),
+  scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
+  limits: external_exports.object({
+    shots: external_exports.object({ min: count, max: count }),
+    shot_frames: external_exports.object({ max: count }),
+    references: external_exports.object({ subjects: count, backgrounds: external_exports.number().int().nonnegative() }),
+    voice: external_exports.object({ speakers_per_shot: external_exports.number().int().nonnegative() })
+  }).partial().optional().catch(void 0),
+  seed: external_exports.array(external_exports.string()).optional().catch(void 0)
+});
+
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
@@ -53590,7 +53611,7 @@ function resolveVideoDuration(tool, input) {
 }
 
 // src/video-registry.ts
-var load4 = createRequire4(import.meta.url);
+var load5 = createRequire5(import.meta.url);
 var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
 var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
 var VIDEO_ADAPTERS = Object.freeze({
@@ -53611,7 +53632,7 @@ var VIDEO_ADAPTERS = Object.freeze({
       if (args.realFaceInput === false && taskIds.length || taskIds.length && args.referenceVideoTaskIds !== void 0 && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
         throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
       const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
-      const offset = videos.reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+      const offset = videos.reduce((count2, files) => count2 + (Array.isArray(files) ? files.length : 0), 0);
       const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return {
         ...args,
@@ -53698,32 +53719,32 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
 }
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 import { fileURLToPath } from "node:url";
-var load5 = createRequire5(import.meta.url);
-var imageRouting = () => load5(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var load6 = createRequire6(import.meta.url);
+var imageRouting = () => load6(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 function hasVideoSubjectReferences(shot) {
   return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
 }
 
 // src/video-voice.ts
 import path7 from "node:path";
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load6 = createRequire6(import.meta.url);
+var load7 = createRequire7(import.meta.url);
 function resolveCharacterVoice(character, context, warnings) {
-  return load6("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
+  return load7("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
 }
 
 // src/scene-video.ts
-var load7 = createRequire7(import.meta.url);
+var load8 = createRequire8(import.meta.url);
 
 // src/video-routing.ts
-import { createRequire as createRequire10 } from "node:module";
+import { createRequire as createRequire11 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/video-pricing.ts
@@ -53915,8 +53936,8 @@ function charUnits(args) {
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-review.ts
-import { createRequire as createRequire8 } from "node:module";
-var review = () => createRequire8(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire9 } from "node:module";
+var review = () => createRequire9(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function refreshVideoReview(episode) {
   try {
     review().write(episode);
@@ -53933,7 +53954,7 @@ var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/video-routing.ts
-var load8 = createRequire10(import.meta.url);
+var load9 = createRequire11(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
@@ -53960,7 +53981,7 @@ var videoPlanSchema = external_exports.object({
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function assertSpeechRenderCapacity(tool, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
-  load8("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+  load9("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
     tool,
     model: model2,
     scene,
@@ -54029,7 +54050,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -54235,7 +54256,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load9 = createRequire11(import.meta.url);
+var load10 = createRequire12(import.meta.url);
 var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -54901,8 +54922,8 @@ function compileActing(text2, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire14 } from "node:module";
-var shared2 = () => createRequire14(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire15 } from "node:module";
+var shared2 = () => createRequire15(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }

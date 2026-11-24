@@ -25332,15 +25332,15 @@ ${value}`;
           pos = 0;
         }
       }
-      discardLeadingBytes(count) {
-        while (count > 0 && this.lineChunkIndex < this.chunks.length) {
+      discardLeadingBytes(count2) {
+        while (count2 > 0 && this.lineChunkIndex < this.chunks.length) {
           const chunk = this.chunks[this.lineChunkIndex];
           const remaining = chunk.length - this.linePos;
-          if (count < remaining) {
-            this.linePos += count;
-            count = 0;
+          if (count2 < remaining) {
+            this.linePos += count2;
+            count2 = 0;
           } else {
-            count -= remaining;
+            count2 -= remaining;
             this.lineChunkIndex++;
             this.linePos = 0;
           }
@@ -33830,13 +33830,15 @@ function requireAstraGenaiKey(route = "") {
 var waiters = /* @__PURE__ */ new Map();
 var waitFor = (ms) => waiters.get(ms) ?? waiters.set(ms, new import_undici.Agent({ headersTimeout: ms, bodyTimeout: ms })).get(ms);
 var GenaiRequestError = class extends Error {
-  constructor(message, terminal, httpStatus) {
+  constructor(message, terminal, httpStatus, retryAfterSeconds) {
     super(message);
     this.terminal = terminal;
     this.httpStatus = httpStatus;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
   terminal;
   httpStatus;
+  retryAfterSeconds;
 };
 async function requestGenai(method, route, body, timeoutMs = 6e4, onResponse, signal, requestId, credentialRoute = route) {
   const key = requireAstraGenaiKey(credentialRoute);
@@ -33944,11 +33946,15 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
     headers: { Authorization: `Bearer ${key}`, ...body && !form ? { "Content-Type": "application/json" } : {} },
     ...body === void 0 ? {} : { body: form ? body : JSON.stringify(body) }
   });
-  if (!response.ok) throw new GenaiRequestError(
-    `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
-    response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
-    response.status
-  );
+  if (!response.ok) {
+    const retryAfter = response.headers.get("retry-after");
+    throw new GenaiRequestError(
+      `ASTRA GenAI HTTP ${response.status}: ${(await response.text()).replaceAll(key, "[redacted]").slice(0, 2e3)}`,
+      response.status >= 400 && response.status < 500 && ![408, 409, 425].includes(response.status),
+      response.status,
+      response.status === 429 && retryAfter !== null && /^\d+$/.test(retryAfter) ? Number(retryAfter) : void 0
+    );
+  }
   return Buffer.from(await response.arrayBuffer());
 }
 var genaiJobsSchema = external_exports.object({
@@ -34533,7 +34539,8 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
   motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
   performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
-  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional()
+  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
+  seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
 var sceneVideoDirectionSchema = external_exports.object({
   openingPositions: openingPositionsSchema,
@@ -35329,6 +35336,34 @@ async function uploadOnce(bytes, contentType, sha256, cacheKey) {
   return file.uri;
 }
 
+// src/genai-scene.ts
+import { createRequire as createRequire4 } from "node:module";
+
+// src/video-prompt.ts
+import { createRequire as createRequire3 } from "node:module";
+var load3 = createRequire3(import.meta.url);
+
+// src/genai-scene.ts
+var load4 = createRequire4(import.meta.url);
+var SCENE_ROUTE = "/v1/ltx/v2/scene-to-video";
+var sceneRequestId = (planId) => "scene-" + planId;
+var count = external_exports.number().int().positive();
+var capabilitiesSchema = external_exports.object({
+  version: external_exports.literal(1),
+  execution: external_exports.literal("per_shot"),
+  transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
+  motion_prefix: external_exports.boolean().optional(),
+  timed_dialogue: external_exports.string().nullish(),
+  scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
+  limits: external_exports.object({
+    shots: external_exports.object({ min: count, max: count }),
+    shot_frames: external_exports.object({ max: count }),
+    references: external_exports.object({ subjects: count, backgrounds: external_exports.number().int().nonnegative() }),
+    voice: external_exports.object({ speakers_per_shot: external_exports.number().int().nonnegative() })
+  }).partial().optional().catch(void 0),
+  seed: external_exports.array(external_exports.string()).optional().catch(void 0)
+});
+
 // src/astra-genai-video.ts
 var GENAI_VIDEO_MODELS = ["ltx-2.5-22b-distilled", "ltx-2.5-22b-dev"];
 var localResolution = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
@@ -35730,10 +35765,10 @@ async function getGenaiVideoStatus(input, planned, binding) {
     throw new Error("GenAI receipt conflicts with the approved media contract");
   if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.");
   if (!receipt.jobId && receipt.operation === "scene-to-video" && receipt.requestId) {
-    if (receipt.requestId !== "scene-" + receipt.fingerprint)
+    if (receipt.requestId !== sceneRequestId(receipt.fingerprint))
       throw new Error("Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.");
     const found = statusSchema2.extend({ request_id: external_exports.literal(receipt.requestId) }).parse(
-      await requestGenai("GET", "/v1/ltx/v2/scene-to-video/requests/" + encodeURIComponent(receipt.requestId))
+      await requestGenai("GET", SCENE_ROUTE + "/requests/" + encodeURIComponent(receipt.requestId))
     );
     if (binding?.jobId && binding.jobId !== found.id) throw new Error("GenAI recovery job ID mismatch");
     receipt.jobId = found.id;
@@ -35750,7 +35785,7 @@ async function getGenaiVideoStatus(input, planned, binding) {
       checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
     return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
-  const route = `${receipt.operation === "scene-to-video" ? "/v1/ltx/v2/scene-to-video" : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
+  const route = `${receipt.operation === "scene-to-video" ? SCENE_ROUTE : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
   const job = statusSchema2.parse(await requestGenai("GET", route));
   if (job.id !== receipt.jobId) throw new Error("GenAI status job ID mismatch");
   if (receipt.operation === "scene-to-video" && Array.isArray(job.shots)) {
@@ -35910,8 +35945,8 @@ async function checkGenaiVideoOptions(tool, args) {
   const missing = requested.filter(([, wire]) => !fields.includes(wire)).map(([key]) => key);
   if (Array.isArray(args.keyframes)) {
     const limit = external_exports.object({ temporal_images_including_endpoints: external_exports.number().int() }).safeParse(model?.limits?.[mode]);
-    const count = args.keyframes.length + Number(!!(args.imagePath || args.imageUri)) + Number(!!(args.lastFramePath || args.lastFrameUri));
-    if (!limit.success || count > limit.data.temporal_images_including_endpoints) missing.push("keyframes");
+    const count2 = args.keyframes.length + Number(!!(args.imagePath || args.imageUri)) + Number(!!(args.lastFramePath || args.lastFrameUri));
+    if (!limit.success || count2 > limit.data.temporal_images_including_endpoints) missing.push("keyframes");
   }
   if (missing.length) throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(", ")}`, true, 422);
 }
@@ -36133,9 +36168,9 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
   }
   return paths;
 }
-async function returnToAnchor(source, path6, count, signal) {
+async function returnToAnchor(source, path6, count2, signal) {
   if (existsSync4(path6)) return path6;
-  const half = (count + 1) / 2;
+  const half = (count2 + 1) / 2;
   const filter = `[0:v]split[a][b];[a]trim=end_frame=${half},setpts=PTS-STARTPTS[f];[b]trim=end_frame=${half - 1},reverse,setpts=PTS-STARTPTS[r];[f][r]concat=n=2:v=1:a=0`;
   const tmp = path6 + "." + randomUUID5() + ".mp4";
   try {
@@ -36233,9 +36268,9 @@ function checkStandbyFraming(samples, reference) {
   return Buffer.from(first);
 }
 var IdleRotation = class {
-  constructor(count = idleCount) {
-    this.count = count;
-    if (!Number.isInteger(count) || count < 2) throw Error("At least two standby clips are required");
+  constructor(count2 = idleCount) {
+    this.count = count2;
+    if (!Number.isInteger(count2) || count2 < 2) throw Error("At least two standby clips are required");
   }
   count;
   bag = [];
@@ -36262,7 +36297,7 @@ import { createHash as createHash7, randomUUID as randomUUID6 } from "node:crypt
 import { existsSync as existsSync5, mkdirSync as mkdirSync5, mkdtempSync as mkdtempSync2, readFileSync as readFileSync6, rmSync as rmSync4 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join4 } from "node:path";
-import { createRequire as createRequire3 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { promisify as promisify2 } from "node:util";
 
 // src/live-motion.ts
@@ -36434,7 +36469,7 @@ var LiveProgram = class {
 
 // src/live-native.ts
 var execute2 = promisify2(execFile2);
-var { estimateSpeechSeconds } = createRequire3(import.meta.url)("../../skills/_shared/scene-acting.js");
+var { estimateSpeechSeconds } = createRequire5(import.meta.url)("../../skills/_shared/scene-acting.js");
 var talkPrompt = "Locked chest-up portrait. The host faces the lens with relaxed shoulders. Keep the camera, light and background fixed.";
 function speechFrames(text, language) {
   const seconds = estimateSpeechSeconds(text, language) ?? Math.max(2, Array.from(text).length / 7);

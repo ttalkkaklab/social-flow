@@ -20,6 +20,12 @@ gets the reserved unlisted room and its actual status. Generate 3–5 second lis
 
 ## Local GenAI routing (owner directive, 2026-11-07)
 
+2026-11-24: the GenAI gateway no longer binds MLX servers (`mlx-serve`,
+`mlx-audio`). A local gateway on that version cannot serve `qwen-image-fast` or
+the MLX `voxcpm2` binding described below. MLX images go through the direct
+`mlx` lane (`mlx_image_generate` / `mlx_image_edit`); `voxcpm2` speech is served
+by the production gateway, whose voices must be registered there first.
+
 `/Volumes/data/story/insight` uses local GenAI (`http://127.0.0.1:18081`) for
 `astra-genai-native` / `qwen-image-fast`, implemented by MLX Serve's
 `qwen-image-2.1-turbo`. Before generation, confirm the MCP process receives
