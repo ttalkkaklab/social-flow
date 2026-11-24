@@ -10,7 +10,12 @@ const normalizeVoice = voice => Object.fromEntries(Object.entries(voice || {}).m
   [key, key === 'language' ? normalizeLanguage(value) : typeof value === 'string' ? value.trim() : value]));
 
 function explicitVoiceOverride(board, voice, current) {
-  const override = board?.PRODUCTION?.modelSettings?.overrides?.speech;
+  const overrides = board?.PRODUCTION?.modelSettings?.overrides;
+  if (Array.isArray(overrides))
+    return overrides.some(entry => entry?.scope === 'episode' && typeof entry.request === 'string' &&
+      entry.request.trim() && entry.speech?.engine === voice.engine && entry.speech.model === voice.model &&
+      entry.speech.voiceId === voice.voiceId);
+  const override = overrides?.speech;
   return typeof override?.request === 'string' && override.request.trim() &&
     override.engine === voice?.engine && override.model === voice?.model &&
     (override.voiceId === voice?.voiceId || (voice?.voiceId !== 'default' &&
