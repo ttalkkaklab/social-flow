@@ -22,6 +22,12 @@ const models = [
     ? 'https://elevenlabs.io/docs/api-reference/text-to-dialogue/convert'
     : 'https://ai.google.dev/gemini-api/docs/speech-generation',
 }));
+models.push(Object.freeze({
+  model: 'voxcpm2', provider: 'mlx-audio', direction: 'local', single: 'tts_local_voxcpm2', dialogue: '',
+  maxSpeakers: 1, maxCharacters: 16000, recommendedDialogueCharacters: null, maxStyleCharacters: 2000,
+  vocalEvents: false, customVoice: true, numericSpeed: false, timestamps: false,
+  evidence: 'Local mlx-audio VoxCPM2 worker with original reference and continuation audio.',
+}));
 const TTS_MODELS = Object.freeze(models);
 const TTS_DEFAULT_MODELS = Object.freeze({gemini:'gemini-2.5-flash-preview-tts',elevenlabs:'eleven_v4'});
 function resolveTtsModel(provider, model) {

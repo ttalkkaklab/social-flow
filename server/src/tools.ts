@@ -1,6 +1,7 @@
 import { sceneDefaultsSchema, sceneShotBindingsSchema, sceneVideoDirectionSchema, shotTimelineSchema } from './msr-opening.js';
 import { TIKTOK_TOOLS } from './tiktok-tools.js';
 import { UPSCALE_TOOLS } from './video-upscale.js';
+import { localVoxSchema } from './local-voxcpm2.js';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { z } from 'zod';
 import { fasth3OmniSchema } from './fasth3-omni.js';
@@ -1083,8 +1084,13 @@ Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, �
 
 export const TOOLS: Tool[] = [
   {
+    name: 'tts_local_voxcpm2', title: 'Local VoxCPM2 speech', annotations: HINT.generate,
+    description: 'Generate one 48 kHz WAV on the configured Mac with mlx-audio VoxCPM2. Pass text and an output directory. Supply referenceAudio for timbre or continuationAudio and its transcript for continuation. Use instructions for voice design or acting. For episode lines copy speech_manage plan_audio arguments. Returns the audio path and receipt. Use tts_route execute with a stable requestId for replay.',
+    inputSchema: zodToJsonSchema(localVoxSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
+  },
+  {
     name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
-    description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Implemented Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+    description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Local mlx-audio VoxCPM2, Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
     inputSchema: { type: 'object', additionalProperties: false, properties: {
       action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
       generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
@@ -1301,7 +1307,7 @@ Do NOT use it for scene images (shot_image) or text-bearing art. Refused (charac
           gender:{type:'string',maxLength:100,description:'Provider-reported vocal gender, e.g. female; omit when absent.'},age:{type:'string',maxLength:200,description:'Provider age label, e.g. 35-year-old; omit when absent.'},pitch:{type:'string',maxLength:100,description:'Provider pitch label, e.g. low; omit when absent.'},description:{type:'string',maxLength:2000,description:'Exact provider voice description, e.g. warm low voice; no invented attributes.'}
         },required:['voiceId','source','retrievedAt']},
         tts: { type: 'object', description: 'Candidate voice settings saved unchanged only after user selection.', additionalProperties: false, required: ['engine','model','voiceId','language','speed'], properties: {
-          engine: { type: 'string', enum: ['gemini','elevenlabs','astra-genai'], description: 'Selected speech provider.' },
+          engine: { type: 'string', enum: ['gemini','elevenlabs','astra-genai', 'mlx-audio'], description: 'Selected speech provider.' },
           model: { type: 'string', description: 'Explicit supported Gemini model or eleven_v4.' },
           voiceId: { type: 'string', description: 'Voice ID obtained from lookup; never invent it.' },
           language: { type: 'string', description: 'Text language e.g. ko.' },
@@ -3865,7 +3871,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
             models: { type: 'object', additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(['video', 'music', 'image', 'speech'].map(kind => [kind, {
               type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
               properties: {
-                engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                 model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music).' },
                 ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                 ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },

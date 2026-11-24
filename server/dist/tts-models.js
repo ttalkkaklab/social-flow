@@ -7,3 +7,10 @@ export function getTtsModels() {
 export function resolveTtsModel(provider, model) {
     return shared().resolveTtsModel(provider, model);
 }
+export function speechProvider(generator) {
+    if (generator === 'tts_local_voxcpm2')
+        return 'mlx-audio';
+    if (generator === 'tts_astra_genai')
+        return 'astra-genai';
+    return generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
+}

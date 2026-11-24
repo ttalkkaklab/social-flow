@@ -103,7 +103,7 @@ Per-line `acting` supports `direction`/`tags` alongside the richer scene fields 
 It is separate from the pinned identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](../produce/references/acting-prompts.md).
-ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_route`.
 An explicitly requested review/improvement loop is permitted within its scope;
 normal production continues without scoring or listening approval.
 

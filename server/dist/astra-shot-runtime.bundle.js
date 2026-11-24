@@ -53783,6 +53783,7 @@ function priceOf(tool, args = {}) {
       return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
     }
   }
+  if (tool === "tts_local_voxcpm2") return { key: "tts.voxcpm2-local", quantity: str(args.text, "").length / 1e3, note: "Local MLX inference" };
   if (tool === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
   if (["astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(tool)) return { key: null, quantity: null };
   if (tool.startsWith("astra_genai_")) {
@@ -55035,7 +55036,13 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
-    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(
+      line.audio.path,
+      line.audio.generation,
+      character?.tts,
+      line,
+      { required: character?.tts?.engine === "mlx-audio", referenceSha256: character?.voiceReference?.sha256 }
+    );
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync5(line.audio.path) && hash(readFileSync7(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
@@ -55051,6 +55058,9 @@ function speechAudioPlan(line, character, context) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language);
   const compiled = compileActing(line.tts, line.acting || void 0, { ...voice, language });
+  if (compiled.generator === "tts_local_voxcpm2" && character?.voiceReference) {
+    Object.assign(compiled.generation, { referenceAudio: character.voiceReference.path, referenceSha256: character.voiceReference.sha256 });
+  }
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
   return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
@@ -55216,7 +55226,8 @@ function manageSpeech(args, options = {}) {
       if (!args.audioPath) throw new Error("audioPath is required");
       const audioPath = resolve5(dirname6(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
-      const voice = audioCharacter(line.speaker)?.tts;
+      const actor = audioCharacter(line.speaker);
+      const voice = actor?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
       const bytes = readFileSync7(audioPath);
@@ -55226,7 +55237,7 @@ function manageSpeech(args, options = {}) {
         args.generation,
         voice,
         line,
-        { required: voice?.engine === "astra-genai" }
+        { required: ["astra-genai", "mlx-audio"].includes(String(voice?.engine)), referenceSha256: actor?.voiceReference?.sha256 }
       );
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
@@ -55545,7 +55556,7 @@ function manageSpeech(args, options = {}) {
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
     const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win });
-    const generation = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
+    const generation = { ...result.generation, ...["tts_astra_genai", "tts_local_voxcpm2"].includes(result.generator) ? {
       speechContext: { path: file, lineId: line.id, expectedRevision: revision }
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };

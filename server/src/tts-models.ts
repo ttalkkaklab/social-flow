@@ -2,8 +2,8 @@ import { createRequire } from 'node:module';
 
 export interface TtsModelContract {
   model: string;
-  provider: 'gemini' | 'elevenlabs' | 'astra-genai';
-  direction: 'legacy' | 'metadata' | 'inline' | 'gateway';
+  provider: 'gemini' | 'elevenlabs' | 'astra-genai' | 'mlx-audio';
+  direction: 'legacy' | 'metadata' | 'inline' | 'gateway' | 'local';
   single: string;
   dialogue: string;
   maxSpeakers: number;
@@ -26,4 +26,10 @@ export function getTtsModels(): readonly Readonly<TtsModelContract>[] {
 }
 export function resolveTtsModel(provider: string, model?: string): Readonly<TtsModelContract> {
   return shared().resolveTtsModel(provider, model);
+}
+
+export function speechProvider(generator: string): TtsModelContract['provider'] {
+  if (generator === 'tts_local_voxcpm2') return 'mlx-audio';
+  if (generator === 'tts_astra_genai') return 'astra-genai';
+  return generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
 }
