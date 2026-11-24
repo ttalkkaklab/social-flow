@@ -4395,7 +4395,7 @@ var require_ponyfill_es2018 = __commonJS({
                   return promiseResolvedWith(void 0);
                 });
               }
-              shutdownWithAction(() => Promise.all(actions.map((action) => action())), true, error);
+              shutdownWithAction(() => Promise.all(actions.map((action2) => action2())), true, error);
             };
             if (signal.aborted) {
               abortAlgorithm();
@@ -4469,21 +4469,21 @@ var require_ponyfill_es2018 = __commonJS({
             const oldCurrentWrite = currentWrite;
             return PerformPromiseThen(currentWrite, () => oldCurrentWrite !== currentWrite ? waitForWritesToFinish() : void 0);
           }
-          function isOrBecomesErrored(stream, promise, action) {
+          function isOrBecomesErrored(stream, promise, action2) {
             if (stream._state === "errored") {
-              action(stream._storedError);
+              action2(stream._storedError);
             } else {
-              uponRejection(promise, action);
+              uponRejection(promise, action2);
             }
           }
-          function isOrBecomesClosed(stream, promise, action) {
+          function isOrBecomesClosed(stream, promise, action2) {
             if (stream._state === "closed") {
-              action();
+              action2();
             } else {
-              uponFulfillment(promise, action);
+              uponFulfillment(promise, action2);
             }
           }
-          function shutdownWithAction(action, originalIsError, originalError) {
+          function shutdownWithAction(action2, originalIsError, originalError) {
             if (shuttingDown) {
               return;
             }
@@ -4494,7 +4494,7 @@ var require_ponyfill_es2018 = __commonJS({
               doTheRest();
             }
             function doTheRest() {
-              uponPromise(action(), () => finalize(originalIsError, originalError), (newError) => finalize(true, newError));
+              uponPromise(action2(), () => finalize(originalIsError, originalError), (newError) => finalize(true, newError));
               return null;
             }
           }
@@ -8017,13 +8017,13 @@ async function fetch2(url, options_) {
       request_.setTimeout(0);
       const headers2 = fromRawHeaders(response_.rawHeaders);
       if (isRedirect(response_.statusCode)) {
-        const location = headers2.get("Location");
+        const location2 = headers2.get("Location");
         let locationURL = null;
         try {
-          locationURL = location === null ? null : new URL(location, request.url);
+          locationURL = location2 === null ? null : new URL(location2, request.url);
         } catch {
           if (request.redirect !== "manual") {
-            reject(new FetchError(`uri requested responds with an invalid redirect URL: ${location}`, "invalid-redirect"));
+            reject(new FetchError(`uri requested responds with an invalid redirect URL: ${location2}`, "invalid-redirect"));
             finalize();
             return;
           }
@@ -17515,11 +17515,11 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           return null;
         }
-        const location = path9.join(configDir, "application_default_credentials.json");
-        if (!fs6.existsSync(location)) {
+        const location2 = path9.join(configDir, "application_default_credentials.json");
+        if (!fs6.existsSync(location2)) {
           return null;
         }
-        const client = await this._getApplicationCredentialsFromFilePath(location, options);
+        const client = await this._getApplicationCredentialsFromFilePath(location2, options);
         return client;
       }
       /**
@@ -23417,17 +23417,17 @@ var require_util4 = __commonJS({
       if (!redirectStatusSet.has(response.status)) {
         return null;
       }
-      let location = response.headersList.get("location", true);
-      if (location !== null && isValidHeaderValue(location)) {
-        if (!isValidEncodedURL(location)) {
-          location = normalizeBinaryStringToUtf8(location);
+      let location2 = response.headersList.get("location", true);
+      if (location2 !== null && isValidHeaderValue(location2)) {
+        if (!isValidEncodedURL(location2)) {
+          location2 = normalizeBinaryStringToUtf8(location2);
         }
-        location = new URL(location, responseURL(response));
+        location2 = new URL(location2, responseURL(response));
       }
-      if (location && !location.hash) {
-        location.hash = requestFragment;
+      if (location2 && !location2.hash) {
+        location2.hash = requestFragment;
       }
-      return location;
+      return location2;
     }
     function isValidEncodedURL(url) {
       for (let i2 = 0; i2 < url.length; ++i2) {
@@ -24723,7 +24723,7 @@ var require_body = __commonJS({
         });
       }
       assert(webidl.is.ReadableStream(stream));
-      let action = null;
+      let action2 = null;
       let source = null;
       let length = null;
       let type = null;
@@ -24774,7 +24774,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           length = null;
         }
         source = object3;
-        action = async function* () {
+        action2 = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
               yield* part.stream();
@@ -24802,15 +24802,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         stream = webidl.is.ReadableStream(object3) ? object3 : ReadableStreamFrom(object3);
       }
       if (typeof source === "string" || isUint8Array(source)) {
-        action = () => {
+        action2 = () => {
           length = typeof source === "string" ? Buffer.byteLength(source) : source.length;
           return source;
         };
       }
-      if (action != null) {
+      if (action2 != null) {
         ;
         (async () => {
-          const result = action();
+          const result = action2();
           const iterator = result?.[Symbol.asyncIterator]?.();
           if (iterator) {
             for await (const bytes of iterator) {
@@ -34813,8 +34813,8 @@ var require_cache_handler = __commonJS({
         }
       }
     }
-    function getSameOriginPath(cacheKey, location) {
-      if (typeof location !== "string") {
+    function getSameOriginPath(cacheKey, location2) {
+      if (typeof location2 !== "string") {
         return void 0;
       }
       let originUrl;
@@ -34823,7 +34823,7 @@ var require_cache_handler = __commonJS({
       try {
         originUrl = new URL(cacheKey.origin);
         requestUrl = new URL(cacheKey.path, originUrl);
-        locationUrl = new URL(location, requestUrl);
+        locationUrl = new URL(location2, requestUrl);
       } catch {
         return void 0;
       }
@@ -39901,9 +39901,9 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              const location = headersList.get("location", true);
+              const location2 = headersList.get("location", true);
               this.body = new Readable({ read: resume });
-              const willFollow = location && request.redirect === "follow" && redirectStatusSet.has(status);
+              const willFollow = location2 && request.redirect === "follow" && redirectStatusSet.has(status);
               const decoders = [];
               if (request.method !== "HEAD" && request.method !== "CONNECT" && !nullBodyStatus.includes(status) && !willFollow) {
                 const contentEncoding = headersList.get("content-encoding", true);
@@ -50288,6 +50288,15 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ] };
 }
 
+// src/scene-edit-grammar.ts
+var noun = "(?:the|a|an|her|his|their|its) (?:[\\p{L}-]+ ){0,3}[\\p{L}-]+";
+var figure = "(?:\u24C8(?:['\u2019]s (?:face|eyes|hands?|shoulders?|coat|back))?|\u24C2)";
+var subject = "(?:" + figure + "|" + noun + ")";
+var location = "(?:(?:at|by|near|beside|behind|past|through|across|towards?|in front of|away from) " + subject + ")";
+var timing = "(?: (?:after|before|during|following) (?:the )?(?:first|second|third|fourth|next|last|final|opening|closing) (?:spoken )?(?:line|turn|sentence)| until \u24C8 (?:finishes|begins|ends) (?:her|his|their|the) (?:first |last |next |final )?(?:line|turn|sentence))?";
+var action = "(?:steps? (?:back|forward|aside)|(?:is |are )?(?:standing|waiting) " + location + "|(?:waits?|stands?|walks?|moves?|leans?|stops?)(?: " + location + ")?|(?:watches?|sees?|greets?|approaches?) " + subject + "|(?:looks?|glances?|turns?) (?:at|to|towards?) " + subject + "|(?:nods?|smiles?|blinks?|frowns?|shrugs?|pauses?|hesitates?|turns? away)(?: slowly| briefly)?|(?:raises?|lowers?) (?:an eyebrow|her eyes|his eyes|their eyes|a hand)|(?:raises?|lifts?) (?:a|her|his|their) hand to answer the (?:door|phone)|exchanges? (?:a glance|glances|a look)(?: " + location + ")?)";
+var stage = new RegExp("^(?:(?:hold on|open on|cut to|show|pan to|push in on|close on) " + subject + "|rack focus from " + subject + " to " + subject + "|keep " + figure + " (?:sharp|in focus|in frame|still)|use a (?:wide|medium|close|tracking) shot of " + figure + "(?: and " + figure + ")?|\u24C8(?: and \u24C8)? " + action + ")(?: (?:as|while) \u24C8 " + action + ")?" + timing + "$", "iu");
+
 // src/scene-prompt-profile.ts
 var ordered = {
   cutTiming: "cut_order",
@@ -53358,12 +53367,12 @@ var msrReferences = external_exports.array(external_exports.object({
   "Supply exactly one imageUri or imagePath"
 ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
 function validateVoiceSlots(references, issue) {
-  let subject = 0;
+  let subject2 = 0;
   for (const ref of references) {
-    subject += Number(!ref.background);
+    subject2 += Number(!ref.background);
     if (!oneOf(ref.audioUri, ref.audioPath)) continue;
     if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+    else if (subject2 > 2) issue("MSR voice samples fit the first two subjects only");
   }
 }
 var genaiImageToVideoSchema = textVideoFields.extend({
@@ -53638,11 +53647,11 @@ function resolveVideoDuration(tool, input) {
   for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
     if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
   }
-  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, videoDurationLimits(tool, input));
+  const timing2 = (0, import_video_duration.minimumDuration)(input.requiredSeconds, videoDurationLimits(tool, input));
   const { requiredSeconds: _required, ...args } = input;
-  if (timing.numFrames !== void 0) args.numFrames = timing.numFrames;
-  else args.durationSeconds = timing.durationSeconds;
-  return { args, timing };
+  if (timing2.numFrames !== void 0) args.numFrames = timing2.numFrames;
+  else args.durationSeconds = timing2.durationSeconds;
+  return { args, timing: timing2 };
 }
 
 // src/video-registry.ts
@@ -54332,9 +54341,9 @@ function describeEvaluationError(error, filename) {
   const message = typeof detail.message === "string" ? detail.message : String(error);
   const stack = typeof detail.stack === "string" ? detail.stack : "";
   const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
-  const location = locations.find((match) => match[2]) ?? locations[0];
-  const line = location?.[1] ?? "1";
-  const column = location?.[2] ?? "1";
+  const location2 = locations.find((match) => match[2]) ?? locations[0];
+  const line = location2?.[1] ?? "1";
+  const column = location2?.[2] ?? "1";
   const wrapped = new Error(
     `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
   );
@@ -55198,7 +55207,7 @@ function manageSpeech(args, options = {}) {
   const scenes = win.SCENES;
   const timedShot = (scene) => actingContract().withThoughtClock(scene, object2(win.STRUCTURE).scenes);
   let changed = false;
-  let timing;
+  let timing2;
   let soundtrack;
   let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
@@ -55289,7 +55298,7 @@ function manageSpeech(args, options = {}) {
       line.mediaStatus = "audio_ready";
     }
     const clock = actingContract().planScenePerformance(timedShot(scene), measuredDuration);
-    timing = {
+    timing2 = {
       shotId: scene.id,
       storedSeconds: scene.duration,
       measuredSeconds: clock.durationSeconds,
@@ -55311,7 +55320,7 @@ function manageSpeech(args, options = {}) {
     scene.duration = result.scene.duration;
     const video = object2(object2(scene.visual).video);
     if (Object.keys(video).length) video.speechStatus = "stale";
-    timing = {
+    timing2 = {
       shotId: scene.id,
       previousSeconds: result.previousSeconds,
       durationSeconds: result.plan.durationSeconds,
@@ -55598,7 +55607,7 @@ function manageSpeech(args, options = {}) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object2(object2(scene.visual).video).speechStatus !== "stale" && object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object2(object2(scene.visual).video).speechStatus !== "stale" && object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

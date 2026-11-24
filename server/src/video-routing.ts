@@ -974,8 +974,11 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       sentences:[{code:'text_policy_missing', text:videoTextPolicy()}, {code:'silent_direction_missing', text:silentSuffix}].filter(sentence => carried(sentence.text))});
     const refused = resolved.issues.filter(issue => issue.level === 'error');
     if (refused.length) throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
+    const sceneCast = new Map((voice.voiceContinuity?.speakers ?? []).map(person => [person.speaker,person.name]));
+    for (const id of [...(scene?.openingPositions ?? []).map(row => row.character), ...cast.map(person => person.character)])
+      if (!sceneCast.has(id)) sceneCast.set(id,names[id] || id);
     assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'),
-      voice.voiceContinuity?.speakers ?? [], scenePromptTemplate(composed,promptSlots,'',script).promptTemplate,
+      Array.from(sceneCast,([speaker,name]) => ({speaker,name})), scenePromptTemplate(composed,promptSlots,'',script).promptTemplate,
       ['reference_voice','model_generated'].includes(voice.voiceContinuity?.strategy ?? ''));
     promptIssues = resolved.issues;
     // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
