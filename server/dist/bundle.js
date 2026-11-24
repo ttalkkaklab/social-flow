@@ -130317,7 +130317,7 @@ var slot = /\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}/gu;
 var escape2 = (value) => value.replace(/[$.*+?^{}()|[\]\\]/g, "\\$&");
 var slotOwner = (id) => id.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "");
 var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
-var object4 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
+var object4 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|latch|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
 var noun = "(?:the|a|an|her|his|their|its) (?:" + material + " ){0,3}" + object4;
 var figure = "(?:\u24C8(?:['\u2019]s (?:face|eyes|hands?|shoulders?|coat|back))?|\u24C2)";
 var subject = "(?:" + figure + "|" + noun + ")";
@@ -130346,32 +130346,42 @@ var SceneEditGrammar = class {
   }
   read(text4, speaker) {
     const owners = /* @__PURE__ */ new Set();
+    const inputs2 = [];
     const mark = (id, isSlot) => {
       owners.add(id);
       if (id === invalid) return invalid;
       if (!speaker || speaker === id) return actor;
       return isSlot ? invalid : listener;
     };
-    if (reserved.test(text4)) return { cue: invalid, owners, bound: false };
+    if (reserved.test(text4)) return { cue: invalid, owners, inputs: inputs2, bound: false };
     let bound = false;
-    let cue = text4.replace(slot, (_token, name) => {
+    let cue = text4.replace(slot, (_token, name, role) => {
       const id = this.ids.get(name);
-      if (!id) return media;
+      if (!id || role === "motion" || role === "soundtrack") {
+        inputs2.push({ source: name, role });
+        return media;
+      }
       bound = true;
       return mark(id, true);
     });
     if (this.aliases) cue = cue.replace(this.aliases, (value) => mark(this.names.get(value.toLowerCase()), false));
-    return { cue: cue.trim().replace(/\s+/gu, " "), owners, bound };
+    return { cue: cue.trim().replace(/\s+/gu, " "), owners, inputs: inputs2, bound };
   }
   checkStageDirection(text4, native) {
-    const { cue, owners, bound } = this.read(text4);
+    const { cue, owners, inputs: inputs2, bound } = this.read(text4);
     if (/^\s*\{[^{}]+\}\s*:/u.test(text4) || cue.includes(invalid) || bound && owners.size > 1)
       throw new Error("scene_dialogue_speaker: keep the generated inventory and pair a cast slot with its own actor");
     const visual = cue.replace(/Ⓢ\s*\(Ⓢ\)/gu, actor);
     if (stage.test(visual)) return;
     if (modelReference.test(visual)) {
-      const source = /\{([^{}]+)\.motion\}\s+and its\s+\{([^{}]+)\.soundtrack\}/iu.exec(text4);
-      if (source && source[1] !== source[2]) throw new Error("scene_media_owner: the named video and its embedded soundtrack have different sources");
+      if (visual.toLowerCase().endsWith(" and its " + media)) {
+        const [first, second] = inputs2;
+        const roles = new Set(inputs2.map((input) => input.role));
+        if (!second || first.source !== second.source || !roles.has("motion") || !roles.has("soundtrack"))
+          throw new Error("scene_media_owner: name a video and its own embedded soundtrack");
+      }
+      if (/^use /iu.test(visual) && inputs2.some((input) => input.role !== "motion"))
+        throw new Error("scene_media_owner: use a motion reference for camera movement and timing");
       return;
     }
     const speech = native && speechWords.test(cue);

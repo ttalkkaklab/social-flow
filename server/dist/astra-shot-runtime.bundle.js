@@ -50290,7 +50290,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
 
 // src/scene-edit-grammar.ts
 var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
-var object2 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
+var object2 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|latch|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
 var noun = "(?:the|a|an|her|his|their|its) (?:" + material + " ){0,3}" + object2;
 var figure = "(?:\u24C8(?:['\u2019]s (?:face|eyes|hands?|shoulders?|coat|back))?|\u24C2)";
 var subject = "(?:" + figure + "|" + noun + ")";

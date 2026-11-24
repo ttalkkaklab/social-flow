@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { scenePromptProfile, sceneWritingGuide, referenceLabel } from '../dist/scene-prompt-profile.js';
+import { SceneEditGrammar } from '../dist/scene-edit-grammar.js';
 import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
@@ -43,4 +44,13 @@ test('two panels of the same role bind by asset identity across reorderings', ()
   assert.equal(resolveScenePrompt(draft,reversed).prompt,'Use Image 2.');
   assert.ok(resolveScenePrompt('Use {mina.face}.',reversed).issues.some(issue => issue.level === 'error'));
   assert.ok(resolveScenePrompt(draft,bind(['profile','profile'])).issues.some(issue => issue.code === 'placeholder_ambiguous'));
+});
+
+test('named clip ownership is independent of cast IDs and normalized cue whitespace', () => {
+  const grammar = new SceneEditGrammar([{speaker:'hero',name:'Hero'}]);
+  for (const cue of ['Track {hero.motion} AND  ITS {hero.soundtrack}', 'Track {hero.soundtrack} and its {hero.motion}', 'Hold on the latch'])
+    assert.doesNotThrow(() => grammar.checkStageDirection(cue,true));
+  for (const cue of ['Track {hero.motion} AND  ITS {wide.soundtrack}', 'Track {wide.soundtrack} and its {hero.motion}',
+    'Use {hero.soundtrack} for camera movement and motion timing'])
+    assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_owner/);
 });

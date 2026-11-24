@@ -12,7 +12,7 @@ const slotOwner = (id) => id.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$
 // A visual object is a controlled noun phrase. Unrestricted words could introduce a
 // second action inside a camera cue. New props and descriptions can be authored on the board.
 const material = '(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)';
-const object = '(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)';
+const object = '(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|latch|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)';
 const noun = '(?:the|a|an|her|his|their|its) (?:' + material + ' ){0,3}' + object;
 const figure = "(?:Ⓢ(?:['’]s (?:face|eyes|hands?|shoulders?|coat|back))?|Ⓜ)";
 const subject = '(?:' + figure + '|' + noun + ')';
@@ -50,6 +50,7 @@ export class SceneEditGrammar {
     }
     read(text, speaker) {
         const owners = new Set();
+        const inputs = [];
         const mark = (id, isSlot) => {
             owners.add(id);
             if (id === invalid)
@@ -59,21 +60,23 @@ export class SceneEditGrammar {
             return isSlot ? invalid : listener;
         };
         if (reserved.test(text))
-            return { cue: invalid, owners, bound: false };
+            return { cue: invalid, owners, inputs, bound: false };
         let bound = false;
-        let cue = text.replace(slot, (_token, name) => {
+        let cue = text.replace(slot, (_token, name, role) => {
             const id = this.ids.get(name);
-            if (!id)
+            if (!id || role === 'motion' || role === 'soundtrack') {
+                inputs.push({ source: name, role });
                 return media;
+            }
             bound = true;
             return mark(id, true);
         });
         if (this.aliases)
             cue = cue.replace(this.aliases, value => mark(this.names.get(value.toLowerCase()), false));
-        return { cue: cue.trim().replace(/\s+/gu, ' '), owners, bound };
+        return { cue: cue.trim().replace(/\s+/gu, ' '), owners, inputs, bound };
     }
     checkStageDirection(text, native) {
-        const { cue, owners, bound } = this.read(text);
+        const { cue, owners, inputs, bound } = this.read(text);
         if (/^\s*\{[^{}]+\}\s*:/u.test(text) || cue.includes(invalid) || bound && owners.size > 1)
             throw new Error('scene_dialogue_speaker: keep the generated inventory and pair a cast slot with its own actor');
         // Strip the matching parenthesized slot from "Hero ({hero.face}) waits by the door".
@@ -81,9 +84,14 @@ export class SceneEditGrammar {
         if (stage.test(visual))
             return;
         if (modelReference.test(visual)) {
-            const source = /\{([^{}]+)\.motion\}\s+and its\s+\{([^{}]+)\.soundtrack\}/iu.exec(text);
-            if (source && source[1] !== source[2])
-                throw new Error('scene_media_owner: the named video and its embedded soundtrack have different sources');
+            if (visual.toLowerCase().endsWith(' and its ' + media)) {
+                const [first, second] = inputs;
+                const roles = new Set(inputs.map(input => input.role));
+                if (!second || first.source !== second.source || !roles.has('motion') || !roles.has('soundtrack'))
+                    throw new Error('scene_media_owner: name a video and its own embedded soundtrack');
+            }
+            if (/^use /iu.test(visual) && inputs.some(input => input.role !== 'motion'))
+                throw new Error('scene_media_owner: use a motion reference for camera movement and timing');
             return;
         }
         const speech = native && speechWords.test(cue);
