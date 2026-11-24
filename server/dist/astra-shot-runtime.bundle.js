@@ -55304,6 +55304,8 @@ function manageSpeech(args, options = {}) {
       const videoSha256 = hash(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
       const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname6(file), board: win }, receipts);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
         const video2 = object2(card.visual?.video), binding = object2(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -55312,7 +55314,10 @@ function manageSpeech(args, options = {}) {
         const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync5(original) && hash(readFileSync7(original)) === videoSha256);
         if (!matches) continue;
         speechContract().assertNoPostLipSync(binding);
-        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider || binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode))
+        const other = renderedShot && renderedScene?.shots.find((shot) => shot.shot_id === card.id);
+        const separateShot = other && renderedShot && (other.end_frame <= renderedShot.start_frame || renderedShot.end_frame <= other.start_frame);
+        const separatePicture = separateShot && (binding.mode === "voiceover" || plan.mode === "voiceover");
+        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider || binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode && !separatePicture))
           throw new Error("speech_video_source_mismatch: this video already belongs to a different speech operation or model");
       }
       const native = plan.mode === "native";
@@ -55352,8 +55357,6 @@ function manageSpeech(args, options = {}) {
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object2(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const renderedScene = receipts.sceneRenders.get(videoPath);
-      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       const trim = object2(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {

@@ -97402,9 +97402,10 @@ var require_scene_cast = __commonJS({
         const shotMarks = [...card.timeline?.openingPositions ?? [], ...visual.video?.openingPositions ?? []];
         const hasShotBlocking = castSpecified && shotMarks.length > 0;
         const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => !shotMarks.some((mark) => mark.character === row.character)) : [];
+        const visibleRefs = original.filter((id) => !shotMarks.some((mark) => mark.character === id && mark.images?.length === 0));
         const localIds = /* @__PURE__ */ new Set([
           ...active,
-          ...original,
+          ...visibleRefs,
           ...castIds(visual.bystanders),
           ...shotMarks.filter((row) => row.images?.length || !hasShotBlocking && declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
           ...inheritedMarks.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
@@ -98862,12 +98863,15 @@ var require_speech_contract = __commonJS({
       function verify(receipt, suffix, hashBound, originalFile) {
         verifyReceiptOperation(receipt, suffix, plan2, hashBound);
         let original = hashBound && require_character_speech().recordedConditioningDriver(receipt, suffix);
-        if (hashBound && receipt.operation === "scene-to-video" && ["native", "audio_conditioned"].includes(plan2.mode)) {
+        const performance2 = ["native", "audio_conditioned"].includes(plan2.mode);
+        const scenePicture = plan2.mode === "voiceover" && receipt.sceneRequestSha256 && plan2.sourceShot;
+        if (hashBound && receipt.operation === "scene-to-video" && (performance2 || scenePicture)) {
           const contract2 = require_scene_speech_receipt();
           const file = [originalFile, ...(index?.hashes.get(receipt.sha256) ?? []).filter((item) => item.receipt.fingerprint === receipt.fingerprint).map((item) => item.file)].find((path39) => path39 && fs26.existsSync(path39 + ".scene-request.json")) ?? originalFile;
           const wire = contract2.readSceneRequest(file, receipt);
-          original = contract2.verifySceneSpeech(wire, plan2);
-          if (index) index.sceneRenders.set(videoPath, receipt.sceneRequestSha256 && wire.conditioningInputs ? { ...wire.body, conditioningInputs: wire.conditioningInputs } : wire.body);
+          if (performance2) original = contract2.verifySceneSpeech(wire, plan2);
+          if (index && (performance2 || wire.body.shots.some((shot) => shot.shot_id === plan2.sourceShot.id)))
+            index.sceneRenders.set(videoPath, receipt.sceneRequestSha256 && wire.conditioningInputs ? { ...wire.body, conditioningInputs: wire.conditioningInputs } : wire.body);
         }
         if (!original) return;
         if (driver && original !== driver) throw new Error("conditioning_audio_unverified: conflicting drivers for the same video");
@@ -148179,6 +148183,8 @@ function manageSpeech(args, options = {}) {
       const videoSha256 = hash4(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname11(file), videoPath);
       const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan2, sourceShot: scene, boardDir: dirname11(file), board: win }, receipts);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
         const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -148187,7 +148193,10 @@ function manageSpeech(args, options = {}) {
         const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync36(original) && hash4(readFileSync37(original)) === videoSha256);
         if (!matches) continue;
         speechContract().assertNoPostLipSync(binding);
-        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan2.provider || binding.model && binding.model !== plan2.model || binding.mode && binding.mode !== plan2.mode))
+        const other = renderedShot && renderedScene?.shots.find((shot) => shot.shot_id === card.id);
+        const separateShot = other && renderedShot && (other.end_frame <= renderedShot.start_frame || renderedShot.end_frame <= other.start_frame);
+        const separatePicture = separateShot && (binding.mode === "voiceover" || plan2.mode === "voiceover");
+        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan2.provider || binding.model && binding.model !== plan2.model || binding.mode && binding.mode !== plan2.mode && !separatePicture))
           throw new Error("speech_video_source_mismatch: this video already belongs to a different speech operation or model");
       }
       const native = plan2.mode === "native";
@@ -148227,8 +148236,6 @@ function manageSpeech(args, options = {}) {
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object5(video2.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const renderedScene = receipts.sceneRenders.get(videoPath);
-      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       const trim = object5(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {

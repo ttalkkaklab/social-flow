@@ -710,11 +710,15 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
  shot.narration=(ensemble?['hero','guest','hero']:['hero']).map((speaker,i)=>({
    id:'line'+i,speaker,delivery:'on_screen',tts:['Hello.','Welcome.','Thanks.'][i]}));
  const inputs=actors.map((character,i)=>({shotId:shot.id,role:'face',character,frame:0,path:faces[i]}));
- async function receipt(pins){
+ async function receipt(pins,opening){
+   const start=opening?3:0;
    const dialogue=shot.narration.map((line,i)=>({lineId:line.id,speaker:line.speaker,text:line.tts,delivery:line.delivery,
-     frame:0,...(pins[i] && {voice:voicePin(pins[i])})}));
-   const wire=await captureSceneRequest({sceneNo:1,fps:24,frameCount:6,images:[{shotId:shot.id,role:'start',frame:0,path:faces[0]},...inputs],
-     shots:[{shotId:shot.id,startFrame:0,endFrame:6,transition:'open',action:'They speak.',openingPositions:[],blocking:[],dialogue}]},model);
+     frame:start,...(pins[i] && {voice:voicePin(pins[i])})}));
+   const leads=opening?[{shotId:opening,startFrame:0,endFrame:start,transition:'open',action:'She listens.',openingPositions:[],blocking:[]}]:[];
+   const images=[{shotId:shot.id,role:'start',frame:start,path:faces[0]},...inputs.map(pin=>({...pin,frame:start}))];
+   if(opening)images.unshift({shotId:opening,role:'start',frame:0,path:faces[0]});
+   const wire=await captureSceneRequest({sceneNo:1,fps:24,frameCount:6,images,
+     shots:[...leads,{shotId:shot.id,startFrame:start,endFrame:6,transition:opening?'hard_cut':'open',action:'They speak.',openingPositions:[],blocking:[],dialogue}]},model);
    assert.deepEqual(wire.attachments.filter(row=>row.role==='voice_reference').map(row=>row.sha256),pins.filter(Boolean).map(sha));
    const fingerprint='7'.repeat(64);
    writeFileSync(source+'.scene-request.json',JSON.stringify(wire));
@@ -759,6 +763,17 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
      const unpinned=structuredClone(archive);
      delete unpinned.SB_DOC.characters[0].voiceReference;
      await receipt([]);await rejected(unpinned);
+   });
+   await t.test('a silent opening and a speaking reply retain their separate source windows',async()=>{
+     const opening={...structuredClone(shot),id:'opening',duration:3/24,narration:[]};
+     const reply={...structuredClone(shot),duration:3/24};
+     await receipt([first],opening.id);
+     save({...win,SCENES:[opening,reply]});
+     const attached=await ROUTES.speech_manage({action:'attach_video',path:target,shotId:opening.id,videoPath:source,
+       expectedRevision:manageSpeech({path:target,action:'list'}).revision});
+     assert.equal(JSON.parse(attached.content[0].text).plan.mode,'voiceover');
+     assert.equal((await bind(source)).plan.mode,'native');
+     assert.deepEqual(read().SCENES.map(card=>[card.edit.in,card.edit.out]),[[0,3/24],[3/24,6/24]]);
    });
  }
 });

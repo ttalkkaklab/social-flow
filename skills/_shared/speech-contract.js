@@ -171,14 +171,17 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
   function verify(receipt,suffix,hashBound,originalFile) {
     verifyReceiptOperation(receipt,suffix,plan,hashBound);
     let original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
-    if (hashBound && receipt.operation === 'scene-to-video' && ['native','audio_conditioned'].includes(plan.mode)) {
+    const performance = ['native','audio_conditioned'].includes(plan.mode);
+    const scenePicture = plan.mode === 'voiceover' && receipt.sceneRequestSha256 && plan.sourceShot;
+    if (hashBound && receipt.operation === 'scene-to-video' && (performance || scenePicture)) {
       const contract = require('./scene-speech-receipt.js');
       const file = [originalFile,...(index?.hashes.get(receipt.sha256) ?? [])
         .filter(item => item.receipt.fingerprint === receipt.fingerprint).map(item => item.file)]
         .find(path => path && fs.existsSync(path + '.scene-request.json')) ?? originalFile;
       const wire = contract.readSceneRequest(file,receipt);
-      original = contract.verifySceneSpeech(wire,plan);
-      if (index) index.sceneRenders.set(videoPath,receipt.sceneRequestSha256 && wire.conditioningInputs
+      if (performance) original = contract.verifySceneSpeech(wire,plan);
+      if (index && (performance || wire.body.shots.some(shot => shot.shot_id === plan.sourceShot.id)))
+        index.sceneRenders.set(videoPath,receipt.sceneRequestSha256 && wire.conditioningInputs
         ? {...wire.body,conditioningInputs:wire.conditioningInputs} : wire.body);
     }
     if (!original) return;

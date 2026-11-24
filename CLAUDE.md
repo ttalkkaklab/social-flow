@@ -879,7 +879,7 @@ Declare everyone who speaks in the story scene. Submit one scene with `video_pla
 
 Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 
-For a per-shot render, list the visible cast on each card and give each opening position its image slots. Use an empty list for a silent person outside the frame. A speaking phone caller still receives the identity reference needed for the pinned voice. Cards without shot-level blocking retain their scene references.
+For a per-shot render, list the visible cast on each card and give each opening position its image slots. Use an empty list for a silent person outside the frame or a silent figure whose appearance comes solely from the shot image. A speaking phone caller still receives the identity reference needed for the pinned voice. Cards without shot-level blocking retain their scene references.
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.

@@ -202,7 +202,9 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     const hasShotBlocking = castSpecified && shotMarks.length > 0;
     const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? [])
       .filter(row => !shotMarks.some(mark => mark.character === row.character)) : [];
-    const localIds = new Set([...active, ...original, ...castIds(visual.bystanders),
+    // An empty slot list leaves a silent character in the composition without a separate face input.
+    const visibleRefs = original.filter(id => !shotMarks.some(mark => mark.character === id && mark.images?.length === 0));
+    const localIds = new Set([...active, ...visibleRefs, ...castIds(visual.bystanders),
       ...shotMarks.filter(row => row.images?.length || !hasShotBlocking && declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
       ...inheritedMarks.filter(row => row.images?.length || declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
       ...(visual.characterInputs ?? []).map(input => input.character),

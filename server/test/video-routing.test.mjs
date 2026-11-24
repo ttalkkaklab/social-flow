@@ -1764,13 +1764,15 @@ test('per-shot rendering binds the visible cast and any off-screen speaker for t
     {id:'greeting',visual:{character:['caller','rider']},narration:[{speaker:'rider',delivery:'on_screen',tts:'Hello.'}]},
     {id:'exit',visual:{character:['rider']},timeline:{openingPositions:[{character:'caller',images:[],position:'Off screen.'}]}},
     {id:'call',visual:{character:['rider']},narration:[{speaker:'caller',delivery:'off_screen',tts:'Wait.'}]},
+    {id:'serve',visual:{character:['caller','rider']},timeline:{openingPositions:[{character:'rider',images:[],position:'Seated in the opening image.'}]},
+      narration:[{speaker:'caller',delivery:'on_screen',tts:'Thank you.'}]},
     {id:'legacy',visual:{}},
   ];
   const refs = perShot => projectSceneCast(scene,cards,{SB_DOC:{characters}},os.tmpdir(),'astra-genai',false,perShot)
     .members.map(card => card.visual.references.map(ref => ref.character));
   const both = ['caller','rider'];
-  assert.deepEqual(refs(true),[both,['rider'],both,both]);
-  assert.deepEqual(refs(false),[both,both,both,both]);
+  assert.deepEqual(refs(true),[both,['rider'],both,['caller'],both]);
+  assert.deepEqual(refs(false),[both,both,both,both,both]);
 });
 
 test('an optional guide cannot prevent silent distilled I2V when the background slot requires a subject', t => {
