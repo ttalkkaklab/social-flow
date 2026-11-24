@@ -130504,16 +130504,25 @@ function castMentions(text4, cast, attribution = false) {
   }
   return owners;
 }
+function changesCastBinding(text4, cast) {
+  if (/^\s*\{[^{}]+\}\s*:/u.test(text4)) return true;
+  if (!cast.length) return false;
+  if (/\b(?:voices?|vocal|timbres?|accents?|voiceprints?)\b/iu.test(text4)) return true;
+  const owners = castMentions(text4, cast);
+  const bound = (text4.match(TOKEN) ?? []).some((token) => cast.some((person) => NAME2.exec(token)?.[1] === word(person.speaker)));
+  if (bound && owners.size > 1) return true;
+  const identity = bound || /\b(?:faces?|facial|likeness(?:es)?|portraits?|identit(?:y|ies)|appearances?)\b/iu.test(text4);
+  const assigns = /\b(?:assign\w*|belongs?|portrays?|impersonat\w*|swap\w*|exchang\w*|borrow\w*|imitat\w*|stands? in for|doubles? as|takes? on)\b/iu;
+  const designates = /\b(?:use|uses|cast|casts)\b.+\s(?:for|as)\s|\b(?:identity|face|likeness)\s+(?:is|of)\s/iu;
+  return (identity || owners.size > 1) && (assigns.test(text4) || designates.test(text4));
+}
 function assertSceneDialogue(template, expected, cast, composed, nativeDialogue = true) {
   const script = expected.flatMap((line) => line.tts ? [line.tts] : []);
   const visualQuotes = spans(composed, script).filter((span) => span.quoted && !script.includes(span.text.slice(1, -1))).map((span) => span.text.slice(1, -1));
-  const splitSentences2 = (text4) => text4.trimEnd().split(/(?:[.!?](?=\s|$)|\n)\s*/u);
+  const splitSentences2 = (text4) => text4.trimEnd().replace(/([:—–=])\s*\n\s*/gu, "$1 ").split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const approvedDirections = new Set(spans(composed, script).filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map((text4) => text4.trim()));
   const speechCue = /\b(?:says?|asks?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|adds?|murmurs?|speaks?|yells?|calls?|tells?|mutters?)\b[^.!?\n]{0,70}[:,]\s*\S/iu;
   const spokenAction = /\b(?:says?|asks?|adds?|repl(?:y|ies)|whispers?|shouts?|speaks?|murmurs?|yells?|mutters?)\b/iu;
-  const identity = /\b(?:faces?|facial|portraits?|voices?|vocal|timbres?|identit(?:y|ies)|likeness(?:es)?)\b/iu;
-  const transfer = /\b(?:assign\w*|belongs?|portrays?|impersonat\w*|swap\w*|switch\w*|exchang\w*|borrow\w*|imitat\w*|stands? in for|doubles? as)\b/iu;
-  const ownership = /\b(?:uses?|cast|plays?|match\w*|speaks? (?:in|with)|sounds? like)\b/iu;
   let index = 0;
   let clause = "";
   const parts = spans(template, script);
@@ -130524,15 +130533,9 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
       for (const sentence2 of sentences) {
         const text4 = sentence2.trim();
         if (approvedDirections.has(text4)) continue;
-        const people = castMentions(text4, cast).size;
-        const castSlot = (text4.match(TOKEN) ?? []).some((token) => cast.some((person) => NAME2.exec(token)?.[1] === word(person.speaker)));
-        const declaration = /^\s*\{[^{}]+\}\s*:/u.test(text4);
-        const assignIdentity = (identity.test(text4) || castSlot) && (transfer.test(text4) || ownership.test(text4) || people > 1 && /\b(?:is|as|for|of)\b/iu.test(text4));
-        if (declaration || assignIdentity || people > 1 && transfer.test(text4))
-          throw new Error("scene_dialogue_speaker: preserve the compiled cast identity and reference declarations");
-        if (/\{[^{}]+\.voice\}/u.test(text4))
-          throw new Error("scene_dialogue_speaker: keep a voice sample with its quoted turn or retain its compiled ownership direction");
-        if (nativeDialogue && (speechCue.test(text4) || spokenAction.test(text4) && people > 0))
+        if (changesCastBinding(text4, cast))
+          throw new Error("scene_dialogue_speaker: preserve cast declarations, use cast names for interactions and keep voice directions with their turn");
+        if (nativeDialogue && (speechCue.test(text4) || spokenAction.test(text4) && castMentions(text4, cast).size > 0))
           throw new Error("scene_dialogue_mismatch: put every spoken line in quotes with its approved speaker");
       }
       continue;
@@ -130548,7 +130551,7 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
     if (!line || line.tts !== words)
       throw new Error("scene_dialogue_mismatch: keep exactly the approved spoken lines in scene order");
     const owners = castMentions(clause, cast, true);
-    if (identity.test(clause) && castMentions(clause, cast).size > 1 && /(?:['’]s\s+(?:voice|face)|\b(?:swap|switch|exchange|borrow|impersonate)\w*\b)/iu.test(clause))
+    if (castMentions(clause, cast).size > 1 && /(?:['’]s\s+(?:voice|face)|\b(?:swap|switch|exchange|borrow|impersonate)\w*\b)/iu.test(clause))
       throw new Error("scene_dialogue_speaker: keep the assigned identity with the approved speaker");
     if (line.speaker && (owners.size !== 1 || !owners.has(word(line.speaker))))
       throw new Error("scene_dialogue_speaker: introduce each quote with its approved speaker and matching face or voice");

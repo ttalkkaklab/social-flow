@@ -2217,9 +2217,26 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     .replace('{guest.face}: character, guest','{hero.face}: character, guest');
   assert.notEqual(swapped,original.promptTemplate);
   const scene = f.board.STRUCTURE.scenes[0];
-  const draft = {engine:original.selection.engine,model:original.selection.model,operation:'reference',prompt:swapped};
-  const stored = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
-    event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,promptDrafts:[draft]}}]});
-  assert.ok(!stored.isError);
-  await assert.rejects(get('edited'),/scene_dialogue_speaker/);
+  async function saveDraft(prompt) {
+    const draft = {engine:original.selection.engine,model:original.selection.model,operation:'reference',prompt};
+    const stored = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
+      event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,promptDrafts:[draft]}}]});
+    assert.ok(!stored.isError);
+  }
+  const edit = text => original.promptTemplate + '\n' + text;
+  for (const invalid of [
+    swapped,
+    edit('Hero ({guest.face}) waits by the door. Guest ({hero.face}) stands beside the lamp.'),
+    edit('Hero — {guest.face}\nGuest — {hero.face}'),
+    edit('Hero:\n{guest.face} waits by the door.'),
+    edit('Hero takes on Guest’s voice throughout.'),
+  ]) {
+    await saveDraft(invalid);
+    await assert.rejects(get('refused'),/scene_dialogue_speaker/);
+  }
+  const focus = 'Keep Hero’s face sharp as Guest steps back.';
+  await saveDraft(edit(focus + ' Hero ({hero.face}) waits by the door.'));
+  const accepted = await get('focus');
+  assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(accepted.args)).prompt,accepted.sceneRequest.prompt);
+  assert.ok(accepted.args.prompt.endsWith(focus + ' Hero (Image 1) waits by the door.'));
 });
