@@ -4395,7 +4395,7 @@ var require_ponyfill_es2018 = __commonJS({
                   return promiseResolvedWith(void 0);
                 });
               }
-              shutdownWithAction(() => Promise.all(actions.map((action) => action())), true, error);
+              shutdownWithAction(() => Promise.all(actions.map((action2) => action2())), true, error);
             };
             if (signal.aborted) {
               abortAlgorithm();
@@ -4469,21 +4469,21 @@ var require_ponyfill_es2018 = __commonJS({
             const oldCurrentWrite = currentWrite;
             return PerformPromiseThen(currentWrite, () => oldCurrentWrite !== currentWrite ? waitForWritesToFinish() : void 0);
           }
-          function isOrBecomesErrored(stream, promise, action) {
+          function isOrBecomesErrored(stream, promise, action2) {
             if (stream._state === "errored") {
-              action(stream._storedError);
+              action2(stream._storedError);
             } else {
-              uponRejection(promise, action);
+              uponRejection(promise, action2);
             }
           }
-          function isOrBecomesClosed(stream, promise, action) {
+          function isOrBecomesClosed(stream, promise, action2) {
             if (stream._state === "closed") {
-              action();
+              action2();
             } else {
-              uponFulfillment(promise, action);
+              uponFulfillment(promise, action2);
             }
           }
-          function shutdownWithAction(action, originalIsError, originalError) {
+          function shutdownWithAction(action2, originalIsError, originalError) {
             if (shuttingDown) {
               return;
             }
@@ -4494,7 +4494,7 @@ var require_ponyfill_es2018 = __commonJS({
               doTheRest();
             }
             function doTheRest() {
-              uponPromise(action(), () => finalize(originalIsError, originalError), (newError) => finalize(true, newError));
+              uponPromise(action2(), () => finalize(originalIsError, originalError), (newError) => finalize(true, newError));
               return null;
             }
           }
@@ -6292,8 +6292,8 @@ var init_fetch_blob = __esm({
       get [Symbol.toStringTag]() {
         return "Blob";
       }
-      static [Symbol.hasInstance](object3) {
-        return object3 && typeof object3 === "object" && typeof object3.constructor === "function" && (typeof object3.stream === "function" || typeof object3.arrayBuffer === "function") && /^(Blob|File)$/.test(object3[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object4) {
+        return object4 && typeof object4 === "object" && typeof object4.constructor === "function" && (typeof object4.stream === "function" || typeof object4.arrayBuffer === "function") && /^(Blob|File)$/.test(object4[Symbol.toStringTag]);
       }
     };
     Object.defineProperties(_Blob.prototype, {
@@ -6341,8 +6341,8 @@ var init_file = __esm({
       get [Symbol.toStringTag]() {
         return "File";
       }
-      static [Symbol.hasInstance](object3) {
-        return !!object3 && object3 instanceof fetch_blob_default && /^(File)$/.test(object3[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object4) {
+        return !!object4 && object4 instanceof fetch_blob_default && /^(File)$/.test(object4[Symbol.toStringTag]);
       }
     };
     File3 = _File;
@@ -6494,14 +6494,14 @@ var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isS
 var init_is = __esm({
   "node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
-    isURLSearchParameters = (object3) => {
-      return typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && typeof object3.sort === "function" && object3[NAME] === "URLSearchParams";
+    isURLSearchParameters = (object4) => {
+      return typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && typeof object4.sort === "function" && object4[NAME] === "URLSearchParams";
     };
-    isBlob = (object3) => {
-      return object3 && typeof object3 === "object" && typeof object3.arrayBuffer === "function" && typeof object3.type === "string" && typeof object3.stream === "function" && typeof object3.constructor === "function" && /^(Blob|File)$/.test(object3[NAME]);
+    isBlob = (object4) => {
+      return object4 && typeof object4 === "object" && typeof object4.arrayBuffer === "function" && typeof object4.type === "string" && typeof object4.stream === "function" && typeof object4.constructor === "function" && /^(Blob|File)$/.test(object4[NAME]);
     };
-    isAbortSignal = (object3) => {
-      return typeof object3 === "object" && (object3[NAME] === "AbortSignal" || object3[NAME] === "EventTarget");
+    isAbortSignal = (object4) => {
+      return typeof object4 === "object" && (object4[NAME] === "AbortSignal" || object4[NAME] === "EventTarget");
     };
     isDomainOrSubdomain = (destination, original) => {
       const orig = new URL(original).hostname;
@@ -7715,8 +7715,8 @@ var init_request = __esm({
     init_get_search();
     init_referrer();
     INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
-    isRequest = (object3) => {
-      return typeof object3 === "object" && typeof object3[INTERNALS3] === "object";
+    isRequest = (object4) => {
+      return typeof object4 === "object" && typeof object4[INTERNALS3] === "object";
     };
     doBadDataWarn = deprecate2(
       () => {
@@ -8017,13 +8017,13 @@ async function fetch2(url, options_) {
       request_.setTimeout(0);
       const headers2 = fromRawHeaders(response_.rawHeaders);
       if (isRedirect(response_.statusCode)) {
-        const location = headers2.get("Location");
+        const location2 = headers2.get("Location");
         let locationURL = null;
         try {
-          locationURL = location === null ? null : new URL(location, request.url);
+          locationURL = location2 === null ? null : new URL(location2, request.url);
         } catch {
           if (request.redirect !== "manual") {
-            reject(new FetchError(`uri requested responds with an invalid redirect URL: ${location}`, "invalid-redirect"));
+            reject(new FetchError(`uri requested responds with an invalid redirect URL: ${location2}`, "invalid-redirect"));
             finalize();
             return;
           }
@@ -10390,20 +10390,20 @@ var require_parse = __commonJS({
           }
         }
         error("Bad array");
-      }, object3 = function() {
-        var key, object4 = /* @__PURE__ */ Object.create(null);
+      }, object4 = function() {
+        var key, object5 = /* @__PURE__ */ Object.create(null);
         if (ch === "{") {
           next("{");
           white();
           if (ch === "}") {
             next("}");
-            return object4;
+            return object5;
           }
           while (ch) {
             key = string();
             white();
             next(":");
-            if (_options.strict === true && Object.hasOwnProperty.call(object4, key)) {
+            if (_options.strict === true && Object.hasOwnProperty.call(object5, key)) {
               error('Duplicate key "' + key + '"');
             }
             if (suspectProtoRx.test(key) === true) {
@@ -10412,7 +10412,7 @@ var require_parse = __commonJS({
               } else if (_options.protoAction === "ignore") {
                 value();
               } else {
-                object4[key] = value();
+                object5[key] = value();
               }
             } else if (suspectConstructorRx.test(key) === true) {
               if (_options.constructorAction === "error") {
@@ -10420,15 +10420,15 @@ var require_parse = __commonJS({
               } else if (_options.constructorAction === "ignore") {
                 value();
               } else {
-                object4[key] = value();
+                object5[key] = value();
               }
             } else {
-              object4[key] = value();
+              object5[key] = value();
             }
             white();
             if (ch === "}") {
               next("}");
-              return object4;
+              return object5;
             }
             next(",");
             white();
@@ -10440,7 +10440,7 @@ var require_parse = __commonJS({
         white();
         switch (ch) {
           case "{":
-            return object3();
+            return object4();
           case "[":
             return array();
           case '"':
@@ -11813,13 +11813,13 @@ var require_util2 = __commonJS({
       }
     };
     exports.LRUCache = LRUCache;
-    function removeUndefinedValuesInObject(object3) {
-      Object.entries(object3).forEach(([key, value]) => {
+    function removeUndefinedValuesInObject(object4) {
+      Object.entries(object4).forEach(([key, value]) => {
         if (value === void 0 || value === "undefined") {
-          delete object3[key];
+          delete object4[key];
         }
       });
-      return object3;
+      return object4;
     }
     async function isValidFile(filePath) {
       try {
@@ -17515,11 +17515,11 @@ var require_googleauth = __commonJS({
         if (!configDir) {
           return null;
         }
-        const location = path9.join(configDir, "application_default_credentials.json");
-        if (!fs6.existsSync(location)) {
+        const location2 = path9.join(configDir, "application_default_credentials.json");
+        if (!fs6.existsSync(location2)) {
           return null;
         }
-        const client = await this._getApplicationCredentialsFromFilePath(location, options);
+        const client = await this._getApplicationCredentialsFromFilePath(location2, options);
         return client;
       }
       /**
@@ -19461,16 +19461,16 @@ var require_util3 = __commonJS({
     function isStream(obj) {
       return obj && typeof obj === "object" && typeof obj.pipe === "function" && typeof obj.on === "function";
     }
-    function isBlobLike(object3) {
-      if (object3 === null) {
+    function isBlobLike(object4) {
+      if (object4 === null) {
         return false;
-      } else if (object3 instanceof Blob) {
+      } else if (object4 instanceof Blob) {
         return true;
-      } else if (typeof object3 !== "object") {
+      } else if (typeof object4 !== "object") {
         return false;
       } else {
-        const sTag = object3[Symbol.toStringTag];
-        return (sTag === "Blob" || sTag === "File") && ("stream" in object3 && typeof object3.stream === "function" || "arrayBuffer" in object3 && typeof object3.arrayBuffer === "function");
+        const sTag = object4[Symbol.toStringTag];
+        return (sTag === "Blob" || sTag === "File") && ("stream" in object4 && typeof object4.stream === "function" || "arrayBuffer" in object4 && typeof object4.arrayBuffer === "function");
       }
     }
     function pathHasQueryOrFragment(url) {
@@ -19760,8 +19760,8 @@ var require_util3 = __commonJS({
         }
       );
     }
-    function isFormDataLike(object3) {
-      return object3 && typeof object3 === "object" && typeof object3.append === "function" && typeof object3.delete === "function" && typeof object3.get === "function" && typeof object3.getAll === "function" && typeof object3.has === "function" && typeof object3.set === "function" && object3[Symbol.toStringTag] === "FormData";
+    function isFormDataLike(object4) {
+      return object4 && typeof object4 === "object" && typeof object4.append === "function" && typeof object4.delete === "function" && typeof object4.get === "function" && typeof object4.getAll === "function" && typeof object4.has === "function" && typeof object4.set === "function" && object4[Symbol.toStringTag] === "FormData";
     }
     function addAbortListener(signal, listener) {
       if ("addEventListener" in signal) {
@@ -23417,17 +23417,17 @@ var require_util4 = __commonJS({
       if (!redirectStatusSet.has(response.status)) {
         return null;
       }
-      let location = response.headersList.get("location", true);
-      if (location !== null && isValidHeaderValue(location)) {
-        if (!isValidEncodedURL(location)) {
-          location = normalizeBinaryStringToUtf8(location);
+      let location2 = response.headersList.get("location", true);
+      if (location2 !== null && isValidHeaderValue(location2)) {
+        if (!isValidEncodedURL(location2)) {
+          location2 = normalizeBinaryStringToUtf8(location2);
         }
-        location = new URL(location, responseURL(response));
+        location2 = new URL(location2, responseURL(response));
       }
-      if (location && !location.hash) {
-        location.hash = requestFragment;
+      if (location2 && !location2.hash) {
+        location2.hash = requestFragment;
       }
-      return location;
+      return location2;
     }
     function isValidEncodedURL(url) {
       for (let i2 = 0; i2 < url.length; ++i2) {
@@ -23452,8 +23452,8 @@ var require_util4 = __commonJS({
       }
       return "allowed";
     }
-    function isErrorLike(object3) {
-      return object3 instanceof Error || (object3?.constructor?.name === "Error" || object3?.constructor?.name === "DOMException");
+    function isErrorLike(object4) {
+      return object4 instanceof Error || (object4?.constructor?.name === "Error" || object4?.constructor?.name === "DOMException");
     }
     function isValidReasonPhrase(statusText) {
       for (let i2 = 0; i2 < statusText.length; ++i2) {
@@ -23796,7 +23796,7 @@ var require_util4 = __commonJS({
         return new FastIterableIterator(target, kind);
       };
     }
-    function iteratorMixin(name, object3, kInternalIterator, keyIndex = 0, valueIndex = 1) {
+    function iteratorMixin(name, object4, kInternalIterator, keyIndex = 0, valueIndex = 1) {
       const makeIterator = createIterator(name, kInternalIterator, keyIndex, valueIndex);
       const properties = {
         keys: {
@@ -23804,7 +23804,7 @@ var require_util4 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function keys() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key");
           }
         },
@@ -23813,7 +23813,7 @@ var require_util4 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function values() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "value");
           }
         },
@@ -23822,7 +23822,7 @@ var require_util4 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function entries() {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             return makeIterator(this, "key+value");
           }
         },
@@ -23831,7 +23831,7 @@ var require_util4 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function forEach(callbackfn, thisArg = globalThis) {
-            webidl.brandCheck(this, object3);
+            webidl.brandCheck(this, object4);
             webidl.argumentLengthCheck(arguments, 1, `${name}.forEach`);
             if (typeof callbackfn !== "function") {
               throw new TypeError(
@@ -23844,7 +23844,7 @@ var require_util4 = __commonJS({
           }
         }
       };
-      return Object.defineProperties(object3.prototype, {
+      return Object.defineProperties(object4.prototype, {
         ...properties,
         [Symbol.iterator]: {
           writable: true,
@@ -24703,13 +24703,13 @@ var require_body = __commonJS({
         stream.cancel("Response object has been garbage collected").catch(noop2);
       }
     });
-    function extractBody(object3, keepalive = false) {
+    function extractBody(object4, keepalive = false) {
       let stream = null;
       let controller = null;
-      if (webidl.is.ReadableStream(object3)) {
-        stream = object3;
-      } else if (webidl.is.Blob(object3)) {
-        stream = object3.stream();
+      if (webidl.is.ReadableStream(object4)) {
+        stream = object4;
+      } else if (webidl.is.Blob(object4)) {
+        stream = object4.stream();
       } else {
         stream = new ReadableStream({
           pull() {
@@ -24723,19 +24723,19 @@ var require_body = __commonJS({
         });
       }
       assert(webidl.is.ReadableStream(stream));
-      let action = null;
+      let action2 = null;
       let source = null;
       let length = null;
       let type = null;
-      if (typeof object3 === "string") {
-        source = object3;
+      if (typeof object4 === "string") {
+        source = object4;
         type = "text/plain;charset=UTF-8";
-      } else if (webidl.is.URLSearchParams(object3)) {
-        source = object3.toString();
+      } else if (webidl.is.URLSearchParams(object4)) {
+        source = object4.toString();
         type = "application/x-www-form-urlencoded;charset=UTF-8";
-      } else if (webidl.is.BufferSource(object3)) {
-        source = webidl.util.getCopyOfBytesHeldByBufferSource(object3);
-      } else if (webidl.is.FormData(object3)) {
+      } else if (webidl.is.BufferSource(object4)) {
+        source = webidl.util.getCopyOfBytesHeldByBufferSource(object4);
+      } else if (webidl.is.FormData(object4)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -24745,7 +24745,7 @@ Content-Disposition: form-data`;
         const rn = new Uint8Array([13, 10]);
         length = 0;
         let hasUnknownSizeValue = false;
-        for (const [name, value] of object3) {
+        for (const [name, value] of object4) {
           if (typeof value === "string") {
             const chunk2 = textEncoder.encode(prefix + `; name="${formdataEscape(normalizeLinefeeds(name))}"\r
 \r
@@ -24773,8 +24773,8 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (hasUnknownSizeValue) {
           length = null;
         }
-        source = object3;
-        action = async function* () {
+        source = object4;
+        action2 = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
               yield* part.stream();
@@ -24784,33 +24784,33 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           }
         };
         type = `multipart/form-data; boundary=${boundary}`;
-      } else if (webidl.is.Blob(object3)) {
-        source = object3;
-        length = object3.size;
-        if (object3.type) {
-          type = object3.type;
+      } else if (webidl.is.Blob(object4)) {
+        source = object4;
+        length = object4.size;
+        if (object4.type) {
+          type = object4.type;
         }
-      } else if (typeof object3[Symbol.asyncIterator] === "function") {
+      } else if (typeof object4[Symbol.asyncIterator] === "function") {
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object3) || object3.locked) {
+        if (util2.isDisturbed(object4) || object4.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
-        stream = webidl.is.ReadableStream(object3) ? object3 : ReadableStreamFrom(object3);
+        stream = webidl.is.ReadableStream(object4) ? object4 : ReadableStreamFrom(object4);
       }
       if (typeof source === "string" || isUint8Array(source)) {
-        action = () => {
+        action2 = () => {
           length = typeof source === "string" ? Buffer.byteLength(source) : source.length;
           return source;
         };
       }
-      if (action != null) {
+      if (action2 != null) {
         ;
         (async () => {
-          const result = action();
+          const result = action2();
           const iterator = result?.[Symbol.asyncIterator]?.();
           if (iterator) {
             for await (const bytes of iterator) {
@@ -24828,12 +24828,12 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       const body = { stream, source, length };
       return [body, type];
     }
-    function safelyExtractBody(object3, keepalive = false) {
-      if (webidl.is.ReadableStream(object3)) {
-        assert(!util2.isDisturbed(object3), "The body has already been consumed.");
-        assert(!object3.locked, "The stream is locked.");
+    function safelyExtractBody(object4, keepalive = false) {
+      if (webidl.is.ReadableStream(object4)) {
+        assert(!util2.isDisturbed(object4), "The body has already been consumed.");
+        assert(!object4.locked, "The stream is locked.");
       }
-      return extractBody(object3, keepalive);
+      return extractBody(object4, keepalive);
     }
     function cloneBody(body) {
       const { 0: out1, 1: out2 } = body.stream.tee();
@@ -24905,14 +24905,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
     function mixinBody(prototype, getInternalState) {
       Object.assign(prototype.prototype, bodyMixinMethods(prototype, getInternalState));
     }
-    function consumeBody2(object3, convertBytesToJSValue, instance, getInternalState) {
+    function consumeBody2(object4, convertBytesToJSValue, instance, getInternalState) {
       try {
-        webidl.brandCheck(object3, instance);
+        webidl.brandCheck(object4, instance);
       } catch (e2) {
         return Promise.reject(e2);
       }
-      object3 = getInternalState(object3);
-      if (bodyUnusable(object3)) {
+      object4 = getInternalState(object4);
+      if (bodyUnusable(object4)) {
         return Promise.reject(new TypeError("Body is unusable: Body has already been read"));
       }
       const promise = createDeferredPromise();
@@ -24924,15 +24924,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           errorSteps(e2);
         }
       };
-      if (object3.body == null) {
+      if (object4.body == null) {
         successSteps(Buffer.allocUnsafe(0));
         return promise.promise;
       }
-      fullyReadBody(object3.body, successSteps, errorSteps);
+      fullyReadBody(object4.body, successSteps, errorSteps);
       return promise.promise;
     }
-    function bodyUnusable(object3) {
-      const body = object3.body;
+    function bodyUnusable(object4) {
+      const body = object4.body;
       return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
     }
     function bodyMimeType(requestOrResponse) {
@@ -34813,8 +34813,8 @@ var require_cache_handler = __commonJS({
         }
       }
     }
-    function getSameOriginPath(cacheKey, location) {
-      if (typeof location !== "string") {
+    function getSameOriginPath(cacheKey, location2) {
+      if (typeof location2 !== "string") {
         return void 0;
       }
       let originUrl;
@@ -34823,7 +34823,7 @@ var require_cache_handler = __commonJS({
       try {
         originUrl = new URL(cacheKey.origin);
         requestUrl = new URL(cacheKey.path, originUrl);
-        locationUrl = new URL(location, requestUrl);
+        locationUrl = new URL(location2, requestUrl);
       } catch {
         return void 0;
       }
@@ -37146,10 +37146,10 @@ var require_headers = __commonJS({
       while (j > i2 && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i2))) ++i2;
       return i2 === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i2, j);
     }
-    function fill(headers2, object3) {
-      if (Array.isArray(object3)) {
-        for (let i2 = 0; i2 < object3.length; ++i2) {
-          const header = object3[i2];
+    function fill(headers2, object4) {
+      if (Array.isArray(object4)) {
+        for (let i2 = 0; i2 < object4.length; ++i2) {
+          const header = object4[i2];
           if (header.length !== 2) {
             throw webidl.errors.exception({
               header: "Headers constructor",
@@ -37158,10 +37158,10 @@ var require_headers = __commonJS({
           }
           appendHeader(headers2, header[0], header[1]);
         }
-      } else if (typeof object3 === "object" && object3 !== null) {
-        const keys = Object.keys(object3);
+      } else if (typeof object4 === "object" && object4 !== null) {
+        const keys = Object.keys(object4);
         for (let i2 = 0; i2 < keys.length; ++i2) {
-          appendHeader(headers2, keys[i2], object3[keys[i2]]);
+          appendHeader(headers2, keys[i2], object4[keys[i2]]);
         }
       } else {
         throw webidl.errors.conversionFailed({
@@ -39901,9 +39901,9 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              const location = headersList.get("location", true);
+              const location2 = headersList.get("location", true);
               this.body = new Readable({ read: resume });
-              const willFollow = location && request.redirect === "follow" && redirectStatusSet.has(status);
+              const willFollow = location2 && request.redirect === "follow" && redirectStatusSet.has(status);
               const decoders = [];
               if (request.method !== "HEAD" && request.method !== "CONNECT" && !nullBodyStatus.includes(status) && !willFollow) {
                 const contentEncoding = headersList.get("content-encoding", true);
@@ -41935,15 +41935,15 @@ var require_connection = __commonJS({
       });
       return controller;
     }
-    function closeWebSocketConnection(object3, code, reason, validate = false) {
+    function closeWebSocketConnection(object4, code, reason, validate = false) {
       code ??= null;
       reason ??= "";
       if (validate) validateCloseCodeAndReason(code, reason);
-      if (isClosed(object3.readyState) || isClosing(object3.readyState)) {
-      } else if (!isEstablished(object3.readyState)) {
-        failWebsocketConnection(object3);
-        object3.readyState = states.CLOSING;
-      } else if (!object3.closeState.has(sentCloseFrameState.SENT) && !object3.closeState.has(sentCloseFrameState.RECEIVED)) {
+      if (isClosed(object4.readyState) || isClosing(object4.readyState)) {
+      } else if (!isEstablished(object4.readyState)) {
+        failWebsocketConnection(object4);
+        object4.readyState = states.CLOSING;
+      } else if (!object4.closeState.has(sentCloseFrameState.SENT) && !object4.closeState.has(sentCloseFrameState.RECEIVED)) {
         const frame2 = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
@@ -41961,11 +41961,11 @@ var require_connection = __commonJS({
         } else {
           frame2.frameData = emptyBuffer;
         }
-        object3.socket.write(frame2.createFrame(opcodes.CLOSE));
-        object3.closeState.add(sentCloseFrameState.SENT);
-        object3.readyState = states.CLOSING;
+        object4.socket.write(frame2.createFrame(opcodes.CLOSE));
+        object4.closeState.add(sentCloseFrameState.SENT);
+        object4.readyState = states.CLOSING;
       } else {
-        object3.readyState = states.CLOSING;
+        object4.readyState = states.CLOSING;
       }
     }
     function failWebsocketConnection(handler, code, reason, cause) {
@@ -46057,10 +46057,10 @@ var util;
       return obj[e2];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object3) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object4) => {
     const keys = [];
-    for (const key in object3) {
-      if (Object.prototype.hasOwnProperty.call(object3, key)) {
+    for (const key in object4) {
+      if (Object.prototype.hasOwnProperty.call(object4, key)) {
         keys.push(key);
       }
     }
@@ -49956,10 +49956,22 @@ var NEVER = INVALID;
 
 // src/prompt-language.ts
 import { createRequire } from "node:module";
-var QUOTED_SEGMENT = /"[^"]*"|“[^”]*”|「[^」]*」/g;
+var QUOTED_SEGMENT = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」|『[^』\n]*』|«[^»\n]*»|‘[^\n]*?’(?![\p{L}\p{N}])|(?<![\p{L}\p{N}])'[^\n]*?'(?![\p{L}\p{N}])/gu;
+var delimiters = [['"', '"'], ["\u201C", "\u201D"], ["\u300C", "\u300D"], ["\u300E", "\u300F"], ["\xAB", "\xBB"], ["\u2018", "\u2019"], ["'", "'"]];
+function quotedSegments(prompt, lines = []) {
+  const literals = [...new Set(lines.filter(Boolean))].sort((a, b) => b.length - a.length).flatMap((line) => delimiters.map(([open, close]) => (open + line + close).replace(/[$.*+?^{}()|[\]\\]/g, "\\$&")));
+  const pattern = literals.length ? new RegExp(literals.join("|") + "|" + QUOTED_SEGMENT.source, "gu") : QUOTED_SEGMENT;
+  return prompt.matchAll(pattern);
+}
 var NON_LATIN_RUN = /[^\P{L}\p{Script=Latin}]+(?:[ \t]+[^\P{L}\p{Script=Latin}]+)*/u;
-function nonEnglishOutsideQuotes(prompt) {
-  const match = prompt.replace(QUOTED_SEGMENT, " ").match(NON_LATIN_RUN);
+function nonEnglishOutsideQuotes(prompt, lines = []) {
+  let start = 0;
+  for (const quote of quotedSegments(prompt, lines)) {
+    const outside = prompt.slice(start, quote.index).match(NON_LATIN_RUN);
+    if (outside) return outside[0];
+    start = quote.index + quote[0].length;
+  }
+  const match = prompt.slice(start).match(NON_LATIN_RUN);
   return match ? match[0] : null;
 }
 var load = createRequire(import.meta.url);
@@ -50032,7 +50044,18 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
+var scenePromptDrafts = external_exports.array(external_exports.object({
+  engine: external_exports.string().trim().min(1),
+  model: external_exports.string().trim().min(1).optional(),
+  operation: external_exports.string().trim().min(1),
+  prompt: external_exports.string().min(1).max(32e3).refine((text2) => !!text2.trim(), "Enter a complete scene prompt")
+}).strict()).refine(
+  (drafts) => new Set(drafts.map((d) => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length,
+  "Keep one edited scene prompt per engine, model and operation"
+);
 var sceneVideoDirectionSchema = external_exports.object({
+  motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
+  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -50265,6 +50288,17 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   ] };
 }
 
+// src/scene-edit-grammar.ts
+var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
+var object2 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|latch|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
+var noun = "(?:the|a|an|her|his|their|its) (?:" + material + " ){0,3}" + object2;
+var figure = "(?:\u24C8(?:['\u2019]s (?:face|eyes|hands?|shoulders?|coat|back))?|\u24C2)";
+var subject = "(?:" + figure + "|" + noun + ")";
+var location = "(?:(?:at|by|near|beside|behind|past|through|across|towards?|in front of|away from) " + subject + ")";
+var timing = "(?: (?:after|before|during|following) (?:the )?(?:first|second|third|fourth|next|last|final|opening|closing) (?:spoken )?(?:line|turn|sentence)| until \u24C8 (?:finishes|begins|ends) (?:her|his|their|the) (?:first |last |next |final )?(?:line|turn|sentence))?";
+var action = "(?:steps? (?:back|forward|aside)|(?:is |are )?(?:standing|waiting) " + location + "|(?:waits?|stands?|walks?|moves?|leans?|stops?)(?: " + location + ")?|(?:watches?|sees?|greets?|approaches?) " + subject + "|(?:looks?|glances?|turns?) (?:at|to|towards?) " + subject + "|(?:nods?|smiles?|blinks?|frowns?|shrugs?|pauses?|hesitates?|turns? away)(?: slowly| briefly)?|(?:raises?|lowers?) (?:an eyebrow|her eyes|his eyes|their eyes|a hand)|(?:raises?|lifts?) (?:a|her|his|their) hand to answer the (?:door|phone)|exchanges? (?:a glance|glances|a look)(?: " + location + ")?)";
+var stage = new RegExp("^(?:(?:hold on|open on|cut to|show|pan to|push in on|close on) " + subject + "|rack focus from " + subject + " to " + subject + "|keep " + figure + " (?:sharp|in focus|in frame|still)|use a (?:wide|medium|close|tracking) shot of " + figure + "(?: and " + figure + ")?|\u24C8(?: and \u24C8)? " + action + ")(?: (?:as|while) \u24C8 " + action + ")?" + timing + "$", "iu");
+
 // src/scene-prompt-profile.ts
 var ordered = {
   cutTiming: "cut_order",
@@ -50272,8 +50306,8 @@ var ordered = {
   allowsGeneratedVoice: false
 };
 var holds = { ...ordered, cutTiming: "approximate_holds" };
-var veo = { ...ordered, cutTiming: "time_ranges", allowsGeneratedVoice: true };
-var seedance = { ...ordered, cutTiming: "action_beats" };
+var veo = { ...ordered, writer: "veo", cutTiming: "time_ranges", allowsGeneratedVoice: true };
+var seedance = { ...ordered, writer: "seedance", cutTiming: "action_beats" };
 var pictureTags = { ...seedance, referenceLabels: "picture_audio_tags" };
 var operations = {
   veo_text2video: veo,
@@ -50283,11 +50317,23 @@ var operations = {
   seedance_text2video: seedance,
   seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
   seedance_reference: seedance,
-  astra_genai_img2video: holds,
-  astra_genai_msr: holds,
-  minimax_reference: { ...ordered, cutTiming: "action_beats", referenceLabels: "reference_indexed" },
-  fasth3_omni_reference: pictureTags,
-  heygen_reference: pictureTags
+  astra_genai_img2video: { ...holds, writer: "ltx" },
+  astra_genai_text2video: { ...ordered, writer: "ltx" },
+  astra_genai_audio2video: { ...ordered, writer: "recorded" },
+  astra_genai_desktop_audio2video: { ...ordered, writer: "recorded" },
+  astra_audio2video: { ...ordered, writer: "recorded" },
+  ltx_api_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_img2video: { ...ordered, writer: "ltx" },
+  ltx_desktop_text2video: { ...ordered, writer: "ltx" },
+  ltx_api_img2video: { ...ordered, writer: "ltx" },
+  minimax_img2video: { ...ordered, writer: "hostedH3" },
+  heygen_img2video: { ...ordered, writer: "heygen" },
+  ltx_video_generate: { ...ordered, writer: "ltx" },
+  astra_genai_msr: { ...holds, writer: "msr" },
+  minimax_reference: { ...ordered, writer: "hostedH3", cutTiming: "action_beats", referenceLabels: "reference_indexed" },
+  fasth3_omni_reference: { ...pictureTags, writer: "fastH3" },
+  heygen_reference: { ...pictureTags, writer: "heygen" }
 };
 function scenePromptProfile(tool, model2) {
   const profile = operations[tool ?? ""] ?? ordered;
@@ -53323,12 +53369,12 @@ var msrReferences = external_exports.array(external_exports.object({
   "Supply exactly one imageUri or imagePath"
 ).refine((ref) => oneOf(ref.audioUri, ref.audioPath) <= 1, "Supply at most one audioUri or audioPath")).min(1).max(5);
 function validateVoiceSlots(references, issue) {
-  let subject = 0;
+  let subject2 = 0;
   for (const ref of references) {
-    subject += Number(!ref.background);
+    subject2 += Number(!ref.background);
     if (!oneOf(ref.audioUri, ref.audioPath)) continue;
     if (ref.background) issue("MSR voice samples belong to subjects, not the background");
-    else if (subject > 2) issue("MSR voice samples fit the first two subjects only");
+    else if (subject2 > 2) issue("MSR voice samples fit the first two subjects only");
   }
 }
 var genaiImageToVideoSchema = textVideoFields.extend({
@@ -53603,11 +53649,11 @@ function resolveVideoDuration(tool, input) {
   for (const key of ["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"]) {
     if (input[key] !== void 0) throw new Error("requiredSeconds is mutually exclusive with " + key + "; supply the shot need or an exact legacy request, not both");
   }
-  const timing = (0, import_video_duration.minimumDuration)(input.requiredSeconds, videoDurationLimits(tool, input));
+  const timing2 = (0, import_video_duration.minimumDuration)(input.requiredSeconds, videoDurationLimits(tool, input));
   const { requiredSeconds: _required, ...args } = input;
-  if (timing.numFrames !== void 0) args.numFrames = timing.numFrames;
-  else args.durationSeconds = timing.durationSeconds;
-  return { args, timing };
+  if (timing2.numFrames !== void 0) args.numFrames = timing2.numFrames;
+  else args.durationSeconds = timing2.durationSeconds;
+  return { args, timing: timing2 };
 }
 
 // src/video-registry.ts
@@ -53783,6 +53829,7 @@ function priceOf(tool, args = {}) {
       return { key: null, quantity: null, note: "Invalid duration plan: " + String(error) };
     }
   }
+  if (tool === "tts_local_voxcpm2") return { key: "tts.voxcpm2-local", quantity: str(args.text, "").length / 1e3, note: "Local MLX inference" };
   if (tool === "tts_astra_genai") return { key: "tts.astra-genai", quantity: null, note: "Gateway speech pricing unverified" };
   if (["astra_genai_catalog", "astra_genai_jobs", "astra_genai_desktop_status"].includes(tool)) return { key: null, quantity: null };
   if (tool.startsWith("astra_genai_")) {
@@ -53975,6 +54022,8 @@ var videoPlanSchema = external_exports.object({
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
+  wholeScene: external_exports.literal(true).optional(),
+  prompt: external_exports.string().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -54294,9 +54343,9 @@ function describeEvaluationError(error, filename) {
   const message = typeof detail.message === "string" ? detail.message : String(error);
   const stack = typeof detail.stack === "string" ? detail.stack : "";
   const locations = [...stack.matchAll(new RegExp(`${escapeRegExp(filename)}:([0-9]+)(?::([0-9]+))?`, "g"))];
-  const location = locations.find((match) => match[2]) ?? locations[0];
-  const line = location?.[1] ?? "1";
-  const column = location?.[2] ?? "1";
+  const location2 = locations.find((match) => match[2]) ?? locations[0];
+  const line = location2?.[1] ?? "1";
+  const column = location2?.[2] ?? "1";
   const wrapped = new Error(
     `${filename}:${line}:${column}: ${message}. Allowed syntax: storyboard JavaScript that assigns JSON-serializable data to window.*; eval and Function are disabled.`
   );
@@ -54983,7 +55032,7 @@ var speechManageSchema = external_exports.object({
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash = (s2) => createHash4("sha256").update(s2).digest("hex");
-var object2 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var speechContract = () => nodeModule4.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
 var videoSeconds = (file) => Number(execFileSync5(
   "ffprobe",
@@ -54991,9 +55040,9 @@ var videoSeconds = (file) => Number(execFileSync5(
   { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
 ).trim());
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const production = object2(scene.productionPlan), cuts = production.cuts;
+  const production = object3(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
-    const cut = object2(cuts[0]);
+    const cut = object3(cuts[0]);
     if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve5(boardDir, cut.path) !== resolve5(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
@@ -55019,15 +55068,15 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
 }
 function bindGeneratedSoundtrack(scene, next, clipSeconds) {
   const { carry } = nodeModule4.createRequire(import.meta.url)("../../skills/produce/references/edit-plan.js");
-  const edit2 = object2(scene.edit);
-  const visual = object2(scene.visual);
+  const edit2 = object3(scene.edit);
+  const visual = object3(scene.visual);
   const transition = String(scene.transition ?? "cut");
-  if (!clipSeconds || edit2.pre || edit2.post || visual.slide || visual.reuse !== void 0 || object2(visual.video).groupPlan || scene.type === "broll" || scene.type === "outro" || carry.test(transition) || carry.test(String(next?.transition)) || transition.startsWith("dip") && edit2.pre !== 0) return false;
+  if (!clipSeconds || edit2.pre || edit2.post || visual.slide || visual.reuse !== void 0 || object3(visual.video).groupPlan || scene.type === "broll" || scene.type === "outro" || carry.test(transition) || carry.test(String(next?.transition)) || transition.startsWith("dip") && edit2.pre !== 0) return false;
   const start = Number(edit2.in ?? 0);
   const end = edit2.out ?? (typeof scene.duration === "number" ? start + scene.duration : clipSeconds);
   if (typeof end !== "number" || !Number.isFinite(end) || end <= start || end > clipSeconds + 1e-3) return false;
   if (edit2.out === void 0 && typeof scene.duration === "number") scene.edit = { ...edit2, out: end };
-  scene.sound = { ...object2(scene.sound), audioSource: "video" };
+  scene.sound = { ...object3(scene.sound), audioSource: "video" };
   return true;
 }
 function speechRevision(line, character) {
@@ -55035,7 +55084,13 @@ function speechRevision(line, character) {
 }
 function currentAudio(line, character) {
   try {
-    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(
+      line.audio.path,
+      line.audio.generation,
+      character?.tts,
+      line,
+      { required: character?.tts?.engine === "mlx-audio", referenceSha256: character?.voiceReference?.sha256 }
+    );
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts && voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 && existsSync5(line.audio.path) && hash(readFileSync7(line.audio.path)) === line.audio.sha256;
   } catch {
     return false;
@@ -55051,6 +55106,9 @@ function speechAudioPlan(line, character, context) {
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language);
   const compiled = compileActing(line.tts, line.acting || void 0, { ...voice, language });
+  if (compiled.generator === "tts_local_voxcpm2" && character?.voiceReference) {
+    Object.assign(compiled.generation, { referenceAudio: character.voiceReference.path, referenceSha256: character.voiceReference.sha256 });
+  }
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === "string" ? voice.model.trim() : void 0);
   return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: "not_reviewed" };
 }
@@ -55093,8 +55151,8 @@ function speechVideoPlan(input, capabilities, sceneNo) {
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const saved = object2(object2(object2(scene.visual).video).promptSource);
-  const design = object2(object2(scene.shot).videoDesign);
+  const saved = object3(object3(object3(scene.visual).video).promptSource);
+  const design = object3(object3(scene.shot).videoDesign);
   const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
@@ -55142,22 +55200,22 @@ function manageSpeech(args, options = {}) {
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
-  const doc = object2(win.SB_DOC);
+  const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object2(rawCharacters)).map(([id, c]) => ({ ...object2(c), id }))).map((c) => resolveCharacterVoice(object2(c), { episode: dirname6(dirname6(file)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname6(dirname6(file)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
   const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname6(file), board: win });
   const scenes = win.SCENES;
-  const timedShot = (scene) => actingContract().withThoughtClock(scene, object2(win.STRUCTURE).scenes);
+  const timedShot = (scene) => actingContract().withThoughtClock(scene, object3(win.STRUCTURE).scenes);
   let changed = false;
-  let timing;
+  let timing2;
   let soundtrack;
   let clearedTrim;
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
-    const needsNarrator = object2(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    const needsNarrator = object3(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
       throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s2) => Number(String(s2.id || "").replace(/^s/, "")) || 0));
@@ -55194,17 +55252,17 @@ function manageSpeech(args, options = {}) {
       if (args.patch.voiceoverKind) line.delivery = "voiceover";
       if (line.voiceoverKind === null || line.delivery !== "voiceover") delete line.voiceoverKind;
       if (args.patch.acting === null) delete line.acting;
-      if (args.patch.speaker && object2(win.STORY).version === "story-v2") {
+      if (args.patch.speaker && object3(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
         for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
-          const performance2 = object2(event);
+          const performance2 = object3(event);
           if (performance2.group === group && ["dialogue", "narration"].includes(String(performance2.kind)))
             performance2.character = line.speaker;
         }
       }
       if (speechRevision(line, character(line.speaker)) !== prior) {
-        const video = object2(object2(scene.visual).video);
-        const binding = object2(video.speechBinding);
+        const video = object3(object3(scene.visual).video);
+        const binding = object3(video.speechBinding);
         const changedRoute = speechContract().invalidateVoiceoverChange(scene, priorLines);
         invalidated = { audio: oldAudio || null, video: changedRoute || Object.keys(video).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video : null, edit: true };
         delete line.audio;
@@ -55216,7 +55274,8 @@ function manageSpeech(args, options = {}) {
       if (!args.audioPath) throw new Error("audioPath is required");
       const audioPath = resolve5(dirname6(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
-      const voice = audioCharacter(line.speaker)?.tts;
+      const actor = audioCharacter(line.speaker);
+      const voice = actor?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error("Generation arguments do not match the pinned character voice: " + voiceErrors.join("; "));
       const bytes = readFileSync7(audioPath);
@@ -55226,12 +55285,12 @@ function manageSpeech(args, options = {}) {
         args.generation,
         voice,
         line,
-        { required: voice?.engine === "astra-genai" }
+        { required: ["astra-genai", "mlx-audio"].includes(String(voice?.engine)), referenceSha256: actor?.voiceReference?.sha256 }
       );
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
-      const video = object2(object2(scene.visual).video), binding = object2(video.speechBinding);
-      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object2).find((a) => a.lineId === line.id) : void 0;
+      const video = object3(object3(scene.visual).video), binding = object3(video.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object3).find((a) => a.lineId === line.id) : void 0;
       if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
         const dependsOnSpeech = binding.mode !== "native" && (line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)));
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video).length ? video : null, edit: true };
@@ -55241,7 +55300,7 @@ function manageSpeech(args, options = {}) {
       line.mediaStatus = "audio_ready";
     }
     const clock = actingContract().planScenePerformance(timedShot(scene), measuredDuration);
-    timing = {
+    timing2 = {
       shotId: scene.id,
       storedSeconds: scene.duration,
       measuredSeconds: clock.durationSeconds,
@@ -55261,9 +55320,9 @@ function manageSpeech(args, options = {}) {
     const result = contract2.retime(timedShot(scene), args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
-    const video = object2(object2(scene.visual).video);
+    const video = object3(object3(scene.visual).video);
     if (Object.keys(video).length) video.speechStatus = "stale";
-    timing = {
+    timing2 = {
       shotId: scene.id,
       previousSeconds: result.previousSeconds,
       durationSeconds: result.plan.durationSeconds,
@@ -55285,7 +55344,7 @@ function manageSpeech(args, options = {}) {
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname6(dirname6(file));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
-    const selectedVideo = object2(scene.visual?.video);
+    const selectedVideo = object3(scene.visual?.video);
     speechContract().assertNoPostLipSync({
       direction: owner?.videoDirection,
       mode: selectedVideo.mode,
@@ -55346,7 +55405,7 @@ function manageSpeech(args, options = {}) {
       const renderedScene = receipts.sceneRenders.get(videoPath);
       const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
-        const video2 = object2(card.visual?.video), binding = object2(video2.speechBinding);
+        const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
         const source = binding.videoPath ?? video2.clip ?? video2.src;
         const original = typeof source === "string" ? resolve5(dirname6(file), source) : void 0;
@@ -55362,7 +55421,7 @@ function manageSpeech(args, options = {}) {
       const native = plan.mode === "native";
       if (native) requireNativeVideo(videoPath);
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
-      const sound = object2(scene.sound);
+      const sound = object3(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       let driverSha256;
       if (plan.mode === "audio_conditioned") {
@@ -55391,12 +55450,12 @@ function manageSpeech(args, options = {}) {
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
-      const visual = object2(scene.visual);
-      const video = object2(visual.video);
+      const visual = object3(scene.visual);
+      const video = object3(visual.video);
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
-      const priorBinding = object2(video.speechBinding);
+      const priorBinding = object3(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const trim = object2(scene.edit);
+      const trim = object3(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {
         const start = renderedShot.start_frame / renderedScene.fps, end = renderedShot.end_frame / renderedScene.fps;
@@ -55436,7 +55495,7 @@ function manageSpeech(args, options = {}) {
         invalidated = { video, edit: true };
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file), videoPath, video.clip, plan.warnings);
-        const trim2 = object2(scene.edit);
+        const trim2 = object3(scene.edit);
         if (native && replacement && (trim2.in !== void 0 || trim2.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim2;
           scene.edit = kept;
@@ -55498,7 +55557,7 @@ function manageSpeech(args, options = {}) {
           plan.warnings.push("Could not decode the bound clip audio; inspect its sound source before assembly.");
         }
         if (status === "signal" && sound.audioSource === "video") {
-          const end = object2(scene.edit).out;
+          const end = object3(scene.edit).out;
           if (typeof end === "number" && !(end <= (boundSeconds ?? videoSeconds(videoPath)) + 1e-3))
             throw new Error("The replacement cannot cover edit.out; keep the current source or revise the authored trim before attaching it.");
         } else if (status === "signal") {
@@ -55507,7 +55566,7 @@ function manageSpeech(args, options = {}) {
             plan.warnings.push("This edit does not use the clip as sync footage. Carry its sound into the separate assembly audio or add post effects and ambience.");
         } else if (status === "silent" || status === "missing") {
           const reason = status === "missing" ? "has no audio stream" : "has a silent audio stream";
-          if (sound.audioSource === "video" && (object2(scene.edit).out !== void 0 || Array.isArray(sound.effects) && sound.effects.some((effect) => ["native", "input"].includes(String(object2(effect).delivery)))))
+          if (sound.audioSource === "video" && (object3(scene.edit).out !== void 0 || Array.isArray(sound.effects) && sound.effects.some((effect) => ["native", "input"].includes(String(object3(effect).delivery)))))
             throw new Error(`The replacement ${reason}; keep the current source or revise the authored soundtrack and trim before attaching it.`);
           const silentSound = { ...sound };
           delete silentSound.audioSource;
@@ -55545,12 +55604,12 @@ function manageSpeech(args, options = {}) {
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
     const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win });
-    const generation = { ...result.generation, ...result.generator === "tts_astra_genai" ? {
+    const generation = { ...result.generation, ...["tts_astra_genai", "tts_local_voxcpm2"].includes(result.generator) ? {
       speechContext: { path: file, lineId: line.id, expectedRevision: revision }
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object2(object2(scene.visual).video).speechStatus !== "stale" && object2(object2(object2(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object3(object3(scene.visual).video).speechStatus !== "stale" && object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

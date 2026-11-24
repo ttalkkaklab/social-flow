@@ -27,6 +27,7 @@ For the browser edition, open `docs/index.html` from a checkout. It includes eve
 
 - [Recovering an interrupted image request](image-request-recovery.md)
 - [Stock media and attribution](stock-media.md)
+- [Video model prompt research and examples](research/2026-11-24-video-model-prompting/README.md) and [scene prompt design](research/2026-11-24-video-model-prompting/scene-prompt-design.md)
 - [Local LTX video](mlx-ltx-2.5.md) and [FastH3 Omni video](fasth3-omni.md)
 - [MCP tool contracts](tool-contracts.md) and the [pipeline manifest](pipeline-manifest.md)
 - [Offline review pages](design-system/DESIGN.md), [motion graphics](design-system/MOTION.md) and [bundled fonts](design-system/FONTS.md)

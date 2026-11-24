@@ -820,7 +820,7 @@ speech_manage and record any combined scene WAV's generation receipt and ordered
 Use WAV in `.work/pcm/`; align the edit to the generated duration. Continue with not_reviewed
 speech. Do not invoke automatic listening, STT, retry-to-pass or human listening approval.
 
-Use Gemini or ElevenLabs `eleven_v4` only; local TTS is removed. Follow
+Use the saved speech model, including local `mlx-audio/voxcpm2` on a configured Mac. Follow
 [acting prompts](../../produce/references/acting-prompts.md) for each line. If a selected
 model is unavailable, report the error without changing model or voice.
 

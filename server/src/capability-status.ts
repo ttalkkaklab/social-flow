@@ -1,3 +1,4 @@
+import { localVoxConfigured } from './local-voxcpm2.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 /**
  * capability_status — what this machine can actually do right now.
@@ -111,6 +112,8 @@ export function capabilityStatus(): {
     {
       capability: 'tts',
       providers: [
+        { provider: 'mlx-audio', configured: localVoxConfigured(), needs: 'Local VoxCPM2 Python and model directory',
+          note: 'tts_local_voxcpm2 via tts_route. Paths configured; synthesis is checked on execution.' },
         { provider: 'astra-genai', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'tts_astra_genai; discover aliases, voices and capabilities with astra_genai_catalog kind:speech. Configuration is not a health check.' },
         { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
           note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },

@@ -13,7 +13,7 @@ import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js') as { generationVoiceErrors(voice: unknown, proof: unknown, line?: unknown): string[] };
 const characterSpeechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-speech.js') as {
   characterSpeech(character: unknown, context?: {boardDir: string; board: unknown}): Character;
-  verifiedSpeechGeneration(audioPath: string, proof: unknown, voice: unknown, line: unknown, options?: {required: boolean}): NonNullable<z.infer<typeof speechManageSchema>['generation']>;
+  verifiedSpeechGeneration(audioPath: string, proof: unknown, voice: unknown, line: unknown, options?: {required: boolean; referenceSha256?: string}): NonNullable<z.infer<typeof speechManageSchema>['generation']>;
   conditioningAudioSha256(videoPath: string): string | undefined;
 };
 import { readBoard, serializeBoard } from './storyboard.js';
@@ -63,7 +63,7 @@ export const speechManageSchema = z.object({
   capabilities: z.object({ provider: z.string().min(1), model: z.string().min(1), audioConditioning: z.boolean(), lipSync: z.boolean(), postLipSync: z.boolean(), nativeSpeech: z.boolean().optional(), evidence: z.string().min(1) }).strict().optional(),
 }).strict();
 type Line = { id?: string; speaker?: string; tts: string; sub?: string; delivery?: z.infer<typeof delivery>; acting?: z.infer<typeof actingSchema> | null; audio?: { path: string; sha256: string; revision: string; status: string; generation: NonNullable<z.infer<typeof speechManageSchema>['generation']> }; [key: string]: unknown };
-type Character = { id: string; name?: string; tts?: Record<string, unknown> };
+type Character = { voiceReference?: {path: string; sha256: string}; id: string; name?: string; tts?: Record<string, unknown> };
 const hash = (s: string | Buffer) => createHash('sha256').update(s).digest('hex');
 const object = (v: unknown): Record<string, unknown> => v && typeof v === 'object' && !Array.isArray(v) ? v as Record<string, unknown> : {};
 const speechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-contract.js') as {
@@ -129,7 +129,8 @@ export function speechRevision(line: Line, character: Character | undefined): st
 }
 function currentAudio(line: Line, character: Character | undefined): boolean {
   try {
-    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
+    if (line.audio) characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line,
+      {required: character?.tts?.engine === 'mlx-audio', referenceSha256: character?.voiceReference?.sha256});
     return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts &&
       voiceContract().generationVoiceErrors(character?.tts,line.audio.generation,line).length===0 &&
       existsSync(line.audio.path) && hash(readFileSync(line.audio.path))===line.audio.sha256;
@@ -146,6 +147,9 @@ export function speechAudioPlan(line: Line, character: Character | undefined, co
   const direction = actingContract().directionSupport(voice, line.acting);
   const language = validator.normalizeLanguage(voice.language) as string;
   const compiled = compileActing(line.tts, line.acting || undefined, {...voice,language});
+  if (compiled.generator === 'tts_local_voxcpm2' && character?.voiceReference) {
+    Object.assign(compiled.generation, {referenceAudio: character.voiceReference.path, referenceSha256: character.voiceReference.sha256});
+  }
   const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === 'string' ? voice.model.trim() : undefined);
   return {...compiled, capabilities: modelContract, arguments:compiled.generation, expectedText:line.tts, speechRevision:speechRevision(line,character), language, direction, review:'not_reviewed'};
 }
@@ -294,13 +298,14 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
       if (!args.audioPath) throw new Error('audioPath is required');
       const audioPath = resolve(dirname(file), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error('Attach the actual generation arguments and exact line text');
-      const voice = audioCharacter(line.speaker)?.tts;
+      const actor = audioCharacter(line.speaker);
+      const voice = actor?.tts;
       const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
       if (voiceErrors.length) throw new Error('Generation arguments do not match the pinned character voice: '+voiceErrors.join('; '));
       const bytes = readFileSync(audioPath);
       if (!bytes.length) throw new Error('Audio file is empty');
       const generation = characterSpeechContract().verifiedSpeechGeneration(audioPath, args.generation, voice, line,
-        {required: voice?.engine === 'astra-genai'});
+        {required: ['astra-genai','mlx-audio'].includes(String(voice?.engine)), referenceSha256: actor?.voiceReference?.sha256});
       const priorAudio = line.audio;
       const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
       const video = object(object(scene.visual).video), binding = object(video.speechBinding);
@@ -576,7 +581,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
   }
   const audioPlans = args.action === 'plan_audio' ? selected.map(({scene,line}) => {
     const result = speechAudioPlan(line, character(line.speaker), {boardDir: dirname(file), board: win});
-    const generation = {...result.generation, ...(result.generator === 'tts_astra_genai' ? {
+    const generation = {...result.generation, ...(['tts_astra_genai','tts_local_voxcpm2'].includes(result.generator) ? {
       speechContext: {path: file, lineId: line.id, expectedRevision: revision},
     } : {})};
     return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation};
