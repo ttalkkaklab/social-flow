@@ -72,7 +72,9 @@ export function tikfinityComment(raw: string, sessionId: string): ChatMessage | 
   if (!text || text.length > 500) return;
   const user = identifier(data.userId ?? data.user?.userId ?? data.uniqueId ?? data.user?.uniqueId);
   const speaker = user && 'tt-' + createHash('sha256').update(sessionId).update(user).digest('hex').slice(0, 12);
-  return { source: 'tiktok', id, text, ...(speaker && { speaker }) };
+  const displayName = data.nickname ?? data.user?.nickname;
+  return { source: 'tiktok', id, text, ...(speaker && { speaker }),
+    ...(typeof displayName === 'string' && { displayName: displayName.slice(0, 128) }) };
 }
 
 function bridgeAddress() {

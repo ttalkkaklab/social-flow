@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type { Utterance } from './live-encoder.js';
 import type { ChatMessage } from './live-character.js';
 
@@ -41,6 +42,28 @@ export class LiveRenderPool {
   }
 }
 
+/** Keep only the next decoded FAQ on standby. New bodies join the current shuffle. */
+export class FaqRotation {
+  private bodies = new Set<string>();
+  private remaining: string[] = [];
+  private last?: string;
+  add(text: string) {
+    if (this.bodies.has(text)) return;
+    this.bodies.add(text);
+    this.remaining.push(text);
+  }
+  next() {
+    if (!this.remaining.length) this.remaining = [...this.bodies];
+    if (!this.remaining.length) return;
+    const eligible = this.remaining.filter(text => text !== this.last);
+    const choices = eligible.length ? eligible : this.remaining;
+    const next = choices[randomInt(choices.length)];
+    this.remaining.splice(this.remaining.indexOf(next), 1);
+    this.last = next;
+    return next;
+  }
+}
+
 interface SpokenTurn {
   host: string;
   answering?: Pick<ChatMessage, 'speaker' | 'text'>;
@@ -51,9 +74,11 @@ interface SpokenTurn {
 export class LiveProgram {
   readonly ready: Utterance[] = [];
   private history: SpokenTurn[] = [];
+  private answeredBodies = new Set<string>();
   private chat: Pick<ChatMessage, 'speaker' | 'text'>[] = [];
   private contextVersion = 0;
   private spokenStandby: Utterance[] = [];
+  faqStandby?: Utterance;
   readonly draftingHosts = new Map<string, string>();
   readonly draftingReplies = new Map<string, SpokenTurn>();
 
@@ -69,12 +94,12 @@ export class LiveProgram {
       onAir: this.history.slice(),
       recentChat: this.chat.slice(),
       scheduledHost: [...this.ready.filter(item => !isReply(item.source)).map(item => item.text), ...this.draftingHosts.values()],
-      scheduledReplies: [...this.ready.filter(item => isReply(item.source)).map(item => ({ host: item.text, answering: item.question })), ...this.draftingReplies.values()]
+      scheduledReplies: [...this.ready.filter(item => isReply(item.source) && !item.address).map(item => ({ host: item.text, answering: item.question })), ...this.draftingReplies.values()]
     };
   }
 
   get version() { return this.contextVersion; }
-  get readyReplies() { return this.ready.filter(item => isReply(item.source)).length; }
+  get readyReplies() { return this.ready.filter(item => isReply(item.source) && !item.address).length; }
   get canPlanHost() {
     return this.history.length > 0;
   }
@@ -94,6 +119,20 @@ export class LiveProgram {
   queueReply(clip: Utterance, alreadyPlanned = false) {
     if (!alreadyPlanned) this.changeContext();
     this.ready.push(clip);
+  }
+
+  // The caller serializes identical bodies while allowing different questions to render concurrently.
+  async offerReply(body: Utterance, address: string | undefined,
+    renderAddress: (text: string) => Promise<Pick<Utterance, 'motion' | 'pcm'>>,
+    onAddressError: (error: unknown) => void) {
+    if (address && !this.answeredBodies.has(body.text)) {
+      try {
+        const clip = await renderAddress(address);
+        this.queueReply({ ...clip, source: body.source, id: body.id, text: address, address: true }, true);
+      } catch (error) { onAddressError(error); }
+    }
+    this.queueReply(body, true);
+    this.answeredBodies.add(body.text);
   }
 
   addStandby(clip: Utterance) { this.spokenStandby.push(clip); }
@@ -119,14 +158,17 @@ export class LiveProgram {
     if (index < 0 && allowHost && !awaitingViewer && this.ready.length) index = 0;
     let clip: Utterance | undefined;
     if (index >= 0) [clip] = this.ready.splice(index, 1);
-    else if (allowHost) {
+    else if (allowHost && this.faqStandby && this.faqStandby.text !== this.history.at(-1)?.host) {
+      clip = this.faqStandby;
+      this.faqStandby = undefined;
+    } else if (allowHost) {
       const next = this.spokenStandby.findIndex(item =>
         (!awaitingViewer || item.source === 'standby') && item.text !== this.history.at(-1)?.host);
       if (next >= 0) {
         [clip] = this.spokenStandby.splice(next, 1);
       }
     }
-    if (!clip) return;
+    if (!clip || clip.address) return clip;
     if (clip.replay || clip.source === 'standby') {
       const text = clip.text;
       this.history = this.history.filter(turn => turn.answering || turn.host !== text);

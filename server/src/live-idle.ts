@@ -1,5 +1,5 @@
 import { randomInt, randomUUID, createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -59,13 +59,25 @@ export function idleRetake(request: ReturnType<typeof idleRequests>[number], ind
   return candidate;
 }
 
-export async function prepareIdleClips(image: string, project: string, concept: string, signal: AbortSignal,
-  progress: (index: number, path: string) => void) {
+function idleCache(image: string, project: string, concept: string) {
   const requests = idleRequests(image, concept);
   const hash = createHash('sha256').update(readFileSync(image)).update(astraVideoBaseUrl());
   for (const {firstFramePath, lastFramePath, ...request} of requests) hash.update(JSON.stringify(request));
   const directory = join(project, '.social-flow', 'live-idle', hash.digest('hex'));
   const gatewayDir = join(directory, createHash('sha256').update(astraGenaiBaseUrl()).digest('hex'));
+  return {requests,directory,gatewayDir};
+}
+
+export function idleCacheReady(image: string, project: string, concept: string) {
+  const marker = join(idleCache(image,project,concept).gatewayDir,'verified.json');
+  if (!existsSync(marker)) return false;
+  const files: string[] = JSON.parse(readFileSync(marker,'utf8'));
+  return files.length === idleCount && files.every(file => existsSync(file));
+}
+
+export async function prepareIdleClips(image: string, project: string, concept: string, signal: AbortSignal,
+  progress: (index: number, path: string) => void) {
+  const {requests,directory,gatewayDir} = idleCache(image,project,concept);
   mkdirSync(gatewayDir, {recursive: true, mode: 0o700});
   const paths: string[] = [];
   let reference: Buffer | undefined;
@@ -94,6 +106,10 @@ export async function prepareIdleClips(image: string, project: string, concept: 
       break;
     }
   }
+  const marker = join(gatewayDir,'verified.json');
+  const tmp = marker + '.' + randomUUID() + '.tmp';
+  writeFileSync(tmp,JSON.stringify(paths),{mode:0o600});
+  renameSync(tmp,marker);
   return paths;
 }
 

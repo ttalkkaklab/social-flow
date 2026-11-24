@@ -114,3 +114,36 @@ test('dropping a failed viewer answer invalidates queued and in-flight host foll
   assert.equal(program.take(true).id, 'unrelated');
   assert.equal(program.take(true), undefined);
 });
+
+test('first named reply airs the address and body together and repeats reuse only the body', async () => {
+  const program = new LiveProgram(() => {});
+  const clip = { source: 'youtube', id: 'q', text: 'Fifteen bags.', pcm: Buffer.alloc(2) };
+  const names = [];
+  const render = async name => { names.push(name); return { pcm: Buffer.alloc(2) }; };
+  await program.offerReply(clip, '민지 님', render, assert.fail);
+  await program.offerReply({ ...clip, id: 'other' }, '수빈 님', render, assert.fail);
+  assert.equal(program.readyReplies, 2);
+  assert.equal(program.context().scheduledReplies.length, 2);
+  assert.deepEqual([program.take(true).text, program.take(true).text, program.take(true).text],
+    ['민지 님', clip.text, clip.text]);
+  assert.deepEqual(names, ['민지 님']);
+  await program.offerReply({ ...clip, text: 'Another answer.' }, '민지 님', async () => { throw Error('render failed'); }, () => {});
+  assert.equal(program.take(true).text, 'Another answer.');
+});
+
+test('standby shuffles complete FAQ bodies, admits new ones mid-cycle and gives chat the next boundary', async () => {
+  const { FaqRotation } = await import('../dist/live-program.js');
+  const rotation = new FaqRotation();
+  for (const text of ['A', 'B', 'C']) rotation.add(text);
+  const first = rotation.next();
+  rotation.add('D');
+  rotation.add(first);
+  const cycle = [first, rotation.next(), rotation.next(), rotation.next()];
+  assert.equal(new Set(cycle).size, 4);
+  assert.notEqual(rotation.next(), cycle.at(-1));
+  const programme = new LiveProgram(() => {});
+  programme.faqStandby = { source: 'standby', text: 'A', id: 'faq', replay: true };
+  programme.queueReply({ source: 'youtube', text: 'B', id: 'reply' });
+  assert.equal(programme.take(true).id, 'reply');
+  assert.equal(programme.take(true).id, 'faq');
+});
