@@ -17,6 +17,13 @@ uses the six-step H3-Image checkpoint. Generate a PNG with `image_plan` and
 ordered `refImagePaths`. The result keeps the source dimensions. Use GPT Image 2
 when the image must display or preserve readable text.
 
+The Mac image test used a local gateway build with the H3 image binding
+(`411b8f8aa606`). Shared gateway builds that expose only the
+`openai-image-basic` profile accept text-to-image requests. Check the image
+catalog on the selected endpoint for both the H3 profile and the edit operation
+before sending a face reference. A Mac plugin can use its loopback image
+gateway independently of the video endpoint selected for an episode.
+
 For an on-screen speaker, pin the character's voice sample and list the owned
 face under `voiceReference.imagePaths`. Give each shot its own composition
 image. Keep the dialogue in the storyboard and set `STORY.language`, for example
