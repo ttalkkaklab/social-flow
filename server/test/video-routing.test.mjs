@@ -2146,6 +2146,7 @@ test('the same authored names take picture and audio tags on the H3 reference la
  const reordered = planVideo(options);
  assert.match(reordered.args.prompt,/Follow <Video 2>. Match <Audio 2>/);
  assert.equal(reordered.args.referenceVideoPaths[1],motion);
+ assert.throws(() => planVideo({...options,prompt:edit + '\nTrack {dolly.motion} and its {motion-with-audio.soundtrack}.'},false),/scene_media_owner/);
  let submitted;
  await f.execute(reordered,async (_tool,args) => {submitted=args; return result;});
  assert.equal(submitted.prompt, reordered.sceneRequest.prompt);
@@ -2237,6 +2238,10 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     [edit('Cast Hero as Guest and Guest as Hero throughout.'),/scene_dialogue_speaker/],
     [edit('Hero is played by Guest. Guest is played by Hero.'),/scene_dialogue_speaker/],
     [edit('Hero plays the part of Guest.'),/scene_dialogue_speaker/],
+    [edit("The first person delivers the second person's quotation."),/scene_direction_unverified/],
+    [edit('Have the two people dub each other throughout the scene.'),/scene_direction_unverified/],
+    [edit('Show the actors swapping voices.'),/scene_dialogue_speaker/],
+    [edit('Show the two performers exchanging faces.'),/scene_dialogue_speaker/],
     [edit('Give all of Hero’s lines to Guest and all of Guest’s lines to Hero.'),/scene_dialogue_mismatch/],
     [original.promptTemplate.replace('hero ({hero.face}, {hero.voice}):','Hero (off screen):'),/scene_dialogue_speaker/],
     [edit('Exchange their roles.'),/scene_dialogue_speaker/],

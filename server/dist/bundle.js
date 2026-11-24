@@ -6600,8 +6600,8 @@ var init_fetch_blob = __esm({
       get [Symbol.toStringTag]() {
         return "Blob";
       }
-      static [Symbol.hasInstance](object6) {
-        return object6 && typeof object6 === "object" && typeof object6.constructor === "function" && (typeof object6.stream === "function" || typeof object6.arrayBuffer === "function") && /^(Blob|File)$/.test(object6[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object7) {
+        return object7 && typeof object7 === "object" && typeof object7.constructor === "function" && (typeof object7.stream === "function" || typeof object7.arrayBuffer === "function") && /^(Blob|File)$/.test(object7[Symbol.toStringTag]);
       }
     };
     Object.defineProperties(_Blob.prototype, {
@@ -6649,8 +6649,8 @@ var init_file = __esm({
       get [Symbol.toStringTag]() {
         return "File";
       }
-      static [Symbol.hasInstance](object6) {
-        return !!object6 && object6 instanceof fetch_blob_default && /^(File)$/.test(object6[Symbol.toStringTag]);
+      static [Symbol.hasInstance](object7) {
+        return !!object7 && object7 instanceof fetch_blob_default && /^(File)$/.test(object7[Symbol.toStringTag]);
       }
     };
     File3 = _File;
@@ -6802,14 +6802,14 @@ var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isS
 var init_is = __esm({
   "node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
-    isURLSearchParameters = (object6) => {
-      return typeof object6 === "object" && typeof object6.append === "function" && typeof object6.delete === "function" && typeof object6.get === "function" && typeof object6.getAll === "function" && typeof object6.has === "function" && typeof object6.set === "function" && typeof object6.sort === "function" && object6[NAME] === "URLSearchParams";
+    isURLSearchParameters = (object7) => {
+      return typeof object7 === "object" && typeof object7.append === "function" && typeof object7.delete === "function" && typeof object7.get === "function" && typeof object7.getAll === "function" && typeof object7.has === "function" && typeof object7.set === "function" && typeof object7.sort === "function" && object7[NAME] === "URLSearchParams";
     };
-    isBlob = (object6) => {
-      return object6 && typeof object6 === "object" && typeof object6.arrayBuffer === "function" && typeof object6.type === "string" && typeof object6.stream === "function" && typeof object6.constructor === "function" && /^(Blob|File)$/.test(object6[NAME]);
+    isBlob = (object7) => {
+      return object7 && typeof object7 === "object" && typeof object7.arrayBuffer === "function" && typeof object7.type === "string" && typeof object7.stream === "function" && typeof object7.constructor === "function" && /^(Blob|File)$/.test(object7[NAME]);
     };
-    isAbortSignal = (object6) => {
-      return typeof object6 === "object" && (object6[NAME] === "AbortSignal" || object6[NAME] === "EventTarget");
+    isAbortSignal = (object7) => {
+      return typeof object7 === "object" && (object7[NAME] === "AbortSignal" || object7[NAME] === "EventTarget");
     };
     isDomainOrSubdomain = (destination, original) => {
       const orig = new URL(original).hostname;
@@ -8023,8 +8023,8 @@ var init_request = __esm({
     init_get_search();
     init_referrer();
     INTERNALS3 = /* @__PURE__ */ Symbol("Request internals");
-    isRequest = (object6) => {
-      return typeof object6 === "object" && typeof object6[INTERNALS3] === "object";
+    isRequest = (object7) => {
+      return typeof object7 === "object" && typeof object7[INTERNALS3] === "object";
     };
     doBadDataWarn = deprecate2(
       () => {
@@ -10698,20 +10698,20 @@ var require_parse = __commonJS({
           }
         }
         error2("Bad array");
-      }, object6 = function() {
-        var key, object7 = /* @__PURE__ */ Object.create(null);
+      }, object7 = function() {
+        var key, object8 = /* @__PURE__ */ Object.create(null);
         if (ch === "{") {
           next("{");
           white();
           if (ch === "}") {
             next("}");
-            return object7;
+            return object8;
           }
           while (ch) {
             key = string3();
             white();
             next(":");
-            if (_options.strict === true && Object.hasOwnProperty.call(object7, key)) {
+            if (_options.strict === true && Object.hasOwnProperty.call(object8, key)) {
               error2('Duplicate key "' + key + '"');
             }
             if (suspectProtoRx.test(key) === true) {
@@ -10720,7 +10720,7 @@ var require_parse = __commonJS({
               } else if (_options.protoAction === "ignore") {
                 value();
               } else {
-                object7[key] = value();
+                object8[key] = value();
               }
             } else if (suspectConstructorRx.test(key) === true) {
               if (_options.constructorAction === "error") {
@@ -10728,15 +10728,15 @@ var require_parse = __commonJS({
               } else if (_options.constructorAction === "ignore") {
                 value();
               } else {
-                object7[key] = value();
+                object8[key] = value();
               }
             } else {
-              object7[key] = value();
+              object8[key] = value();
             }
             white();
             if (ch === "}") {
               next("}");
-              return object7;
+              return object8;
             }
             next(",");
             white();
@@ -10748,7 +10748,7 @@ var require_parse = __commonJS({
         white();
         switch (ch) {
           case "{":
-            return object6();
+            return object7();
           case "[":
             return array2();
           case '"':
@@ -12121,13 +12121,13 @@ var require_util2 = __commonJS({
       }
     };
     exports.LRUCache = LRUCache;
-    function removeUndefinedValuesInObject(object6) {
-      Object.entries(object6).forEach(([key, value]) => {
+    function removeUndefinedValuesInObject(object7) {
+      Object.entries(object7).forEach(([key, value]) => {
         if (value === void 0 || value === "undefined") {
-          delete object6[key];
+          delete object7[key];
         }
       });
-      return object6;
+      return object7;
     }
     async function isValidFile(filePath) {
       try {
@@ -31521,8 +31521,8 @@ function setMcpUsageHeader(headers2) {
   const existingHeader = (_a4 = headers2[GOOGLE_API_CLIENT_HEADER]) !== null && _a4 !== void 0 ? _a4 : "";
   headers2[GOOGLE_API_CLIENT_HEADER] = (existingHeader + ` ${MCP_LABEL}`).trimStart();
 }
-function isMcpCallableTool(object6) {
-  return object6 !== null && typeof object6 === "object" && object6 instanceof McpCallableTool;
+function isMcpCallableTool(object7) {
+  return object7 !== null && typeof object7 === "object" && object7 instanceof McpCallableTool;
 }
 function listAllTools(mcpClient_1) {
   return __asyncGenerator(this, arguments, function* listAllTools_1(mcpClient, maxTools = 100) {
@@ -52863,16 +52863,16 @@ var require_util4 = __commonJS({
     function isStream(obj) {
       return obj && typeof obj === "object" && typeof obj.pipe === "function" && typeof obj.on === "function";
     }
-    function isBlobLike2(object6) {
-      if (object6 === null) {
+    function isBlobLike2(object7) {
+      if (object7 === null) {
         return false;
-      } else if (object6 instanceof Blob) {
+      } else if (object7 instanceof Blob) {
         return true;
-      } else if (typeof object6 !== "object") {
+      } else if (typeof object7 !== "object") {
         return false;
       } else {
-        const sTag = object6[Symbol.toStringTag];
-        return (sTag === "Blob" || sTag === "File") && ("stream" in object6 && typeof object6.stream === "function" || "arrayBuffer" in object6 && typeof object6.arrayBuffer === "function");
+        const sTag = object7[Symbol.toStringTag];
+        return (sTag === "Blob" || sTag === "File") && ("stream" in object7 && typeof object7.stream === "function" || "arrayBuffer" in object7 && typeof object7.arrayBuffer === "function");
       }
     }
     function pathHasQueryOrFragment(url) {
@@ -53162,8 +53162,8 @@ var require_util4 = __commonJS({
         }
       );
     }
-    function isFormDataLike(object6) {
-      return object6 && typeof object6 === "object" && typeof object6.append === "function" && typeof object6.delete === "function" && typeof object6.get === "function" && typeof object6.getAll === "function" && typeof object6.has === "function" && typeof object6.set === "function" && object6[Symbol.toStringTag] === "FormData";
+    function isFormDataLike(object7) {
+      return object7 && typeof object7 === "object" && typeof object7.append === "function" && typeof object7.delete === "function" && typeof object7.get === "function" && typeof object7.getAll === "function" && typeof object7.has === "function" && typeof object7.set === "function" && object7[Symbol.toStringTag] === "FormData";
     }
     function addAbortListener(signal, listener2) {
       if ("addEventListener" in signal) {
@@ -56854,8 +56854,8 @@ var require_util5 = __commonJS({
       }
       return "allowed";
     }
-    function isErrorLike(object6) {
-      return object6 instanceof Error || (object6?.constructor?.name === "Error" || object6?.constructor?.name === "DOMException");
+    function isErrorLike(object7) {
+      return object7 instanceof Error || (object7?.constructor?.name === "Error" || object7?.constructor?.name === "DOMException");
     }
     function isValidReasonPhrase(statusText) {
       for (let i2 = 0; i2 < statusText.length; ++i2) {
@@ -57198,7 +57198,7 @@ var require_util5 = __commonJS({
         return new FastIterableIterator(target, kind);
       };
     }
-    function iteratorMixin(name, object6, kInternalIterator, keyIndex = 0, valueIndex = 1) {
+    function iteratorMixin(name, object7, kInternalIterator, keyIndex = 0, valueIndex = 1) {
       const makeIterator = createIterator(name, kInternalIterator, keyIndex, valueIndex);
       const properties = {
         keys: {
@@ -57206,7 +57206,7 @@ var require_util5 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function keys2() {
-            webidl.brandCheck(this, object6);
+            webidl.brandCheck(this, object7);
             return makeIterator(this, "key");
           }
         },
@@ -57215,7 +57215,7 @@ var require_util5 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function values() {
-            webidl.brandCheck(this, object6);
+            webidl.brandCheck(this, object7);
             return makeIterator(this, "value");
           }
         },
@@ -57224,7 +57224,7 @@ var require_util5 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function entries() {
-            webidl.brandCheck(this, object6);
+            webidl.brandCheck(this, object7);
             return makeIterator(this, "key+value");
           }
         },
@@ -57233,7 +57233,7 @@ var require_util5 = __commonJS({
           enumerable: true,
           configurable: true,
           value: function forEach(callbackfn, thisArg = globalThis) {
-            webidl.brandCheck(this, object6);
+            webidl.brandCheck(this, object7);
             webidl.argumentLengthCheck(arguments, 1, `${name}.forEach`);
             if (typeof callbackfn !== "function") {
               throw new TypeError(
@@ -57246,7 +57246,7 @@ var require_util5 = __commonJS({
           }
         }
       };
-      return Object.defineProperties(object6.prototype, {
+      return Object.defineProperties(object7.prototype, {
         ...properties,
         [Symbol.iterator]: {
           writable: true,
@@ -58105,13 +58105,13 @@ var require_body = __commonJS({
         stream.cancel("Response object has been garbage collected").catch(noop3);
       }
     });
-    function extractBody(object6, keepalive = false) {
+    function extractBody(object7, keepalive = false) {
       let stream = null;
       let controller = null;
-      if (webidl.is.ReadableStream(object6)) {
-        stream = object6;
-      } else if (webidl.is.Blob(object6)) {
-        stream = object6.stream();
+      if (webidl.is.ReadableStream(object7)) {
+        stream = object7;
+      } else if (webidl.is.Blob(object7)) {
+        stream = object7.stream();
       } else {
         stream = new ReadableStream({
           pull() {
@@ -58129,15 +58129,15 @@ var require_body = __commonJS({
       let source = null;
       let length = null;
       let type = null;
-      if (typeof object6 === "string") {
-        source = object6;
+      if (typeof object7 === "string") {
+        source = object7;
         type = "text/plain;charset=UTF-8";
-      } else if (webidl.is.URLSearchParams(object6)) {
-        source = object6.toString();
+      } else if (webidl.is.URLSearchParams(object7)) {
+        source = object7.toString();
         type = "application/x-www-form-urlencoded;charset=UTF-8";
-      } else if (webidl.is.BufferSource(object6)) {
-        source = webidl.util.getCopyOfBytesHeldByBufferSource(object6);
-      } else if (webidl.is.FormData(object6)) {
+      } else if (webidl.is.BufferSource(object7)) {
+        source = webidl.util.getCopyOfBytesHeldByBufferSource(object7);
+      } else if (webidl.is.FormData(object7)) {
         const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, "0")}`;
         const prefix = `--${boundary}\r
 Content-Disposition: form-data`;
@@ -58147,7 +58147,7 @@ Content-Disposition: form-data`;
         const rn = new Uint8Array([13, 10]);
         length = 0;
         let hasUnknownSizeValue = false;
-        for (const [name, value] of object6) {
+        for (const [name, value] of object7) {
           if (typeof value === "string") {
             const chunk4 = textEncoder.encode(prefix + `; name="${formdataEscape(normalizeLinefeeds(name))}"\r
 \r
@@ -58175,7 +58175,7 @@ Content-Type: ${value.type || "application/octet-stream"}\r
         if (hasUnknownSizeValue) {
           length = null;
         }
-        source = object6;
+        source = object7;
         action2 = async function* () {
           for (const part of blobParts) {
             if (part.stream) {
@@ -58186,22 +58186,22 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           }
         };
         type = `multipart/form-data; boundary=${boundary}`;
-      } else if (webidl.is.Blob(object6)) {
-        source = object6;
-        length = object6.size;
-        if (object6.type) {
-          type = object6.type;
+      } else if (webidl.is.Blob(object7)) {
+        source = object7;
+        length = object7.size;
+        if (object7.type) {
+          type = object7.type;
         }
-      } else if (typeof object6[Symbol.asyncIterator] === "function") {
+      } else if (typeof object7[Symbol.asyncIterator] === "function") {
         if (keepalive) {
           throw new TypeError("keepalive");
         }
-        if (util2.isDisturbed(object6) || object6.locked) {
+        if (util2.isDisturbed(object7) || object7.locked) {
           throw new TypeError(
             "Response body object should not be disturbed or locked"
           );
         }
-        stream = webidl.is.ReadableStream(object6) ? object6 : ReadableStreamFrom2(object6);
+        stream = webidl.is.ReadableStream(object7) ? object7 : ReadableStreamFrom2(object7);
       }
       if (typeof source === "string" || isUint8Array(source)) {
         action2 = () => {
@@ -58230,12 +58230,12 @@ Content-Type: ${value.type || "application/octet-stream"}\r
       const body = { stream, source, length };
       return [body, type];
     }
-    function safelyExtractBody(object6, keepalive = false) {
-      if (webidl.is.ReadableStream(object6)) {
-        assert2(!util2.isDisturbed(object6), "The body has already been consumed.");
-        assert2(!object6.locked, "The stream is locked.");
+    function safelyExtractBody(object7, keepalive = false) {
+      if (webidl.is.ReadableStream(object7)) {
+        assert2(!util2.isDisturbed(object7), "The body has already been consumed.");
+        assert2(!object7.locked, "The stream is locked.");
       }
-      return extractBody(object6, keepalive);
+      return extractBody(object7, keepalive);
     }
     function cloneBody(body) {
       const { 0: out1, 1: out2 } = body.stream.tee();
@@ -58307,14 +58307,14 @@ Content-Type: ${value.type || "application/octet-stream"}\r
     function mixinBody(prototype, getInternalState) {
       Object.assign(prototype.prototype, bodyMixinMethods(prototype, getInternalState));
     }
-    function consumeBody2(object6, convertBytesToJSValue, instance, getInternalState) {
+    function consumeBody2(object7, convertBytesToJSValue, instance, getInternalState) {
       try {
-        webidl.brandCheck(object6, instance);
+        webidl.brandCheck(object7, instance);
       } catch (e2) {
         return Promise.reject(e2);
       }
-      object6 = getInternalState(object6);
-      if (bodyUnusable(object6)) {
+      object7 = getInternalState(object7);
+      if (bodyUnusable(object7)) {
         return Promise.reject(new TypeError("Body is unusable: Body has already been read"));
       }
       const promise = createDeferredPromise();
@@ -58326,15 +58326,15 @@ Content-Type: ${value.type || "application/octet-stream"}\r
           errorSteps(e2);
         }
       };
-      if (object6.body == null) {
+      if (object7.body == null) {
         successSteps(Buffer.allocUnsafe(0));
         return promise.promise;
       }
-      fullyReadBody(object6.body, successSteps, errorSteps);
+      fullyReadBody(object7.body, successSteps, errorSteps);
       return promise.promise;
     }
-    function bodyUnusable(object6) {
-      const body = object6.body;
+    function bodyUnusable(object7) {
+      const body = object7.body;
       return body != null && (body.stream.locked || util2.isDisturbed(body.stream));
     }
     function bodyMimeType(requestOrResponse) {
@@ -70548,10 +70548,10 @@ var require_headers = __commonJS({
       while (j > i2 && isHTTPWhiteSpaceCharCode(potentialValue.charCodeAt(i2))) ++i2;
       return i2 === 0 && j === potentialValue.length ? potentialValue : potentialValue.substring(i2, j);
     }
-    function fill(headers2, object6) {
-      if (Array.isArray(object6)) {
-        for (let i2 = 0; i2 < object6.length; ++i2) {
-          const header = object6[i2];
+    function fill(headers2, object7) {
+      if (Array.isArray(object7)) {
+        for (let i2 = 0; i2 < object7.length; ++i2) {
+          const header = object7[i2];
           if (header.length !== 2) {
             throw webidl.errors.exception({
               header: "Headers constructor",
@@ -70560,10 +70560,10 @@ var require_headers = __commonJS({
           }
           appendHeader(headers2, header[0], header[1]);
         }
-      } else if (typeof object6 === "object" && object6 !== null) {
-        const keys2 = Object.keys(object6);
+      } else if (typeof object7 === "object" && object7 !== null) {
+        const keys2 = Object.keys(object7);
         for (let i2 = 0; i2 < keys2.length; ++i2) {
-          appendHeader(headers2, keys2[i2], object6[keys2[i2]]);
+          appendHeader(headers2, keys2[i2], object7[keys2[i2]]);
         }
       } else {
         throw webidl.errors.conversionFailed({
@@ -75337,15 +75337,15 @@ var require_connection = __commonJS({
       });
       return controller;
     }
-    function closeWebSocketConnection(object6, code, reason, validate2 = false) {
+    function closeWebSocketConnection(object7, code, reason, validate2 = false) {
       code ??= null;
       reason ??= "";
       if (validate2) validateCloseCodeAndReason(code, reason);
-      if (isClosed(object6.readyState) || isClosing(object6.readyState)) {
-      } else if (!isEstablished(object6.readyState)) {
-        failWebsocketConnection(object6);
-        object6.readyState = states.CLOSING;
-      } else if (!object6.closeState.has(sentCloseFrameState.SENT) && !object6.closeState.has(sentCloseFrameState.RECEIVED)) {
+      if (isClosed(object7.readyState) || isClosing(object7.readyState)) {
+      } else if (!isEstablished(object7.readyState)) {
+        failWebsocketConnection(object7);
+        object7.readyState = states.CLOSING;
+      } else if (!object7.closeState.has(sentCloseFrameState.SENT) && !object7.closeState.has(sentCloseFrameState.RECEIVED)) {
         const frame2 = new WebsocketFrameSend();
         if (reason.length !== 0 && code === null) {
           code = 1e3;
@@ -75363,11 +75363,11 @@ var require_connection = __commonJS({
         } else {
           frame2.frameData = emptyBuffer;
         }
-        object6.socket.write(frame2.createFrame(opcodes.CLOSE));
-        object6.closeState.add(sentCloseFrameState.SENT);
-        object6.readyState = states.CLOSING;
+        object7.socket.write(frame2.createFrame(opcodes.CLOSE));
+        object7.closeState.add(sentCloseFrameState.SENT);
+        object7.readyState = states.CLOSING;
       } else {
-        object6.readyState = states.CLOSING;
+        object7.readyState = states.CLOSING;
       }
     }
     function failWebsocketConnection(handler, code, reason, cause) {
@@ -78286,13 +78286,13 @@ var init_utils = __esm({
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
-function inner_stringify(object6, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
-  let obj = object6;
+function inner_stringify(object7, prefix, generateArrayPrefix, commaRoundTrip, allowEmptyArrays, strictNullHandling, skipNulls, encodeDotInKeys, encoder, filter, sort, allowDots, serializeDate, format, formatter, encodeValuesOnly, charset, sideChannel) {
+  let obj = object7;
   let tmp_sc = sideChannel;
   let step = 0;
   let find_flag = false;
   while ((tmp_sc = tmp_sc.get(sentinel)) !== void 0 && !find_flag) {
-    const pos = tmp_sc.get(object6);
+    const pos = tmp_sc.get(object7);
     step += 1;
     if (typeof pos !== "undefined") {
       if (pos === step) {
@@ -78368,7 +78368,7 @@ function inner_stringify(object6, prefix, generateArrayPrefix, commaRoundTrip, a
     }
     const encoded_key = allowDots && encodeDotInKeys ? key.replace(/\./g, "%2E") : key;
     const key_prefix = isArray(obj) ? typeof generateArrayPrefix === "function" ? generateArrayPrefix(adjusted_prefix, encoded_key) : adjusted_prefix : adjusted_prefix + (allowDots ? "." + encoded_key : "[" + encoded_key + "]");
-    sideChannel.set(object6, step);
+    sideChannel.set(object7, step);
     const valueSideChannel = /* @__PURE__ */ new WeakMap();
     valueSideChannel.set(sentinel, sideChannel);
     push_to_array(values, inner_stringify(
@@ -78457,8 +78457,8 @@ function normalize_stringify_options(opts = defaults) {
     strictNullHandling: typeof opts.strictNullHandling === "boolean" ? opts.strictNullHandling : defaults.strictNullHandling
   };
 }
-function stringify(object6, opts = {}) {
-  let obj = object6;
+function stringify(object7, opts = {}) {
+  let obj = object7;
   const options = normalize_stringify_options(opts);
   let obj_keys;
   let filter;
@@ -95301,7 +95301,7 @@ var require_production_mode = __commonJS({
       }
       function resolveVideoChoice(production, shot, snapshotVideo) {
         const shotId = String(shot.id ?? shot.shot?.id);
-        const object6 = (value) => value && typeof value === "object" && !Array.isArray(value);
+        const object7 = (value) => value && typeof value === "object" && !Array.isArray(value);
         let selection = snapshotVideo;
         let source = snapshotVideo ? "episode_snapshot" : "legacy_board";
         if (!selection) {
@@ -95334,7 +95334,7 @@ var require_production_mode = __commonJS({
         if (!Array.isArray(overrides)) throw new Error("modelSettings.overrides must be an array of explicit scoped changes");
         for (const scope of ["episode", "shot"]) {
           for (const change of overrides) {
-            if (!object6(change) || !["episode", "shot"].includes(change.scope) || typeof change.request !== "string" || !change.request.trim())
+            if (!object7(change) || !["episode", "shot"].includes(change.scope) || typeof change.request !== "string" || !change.request.trim())
               throw new Error("Each model override requires scope and the actual user request");
             if (change.scope === "shot" && (typeof change.shotId !== "string" || !change.shotId)) throw new Error("Shot override needs shotId");
             if (change.scope !== scope || scope === "shot" && change.shotId !== shotId || !change.video) continue;
@@ -96533,18 +96533,18 @@ var require_character_identity = __commonJS({
     ];
     var REQUIRED = { identity: ["gender", "species", "age", "role", "summary"], physical: ["heightCm"] };
     var required2 = (group, key) => (REQUIRED[group] || []).includes(key);
-    var object6 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+    var object7 = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
     var text4 = (v) => typeof v === "string" && v.trim().length > 0 && v.length <= 2e3;
     var placeholder = (v) => typeof v === "string" && /^(?:tbd|todo|unknown|미정|추후|<[^>]+>|\{\{.*\}\})$/i.test(v.trim());
     function identityErrors(character, { ready = true } = {}) {
-      if (!object6(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
+      if (!object7(character)) return ["character: structured identity is required (migrate legacy identity.md explicitly)"];
       const errors = [];
       if (character.schemaVersion !== 1) errors.push("character.schemaVersion must be 1");
       if (!Number.isInteger(character.version) || character.version < 1) errors.push("character.version must be a positive integer");
       for (const key of Object.keys(character)) if (!["schemaVersion", "version", ...GROUPS.map((g) => g[0])].includes(key)) errors.push(`character.${key}: unknown field`);
       for (const [group, , , fields2] of GROUPS) {
         if (character[group] === void 0 && !REQUIRED[group]) continue;
-        if (!object6(character[group])) {
+        if (!object7(character[group])) {
           errors.push(`character.${group}: required group`);
           continue;
         }
@@ -96552,7 +96552,7 @@ var require_character_identity = __commonJS({
         for (const [key, , , type = "text"] of fields2) {
           const p = `${group}.${key}`, f3 = character[group][key], must = required2(group, key);
           if (f3 === void 0 && !must) continue;
-          if (!object6(f3)) {
+          if (!object7(f3)) {
             errors.push(`${p}: expected {status, value, reason?}`);
             continue;
           }
@@ -96583,7 +96583,7 @@ var require_character_identity = __commonJS({
         } catch {
           throw new Error("Invalid JSON in character identity");
         }
-        if (object6(v) && Object.hasOwn(v, "character")) values.push(v.character);
+        if (object7(v) && Object.hasOwn(v, "character")) values.push(v.character);
       }
       if (values.length !== 1) throw new Error("identity.md must contain exactly one JSON block with character");
       const errors = identityErrors(values[0], options);
@@ -97732,7 +97732,7 @@ var require_scene_voice = __commonJS({
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { handoff } = require_character_sheet();
     var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
-    var object6 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    var object7 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
     var text4 = (value) => typeof value === "string" ? value.trim() : "";
     var fileHash2 = (file2) => createHash34("sha256").update(readFileSync43(file2)).digest("hex");
     var sameSettings = (a, b) => isDeepStrictEqual2(JSON.parse(JSON.stringify(a ?? null)), JSON.parse(JSON.stringify(b ?? null)));
@@ -97749,17 +97749,17 @@ var require_scene_voice = __commonJS({
       const folder = required2 ? path40.dirname(path40.resolve(boardDir, required2.bodyPath)) : path40.join(channel, "assets/characters", id);
       const identity = path40.join(folder, "identity.md");
       let resolved = character;
-      const pinnedSettings = Object.keys(object6(character.tts)).length > 0;
-      if ((!pinnedSettings || !object6(character.voiceReference).path) && existsSync45(identity)) {
+      const pinnedSettings = Object.keys(object7(character.tts)).length > 0;
+      if ((!pinnedSettings || !object7(character.voiceReference).path) && existsSync45(identity)) {
         try {
           const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
           if (!pinnedSettings || sameSettings(current.tts, character.tts)) {
             resolved = { ...current, ...character, tts: current.tts };
-            if (current.voiceReference && !object6(resolved.voiceReference).path)
-              resolved.voiceReference = { ...object6(resolved.voiceReference), ...current.voiceReference };
-            if (required2 && !object6(resolved.voiceReference).path) {
+            if (current.voiceReference && !object7(resolved.voiceReference).path)
+              resolved.voiceReference = { ...object7(resolved.voiceReference), ...current.voiceReference };
+            if (required2 && !object7(resolved.voiceReference).path) {
               const sample = path40.join(folder, "voice.wav");
-              const selected = object6(current.voiceSelection).audioSha256;
+              const selected = object7(current.voiceSelection).audioSha256;
               if (typeof selected === "string" && existsSync45(sample) && fileHash2(sample) === selected)
                 resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
             }
@@ -97769,21 +97769,21 @@ var require_scene_voice = __commonJS({
           return character;
         }
       }
-      const reference2 = object6(resolved.voiceReference);
+      const reference2 = object7(resolved.voiceReference);
       if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face?.path, required2.bodyPath].filter(Boolean) } };
-      const sceneRefs = object6(shot.visual).references;
-      const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object6) : []).filter((ref) => ref.scope === "scene" && ref.character === id && ref.role === "character").map((ref) => text4(ref.path));
+      const sceneRefs = object7(shot.visual).references;
+      const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object7) : []).filter((ref) => ref.scope === "scene" && ref.character === id && ref.role === "character").map((ref) => text4(ref.path));
       if (facePaths.length) return { ...resolved, voiceReference: { ...reference2, imagePaths: facePaths } };
       if (!Array.isArray(reference2.imagePaths) && existsSync45(folder)) {
         const root = realpathSync15(folder) + path40.sep;
-        const refs = object6(shot.visual).references;
-        const imagePaths = (Array.isArray(refs) ? refs.map(object6) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text4(ref.use))).map((ref) => text4(ref.path)).filter(Boolean).map((file2) => path40.resolve(boardDir, file2)).filter((file2) => existsSync45(file2) && realpathSync15(file2).startsWith(root));
+        const refs = object7(shot.visual).references;
+        const imagePaths = (Array.isArray(refs) ? refs.map(object7) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text4(ref.use))).map((ref) => text4(ref.path)).filter(Boolean).map((file2) => path40.resolve(boardDir, file2)).filter((file2) => existsSync45(file2) && realpathSync15(file2).startsWith(root));
         if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
       }
       return resolved;
     }
     function voiceReference2(character, boardDir, warnings) {
-      const declared = object6(character.voiceReference);
+      const declared = object7(character.voiceReference);
       if (character.voiceReferenceWarning && !declared.path) {
         warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
         return void 0;
@@ -97809,7 +97809,7 @@ var require_scene_voice = __commonJS({
       if (!file2) return void 0;
       if (!existsSync45(file2)) throw new Error(`voice_reference_stale: ${character.id} selected sample is missing: ${file2}`);
       const absolute = realpathSync15(file2), sha2563 = fileHash2(absolute);
-      const selected = declared.sha256 || object6(character.voiceSelection).audioSha256;
+      const selected = declared.sha256 || object7(character.voiceSelection).audioSha256;
       if (selected && selected !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
       const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
       if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
@@ -99739,10 +99739,10 @@ var require_project_config = __commonJS({
     var TOKEN_FILES = { threads: "threads_token", instagram: "instagram_token", facebook: "facebook_page_token", youtube: "youtube-oauth-client.json", tiktok: "tiktok-oauth.json" };
     var PROJECT_FIELDS = ["project", "style", "production", "sns", "languages"];
     var SLUG = /^[a-z0-9][a-z0-9-]{0,63}$/;
-    var object6 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    var object7 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
     var text4 = (value) => typeof value === "string" && !!value.trim();
     function keys2(value, allowed, label) {
-      if (!object6(value) || Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(`Invalid ${label} fields; credentials must stay outside project settings`);
+      if (!object7(value) || Object.keys(value).some((key) => !allowed.includes(key))) throw new Error(`Invalid ${label} fields; credentials must stay outside project settings`);
     }
     function credentialRef(channel, platform) {
       return "${SNS_TOKEN_DIR}/" + channel + "/" + TOKEN_FILES[platform];
@@ -100375,14 +100375,14 @@ var require_model_settings = __commonJS({
       image: ["engine", "model", "quality", "host"],
       music: ["engine", "model"]
     };
-    function object6(value) {
+    function object7(value) {
       return value !== null && typeof value === "object" && !Array.isArray(value);
     }
     function nonempty2(value) {
       return typeof value === "string" && value.trim().length > 0;
     }
     function validateVideoType(choice2) {
-      if (!object6(choice2) || !VIDEO_TYPES.some((type) => type.id === choice2.id)) {
+      if (!object7(choice2) || !VIDEO_TYPES.some((type) => type.id === choice2.id)) {
         throw new Error("videoType.id must name a video type from model-settings.js types");
       }
       for (const [key, value] of Object.entries(choice2)) {
@@ -100392,7 +100392,7 @@ var require_model_settings = __commonJS({
       return choice2;
     }
     function validateModels(models, partial2 = false, allowRetired = false) {
-      if (!object6(models)) throw new Error("models must be an object");
+      if (!object7(models)) throw new Error("models must be an object");
       for (const key of Object.keys(models)) {
         if (!Object.hasOwn(ENGINES, key)) throw new Error(`Unknown model category: ${key}`);
       }
@@ -100402,7 +100402,7 @@ var require_model_settings = __commonJS({
         if (kind === "music" && !Object.hasOwn(models, kind)) continue;
         const choice2 = models[kind];
         const retired = allowRetired && retiredChoice(kind, choice2);
-        if (!object6(choice2) || !engines.includes(choice2.engine) && !retired) throw new Error(`${kind}.engine must be one of ${engines.join(", ")}`);
+        if (!object7(choice2) || !engines.includes(choice2.engine) && !retired) throw new Error(`${kind}.engine must be one of ${engines.join(", ")}`);
         if (kind === "speech" && choice2.engine === "mlx-audio" && choice2.model !== "voxcpm2") throw new Error("Local mlx-audio speech requires model voxcpm2");
         if (kind === "video" && choice2.engine === "ltx-desktop-local") {
           if (!/^ltx-[a-z0-9.-]+$/i.test(choice2.model || "") || !/^(270|360|540|720|1080|1440|2160)p$/.test(choice2.resolution || "") || choice2.operation && !VIDEO_ADAPTERS2.some((a) => a.engine === choice2.engine && a.operation === choice2.operation))
@@ -100474,10 +100474,10 @@ var require_model_settings = __commonJS({
       }
     }
     function validateConfig(config3, allowRetired = false, allowMissing = false) {
-      if (!object6(config3) || config3.version !== 1 || !nonempty2(config3.request) || !nonempty2(config3.updatedAt)) {
+      if (!object7(config3) || config3.version !== 1 || !nonempty2(config3.request) || !nonempty2(config3.updatedAt)) {
         throw new Error("Invalid model settings version or selection record; repair explicitly, do not reset");
       }
-      const emptyModels = config3.models === void 0 || object6(config3.models) && !Object.keys(config3.models).length;
+      const emptyModels = config3.models === void 0 || object7(config3.models) && !Object.keys(config3.models).length;
       if (!allowMissing || !emptyModels) validateModels(config3.models, allowMissing, allowRetired);
       if (config3.workspace !== void 0 && (typeof config3.workspace !== "string" || !path40.isAbsolute(config3.workspace)))
         throw new Error("Invalid saved workspace path");
@@ -100534,7 +100534,7 @@ var require_model_settings = __commonJS({
           writeJson(file2, { ...current.config, version: 1, workspace: selectedWorkspace, updatedAt: (/* @__PURE__ */ new Date()).toISOString(), request: request.trim() });
           return readSettings(workspace);
         }
-        const typeOnly = expectedRevision !== void 0 && (videoType !== void 0 || Object.keys(projectFields).length > 0) && (models === void 0 || object6(models) && !Object.keys(models).length);
+        const typeOnly = expectedRevision !== void 0 && (videoType !== void 0 || Object.keys(projectFields).length > 0) && (models === void 0 || object7(models) && !Object.keys(models).length);
         if (!typeOnly) validateModels(models, expectedRevision !== void 0);
         if (videoType !== void 0) validateVideoType(videoType);
         if (!current.config && videoType === void 0) throw new Error("Select a video type before saving initial settings");
@@ -100565,7 +100565,7 @@ var require_model_settings = __commonJS({
       const file2 = path40.join(episodeRoot, SNAPSHOT_FILE);
       const existing = readJson(file2);
       if (existing !== void 0) {
-        if (!object6(existing) || existing.version !== 1 || !nonempty2(existing.source)) throw new Error("Invalid episode model snapshot");
+        if (!object7(existing) || existing.version !== 1 || !nonempty2(existing.source)) throw new Error("Invalid episode model snapshot");
         validateConfig(existing.config, true);
         if (existing.revision !== revision(existing.config)) throw new Error("Episode model snapshot is inconsistent; repair explicitly");
         return { ...existing, file: file2, resumed: true };
@@ -104306,8 +104306,8 @@ var require_location_contract = __commonJS({
           }
           if (!Number.isFinite(s2.light) || s2.light < 0 || s2.light > 5) e2.push(key + ": light must be 0..5");
           for (const [oid, v] of Object.entries(s2.objects || {})) {
-            const object6 = objects.find((o) => o?.id === oid);
-            if (object6 && (object6.fixed || object6.role === "wall") && Object.keys(v || {}).length) e2.push(key + ": fixed architecture needs a new revision " + oid);
+            const object7 = objects.find((o) => o?.id === oid);
+            if (object7 && (object7.fixed || object7.role === "wall") && Object.keys(v || {}).length) e2.push(key + ": fixed architecture needs a new revision " + oid);
             if (!ids.has(oid) || !v || Object.keys(v).some((k) => !["position", "rotation", "visible"].includes(k)) || "position" in v && !vec(v.position) || "rotation" in v && !vec(v.rotation) || v.visible !== void 0 && typeof v.visible !== "boolean") e2.push(key + ": invalid object override " + oid);
           }
         }
@@ -104793,9 +104793,9 @@ var require_location_assets = __commonJS({
       const viewer = pov ? observer || actors.find((x2) => !cast.includes(x2.id) && x2.gazeTarget && (cast.includes(x2.gazeTarget) || !cast.length)) || people[1] : null;
       if (pov && !viewer) warnings.push("pov needs a blocked viewer whose gaze names the seen character or object; the render frames the shot from the front");
       if (viewer) {
-        const seen = subject2 || actors.find((x2) => x2.id === viewer.gazeTarget), object6 = objectSubject || objects.find((o) => o.id === viewer.gazeTarget);
+        const seen = subject2 || actors.find((x2) => x2.id === viewer.gazeTarget), object7 = objectSubject || objects.find((o) => o.id === viewer.gazeTarget);
         const from = [viewer.position[0], viewer.position[1], viewer.position[2] + viewer.height * 0.93];
-        target = seen ? [seen.position[0], seen.position[1], seen.position[2] + seen.height * 0.93] : object6 ? object6.position : [from[0] + facing(viewer)[0] * 3, from[1] + facing(viewer)[1] * 3, from[2]];
+        target = seen ? [seen.position[0], seen.position[1], seen.position[2] + seen.height * 0.93] : object7 ? object7.position : [from[0] + facing(viewer)[0] * 3, from[1] + facing(viewer)[1] * 3, from[2]];
         const dir = unit(target.map((v, i2) => v - from[i2])) || [0, -1, 0];
         position = from.map((v, i2) => v + dir[i2] * 0.3);
         lensMm = 35;
@@ -106245,15 +106245,15 @@ var require_story_performance = __commonJS({
   "../skills/storyboard/references/story-performance.js"(exports, module) {
     "use strict";
     var text4 = (x2) => typeof x2 === "string" && !!x2.trim();
-    var object6 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+    var object7 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
     function storyPerformance(win) {
       const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       const order = [];
       scenes.forEach((s2, i2) => {
-        if (!object6(s2) || s2.type === "outro" || s2.type === "broll") return;
+        if (!object7(s2) || s2.type === "outro" || s2.type === "broll") return;
         order.push(i2);
         scenes.forEach((b, j) => {
-          if (object6(b) && b.type === "broll" && b.after === i2) order.push(j);
+          if (object7(b) && b.type === "broll" && b.after === i2) order.push(j);
         });
       });
       return order.flatMap((i2) => (Array.isArray(scenes[i2].performance) ? scenes[i2].performance : []).map((e2, j) => {
@@ -106286,7 +106286,7 @@ var require_story_performance = __commonJS({
       if (story.kind === "adapted" && !text4(story.adaptationBoundary)) fail5("STORY.adaptationBoundary is required");
       const cast = Array.isArray(story.cast) ? story.cast : [], ids = /* @__PURE__ */ new Set();
       for (const c of cast) {
-        if (!object6(c) || !text4(c.id) || ids.has(c.id)) {
+        if (!object7(c) || !text4(c.id) || ids.has(c.id)) {
           fail5("STORY.cast requires unique character IDs");
           continue;
         }
@@ -106299,7 +106299,7 @@ var require_story_performance = __commonJS({
         if (!Number.isInteger(t2?.shot) || !scenes[t2.shot - 1] || scenes[t2.shot - 1].type === "outro") fail5("transcript references an invalid shot");
       const used = /* @__PURE__ */ new Set();
       scenes.forEach((s2, i2) => {
-        if (!object6(s2)) {
+        if (!object7(s2)) {
           fail5("shot " + (i2 + 1) + " must be an object");
           return;
         }
@@ -106319,7 +106319,7 @@ var require_story_performance = __commonJS({
         const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = /* @__PURE__ */ new Set();
         let lastGroup = 0;
         events2.forEach((e2) => {
-          if (!object6(e2) || !["action", "dialogue", "narration"].includes(e2.kind)) {
+          if (!object7(e2) || !["action", "dialogue", "narration"].includes(e2.kind)) {
             fail5("invalid performance event");
             return;
           }
@@ -106353,7 +106353,7 @@ var require_story_performance = __commonJS({
       function ref(r2, label) {
         const index = events.findIndex((e3) => e3.shot === r2?.shot && e3.event === r2?.event);
         const e2 = events[index];
-        if (!object6(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.event) || !text4(r2.quote) || !e2 || !text4(e2.quote) || !e2.quote.includes(r2.quote) || r2.quote.trim().length < Math.min(12, Math.ceil(e2.quote.trim().length / 2))) {
+        if (!object7(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.event) || !text4(r2.quote) || !e2 || !text4(e2.quote) || !e2.quote.includes(r2.quote) || r2.quote.trim().length < Math.min(12, Math.ceil(e2.quote.trim().length / 2))) {
           fail5(label + " requires an exact observable event quote with 1-based shot/event");
           return -1;
         }
@@ -106369,12 +106369,12 @@ var require_story_performance = __commonJS({
       if (beats.length !== shots.length || new Set(beats.map((b) => b?.shot)).size !== shots.length || beats.some((b) => !shots.includes(b?.shot) || !text4(b.change) || !text4(b.necessity))) fail5("STORY.beats must cover every performance shot with change and necessity");
       if (!requireReview) return errors;
       const review2 = story.review;
-      if (!object6(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
+      if (!object7(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
       if (review2.hash !== hash7) fail5("STORY.review is stale; reread the current performance");
       if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length) fail5("STORY.review reports an unresolved or non-pass result");
       for (const key of ["meaning", "progression", "payoff", "grounding", "character"]) {
         const item = review2[key];
-        if (!object6(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+        if (!object7(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
           fail5("STORY.review." + key + " needs reasoning and event evidence");
           continue;
         }
@@ -106391,9 +106391,9 @@ var require_story_contract = __commonJS({
   "../skills/storyboard/references/story-contract.js"(exports, module) {
     "use strict";
     var crypto2 = __require("node:crypto");
-    var object6 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+    var object7 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
     var text4 = (x2) => typeof x2 === "string" && x2.trim().length > 0;
-    var canonical4 = (x2) => Array.isArray(x2) ? x2.map(canonical4) : object6(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical4(x2[k])])) : x2;
+    var canonical4 = (x2) => Array.isArray(x2) ? x2.map(canonical4) : object7(x2) ? Object.fromEntries(Object.keys(x2).sort().map((k) => [k, canonical4(x2[k])])) : x2;
     var PAST_FINAL = /(았|었|였|했|왔|갔|봤|됐|냈|셨|잤|샀|썼|줬|놨|뒀|했었|았었|었었)(?:다|어요|어|습니다|죠|네요|거든요|대요|답니다|지요|잖아요|던\s*것이다|던\s*거다|던\s*겁니다|던\s*거예요)\s*$/;
     var MORAL_FINAL = /(?:하자|합시다|말자|맙시다|세요|십시오|해야\s*(?:한다|해요|합니다|해|돼요|됩니다|된다)|[아어해마]라)\s*$/;
     function storySpeech(win) {
@@ -106401,10 +106401,10 @@ var require_story_contract = __commonJS({
       const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
       const ordered2 = [];
       scenes.forEach((s2, i2) => {
-        if (!object6(s2) || s2.type === "outro" || s2.type === "broll") return;
+        if (!object7(s2) || s2.type === "outro" || s2.type === "broll") return;
         ordered2.push({ s: s2, shot: i2 + 1 });
         scenes.forEach((b, j) => {
-          if (object6(b) && b.type === "broll" && Number(b.after) === i2) ordered2.push({ s: b, shot: j + 1 });
+          if (object7(b) && b.type === "broll" && Number(b.after) === i2) ordered2.push({ s: b, shot: j + 1 });
         });
       });
       return ordered2.flatMap(({ s: s2, shot }) => {
@@ -106414,9 +106414,9 @@ var require_story_contract = __commonJS({
       });
     }
     function storyHash(win) {
-      const story = object6(win.STORY) ? { ...win.STORY } : null;
+      const story = object7(win.STORY) ? { ...win.STORY } : null;
       if (story) delete story.review;
-      const scenes = (Array.isArray(win.SCENES) ? win.SCENES : []).map((s2) => !object6(s2) ? s2 : {
+      const scenes = (Array.isArray(win.SCENES) ? win.SCENES : []).map((s2) => !object7(s2) ? s2 : {
         type: s2.type,
         beat: s2.beat,
         arc: s2.arc,
@@ -106426,7 +106426,7 @@ var require_story_contract = __commonJS({
         bullets: s2.bullets,
         ...win.STORY?.version === "story-v2" ? { performance: s2.performance, action: s2.visual?.action, character: s2.visual?.character } : {},
         narration: win.STORY?.version === "story-v2" && Array.isArray(s2.narration) ? s2.narration.map((n) => {
-          if (!object6(n)) return n;
+          if (!object7(n)) return n;
           const { audio, mediaStatus, ...editorial } = n;
           return editorial;
         }) : s2.narration,
@@ -106451,7 +106451,7 @@ var require_story_contract = __commonJS({
       const errors = [], fail5 = (message) => errors.push(message);
       const story = win.STORY, scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
       if (story?.version === "story-v2") return require_story_performance().checkPerformanceStory(win, { requireReview, hash: storyHash(win) });
-      if (!object6(story) || story.version !== "story-v1")
+      if (!object7(story) || story.version !== "story-v1")
         return ["window.STORY requires version story-v1; read story-quality.md before authoring"];
       for (const key of ["viewerNeed", "thesis", "basis", "endingReason"])
         if (!text4(story[key])) fail5(`STORY.${key} must explain a concrete editorial decision`);
@@ -106460,21 +106460,21 @@ var require_story_contract = __commonJS({
       if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail5("STORY.transcripts must be an array");
       (Array.isArray(story.transcripts) ? story.transcripts : []).forEach((t2, i2) => {
         const s2 = scenes[t2?.shot - 1];
-        if (!object6(t2) || !Number.isInteger(t2.shot) || !s2 || s2.type === "outro" || s2.visual?.source !== "recording" && !s2.visual?.reuse || !text4(t2.source) || t2.source !== (s2.visual?.reuse?.clip || s2.visual.clip) || Array.isArray(s2.narration) && s2.narration.length || live.has(t2.shot) || !Array.isArray(t2.groups) || !t2.groups.length) {
+        if (!object7(t2) || !Number.isInteger(t2.shot) || !s2 || s2.type === "outro" || s2.visual?.source !== "recording" && !s2.visual?.reuse || !text4(t2.source) || t2.source !== (s2.visual?.reuse?.clip || s2.visual.clip) || Array.isArray(s2.narration) && s2.narration.length || live.has(t2.shot) || !Array.isArray(t2.groups) || !t2.groups.length) {
           fail5(`STORY.transcripts[${i2}] requires a unique live-voice recording or reused shot, matching clip and groups`);
           return;
         }
         let end = 0;
         t2.groups.forEach((g) => {
-          if (!object6(g) || !text4(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail5(`STORY.transcripts[${i2}] requires ordered timed speech`);
-          if (object6(g)) end = g.end;
+          if (!object7(g) || !text4(g.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail5(`STORY.transcripts[${i2}] requires ordered timed speech`);
+          if (object7(g)) end = g.end;
         });
         live.set(t2.shot, t2.groups.map((g) => ({ tts: g?.text, sub: g?.text })));
       });
       const speech = storySpeech(win);
       const narrated = [...new Set(speech.map((x2) => x2.shot))].map((i2) => ({ i: i2 }));
       function ref(r2, label) {
-        if (!object6(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.group) || r2.shot < 1 || r2.group < 1 || !text4(r2.quote)) {
+        if (!object7(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.group) || r2.shot < 1 || r2.group < 1 || !text4(r2.quote)) {
           fail5(`${label} requires 1-based shot, group and exact quote`);
           return null;
         }
@@ -106497,7 +106497,7 @@ var require_story_contract = __commonJS({
       const position = (a) => speech.findIndex((x2) => x2.shot === a[0] && x2.group === a[1]);
       const before = (a, b) => position(a) < position(b);
       if (opening && position(opening) !== 0) fail5("STORY.opening must reference the first spoken group");
-      const revealCover = scenes.find((s2) => object6(s2) && s2.type === "cover");
+      const revealCover = scenes.find((s2) => object7(s2) && s2.type === "cover");
       const coverReveal = !!revealCover && (revealCover.hookType === "spoiler" || revealCover.hookForm === "payoff");
       if (opening && payoff) {
         if (position(payoff) < position(opening)) fail5("STORY.payoff cannot precede the opening");
@@ -106531,8 +106531,8 @@ var require_story_contract = __commonJS({
       }
       if (story.person !== void 0) {
         const person = story.person;
-        const names = object6(person) ? [person.name, ...Array.isArray(person.aliases) ? person.aliases : []] : [];
-        if (!object6(person) || !text4(person.name) || person.aliases !== void 0 && !(Array.isArray(person.aliases) && person.aliases.every(text4))) {
+        const names = object7(person) ? [person.name, ...Array.isArray(person.aliases) ? person.aliases : []] : [];
+        if (!object7(person) || !text4(person.name) || person.aliases !== void 0 && !(Array.isArray(person.aliases) && person.aliases.every(text4))) {
           fail5("STORY.person requires a name and optional aliases (person-short.md)");
         } else if (names.some((v) => v.trim().length < 2)) {
           fail5("STORY.person names and aliases need at least two characters");
@@ -106565,7 +106565,7 @@ var require_story_contract = __commonJS({
       if (beats.length !== narrated.length) fail5("STORY.beats requires one row per narrated shot");
       const seen = /* @__PURE__ */ new Set();
       beats.forEach((b, i2) => {
-        if (!object6(b)) {
+        if (!object7(b)) {
           fail5(`STORY.beats[${i2}] must be an object`);
           return;
         }
@@ -106577,13 +106577,13 @@ var require_story_contract = __commonJS({
       });
       if (!requireReview) return errors;
       const review2 = story.review;
-      if (!object6(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
+      if (!object7(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
       if (review2.hash !== storyHash(win)) fail5("STORY.review is stale; review the current narration and contract again");
       if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length)
         fail5("STORY.review reports an unresolved or non-pass result");
       for (const key of ["meaning", "progression", "payoff", "grounding"]) {
         const item = review2[key];
-        if (!object6(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+        if (!object7(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
           fail5(`STORY.review.${key} requires reasoning and quoted narration evidence`);
           continue;
         }
@@ -107182,10 +107182,10 @@ var util;
       return obj[e2];
     });
   };
-  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object6) => {
+  util2.objectKeys = typeof Object.keys === "function" ? (obj) => Object.keys(obj) : (object7) => {
     const keys2 = [];
-    for (const key in object6) {
-      if (Object.prototype.hasOwnProperty.call(object6, key)) {
+    for (const key in object7) {
+      if (Object.prototype.hasOwnProperty.call(object7, key)) {
         keys2.push(key);
       }
     }
@@ -113574,19 +113574,19 @@ function floatSafeRemainder2(val, step) {
   const stepInt = Number.parseInt(step.toFixed(decCount).replace(".", ""));
   return valInt % stepInt / 10 ** decCount;
 }
-function defineLazy(object6, key, getter) {
+function defineLazy(object7, key, getter) {
   const set = false;
-  Object.defineProperty(object6, key, {
+  Object.defineProperty(object7, key, {
     get() {
       if (!set) {
         const value = getter();
-        object6[key] = value;
+        object7[key] = value;
         return value;
       }
       throw new Error("cached value already set");
     },
     set(v) {
-      Object.defineProperty(object6, key, {
+      Object.defineProperty(object7, key, {
         value: v
         // configurable: true,
       });
@@ -119453,11 +119453,11 @@ function parseMapDef(def, refs) {
 
 // node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
-  const object6 = def.values;
+  const object7 = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
-    return typeof object6[object6[key]] !== "number";
+    return typeof object7[object7[key]] !== "number";
   });
-  const actualValues = actualKeys.map((key) => object6[key]);
+  const actualValues = actualKeys.map((key) => object7[key]);
   const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
   return {
     type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
@@ -130316,13 +130316,16 @@ var reserved = /[ⓈⓁⓂⓧ]/iu;
 var slot = /\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}/gu;
 var escape2 = (value) => value.replace(/[$.*+?^{}()|[\]\\]/g, "\\$&");
 var slotOwner = (id) => id.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "");
-var noun = "(?:the|a|an|her|his|their|its) (?:[\\p{L}-]+ ){0,3}[\\p{L}-]+";
+var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
+var object4 = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
+var noun = "(?:the|a|an|her|his|their|its) (?:" + material + " ){0,3}" + object4;
 var figure = "(?:\u24C8(?:['\u2019]s (?:face|eyes|hands?|shoulders?|coat|back))?|\u24C2)";
 var subject = "(?:" + figure + "|" + noun + ")";
 var location = "(?:(?:at|by|near|beside|behind|past|through|across|towards?|in front of|away from) " + subject + ")";
 var timing = "(?: (?:after|before|during|following) (?:the )?(?:first|second|third|fourth|next|last|final|opening|closing) (?:spoken )?(?:line|turn|sentence)| until \u24C8 (?:finishes|begins|ends) (?:her|his|their|the) (?:first |last |next |final )?(?:line|turn|sentence))?";
 var action = "(?:steps? (?:back|forward|aside)|(?:is |are )?(?:standing|waiting) " + location + "|(?:waits?|stands?|walks?|moves?|leans?|stops?)(?: " + location + ")?|(?:watches?|sees?|greets?|approaches?) " + subject + "|(?:looks?|glances?|turns?) (?:at|to|towards?) " + subject + "|(?:nods?|smiles?|blinks?|frowns?|shrugs?|pauses?|hesitates?|turns? away)(?: slowly| briefly)?|(?:raises?|lowers?) (?:an eyebrow|her eyes|his eyes|their eyes|a hand)|(?:raises?|lifts?) (?:a|her|his|their) hand to answer the (?:door|phone)|exchanges? (?:a glance|glances|a look)(?: " + location + ")?)";
 var stage = new RegExp("^(?:(?:hold on|open on|cut to|show|pan to|push in on|close on) " + subject + "|rack focus from " + subject + " to " + subject + "|keep " + figure + " (?:sharp|in focus|in frame|still)|use a (?:wide|medium|close|tracking) shot of " + figure + "(?: and " + figure + ")?|\u24C8(?: and \u24C8)? " + action + ")(?: (?:as|while) \u24C8 " + action + ")?" + timing + "$", "iu");
+var modelReference = /^(?:(?:follow|track|match) (?:the (?:camera movement|camera move|motion|rhythm|soundtrack) in )?Ⓜ(?: and (?:its )?Ⓜ)?|use Ⓜ(?:, Ⓜ)* for camera movement and motion timing)$/iu;
 var castWords = /\b(?:voices?|voiceprints?|vocal|timbres?|accents?|casts?|actors?|actress(?:es)?|performers?|characters?|faces?|facial|identit(?:y|ies)|likeness(?:es)?|portraits?|roles?|parts?)\b/iu;
 var speechWords = /\b(?:dialogue|utterances?|spoken|speakers?|speech|lines?|script|sentences?|words?|turns?|conversation|monologue|says?|asks?|adds?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|speaks?|yells?|tells?|recites?|mutters?|mouths?|lip[- ]?sync\w*)\b/iu;
 var SceneEditGrammar = class {
@@ -130366,9 +130369,17 @@ var SceneEditGrammar = class {
       throw new Error("scene_dialogue_speaker: keep the generated inventory and pair a cast slot with its own actor");
     const visual = cue.replace(/Ⓢ\s*\(Ⓢ\)/gu, actor);
     if (stage.test(visual)) return;
+    if (modelReference.test(visual)) {
+      const source = /\{([^{}]+)\.motion\}\s+and its\s+\{([^{}]+)\.soundtrack\}/iu.exec(text4);
+      if (source && source[1] !== source[2]) throw new Error("scene_media_owner: the named video and its embedded soundtrack have different sources");
+      return;
+    }
     const speech = native && speechWords.test(cue);
     const cast = (this.names.size > 0 || bound) && (owners.size > 0 || castWords.test(text4));
-    if (!cast && !speech) return;
+    if (!cast && !speech) {
+      if (!native && !this.names.size) return;
+      throw new Error("scene_direction_unverified: author this direction on the storyboard, or use a supported camera, blocking or media cue");
+    }
     if (speech && !/\b(?:faces?|identit(?:y|ies)|roles?|vocal|voices?)\b/iu.test(cue))
       throw new Error("scene_dialogue_mismatch: write each line with its approved speaker. Put complex timing or acting on the storyboard");
     throw new Error("scene_dialogue_speaker: preserve the cast. Put complex blocking on the storyboard or use a direct camera or blocking cue");
@@ -130378,7 +130389,7 @@ var SceneEditGrammar = class {
     if (!cue.startsWith(actor) || cue.includes(invalid)) return false;
     const offScreen = /\boff[- ]screen\b/iu.test(cue);
     if (delivery2 && offScreen !== (delivery2 === "off_screen")) return false;
-    cue = cue.replace(/\s*\((?:Ⓢ|on screen|off screen)(?:,\s*(?:Ⓢ|on screen|off screen))*\)$/iu, "").replace(/,?\s+(?:using|with)\s+Ⓢ$/iu, "").replace(/\s+to\s+Ⓛ$/iu, "").replace(/^Ⓢ\s+(?:looks?|glances?|turns?)\s+(?:at|to|towards?)\s+Ⓛ\s+and\s+/iu, "\u24C8 ").replace(/^Ⓢ\s+waits?(?:\s+(?:by|at|near|beside)\s+(?:the|a)\s+[\p{L}-]+(?:\s+[\p{L}-]+){0,2})?\s+and\s+/iu, "\u24C8 ");
+    cue = cue.replace(/\s*\((?:Ⓢ|on screen|off screen)(?:,\s*(?:Ⓢ|on screen|off screen))*\)$/iu, "").replace(/,?\s+(?:using|with)\s+Ⓢ$/iu, "").replace(/\s+to\s+Ⓛ$/iu, "").replace(/^Ⓢ\s+(?:looks?|glances?|turns?)\s+(?:at|to|towards?)\s+Ⓛ\s+and\s+/iu, "\u24C8 ").replace(new RegExp("^\u24C8 waits?(?: (?:by|at|near|beside) " + noun + ")? and ", "iu"), "\u24C8 ");
     return /^(?:Ⓢ|Ⓢ\s+(?:says?|asks?|repl(?:y|ies)|answers?|speaks?|whispers?|calls?|shouts?|murmurs?|mutters?|tells?|continues?)(?:\s+\p{L}+ly)?|Ⓢ\s+(?:asks?|tells?|reassures?|greets?|addresses?|thanks?|warns?|comforts?|reminds?)\s+Ⓛ)$/iu.test(cue);
   }
 };
@@ -130566,14 +130577,17 @@ function scenePromptTemplate(prompt, { slots }, header = "", lines) {
 }
 function assertSceneDialogue(template, expected, cast, composed, nativeDialogue = true) {
   const script = expected.flatMap((line) => line.tts ? [line.tts] : []);
-  const visualQuotes = spans(composed, script).filter((span) => span.quoted && !script.includes(span.text.slice(1, -1))).map((span) => span.text.slice(1, -1));
   const splitSentences2 = (text4) => text4.trimEnd().replace(/([:—–=])\s*\n\s*/gu, "$1 ").split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed, script);
   const approvedDirections = new Set(original.filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map((text4) => text4.trim()));
   const attributions = [];
+  const visualQuotes = [];
   for (const [i2, span] of original.entries()) {
-    if (span.quoted && span.text.slice(1, -1) === script[attributions.length])
-      attributions.push(splitSentences2(original[i2 - 1]?.text ?? "").at(-1)?.trim() ?? "");
+    if (!span.quoted) continue;
+    const words = span.text.slice(1, -1);
+    const lead = splitSentences2(original[i2 - 1]?.text ?? "").at(-1)?.trim() ?? "";
+    if (nativeDialogue && words === script[attributions.length]) attributions.push(lead);
+    else visualQuotes.push({ words, lead });
   }
   const grammar = new SceneEditGrammar(cast);
   let index = 0;
@@ -130583,19 +130597,22 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
     if (!span.quoted) {
       const sentences = splitSentences2(span.text);
       wrappedClause = span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1)?.trim() ?? "";
-      clause = nativeDialogue && parts[partIndex + 1]?.quoted ? sentences.pop() ?? "" : "";
+      clause = parts[partIndex + 1]?.quoted ? sentences.pop() ?? "" : "";
       for (const sentence2 of sentences) {
         const text4 = sentence2.trim();
-        if (approvedDirections.has(text4)) continue;
+        if (!text4 || approvedDirections.has(text4)) continue;
         grammar.checkStageDirection(text4, nativeDialogue);
       }
       continue;
     }
-    if (!nativeDialogue) continue;
     const words = span.text.slice(1, -1);
-    const visual = visualQuotes.indexOf(words);
-    if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
+    const visual = visualQuotes.findIndex((quote) => quote.words === words && quote.lead === clause.trim());
+    if (visual >= 0) {
       visualQuotes.splice(visual, 1);
+      continue;
+    }
+    if (!nativeDialogue) {
+      if (cast.length) throw new Error("scene_dialogue_mismatch: preserve quoted material and its attribution from the storyboard");
       continue;
     }
     const line = expected[index++];
@@ -131005,15 +131022,15 @@ var speakerBindingSchema = external_exports.object({
   description: external_exports.string().trim().min(1)
 }).strict();
 var load8 = createRequire13(import.meta.url);
-var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
+var object5 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
 var hash = (value) => createHash18("sha256").update(JSON.stringify(stable2(value))).digest("hex");
 var fileHash = (file2) => createHash18("sha256").update(readFileSync22(file2)).digest("hex");
 function voiceDescription(character) {
-  const tts = object4(character.tts), speech = object4(object4(character.character).speech);
+  const tts = object5(character.tts), speech = object5(object5(character.character).speech);
   const confirmed = (key) => {
-    const field2 = object4(speech[key]);
+    const field2 = object5(speech[key]);
     return field2.status === "confirmed" ? text2(field2.value) : "";
   };
   return [
@@ -131034,10 +131051,10 @@ function currentSceneVoice(board, boardDir, shot, id, warnings) {
   return load8("../../skills/_shared/scene-voice.js").currentSceneVoice(board, boardDir, shot, id, warnings);
 }
 function msrSubject(character, refs, context2) {
-  const owned = object4(character.voiceReference).imagePaths;
+  const owned = object5(character.voiceReference).imagePaths;
   let ownedPaths;
-  const declared = [].concat(object4(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text2(object4(entry2).id));
-  const visualReferences = object4(context2.shot.visual).references;
+  const declared = [].concat(object5(context2.shot.visual).character ?? []).map((entry2) => typeof entry2 === "string" ? entry2 : text2(object5(entry2).id));
+  const visualReferences = object5(context2.shot.visual).references;
   const sceneFace = Array.isArray(visualReferences) && visualReferences.some((ref) => ref.scope === "scene" && ref.character === character.id);
   if (sceneFace || requiredCharacters(context2.shot).some((person) => person.character === character.id)) {
     ownedPaths = owned.map((file2) => realpathSync6(path21.resolve(context2.episode, "storyboard", file2)));
@@ -131045,7 +131062,7 @@ function msrSubject(character, refs, context2) {
     const { sheetPanels, canonicalReferences } = load8("../../skills/channel/references/character-panels.js");
     const dir = path21.join(context2.episode, "storyboard");
     const panels = sheetPanels(dir, [text2(character.id)]).get(text2(character.id));
-    const combined = object4(object4(context2.shot.visual).video).referenceLayout === "combined";
+    const combined = object5(object5(context2.shot.visual).video).referenceLayout === "combined";
     const files3 = combined ? canonicalReferences(dir, text2(context2.shot.id), [text2(character.id)], "video", { combined: true }).map((ref) => ref.path) : Object.values(panels);
     ownedPaths = files3.map((file2) => realpathSync6(path21.resolve(dir, file2)));
   } else ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
@@ -131079,20 +131096,20 @@ function afterImageBlock(prompt, lines) {
 function prepareVideoVoice(tool2, input, context2) {
   const args = { ...input };
   const ordered2 = load8("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
-  const lines = ordered2(context2.shot).map(object4).filter((line) => text2(line.tts));
+  const lines = ordered2(context2.shot).map(object5).filter((line) => text2(line.tts));
   const pinnedMsr = tool2 === "astra_genai_img2video" && args.generateAudio !== false && hasSubjectInput(args.references) && lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   if (pinnedMsr && lines.some((line) => line.delivery === "voiceover"))
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots");
   const msr = tool2 === "astra_genai_msr" || pinnedMsr;
   const vendor = VENDOR_REFERENCE_TOOLS.includes(tool2);
   if (msr) {
-    if (object4(context2.shot.visual).video && object4(object4(context2.shot.visual).video).voice !== void 0)
+    if (object5(context2.shot.visual).video && object5(object5(context2.shot.visual).video).voice !== void 0)
       throw new Error("visual.video.voice is retired: MSR uses the speaker's voice sample when one is pinned");
   }
   if (!lines.length) return { args };
-  const doc = object4(context2.board.SB_DOC), raw = doc.characters;
-  const characters = Array.isArray(raw) ? raw.map(object4) : Object.entries(object4(raw)).map(([id, value]) => ({ ...object4(value), id }));
-  const visual = object4(context2.shot.visual);
+  const doc = object5(context2.board.SB_DOC), raw = doc.characters;
+  const characters = Array.isArray(raw) ? raw.map(object5) : Object.entries(object5(raw)).map(([id, value]) => ({ ...object5(value), id }));
+  const visual = object5(context2.shot.visual);
   const seedanceDialogue = tool2 === "seedance_reference" && lines.some((line) => ["on_screen", "off_screen"].includes(String(line.delivery)));
   const nativeSlot = seedanceDialogue || Boolean(visual.clip) || context2.shot.type === "broll";
   const audible = msr || (tool2 !== "astra_genai_desktop_keyframes" || args.audio === true) && (tool2 === "fasth3_omni_reference" || tool2.startsWith("minimax_") || tool2.startsWith("heygen_") || (tool2.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
@@ -131115,9 +131132,9 @@ function prepareVideoVoice(tool2, input, context2) {
   const audioOffset = tool2 === "fasth3_omni_reference" && Array.isArray(args.referenceVideoPaths) ? fasth3VideoAudioCount(args.referenceVideoPaths.map((file2) => path21.resolve(context2.episode, String(file2)))) : 0;
   const audioPaths = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths.map((value) => realpathSync6(path21.resolve(context2.episode, String(value)))) : [];
   const imagePaths = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths.map((value) => realpathSync6(path21.resolve(context2.episode, String(value)))) : [];
-  const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object4(ref) })) : [];
+  const msrRefs = msr && Array.isArray(args.references) ? args.references.map((ref) => ({ ...object5(ref) })) : [];
   const msrAudio = [];
-  const screenBindings = msr ? external_exports.array(speakerBindingSchema).max(2).parse(object4(visual.video).speakerBindings ?? []) : [];
+  const screenBindings = msr ? external_exports.array(speakerBindingSchema).max(2).parse(object5(visual.video).speakerBindings ?? []) : [];
   if (new Set(screenBindings.map((binding) => binding.speaker)).size !== screenBindings.length)
     throw new Error("video_speaker_binding_invalid: each speaker needs one screen binding");
   for (const binding of screenBindings) {
@@ -131132,7 +131149,7 @@ function prepareVideoVoice(tool2, input, context2) {
   if (msr && !context2.sceneDirection && visibleSpeakers.length > 1 && new Set(screenBindings.filter((binding) => visibleSpeakers.includes(binding.speaker)).map((binding) => binding.screenPosition)).size !== visibleSpeakers.length)
     throw new Error("video_speaker_binding_invalid: on-screen speakers need distinct screen positions");
   if (msr && screenBindings.length) {
-    const start = text2(object4(visual.frames).start), expected = text2(object4(visual.video).speakerBindingImageSha256);
+    const start = text2(object5(visual.frames).start), expected = text2(object5(visual.video).speakerBindingImageSha256);
     if (expected && (!start || fileHash(path21.resolve(context2.episode, "storyboard", start)) !== expected))
       throw new Error("video_speaker_binding_stale: the start image changed; inspect its positions and rewrite shot_prompt speakerBindings");
   }
@@ -131143,11 +131160,11 @@ function prepareVideoVoice(tool2, input, context2) {
       continue;
     }
     const character = resolveCharacterVoice(matches[0], context2, warnings);
-    if (!context2.modelVoice && !Object.keys(object4(character.tts)).length) {
+    if (!context2.modelVoice && !Object.keys(object5(character.tts)).length) {
       warnings.push(`${id}: no pinned TTS settings in the storyboard or character identity; voice samples were not resolved.`);
       continue;
     }
-    const speaker = { speaker: id, name: text2(character.name) || id, tts: object4(character.tts), description: voiceDescription(character) };
+    const speaker = { speaker: id, name: text2(character.name) || id, tts: object5(character.tts), description: voiceDescription(character) };
     const screenBinding = screenBindings.find((binding) => binding.speaker === id);
     if (screenBinding) speaker.screenBinding = screenBinding;
     const label = nonEnglishOutsideQuotes(speaker.name) ? id : speaker.name;
@@ -131177,7 +131194,7 @@ function prepareVideoVoice(tool2, input, context2) {
           audioPaths.push(speaker.reference.path);
         }
         speaker.audioIndex = index + 1 + audioOffset;
-        const owned = object4(character.voiceReference).imagePaths;
+        const owned = object5(character.voiceReference).imagePaths;
         const ownedPaths = Array.isArray(owned) ? owned.map((value) => realpathSync6(path21.resolve(context2.episode, "storyboard", String(value)))) : [];
         speaker.imageIndices = imagePaths.flatMap((file2, i2) => ownedPaths.includes(file2) ? [i2 + 1] : []);
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
@@ -131191,7 +131208,7 @@ function prepareVideoVoice(tool2, input, context2) {
       if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
-    if (native && !context2.modelVoice && !text2(object4(character.tts).voiceDirection) && !text2(object4(character.tts).stylePrompt) && !text2(object4(object4(object4(character.character).speech).timbre).value))
+    if (native && !context2.modelVoice && !text2(object5(character.tts).voiceDirection) && !text2(object5(character.tts).stylePrompt) && !text2(object5(object5(object5(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
   }
   const turnScript = () => {
@@ -131205,18 +131222,18 @@ function prepareVideoVoice(tool2, input, context2) {
     if (nativeLines.some((line) => quoted.some((words) => words.includes(text2(line.tts)))))
       throw new Error("video_dialogue_embedded: keep authored dialogue in shot_dialogue, not args.prompt/action/sound; video_plan compiles every turn with its speaker binding in order");
     const bySpeaker = new Map(speakers.map((speaker) => [speaker.speaker, speaker]));
-    const owners = object4(context2.board.STRUCTURE).scenes;
+    const owners = object5(context2.board.STRUCTURE).scenes;
     const owner = Array.isArray(owners) && owners.find((scene) => scene.no === context2.shot.scene);
     const legacyScene = !context2.timed && !owner?.directionDefaults;
     const script = nativeLines.map((line, turn) => {
       const id = text2(line.speaker) || text2(doc.narratorCharacterId), speaker = bySpeaker.get(id);
-      const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text2(object4(line.acting).direction);
+      const image2 = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text2(object5(line.acting).direction);
       const label = nonEnglishOutsideQuotes(speaker?.name ?? "") ? id : speaker?.name ?? id;
       const who = image2 ? img(image2) : label;
       if (context2.sceneDirection) {
         const owner2 = context2.sceneDirection.openingPositions.find((p) => p.character === id);
         const imageSlot = image2 ?? owner2?.images[0];
-        const deliveryCue = sceneVoiceDirection(object4(line.acting), text2(line.tts), legacyScene);
+        const deliveryCue = sceneVoiceDirection(object5(line.acting), text2(line.tts), legacyScene);
         const binding2 = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === "off_screen" && "off screen"].filter(Boolean).join(", ");
         return `${deliveryCue ? deliveryCue + " " : ""}${id}${binding2 ? " (" + binding2 + ")" : ""}: "${text2(line.tts)}"`;
       }
@@ -131237,7 +131254,7 @@ function prepareVideoVoice(tool2, input, context2) {
     args.references = msrRefs;
     turnScript();
     if (typeof args.prompt === "string" && msrAudio.length) args.prompt = afterImageBlock(args.prompt, msrAudio.sort());
-    const spoken = object4(context2.board.STORY).language;
+    const spoken = object5(context2.board.STORY).language;
     if (typeof spoken === "string" ? !/^en\b/i.test(spoken) : lines.some((line) => /[^\P{L}A-Za-z]/u.test(text2(line.tts)))) warnings.push("MSR training captions were English; speech in another language and cross-language voice are not established (arXiv 2609.18393).");
     if (speakers.some((speaker) => speaker.audioIndex)) warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
   } else if (reference2) {
@@ -133434,6 +133451,8 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     });
     const refused = resolved.issues.filter((issue2) => issue2.level === "error");
     if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
+    const foreignEdit = nonEnglishOutsideQuotes(resolved.body, script);
+    if (foreignEdit) throw new Error("video_prompt_language: write directions in English and keep spoken words in quotes");
     const sceneCast = new Map((voice.voiceContinuity?.speakers ?? []).map((person) => [person.speaker, person.name]));
     for (const id of [...(scene?.openingPositions ?? []).map((row) => row.character), ...cast.map((person) => person.character)])
       if (!sceneCast.has(id)) sceneCast.set(id, names[id] || id);
@@ -148852,7 +148871,7 @@ var speechManageSchema = external_exports.object({
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
 var hash4 = (s2) => createHash30("sha256").update(s2).digest("hex");
-var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
+var object6 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var speechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
 var videoSeconds2 = (file2) => Number(execFileSync19(
   "ffprobe",
@@ -148860,9 +148879,9 @@ var videoSeconds2 = (file2) => Number(execFileSync19(
   { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
 ).trim());
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
-  const production = object5(scene.productionPlan), cuts = production.cuts;
+  const production = object6(scene.productionPlan), cuts = production.cuts;
   if (Array.isArray(cuts) && cuts.length) {
-    const cut = object5(cuts[0]);
+    const cut = object6(cuts[0]);
     if (cuts.length !== 1 || cut.kind !== "generated_video" || Number(cut.start ?? 0) !== 0 || typeof oldClip !== "string" || typeof cut.path !== "string" || resolve12(boardDir, cut.path) !== resolve12(boardDir, oldClip)) {
       warnings.push("The bound video changed; the authored production cuts were preserved and need an explicit edit before playback uses this clip.");
       return;
@@ -148888,15 +148907,15 @@ function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
 }
 function bindGeneratedSoundtrack(scene, next, clipSeconds) {
   const { carry } = nodeModule7.createRequire(import.meta.url)("../../skills/produce/references/edit-plan.js");
-  const edit2 = object5(scene.edit);
-  const visual = object5(scene.visual);
+  const edit2 = object6(scene.edit);
+  const visual = object6(scene.visual);
   const transition = String(scene.transition ?? "cut");
-  if (!clipSeconds || edit2.pre || edit2.post || visual.slide || visual.reuse !== void 0 || object5(visual.video).groupPlan || scene.type === "broll" || scene.type === "outro" || carry.test(transition) || carry.test(String(next?.transition)) || transition.startsWith("dip") && edit2.pre !== 0) return false;
+  if (!clipSeconds || edit2.pre || edit2.post || visual.slide || visual.reuse !== void 0 || object6(visual.video).groupPlan || scene.type === "broll" || scene.type === "outro" || carry.test(transition) || carry.test(String(next?.transition)) || transition.startsWith("dip") && edit2.pre !== 0) return false;
   const start = Number(edit2.in ?? 0);
   const end = edit2.out ?? (typeof scene.duration === "number" ? start + scene.duration : clipSeconds);
   if (typeof end !== "number" || !Number.isFinite(end) || end <= start || end > clipSeconds + 1e-3) return false;
   if (edit2.out === void 0 && typeof scene.duration === "number") scene.edit = { ...edit2, out: end };
-  scene.sound = { ...object5(scene.sound), audioSource: "video" };
+  scene.sound = { ...object6(scene.sound), audioSource: "video" };
   return true;
 }
 function speechRevision(line, character) {
@@ -148971,8 +148990,8 @@ function speechVideoPlan(input, capabilities, sceneNo) {
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const saved = object5(object5(object5(scene.visual).video).promptSource);
-  const design = object5(object5(scene.shot).videoDesign);
+  const saved = object6(object6(object6(scene.visual).video).promptSource);
+  const design = object6(object6(scene.shot).videoDesign);
   const astra = capabilities.provider.trim().toLowerCase() === "astra";
   const compiled = compileVideoPrompt(scene, {
     action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
@@ -149020,14 +149039,14 @@ function manageSpeech(args, options = {}) {
   const revision = hash4(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
-  const doc = object5(win.SB_DOC);
+  const doc = object6(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object5(rawCharacters)).map(([id, c]) => ({ ...object5(c), id }))).map((c) => resolveCharacterVoice(object5(c), { episode: dirname11(dirname11(file2)), board: win, shot: {} }, voiceWarnings));
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object6(rawCharacters)).map(([id, c]) => ({ ...object6(c), id }))).map((c) => resolveCharacterVoice(object6(c), { episode: dirname11(dirname11(file2)), board: win, shot: {} }, voiceWarnings));
   const character = (id) => characters.find((c) => c.id === id);
   const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname11(file2), board: win });
   const scenes = win.SCENES;
-  const timedShot = (scene) => actingContract().withThoughtClock(scene, object5(win.STRUCTURE).scenes);
+  const timedShot = (scene) => actingContract().withThoughtClock(scene, object6(win.STRUCTURE).scenes);
   let changed = false;
   let timing2;
   let soundtrack;
@@ -149035,7 +149054,7 @@ function manageSpeech(args, options = {}) {
   if (args.timingPatch && args.action !== "retime") throw new Error("timingPatch is only used by retime");
   if (args.reuse && args.action !== "attach_video") throw new Error("reuse is only used by attach_video");
   if (args.action === "prepare") {
-    const needsNarrator = object5(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
+    const needsNarrator = object6(win.STORY).version !== "story-v2" || scenes.some((scene) => (scene.narration || []).some((line) => !line.speaker));
     if ((needsNarrator || doc.narratorCharacterId !== void 0) && (typeof doc.narratorCharacterId !== "string" || !character(doc.narratorCharacterId)))
       throw new Error("Set SB_DOC.characters and narratorCharacterId before preparing speech without explicit speakers; no voice is invented");
     let next = Math.max(0, ...scenes.map((s2) => Number(String(s2.id || "").replace(/^s/, "")) || 0));
@@ -149072,17 +149091,17 @@ function manageSpeech(args, options = {}) {
       if (args.patch.voiceoverKind) line.delivery = "voiceover";
       if (line.voiceoverKind === null || line.delivery !== "voiceover") delete line.voiceoverKind;
       if (args.patch.acting === null) delete line.acting;
-      if (args.patch.speaker && object5(win.STORY).version === "story-v2") {
+      if (args.patch.speaker && object6(win.STORY).version === "story-v2") {
         const group = (scene.narration || []).indexOf(line) + 1;
         for (const event of Array.isArray(scene.performance) ? scene.performance : []) {
-          const performance2 = object5(event);
+          const performance2 = object6(event);
           if (performance2.group === group && ["dialogue", "narration"].includes(String(performance2.kind)))
             performance2.character = line.speaker;
         }
       }
       if (speechRevision(line, character(line.speaker)) !== prior) {
-        const video2 = object5(object5(scene.visual).video);
-        const binding = object5(video2.speechBinding);
+        const video2 = object6(object6(scene.visual).video);
+        const binding = object6(video2.speechBinding);
         const changedRoute = speechContract().invalidateVoiceoverChange(scene, priorLines);
         invalidated = { audio: oldAudio || null, video: changedRoute || Object.keys(video2).length && (line.delivery === "on_screen" || oldDelivery === "on_screen" || Object.hasOwn(args.patch, "acting")) || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)) ? video2 : null, edit: true };
         delete line.audio;
@@ -149109,8 +149128,8 @@ function manageSpeech(args, options = {}) {
       );
       const priorAudio = line.audio;
       const audioHash = hash4(bytes), lineRevision = speechRevision(line, character(line.speaker));
-      const video2 = object5(object5(scene.visual).video), binding = object5(video2.speechBinding);
-      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object5).find((a) => a.lineId === line.id) : void 0;
+      const video2 = object6(object6(scene.visual).video), binding = object6(video2.speechBinding);
+      const boundAudio = Array.isArray(binding.audio) ? binding.audio.map(object6).find((a) => a.lineId === line.id) : void 0;
       if (priorAudio?.sha256 !== audioHash || priorAudio?.revision !== lineRevision || boundAudio && (boundAudio.sha256 !== audioHash || boundAudio.revision !== lineRevision)) {
         const dependsOnSpeech = binding.mode !== "native" && (line.delivery === "on_screen" || ["audio_conditioned", "post_lipsync"].includes(String(binding.mode)));
         invalidated = { audio: priorAudio || null, video: dependsOnSpeech && Object.keys(video2).length ? video2 : null, edit: true };
@@ -149140,7 +149159,7 @@ function manageSpeech(args, options = {}) {
     const result = contract2.retime(timedShot(scene), args.timingPatch || {}, measuredDuration);
     scene.performance = result.scene.performance;
     scene.duration = result.scene.duration;
-    const video2 = object5(object5(scene.visual).video);
+    const video2 = object6(object6(scene.visual).video);
     if (Object.keys(video2).length) video2.speechStatus = "stale";
     timing2 = {
       shotId: scene.id,
@@ -149164,7 +149183,7 @@ function manageSpeech(args, options = {}) {
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
     const episode = dirname11(dirname11(file2));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
-    const selectedVideo = object5(scene.visual?.video);
+    const selectedVideo = object6(scene.visual?.video);
     speechContract().assertNoPostLipSync({
       direction: owner?.videoDirection,
       mode: selectedVideo.mode,
@@ -149225,7 +149244,7 @@ function manageSpeech(args, options = {}) {
       const renderedScene = receipts.sceneRenders.get(videoPath);
       const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
-        const video3 = object5(card.visual?.video), binding = object5(video3.speechBinding);
+        const video3 = object6(card.visual?.video), binding = object6(video3.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
         const source = binding.videoPath ?? video3.clip ?? video3.src;
         const original = typeof source === "string" ? resolve12(dirname11(file2), source) : void 0;
@@ -149241,7 +149260,7 @@ function manageSpeech(args, options = {}) {
       const native = plan2.mode === "native";
       if (native) requireNativeVideo(videoPath);
       const nativeAudio = native ? speechSpanContract().inspect(videoPath) : void 0;
-      const sound = object5(scene.sound);
+      const sound = object6(scene.sound);
       if (native && sound.audioSource === "speech") throw new Error("Native video speech lives in the clip soundtrack; sound.audioSource speech would drop it");
       let driverSha256;
       if (plan2.mode === "audio_conditioned") {
@@ -149270,12 +149289,12 @@ function manageSpeech(args, options = {}) {
         audioPath: args.audioPath,
         sceneAudioPath: owner?.videoDirection?.audio?.path
       });
-      const visual = object5(scene.visual);
-      const video2 = object5(visual.video);
+      const visual = object6(scene.visual);
+      const video2 = object6(visual.video);
       if (video2.engine && video2.engine !== plan2.provider || video2.model && video2.model !== plan2.model) throw new Error("Adapter does not match the selected shot model");
-      const priorBinding = object5(video2.speechBinding);
+      const priorBinding = object6(video2.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const trim = object5(scene.edit);
+      const trim = object6(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {
         const start = renderedShot.start_frame / renderedScene.fps, end = renderedShot.end_frame / renderedScene.fps;
@@ -149315,7 +149334,7 @@ function manageSpeech(args, options = {}) {
         invalidated = { video: video2, edit: true };
       } else {
         if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname11(file2), videoPath, video2.clip, plan2.warnings);
-        const trim2 = object5(scene.edit);
+        const trim2 = object6(scene.edit);
         if (native && replacement && (trim2.in !== void 0 || trim2.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim2;
           scene.edit = kept;
@@ -149377,7 +149396,7 @@ function manageSpeech(args, options = {}) {
           plan2.warnings.push("Could not decode the bound clip audio; inspect its sound source before assembly.");
         }
         if (status === "signal" && sound.audioSource === "video") {
-          const end = object5(scene.edit).out;
+          const end = object6(scene.edit).out;
           if (typeof end === "number" && !(end <= (boundSeconds ?? videoSeconds2(videoPath)) + 1e-3))
             throw new Error("The replacement cannot cover edit.out; keep the current source or revise the authored trim before attaching it.");
         } else if (status === "signal") {
@@ -149386,7 +149405,7 @@ function manageSpeech(args, options = {}) {
             plan2.warnings.push("This edit does not use the clip as sync footage. Carry its sound into the separate assembly audio or add post effects and ambience.");
         } else if (status === "silent" || status === "missing") {
           const reason = status === "missing" ? "has no audio stream" : "has a silent audio stream";
-          if (sound.audioSource === "video" && (object5(scene.edit).out !== void 0 || Array.isArray(sound.effects) && sound.effects.some((effect) => ["native", "input"].includes(String(object5(effect).delivery)))))
+          if (sound.audioSource === "video" && (object6(scene.edit).out !== void 0 || Array.isArray(sound.effects) && sound.effects.some((effect) => ["native", "input"].includes(String(object6(effect).delivery)))))
             throw new Error(`The replacement ${reason}; keep the current source or revise the authored soundtrack and trim before attaching it.`);
           const silentSound = { ...sound };
           delete silentSound.audioSource;
@@ -149429,7 +149448,7 @@ function manageSpeech(args, options = {}) {
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation: generation2, arguments: generation2 };
   }) : void 0;
-  return { revision: hash4(readFileSync38(file2)), changed, invalidated, plan: plan2, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname11(file2), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object5(object5(scene.visual).video).speechStatus !== "stale" && object5(object5(object5(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash4(readFileSync38(file2)), changed, invalidated, plan: plan2, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname11(file2), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object6(object6(scene.visual).video).speechStatus !== "stale" && object6(object6(object6(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/acting-review.ts

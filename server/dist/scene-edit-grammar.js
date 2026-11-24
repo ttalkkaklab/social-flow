@@ -9,8 +9,11 @@ const reserved = /[ⓈⓁⓂⓧ]/iu;
 const slot = /\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}/gu;
 const escape = (value) => value.replace(/[$.*+?^{}()|[\]\\]/g, '\\$&');
 const slotOwner = (id) => id.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '');
-// A common noun phrase has no cast or command tokens. Named actors and media are separate terms.
-const noun = '(?:the|a|an|her|his|their|its) (?:[\\p{L}-]+ ){0,3}[\\p{L}-]+';
+// A visual object is a controlled noun phrase. Unrestricted words could introduce a
+// second action inside a camera cue. New props and descriptions can be authored on the board.
+const material = '(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)';
+const object = '(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)';
+const noun = '(?:the|a|an|her|his|their|its) (?:' + material + ' ){0,3}' + object;
 const figure = "(?:Ⓢ(?:['’]s (?:face|eyes|hands?|shoulders?|coat|back))?|Ⓜ)";
 const subject = '(?:' + figure + '|' + noun + ')';
 const location = '(?:(?:at|by|near|beside|behind|past|through|across|towards?|in front of|away from) ' + subject + ')';
@@ -25,6 +28,7 @@ const stage = new RegExp('^(?:(?:hold on|open on|cut to|show|pan to|push in on|c
     '|keep ' + figure + ' (?:sharp|in focus|in frame|still)' +
     '|use a (?:wide|medium|close|tracking) shot of ' + figure + '(?: and ' + figure + ')?' +
     '|Ⓢ(?: and Ⓢ)? ' + action + ')(?: (?:as|while) Ⓢ ' + action + ')?' + timing + '$', 'iu');
+const modelReference = /^(?:(?:follow|track|match) (?:the (?:camera movement|camera move|motion|rhythm|soundtrack) in )?Ⓜ(?: and (?:its )?Ⓜ)?|use Ⓜ(?:, Ⓜ)* for camera movement and motion timing)$/iu;
 const castWords = /\b(?:voices?|voiceprints?|vocal|timbres?|accents?|casts?|actors?|actress(?:es)?|performers?|characters?|faces?|facial|identit(?:y|ies)|likeness(?:es)?|portraits?|roles?|parts?)\b/iu;
 const speechWords = /\b(?:dialogue|utterances?|spoken|speakers?|speech|lines?|script|sentences?|words?|turns?|conversation|monologue|says?|asks?|adds?|repl(?:y|ies)|responds?|answers?|whispers?|shouts?|speaks?|yells?|tells?|recites?|mutters?|mouths?|lip[- ]?sync\w*)\b/iu;
 export class SceneEditGrammar {
@@ -76,10 +80,19 @@ export class SceneEditGrammar {
         const visual = cue.replace(/Ⓢ\s*\(Ⓢ\)/gu, actor);
         if (stage.test(visual))
             return;
+        if (modelReference.test(visual)) {
+            const source = /\{([^{}]+)\.motion\}\s+and its\s+\{([^{}]+)\.soundtrack\}/iu.exec(text);
+            if (source && source[1] !== source[2])
+                throw new Error('scene_media_owner: the named video and its embedded soundtrack have different sources');
+            return;
+        }
         const speech = native && speechWords.test(cue);
         const cast = (this.names.size > 0 || bound) && (owners.size > 0 || castWords.test(text));
-        if (!cast && !speech)
-            return;
+        if (!cast && !speech) {
+            if (!native && !this.names.size)
+                return;
+            throw new Error('scene_direction_unverified: author this direction on the storyboard, or use a supported camera, blocking or media cue');
+        }
         if (speech && !/\b(?:faces?|identit(?:y|ies)|roles?|vocal|voices?)\b/iu.test(cue))
             throw new Error('scene_dialogue_mismatch: write each line with its approved speaker. Put complex timing or acting on the storyboard');
         throw new Error('scene_dialogue_speaker: preserve the cast. Put complex blocking on the storyboard or use a direct camera or blocking cue');
@@ -95,7 +108,7 @@ export class SceneEditGrammar {
         cue = cue.replace(/\s*\((?:Ⓢ|on screen|off screen)(?:,\s*(?:Ⓢ|on screen|off screen))*\)$/iu, '')
             .replace(/,?\s+(?:using|with)\s+Ⓢ$/iu, '').replace(/\s+to\s+Ⓛ$/iu, '')
             .replace(/^Ⓢ\s+(?:looks?|glances?|turns?)\s+(?:at|to|towards?)\s+Ⓛ\s+and\s+/iu, 'Ⓢ ')
-            .replace(/^Ⓢ\s+waits?(?:\s+(?:by|at|near|beside)\s+(?:the|a)\s+[\p{L}-]+(?:\s+[\p{L}-]+){0,2})?\s+and\s+/iu, 'Ⓢ ');
+            .replace(new RegExp('^Ⓢ waits?(?: (?:by|at|near|beside) ' + noun + ')? and ', 'iu'), 'Ⓢ ');
         return /^(?:Ⓢ|Ⓢ\s+(?:says?|asks?|repl(?:y|ies)|answers?|speaks?|whispers?|calls?|shouts?|murmurs?|mutters?|tells?|continues?)(?:\s+\p{L}+ly)?|Ⓢ\s+(?:asks?|tells?|reassures?|greets?|addresses?|thanks?|warns?|comforts?|reminds?)\s+Ⓛ)$/iu.test(cue);
     }
 }

@@ -224,16 +224,18 @@ export function scenePromptTemplate(prompt: string, {slots}: Pick<ReturnType<typ
 export function assertSceneDialogue(template: string, expected: readonly {speaker?: string; tts?: string; delivery?: string}[],
   cast: PromptCast, composed: string, nativeDialogue = true): void {
   const script = expected.flatMap(line => line.tts ? [line.tts] : []);
-  const visualQuotes = spans(composed,script).filter(span => span.quoted && !script.includes(span.text.slice(1,-1)))
-    .map(span => span.text.slice(1,-1));
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed,script);
   const approvedDirections = new Set(original.filter(span => !span.quoted)
     .flatMap(span => splitSentences(span.text)).map(text => text.trim()));
   const attributions: string[] = [];
+  const visualQuotes: {words:string; lead:string}[] = [];
   for (const [i, span] of original.entries()) {
-    if (span.quoted && span.text.slice(1,-1) === script[attributions.length])
-      attributions.push(splitSentences(original[i-1]?.text ?? '').at(-1)?.trim() ?? '');
+    if (!span.quoted) continue;
+    const words = span.text.slice(1,-1);
+    const lead = splitSentences(original[i-1]?.text ?? '').at(-1)?.trim() ?? '';
+    if (nativeDialogue && words === script[attributions.length]) attributions.push(lead);
+    else visualQuotes.push({words,lead});
   }
   const grammar = new SceneEditGrammar(cast);
   let index = 0;
@@ -243,20 +245,19 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
     if (!span.quoted) {
       const sentences = splitSentences(span.text);
       wrappedClause = span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1)?.trim() ?? '';
-      clause = nativeDialogue && parts[partIndex+1]?.quoted ? sentences.pop() ?? '' : '';
+      clause = parts[partIndex+1]?.quoted ? sentences.pop() ?? '' : '';
       for (const sentence of sentences) {
         const text = sentence.trim();
-        if (approvedDirections.has(text)) continue;
+        if (!text || approvedDirections.has(text)) continue;
         grammar.checkStageDirection(text,nativeDialogue);
       }
       continue;
     }
-    if (!nativeDialogue) continue;
     const words = span.text.slice(1,-1);
-    // Limit attribution to this sentence. A period inside a named slot is part of the identifier.
-    const visual = visualQuotes.indexOf(words);
-    if (visual >= 0 && !/(?:[:,]\s*$|\b(?:says|asks|replies|whispers|speaks)\b)/iu.test(clause)) {
-      visualQuotes.splice(visual,1);
+    const visual = visualQuotes.findIndex(quote => quote.words === words && quote.lead === clause.trim());
+    if (visual >= 0) { visualQuotes.splice(visual,1); continue; }
+    if (!nativeDialogue) {
+      if (cast.length) throw new Error('scene_dialogue_mismatch: preserve quoted material and its attribution from the storyboard');
       continue;
     }
     const line = expected[index++];

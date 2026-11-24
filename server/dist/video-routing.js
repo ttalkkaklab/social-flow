@@ -994,6 +994,9 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const refused = resolved.issues.filter(issue => issue.level === 'error');
         if (refused.length)
             throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
+        const foreignEdit = nonEnglishOutsideQuotes(resolved.body, script);
+        if (foreignEdit)
+            throw new Error('video_prompt_language: write directions in English and keep spoken words in quotes');
         const sceneCast = new Map((voice.voiceContinuity?.speakers ?? []).map(person => [person.speaker, person.name]));
         for (const id of [...(scene?.openingPositions ?? []).map(row => row.character), ...cast.map(person => person.character)])
             if (!sceneCast.has(id))
