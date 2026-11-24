@@ -692,6 +692,8 @@ test('a saved engine that cannot keep a voice is refused by name, not as a missi
 test('storyboard timing follows snapshot, scoped overrides, source trim and outgoing handles before media', async t => {
   const f = fixture(t, selection);
   Object.assign(f.board.SCENES[0], { duration: 14, edit: { in: .5 }, shot: { render: { mode: 'generated_video' } } });
+  f.board.SCENES[0].visual.bg = 'opening.png';
+  fs.writeFileSync(path.join(f.episode,'storyboard','opening.png'),png);
   f.board.SCENES[1].transition = 'dissolve';
   f.save();
   const fit = readShotVideoTiming(f.episode, 's1');
@@ -1677,14 +1679,14 @@ test('one Seedance scene binds all three original characters and their voices in
   f.save();
   assert.throws(()=>planVideo(input,false),/scene_speech_opening/);
 });
-test('scene submission distinguishes soft shot references, temporal endpoints and omitted optional inputs', t => {
+test('scene submission requires shot images and distinguishes soft references from temporal endpoints', t => {
   const f = fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'480p'});
   const dir = path.join(f.episode,'storyboard');
   const scene = {no:1,speakers:[],frames:{},videoDirection:{openingPositions:[],emotion:'The rider relaxes.',action:'The blue bike rounds a bend.'}};
   f.board.STRUCTURE = {scenes:[scene]};
   const input = {episode:f.episode,sceneNo:1,requestId:'whole-scene'};
   for (const [i,card] of f.board.SCENES.entries()) {
-    card.scene = 1; card.duration = 2; card.shot = {size:'ms',angle:'eye'};
+    card.scene = 1; card.duration = 2; card.shot = {size:'ms',angle:'eye',render:{mode:'generated_video'}};
     card.visual = {video:{promptSource:{action:i ? 'The wheels clear the bend.' : 'The rider grips the bars.'}}};
     card.referenceImage = 'guide'+i+'.png';
     if (i === 0) card.transition = 'dip'; // The incoming scene edit precedes the first frame of this request.
@@ -1695,11 +1697,27 @@ test('scene submission distinguishes soft shot references, temporal endpoints an
   assert.throws(()=>planVideo({...input,shotId:'s2'}),/shotId/);
   scene.frames = {start:'guide1.png',end:'guide0.png'};
   f.board.SCENES[0].visual.frames = {mode:'first',start:'obsolete.png'};
+  delete f.board.SCENES[0].referenceImage;
+  delete f.board.SCENES[1].referenceImage;
+  f.save();
+  assert.throws(()=>planVideo(input,false), /shot_image_required:.*shot s2 has no shot image/);
+  f.board.SCENES[1].referenceImage = 'corrupted.png';
+  fs.writeFileSync(path.join(dir,'corrupted.png'),'not a picture');
+  f.save();
+  assert.throws(()=>planVideo(input,false), /shot_image_required:.*shot s2 has an unreadable shot image/);
+  f.board.SCENES[1].referenceImage = 'later.png';
+  fs.copyFileSync(path.join(dir,'guide0.png'),path.join(dir,'later.png'));
   f.save();
   const anchored = planVideo({...input,requestId:'anchored'},false);
   assert.equal(anchored.tool,'seedance_img2video');
   assert.deepEqual(anchored.sceneRequest.images.map(image=>[image.role,image.frame]),[['start',0],['end',95]]);
-  assert.ok(anchored.sceneRequest.shotReferenceImages.every(g=>!g.submitted && g.reason));
+  const [guide] = anchored.sceneRequest.shotReferenceImages;
+  assert.equal(guide.shotId,'s2');
+  assert.equal(guide.submitted,false);
+  assert.ok(guide.reason);
+  f.board.SCENES[0].referenceImage = scene.frames.start;
+  f.save();
+  assert.deepEqual(planVideo(input,false).sceneRequest.shotReferenceImages.map(g=>g.shotId),['s2']);
   assert.equal(anchored.args.referenceImagePaths,undefined);
   for (const [index,id] of ['ada','bo','cy'].entries()) {
     const card = f.board.SCENES[index % 2];
@@ -1735,6 +1753,26 @@ test('audio conditioning reports an explicit speaker reference it cannot submit'
   delete scene.speakerReferences;
   const projection=projectSceneCast(scene,[card],board,os.tmpdir(),'astra-genai');
   assert.deepEqual(projection.direction.openingPositions[0].images,[]);
+});
+
+test('per-shot rendering binds the visible cast and any off-screen speaker for that shot', () => {
+  const {projectSceneCast} = require('../../skills/_shared/scene-cast.js');
+  const characters = ['caller','rider'].map(id => ({id,panels:{face:id+'.png'}}));
+  const scene = {no:1,speakers:['caller','rider'],frames:{},
+    speakerReferences:characters.map(actor => ({character:actor.id,path:actor.panels.face}))};
+  const cards = [
+    {id:'greeting',visual:{character:['caller','rider']},narration:[{speaker:'rider',delivery:'on_screen',tts:'Hello.'}]},
+    {id:'exit',visual:{character:['rider']},timeline:{openingPositions:[{character:'caller',images:[],position:'Off screen.'}]}},
+    {id:'call',visual:{character:['rider']},narration:[{speaker:'caller',delivery:'off_screen',tts:'Wait.'}]},
+    {id:'serve',visual:{character:['caller','rider']},timeline:{openingPositions:[{character:'rider',images:[],position:'Seated in the opening image.'}]},
+      narration:[{speaker:'caller',delivery:'on_screen',tts:'Thank you.'}]},
+    {id:'legacy',visual:{}},
+  ];
+  const refs = perShot => projectSceneCast(scene,cards,{SB_DOC:{characters}},os.tmpdir(),'astra-genai',false,perShot)
+    .members.map(card => card.visual.references.map(ref => ref.character));
+  const both = ['caller','rider'];
+  assert.deepEqual(refs(true),[both,['rider'],both,['caller'],both]);
+  assert.deepEqual(refs(false),[both,both,both,both,both]);
 });
 
 test('an optional guide cannot prevent silent distilled I2V when the background slot requires a subject', t => {

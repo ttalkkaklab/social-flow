@@ -53926,6 +53926,7 @@ var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_
 var load7 = createRequire9(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
+var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
 function selectedVideoTool(selection, operation = selection.operation) {
   if (operation === "image" && selection.engine === "mlx" && selection.model && localVideoStrategy("ltx_video_generate")?.acceptsModel(selection.model))
     return "ltx_video_generate";
@@ -54456,7 +54457,7 @@ var visualSchema = external_exports.object({
 var shotIdSchema = external_exports.string().regex(/^s\d{4,}$/);
 var shotSchema = external_exports.object({
   id: shotIdSchema.optional(),
-  referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+  referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
   timeline: shotTimelineSchema.optional(),
   type: tuple(V.TYPES),
   title: external_exports.string().optional(),
@@ -54733,7 +54734,7 @@ var storyShotSchema = external_exports.object({
     id: shotIdSchema.optional().describe("Revise this shot; without it a new shot is added at the end of its scene"),
     scene: external_exports.number().int().positive().describe("The scene number \u2014 written first with story_scene"),
     summary: nonEmpty.describe("The story this shot tells, in one sentence"),
-    referenceImage: nonEmpty.optional().describe("Optional composition guide for this shot. Never a temporal frame."),
+    referenceImage: nonEmpty.optional().describe("Shot composition image for a scene-owned video. The first card may use the scene opening."),
     duration: external_exports.number().finite().positive().optional().describe("Target seconds for a model-paced shot. Use timeline instead for exact frame boundaries."),
     timeline: shotTimelineSchema.optional()
   }).strict().refine((card) => card.duration === void 0 || !card.timeline, "Choose duration or an exact timeline")).min(1)
@@ -55303,6 +55304,8 @@ function manageSpeech(args, options = {}) {
       const videoSha256 = hash(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
       const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname6(file), board: win }, receipts);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
         const video2 = object2(card.visual?.video), binding = object2(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -55311,7 +55314,10 @@ function manageSpeech(args, options = {}) {
         const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync5(original) && hash(readFileSync7(original)) === videoSha256);
         if (!matches) continue;
         speechContract().assertNoPostLipSync(binding);
-        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider || binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode))
+        const other = renderedShot && renderedScene?.shots.find((shot) => shot.shot_id === card.id);
+        const separateShot = other && renderedShot && (other.end_frame <= renderedShot.start_frame || renderedShot.end_frame <= other.start_frame);
+        const separatePicture = separateShot && (binding.mode === "voiceover" || plan.mode === "voiceover");
+        if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider || binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode && !separatePicture))
           throw new Error("speech_video_source_mismatch: this video already belongs to a different speech operation or model");
       }
       const native = plan.mode === "native";
@@ -55351,8 +55357,6 @@ function manageSpeech(args, options = {}) {
       if (video.engine && video.engine !== plan.provider || video.model && video.model !== plan.model) throw new Error("Adapter does not match the selected shot model");
       const priorBinding = object2(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const renderedScene = receipts.sceneRenders.get(videoPath);
-      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       const trim = object2(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {

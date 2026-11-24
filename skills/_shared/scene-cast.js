@@ -195,19 +195,25 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
   let openingRefs = [];
   const members = cards.map((card, index) => {
     const visual = card.visual || {};
+    const castSpecified = visual.character !== undefined || visual.characters !== undefined;
     const original = castIds(visual.character ?? visual.characters);
     const active = [...new Set(orderedSpeech(card).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker))];
-    const positioned = [...(card.timeline?.openingPositions ?? []), ...(visual.video?.openingPositions ?? []),
-      ...(index === 0 ? scene.videoDirection?.openingPositions ?? [] : [])];
-    const localIds = new Set([...active, ...original, ...castIds(visual.bystanders),
-      ...positioned.filter(row => row.images?.length || declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
+    const shotMarks = [...(card.timeline?.openingPositions ?? []), ...(visual.video?.openingPositions ?? [])];
+    const hasShotBlocking = castSpecified && shotMarks.length > 0;
+    const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? [])
+      .filter(row => !shotMarks.some(mark => mark.character === row.character)) : [];
+    // An empty slot list leaves a silent character in the composition without a separate face input.
+    const visibleRefs = original.filter(id => !shotMarks.some(mark => mark.character === id && mark.images?.length === 0));
+    const localIds = new Set([...active, ...visibleRefs, ...castIds(visual.bystanders),
+      ...shotMarks.filter(row => row.images?.length || !hasShotBlocking && declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
+      ...inheritedMarks.filter(row => row.images?.length || declaredRefs.some(ref => ref.character === row.character)).map(row => row.character),
       ...(visual.characterInputs ?? []).map(input => input.character),
       ...(card.timeline?.images ?? []).map(pin => pin.character),
       ...(visual.references ?? []).map(ref => ownerOf(ref,card))]);
     const localRefs = perShot && identities.length > 2 ? [
       ...active.flatMap(id => references.filter(ref => ref.character === id)),
       ...references.filter(ref => !active.includes(ref.character) && localIds.has(ref.character))
-    ] : references;
+    ] : perShot && hasShotBlocking ? references.filter(ref => localIds.has(ref.character)) : references;
     const useSceneRefs = (ltx || scene.frames !== undefined || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === 'mix');
     const keep = ref => {
       const owner = registeredOwner(ref.path);
@@ -239,7 +245,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     const timeline = card.timeline && {...card.timeline,
       ...(card.timeline.images ? {images:pins} : {}),
       ...(card.timeline.openingPositions ? {openingPositions:shotPositions(card.timeline.openingPositions)} : {})};
-    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(visual.character !== undefined || visual.characters !== undefined ? {character:original} : {}),
+    const updated = {...visual, ...(ltx ? {sceneSpeakerReferences:true} : {}), ...(castSpecified ? {character:original} : {}),
       ...(visual.references || subjectRefs.length ? {references:[...subjectRefs,...kept]} : {}),
       ...(visual.characterInputs ? {characterInputs:visual.characterInputs} : {}),
       ...(visual.video?.openingPositions ? {video:{...visual.video,openingPositions:shotPositions(visual.video.openingPositions)}} : {})};
@@ -266,7 +272,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
         delete updated.video.referenceImagePaths;
       }
       if (!perShot && timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
-        throw new Error('scene_image_scope: scene anchors and optional shot guides replace temporal pins on ' + card.id);
+        throw new Error('scene_image_scope: use a scene anchor or an authored shot composition image on ' + card.id);
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};
   });

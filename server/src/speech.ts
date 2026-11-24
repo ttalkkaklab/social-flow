@@ -386,6 +386,8 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
       const videoSha256 = hash(bytes);
       const receipts = speechContract().episodeVideoReceipts(scenes,dirname(file),videoPath);
       const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, {...plan,sourceShot:scene,boardDir:dirname(file),board:win}, receipts);
+      const renderedScene = receipts.sceneRenders.get(videoPath);
+      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find(shot=>shot.shot_id===scene.id);
       for (const card of scenes) {
         const video = object(card.visual?.video), binding = object(video.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
@@ -395,8 +397,11 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
           original && (original === videoPath || existsSync(original) && hash(readFileSync(original)) === videoSha256);
         if (!matches) continue;
         speechContract().assertNoPostLipSync(binding);
+        const other = renderedShot && renderedScene?.shots.find(shot => shot.shot_id === card.id);
+        const separateShot = other && renderedShot && (other.end_frame <= renderedShot.start_frame || renderedShot.end_frame <= other.start_frame);
+        const separatePicture = separateShot && (binding.mode === 'voiceover' || plan.mode === 'voiceover');
         if (physical && binding.videoSha256 && (binding.provider && binding.provider !== plan.provider ||
-            binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode))
+            binding.model && binding.model !== plan.model || binding.mode && binding.mode !== plan.mode && !separatePicture))
           throw new Error('speech_video_source_mismatch: this video already belongs to a different speech operation or model');
       }
       const native = plan.mode === 'native';
@@ -430,8 +435,6 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
       if ((video.engine && video.engine !== plan.provider) || (video.model && video.model !== plan.model)) throw new Error('Adapter does not match the selected shot model');
       const priorBinding = object(video.speechBinding);
       const replacement = Boolean(priorBinding.videoSha256 && priorBinding.videoSha256 !== videoSha256);
-      const renderedScene = receipts.sceneRenders.get(videoPath);
-      const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find(shot=>shot.shot_id===scene.id);
       const trim = object(scene.edit);
       let sourceEdit = native && replacement ? {} : trim;
       if (renderedShot && renderedScene) {

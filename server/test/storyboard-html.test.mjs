@@ -72,7 +72,7 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   const plan = { sceneNo: 1, shotIds: [first.id, second.id], prompt: 'Saved <take>', requestId: 'take-1', stale: false };
   const context = { LANG: 'en', window: { VIDEO_PRODUCTION: { candidates: [plan] }, VIDEO_PRODUCTION_REVIEW: review },
     grp: { scene: 1, items: [first, second].map((s, i) => ({ s, i })) }, sc: { videoDirection: { sound: 'Street noise' } },
-    first, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
+    first, second, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
     safeSrc: () => '', esc: s => String(s).replaceAll('<', '&lt;'),
     T: { shotCap: n => 'Shot ' + n, sceneNamed: n => 'Scene ' + n }, DOC: {}, OFF_GLYPH: '' };
   const render = expression => runInNewContext(functions + '\n' + expression, context);
@@ -112,12 +112,17 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   assert.doesNotMatch(card, /Earlier single-shot prompt|>Prompt<|>Video prompt</);
   assert.match(render('shotBodyHtml(first, [], false, 1)'), /Earlier single-shot prompt/);
   context.window.STRUCTURE = {scenes:[{no:1,speakers:[],frames:{start:'opening.png'}}]};
+  context.window.STRUCTURE_CONTRACT = require('../../skills/storyboard/references/structure-contract.js');
+  context.window.SCENES = [first, second];
   Object.assign(first,{scene:1,shot:{render:{mode:'generated_video'}}});
+  Object.assign(second,{scene:1,shot:{render:{mode:'generated_video'}}});
   const sceneCard = () => render('shotBodyHtml(first, [], true, 1)');
-  assert.match(sceneCard(),/shot-body lines-only/);
-  assert.doesNotMatch(sceneCard(),/shot-refs|Start image|End image/);
-  first.referenceImage = 'guide.png';
   context.safeSrc = file => file;
+  assert.match(sceneCard(),/Shot reference.*opening.png/s);
+  const laterCard = render('shotBodyHtml(second, [], true, 2)');
+  assert.match(laterCard,/Shot image required/);
+  assert.doesNotMatch(laterCard,/opening.png/);
+  first.referenceImage = 'guide.png';
   assert.match(sceneCard(),/Shot reference.*guide.png/s);
   assert.doesNotMatch(sceneCard(),/shot-refs|opening.png/);
 });

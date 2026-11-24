@@ -410,6 +410,11 @@ for the default front view with a missing-view warning; a missing back panel is 
 Built sets use the same direction against their establishing camera and reject an opposing
 subject viewpoint before rendering. See [asset sheets](skills/storyboard/references/asset-sheets.md).
 
+Before image generation, store the scene's fixed positions, landmarks and axis in
+`story_scene.directionDefaults`. `shot_image` puts that plan in the first shot's prompt
+and uses its saved image as a spatial reference for subsequent shots in the same location.
+The current shot supplies the next camera view, action and prop state.
+
 ## Scene video generation
 
 Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
@@ -1383,6 +1388,8 @@ See [review translations](skills/storyboard/references/review-localization.md).
 ### Scene video requests
 
 Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.

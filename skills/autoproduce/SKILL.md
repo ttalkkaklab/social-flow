@@ -115,7 +115,7 @@ reality check before opening new scenes.
    On any other type an unattended run has no user to pick: record the candidates with
    `offered: true`, apply none and list them in the run report
    ([cliché use](../storyboard/references/cliche-use.md#6-recommend-then-apply-what-the-user-picks)).
-2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): the scene's chosen anchors and optional shot guides, with `shot_image`.
+2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): attach each picture shot's image and the chosen scene endpoints with `shot_image`.
 3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): one `story_scene.videoDirection` and one `video_plan` with `sceneNo` per generated scene. Execute each approved scene once and reuse the original request ID to recover a pending job.
 
 [review-context](../review-context/SKILL.md), [review-camera](../review-camera/SKILL.md),
