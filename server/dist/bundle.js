@@ -111379,7 +111379,7 @@ function blenderBin() {
 }
 function mlxServeConfigured() {
   if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL) return true;
-  if (existsSync4("/Applications/MLX Core.app")) return true;
+  if (existsSync4("/Applications/MLX-Serve.app") || existsSync4("/Applications/MLX Core.app")) return true;
   return binOnPath("mlx-serve");
 }
 var snsTokenDir = process.env.SNS_TOKEN_DIR || join2(homedir(), ".config", "social-flow");

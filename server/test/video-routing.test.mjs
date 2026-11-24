@@ -2119,6 +2119,10 @@ test('a shot image sent as a timed frame has no name in the prompt',async t=>{
  assert.equal(buildGenaiVideoBody(planVideo({...input,prompt:compiled.promptTemplate},false).args).prompt,buildGenaiVideoBody(compiled.args).prompt);
 });
 test('the same authored names take picture and audio tags on the H3 reference lane',async t=>{
+ // The transport is injected. Its configuration must be independent of the host's installed apps.
+ const priorUrl = process.env.MLX_SERVE_URL;
+ process.env.MLX_SERVE_URL = 'http://127.0.0.1:1';
+ t.after(() => { if (priorUrl === undefined) delete process.env.MLX_SERVE_URL; else process.env.MLX_SERVE_URL = priorUrl; });
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'mlx',model:'ddalcu/FastH3-Omni-MLX-Serve-8bit'},[62,62],2);
  const input={episode:f.episode,sceneNo:1,requestId:'h3',args:{}};
  const compiled=planVideo(input,false);
