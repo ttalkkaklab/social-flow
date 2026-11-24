@@ -81,8 +81,11 @@ export class SceneEditGrammar {
             throw new Error('scene_dialogue_speaker: keep the generated inventory and pair a cast slot with its own actor');
         // Strip the matching parenthesized slot from "Hero ({hero.face}) waits by the door".
         const visual = cue.replace(/Ⓢ\s*\(Ⓢ\)/gu, actor);
-        if (stage.test(visual))
+        if (stage.test(visual)) {
+            if (inputs.some(input => input.role === 'soundtrack'))
+                throw new Error('scene_media_type: a camera cue requires a visual reference');
             return;
+        }
         if (modelReference.test(visual)) {
             if (/ and its Ⓜ$/iu.test(visual)) {
                 const [first, second] = inputs;
@@ -90,8 +93,11 @@ export class SceneEditGrammar {
                 if (!second || first.source !== second.source || !roles.has('motion') || !roles.has('soundtrack'))
                     throw new Error('scene_media_owner: name a video and its own embedded soundtrack');
             }
-            if (/^use /iu.test(visual) && inputs.some(input => input.role !== 'motion'))
-                throw new Error('scene_media_owner: use a motion reference for camera movement and timing');
+            const motion = /\bthe (?:camera movement|camera move|motion) in\b/iu.test(visual);
+            const sound = /\bthe (?:rhythm|soundtrack) in\b/iu.test(visual);
+            if (motion && inputs[0].role !== 'motion' || sound && inputs[0].role !== 'soundtrack' ||
+                /^use /iu.test(visual) && inputs.some(input => input.role !== 'motion'))
+                throw new Error('scene_media_type: use a motion clip for camera movement and an audio slot for a soundtrack cue');
             return;
         }
         const speech = native && speechWords.test(cue);

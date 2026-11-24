@@ -48,9 +48,11 @@ test('two panels of the same role bind by asset identity across reorderings', ()
 
 test('named clip ownership is independent of cast IDs and normalized cue whitespace', () => {
   const grammar = new SceneEditGrammar([{speaker:'hero',name:'Hero'}]);
-  for (const cue of ['Track {hero.motion} AND  ITS {hero.soundtrack}', 'Track {hero.soundtrack} and its {hero.motion}', 'Hold on the latch'])
+  for (const cue of ['Track {hero.motion} AND  ITS {hero.soundtrack}', 'Track {hero.soundtrack} and its {hero.motion}', 'Follow the camera movement in {hero.motion}', 'Match the rhythm in {hero.soundtrack}', 'Hold on the latch'])
     assert.doesNotThrow(() => grammar.checkStageDirection(cue,true));
-  for (const cue of ['Track {hero.motion} AND  ITS {wide.soundtrack}', 'Track {wide.soundtrack} and its {hero.motion}',
-    'Use {hero.soundtrack} for camera movement and motion timing'])
+  for (const cue of ['Track {hero.motion} AND  ITS {wide.soundtrack}', 'Track {wide.soundtrack} and its {hero.motion}'])
     assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_owner/);
+  for (const cue of ['Use {hero.soundtrack} for camera movement and motion timing','Track the camera move in {wide.soundtrack}',
+    'Match the motion in {hero.soundtrack}','Follow the soundtrack in {hero.motion}','Hold on {hero.soundtrack}'])
+    assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_type/);
 });

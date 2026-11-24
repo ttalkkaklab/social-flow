@@ -2151,6 +2151,7 @@ test('the same authored names take picture and audio tags on the H3 reference la
    'Track {motion-with-audio.soundtrack} AND ITS {dolly.motion}.']) {
    assert.throws(() => planVideo({...options,prompt:edit + '\n' + direction},false),/scene_media_owner/);
  }
+ assert.throws(() => planVideo({...options,prompt:edit + '\nFollow the camera movement in {dolly.soundtrack}.'},false),/scene_media_type/);
  const paired = planVideo({...options,prompt:edit + '\nTrack {motion-with-audio.soundtrack} and  its {motion-with-audio.motion}.'},false);
  assert.ok(paired.args.prompt.endsWith('Track <Audio 2> and  its <Video 2>.'));
  let submitted;
