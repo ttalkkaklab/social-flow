@@ -34643,7 +34643,18 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
+var scenePromptDrafts = external_exports.array(external_exports.object({
+  engine: external_exports.string().trim().min(1),
+  model: external_exports.string().trim().min(1).optional(),
+  operation: external_exports.string().trim().min(1),
+  prompt: external_exports.string().min(1).max(32e3).refine((text) => !!text.trim(), "Enter a complete scene prompt")
+}).strict()).refine(
+  (drafts) => new Set(drafts.map((d) => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length,
+  "Keep one edited scene prompt per engine, model and operation"
+);
 var sceneVideoDirectionSchema = external_exports.object({
+  motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
+  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),

@@ -50032,7 +50032,18 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
+var scenePromptDrafts = external_exports.array(external_exports.object({
+  engine: external_exports.string().trim().min(1),
+  model: external_exports.string().trim().min(1).optional(),
+  operation: external_exports.string().trim().min(1),
+  prompt: external_exports.string().min(1).max(32e3).refine((text2) => !!text2.trim(), "Enter a complete scene prompt")
+}).strict()).refine(
+  (drafts) => new Set(drafts.map((d) => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length,
+  "Keep one edited scene prompt per engine, model and operation"
+);
 var sceneVideoDirectionSchema = external_exports.object({
+  motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
+  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -50272,8 +50283,8 @@ var ordered = {
   allowsGeneratedVoice: false
 };
 var holds = { ...ordered, cutTiming: "approximate_holds" };
-var veo = { ...ordered, cutTiming: "time_ranges", allowsGeneratedVoice: true };
-var seedance = { ...ordered, cutTiming: "action_beats" };
+var veo = { ...ordered, writer: "veo", cutTiming: "time_ranges", allowsGeneratedVoice: true };
+var seedance = { ...ordered, writer: "seedance", cutTiming: "action_beats" };
 var pictureTags = { ...seedance, referenceLabels: "picture_audio_tags" };
 var operations = {
   veo_text2video: veo,
@@ -50283,11 +50294,23 @@ var operations = {
   seedance_text2video: seedance,
   seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
   seedance_reference: seedance,
-  astra_genai_img2video: holds,
-  astra_genai_msr: holds,
-  minimax_reference: { ...ordered, cutTiming: "action_beats", referenceLabels: "reference_indexed" },
-  fasth3_omni_reference: pictureTags,
-  heygen_reference: pictureTags
+  astra_genai_img2video: { ...holds, writer: "ltx" },
+  astra_genai_text2video: { ...ordered, writer: "ltx" },
+  astra_genai_audio2video: { ...ordered, writer: "recorded" },
+  astra_genai_desktop_audio2video: { ...ordered, writer: "recorded" },
+  astra_audio2video: { ...ordered, writer: "recorded" },
+  ltx_api_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_img2video: { ...ordered, writer: "ltx" },
+  ltx_desktop_text2video: { ...ordered, writer: "ltx" },
+  ltx_api_img2video: { ...ordered, writer: "ltx" },
+  minimax_img2video: { ...ordered, writer: "hostedH3" },
+  heygen_img2video: { ...ordered, writer: "heygen" },
+  ltx_video_generate: { ...ordered, writer: "ltx" },
+  astra_genai_msr: { ...holds, writer: "msr" },
+  minimax_reference: { ...ordered, writer: "hostedH3", cutTiming: "action_beats", referenceLabels: "reference_indexed" },
+  fasth3_omni_reference: { ...pictureTags, writer: "fastH3" },
+  heygen_reference: { ...pictureTags, writer: "heygen" }
 };
 function scenePromptProfile(tool, model2) {
   const profile = operations[tool ?? ""] ?? ordered;
@@ -53976,6 +53999,8 @@ var videoPlanSchema = external_exports.object({
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
+  wholeScene: external_exports.literal(true).optional(),
+  prompt: external_exports.string().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})

@@ -284,8 +284,9 @@ function pinnedActor(dir, id, face, frequency) {
   return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
 }
 
-test('EP13 keeps five Linh face pins and only her third-shot voice in one native scene submission', async t => {
+test('explicit legacy shot rendering keeps five Linh face pins and only her third-shot voice', async t => {
   const f = busking(t);
+  f.input.sceneRendering = 'per_shot';
   delete f.scene.audio;
   f.scene.openingPositions = [
     {character:'bo',images:[],position:'At the flower stall.'},
@@ -436,7 +437,7 @@ test('native scene children bind the active voices locally and reject three spea
   save();
   const options = {...f.input,sceneRendering:'per_shot'};
   const plan = planVideo(options,false);
-  assert.equal(planVideo(f.input,false).sceneRendering,'per_shot');
+  assert.throws(() => planVideo(f.input,false), /scene_prompt_unsupported/);
   const {body} = await buildSceneWire(plan.sceneRequest,plan.selection.model,plan.selection.resolution);
   const firstFaces = body.shots[0].images.filter(pin => pin.role === 'face');
   const listenerSlot = firstFaces.findIndex(pin => pin.character === listener.id);

@@ -58,7 +58,15 @@ export const sceneShotBindingsSchema = z.array(z.object({
     dialogueCues: z.array(z.object({ lineId: z.string().min(1), frame: z.number().int().nonnegative() }).strict()).optional(),
     seed: z.number().int().min(0).max(2147483647).optional().describe('Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.'),
 }).strict()).min(1);
+const scenePromptDrafts = z.array(z.object({
+    engine: z.string().trim().min(1),
+    model: z.string().trim().min(1).optional(),
+    operation: z.string().trim().min(1),
+    prompt: z.string().min(1).max(32000).refine(text => !!text.trim(), 'Enter a complete scene prompt'),
+}).strict()).refine(drafts => new Set(drafts.map(d => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length, 'Keep one edited scene prompt per engine, model and operation');
 export const sceneVideoDirectionSchema = z.object({
+    motionReferencePaths: z.array(z.string().trim().min(1)).min(1).max(3).optional().describe('Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot.'),
+    promptDrafts: scenePromptDrafts.optional().describe('Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections.'),
     openingPositions: openingPositionsSchema,
     dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),

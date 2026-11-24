@@ -1,7 +1,7 @@
 import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords } from './scene-video.js';
 import { readSceneCapabilities, sceneRequestId, sceneRequestIssues, SCENE_LIMITS, submitSceneBody, validateSceneBody } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
-import { openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
+import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema } from './msr-opening.js';
 import { buildFasth3Body, fasth3OmniSchema } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
@@ -36,7 +36,8 @@ import { readImageMetadata } from './image-media.js';
 import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
 import { prepareVideoVoice } from './video-voice.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
-import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText } from './video-prompt.js';
+import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy } from './video-prompt.js';
+import { assertSceneDialogue, resolveScenePrompt, scenePromptSlots, scenePromptTemplate } from './scene-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
 import { checkDesktopOffering, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.js';
@@ -174,6 +175,8 @@ export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z
     purpose: z.enum(['draft', 'final', 'revision']).optional(),
     basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
     maxCostUsd: z.number().nonnegative().finite().optional(),
+    wholeScene: z.literal(true).optional(),
+    prompt: z.string().optional(),
     operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 function within(root, file) {
@@ -282,7 +285,7 @@ function saveVideoPlan(plan) {
     const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
     if (!fs.existsSync(file)) {
         // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
-        const { promptProfile: _profile, ...manifest } = plan;
+        const { promptProfile: _profile, promptTemplate: _template, promptHeader: _header, ...manifest } = plan;
         atomicJson(file, manifest);
     }
     fs.rmSync(blockedPlanFile(plan.episode, plan.requestId), { force: true });
@@ -477,9 +480,33 @@ export function planVideo(raw, persist = true) {
     const input = videoPlanSchema.parse(raw);
     return buildVideoPlan(input, resolvePlanContext(input), persist);
 }
+/** Where each submitted picture sits in the request's numbered reference list, and whose it is. */
+function numberedImages(args, bindings = [], speakers = [], cast, episode, firstShot) {
+    const list = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths
+        : Array.isArray(args.references) ? args.references.map(ref => ref?.imagePath) : [];
+    const positions = Array.isArray(args.openingPositions) ? args.openingPositions : [];
+    const panel = (file) => file ? fs.realpathSync(path.resolve(episode, 'storyboard', file)) : undefined;
+    const taken = new Set();
+    return bindings.filter(binding => binding.submitted).map(binding => {
+        const scene = binding;
+        const at = list.findIndex((file, index) => !taken.has(index) && file === binding.path);
+        if (at >= 0)
+            taken.add(at);
+        const number = at < 0 ? undefined : at + 1;
+        const person = cast.find(person => [panel(person.face?.path), panel(person.bodyPath)].includes(binding.path));
+        const owner = scene.character ?? speakers.find(speaker => number && speaker.imageIndices?.includes(number))?.speaker
+            ?? positions.find(row => number && row.images.includes(number))?.character ?? person?.character;
+        const guide = binding.id === 'start' || binding.id === 'end' || Boolean(scene.shotId && binding.id === scene.shotId + '-composition');
+        // A legacy binding calls every panel "character"; its id ends in the panel name.
+        const role = binding.role !== 'character' ? binding.role
+            : owner && binding.id.includes(owner + '-') ? binding.id.slice(binding.id.lastIndexOf(owner + '-') + owner.length + 1)
+                : person && panel(person.face?.path) === binding.path ? 'face' : 'image';
+        return { number, owner: guide ? undefined : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === 'start' ? firstShot : undefined), guide };
+    });
+}
 function buildVideoPlan(input, { context, tool }, persist) {
     if (!input.sceneRendering && context.speechRoute?.rendering)
-        input = { ...input, sceneRendering: context.speechRoute.rendering };
+        throw new Error('scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request.');
     const sourceArgs = input.args;
     const speakers = context.speechRoute.speakers;
     const opening = context.speechRoute.opening;
@@ -522,6 +549,12 @@ function buildVideoPlan(input, { context, tool }, persist) {
             throw new Error('video_parent_missing: name a different existing request for this shot');
     }
     const { selection } = context;
+    const motionReferences = scene?.motionReferencePaths?.map(file => {
+        if (tool !== 'fasth3_omni_reference' && tool !== 'seedance_reference')
+            throw new Error('scene_inputs_unsupported: this operation cannot submit a motion reference video');
+        const resolved = fs.realpathSync(path.resolve(context.episode, 'storyboard', file));
+        return { path: resolved, sha256: createHash('sha256').update(fs.readFileSync(resolved)).digest('hex') };
+    });
     const cast = (context.sceneMembers ?? [context.shot]).flatMap(requiredCharacters);
     if (cast.length && (!tool || !VIDEO_ADAPTERS[tool]))
         throw new Error('character_inputs_unsupported: the selected route cannot verify the required character inputs');
@@ -540,6 +573,11 @@ function buildVideoPlan(input, { context, tool }, persist) {
         }
         input = { ...input, args: { ...media, ...input.args } };
     }
+    if (motionReferences) {
+        if (input.args.referenceVideoPaths !== undefined)
+            throw new Error('scene_image_scope: declare motion reference videos once on the scene');
+        input = { ...input, args: { ...input.args, referenceVideoPaths: motionReferences.map(ref => ref.path) } };
+    }
     const lines = (context.shot.narration ?? [])
         .filter(line => line.tts?.trim());
     const promptProfile = scenePromptProfile(tool, selection.model);
@@ -554,6 +592,20 @@ function buildVideoPlan(input, { context, tool }, persist) {
         throw new Error('scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue');
     if (input.shotBindings && !input.sceneRendering)
         throw new Error('scene_render_bindings: select per_shot rendering');
+    const savedDraft = scene?.promptDrafts?.find(draft => draft.engine === selection.engine &&
+        draft.model === selection.model && draft.operation === (tool && VIDEO_ADAPTERS[tool]?.operation || selection.operation));
+    if (input.prompt === undefined && savedDraft)
+        input = { ...input, prompt: savedDraft.prompt };
+    if ((input.wholeScene || scene?.promptDrafts) && input.sceneRendering)
+        throw new Error('scene_prompt_unsupported: this route needs separate renders. Choose an operation that accepts the complete scene.');
+    if (input.prompt !== undefined) {
+        if (!input.prompt.trim())
+            throw new Error('scene_prompt_empty: write the prompt, or leave it out for the composed one');
+        if (input.prompt.length > 32_000)
+            throw new Error('prompt_too_long: a prompt takes at most 32000 characters');
+        if (input.sceneRendering)
+            throw new Error('scene_prompt_unsupported: an authored prompt describes one render of the whole scene; per-shot rendering writes each shot from its own card');
+    }
     if (input.sceneRendering) {
         for (const card of context.sceneMembers ?? []) {
             const turns = card.narration?.filter(line => line.tts?.trim()) ?? [];
@@ -747,7 +799,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
             const details = [...Object.entries(coverage.common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)),
                 shotVisualWords(members[0], coverage.shots[0], coverage.common, notes.end), notes.blocking, notes.action, ...notes.beats,
                 notes.sound && 'Sound: ' + notes.sound].filter(Boolean);
-            const sceneText = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(' '), lines, bindTurns);
+            const sceneText = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(' '), lines, bindTurns, promptProfile);
             callArgs = withPrompt(bindOpening ? sceneText : openingPrompt(sceneText, scene.openingPositions, index => formatReferenceLabel(promptProfile.referenceLabels, 'image', index)));
         }
     }
@@ -767,14 +819,23 @@ function buildVideoPlan(input, { context, tool }, persist) {
     }
     if (silentPicture)
         checkVoiceoverDirection(String(callArgs.prompt ?? ''), lines, true);
-    const sourcePrompt = scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
+    // The direction record describes the prompt the planner composes from the board. An authored prompt is sent in its place
+    // and is not read for direction, so its record names the author's text, leaves out the settings the planner writes into
+    // its own prompt and carries no reading or warning of a prompt this request does not send.
+    const replaced = input.prompt !== undefined;
+    const sourcePrompt = replaced ? input.prompt : scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
+    const outsidePrompt = (bindings = []) => {
+        const kept = bindings.filter(binding => binding.via !== 'prompt');
+        return kept.length ? { directionBindings: kept } : {};
+    };
     const boardCamera = shot.visual?.camera ?? {};
     const rawPrompt = input.args.prompt ?? video?.prompt;
-    const drift = !scene && !compiled && typeof rawPrompt === 'string' ? cameraDrift(rawPrompt, String(boardCamera.movement ?? '')) : null;
+    const drift = !scene && !compiled && !replaced && typeof rawPrompt === 'string' ? cameraDrift(rawPrompt, String(boardCamera.movement ?? '')) : null;
     const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === undefined ? 'saved' : 'explicit'} prompt ${drift === 'missing' ? 'omits' : 'contradicts'} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
-    const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
-        { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
-                    'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
+    const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...(c ? { performance: c.performance } : {}) } :
+        c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
+            { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
+                        'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
     const cutWarnings = sceneRequest?.modelPacedCuts
         ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
         : [];
@@ -782,8 +843,8 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (!guide.submitted)
             cutWarnings.push('shot_reference_omitted: ' + guide.shotId + ' receives no composition image. ' + guide.reason);
     }
-    let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
-        ...(sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
+    let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
+        ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
     if (selection.engine === 'host') {
         if (input.tool)
             throw new Error('model_selection_mismatch: host has no server adapter');
@@ -879,7 +940,46 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (person.voiceRequired && !voice.voiceContinuity?.speakers.some(s => s.speaker === person.character && s.reference?.provenance === 'pinned_settings_and_bytes' && s.audioIndex))
             throw new Error('character_voice_required: ' + tool + ' cannot bind the selected voice sample for ' + person.character);
     }
-    const args = parseVideoArgs(tool, voice.args);
+    const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings;
+    // The numbers in a prompt follow the request as it is finally submitted, so names resolve against these bindings.
+    const promptSlots = scenePromptSlots(promptProfile.referenceLabels, numberedImages(voice.args, imageBindings, voice.voiceContinuity?.speakers, cast, context.episode, String(context.sceneMembers?.[0]?.id ?? shot.id ?? '')), voice.voiceContinuity?.speakers);
+    const authored = input.prompt !== undefined;
+    let promptIssues;
+    if (authored) {
+        const composed = String(voice.args.prompt ?? '');
+        // The LTX lanes state the opening positions ahead of every prompt, with the names the composed prompt would use.
+        const listed = openingPositionsSchema.safeParse(voice.args.openingPositions);
+        const positions = !listed.success ? undefined : sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length
+            ? sceneCastProse('', listed.data, voice.voiceContinuity.speakers).positions : listed.data;
+        // A line or sentence the planner's own prompt carries is one this model's prompt is expected to carry.
+        const carried = (text) => Boolean(text && composed.includes(text));
+        if ((input.wholeScene || savedDraft) && ['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy || ''))
+            assertSceneDialogue(input.prompt, lines.filter(line => line.delivery !== 'voiceover'));
+        const resolved = resolveScenePrompt(input.prompt, promptSlots, { composed, header: openingPrompt('', positions),
+            limit: promptLimit, schemaLimit: videoPromptLimit(tool),
+            lines: lines.map(line => line.tts?.trim()).filter((text) => carried(text)),
+            sentences: [{ code: 'text_policy_missing', text: videoTextPolicy() }, { code: 'silent_direction_missing', text: silentSuffix }].filter(sentence => carried(sentence.text)) });
+        const refused = resolved.issues.filter(issue => issue.level === 'error');
+        if (refused.length)
+            throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
+        promptIssues = resolved.issues;
+        // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
+        voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...(positions ? { openingPositions: positions } : {}) } };
+    }
+    let args;
+    try {
+        args = parseVideoArgs(tool, voice.args);
+    }
+    catch (error) {
+        // An adapter's own rule for the author's text comes back as one coded line.
+        const issue = authored && error instanceof z.ZodError ? error.issues.find(issue => issue.path[0] === 'prompt') : undefined;
+        if (!issue)
+            throw error;
+        throw new Error(/^[a-z_]+: /.test(issue.message) ? issue.message : 'prompt_refused: ' + issue.message);
+    }
+    // Some adapter schemas trim their prompt. The author's text goes out as written, white space at its edges included.
+    if (authored)
+        args.prompt = voice.args.prompt;
     if (silentPicture)
         checkVoiceoverDirection(args, lines, true);
     const adaptiveDuration = selection.engine === 'seedance' && args.durationSeconds === -1;
@@ -892,7 +992,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
     if (Array.isArray(args.openingPositions)) {
         const positions = args.openingPositions;
         const opening = openingPrompt(String(args.prompt), positions);
-        if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
+        if (!authored && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
             const prose = sceneCastProse(opening, positions, voice.voiceContinuity.speakers);
             args.openingPositions = prose.positions;
             args.prompt = prose.prompt;
@@ -900,7 +1000,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         else
             args.prompt = opening;
     }
-    if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
+    if (!authored && !Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
         args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
     if (VIDEO_ADAPTERS[tool].voice === 'supplied' && typeof args.audioPath === 'string' && durationPlan.requiredSeconds !== undefined) {
         const sourceSeconds = ltxApiAudioSeconds(path.resolve(context.episode, args.audioPath));
@@ -977,7 +1077,6 @@ function buildVideoPlan(input, { context, tool }, persist) {
         if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
             throw new Error('model_selection_mismatch: retake inherits source dimensions; select the source resolution');
     }
-    const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool, images.imageBindings) : images.imageBindings;
     const characterBindings = tool === 'seedance_reference'
         ? seedanceBindings(context.episode, context.sceneMembers ?? [context.shot], args, inputs, imageBindings, voice.voiceContinuity, sceneRequest?.images.filter(pin => pin.role === 'face' && pin.reference?.scope === 'scene'))
         : undefined;
@@ -997,12 +1096,14 @@ function buildVideoPlan(input, { context, tool }, persist) {
         verifyDistinctSamples(voices.map(v => ({ speaker: v.speaker, path: v.reference.path })));
     }
     const quote = quoteFor(tool, args);
-    const body = { ...take, ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+    const body = { ...take, ...(motionReferences ? { motionReferences } : {}), ...(input.wholeScene ? { wholeScene: true } : {}), ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+        ...(authored ? { authoredPrompt: input.prompt, ...(promptIssues.length ? { promptIssues } : {}) } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
         ...(imageBindings ? { imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
-    const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile } : {}) };
+    const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile } : {}),
+        ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions)) : {}) };
     return persist ? saveVideoPlan(plan) : plan;
 }
 function authorization(context) {
@@ -1121,7 +1222,7 @@ function approvedContext(plan) {
     }
 }
 function rebuildPlan(plan) {
-    return planVideo({ episode: plan.episode, ...(plan.sceneNo !== undefined ? { sceneNo: plan.sceneNo } : { shotId: plan.shotId }), requestId: plan.requestId, sceneRendering: plan.sceneRendering, shotBindings: plan.shotBindings, maxCostUsd: plan.maxCostUsd, tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
+    return planVideo({ episode: plan.episode, wholeScene: plan.wholeScene, ...(plan.sceneNo !== undefined ? { sceneNo: plan.sceneNo } : { shotId: plan.shotId }), requestId: plan.requestId, sceneRendering: plan.sceneRendering, shotBindings: plan.shotBindings, maxCostUsd: plan.maxCostUsd, ...(plan.authoredPrompt !== undefined ? { prompt: plan.authoredPrompt } : {}), tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
 }
 export async function executeVideo(raw, dispatch) {
     const request = videoExecuteSchema.parse(raw), episode = fs.realpathSync(request.episode);

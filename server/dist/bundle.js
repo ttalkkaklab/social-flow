@@ -10654,7 +10654,7 @@ var require_parse = __commonJS({
         while (ch && ch <= " ") {
           next();
         }
-      }, word = function() {
+      }, word2 = function() {
         switch (ch) {
           case "t":
             next("t");
@@ -10756,7 +10756,7 @@ var require_parse = __commonJS({
           case "-":
             return number3();
           default:
-            return ch >= "0" && ch <= "9" ? number3() : word();
+            return ch >= "0" && ch <= "9" ? number3() : word2();
         }
       };
       return function(source, reviver) {
@@ -67208,12 +67208,12 @@ var require_cache = __commonJS({
       return value.replace(/[\t ]+$/, "");
     }
     function findUnescapedQuote(value, start) {
-      let escaped = false;
+      let escaped2 = false;
       for (let i2 = start; i2 < value.length; i2++) {
-        if (escaped) {
-          escaped = false;
+        if (escaped2) {
+          escaped2 = false;
         } else if (value[i2] === "\\") {
-          escaped = true;
+          escaped2 = true;
         } else if (value[i2] === '"') {
           return i2;
         }
@@ -67225,13 +67225,13 @@ var require_cache = __commonJS({
       let start = 0;
       let quoteStart = -1;
       let inQuote = false;
-      let escaped = false;
+      let escaped2 = false;
       for (let i2 = 0; i2 < value.length; i2++) {
         if (inQuote) {
-          if (escaped) {
-            escaped = false;
+          if (escaped2) {
+            escaped2 = false;
           } else if (value[i2] === "\\") {
-            escaped = true;
+            escaped2 = true;
           } else if (value[i2] === '"') {
             inQuote = false;
             quoteStart = -1;
@@ -91859,6 +91859,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92099,6 +92100,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92342,6 +92344,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
           voice: {
             maxPinnedVoicesPerRender: {
               "dreamina-seedance-2-5-260628": 10,
@@ -92595,6 +92598,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92642,6 +92646,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92690,6 +92695,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92746,6 +92752,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92790,6 +92797,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92835,6 +92843,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92884,6 +92893,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92949,6 +92959,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "approximate_holds",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 2,
             postLipSync: false,
@@ -93038,6 +93049,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93093,6 +93105,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "approximate_holds",
+          sceneWritingGuide: "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
           voice: {
             maxPinnedVoicesPerRender: 2,
             postLipSync: false,
@@ -93146,6 +93159,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93197,6 +93211,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93250,6 +93265,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93297,6 +93313,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93352,6 +93369,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93401,6 +93419,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93442,6 +93461,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93494,6 +93514,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
           voice: {
             maxPinnedVoicesPerRender: 3,
             postLipSync: false,
@@ -93548,6 +93569,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93602,6 +93624,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93645,6 +93668,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93690,6 +93714,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93734,6 +93759,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -93932,6 +93958,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94129,6 +94156,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
+          sceneWritingGuide: "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94255,6 +94283,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
+          sceneWritingGuide: "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94383,6 +94412,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
+          sceneWritingGuide: "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94510,6 +94540,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
+          sceneWritingGuide: "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94636,6 +94667,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94683,6 +94715,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
           voice: {
             maxPinnedVoicesPerRender: 3,
             postLipSync: false,
@@ -94731,6 +94764,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
+          sceneWritingGuide: "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94776,6 +94810,7 @@ var require_video_catalog = __commonJS({
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
+          sceneWritingGuide: "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
           voice: {
             maxPinnedVoicesPerRender: 3,
             postLipSync: false,
@@ -96167,9 +96202,9 @@ var require_scene_acting = __commonJS({
       return /[ăơưđẠ-ỹ]/i.test(words) ? "vi" : "latin";
     }
     function latinSyllables(words, language) {
-      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word) => {
-        const groups = count2(word.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
-        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word) && !(language === "en" && /[^aeiouy]le$/i.test(word));
+      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word2) => {
+        const groups = count2(word2.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
+        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word2) && !(language === "en" && /[^aeiouy]le$/i.test(word2));
         return total + Math.max(1, groups - (silent ? 1 : 0));
       }, 0);
     }
@@ -96607,7 +96642,7 @@ var require_character_identity = __commonJS({
     var HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, "gi");
     var BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick|taller|shorter|higher|lower|above|below|more|less))|(?<=-)head\b(?![-\w]))`, "gi");
     var NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
-    var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word) => NUMBER_WORDS.indexOf(word.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
+    var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word2) => NUMBER_WORDS.indexOf(word2.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
     function headsTall(character) {
       const field2 = character?.physical?.proportions;
       if (field2?.status !== "confirmed") return null;
@@ -98259,8 +98294,8 @@ var require_render_routing = __commonJS({
         const wrap = (value, limit2) => {
           const rows = [];
           let line = "";
-          for (const word of String(value).split(/\s+/).filter(Boolean)) {
-            const candidate2 = line ? line + " " + word : word;
+          for (const word2 of String(value).split(/\s+/).filter(Boolean)) {
+            const candidate2 = line ? line + " " + word2 : word2;
             if (Array.from(candidate2).length <= limit2) {
               line = candidate2;
               continue;
@@ -98269,7 +98304,7 @@ var require_render_routing = __commonJS({
               rows.push(line);
               line = "";
             }
-            let chars = Array.from(word);
+            let chars = Array.from(word2);
             while (chars.length > limit2) {
               rows.push(chars.slice(0, limit2).join(""));
               chars = chars.slice(limit2);
@@ -98459,19 +98494,19 @@ var require_audio_signal = __commonJS({
       );
       if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
         throw new Error("cannot decode audio signal");
-      const spans = [];
+      const spans2 = [];
       let start = 0;
       for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
         if (event === "start") start = Number(time3);
-        else spans.push([start, Number(time3)]);
+        else spans2.push([start, Number(time3)]);
       }
       const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
       if (peak === void 0) throw new Error("cannot measure decoded audio peak");
       const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
-      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
+      return { status: silent ? "silent" : "signal", spans: spans2, duration: duration5 };
     }
-    function covers(spans, start, seconds2, tolerance = 0) {
-      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
+    function covers(spans2, start, seconds2, tolerance = 0) {
+      return spans2.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
     }
     function decodedAudioHash(file2) {
       return execFileSync20("ffmpeg", [
@@ -100865,8 +100900,8 @@ var require_structure_contract = __commonJS({
           if (c.eyeHeight !== void 0 && Math.abs(c.eyeHeight - 1 / 3) > 0.15) add("eye height departs from the upper-third convention; review the image", "warn");
           const layout = sh.space && sh.space.layout;
           if (typeof layout === "string") {
-            const escaped = c.subject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const match2 = layout.match(new RegExp("(?:^|[,;]\\s*)" + escaped + "\\s+(?:is\\s+)?on the (left|right)(?: third| side)?", "i"));
+            const escaped2 = c.subject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const match2 = layout.match(new RegExp("(?:^|[,;]\\s*)" + escaped2 + "\\s+(?:is\\s+)?on the (left|right)(?: third| side)?", "i"));
             if (match2 && match2[1].toLowerCase() !== c.position) add("space.layout and composition.position disagree", "warn");
           }
         });
@@ -121973,7 +122008,18 @@ var sceneShotBindingsSchema = external_exports.array(external_exports.object({
   dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
   seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
 }).strict()).min(1);
+var scenePromptDrafts = external_exports.array(external_exports.object({
+  engine: external_exports.string().trim().min(1),
+  model: external_exports.string().trim().min(1).optional(),
+  operation: external_exports.string().trim().min(1),
+  prompt: external_exports.string().min(1).max(32e3).refine((text4) => !!text4.trim(), "Enter a complete scene prompt")
+}).strict()).refine(
+  (drafts) => new Set(drafts.map((d) => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length,
+  "Keep one edited scene prompt per engine, model and operation"
+);
 var sceneVideoDirectionSchema = external_exports.object({
+  motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
+  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -125765,9 +125811,31 @@ function sceneVoiceDirection(acting, spoken, legacy = false) {
     return true;
   }).join(" ");
 }
-function scenePromptText(scene, camera, timeline, lines, bindTurns) {
+function scenePromptText(scene, camera, timeline, lines, bindTurns, profile) {
   const dialogue = bindTurns ? [] : lines.filter((l) => l.delivery !== "voiceover").map((l) => [sceneVoiceDirection(l.acting, l.tts), l.speaker + " (" + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(" "));
-  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && "One continuous take. No cuts.", timeline, ...dialogue, videoTextPolicy()].filter(Boolean).join("\n");
+  const oneTake = scene.oneTake && "One continuous take. No cuts.";
+  const beats = [timeline, ...dialogue];
+  const ordered2 = () => {
+    switch (profile?.writer) {
+      case "recorded":
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound];
+      case "msr":
+        return [scene.action, camera, scene.emotion, oneTake, ...beats, scene.sound];
+      case "hostedH3":
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && "Environmental sound: " + scene.sound];
+      case "fastH3":
+      case "seedance":
+        return [scene.action, scene.emotion, camera, oneTake, ...beats, scene.sound];
+      case "veo":
+      case "heygen":
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && "Sound: " + scene.sound];
+      case "ltx":
+        return [camera, scene.emotion, scene.action, oneTake, ...beats, scene.sound];
+      default:
+        return [scene.emotion, scene.action, scene.sound, camera, oneTake, ...beats];
+    }
+  };
+  return [...ordered2(), videoTextPolicy()].filter(Boolean).join("\n");
 }
 function cameraDrift(prompt, movement) {
   if (!movement.trim()) return null;
@@ -129834,14 +129902,27 @@ function resolveVideoDuration(tool2, input) {
 }
 
 // src/scene-prompt-profile.ts
+var authoring = {
+  ltx: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+  msr: "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
+  recorded: "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
+  hostedH3: "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+  fastH3: "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
+  veo: "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
+  seedance: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+  heygen: "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker."
+};
+function sceneWritingGuide(profile) {
+  return profile.writer ? authoring[profile.writer] : "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.";
+}
 var ordered = {
   cutTiming: "cut_order",
   referenceLabels: "indexed",
   allowsGeneratedVoice: false
 };
 var holds = { ...ordered, cutTiming: "approximate_holds" };
-var veo2 = { ...ordered, cutTiming: "time_ranges", allowsGeneratedVoice: true };
-var seedance = { ...ordered, cutTiming: "action_beats" };
+var veo2 = { ...ordered, writer: "veo", cutTiming: "time_ranges", allowsGeneratedVoice: true };
+var seedance = { ...ordered, writer: "seedance", cutTiming: "action_beats" };
 var pictureTags = { ...seedance, referenceLabels: "picture_audio_tags" };
 var operations = {
   veo_text2video: veo2,
@@ -129851,11 +129932,23 @@ var operations = {
   seedance_text2video: seedance,
   seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
   seedance_reference: seedance,
-  astra_genai_img2video: holds,
-  astra_genai_msr: holds,
-  minimax_reference: { ...ordered, cutTiming: "action_beats", referenceLabels: "reference_indexed" },
-  fasth3_omni_reference: pictureTags,
-  heygen_reference: pictureTags
+  astra_genai_img2video: { ...holds, writer: "ltx" },
+  astra_genai_text2video: { ...ordered, writer: "ltx" },
+  astra_genai_audio2video: { ...ordered, writer: "recorded" },
+  astra_genai_desktop_audio2video: { ...ordered, writer: "recorded" },
+  astra_audio2video: { ...ordered, writer: "recorded" },
+  ltx_api_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_audio2video: { ...ordered, writer: "recorded" },
+  ltx_desktop_img2video: { ...ordered, writer: "ltx" },
+  ltx_desktop_text2video: { ...ordered, writer: "ltx" },
+  ltx_api_img2video: { ...ordered, writer: "ltx" },
+  minimax_img2video: { ...ordered, writer: "hostedH3" },
+  heygen_img2video: { ...ordered, writer: "heygen" },
+  ltx_video_generate: { ...ordered, writer: "ltx" },
+  astra_genai_msr: { ...holds, writer: "msr" },
+  minimax_reference: { ...ordered, writer: "hostedH3", cutTiming: "action_beats", referenceLabels: "reference_indexed" },
+  fasth3_omni_reference: { ...pictureTags, writer: "fastH3" },
+  heygen_reference: { ...pictureTags, writer: "heygen" }
 };
 function scenePromptProfile(tool2, model2) {
   const profile = operations[tool2 ?? ""] ?? ordered;
@@ -130014,6 +130107,7 @@ function videoCatalog() {
       operation: a.operation,
       sceneInputs: sceneInputCapabilities(tool2),
       sceneCutTiming: scenePromptProfile(tool2).cutTiming,
+      sceneWritingGuide: sceneWritingGuide(scenePromptProfile(tool2)),
       voice: videoVoiceCapabilities(tool2),
       ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
       fields: keys(a.schema),
@@ -130212,6 +130306,8 @@ function shotHeading(shot, fps, options) {
   const cut = transitions[shot.transition] ?? transition;
   if (!options.modelPacedCuts)
     return shot.transition === "open" ? "" : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+  if (options.writer === "fastH3" && shot.transition === "hard_cut") return "Hard cut to the next camera setup.";
+  if (options.writer === "hostedH3" && shot.transition === "hard_cut") return "Cut to the next view.";
   const order = shot.transition === "open" ? "" : `Then ${cut}.`;
   if (options.cutTiming !== "time_ranges") return order;
   const seconds2 = (frame2) => Number((frame2 / fps).toFixed(2));
@@ -130262,10 +130358,128 @@ function sceneTimelineWords(timeline, scene, options = {}) {
     ].filter(Boolean).join(" "));
   }
   if (timeline.audio) {
-    rows.push(modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.");
+    rows.push(modelFacing && options.writer === "recorded" ? "Follow the supplied recording from the opening. Time visible speech and reactions to its words and pauses." : modelFacing ? "Play one continuous soundtrack from the opening." : "Play one continuous scene track from frame 0.");
     for (const cue of timeline.audio.cues) rows.push(`${timing(cue.frame)}: ${cue.action}`);
   }
   return rows.filter(Boolean).join("\n");
+}
+var TOKEN = /\{[^{}\n]*\}/g;
+var NAME2 = /^\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}$/u;
+var escaped = (text4) => text4.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+var labelPattern = (label) => new RegExp("(?<![\\p{L}\\p{N}])" + escaped(label) + "(?!\\d|\\.\\d)", "gu");
+var QUOTED = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」/g;
+var spans = (text4) => {
+  const parts = [];
+  let at = 0;
+  for (const quote of text4.matchAll(QUOTED)) {
+    parts.push({ text: text4.slice(at, quote.index), quoted: false }, { text: quote[0], quoted: true });
+    at = quote.index + quote[0].length;
+  }
+  return [...parts, { text: text4.slice(at), quoted: false }];
+};
+var loneBrace = (text4) => /[{}]/.test(text4.replace(TOKEN, ""));
+var word = (text4) => text4.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "");
+function scenePromptSlots(style, images = [], voices = []) {
+  const slots = [], unlabeled = /* @__PURE__ */ new Set();
+  const owned = /* @__PURE__ */ new Map();
+  for (const image2 of images) {
+    if (image2.number === void 0) {
+      if (image2.shotId && (image2.guide || !image2.owner)) unlabeled.add(word(image2.shotId) + ".image");
+      continue;
+    }
+    const label = formatReferenceLabel(style, "image", image2.number);
+    if (image2.owner) owned.set(image2.owner, [...owned.get(image2.owner) ?? [], { role: word(image2.role ?? "") || "image", label }]);
+    else slots.push({ key: word((image2.guide ? image2.shotId : void 0) ?? image2.id ?? "reference" + image2.number) + ".image", label });
+  }
+  for (const [owner, rows] of owned) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const count2 = (seen.get(row.role) ?? 0) + 1;
+      seen.set(row.role, count2);
+      slots.push({ key: word(owner) + "." + row.role + (count2 > 1 ? count2 : ""), label: row.label });
+    }
+    if (rows.length === 1 && rows[0].role !== "image" && !unlabeled.has(word(owner) + ".image")) slots.push({ key: word(owner) + ".image", label: rows[0].label });
+  }
+  for (const voice of voices) if (voice.audioIndex) slots.push({ key: word(voice.speaker) + ".voice", label: formatReferenceLabel(style, "audio", voice.audioIndex) });
+  const keys2 = /* @__PURE__ */ new Set();
+  return {
+    slots: slots.filter((slot) => NAME2.test("{" + slot.key + "}") && !keys2.has(slot.key) && keys2.add(slot.key)),
+    unlabeled: [...unlabeled].filter((key) => !keys2.has(key))
+  };
+}
+function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) {
+  const labels = new Map(slots.map((slot) => [slot.key, slot.label]));
+  const named = /* @__PURE__ */ new Map();
+  for (const slot of slots) if (!named.has(slot.label)) named.set(slot.label, slot.key);
+  const issues = [], reported = /* @__PURE__ */ new Set();
+  const report = (level, code, detail) => {
+    if (!reported.has(code + detail)) {
+      reported.add(code + detail);
+      issues.push({ level, code, detail });
+    }
+  };
+  const board = new Set(checks.composed?.match(TOKEN) ?? []);
+  const body = spans(template).map((span) => {
+    if (!span.quoted) {
+      for (const [label, key] of named) if (labelPattern(label).test(span.text))
+        report("warning", "label_literal", `"${label}" is written as a number; write {${key}} so it follows the submitted order`);
+    }
+    return span.text.replace(TOKEN, (token) => {
+      const name = NAME2.exec(token), key = name ? name[1] + "." + name[2] : "", label = labels.get(key);
+      if (board.has(token) && (span.quoted || !label)) return token;
+      if (label) return label;
+      if (unlabeled.includes(key)) report("error", "placeholder_unlabeled", `${token} is sent as a timed frame, which this model's prompt cannot name`);
+      else if (name) report("error", "placeholder_unresolved", `${token} names no submitted reference; available: ${slots.map((slot) => "{" + slot.key + "}").join(" ") || "none"}`);
+      else report("error", "placeholder_unresolved", `${token} is not a reference name; braces are kept for {id.role}, {id.image} and {id.voice}`);
+      return token;
+    });
+  }).join("");
+  if (loneBrace(template) && !loneBrace(checks.composed ?? ""))
+    report("error", "placeholder_unresolved", "a brace stands without its pair; braces are kept for {id.role}, {id.image} and {id.voice}");
+  const header = checks.header ?? "";
+  const prompt = body.startsWith(header) ? body : header + body;
+  for (const [label, key] of named) if (!labelPattern(label).test(prompt))
+    report("warning", "reference_unmentioned", `{${key}} is submitted and the prompt never names it`);
+  for (const line of checks.lines ?? []) if (!prompt.includes(line))
+    report("warning", "line_missing", `the prompt does not carry the authored line "${line}"`);
+  for (const sentence2 of checks.sentences ?? []) if (!prompt.includes(sentence2.text))
+    report("warning", sentence2.code, `the prompt leaves out "${sentence2.text}"`);
+  const length = [...prompt].length;
+  if (checks.limit !== void 0 && length > checks.limit)
+    report("error", "prompt_too_long", `${length} characters${header && prompt !== body ? " with the " + [...header].length + "-character opening header" : ""}; this model takes ${checks.limit}`);
+  else if (checks.schemaLimit !== void 0 && prompt.length > checks.schemaLimit)
+    report("error", "prompt_too_long", `${prompt.length} UTF-16 units; this adapter takes ${checks.schemaLimit}`);
+  return { prompt, body, issues };
+}
+function scenePromptTemplate(prompt, { slots }, header = "") {
+  const names = /* @__PURE__ */ new Map();
+  for (const slot of slots) if (!names.has(slot.label)) names.set(slot.label, slot.key);
+  const headed = Boolean(header) && prompt.startsWith(header);
+  const longestFirst = [...names].sort((a, b) => b[0].length - a[0].length);
+  const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt).map((span) => span.quoted ? span.text : longestFirst.reduce((text4, [label, key]) => text4.replace(labelPattern(label), "{" + key + "}"), span.text)).join("");
+  return { promptTemplate, ...headed ? { promptHeader: header } : {} };
+}
+function assertSceneDialogue(template, expected) {
+  if (!expected.length) return;
+  const wanted = new Set(expected.map((line) => line.tts));
+  let index = 0;
+  let lead = "";
+  for (const span of spans(template)) {
+    if (!span.quoted) {
+      lead = span.text;
+      continue;
+    }
+    const words = span.text.slice(1, -1);
+    if (!wanted.has(words)) continue;
+    const line = expected[index++];
+    if (line?.tts !== words)
+      throw new Error("scene_dialogue_mismatch: preserve the approved spoken lines in scene order");
+    const voice = lead.match(/\{([\p{L}\p{N}_-]+)\.voice\}\s*(?:,\s*off screen)?\)?\s*:\s*$/u);
+    if (voice && line.speaker && voice[1] !== line.speaker)
+      throw new Error("scene_dialogue_speaker: the voice immediately introducing this line belongs to another character");
+  }
+  if (index !== expected.length)
+    throw new Error("scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes");
 }
 
 // src/video-image-inputs.ts
@@ -131158,13 +131372,13 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value) => [value, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming };
+  const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
   const providerTimeline = sceneTimelineWords(timeline, scene, {
     ...providerTiming,
     includeDialogue: !options.bindDialogue,
     describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue
   });
-  const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
+  const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions, (index) => formatReferenceLabel(options.profile?.referenceLabels ?? "indexed", "image", index)));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, sceneDirection: {
     emotion: scene.emotion,
@@ -132272,6 +132486,8 @@ var videoPlanSchema = external_exports.object({
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
+  wholeScene: external_exports.literal(true).optional(),
+  prompt: external_exports.string().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -132359,7 +132575,7 @@ function checkVideoEnvironment(tool2) {
 function saveVideoPlan(plan2) {
   const file2 = path27.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file2)) {
-    const { promptProfile: _profile, ...manifest2 } = plan2;
+    const { promptProfile: _profile, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
     atomicJson(file2, manifest2);
   }
   fs19.rmSync(blockedPlanFile(plan2.episode, plan2.requestId), { force: true });
@@ -132568,8 +132784,26 @@ function planVideo(raw, persist = true) {
   const input = videoPlanSchema.parse(raw);
   return buildVideoPlan(input, resolvePlanContext(input), persist);
 }
+function numberedImages(args, bindings = [], speakers = [], cast, episode, firstShot) {
+  const list = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths : Array.isArray(args.references) ? args.references.map((ref) => ref?.imagePath) : [];
+  const positions = Array.isArray(args.openingPositions) ? args.openingPositions : [];
+  const panel = (file2) => file2 ? fs19.realpathSync(path27.resolve(episode, "storyboard", file2)) : void 0;
+  const taken = /* @__PURE__ */ new Set();
+  return bindings.filter((binding) => binding.submitted).map((binding) => {
+    const scene = binding;
+    const at = list.findIndex((file2, index) => !taken.has(index) && file2 === binding.path);
+    if (at >= 0) taken.add(at);
+    const number3 = at < 0 ? void 0 : at + 1;
+    const person = cast.find((person2) => [panel(person2.face?.path), panel(person2.bodyPath)].includes(binding.path));
+    const owner = scene.character ?? speakers.find((speaker) => number3 && speaker.imageIndices?.includes(number3))?.speaker ?? positions.find((row) => number3 && row.images.includes(number3))?.character ?? person?.character;
+    const guide = binding.id === "start" || binding.id === "end" || Boolean(scene.shotId && binding.id === scene.shotId + "-composition");
+    const role = binding.role !== "character" ? binding.role : owner && binding.id.includes(owner + "-") ? binding.id.slice(binding.id.lastIndexOf(owner + "-") + owner.length + 1) : person && panel(person.face?.path) === binding.path ? "face" : "image";
+    return { number: number3, owner: guide ? void 0 : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === "start" ? firstShot : void 0), guide };
+  });
+}
 function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
-  if (!input.sceneRendering && context2.speechRoute?.rendering) input = { ...input, sceneRendering: context2.speechRoute.rendering };
+  if (!input.sceneRendering && context2.speechRoute?.rendering)
+    throw new Error("scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request.");
   const sourceArgs = input.args;
   const speakers = context2.speechRoute.speakers;
   const opening = context2.speechRoute.opening;
@@ -132606,6 +132840,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!parent) throw new Error("video_parent_missing: name a different existing request for this shot");
   }
   const { selection } = context2;
+  const motionReferences = scene?.motionReferencePaths?.map((file2) => {
+    if (tool2 !== "fasth3_omni_reference" && tool2 !== "seedance_reference")
+      throw new Error("scene_inputs_unsupported: this operation cannot submit a motion reference video");
+    const resolved = fs19.realpathSync(path27.resolve(context2.episode, "storyboard", file2));
+    return { path: resolved, sha256: createHash21("sha256").update(fs19.readFileSync(resolved)).digest("hex") };
+  });
   const cast = (context2.sceneMembers ?? [context2.shot]).flatMap(requiredCharacters);
   if (cast.length && (!tool2 || !VIDEO_ADAPTERS[tool2]))
     throw new Error("character_inputs_unsupported: the selected route cannot verify the required character inputs");
@@ -132623,6 +132863,11 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     }
     input = { ...input, args: { ...media, ...input.args } };
   }
+  if (motionReferences) {
+    if (input.args.referenceVideoPaths !== void 0)
+      throw new Error("scene_image_scope: declare motion reference videos once on the scene");
+    input = { ...input, args: { ...input.args, referenceVideoPaths: motionReferences.map((ref) => ref.path) } };
+  }
   const lines = (context2.shot.narration ?? []).filter((line) => line.tts?.trim());
   const promptProfile = scenePromptProfile(tool2, selection.model);
   const physicalSpeech = lines.some((line) => line.delivery !== "voiceover");
@@ -132635,6 +132880,16 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (modelVoice && input.args.generateAudio === false)
     throw new Error("scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue");
   if (input.shotBindings && !input.sceneRendering) throw new Error("scene_render_bindings: select per_shot rendering");
+  const savedDraft = scene?.promptDrafts?.find((draft) => draft.engine === selection.engine && draft.model === selection.model && draft.operation === (tool2 && VIDEO_ADAPTERS[tool2]?.operation || selection.operation));
+  if (input.prompt === void 0 && savedDraft) input = { ...input, prompt: savedDraft.prompt };
+  if ((input.wholeScene || scene?.promptDrafts) && input.sceneRendering)
+    throw new Error("scene_prompt_unsupported: this route needs separate renders. Choose an operation that accepts the complete scene.");
+  if (input.prompt !== void 0) {
+    if (!input.prompt.trim()) throw new Error("scene_prompt_empty: write the prompt, or leave it out for the composed one");
+    if (input.prompt.length > 32e3) throw new Error("prompt_too_long: a prompt takes at most 32000 characters");
+    if (input.sceneRendering)
+      throw new Error("scene_prompt_unsupported: an authored prompt describes one render of the whole scene; per-shot rendering writes each shot from its own card");
+  }
   if (input.sceneRendering) {
     for (const card of context2.sceneMembers ?? []) {
       const turns = card.narration?.filter((line) => line.tts?.trim()) ?? [];
@@ -132865,7 +133120,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
         ...notes.beats,
         notes.sound && "Sound: " + notes.sound
       ].filter(Boolean);
-      const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(" "), lines, bindTurns);
+      const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(" "), lines, bindTurns, promptProfile);
       callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions, (index) => formatReferenceLabel(promptProfile.referenceLabels, "image", index)));
     }
   }
@@ -132880,20 +133135,25 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     callArgs = { ...callArgs, generateAudio: true };
   }
   if (silentPicture) checkVoiceoverDirection(String(callArgs.prompt ?? ""), lines, true);
-  const sourcePrompt = scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
+  const replaced = input.prompt !== void 0;
+  const sourcePrompt = replaced ? input.prompt : scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
+  const outsidePrompt = (bindings = []) => {
+    const kept = bindings.filter((binding) => binding.via !== "prompt");
+    return kept.length ? { directionBindings: kept } : {};
+  };
   const boardCamera = shot.visual?.camera ?? {};
   const rawPrompt = input.args.prompt ?? video2?.prompt;
-  const drift = !scene && !compiled && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
+  const drift = !scene && !compiled && !replaced && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
-  const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...c ? { performance: c.performance } : {} } : c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
   for (const guide of sceneRequest?.shotReferenceImages ?? []) {
     if (!guide.submitted) cutWarnings.push("shot_reference_omitted: " + guide.shotId + " receives no composition image. " + guide.reason);
   }
   let direction = sceneCamera ? {
     sourcePrompt,
-    directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
-    ...sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
+    directionWarnings: [...replaced ? [] : sceneCamera.warnings, ...cutWarnings],
+    ...replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
   } : directionOf(compiled);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
@@ -132991,7 +133251,43 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (person.voiceRequired && !voice.voiceContinuity?.speakers.some((s2) => s2.speaker === person.character && s2.reference?.provenance === "pinned_settings_and_bytes" && s2.audioIndex))
       throw new Error("character_voice_required: " + tool2 + " cannot bind the selected voice sample for " + person.character);
   }
-  const args = parseVideoArgs(tool2, voice.args);
+  const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings;
+  const promptSlots = scenePromptSlots(
+    promptProfile.referenceLabels,
+    numberedImages(voice.args, imageBindings, voice.voiceContinuity?.speakers, cast, context2.episode, String(context2.sceneMembers?.[0]?.id ?? shot.id ?? "")),
+    voice.voiceContinuity?.speakers
+  );
+  const authored = input.prompt !== void 0;
+  let promptIssues;
+  if (authored) {
+    const composed = String(voice.args.prompt ?? "");
+    const listed = openingPositionsSchema.safeParse(voice.args.openingPositions);
+    const positions = !listed.success ? void 0 : sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length ? sceneCastProse("", listed.data, voice.voiceContinuity.speakers).positions : listed.data;
+    const carried = (text4) => Boolean(text4 && composed.includes(text4));
+    if ((input.wholeScene || savedDraft) && ["reference_voice", "model_generated"].includes(voice.voiceContinuity?.strategy || ""))
+      assertSceneDialogue(input.prompt, lines.filter((line) => line.delivery !== "voiceover"));
+    const resolved = resolveScenePrompt(input.prompt, promptSlots, {
+      composed,
+      header: openingPrompt("", positions),
+      limit: promptLimit,
+      schemaLimit: videoPromptLimit(tool2),
+      lines: lines.map((line) => line.tts?.trim()).filter((text4) => carried(text4)),
+      sentences: [{ code: "text_policy_missing", text: videoTextPolicy() }, { code: "silent_direction_missing", text: silentSuffix }].filter((sentence2) => carried(sentence2.text))
+    });
+    const refused = resolved.issues.filter((issue2) => issue2.level === "error");
+    if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
+    promptIssues = resolved.issues;
+    voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...positions ? { openingPositions: positions } : {} } };
+  }
+  let args;
+  try {
+    args = parseVideoArgs(tool2, voice.args);
+  } catch (error2) {
+    const issue2 = authored && error2 instanceof external_exports.ZodError ? error2.issues.find((issue3) => issue3.path[0] === "prompt") : void 0;
+    if (!issue2) throw error2;
+    throw new Error(/^[a-z_]+: /.test(issue2.message) ? issue2.message : "prompt_refused: " + issue2.message);
+  }
+  if (authored) args.prompt = voice.args.prompt;
   if (silentPicture) checkVoiceoverDirection(args, lines, true);
   const adaptiveDuration = selection.engine === "seedance" && args.durationSeconds === -1;
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
@@ -133002,13 +133298,13 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (Array.isArray(args.openingPositions)) {
     const positions = args.openingPositions;
     const opening2 = openingPrompt(String(args.prompt), positions);
-    if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
+    if (!authored && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
       const prose = sceneCastProse(opening2, positions, voice.voiceContinuity.speakers);
       args.openingPositions = prose.positions;
       args.prompt = prose.prompt;
     } else args.prompt = opening2;
   }
-  if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
+  if (!authored && !Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
     args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
   if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
     const sourceSeconds = ltxApiAudioSeconds(path27.resolve(context2.episode, args.audioPath));
@@ -133068,7 +133364,6 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
   }
-  const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings;
   const characterBindings = tool2 === "seedance_reference" ? seedanceBindings(
     context2.episode,
     context2.sceneMembers ?? [context2.shot],
@@ -133092,9 +133387,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const quote = quoteFor(tool2, args);
   const body = {
     ...take,
+    ...motionReferences ? { motionReferences } : {},
+    ...input.wholeScene ? { wholeScene: true } : {},
     ...characterBindings ? { characterBindings } : {},
     ...cast.length ? { characterInputs: cast } : {},
     ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
+    ...authored ? { authoredPrompt: input.prompt, ...promptIssues.length ? { promptIssues } : {} } : {},
     version: 1,
     episode: context2.episode,
     shotId: context2.shotId,
@@ -133115,7 +133413,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     quote,
     execution: "server"
   };
-  const plan2 = { ...body, id: hash2(body), ...prepared ? { promptProfile } : {} };
+  const plan2 = {
+    ...body,
+    id: hash2(body),
+    ...prepared ? { promptProfile } : {},
+    ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions)) : {}
+  };
   return persist ? saveVideoPlan(plan2) : plan2;
 }
 function authorization(context2) {
@@ -133222,7 +133525,7 @@ function approvedContext(plan2) {
   }
 }
 function rebuildPlan(plan2) {
-  return planVideo({ episode: plan2.episode, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, sceneRendering: plan2.sceneRendering, shotBindings: plan2.shotBindings, maxCostUsd: plan2.maxCostUsd, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote }, false);
+  return planVideo({ episode: plan2.episode, wholeScene: plan2.wholeScene, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, sceneRendering: plan2.sceneRendering, shotBindings: plan2.shotBindings, maxCostUsd: plan2.maxCostUsd, ...plan2.authoredPrompt !== void 0 ? { prompt: plan2.authoredPrompt } : {}, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote }, false);
 }
 async function executeVideo(raw, dispatch) {
   const request = videoExecuteSchema.parse(raw), episode = fs19.realpathSync(request.episode);
@@ -146358,6 +146661,8 @@ TOOLS.push(
     description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
+      wholeScene: { type: "boolean", enum: [true], description: "Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it." },
+      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional complete scene prompt. Edit the returned promptTemplate, using its named face, voice and image slots. Overrides the saved draft for this plan." },
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: "none" }),
       sceneRendering: { type: "string", enum: ["per_shot"], description: "Use the saved model\u2019s per-shot renderer for one scene job. The planner can select this for compatible multi-shot dialogue that needs different voice references across cuts. Review the render plan before approval." },

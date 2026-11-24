@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { scenePromptProfile, referenceLabel } from '../dist/scene-prompt-profile.js';
+import { scenePromptProfile, sceneWritingGuide, referenceLabel } from '../dist/scene-prompt-profile.js';
 import { sceneTimelineWords } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
@@ -19,4 +19,18 @@ test('provider syntax preserves the shot, speaker and closing action with each q
   }
   assert.equal(referenceLabel('seedance_reference','image',2,'dreamina-seedance-2-5-flash-261115'),'@Image 2');
   assert.equal(referenceLabel('seedance_reference','audio',1,'dreamina-seedance-2-0-mini-260615'),'Audio 1');
+});
+
+test('model writers use the scene clock, reference dialect and supplied performance', async () => {
+  const {scenePromptText} = await import('../dist/video-prompt.js');
+  const scene = {emotion:'Relief.', action:'Mina releases the key.', sound:'The fan hums.'};
+  const text = tool => scenePromptText(scene,'Medium on Mina.','Jun takes it.',[],false,scenePromptProfile(tool));
+  assert.match(text('minimax_reference'), /Medium on Mina\.[\s\S]+Jun takes it\.[\s\S]+Environmental sound: The fan hums/);
+  assert.match(text('fasth3_omni_reference'), /^Mina releases the key/);
+  assert.match(text('veo_img2video'), /^Medium on Mina\.[\s\S]+Sound: The fan hums/);
+  assert.match(sceneWritingGuide(scenePromptProfile('astra_genai_msr')), /face and voice/);
+  assert.match(sceneWritingGuide(scenePromptProfile('heygen_reference')), /contained location/);
+  const timeline = {fps:24,images:[],shots:[],audio:{cues:[{frame:24,action:'Jun looks up.'}]}};
+  const profile = scenePromptProfile('ltx_api_audio2video');
+  assert.match(sceneTimelineWords(timeline,scene,{modelFacing:true,writer:profile.writer}), /supplied recording[\s\S]+At 1 seconds: Jun looks up/);
 });
