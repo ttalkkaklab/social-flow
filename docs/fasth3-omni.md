@@ -37,6 +37,14 @@ disconnect, call `video_status` with the original request ID and `action:"refres
 A complete local take can finish delivery without another model invocation.
 If the worker disconnected before returning media, the request remains unresolved.
 
+For character dialogue, inspect `voiceReferenceCheck` on the delivery receipt.
+On the Mac test, a take generated the requested Vietnamese line and replayed
+its Korean reference recording later in the same shot. The waveform check
+reports the reference index, time and correlation for a possible full-sample
+replay. Exclude that interval from speaker-similarity scoring and listen to
+the complete clip before adoption. Short phrases or paraphrases can escape
+the waveform check.
+
 ## Architecture
 
 `local-video-models.ts` is a small Strategy registry. Each entry owns its schema,

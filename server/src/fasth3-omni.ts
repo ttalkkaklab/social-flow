@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -56,6 +57,52 @@ export function fasth3VideoAudioCount(files: string[]): number {
 
 function ffmpeg(args: string[]): void {
   execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', ...args], { timeout: 120_000, maxBuffer: 1024 * 1024 });
+}
+
+/** Detect a replay of a voice sample in a take before using it for a speaker comparison. */
+export function checkFasth3VoiceReplay(video: string, references: {path: string; audioIndex: number; speaker: string; sha256: string}[]) {
+  if (!references.length) return {status: 'no_voice_references' as const};
+  const rate = 2000;
+  const pcm = (file: string) => {
+    const bytes = execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-i', file, '-map', '0:a:0',
+      '-t', '16', '-ac', '1', '-af', 'highpass=f=80,lowpass=f=650', '-ar', String(rate), '-f', 'f32le', '-'],
+      {timeout: 20_000, maxBuffer: 140_000, stdio: ['ignore', 'pipe', 'pipe']});
+    return new Float32Array(Uint8Array.from(bytes).buffer);
+  };
+  try {
+    const take = pcm(video);
+    const matches = [];
+    for (const reference of references) {
+      if (createHash('sha256').update(readFileSync(reference.path)).digest('hex') !== reference.sha256)
+        return {status: 'unmeasured' as const};
+      const ref = pcm(reference.path);
+      if (ref.length < rate || ref.length > take.length) continue;
+      // Rank offsets with a sparse sample, then measure the full waveform at the strongest offsets.
+      const stride = Math.max(1, Math.floor(ref.length / 256));
+      const candidates: {offset: number; score: number}[] = [];
+      const correlate = (offset: number, step: number) => {
+        let dot = 0, sourceEnergy = 0, takeEnergy = 0;
+        for (let i = 0; i < ref.length; i += step) {
+          const a = ref[i], b = take[offset + i];
+          dot += a * b; sourceEnergy += a * a; takeEnergy += b * b;
+        }
+        return Math.abs(dot) / Math.sqrt(Math.max(1e-12, sourceEnergy * takeEnergy));
+      };
+      for (let offset = 0; offset <= take.length - ref.length; offset++) {
+        const score = correlate(offset, stride);
+        if (score < 0.4 || (candidates.length === 8 && score <= candidates[7].score)) continue;
+        candidates.push({offset, score});
+        candidates.sort((a, b) => b.score - a.score);
+        if (candidates.length > 8) candidates.pop();
+      }
+      const best = candidates.map(({offset}) => ({offset, score: correlate(offset, 1)})).sort((a,b) => b.score - a.score)[0];
+      if (best && best.score >= 0.55) matches.push({audioIndex: reference.audioIndex, speaker: reference.speaker, startSeconds: best.offset / rate,
+        durationSeconds: ref.length / rate, waveformCorrelation: Number(best.score.toFixed(3))});
+    }
+    return {status: matches.length ? 'possible_reference_replay' as const : 'no_full_sample_match' as const, matches};
+  } catch {
+    return {status: 'unmeasured' as const};
+  }
 }
 
 /** Convert bounded local references to the backend wire format before loading any weights. */

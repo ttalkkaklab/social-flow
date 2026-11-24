@@ -20964,7 +20964,7 @@ var require_websocket = __commonJS({
     var http4 = __require("http");
     var net = __require("net");
     var tls = __require("tls");
-    var { randomBytes: randomBytes3, createHash: createHash33 } = __require("crypto");
+    var { randomBytes: randomBytes3, createHash: createHash34 } = __require("crypto");
     var { Duplex, Readable: Readable2 } = __require("stream");
     var { URL: URL2 } = __require("url");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -21632,7 +21632,7 @@ var require_websocket = __commonJS({
           abortHandshake(websocket, socket, "Invalid Upgrade header");
           return;
         }
-        const digest5 = createHash33("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash34("sha1").update(key + GUID).digest("base64");
         if (res2.headers["sec-websocket-accept"] !== digest5) {
           abortHandshake(websocket, socket, "Invalid Sec-WebSocket-Accept header");
           return;
@@ -22001,7 +22001,7 @@ var require_websocket_server = __commonJS({
     var EventEmitter = __require("events");
     var http4 = __require("http");
     var { Duplex } = __require("stream");
-    var { createHash: createHash33 } = __require("crypto");
+    var { createHash: createHash34 } = __require("crypto");
     var extension2 = require_extension();
     var PerMessageDeflate2 = require_permessage_deflate();
     var subprotocol2 = require_subprotocol();
@@ -22308,7 +22308,7 @@ var require_websocket_server = __commonJS({
           );
         }
         if (this._state > RUNNING) return abortHandshake(socket, 503);
-        const digest5 = createHash33("sha1").update(key + GUID).digest("base64");
+        const digest5 = createHash34("sha1").update(key + GUID).digest("base64");
         const headers2 = [
           "HTTP/1.1 101 Switching Protocols",
           "Upgrade: websocket",
@@ -96774,7 +96774,7 @@ var require_character_sheet = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
     var { identityVoice, voiceErrors } = require_character_voice();
@@ -96791,7 +96791,7 @@ var require_character_sheet = __commonJS({
       const id = path40.basename(path40.dirname(path40.resolve(file)));
       if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id)) throw new Error("Character folder needs a kebab-case id");
       const tts = identityVoice(source, { optional: !requireSpeech });
-      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash33("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
+      return { id, name, character, tts, direction: direction(character, options), identitySha256: createHash34("sha256").update(source).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source, tts) };
     }
     function selectedVoiceReference(source, tts) {
       if (!tts) return {};
@@ -96861,10 +96861,10 @@ var require_character_panels = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { execFileSync: execFileSync20 } = __require("node:child_process");
     var { identityCharacter } = require_character_identity();
-    var sha2 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+    var sha2 = (file) => createHash34("sha256").update(fs26.readFileSync(file)).digest("hex");
     var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
     var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
     function localFile(folder, name) {
@@ -97505,14 +97505,14 @@ var require_scene_voice = __commonJS({
   "../skills/_shared/scene-voice.js"(exports, module) {
     "use strict";
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { existsSync: existsSync44, readFileSync: readFileSync42, realpathSync: realpathSync15 } = __require("node:fs");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { handoff } = require_character_sheet();
     var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
     var object6 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
     var text4 = (value) => typeof value === "string" ? value.trim() : "";
-    var fileHash2 = (file) => createHash33("sha256").update(readFileSync42(file)).digest("hex");
+    var fileHash2 = (file) => createHash34("sha256").update(readFileSync42(file)).digest("hex");
     var sameSettings = (a, b) => isDeepStrictEqual2(JSON.parse(JSON.stringify(a ?? null)), JSON.parse(JSON.stringify(b ?? null)));
     function channelRoot(boardDir) {
       let channel = path40.resolve(boardDir);
@@ -98339,8 +98339,8 @@ var require_scene_speech_receipt = __commonJS({
   "../skills/_shared/scene-speech-receipt.js"(exports, module) {
     "use strict";
     var fs26 = __require("node:fs");
-    var { createHash: createHash33 } = __require("node:crypto");
-    var sha2 = (value) => createHash33("sha256").update(value).digest("hex");
+    var { createHash: createHash34 } = __require("node:crypto");
+    var sha2 = (value) => createHash34("sha256").update(value).digest("hex");
     var shaPattern = /^[a-f0-9]{64}$/;
     function mismatch(message) {
       throw new Error("speech_video_source_mismatch: " + message);
@@ -98530,10 +98530,10 @@ var require_character_speech = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { voiceErrors, generationVoiceErrors, normalizeLanguage } = require_character_voice();
-    var hash7 = (bytes) => createHash33("sha256").update(bytes).digest("hex");
+    var hash7 = (bytes) => createHash34("sha256").update(bytes).digest("hex");
     var normalizeVoice = (voice) => Object.fromEntries(Object.entries(voice || {}).map(([key, value]) => [key, key === "language" ? normalizeLanguage(value) : typeof value === "string" ? value.trim() : value]));
     function explicitVoiceOverride(board, voice, current) {
       const overrides = board?.PRODUCTION?.modelSettings?.overrides;
@@ -98684,9 +98684,9 @@ var require_character_speech = __commonJS({
 var require_speech_contract = __commonJS({
   "../skills/_shared/speech-contract.js"(exports, module) {
     "use strict";
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     function speechRevision2(line, character) {
-      return createHash33("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
+      return createHash34("sha256").update(JSON.stringify(require_scene_acting().speechRevisionPayload(line, character?.tts))).digest("hex");
     }
     function compileActing2(text4, acting, voice) {
       voice = { ...voice };
@@ -98788,7 +98788,7 @@ var require_speech_contract = __commonJS({
       for (const name of names) {
         if (!/^[a-f0-9]{64}\.js$/.test(name)) continue;
         const file = path40.join(dir, name), bytes = fs26.readFileSync(file);
-        if (createHash33("sha256").update(bytes).digest("hex") !== name.slice(0, -3))
+        if (createHash34("sha256").update(bytes).digest("hex") !== name.slice(0, -3))
           throw new Error("speech_history_invalid: a storyboard snapshot no longer matches its content hash");
         if (!bytes.includes("speechBinding")) continue;
         const win = require_scenes_vm().evaluateWindowScript(bytes.toString("utf8"), { filename: file });
@@ -98845,7 +98845,7 @@ var require_speech_contract = __commonJS({
           const file = sidecar.slice(0, -suffix.length);
           let sha2 = receipt?.sha256;
           if (!sha2 && receipt?.videoPath === file && hasPostLipSync(receipt) && fs26.existsSync(file))
-            sha2 = createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+            sha2 = createHash34("sha256").update(fs26.readFileSync(file)).digest("hex");
           if (!/^[a-f0-9]{64}$/.test(sha2)) continue;
           if (!hashes.has(sha2)) hashes.set(sha2, []);
           const source = { receipt, suffix, sha: sha2, file };
@@ -98858,7 +98858,7 @@ var require_speech_contract = __commonJS({
     }
     function assertVideoSpeechProvenance(videoPath, sha2563, plan2 = {}, index) {
       const fs26 = __require("node:fs");
-      const digest5 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+      const digest5 = (file) => createHash34("sha256").update(fs26.readFileSync(file)).digest("hex");
       let driver;
       function verify(receipt, suffix, hashBound, originalFile) {
         verifyReceiptOperation(receipt, suffix, plan2, hashBound);
@@ -98977,7 +98977,7 @@ var require_speech_contract = __commonJS({
         const { videoPath, videoSha256, performanceSource, conditioningAudioSha256 } = entry2.binding;
         if (!media.has(videoSha256)) {
           const file = typeof videoPath === "string" && path40.resolve(boardDir, videoPath);
-          const original = file && fs26.existsSync(file) && createHash33("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
+          const original = file && fs26.existsSync(file) && createHash34("sha256").update(fs26.readFileSync(file)).digest("hex") === videoSha256;
           const measured = original && (entry2.binding.mode === "voiceover" ? externalPictureSource(file) : videoPerformanceSource(file, Boolean(conditioningAudioSha256)));
           media.set(videoSha256, measured || performanceSource);
         }
@@ -103340,9 +103340,9 @@ var require_video_groups = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { execFileSync: execFileSync20 } = __require("node:child_process");
-    var hash7 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+    var hash7 = (file) => createHash34("sha256").update(fs26.readFileSync(file)).digest("hex");
     var asset = (board, file) => path40.resolve(file.startsWith(".work/") ? path40.dirname(board) : board, file);
     function declaration(scene, { mode } = {}) {
       const p = scene.visual?.video?.groupPlan;
@@ -103494,7 +103494,7 @@ var require_shot_image_review = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { framePlan } = require_render_routing();
     function inspect(file, remote) {
@@ -103505,7 +103505,7 @@ var require_shot_image_review = __commonJS({
       } catch {
         return { status: "unverified", reason: "local source is unreadable" };
       }
-      const hash7 = createHash33("sha256").update(bytes).digest("hex");
+      const hash7 = createHash34("sha256").update(bytes).digest("hex");
       if (!/\.(png|jpe?g|webp|avif|bmp|tiff?)$/i.test(file)) {
         return { hash: hash7, status: "unverified", reason: "unsupported still-image format" };
       }
@@ -103691,12 +103691,12 @@ var require_shot_continuity = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { execFileSync: execFileSync20 } = __require("node:child_process");
     var { outline } = require_structure_contract();
     var { framePlan } = require_render_routing();
     var text4 = (value) => typeof value === "string" && value.trim().length > 0;
-    var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash34("sha256").update(value).digest("hex");
     var fileHash2 = (file) => hash7(fs26.readFileSync(file));
     var local2 = (dir, file) => {
       if (!text4(file) || /^[a-z][a-z0-9+.-]*:/i.test(file)) throw new Error("expected a local media path");
@@ -104889,7 +104889,7 @@ var require_edit_plan = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var carry = /^(jcut|dissolve|iris|blur|zoom|push:(l2r|r2l|u2d|d2u)|whip:(l2r|r2l|u2d|d2u))$/;
     var durations = { jcut: 0.24, dissolve: 0.4, iris: 0.4, blur: 0.4, zoom: 0.32, push: 0.32, whip: 0.24 };
     function seconds2(value, fallback, label, max = 2) {
@@ -104975,7 +104975,7 @@ var require_edit_plan = __commonJS({
       const source = fs26.readFileSync(path40.join(work, "cards.tsv"), "utf8");
       const result = compile(scenes, source, options);
       fs26.writeFileSync(path40.join(work, "cards.resolved.tsv"), result.cards);
-      fs26.writeFileSync(path40.join(work, "edit-plan.json"), JSON.stringify({ version: 1, cardsSha256: createHash33("sha256").update(result.cards).digest("hex"), shots: result.plan }, null, 2) + "\n");
+      fs26.writeFileSync(path40.join(work, "edit-plan.json"), JSON.stringify({ version: 1, cardsSha256: createHash34("sha256").update(result.cards).digest("hex"), shots: result.plan }, null, 2) + "\n");
       return result;
     }
     function preview2(scenes, options) {
@@ -105436,11 +105436,11 @@ var require_compose_speech = __commonJS({
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
     var { execFileSync: execFileSync20 } = __require("node:child_process");
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
-    var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash34("sha256").update(value).digest("hex");
     function duration5(file) {
       const seconds2 = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file);
@@ -105823,7 +105823,7 @@ var require_prepare_source_audio = __commonJS({
     var fs26 = __require("fs");
     var path40 = __require("path");
     var { execFileSync: execFileSync20 } = __require("child_process");
-    var { createHash: createHash33 } = __require("crypto");
+    var { createHash: createHash34 } = __require("crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var speechSpan = require_speech_span();
     function checkAssemblyRoutes(win, board) {
@@ -105863,7 +105863,7 @@ var require_prepare_source_audio = __commonJS({
       const clip2 = visual.video?.clip;
       const file = clip2 && require_check_production().assetPath(board, clip2);
       const driver = recordedDriver ?? (file && require_character_speech().conditioningAudioSha256(file));
-      const original = driver && fs26.existsSync(audio) && (createHash33("sha256").update(fs26.readFileSync(audio)).digest("hex") === driver || sceneRender?.shots?.length > 1 && require_compose_speech().matchesConditioningSlice(scene, board, sceneRender, audio, driver));
+      const original = driver && fs26.existsSync(audio) && (createHash34("sha256").update(fs26.readFileSync(audio)).digest("hex") === driver || sceneRender?.shots?.length > 1 && require_compose_speech().matchesConditioningSlice(scene, board, sceneRender, audio, driver));
       if (!original || visual.video?.groupPlan || visual.reuse || !["missing", "silent"].includes(require_audio_signal().inspect(file).status)) {
         throw new Error("post_lipsync_forbidden: on-screen dialogue needs sound.audioSource video or the original WAV from its silent audio-to-video render");
       }
@@ -105921,7 +105921,7 @@ var require_prepare_source_audio = __commonJS({
         if (!(sourceIn >= 0) || !(sourceOut > sourceIn) || sourceOut > clipSeconds + 1 / (fps || 24))
           throw new Error(`shot ${Number(fields2[0]) + 1}: edit.in ${requested} / edit.out ${scene.edit?.out ?? "end"} fall outside the ${clipSeconds}s clip`);
         const seconds2 = Math.min(sourceOut, clipSeconds) - sourceIn;
-        const hash7 = (file) => createHash33("sha256").update(fs26.readFileSync(file)).digest("hex");
+        const hash7 = (file) => createHash34("sha256").update(fs26.readFileSync(file)).digest("hex");
         const sourceSha256 = hash7(video2);
         const audioDir = path40.join(work, ".source-audio");
         fs26.mkdirSync(audioDir, { recursive: true });
@@ -106321,11 +106321,11 @@ var require_check_tts_quality = __commonJS({
     var fs26 = __require("node:fs");
     var path40 = __require("node:path");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { speechRevision: speechRevision2, assertVideoPerformanceOwnership } = require_speech_contract();
     var { usesConditioningTrack, checkAssemblyRoutes } = require_prepare_source_audio();
     var { authorizeSpeed: authorizeSpeed2 } = require_tts_speed_policy();
-    var hash7 = (value) => createHash33("sha256").update(value).digest("hex");
+    var hash7 = (value) => createHash34("sha256").update(value).digest("hex");
     var normalize2 = (text4) => text4.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
     function cer(expected, heard) {
       const a = [...normalize2(expected)], b = [...normalize2(heard)];
@@ -106666,14 +106666,14 @@ var require_check_tts_quality = __commonJS({
 var require_final_speech_chapters = __commonJS({
   "../skills/produce/references/final-speech-chapters.js"(exports, module) {
     "use strict";
-    var { createHash: createHash33 } = __require("node:crypto");
+    var { createHash: createHash34 } = __require("node:crypto");
     var { spawnSync: spawnSync4 } = __require("node:child_process");
     var { normalize: normalize2, cer } = require_check_tts_quality();
     var RATE2 = 24e3;
     var BYTES2 = 4;
     var LIMIT3 = 14 * 1024 * 1024;
     var POLICY2 = "final-speech-chapters-v1";
-    var hash7 = (x2) => createHash33("sha256").update(x2).digest("hex");
+    var hash7 = (x2) => createHash34("sha256").update(x2).digest("hex");
     var digest5 = (x2) => hash7(JSON.stringify(x2));
     function decode2(media) {
       const encoded = spawnSync4("ffmpeg", ["-v", "error", "-i", media, "-map", "0:a:0", "-map_metadata", "-1", "-ac", "1", "-ar", String(RATE2), "-c:a", "flac", "-f", "flac", "pipe:1"], { maxBuffer: RATE2 * BYTES2 * 1800 + 65536, timeout: 6e4 });
@@ -112108,6 +112108,7 @@ var import_undici = __toESM(require_undici(), 1);
 
 // src/fasth3-omni.ts
 import { execFileSync as execFileSync2 } from "node:child_process";
+import { createHash as createHash4 } from "node:crypto";
 import { mkdtempSync, readFileSync as readFileSync5, readdirSync as readdirSync2, rmSync, statSync as statSync3 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join as join5 } from "node:path";
@@ -112224,6 +112225,77 @@ function fasth3VideoAudioCount(files3) {
 }
 function ffmpeg(args) {
   execFileSync2("ffmpeg", ["-hide_banner", "-loglevel", "error", "-nostdin", "-y", ...args], { timeout: 12e4, maxBuffer: 1024 * 1024 });
+}
+function checkFasth3VoiceReplay(video2, references) {
+  if (!references.length) return { status: "no_voice_references" };
+  const rate = 2e3;
+  const pcm = (file) => {
+    const bytes = execFileSync2(
+      "ffmpeg",
+      [
+        "-nostdin",
+        "-v",
+        "error",
+        "-i",
+        file,
+        "-map",
+        "0:a:0",
+        "-t",
+        "16",
+        "-ac",
+        "1",
+        "-af",
+        "highpass=f=80,lowpass=f=650",
+        "-ar",
+        String(rate),
+        "-f",
+        "f32le",
+        "-"
+      ],
+      { timeout: 2e4, maxBuffer: 14e4, stdio: ["ignore", "pipe", "pipe"] }
+    );
+    return new Float32Array(Uint8Array.from(bytes).buffer);
+  };
+  try {
+    const take = pcm(video2);
+    const matches = [];
+    for (const reference2 of references) {
+      if (createHash4("sha256").update(readFileSync5(reference2.path)).digest("hex") !== reference2.sha256)
+        return { status: "unmeasured" };
+      const ref = pcm(reference2.path);
+      if (ref.length < rate || ref.length > take.length) continue;
+      const stride = Math.max(1, Math.floor(ref.length / 256));
+      const candidates = [];
+      const correlate = (offset, step) => {
+        let dot = 0, sourceEnergy = 0, takeEnergy = 0;
+        for (let i2 = 0; i2 < ref.length; i2 += step) {
+          const a = ref[i2], b = take[offset + i2];
+          dot += a * b;
+          sourceEnergy += a * a;
+          takeEnergy += b * b;
+        }
+        return Math.abs(dot) / Math.sqrt(Math.max(1e-12, sourceEnergy * takeEnergy));
+      };
+      for (let offset = 0; offset <= take.length - ref.length; offset++) {
+        const score4 = correlate(offset, stride);
+        if (score4 < 0.4 || candidates.length === 8 && score4 <= candidates[7].score) continue;
+        candidates.push({ offset, score: score4 });
+        candidates.sort((a, b) => b.score - a.score);
+        if (candidates.length > 8) candidates.pop();
+      }
+      const best = candidates.map(({ offset }) => ({ offset, score: correlate(offset, 1) })).sort((a, b) => b.score - a.score)[0];
+      if (best && best.score >= 0.55) matches.push({
+        audioIndex: reference2.audioIndex,
+        speaker: reference2.speaker,
+        startSeconds: best.offset / rate,
+        durationSeconds: ref.length / rate,
+        waveformCorrelation: Number(best.score.toFixed(3))
+      });
+    }
+    return { status: matches.length ? "possible_reference_replay" : "no_full_sample_match", matches };
+  } catch {
+    return { status: "unmeasured" };
+  }
 }
 function buildFasth3Body(raw) {
   const r2 = fasth3OmniSchema.parse(raw);
@@ -121898,7 +121970,7 @@ function validateOpening(prompt, positions, references, issue2, maxChars = 2e3) 
 
 // src/tiktok-client.ts
 import { execFile as execFile2 } from "node:child_process";
-import { createHash as createHash4, randomBytes, randomUUID as randomUUID2 } from "node:crypto";
+import { createHash as createHash5, randomBytes, randomUUID as randomUUID2 } from "node:crypto";
 import { createReadStream as createReadStream2, existsSync as existsSync6 } from "node:fs";
 import { chmod, mkdir, open as open2, readFile, rename, rm, stat as stat3, writeFile as writeFile2 } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -122123,7 +122195,7 @@ async function tiktokAuth(raw) {
     scope: scopes.join(","),
     redirect_uri: client.redirect_uri,
     state,
-    code_challenge: createHash4("sha256").update(verifier).digest("hex"),
+    code_challenge: createHash5("sha256").update(verifier).digest("hex"),
     code_challenge_method: "S256"
   }).toString();
   const session = { status: "pending", authorizationUrl: authUrl.toString() };
@@ -122243,9 +122315,9 @@ async function tiktokPublish(raw, mode) {
     const mime = { ".mp4": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm" }[extname3(input.videoFilePath).toLowerCase()];
     if (!mime) throw new Error("TikTok supports MP4, MOV or WebM files.");
     const { chunkSize, totalChunkCount } = tiktokChunkPlan(media.size);
-    const hash7 = createHash4("sha256");
+    const hash7 = createHash5("sha256");
     for await (const bytes of createReadStream2(input.videoFilePath)) hash7.update(bytes);
-    const fingerprint = createHash4("sha256").update(JSON.stringify({ mode, input, sha256: hash7.digest("hex") })).digest("hex");
+    const fingerprint = createHash5("sha256").update(JSON.stringify({ mode, input, sha256: hash7.digest("hex") })).digest("hex");
     if (existsSync6(file)) {
       const previous = await json2(file);
       if (previous.fingerprint !== fingerprint) throw new Error("TikTok requestId already belongs to different media or metadata.");
@@ -122380,7 +122452,7 @@ import fs6 from "node:fs";
 import path6 from "node:path";
 import os from "node:os";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash6 } from "node:crypto";
 import { execFileSync as execFileSync3, spawn } from "node:child_process";
 var home = () => path6.join(os.homedir(), ".local/share/social-flow/upscale-tools");
 var worker = fileURLToPath3(new URL("./video-upscale-worker.py", import.meta.url));
@@ -122458,7 +122530,7 @@ function startUpscale(args) {
   if (new Set(sources).size !== sources.length) throw new Error("Duplicate source paths");
   const request = { ...parsed, sources, outputDirectory, pythonPath: python(parsed), modelsDirectory: path6.resolve(parsed.modelsDirectory ?? path6.join(home(), "models")) };
   const prepared = JSON.parse(execFileSync3(request.pythonPath, [worker, "--prepare"], { input: JSON.stringify(request), encoding: "utf8", timeout: 12e4, maxBuffer: 16 * 1024 * 1024 }));
-  const fingerprint = createHash5("sha256").update(JSON.stringify(prepared)).digest("hex");
+  const fingerprint = createHash6("sha256").update(JSON.stringify(prepared)).digest("hex");
   const dir = path6.join(outputDirectory, `job-${fingerprint.slice(0, 24)}`);
   try {
     fs6.mkdirSync(dir);
@@ -122618,7 +122690,7 @@ var MUSIC_TOOLS = [
 
 // src/astra-genai-native-image.ts
 import * as fs7 from "node:fs";
-import { createHash as createHash6, randomUUID as randomUUID3 } from "node:crypto";
+import { createHash as createHash7, randomUUID as randomUUID3 } from "node:crypto";
 
 // src/astra-genai-client.ts
 var import_undici2 = __toESM(require_undici(), 1);
@@ -122873,7 +122945,7 @@ async function generateNativeImage(input, edit2 = false) {
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
   const receiptPath2 = imagePath + ".astra-genai.json";
   if (fs7.existsSync(receiptPath2) || fs7.existsSync(imagePath)) throw new Error("Output/receipt already exists; recover it before any new generation");
-  const fingerprint = createHash6("sha256").update(JSON.stringify(body)).digest("hex");
+  const fingerprint = createHash7("sha256").update(JSON.stringify(body)).digest("hex");
   const requestId = args.model === "h3-image" ? randomUUID3() : void 0;
   const receipt = {
     requestId,
@@ -122936,7 +123008,7 @@ async function recoverNativeImage(receiptPath2) {
 import * as fs9 from "node:fs";
 import path8 from "node:path";
 import { tmpdir as tmpdir3 } from "node:os";
-import { createHash as createHash7 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 import { execFileSync as execFileSync5 } from "node:child_process";
 
 // src/ltx-api-video.ts
@@ -123372,7 +123444,7 @@ async function desktopVideoStatus(receiptPath2, download = false) {
   if (receipt.baseUrl !== astraGenaiBaseUrl(ROOT + "/")) throw new Error("Gateway origin changed; restore it before recovery");
   if (!receipt.jobId) throw new Error("Submission outcome unknown; inspect gateway generations/usage before retrying");
   if (receipt.status === "completed") {
-    if (createHash7("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
+    if (createHash8("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
     return { jobId: receipt.jobId, ...receipt.resolvedParams && { resolvedParams: receipt.resolvedParams }, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
   const job = external_exports.object({ id: external_exports.string(), status: external_exports.string(), resolved_params: resolvedParamsSchema.optional(), outputs: external_exports.array(external_exports.object({ url: external_exports.string(), media_kind: external_exports.string() })).default([]) }).passthrough().parse(await requestGenai("GET", `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
@@ -123392,9 +123464,9 @@ async function desktopVideoStatus(receiptPath2, download = false) {
     if (!(picture2?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("Invalid video result");
     if (receipt.expectedFrames !== void 0 && Number(picture2.nb_frames) !== receipt.expectedFrames)
       throw new Error("Desktop output frame count differs from numFrames; retain the receipt");
-    const sha2563 = createHash7("sha256").update(bytes).digest("hex");
+    const sha2563 = createHash8("sha256").update(bytes).digest("hex");
     if (fs9.existsSync(receipt.videoPath)) {
-      if (createHash7("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
+      if (createHash8("sha256").update(fs9.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
     } else fs9.linkSync(temp, receipt.videoPath);
     atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2563, ...job.resolved_params && { resolvedParams: job.resolved_params } });
   } finally {
@@ -123409,9 +123481,9 @@ async function generateDesktopVideo(operation, input) {
   for (const file of files3) {
     const stat5 = fs9.statSync(file);
     if (!stat5.isFile() || stat5.size === 0 || stat5.size > 100 * 1024 * 1024) throw new Error("Input must be a nonempty file up to 100 MiB");
-    hashes[file] = createHash7("sha256").update(fs9.readFileSync(file)).digest("hex");
+    hashes[file] = createHash8("sha256").update(fs9.readFileSync(file)).digest("hex");
   }
-  const fingerprint = createHash7("sha256").update(JSON.stringify({ operation, args, hashes })).digest("hex");
+  const fingerprint = createHash8("sha256").update(JSON.stringify({ operation, args, hashes })).digest("hex");
   const videoPath = resolveOutputFile(String(args.outputPath || process.cwd()), String(args.filename || `desktop-${Date.now()}.mp4`), "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
   if (fs9.existsSync(receiptPath2)) {
@@ -123429,10 +123501,10 @@ async function generateDesktopVideo(operation, input) {
     const assets = {};
     for (const file of files3) {
       const bytes = fs9.readFileSync(file);
-      if (createHash7("sha256").update(bytes).digest("hex") !== hashes[file]) throw new Error("Input changed before upload");
+      if (createHash8("sha256").update(bytes).digest("hex") !== hashes[file]) throw new Error("Input changed before upload");
       const windowed = file === args.audioPath && [args.audioStartTime, args.audioMaxDuration, args.numFrames].some((v) => v !== void 0);
       const upload = windowed ? desktopAudioBytes(file, args) : bytes;
-      if (windowed && createHash7("sha256").update(fs9.readFileSync(file)).digest("hex") !== hashes[file]) throw new Error("Audio changed during decoding");
+      if (windowed && createHash8("sha256").update(fs9.readFileSync(file)).digest("hex") !== hashes[file]) throw new Error("Audio changed during decoding");
       const form = new FormData();
       form.append("file", new Blob([new Uint8Array(upload)]), windowed ? "audio-window.wav" : path8.basename(file));
       assets[file] = external_exports.object({ id: external_exports.string().min(1) }).parse(JSON.parse((await requestGenaiMedia(ROOT + "/assets", form)).toString())).id;
@@ -123462,7 +123534,7 @@ import { setTimeout as sleep5 } from "node:timers/promises";
 
 // src/tts-execution.ts
 import { AsyncLocalStorage as AsyncLocalStorage2 } from "node:async_hooks";
-import { createHash as createHash8, randomUUID as randomUUID5 } from "node:crypto";
+import { createHash as createHash9, randomUUID as randomUUID5 } from "node:crypto";
 import { accessSync as accessSync2, constants as constants2, existsSync as existsSync9, lstatSync, mkdirSync as mkdirSync4, readFileSync as readFileSync10, realpathSync as realpathSync3, renameSync as renameSync2, rmSync as rmSync6, statSync as statSync6, writeFileSync as writeFileSync7 } from "node:fs";
 import { tmpdir as tmpdir5 } from "node:os";
 import { extname as extname5, join as join9, resolve as resolve3 } from "node:path";
@@ -123606,7 +123678,7 @@ function withSpeechRequestId(id, run) {
   if (!/^[A-Za-z0-9_-]{1,100}$/.test(id)) throw new Error("Invalid speech requestId");
   return executionId.run(id, run);
 }
-var digest2 = (value) => createHash8("sha256").update(value).digest("hex");
+var digest2 = (value) => createHash9("sha256").update(value).digest("hex");
 function canonical(value) {
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
   if (value && typeof value === "object") return "{" + Object.entries(value).filter(([, v]) => v !== void 0).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => JSON.stringify(k) + ":" + canonical(v)).join(",") + "}";
@@ -123924,7 +123996,7 @@ var NATIVE_GENAI_TOOLS = [
 
 // src/astra-video-client.ts
 import { execFileSync as execFileSync7 } from "node:child_process";
-import { createHash as createHash9, randomInt, randomUUID as randomUUID6 } from "node:crypto";
+import { createHash as createHash10, randomInt, randomUUID as randomUUID6 } from "node:crypto";
 import * as fs11 from "node:fs";
 import * as path10 from "node:path";
 
@@ -125000,7 +125072,7 @@ async function uploadFile(filePath) {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
-    ...contentType === "audio/wav" ? { wavSha256: createHash9("sha256").update(contents).digest("hex") } : {},
+    ...contentType === "audio/wav" ? { wavSha256: createHash10("sha256").update(contents).digest("hex") } : {},
     ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
     ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
     ...parsed.width !== void 0 ? { width: parsed.width } : {},
@@ -125116,7 +125188,7 @@ async function runJob(mode, prompt, body, outputPath, filename, signal, conditio
   });
   atomicVideoFile(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt2({ ...submitted, ...response, sha256: createHash9("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt2({ ...submitted, ...response, sha256: createHash10("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
 async function generateFromText(args) {
@@ -125232,14 +125304,14 @@ async function retakeVideo(args) {
 }
 
 // src/astra-genai-video.ts
-import { createHash as createHash12, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash13, randomUUID as randomUUID7 } from "node:crypto";
 import * as fs12 from "node:fs";
 import * as path12 from "node:path";
 import { execFileSync as execFileSync8 } from "node:child_process";
 import { setTimeout as sleep7 } from "node:timers/promises";
 
 // src/astra-genai-upload.ts
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 var GENAI_FILE_SCHEME = "genai-file://";
 var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
@@ -125296,7 +125368,7 @@ function genaiUploadable(bytes, contentType) {
 var FALL_BACK = [404, 405, 429, 507];
 async function uploadGenaiFile(bytes, contentType) {
   if (!genaiUploadable(bytes, contentType)) return void 0;
-  const sha2563 = createHash10("sha256").update(bytes).digest("hex");
+  const sha2563 = createHash11("sha256").update(bytes).digest("hex");
   const cacheKey = `${astraGenaiBaseUrl()} ${sha2563}`, cached2 = uploaded.get(cacheKey);
   if (cached2 && cached2.expiresAt > Date.now() + 60 * 6e4) return cached2.uri;
   for (let attempt = 1; ; attempt++) {
@@ -125327,7 +125399,7 @@ async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
   const route = `/v1/uploads/${encodeURIComponent(session.upload_id)}`;
   const put2 = (n) => retried(() => {
     const chunk3 = bytes.subarray(n * session.chunk_size, (n + 1) * session.chunk_size);
-    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash10("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
+    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash11("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
   });
   for (let n = 0; n < session.chunks; n++) await put2(n);
   const complete = async () => {
@@ -125353,7 +125425,7 @@ async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
 
 // src/genai-scene.ts
 import path11 from "node:path";
-import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash12 } from "node:crypto";
 import { readFileSync as readFileSync12, statSync as statSync8 } from "node:fs";
 import { createRequire as createRequire8 } from "node:module";
 
@@ -125751,7 +125823,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
   if (stageFiles || stageTrack || bindings?.some((b) => b.motionPrefix || b.performanceAudio) || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
     const staged = /* @__PURE__ */ new Map();
     const stageBytes = async (bytes, mime, role, frame2, shotId) => {
-      const sha2563 = createHash11("sha256").update(bytes).digest("hex");
+      const sha2563 = createHash12("sha256").update(bytes).digest("hex");
       const id = staged.get(sha2563) ?? await uploadGenaiFile(bytes, mime);
       if (!id) throw new Error("Gateway could not stage the original " + role + " file for validation");
       staged.set(sha2563, id);
@@ -125778,7 +125850,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
     }
     wire = JSON.stringify(body);
   }
-  return { body, attachments, bodySha256: createHash11("sha256").update(wire).digest("hex"), bytes: Buffer.byteLength(wire) };
+  return { body, attachments, bodySha256: createHash12("sha256").update(wire).digest("hex"), bytes: Buffer.byteLength(wire) };
 }
 async function validateScenePayload(endpoint2, scene, model2, resolution2, requestId) {
   let sent;
@@ -126228,7 +126300,7 @@ async function getGenaiVideoStatus(input, planned, binding) {
   if (receipt.status === "completed") {
     input.onJobCompleted?.();
     const bytes2 = fs12.readFileSync(receipt.videoPath);
-    if (createHash12("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    if (createHash13("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
     if (receipt.expected || planned || receipt.operation === "msr" || receipt.operation === "scene-to-video")
       checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
     return { jobId: receipt.jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
@@ -126260,10 +126332,10 @@ async function getGenaiVideoStatus(input, planned, binding) {
       fs12.linkSync(temp, receipt.videoPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
-      if (createHash12("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== createHash12("sha256").update(bytes).digest("hex"))
+      if (createHash13("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== createHash13("sha256").update(bytes).digest("hex"))
         throw new Error("GenAI video output conflicts with download");
     }
-    atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash12("sha256").update(bytes).digest("hex") });
+    atomicJson(input.receiptPath, { ...receipt, status: "completed", sha256: createHash13("sha256").update(bytes).digest("hex") });
   } finally {
     fs12.rmSync(temp, { force: true });
   }
@@ -126404,7 +126476,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
   requireAstraGenaiKey();
   const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
   const usesReferences = "references" in body && Array.isArray(body.references) && body.references.length > 0;
-  const fingerprint = createHash12("sha256").update(JSON.stringify(body)).digest("hex");
+  const fingerprint = createHash13("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
   const finish = async () => {
@@ -126468,7 +126540,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
       videoPath,
       expected: msrOutputContract(operation, args),
       status: "submitting",
-      ...wav ? { conditioningAudioSha256: createHash12("sha256").update(wav).digest("hex") } : {}
+      ...wav ? { conditioningAudioSha256: createHash13("sha256").update(wav).digest("hex") } : {}
     };
     signal?.throwIfAborted();
     const claim = receiptPath2 + "." + randomUUID7() + ".tmp";
@@ -126708,7 +126780,7 @@ var GENAI_TOOLS = [
 
 // src/astra-genai-image.ts
 import * as fs13 from "node:fs";
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash14 } from "node:crypto";
 var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
 var genaiImageSchema = external_exports.object({
   model: external_exports.string().min(1),
@@ -126783,7 +126855,7 @@ async function generateGenaiImage(input, operation = "text") {
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
   const receiptPath2 = imagePath + ".astra-genai.json";
   const body = buildGenaiImageBody(args);
-  const fingerprint = createHash13("sha256").update(JSON.stringify(body)).digest("hex");
+  const fingerprint = createHash14("sha256").update(JSON.stringify(body)).digest("hex");
   if (fs13.existsSync(receiptPath2) || fs13.existsSync(imagePath))
     throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
   fs13.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
@@ -127336,7 +127408,7 @@ async function generateLocalVideo(tool2, input) {
 }
 
 // src/seedance-client.ts
-import { createHash as createHash15 } from "node:crypto";
+import { createHash as createHash16 } from "node:crypto";
 import { execFile as execFile4 } from "node:child_process";
 import { promisify as promisify3 } from "node:util";
 import * as fs15 from "node:fs";
@@ -127544,12 +127616,12 @@ async function publishFiles(filePaths) {
 
 // src/modelark-assets.ts
 var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
-import { createHash as createHash14, createHmac, randomUUID as randomUUID8 } from "node:crypto";
+import { createHash as createHash15, createHmac, randomUUID as randomUUID8 } from "node:crypto";
 import { existsSync as existsSync15, statSync as statSync10, readFileSync as readFileSync16, realpathSync as realpathSync4, renameSync as renameSync4, rmSync as rmSync10, writeFileSync as writeFileSync12 } from "node:fs";
 import path15 from "node:path";
 var region = "ap-southeast-1";
 var host = "ark.ap-southeast-1.byteplusapi.com";
-var sha = (data) => createHash14("sha256").update(data).digest("hex");
+var sha = (data) => createHash15("sha256").update(data).digest("hex");
 var delay2 = (ms) => new Promise((resolve15) => setTimeout(resolve15, ms));
 var groupType = external_exports.enum(["AIGC", "LivenessFace"]);
 var portraitAssetSchema = external_exports.object({
@@ -128372,7 +128444,7 @@ async function prepareImages(filePaths, output2, realFaceInput, hasPortraitVideo
     checkDimensions2(image2.width, image2.height, path16.basename(filePath));
     const portrait = portraitForImage(filePath, output2, realFaceInput);
     if (portrait && new URL(arkBaseUrl()).hostname !== "ark.ap-southeast.bytepluses.com") throw new PortraitError(new Error("modelark_asset_region: select the Singapore inference endpoint for this asset"));
-    inputs2.push(portrait ? { portrait, sha256: createHash15("sha256").update(fs15.readFileSync(filePath)).digest("hex") } : readImageDataUri(filePath));
+    inputs2.push(portrait ? { portrait, sha256: createHash16("sha256").update(fs15.readFileSync(filePath)).digest("hex") } : readImageDataUri(filePath));
   }
   if (realFaceInput && !hasPortraitVideo && !inputs2.some((input) => typeof input !== "string"))
     throw new PortraitError(new Error("modelark_asset_sheet_required: the shot declares a face but has no character sheet portrait or reviewed video asset"));
@@ -128541,7 +128613,7 @@ function checkCastParts(body, originals) {
       matches = !!part && part.video_url.url === originals.find((v) => v.id === binding.taskId)?.url;
     } else {
       const uri = binding.media === "Image" ? body.content.filter((p) => p.type === "image_url")[index]?.image_url.url : body.content.filter((p) => p.type === "audio_url")[index]?.audio_url.url;
-      matches = binding.asset ? uri === "asset://" + binding.asset.assetId : !!uri?.startsWith("data:") && createHash15("sha256").update(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64")).digest("hex") === binding.sha256;
+      matches = binding.asset ? uri === "asset://" + binding.asset.assetId : !!uri?.startsWith("data:") && createHash16("sha256").update(Buffer.from(uri.slice(uri.indexOf(",") + 1), "base64")).digest("hex") === binding.sha256;
     }
     if (!matches) {
       const problem = new PortraitError(new Error("modelark_asset_stale: final " + binding.media + " " + binding.slot + " differs from the approved " + binding.role));
@@ -129960,7 +130032,7 @@ function sceneTimelineWords(timeline, scene, options = {}) {
 
 // src/video-image-inputs.ts
 import path20 from "node:path";
-import { createHash as createHash16 } from "node:crypto";
+import { createHash as createHash17 } from "node:crypto";
 import { existsSync as existsSync18, realpathSync as realpathSync5, readFileSync as readFileSync20 } from "node:fs";
 import { createRequire as createRequire11 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
@@ -130055,7 +130127,7 @@ function bindOpeningPositions(input, visual, episode) {
   }
   if (visual.video?.openingImageSha256) {
     const start = visual.frames?.start;
-    if (!start || createHash16("sha256").update(readFileSync20(path20.resolve(episode, "storyboard", start))).digest("hex") !== visual.video.openingImageSha256)
+    if (!start || createHash17("sha256").update(readFileSync20(path20.resolve(episode, "storyboard", start))).digest("hex") !== visual.video.openingImageSha256)
       throw new Error("openingPositions stale: inspect the changed start image and update shot_prompt");
   }
   return positions;
@@ -130344,7 +130416,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
 }
 
 // src/video-voice.ts
-import { createHash as createHash17 } from "node:crypto";
+import { createHash as createHash18 } from "node:crypto";
 import { existsSync as existsSync19, readFileSync as readFileSync21, realpathSync as realpathSync6 } from "node:fs";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import path21 from "node:path";
@@ -130358,8 +130430,8 @@ var load7 = createRequire12(import.meta.url);
 var object4 = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : {};
 var text2 = (value) => typeof value === "string" ? value.trim() : "";
 var stable2 = (value) => Array.isArray(value) ? value.map(stable2) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, v]) => [key, stable2(v)])) : value;
-var hash = (value) => createHash17("sha256").update(JSON.stringify(stable2(value))).digest("hex");
-var fileHash = (file) => createHash17("sha256").update(readFileSync21(file)).digest("hex");
+var hash = (value) => createHash18("sha256").update(JSON.stringify(stable2(value))).digest("hex");
+var fileHash = (file) => createHash18("sha256").update(readFileSync21(file)).digest("hex");
 function voiceDescription(character) {
   const tts = object4(character.tts), speech = object4(object4(character.character).speech);
   const confirmed = (key) => {
@@ -130614,6 +130686,10 @@ function prepareVideoVoice(tool2, input, context2) {
     const mapped = new Set(speakers.map((speaker) => speaker.audioIndex));
     if (audioPaths.some((_, i2) => !mapped.has(i2 + 1 + audioOffset))) warnings.push("Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.");
     if (speakers.some((speaker) => speaker.reference)) {
+      if (tool2 === "fasth3_omni_reference" && lines.length) {
+        prompt.push("Each speaker says each written line once. After the final syllable their lips settle. The rest of the shot contains only the planned action, ambience and effects.");
+        warnings.push("Listen past the last line for words copied from the voice sample. Check voiceReferenceCheck in the delivery receipt before comparing speaker identity.");
+      }
       prompt.push("Keep the authored visual roles of reference videos, but do not inherit their voices or dialogue. Use the mapped audio references for speaker identity; keep music and effects separate from speech. Keep each speaker assigned to their own voice reference.");
       warnings.push("Reference voice is imitation, not preservation of the original WAV or exact speech timing.");
     }
@@ -131272,12 +131348,12 @@ import { execFileSync as execFileSync14 } from "node:child_process";
 import path27 from "node:path";
 import { createRequire as createRequire15 } from "node:module";
 import { fileURLToPath as fileURLToPath7 } from "node:url";
-import { createHash as createHash20 } from "node:crypto";
+import { createHash as createHash21 } from "node:crypto";
 
 // src/video-pricing.ts
 import { readFileSync as readFileSync22 } from "node:fs";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
-import { createHash as createHash18 } from "node:crypto";
+import { createHash as createHash19 } from "node:crypto";
 
 // src/usage-ledger.ts
 import { execFileSync as execFileSync13 } from "node:child_process";
@@ -131528,7 +131604,7 @@ var TOKEN_RATES = {
 var roundUp = (n) => Math.ceil(n * 1e6) / 1e6;
 function quoteVideo(tool2, args) {
   const prices = readFileSync22(PRICE_FILE, "utf8");
-  const revision = createHash18("sha256").update(prices + JSON.stringify(TOKEN_RATES)).digest("hex");
+  const revision = createHash19("sha256").update(prices + JSON.stringify(TOKEN_RATES)).digest("hex");
   if (tool2.startsWith("astra_genai_")) {
     if (typeof args.reserveUsd !== "number" || !Number.isFinite(args.reserveUsd) || args.reserveUsd < 0)
       throw new Error("genai_quote_required: supply an explicit reserveUsd; no published gateway price is assumed");
@@ -131700,7 +131776,7 @@ function videoTransaction(episode, update, openingSpendUsd) {
 // src/seedance-bindings.ts
 import fs18 from "node:fs";
 import path26 from "node:path";
-import { createHash as createHash19 } from "node:crypto";
+import { createHash as createHash20 } from "node:crypto";
 async function checkRegisteredBindings(bindings) {
   for (const binding of bindings ?? []) {
     if (!binding.asset) continue;
@@ -131772,7 +131848,7 @@ function seedanceBindings(episode, members, args, inputs2, images = [], voice, s
           media: "Video",
           slot: videoOffset + index + 1,
           taskId: face.taskId,
-          reviewSha256: createHash19("sha256").update(bytes).digest("hex")
+          reviewSha256: createHash20("sha256").update(bytes).digest("hex")
         });
       }
     }
@@ -131941,7 +132017,7 @@ function stable3(value) {
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, stable3(v)]));
   return value;
 }
-var hash2 = (value) => createHash20("sha256").update(JSON.stringify(stable3(value))).digest("hex");
+var hash2 = (value) => createHash21("sha256").update(JSON.stringify(stable3(value))).digest("hex");
 var idSchema = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -131977,7 +132053,7 @@ function inputFiles(args, episode) {
     if (typeof value === "string" && key.endsWith("Path") && key !== "outputPath") {
       const absolute = fs19.realpathSync(path27.resolve(episode, value));
       if (!fs19.statSync(absolute).isFile()) throw new Error("Input is not a regular file: " + key);
-      files3[absolute] = createHash20("sha256").update(fs19.readFileSync(absolute)).digest("hex");
+      files3[absolute] = createHash21("sha256").update(fs19.readFileSync(absolute)).digest("hex");
       return absolute;
     }
     return value;
@@ -132062,7 +132138,7 @@ function fasth3Files(plan2) {
   const folder = path27.join(plan2.episode, ".work/fasth3", plan2.id);
   return { target, folder, raw: path27.join(folder, "native.mp4"), receipt: path27.join(folder, "delivery.json") };
 }
-var mediaHash = (file) => createHash20("sha256").update(fs19.readFileSync(file)).digest("hex");
+var mediaHash = (file) => createHash21("sha256").update(fs19.readFileSync(file)).digest("hex");
 function verifyFasth3Delivery(plan2) {
   const { target, raw, receipt } = fasth3Files(plan2);
   const saved = JSON.parse(fs19.readFileSync(receipt, "utf8"));
@@ -132154,6 +132230,9 @@ function finalizeFasth3(plan2) {
     height: plan2.args.height,
     hasAudio: true,
     durationSeconds: duration5,
+    voiceReferenceCheck: checkFasth3VoiceReplay(target, (plan2.voiceContinuity?.speakers ?? []).flatMap(
+      (s2) => s2.reference && s2.audioIndex ? [{ ...s2.reference, audioIndex: s2.audioIndex, speaker: s2.speaker }] : []
+    )),
     deployment: plan2.mlxDeployment,
     inputs: plan2.inputs,
     sha256: mediaHash(target),
@@ -132210,7 +132289,7 @@ async function executeShotRenderPlan(plan2, prepared) {
     version: 1,
     operation: "scene-to-video",
     baseUrl: astraGenaiBaseUrl(),
-    sceneRequestSha256: createHash20("sha256").update(JSON.stringify(prepared)).digest("hex"),
+    sceneRequestSha256: createHash21("sha256").update(JSON.stringify(prepared)).digest("hex"),
     fingerprint: plan2.id,
     expected: planOutputContract(plan2),
     videoPath: target,
@@ -132507,7 +132586,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
         );
       }
     }
-    const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash20("sha256").update(fs19.readFileSync(file)).digest("hex")]));
+    const inputs3 = Object.fromEntries(files3.map((file) => [file, createHash21("sha256").update(fs19.readFileSync(file)).digest("hex")]));
     const doc = context2.board.SB_DOC;
     const conditioningInputs = conditioned && request.audio ? load9("../../skills/produce/references/compose-speech.js").conditioningInputs(
       context2.sceneMembers,
@@ -132575,7 +132654,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const audio = line.audio;
     if (mode === "native" || !audio?.path || !audio.sha256) return null;
     const file = path27.resolve(context2.episode, "storyboard", audio.path);
-    if (!fs19.existsSync(file) || createHash20("sha256").update(fs19.readFileSync(file)).digest("hex") !== audio.sha256) return null;
+    if (!fs19.existsSync(file) || createHash21("sha256").update(fs19.readFileSync(file)).digest("hex") !== audio.sha256) return null;
     const seconds2 = Number(execFileSync14("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file], { encoding: "utf8", timeout: 1e4 }));
     if (!Number.isFinite(seconds2) || seconds2 <= 0) return null;
     performanceInputs[file] = audio.sha256;
@@ -132962,7 +133041,7 @@ function approveVideo(raw) {
     const context2 = approvedContext(plan2);
     if (!plan2.speechRoute || hash2(plan2.speechRoute) !== hash2(context2.speechRoute) || plan2.tool !== selectedVideoTool(context2.selection, context2.speechRoute.operation))
       throw new Error("video_plan_stale: the stored operation conflicts with the scene speakers");
-    const changedSceneInput = plan2.sceneNo !== void 0 && Object.entries(plan2.inputs).some(([file, digest5]) => !fs19.existsSync(file) || createHash20("sha256").update(fs19.readFileSync(file)).digest("hex") !== digest5);
+    const changedSceneInput = plan2.sceneNo !== void 0 && Object.entries(plan2.inputs).some(([file, digest5]) => !fs19.existsSync(file) || createHash21("sha256").update(fs19.readFileSync(file)).digest("hex") !== digest5);
     if (context2.revision !== plan2.contextRevision || changedSceneInput)
       throw new Error(`video_plan_stale: shot ${plan2.shotId}'s frames, prompt, lines or settings changed after this plan \u2014 plan it again and show the user the new plan`);
     const visual = context2.shot.visual ?? {};
@@ -133776,7 +133855,7 @@ async function refreshGenaiImage(directory2, requestId) {
 }
 
 // src/storyboard.ts
-import { createHash as createHash21, randomUUID as randomUUID9 } from "node:crypto";
+import { createHash as createHash22, randomUUID as randomUUID9 } from "node:crypto";
 import { execFileSync as execFileSync15 } from "node:child_process";
 
 // src/scenes-vm.ts
@@ -133839,7 +133918,7 @@ var CONTRACT_FILE = join11(REFERENCES_DIR, "structure-contract.js");
 var CHECK_SCENES_FILE = join11(REFERENCES_DIR, "check-scenes.js");
 var CHECK_SCENARIO_FILE = join11(REFERENCES_DIR, "check-scenario.js");
 var runtimeFile = fileURLToPath9(import.meta.url);
-var runtimeModuleSha256 = createHash21("sha256").update(readFileSync27(runtimeFile)).digest("hex");
+var runtimeModuleSha256 = createHash22("sha256").update(readFileSync27(runtimeFile)).digest("hex");
 var runtimeLoadedAt = (/* @__PURE__ */ new Date()).toISOString();
 var loadFromHere2 = nodeModule3.createRequire(import.meta.url);
 var contractCache;
@@ -134298,7 +134377,7 @@ function readStoryboard(args) {
     modulePath: runtimeFile,
     loadedAt: runtimeLoadedAt,
     loadedModuleSha256: runtimeModuleSha256,
-    diskModuleSha256: createHash21("sha256").update(readFileSync27(runtimeFile)).digest("hex"),
+    diskModuleSha256: createHash22("sha256").update(readFileSync27(runtimeFile)).digest("hex"),
     features: ["boundaryReview", "videoTiming", "imageFraming", "editImpact"],
     referenceModules: "not_verified; module hashes exclude runtime-loaded skills and their require cache",
     note: "Loaded-module identity, not an install/update action. Compare with the intended build; reconnect after updating."
@@ -134511,7 +134590,7 @@ function readBoard(target, source) {
     throw new Error(`failed to evaluate ${file}: ${e2.message}`);
   }
   if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win, sha256: createHash21("sha256").update(src).digest("hex") };
+  return { file, header, win, sha256: createHash22("sha256").update(src).digest("hex") };
 }
 var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
@@ -134895,7 +134974,7 @@ function applyStoryboard(args, opts = {}) {
   else if (!opts.outline && workflowEpisode(dirname7(file))) throw new Error("story_order: a new episode board starts with story_sequence \u2192 story_scene \u2192 story_shot");
   else if (!existsSync26(dirname7(file))) throw new Error(`directory does not exist: ${dirname7(file)}`);
   const audienceEdit = !!(args.audienceEffects || args.sfxEntries);
-  const originalHash = createHash21("sha256").update(original).digest("hex");
+  const originalHash = createHash22("sha256").update(original).digest("hex");
   if (audienceEdit && args.expectedSha256 !== originalHash) throw new Error("head_moved: audience edits require the current expectedSha256");
   const previousDoc = win.SB_DOC;
   const incomingDoc = args.globals?.SB_DOC;
@@ -134910,7 +134989,7 @@ function applyStoryboard(args, opts = {}) {
     const members = (next.SCENES ?? []).filter((card) => card.scene === scene.no);
     if (scene.frames !== void 0 && !scene.frames.start && !members[0]?.timeline?.images?.some((image2) => image2.role === "start")) delete scene.videoOpeningSha256;
     else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection)
-      scene.videoOpeningSha256 = createHash21("sha256").update(readFileSync27(resolve6(dirname7(file), scene.frames.start))).digest("hex");
+      scene.videoOpeningSha256 = createHash22("sha256").update(readFileSync27(resolve6(dirname7(file), scene.frames.start))).digest("hex");
     sceneCasting.sceneCast(scene, members);
     if (scene.speakers?.length || scene.speakerReferences?.length) {
       const { ids, voiceOnly } = castRegistry(file, next);
@@ -134997,7 +135076,7 @@ function applyStoryboard(args, opts = {}) {
   const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
   try {
     if ((changesProps || audienceEdit) && exists) {
-      if (createHash21("sha256").update(readFileSync27(file)).digest("hex") !== originalHash) throw new Error("head_moved");
+      if (createHash22("sha256").update(readFileSync27(file)).digest("hex") !== originalHash) throw new Error("head_moved");
       const history = join11(dirname7(file), changesProps ? ".prop-history" : ".audience-history");
       mkdirSync11(history, { recursive: true });
       const backup = join11(history, originalHash + ".js");
@@ -135141,7 +135220,7 @@ function writeStoryScenes(args, requireSceneCast = false) {
     const anchors = scene.frames ?? existing?.frames ?? (scene.speakers !== void 0 ? {} : void 0);
     const opening = anchors?.start ?? first?.timeline?.images?.find((image2) => image2.role === "start")?.path ?? (anchors === void 0 ? first?.visual?.frames?.start : void 0);
     const frame2 = (scene.videoDirection || scene.frames !== void 0 && existing?.videoDirection) && opening ? resolve6(dirname7(scenesPath(args.path)), opening) : void 0;
-    const pin = frame2 ? { videoOpeningSha256: createHash21("sha256").update(readFileSync27(frame2)).digest("hex") } : {};
+    const pin = frame2 ? { videoOpeningSha256: createHash22("sha256").update(readFileSync27(frame2)).digest("hex") } : {};
     const revised = { ...existing, ...scene, ...anchors ? { frames: anchors } : {}, ...pin };
     if (anchors !== void 0 && !opening) delete revised.videoOpeningSha256;
     scenes = upsertBy(scenes, [revised], "no");
@@ -135892,10 +135971,10 @@ function sceneImageOpening(win, scene) {
 var CODEX_IMAGE_REFERENCE_LIMIT = 5;
 var REFERENCE_TILE_SIZE = 512;
 function packImageReferences(boardDir, files3, columns) {
-  const stamp = createHash21("sha256").update(JSON.stringify({
+  const stamp = createHash22("sha256").update(JSON.stringify({
     columns,
     size: REFERENCE_TILE_SIZE,
-    files: files3.map((file) => createHash21("sha256").update(readFileSync27(file)).digest("hex"))
+    files: files3.map((file) => createHash22("sha256").update(readFileSync27(file)).digest("hex"))
   })).digest("hex");
   const packed = join11(boardDir, "images", "inputs", `reference-sheet-${stamp}.png`);
   if (existsSync26(packed)) return packed;
@@ -135929,7 +136008,7 @@ function packImageReferences(boardDir, files3, columns) {
 }
 function startImageBasis(shot, format, imageContextWords) {
   const plan2 = shot.shot ?? {}, visual = shot.visual ?? {};
-  return createHash21("sha256").update(JSON.stringify({
+  return createHash22("sha256").update(JSON.stringify({
     format,
     ...imageContextWords ? { sceneStaging: imageContextWords } : {},
     size: plan2.size,
@@ -135959,7 +136038,7 @@ function imageFramingStatus(shot, win, boardDir) {
   const visual = shot.visual;
   const frames = visual?.frames;
   const availability = !boardDir ? void 0 : frames?.start && existsSync26(resolve6(boardDir, frames.start)) ? "present" : "missing";
-  const promptHash = typeof visual?.bgPrompt === "string" ? createHash21("sha256").update(visual.bgPrompt).digest("hex") : null;
+  const promptHash = typeof visual?.bgPrompt === "string" ? createHash22("sha256").update(visual.bgPrompt).digest("hex") : null;
   const changed = !!frames?.startBasis && frames.startBasis !== startImageBasis(shot, win.FORMAT, sceneImageDirection(win, shot)) || !!frames?.startPromptSha256 && frames.startPromptSha256 !== promptHash;
   return {
     id: shot.id,
@@ -136103,7 +136182,7 @@ function shotImageSourceBasis(path40, id, request) {
       axis: opener.shot && imageDirections(win, opener.shot)?.axis?.value
     }
   } : void 0;
-  return createHash21("sha256").update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels, sceneBasis, staging })).digest("hex");
+  return createHash22("sha256").update(JSON.stringify({ shot, format: win.FORMAT, assets, style, panels, sceneBasis, staging })).digest("hex");
 }
 function shotImageRequest(args) {
   if (args.action === "complete") throw new Error("shot_image_action: use completeShotImage for a host completion");
@@ -136124,7 +136203,7 @@ function shotImageRequest(args) {
     ...role ? { sceneImageRole: role, sceneNo: card.scene } : {}
   };
   const sourceBasis = shotImageSourceBasis(args.path, args.id, request);
-  return { ...request, sourceBasis, inputHashes: Object.fromEntries([.../* @__PURE__ */ new Set([...request.inputs, ...request.originalInputs ?? []])].map((file) => [file, createHash21("sha256").update(readFileSync27(file)).digest("hex")])) };
+  return { ...request, sourceBasis, inputHashes: Object.fromEntries([.../* @__PURE__ */ new Set([...request.inputs, ...request.originalInputs ?? []])].map((file) => [file, createHash22("sha256").update(readFileSync27(file)).digest("hex")])) };
 }
 function buildShotImageRequest(args) {
   const { win } = readOutline(args.path);
@@ -136185,7 +136264,7 @@ function buildShotImageRequest(args) {
         throw new Error("image_crop_bounds: sourceCrop must fit inside the saved image");
       if (crop.width * editHeight !== crop.height * editWidth)
         throw new Error("image_crop_aspect: sourceCrop must match the output aspect exactly; do not stretch anatomy");
-      const stamp = createHash21("sha256").update(JSON.stringify({ source: metadata.sha256, crop, width: editWidth, height: editHeight })).digest("hex");
+      const stamp = createHash22("sha256").update(JSON.stringify({ source: metadata.sha256, crop, width: editWidth, height: editHeight })).digest("hex");
       const prepared = join11(boardDir, "images", "inputs", `crop-${stamp}.png`);
       mkdirSync11(dirname7(prepared), { recursive: true });
       const temporary = prepared + "." + randomUUID9() + ".png";
@@ -136465,7 +136544,7 @@ function imageCall(o) {
     throw new Error(`image_references_unsupported: the saved image model (${selection.engine}${selection.model ? " " + selection.model : ""}) takes ${adapter2.max} picture(s); ${o.what} composes ${inputs2.length}. Choose a model that takes that many with the user (gpt-image up to 16; astra-genai-native or an MLX Qwen-Image-2.1 pack up to 10; MLX FLUX.2 klein or Mage-Flow Edit up to 4).`);
   const mimes = selection.engine === "gpt-image" ? inputs2.map((f3) => readImageMetadata(f3).mimeType) : [];
   const toPng = (f3) => {
-    const out = join11(o.outDir, "inputs", createHash21("sha256").update(readFileSync27(f3)).digest("hex").slice(0, 16) + ".png");
+    const out = join11(o.outDir, "inputs", createHash22("sha256").update(readFileSync27(f3)).digest("hex").slice(0, 16) + ".png");
     if (!existsSync26(out)) {
       mkdirSync11(dirname7(out), { recursive: true });
       try {
@@ -136516,7 +136595,7 @@ function recordShotImage(args, request) {
   if (request.sourceBasis && request.sourceBasis !== shotImageSourceBasis(args.path, args.id, request))
     throw new Error("shot_image_request_stale: the shot or asset plan changed after generation was requested; keep the output and plan a new request");
   for (const [file, hash7] of Object.entries(request.inputHashes ?? {})) {
-    if (!existsSync26(file) || createHash21("sha256").update(readFileSync27(file)).digest("hex") !== hash7)
+    if (!existsSync26(file) || createHash22("sha256").update(readFileSync27(file)).digest("hex") !== hash7)
       throw new Error("shot_image_input_changed: a reference changed after generation was requested");
   }
   const { win, st } = readOutline(args.path);
@@ -136536,7 +136615,7 @@ function recordShotImage(args, request) {
       const opening = request.sceneImageRole === "scene_start";
       const sharedOpening = opening && !!owner.frames?.start && shots[index].referenceImage === owner.frames.start;
       owner.frames = { ...owner.frames, [opening ? "start" : "end"]: rel };
-      if (opening && owner.videoDirection) owner.videoOpeningSha256 = createHash21("sha256").update(readFileSync27(request.file)).digest("hex");
+      if (opening && owner.videoDirection) owner.videoOpeningSha256 = createHash22("sha256").update(readFileSync27(request.file)).digest("hex");
       if (opening && (sharedOpening || request.location || request.bystanders))
         shots[index] = {
           ...shots[index],
@@ -136550,7 +136629,7 @@ function recordShotImage(args, request) {
   if (args.frame === "start") {
     if (request.startBasis) frames.startBasis = request.startBasis;
     else delete frames.startBasis;
-    frames.startPromptSha256 = createHash21("sha256").update(request.prompt).digest("hex");
+    frames.startPromptSha256 = createHash22("sha256").update(request.prompt).digest("hex");
     const videoRefs = (visual.references ?? []).filter((ref) => ref.use === "video" || ref.use === "both");
     const references = [...request.refs.filter((ref) => !videoRefs.some((kept) => kept.id === ref.id)), ...videoRefs];
     Object.assign(visual, {
@@ -136627,14 +136706,14 @@ function writeShotPrompt(args) {
   const { openingPositions: oldPositions, openingImageSha256: oldHash, speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = visual.video ?? {};
   const start = visual.frames?.start;
   const positions = args.openingPositions ?? oldPositions;
-  const openingHash = args.openingPositions && start ? createHash21("sha256").update(readFileSync27(resolve6(dirname7(scenesPath(args.path)), start))).digest("hex") : oldHash;
+  const openingHash = args.openingPositions && start ? createHash22("sha256").update(readFileSync27(resolve6(dirname7(scenesPath(args.path)), start))).digest("hex") : oldHash;
   shots[index] = { ...shot, visual: { ...visual, video: {
     ...priorVideo,
     ...positions ? { openingPositions: positions, openingImageSha256: openingHash } : {},
     prompt,
     promptSource: source,
     promptBasis: contract().promptBasis(shot, isFocus),
-    ...speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash21("sha256").update(readFileSync27(resolve6(dirname7(scenesPath(args.path)), start))).digest("hex") } : {}
+    ...speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash22("sha256").update(readFileSync27(resolve6(dirname7(scenesPath(args.path)), start))).digest("hex") } : {}
   } } };
   const result = writeOutline(args.path, win, st, shots);
   const open3 = win.STORY?.authoring === "story-first" && musicTimeline().spottingReport(win).undecided.includes(shot.scene) ? [{ level: "warn", where: args.id, what: `scene ${shot.scene} has no music decision \u2014 record score or none with story_music` }] : [];
@@ -137535,14 +137614,14 @@ async function generateGemini38Speech(request) {
 // src/tts-quality.ts
 var import_tts_speed_policy = __toESM(require_tts_speed_policy(), 1);
 import { execFile as execFile5 } from "node:child_process";
-import { createHash as createHash23, randomUUID as randomUUID10 } from "node:crypto";
+import { createHash as createHash24, randomUUID as randomUUID10 } from "node:crypto";
 import { closeSync as closeSync5, existsSync as existsSync28, mkdirSync as mkdirSync12, openSync as openSync5, readFileSync as readFileSync29, renameSync as renameSync6, rmSync as rmSync14, writeFileSync as writeFileSync19 } from "node:fs";
 import path31 from "node:path";
 import { promisify as promisify4 } from "node:util";
 
 // src/elevenlabs-client.ts
 import * as fs22 from "node:fs";
-import { createHash as createHash22 } from "node:crypto";
+import { createHash as createHash23 } from "node:crypto";
 import * as path30 from "node:path";
 var ELEVENLABS_MODELS = ["eleven_v4"];
 var DEFAULT_ELEVENLABS_MODEL = "eleven_v4";
@@ -138027,7 +138106,7 @@ async function generateElevenLabsSoundEffect(request) {
   const filename = request.filename || `elevenlabs_sfx_${Date.now()}${ext}`;
   const catalog2 = !!request.filename && path30.resolve(outputDir).endsWith(path30.join(path30.sep, "assets", "audio", "sfx"));
   const body = soundEffectRequestBody(request);
-  const signature = createHash22("sha256").update(JSON.stringify([body, request.outputFormat])).digest("hex");
+  const signature = createHash23("sha256").update(JSON.stringify([body, request.outputFormat])).digest("hex");
   let reservation, submitted = false;
   try {
     if (catalog2) {
@@ -138036,7 +138115,7 @@ async function generateElevenLabsSoundEffect(request) {
       if (fs22.existsSync(file) || fs22.existsSync(receipt)) {
         if (!fs22.existsSync(file) || !fs22.existsSync(receipt)) throw new Error("Incomplete catalog asset: reconcile its receipt before ordering");
         const saved = JSON.parse(fs22.readFileSync(receipt, "utf8"));
-        if (saved.signature !== signature || saved.sha256 !== createHash22("sha256").update(fs22.readFileSync(file)).digest("hex"))
+        if (saved.signature !== signature || saved.sha256 !== createHash23("sha256").update(fs22.readFileSync(file)).digest("hex"))
           throw new Error("Existing catalog asset: resolve it for reuse or choose a new variant id");
         return {
           success: true,
@@ -138088,7 +138167,7 @@ async function generateElevenLabsSoundEffect(request) {
     const sidecar = {
       tool: "sfx_elevenlabs_generate",
       signature,
-      sha256: createHash22("sha256").update(audio).digest("hex"),
+      sha256: createHash23("sha256").update(audio).digest("hex"),
       engine: "elevenlabs",
       model: ELEVENLABS_SFX_MODEL,
       text: request.text,
@@ -138432,7 +138511,7 @@ var reviewSchema = external_exports.object({
   }).strict()).max(100)
 }).strict();
 var normalizeSpeech = (s2) => s2.normalize("NFKC").toLowerCase().replace(/[\p{P}\p{Z}\s]/gu, "");
-var sha256 = (s2) => createHash23("sha256").update(s2).digest("hex");
+var sha256 = (s2) => createHash24("sha256").update(s2).digest("hex");
 function characterErrorRate(expected, heard) {
   const a = [...normalizeSpeech(expected)], b = [...normalizeSpeech(heard)];
   if (!a.length || b.length > 12e3) return 1;
@@ -146344,7 +146423,7 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 // src/music-media.ts
 import * as fs24 from "node:fs";
 import path33 from "node:path";
-import { createHash as createHash24, randomUUID as randomUUID11 } from "node:crypto";
+import { createHash as createHash25, randomUUID as randomUUID11 } from "node:crypto";
 import { execFileSync as execFileSync16 } from "node:child_process";
 function readMusicMetadata(file) {
   const result = JSON.parse(execFileSync16(
@@ -146368,7 +146447,7 @@ function readMusicMetadata(file) {
     durationSeconds,
     sampleRate: Number(audio.sample_rate),
     channels: Number(audio.channels),
-    sha256: createHash24("sha256").update(fs24.readFileSync(file)).digest("hex")
+    sha256: createHash25("sha256").update(fs24.readFileSync(file)).digest("hex")
   };
 }
 function normalizeMusicFile(source, target) {
@@ -146749,7 +146828,7 @@ async function routeSpeech(input) {
 // src/host-review.ts
 import { execFile as execFile8 } from "node:child_process";
 import { promisify as promisify5 } from "node:util";
-import { createHash as createHash25, randomUUID as randomUUID12 } from "node:crypto";
+import { createHash as createHash26, randomUUID as randomUUID12 } from "node:crypto";
 import { createReadStream as createReadStream4, mkdirSync as mkdirSync16, realpathSync as realpathSync11, statSync as statSync20, writeFileSync as writeFileSync21 } from "node:fs";
 import { homedir as homedir4 } from "node:os";
 import path35 from "node:path";
@@ -146775,7 +146854,7 @@ var hostReviewSchema = external_exports.object({
   }).strict()).max(100).default([])
 }).strict();
 async function digest3(file) {
-  const hash7 = createHash25("sha256");
+  const hash7 = createHash26("sha256");
   for await (const chunk3 of createReadStream4(file)) hash7.update(chunk3);
   return hash7.digest("hex");
 }
@@ -146893,7 +146972,7 @@ async function hostReview(input) {
 // src/voice-design.ts
 import { existsSync as existsSync33, mkdirSync as mkdirSync17, writeFileSync as writeFileSync22 } from "node:fs";
 import { resolve as resolve9 } from "node:path";
-import { createHash as createHash26 } from "node:crypto";
+import { createHash as createHash27 } from "node:crypto";
 var voiceDesignSchema = external_exports.object({
   model: external_exports.enum(GEMINI_38_TTS_MODELS),
   displayName: external_exports.string().trim().min(1).max(100),
@@ -146951,7 +147030,7 @@ async function designGeminiVoice(input) {
     return { success: false, voiceId: voice.id, receiptPath: receiptPath2, error: "Voice response or WAV preview invalid; the remote voice may exist. Inspect the receipt before another paid creation." };
   }
   writeFileSync22(samplePath, bytes, { flag: "wx" });
-  const audioSha256 = createHash26("sha256").update(bytes).digest("hex");
+  const audioSha256 = createHash27("sha256").update(bytes).digest("hex");
   writeFileSync22(receiptPath2, JSON.stringify({ ...record3, samplePath, audioSha256 }, null, 2));
   return {
     success: true,
@@ -147059,7 +147138,7 @@ async function reviewActing(input) {
 }
 
 // src/voice-audition.ts
-import { createHash as createHash27, randomUUID as randomUUID13 } from "node:crypto";
+import { createHash as createHash28, randomUUID as randomUUID13 } from "node:crypto";
 import { appendFileSync as appendFileSync3, copyFileSync as copyFileSync2, existsSync as existsSync34, mkdirSync as mkdirSync18, readFileSync as readFileSync35, writeFileSync as writeFileSync23, renameSync as renameSync8 } from "node:fs";
 import { basename as basename10, dirname as dirname9, join as join15, resolve as resolve10 } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -147179,7 +147258,7 @@ var voiceAuditionSchema = external_exports.object({
       ctx.addIssue({ code: "custom", path: ["sampleTurns"], message: "Per-turn sample acting requires Gemini 3.8 TTS" });
   }
 });
-var hash3 = (value) => createHash27("sha256").update(value).digest("hex");
+var hash3 = (value) => createHash28("sha256").update(value).digest("hex");
 var escape2 = (s2) => s2.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 function compileSample(text4, acting, voice, turns) {
   if (!turns) return compileActing(text4, acting, voice);
@@ -147445,7 +147524,7 @@ async function manageLocation(args) {
 }
 
 // src/cover.ts
-import { createHash as createHash28 } from "node:crypto";
+import { createHash as createHash29 } from "node:crypto";
 import { execFileSync as execFileSync18, spawn as spawn3 } from "node:child_process";
 import { copyFileSync as copyFileSync3, existsSync as existsSync35, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync8, readFileSync as readFileSync36, realpathSync as realpathSync12, renameSync as renameSync9, rmSync as rmSync19, statSync as statSync21, writeFileSync as writeFileSync24, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir7 } from "node:os";
@@ -147504,7 +147583,7 @@ function inside(episode, file, what) {
   return real;
 }
 function sha256File(file) {
-  const hash7 = createHash28("sha256"), fd = openSync7(file, "r"), buf = Buffer.alloc(1 << 20);
+  const hash7 = createHash29("sha256"), fd = openSync7(file, "r"), buf = Buffer.alloc(1 << 20);
   try {
     for (let n; (n = readSync(fd, buf, 0, buf.length, null)) > 0; ) hash7.update(buf.subarray(0, n));
   } finally {
@@ -147512,7 +147591,7 @@ function sha256File(file) {
   }
   return hash7.digest("hex");
 }
-var sha2562 = (value) => createHash28("sha256").update(value).digest("hex");
+var sha2562 = (value) => createHash29("sha256").update(value).digest("hex");
 function probe4(file) {
   try {
     const out = JSON.parse(execFileSync18("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file], { encoding: "utf8", timeout: 3e4 }));
@@ -148094,7 +148173,7 @@ function readCover(path40) {
 }
 
 // src/speech.ts
-import { createHash as createHash29, randomUUID as randomUUID14 } from "node:crypto";
+import { createHash as createHash30, randomUUID as randomUUID14 } from "node:crypto";
 import { readFileSync as readFileSync37, writeFileSync as writeFileSync25, renameSync as renameSync10, mkdirSync as mkdirSync20, existsSync as existsSync36 } from "node:fs";
 import { basename as basename12, dirname as dirname11, resolve as resolve12, join as join18, relative as relative3 } from "node:path";
 import * as nodeModule7 from "node:module";
@@ -148152,7 +148231,7 @@ var speechManageSchema = external_exports.object({
   generation: external_exports.object({ generator: external_exports.string().min(1), voiceSettings: external_exports.record(external_exports.unknown()), text: external_exports.string().min(1), language: external_exports.string().min(1).optional(), receiptPath: external_exports.string().min(1).optional() }).strict().optional(),
   capabilities: external_exports.object({ provider: external_exports.string().min(1), model: external_exports.string().min(1), audioConditioning: external_exports.boolean(), lipSync: external_exports.boolean(), postLipSync: external_exports.boolean(), nativeSpeech: external_exports.boolean().optional(), evidence: external_exports.string().min(1) }).strict().optional()
 }).strict();
-var hash4 = (s2) => createHash29("sha256").update(s2).digest("hex");
+var hash4 = (s2) => createHash30("sha256").update(s2).digest("hex");
 var object5 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var speechContract = () => nodeModule7.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
 var videoSeconds2 = (file) => Number(execFileSync19(
@@ -148717,7 +148796,7 @@ function manageSpeech(args, options = {}) {
 
 // src/acting-review.ts
 import { execFile as execFile9 } from "node:child_process";
-import { createHash as createHash30, randomUUID as randomUUID15 } from "node:crypto";
+import { createHash as createHash31, randomUUID as randomUUID15 } from "node:crypto";
 import { existsSync as existsSync37, mkdirSync as mkdirSync21, readFileSync as readFileSync38, realpathSync as realpathSync13, renameSync as renameSync11, rmSync as rmSync20, statSync as statSync22, writeFileSync as writeFileSync26 } from "node:fs";
 import path36 from "node:path";
 import { homedir as homedir5 } from "node:os";
@@ -148783,7 +148862,7 @@ var actingObservationSchema = external_exports.object({
     correction: external_exports.string().trim().min(1).max(2e3)
   }).strict()).max(80)
 }).strict();
-var hash5 = (data) => createHash30("sha256").update(data).digest("hex");
+var hash5 = (data) => createHash31("sha256").update(data).digest("hex");
 var currentHash = (file) => {
   try {
     const stat5 = statSync22(file);
@@ -149170,7 +149249,7 @@ async function reviewActing2(input, deps) {
 }
 
 // src/threads-gate.ts
-import { createHash as createHash31, randomUUID as randomUUID16 } from "node:crypto";
+import { createHash as createHash32, randomUUID as randomUUID16 } from "node:crypto";
 import { appendFileSync as appendFileSync4, mkdirSync as mkdirSync22, readFileSync as readFileSync39, realpathSync as realpathSync14, renameSync as renameSync12, statSync as statSync23, writeFileSync as writeFileSync27 } from "node:fs";
 import { dirname as dirname12, join as join19, resolve as resolve13 } from "node:path";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
@@ -149207,7 +149286,7 @@ var reviewSchema2 = external_exports.object({
 });
 var normalize = (s2) => s2.normalize("NFC").replace(/\r\n?/g, "\n").trim();
 function threadsBodyHash(body, selfReply = "") {
-  return createHash31("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
+  return createHash32("sha256").update(JSON.stringify([normalize(body), normalize(selfReply)])).digest("hex");
 }
 function directory(channel) {
   return join19(process.cwd(), "data", channelSchema2.parse(channel), "growth", "threads");
@@ -150638,7 +150717,7 @@ async function stockSearch(input) {
 
 // src/sns-client.ts
 import { execFile as execFile10 } from "node:child_process";
-import { createHash as createHash32, randomUUID as randomUUID17 } from "node:crypto";
+import { createHash as createHash33, randomUUID as randomUUID17 } from "node:crypto";
 import { promisify as promisify7 } from "node:util";
 import {
   existsSync as existsSync39,
@@ -151490,7 +151569,7 @@ async function facebookCaptions(input) {
     if (!read4.bytes) return read4.error;
     if (!/^\d+\r?\n\d{2}:\d{2}:\d{2},\d{3} --> \d{2}:\d{2}:\d{2},\d{3}\r?\n/m.test(read4.bytes.toString("utf8")))
       return fail2(400, `Invalid SRT cues: ${track.locale}`);
-    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash32("sha256").update(read4.bytes).digest("hex") });
+    files3.push({ bytes: read4.bytes, locale: track.locale, sha256: createHash33("sha256").update(read4.bytes).digest("hex") });
   }
   const { token, error: error2 } = await loadTokenFile("FACEBOOK", input.channel);
   if (error2 || !token) return error2 || fail2(400, "Missing Facebook token");
@@ -151598,7 +151677,7 @@ function parseResumeOffset(range) {
   return m2 ? Number(m2[1]) + 1 : 0;
 }
 function sessionStateFile(filePath) {
-  const key = createHash32("sha256").update(filePath).digest("hex").slice(0, 16);
+  const key = createHash33("sha256").update(filePath).digest("hex").slice(0, 16);
   return join21(snsTokenDir, ".yt-upload", `${key}.json`);
 }
 function readState(filePath) {

@@ -342,6 +342,10 @@ export function prepareVideoVoice(tool, input, context) {
         if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset)))
             warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
         if (speakers.some(speaker => speaker.reference)) {
+            if (tool === 'fasth3_omni_reference' && lines.length) {
+                prompt.push('Each speaker says each written line once. After the final syllable their lips settle. The rest of the shot contains only the planned action, ambience and effects.');
+                warnings.push('Listen past the last line for words copied from the voice sample. Check voiceReferenceCheck in the delivery receipt before comparing speaker identity.');
+            }
             prompt.push('Keep the authored visual roles of reference videos, but do not inherit their voices or dialogue. Use the mapped audio references for speaker identity; keep music and effects separate from speech. Keep each speaker assigned to their own voice reference.');
             warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
         }

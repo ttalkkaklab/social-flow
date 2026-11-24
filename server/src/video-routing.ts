@@ -2,7 +2,7 @@ import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneReque
 import { readSceneCapabilities, sceneRequestId, sceneRequestIssues, SCENE_LIMITS, submitSceneBody, validateSceneBody } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
-import { buildFasth3Body, fasth3OmniSchema, fasth3RenderFrames } from './fasth3-omni.js';
+import { buildFasth3Body, checkFasth3VoiceReplay, fasth3OmniSchema, fasth3RenderFrames } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
 import * as fs from 'node:fs';
@@ -363,6 +363,8 @@ function finalizeFasth3(plan: VideoPlan) {
   const delivered = {success:true, path:target, nativePath:raw, model:plan.args.model,
     planId:plan.id, requestId:plan.requestId, frames:scene.frameCount, nativeFrames:plan.args.numFrames,
     fps:scene.fps, width:plan.args.width, height:plan.args.height, hasAudio:true, durationSeconds:duration,
+    voiceReferenceCheck:checkFasth3VoiceReplay(target, (plan.voiceContinuity?.speakers ?? []).flatMap(
+      s => s.reference && s.audioIndex ? [{...s.reference, audioIndex:s.audioIndex, speaker:s.speaker}] : [])),
     deployment:plan.mlxDeployment, inputs:plan.inputs, sha256:mediaHash(target), nativeSha256:mediaHash(raw)};
   atomicJson(receipt, delivered);
   return delivered;
