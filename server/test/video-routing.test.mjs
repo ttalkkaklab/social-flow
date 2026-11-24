@@ -1755,6 +1755,24 @@ test('audio conditioning reports an explicit speaker reference it cannot submit'
   assert.deepEqual(projection.direction.openingPositions[0].images,[]);
 });
 
+test('per-shot rendering binds the visible cast and any off-screen speaker for that shot', () => {
+  const {projectSceneCast} = require('../../skills/_shared/scene-cast.js');
+  const characters = ['caller','rider'].map(id => ({id,panels:{face:id+'.png'}}));
+  const scene = {no:1,speakers:['caller','rider'],frames:{},
+    speakerReferences:characters.map(actor => ({character:actor.id,path:actor.panels.face}))};
+  const cards = [
+    {id:'greeting',visual:{character:['caller','rider']},narration:[{speaker:'rider',delivery:'on_screen',tts:'Hello.'}]},
+    {id:'exit',visual:{character:['rider']},timeline:{openingPositions:[{character:'caller',images:[],position:'Off screen.'}]}},
+    {id:'call',visual:{character:['rider']},narration:[{speaker:'caller',delivery:'off_screen',tts:'Wait.'}]},
+    {id:'legacy',visual:{}},
+  ];
+  const refs = perShot => projectSceneCast(scene,cards,{SB_DOC:{characters}},os.tmpdir(),'astra-genai',false,perShot)
+    .members.map(card => card.visual.references.map(ref => ref.character));
+  const both = ['caller','rider'];
+  assert.deepEqual(refs(true),[both,['rider'],both,both]);
+  assert.deepEqual(refs(false),[both,both,both,both]);
+});
+
 test('an optional guide cannot prevent silent distilled I2V when the background slot requires a subject', t => {
   const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'});
   const [shot]=f.board.SCENES;

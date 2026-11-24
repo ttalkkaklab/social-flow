@@ -97396,18 +97396,18 @@ var require_scene_cast = __commonJS({
       let openingRefs = [];
       const members = cards.map((card, index) => {
         const visual = card.visual || {};
+        const castSpecified = visual.character !== void 0 || visual.characters !== void 0;
         const original = castIds(visual.character ?? visual.characters);
         const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
-        const positioned = [
-          ...card.timeline?.openingPositions ?? [],
-          ...visual.video?.openingPositions ?? [],
-          ...index === 0 ? scene.videoDirection?.openingPositions ?? [] : []
-        ];
+        const shotMarks = [...card.timeline?.openingPositions ?? [], ...visual.video?.openingPositions ?? []];
+        const hasShotBlocking = castSpecified && shotMarks.length > 0;
+        const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => !shotMarks.some((mark) => mark.character === row.character)) : [];
         const localIds = /* @__PURE__ */ new Set([
           ...active,
           ...original,
           ...castIds(visual.bystanders),
-          ...positioned.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...shotMarks.filter((row) => row.images?.length || !hasShotBlocking && declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...inheritedMarks.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
           ...(visual.characterInputs ?? []).map((input) => input.character),
           ...(card.timeline?.images ?? []).map((pin) => pin.character),
           ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
@@ -97415,7 +97415,7 @@ var require_scene_cast = __commonJS({
         const localRefs = perShot && identities.length > 2 ? [
           ...active.flatMap((id) => references.filter((ref) => ref.character === id)),
           ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
-        ] : references;
+        ] : perShot && hasShotBlocking ? references.filter((ref) => localIds.has(ref.character)) : references;
         const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
         const keep2 = (ref) => {
           const owner = registeredOwner(ref.path);
@@ -97453,7 +97453,7 @@ var require_scene_cast = __commonJS({
         const updated = {
           ...visual,
           ...ltx2 ? { sceneSpeakerReferences: true } : {},
-          ...visual.character !== void 0 || visual.characters !== void 0 ? { character: original } : {},
+          ...castSpecified ? { character: original } : {},
           ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
           ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
           ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
