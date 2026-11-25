@@ -61,6 +61,19 @@ test('local review preserves ambiguous jobs and strips provider secrets; export 
  c.clip='javascript:alert(1)';assert.doesNotMatch(review.render(report,'s0001','en'),/<video/);
  fs.writeFileSync(path.join(store,'plans','b'.repeat(64)+'.json'),'broken');
  assert.equal(review.read(board).warnings.length,1);
+ const stateFile=path.join(store,'state.json'),state=JSON.parse(fs.readFileSync(stateFile));
+ Object.assign(state.jobs.a,{providerId:'provider-job',observedAt:'2026-01-02T03:04:05Z'});
+ for (const [remote,label] of [['pending','Queued by provider'],['processing','Generating on provider']]) {
+  state.jobs.a.providerStatus=remote;
+  fs.writeFileSync(stateFile,JSON.stringify(state));
+  const observed=review.read(board);
+  assert.equal(observed.candidates[0].status,'submission_unknown');
+  assert.deepEqual([observed.summary.pendingRequests,observed.summary.unknownRequests],[1,0]);
+  assert.ok(review.render(observed,'s0001','en').includes(label));
+ }
+ state.jobs.a.status='failed';
+ fs.writeFileSync(stateFile,JSON.stringify(state));
+ assert.match(review.render(review.read(board),'s0001','en'),/ · Failed<\/h4>/);
 });
 
 test('canonical reviews keep completed remote history and recognise a separately edited shot',t=>{

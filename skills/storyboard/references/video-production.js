@@ -10,6 +10,12 @@ const repairs = [
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safePath = x => typeof x === 'string' && x && !/^[\s/\\]|[\x00-\x1f]|^[a-z][a-z0-9+.-]*:/i.test(x) && !x.includes('\\');
+function displayStatus(job) {
+ if (!job.providerId || !job.observedAt || !['submitting','submitted','submission_unknown'].includes(job.status)) return job.status;
+ if (['pending','queued'].includes(job.providerStatus)) return 'queued';
+ if (['processing','running'].includes(job.providerStatus)) return 'running';
+ return job.status;
+}
 function changes(before, after) {
  if (!before) return [];
  return ['prompt','selection','settings','inputs','performance'].filter(key=>JSON.stringify(before[key])!==JSON.stringify(after[key]));
@@ -167,7 +173,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
  }
  return {version:1,storyboardPath:dir,sceneModes,shotModes,sceneApprovals,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
   summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:attachedIds.size,reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
-   pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
+   pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>displayStatus(j)==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,blocked,warnings,repairs};
 }
 function write(episode) {
@@ -182,12 +188,13 @@ function render(report,shotId,language,sceneNo) {
  const problems=(report?.blocked||[]).filter(p=>sceneNo===undefined?p.shotId===shotId:p.sceneNo===sceneNo)
   .map(p=>'<p class="production-review">'+esc([p.shotId,p.character,p.role,p.code].filter(Boolean).join(' · '))+'<br>'+esc(p.message)+'</p>').join('');
  if(!items.length)return problems;
- const labels={planned:t('계획만 저장','Planned'),submitting:t('제출 중','Submitting'),submitted:t('제출됨','Submitted'),submission_unknown:t('결과 확인 필요','Outcome unknown'),completed:t('생성 완료','Completed'),failed:t('실패','Failed')};
+ const labels={planned:t('계획만 저장','Planned'),submitting:t('제출 중','Submitting'),submitted:t('제출됨','Submitted'),queued:t('서버 대기 중','Queued by provider'),running:t('서버에서 생성 중','Generating on provider'),submission_unknown:t('결과 확인 필요','Outcome unknown'),completed:t('생성 완료','Completed'),failed:t('실패','Failed')};
  const purpose={draft:t('초안','Draft'),final:t('최종본','Final'),revision:t('수정본','Revision'),unspecified:t('용도 미지정','Unspecified')};
  const row=(label,value)=>'<dt>'+esc(label)+'</dt><dd>'+esc(value ?? '—')+'</dd>';
  const cards=items.map(c=>{
   const elapsed=c.startedAt?Math.round(Math.max(0,(Date.parse(c.finishedAt||c.updatedAt)-Date.parse(c.startedAt))/1000)):null;
-  let h='<article class="production-take"><h4>'+esc(purpose[c.purpose]||c.purpose)+' · '+esc(labels[c.status]||c.status)+(c.selected?' · '+t('현재 연결됨','Attached'):'')+'</h4>';
+  const status=displayStatus(c);
+  let h='<article class="production-take"><h4>'+esc(purpose[c.purpose]||c.purpose)+' · '+esc(labels[status]||status)+(c.selected?' · '+t('현재 연결됨','Attached'):'')+'</h4>';
   if(c.clip&&safePath(c.clip))h+='<video controls preload="none" src="'+esc(c.clip)+'"></video>';
   h+='<dl>'+row(t('요청','Request'),c.requestId)+row(t('모델','Model'),[c.selection?.engine,c.selection?.model,c.settings?.resolution||c.selection?.resolution].filter(Boolean).join(' / '))+
    row(t('연결 서버 기록','Recorded endpoint'),c.endpoint)+row(t('로컬 상태 갱신','Local state update'),c.updatedAt)+row(t('서버 상태 확인','Provider observation'),c.observedAt)+row(t('서버가 보고한 상태','Provider status'),c.providerStatus)+row(t('시작 시각','Started'),c.startedAt)+row(t('기록된 경과 시간(초)','Recorded elapsed seconds'),elapsed)+
