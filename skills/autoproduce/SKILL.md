@@ -7,7 +7,8 @@ description: >
   plans shots and content-led timing, then produces the media within saved choices and
   spending limits. Storyboard stops at a plan; produce builds an existing approved board.
 argument-hint: "[episode-or-storyboard-path | channel topic]"
-allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan",
+allowed-tools: ["mcp__social-flow__scenario_check", "mcp__plugin_social-flow_social-flow__scenario_check", "mcp__social-flow__story_opening_review", "mcp__plugin_social-flow_social-flow__story_opening_review",
+  "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_song", "mcp__plugin_social-flow_social-flow__music_generate_song", "mcp__social-flow__music_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__music_elevenlabs_generate", "mcp__social-flow__suno_generate", "mcp__plugin_social-flow_social-flow__suno_generate", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_route", "mcp__plugin_social-flow_social-flow__tts_route", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan",
   "WebSearch", "WebFetch",
   "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search",
   "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search",
@@ -100,8 +101,10 @@ not inherit a publishing schedule or automatic queue authorization.
 ## Coordinate the steps
 
 Read [the production order](../_shared/production-workflow.md) (user directive 2026-10-31).
-The story tools enforce story order and cast readiness. The author completes the synopsis
-reality check before opening new scenes.
+The author validates each synopsis candidate with `scenario_check`, runs its reality
+check and completes the [opening review](../storyboard/references/opening-review.md).
+Set the combined policy before the first review. Hand the chosen type and current
+receipt to the board author. With no selected file, choose the type on the first sequence.
 
 1. Storyboard: the story (`story_sequence` → `story_scene` → `story_shot`), each shot's
    characters and lines (`shot_characters` → `shot_dialogue`), each scene's music decision
@@ -115,7 +118,11 @@ reality check before opening new scenes.
    On any other type an unattended run has no user to pick: record the candidates with
    `offered: true`, apply none and list them in the run report
    ([cliché use](../storyboard/references/cliche-use.md#6-recommend-then-apply-what-the-user-picks)).
-2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): the scene's chosen anchors and optional shot guides, with `shot_image`.
+   Once shot actions and timing exist, run `story_opening_review` on the completed text
+   board, even if the synopsis passed. Reserve only the remaining shared revisions.
+   Include an exhausted or incomplete review with the best available board and continue
+   within the run's existing authorization.
+2. Invoke [generate-cut-images](../generate-cut-images/SKILL.md): attach each picture shot's image and the chosen scene endpoints with `shot_image`.
 3. Invoke [generate-cut-videos](../generate-cut-videos/SKILL.md): one `story_scene.videoDirection` and one `video_plan` with `sceneNo` per generated scene. Execute each approved scene once and reuse the original request ID to recover a pending job.
 
 [review-context](../review-context/SKILL.md), [review-camera](../review-camera/SKILL.md),
@@ -131,7 +138,8 @@ Publishing remains a separate authorization. Preserve actual costs and failed re
 
 ## Reviews and explicit improvement loops
 
-Independent storyboard and media reviews run only when the user asks. Do not manufacture
+The three-second opening review runs on both completed authoring stages. Other independent
+storyboard and media reviews run when the user asks. Do not manufacture
 scores, freeze stamps or media reviews. Do not invent a passing result to fill a growth queue. Readability, usable files, supported payloads, finite execution timing, concurrency,
 spending and publication authority remain real requirements.
 

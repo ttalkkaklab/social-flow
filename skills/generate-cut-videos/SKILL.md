@@ -8,7 +8,14 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 
 # Generate Cut Videos
 
-Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
+
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
+- Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 For a character reference shot, set `visual.character` and the camera’s subject and view. The plan binds the sheet face and the front or rear body panel to that character. Use `visual.characterInputs` to specify each principal’s body view when their directions differ. For a reference-voice performance, on-screen and off-screen lines by a principal require the selected voice sample. Check the panel paths and speaker slots before approval.
 
@@ -25,77 +32,48 @@ For LTX and Google Cloud Veo, call `video_plan` with the same scene and request 
 
 ## Generate one scene
 
-For a visible action that depends on a particular intermediate state, such as a hand releasing a loaded cart, inspect the image and set `story_scene.videoDirection.keyframes` with its storyboard-relative `path` and zero-based scene `frame`. The planner sends these images with the opening, ending and supported voice references in the same generation. Check the outgoing image bindings. A temporal guide conditions the picture at that moment and leaves cut timing to the model. Keep an ordinary shot composition reference untimed unless the image actually depicts a chosen moment.
+For a visible action that depends on a particular intermediate state, such as a hand releasing a loaded cart, inspect the image and set `story_scene.videoDirection.keyframes` with its storyboard-relative `path` and zero-based scene `frame`. The planner sends these images with the opening, ending and supported voice references in the same generation; GenAI scene mode leaves them out and names them. Check the outgoing image bindings. A temporal guide conditions the picture at that moment and leaves cut timing to the model. Keep an ordinary shot composition reference untimed unless the image actually depicts a chosen moment.
 
 For a multi-shot MSR scene, put each quoted line in the view where its speaker delivers it. Describe the cut, the next action, and whether dialogue gives way to ambience or effects. The scene planner uses each card’s duration as an approximate hold and distinguishes on-screen voices, off-screen voices and silent reactions. Near the provider’s character limit, it keeps the quotes with their shots and omits optional pacing prose. When a line must finish before a reaction, give it enough time and check its position in the submitted prompt. See the [LTX multi-shot prompting guide](https://docs.ltx.io/open-source-model/usage-guides/prompting-guide) and the [MSR reference mapping](https://huggingface.co/LiconStudio/LTX-2.5-Multiple-Subject-Reference).
 
-For Veo, use a start and end time for each view. When the user accepts a model-generated voice, set `videoDirection.dialogueVoice:"model_generated"` on that scene. Seedance can use the same voice setting with a scene opening on its image operation. For Seedance reference mode, associate each cut with the action that triggers it. Keep the speaker and their numbered voice reference beside the line. Seedance 2.0 can drift when given hard timecodes. Check `shot_reference_omitted` for any intermediate view that relies on a composition image. Compare the dialogue, visible reactions and actual cut positions in the returned video. [Google Veo prompting guide](https://cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1) · [BytePlus Seedance 2.0 prompt guide](https://docs.byteplus.com/en/docs/modelark/seedance-2-0-prompt-guide)
+For a silent Veo scene, use a start and end time for each view. For Seedance reference mode, associate each cut with the action that triggers it. Keep the speaker and their numbered voice reference beside the line. Seedance 2.0 can drift when given hard timecodes. Check `shot_reference_omitted` for any intermediate view that relies on a composition image. Compare the dialogue, visible reactions and actual cut positions in the returned video. [Google Veo prompting guide](https://cloud.google.com/blog/products/ai-machine-learning/ultimate-prompting-guide-for-veo-3-1) · [BytePlus Seedance 2.0 prompt guide](https://docs.byteplus.com/en/docs/modelark/seedance-2-0-prompt-guide)
 
-1. Read the scene and its shot cards in playback order with `storyboard_read`. Read the scene's opening and ending images and its optional shot references. Keep every camera setup on its own shot card. Use scene-relative frames for its image pins and incoming cut. An entrance, zoom or camera move during uninterrupted filming stays on that shot.
+1. Read the scene and its shot cards in playback order with `storyboard_read`. Read the scene's opening and ending images and the image for each shot. Keep every camera setup on its own shot card. Use scene-relative frames for its image pins and incoming cut. An entrance, zoom or camera move during uninterrupted filming stays on that shot.
 2. Save `videoDirection` on the scene with `story_scene` (retain its sequence, number, place, time, event and summary). Identify each person from the viewer's perspective by side, depth, posture and a landmark. Link their face and outfit panels to the same cast ID. Describe an off-screen start when appropriate. Use clothing to disambiguate people who share a desk or row. Coordinates and phrases such as “third man” make poor identifiers.
 3. Write the emotional change in English. Keep the dialogue on the shot cards in the original language. Keep each shot’s framing and action in its timeline. For example, “He rises behind that same far-right desk and points across the room at Miran.” Read the scene’s `directionDefaults` and each shot’s icon choices. A shot move replaces the scene default for its interval. Use the legacy free-text `videoDirection.camera` only when no catalogue default is set. When a reveal or reaction needs a move, name the cue, direction and landing in one sentence. For example, “When Miran unfolds the letter, the camera tilts down from her face and settles on the torn corner in her hand.” Specify a fixed view when the scene depends on seeing both performances together. Leave coverage open when the cards give the scene no reason to move. Keep audience-only shock effects on the post-production cue track.
-4. Call `video_plan {episode, sceneNo, requestId}` once per scene. Omit `args.prompt`. Check the actual compiled prompt, input images, speaker and voice assignments, total seconds, resolution and price. Distilled GenAI LTX uses the opening image as the temporal first frame with compatible subject references. For mixed-media scenes, keep editorial inserts on their existing route and plan continuous generated material as its own scene. A larger room or crowd in frame still needs visual review. A blocked plan lists each unsupported input with its shot and frame. Show the list and retain the storyboard. Splitting the generation or changing the input requires a new user choice.
+4. Call `video_plan {episode, sceneNo, requestId, wholeScene:true}` once per scene. Omit `args.prompt`. Check the actual compiled prompt, input images, speaker and voice assignments, total seconds, resolution and price. Distilled GenAI LTX uses the opening image as the temporal first frame with compatible subject references. For mixed-media scenes, keep editorial inserts on their existing route and plan continuous generated material as its own scene. A larger room or crowd in frame still needs visual review. A blocked plan lists each unsupported input with its shot and frame. Show the list and retain the storyboard. Splitting the generation or changing the input requires a new user choice.
 5. Use the existing approval or record the user's approval with `video_approve`, then run `video_execute` once. For a host handoff use the returned frame, prompt and scene duration with the selected host. Resume with `video_status` and the original request ID. The scene header shows the candidate and its actual prompt. Watch the opening second, distance, posture, speaking mouth and reaction through the last line. For a planned move, follow a fixed feature such as a door jamb through the cue and check where the frame lands. Walking actors can cross a locked frame. Report any missed move, missing or swapped person, unexpected cut or incomplete dialogue.
 6. Hand the accepted take to assembly once. When editing by shot card, use the observed source intervals from that take. Attaching the whole take separately to every card would repeat the scene.
 
 A scene shares one soundtrack from frame zero, including its lead-in. Check each cut and beat against the requested scene frames. Subject panels establish identity and outfit. The shot action controls when the person enters. See the [scene input contract](../_shared/video-routing.md).
 
-When the user approves rendering each camera setup separately, set `sceneRendering:"per_shot"` on the scene’s `video_plan`. The GenAI scene endpoint validates the actual files, renders each interval with the saved model (distilled I2V for native sound or a continuous mix, dev A2V for a conditioning track), then returns one video under the scene request ID. Keep the existing budget and approval. Set identity images in `story_scene.speakerReferences` and opening positions in `story_scene.videoDirection`. A protected board can supply a reply cue or recorded performance in `shotBindings`. For a frame-cued line, attach its recorded performance and room sound in `performanceAudio`. A reviewed `motionPrefix` can keep an approved dolly continuous. The deployed renderer must advertise these controls. Inspect both frames beside each cut and listen for the first word, the end of each line and repeated effects.
+Read the plan's `promptGuidance` with its prompt. `guide` is the writing sentence for the selected model and `reference` is that model family's page: [MiniMax H3 and FastH3](references/prompt-h3.md), [LTX-2.5 with MSR](references/prompt-ltx-msr.md) or [Seedance 2.0 and 2.5](references/prompt-seedance.md). `advice` lists each count the request holds outside the range the vendor's guide recommends, such as more than four reference people on Seedance 2.0. An entry is a report: the plan stands, and the page says what to change on the board if the take fails that way.
 
-## Correcting a shot
+Plan each scene for one model call: the plan returns the prompt it will send as `promptTemplate`, and an edited copy goes back as `prompt`. On the GenAI engine that is one scene-mode request (`astra_genai_scene`, `POST /v1/generations`): the prompt keeps its `{cast.role}` names and the gateway numbers them, `video_plan` checks the numbering, frames and cuts with `POST /v1/generations/validate`, and the model paces the cuts. A scene that needs a supplied soundtrack or a line pinned to a frame is refused there; split or revise it, or choose an engine that takes it. An ending or timed picture inside a shot is left out and named in the plan's warnings, as are the optional words a scene over the model's prompt cap leaves out (`scene_prompt_fitted`), so read them before approval. A scene still over the cap is refused (`scene_prompt_too_long`); shorten its shot framing or action text, or split it at an authored cut.
 
-Edit the identified card, then plan and approve its complete scene.
+## Correcting a scene take
+
+Change the relevant beat, dialogue or image on the storyboard. Regenerate the complete scene using its selected model and one reviewed request. Retain the previous candidate until the new take has been reviewed.
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener
-in conventional OTS coverage. For a requested one-take preserve all speaker turns on the same card and use scene planning. Set each camera setup's size and angle before images.
+in OTS coverage. Keep the speaker turns spoken in one view on the same card, a requested one-take included, and use scene planning. Set each camera setup's size and angle before images.
 Choose the attention subject independently of the speaker using the dialogue coverage
 guide: intentional off_screen physical speech may accompany a hand insert, listener
 reaction or spatial view. Keep its voice ownership without adding a speaking face;
 screen-position bindings describe on_screen speakers only.
 If coverage is wrong, return to the earlier authoring/image stages rather than patching
-the prompt alone. Preserve the single MSR speaker's binding and selected voice.
+the prompt alone. Preserve each MSR speaker's binding and selected voice.
 Dialogue-free cuts use image2video with `frames.mode:"first"`. On LTX, request natural
 ambience and action-timed effects. Use `generateAudio:false` when the edit supplies the
 sound separately, and carry those cues into assembly. Thoughts use image2video with
 `generateAudio:false` and character `voiceover`: generate and attach pinned
 TTS, compose measured speech/action intervals and lead-in/tail-out, then plan the full
-video duration. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
+video duration. Send the visible reaction and ongoing action to the video model. Keep the thought text and vocal direction with TTS. Keep mouths closed and assembly on `sound.audioSource:"speech"`.
 If speech is disabled, report missing TTS setup rather than sending thoughts to MSR.
 See [shot speech](../produce/references/shot-speech.md).
 
-**Prompt.** After every picture shot has its images, write each `generated_video` shot's
-prompt with `shot_prompt`. Give `action` (what moves from the opening picture), `end` (the
-closing picture) and `sound` in English; the tool builds the rest from the shot's icon
-attributes — camera move and speed, focus, and on an MSR shot its size, angle and depth —
-and quotes its on-screen lines. It also names each character's `expression` from
-`shot_characters` and asks the model to hold it to the last frame (user directive 2026-11-16).
-Write `action` as visible behaviour that fits that state, name a change of expression as one
-step of it, and say in `end` how the face looks when the shot closes. After generation watch
-the last second: a mouth drifting back to a smile is a failed clip. MSR's lines and image bindings are added by `video_plan`.
-On a speaking shot, do not close `action` or `end` on waiting or listening for an answer
-unless that reaction is in the shot's performance with its seconds: the model plays it as
-silence after the line, and the next shot already carries the reaction. The closing face is
-a state, not extra time.
-The tool records what the prompt came from; when the shot's characters, on-screen lines,
-frame plan, camera, focus or MSR framing change later, the stage tools warn and the review
-page marks the prompt stale. Rewrite it with `shot_prompt` before planning that shot.
-For MSR and distilled image-to-video with references, pass `openingPositions` to
-`shot_prompt`. Inspect the opening image. For every named character, including a
-silent listener, give the cast ID, subject image numbers and where the viewer sees
-them. Group face and outfit panels under one person. For example,
-`{character:"miran",images:[2,4],position:"left foreground, back to camera, standing at the witness rail"}`.
-Use `images:[]` for a character visible only in the opening image. The tool puts
-these descriptions at the start of the submitted prompt. After changing the
-opening image, inspect it again and update the positions.
-
-MSR submits the composed opening image as a background reference; it does not pin that
-image to frame zero. Do not promise exact framing from that input alone. If the actual
-result repeatedly changes a required locked setup or duplicates a referenced person,
-explain the limitation and prepare a scoped first-frame-conditioned alternative. Preserve
-the saved model and resolution unless the user authorizes a change, and keep attempt limits.
-
-Describe the room and sounds made by the visible action in `shot_prompt.sound`. Keep the accepted video's soundtrack. Omit a scene effect when the selected route cannot render it. Keep the input voice track free of audience cues. Put cues such as a surprise hit or tension rise in `sound.effects[].audience` for post. The saved music model can score them independently of the scene's BGM.
+**Prompt.** Write or revise the complete scene with the saved model's writing guide from `video_catalog`. Keep dialogue, expressions, actions, camera choices and closing states on their existing shot cards. For reference voice, pair the speaking character's face and sample. On audio-to-video, time visible action to the approved recording. Include ambience in the scene sound and keep audience cues in post. Inspect `video_plan`'s complete `args.prompt`, named `promptTemplate` and reference bindings. To keep an edit, save it under the matching model and operation in the scene's `videoDirection.promptDrafts`.
 
 **Approval.** Show the scene prompt, planned attachments, dialogue and cost. Record the user's approval with `video_approve` and execute that scene plan once. When inputs change, replan and show the updated scene under the existing approval policy.
 
@@ -138,20 +116,7 @@ just to expose a source clip. Look at each clip before
 assembly. Stop before assembly; review-cut-videos runs only when the user asks.
 
 For the shot's actual request and prior takes, read `video_status {episode}` or
-`storyboard_read.videoProduction`. Omit `args.prompt`: `shot_prompt` and
-`speech_manage plan_video` share the camera/performance compiler, and `video_plan` compiles
-the board prompt to the adapter's own limit (2,000 characters on the GenAI image and MSR
-lanes), leaving out design notes, the beats' acting fields and then the expressions before it
-touches the camera, the action or the lines (`prompt_fitted`, or `prompt_over_limit` when the
-authored action, view or sound alone is too long — shorten those in `shot_prompt`). On
-Mochi & Bơ EP05 shot s0015, the submitted prompt asked to preserve the opening composition.
-The ceiling fan and shelf stayed in place while Mochi moved the pillow. EP01 shot s0104
-used a hand-written “Camera: pan right.” The cafe door shifted left as Bo walked to the
-counter. Compare the actual direction and the background in the take.
-A correction such as "no text on the picture" goes into `shot_prompt` or the negative prompt,
-not into a replacement prompt. When a prompt is written by hand anyway, `video_plan` names
-one that drops the board's move (`camera_move_missing`) or gives a conflicting hold or direction
-(`camera_move_contradicted`). Older saved prompts receive the same check. Keep unresolved native
+`storyboard_read.videoProduction`. Review the actual complete scene prompt from `video_plan`. After an edit, compare the opening positions, the move and the final framing to the approved board. A saved route-specific template carries the same cast names even when the transmitted reference numbers change. Keep unresolved native
 speech timing explicit. Reference `preserve`/`avoid` instructions remain attached to their
 image slots. A new take may carry `purpose`, `basedOnRequestId` and `changeNote`; use a
 unique filename. Draft/final labels do not authorize a resolution or model switch.

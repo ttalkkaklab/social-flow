@@ -26,11 +26,6 @@ Look for the LTX model ID, its ready state and the `video` capability. The plugi
 
 ## Plan the render
 
-| Parameter | Local adapter contract |
-| --- | --- |
-| Width and height | 256–1920 pixels per side. Use multiples of 64 for the default two-stage pipeline, or multiples of 32 with `one_stage`. |
-| Frame count | 9 through 241 in steps of 8. The default is 49 frames at 24 fps. |
-| Decoded RGB | At most 800 MiB for width × height × frames × 3 bytes. Reduce the canvas or the number of frames if the plan exceeds it. |
-| Conditioning | Supply a local first-frame image, and a last-frame image when the plan calls for one. |
+The canvas, frame grid, RGB cap, pipelines and frame conditioning the adapter accepts are listed in the [video model call reference](video-models.md#ltx-25-pack), next to what MLX-Serve itself accepts.
 
 In the September test, a 49-frame clip took about 13 minutes at 768×1280. Treat that as one machine's measurement. RAM pressure, model loading, canvas size and other GPU work change the time. For a managed episode, keep the request ID and inspect `video_status` if the connection closes. [Adapter implementation](../server/src/mlx-serve-client.ts)

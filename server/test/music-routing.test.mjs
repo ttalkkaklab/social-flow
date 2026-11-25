@@ -52,6 +52,8 @@ test('managed output is decoded to stereo WAV and reused without a second dispat
 test('plan binds model, native fields, output location and current selection', async t => {
   const f = fixture(t);
   assert.throws(() => f.plan('bad', { modelId: 'music_v2' }), /selection_mismatch/);
+  assert.throws(() => f.plan('bad', {}, { model: 'music_v2' }), /music_selection_mismatch: model/);
+  assert.equal(f.plan('base-1', {}, { engine: 'elevenlabs', model: 'music_v2_5' }).id, f.plan().id);
   assert.throws(() => f.plan('bad', { bpm: 80 }), /argument_unsupported/);
   assert.throws(() => f.plan('bad', { outputPath: '../outside' }), /output_outside/);
   assert.throws(() => f.plan('bad', { filename: 'bed.mp3' }), /requires_wav/);

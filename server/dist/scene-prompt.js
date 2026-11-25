@@ -1,13 +1,25 @@
+import { SceneEditGrammar } from './scene-edit-grammar.js';
+import { quotedSegments } from './prompt-language.js';
+import { formatReferenceLabel } from './scene-prompt-profile.js';
 const transitions = {
     hard_cut: 'cut directly', dissolve: 'dissolve to the next view', fade: 'fade to the next view',
 };
-function shotHeading(shot, fps, options) {
+// The numbered label of a storyboard shot. Where the planner numbers shots, an author may keep, drop or renumber it.
+const shotLabel = /^Shot \d+:\s*/u;
+function shotHeading(shot, fps, options, number) {
     const transition = shot.transition.replaceAll('_', ' ');
     if (!options.modelFacing)
         return `${shot.shotId} [${shot.startFrame}–${shot.endFrame - 1}] ${transition}.`;
     const cut = transitions[shot.transition] ?? transition;
     if (!options.modelPacedCuts)
         return shot.transition === 'open' ? '' : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+    // The 2.0 guide recommends Shot 1, Shot 2 identifiers and calls precise timing unstable. The 2.5 guide reads either.
+    if (options.writer === 'seedance' && number)
+        return `Shot ${number}:`;
+    if (options.writer === 'fastH3' && shot.transition === 'hard_cut')
+        return 'Hard cut to the next camera setup.';
+    if (options.writer === 'hostedH3' && shot.transition === 'hard_cut')
+        return 'Cut to the next view.';
     const order = shot.transition === 'open' ? '' : `Then ${cut}.`;
     if (options.cutTiming !== 'time_ranges')
         return order;
@@ -33,7 +45,7 @@ export function sceneTimelineWords(timeline, scene, options = {}) {
     if (!modelFacing)
         rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
     let turnIndex = 0;
-    for (const shot of timeline.shots) {
+    for (const [index, shot] of timeline.shots.entries()) {
         const images = timeline.images.filter(image => image.shotId === shot.shotId);
         const cues = images.filter(image => image.cue).map(image => `${timing(image.frame)}: ${image.cue}`);
         const guides = images.flatMap(image => image.reference?.scope === 'shot_guide' ? [image.reference.purpose] : []);
@@ -51,7 +63,7 @@ export function sceneTimelineWords(timeline, scene, options = {}) {
         const hold = describeDelivery && options.cutTiming === 'approximate_holds' &&
             `Hold this view for about ${duration} ${duration === 1 ? 'second' : 'seconds'}.`;
         rows.push([
-            shotHeading(shot, timeline.fps, options), hold,
+            shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : undefined), hold,
             ...[shot.framing, shot.blocking, shot.action].filter(value => value && !wholeTake.has(value)),
             ...cues, ...guides, shot.sound && shot.sound !== scene.sound && 'Sound: ' + shot.sound,
             describeDelivery && deliveryDirection(lines), ...spoken,
@@ -59,9 +71,218 @@ export function sceneTimelineWords(timeline, scene, options = {}) {
         ].filter(Boolean).join(' '));
     }
     if (timeline.audio) {
-        rows.push(modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.');
+        rows.push(modelFacing && options.writer === 'recorded'
+            ? 'Follow the supplied recording from the opening. Time visible speech and reactions to its words and pauses.'
+            : modelFacing ? 'Play one continuous soundtrack from the opening.' : 'Play one continuous scene track from frame 0.');
         for (const cue of timeline.audio.cues)
             rows.push(`${timing(cue.frame)}: ${cue.action}`);
     }
     return rows.filter(Boolean).join('\n');
+}
+const TOKEN = /\{[^{}\n]*\}/g;
+const NAME = /^\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}$/u;
+const escaped = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/** A label is its whole number: "Image 1" is not read inside "Image 10", "Image 1.5" or "KeyImage 1". */
+const labelPattern = (label) => new RegExp('(?<![\\p{L}\\p{N}])' + escaped(label) + '(?!\\d|\\.\\d)', 'gu');
+/** The text outside and inside quotation marks, in order. */
+const spans = (text, lines) => {
+    const parts = [];
+    let at = 0;
+    for (const quote of quotedSegments(text, lines)) {
+        parts.push({ text: text.slice(at, quote.index), quoted: false }, { text: quote[0], quoted: true });
+        at = quote.index + quote[0].length;
+    }
+    return [...parts, { text: text.slice(at), quoted: false }];
+};
+const loneBrace = (text) => /[{}]/.test(text.replace(TOKEN, ''));
+const word = (text) => text.replace(/[^\p{L}\p{N}_-]+/gu, '-').replace(/^-+|-+$/g, '');
+/** Name every numbered input of the final request. `unlabeled` lists pictures a prompt cannot point at. */
+export function scenePromptSlots(style, images = [], voices = [], media = []) {
+    const slots = [], unlabeled = new Set();
+    const owned = new Map();
+    for (const image of images) {
+        // Only the reference list is numbered in a prompt. A start, end or timed frame has no label.
+        if (image.number === undefined) {
+            if (image.shotId && (image.guide || !image.owner))
+                unlabeled.add(word(image.shotId) + '.image');
+            continue;
+        }
+        const label = formatReferenceLabel(style, 'image', image.number);
+        if (image.owner)
+            owned.set(image.owner, [...owned.get(image.owner) ?? [], { role: word(image.role ?? '') || 'image', label, id: image.id }]);
+        else
+            slots.push({ key: word((image.guide ? image.shotId : undefined) ?? image.id ?? 'reference' + image.number) + '.image', label });
+    }
+    for (const [owner, rows] of owned) {
+        for (const row of rows) {
+            const repeated = rows.some(other => other !== row && other.role === row.role);
+            const role = repeated && row.id ? row.role + '-' + word(row.id) : row.role;
+            slots.push({ key: word(owner) + '.' + role, label: row.label });
+        }
+        // The short name is unambiguous only for a single picture, and it never takes the name of a shot's own picture.
+        if (rows.length === 1 && rows[0].role !== 'image' && !unlabeled.has(word(owner) + '.image'))
+            slots.push({ key: word(owner) + '.image', label: rows[0].label });
+    }
+    for (const voice of voices)
+        if (voice.audioIndex)
+            slots.push({ key: word(voice.speaker) + '.voice', label: formatReferenceLabel(style, 'audio', voice.audioIndex) });
+    for (const item of media)
+        slots.push({ key: word(item.name) + '.' + item.role,
+            label: formatReferenceLabel(style, item.role === 'motion' ? 'video' : 'audio', item.index) });
+    const keys = new Map();
+    const ambiguous = new Set();
+    for (const { key, label } of slots) {
+        if (keys.has(key) && keys.get(key) !== label)
+            ambiguous.add(key);
+        keys.set(key, label);
+    }
+    return { slots: [...keys].filter(([key]) => NAME.test('{' + key + '}') && !ambiguous.has(key)).map(([key, label]) => ({ key, label })),
+        ambiguous: [...ambiguous], unlabeled: [...unlabeled].filter(key => !keys.has(key)) };
+}
+/**
+ * Fill the names of an authored prompt with the numbers of the submitted request. Problems are reported; no
+ * sentence is reworded or shortened. `composed` is the planner's own prompt for the same request: a line, a
+ * sentence or a brace it carries is the board's text, which calibrates what is reported and what is left alone.
+ */
+export function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, checks = {}) {
+    const labels = new Map(slots.map(slot => [slot.key, slot.label]));
+    // A label can have two names; the first is the one a report offers.
+    const named = new Map();
+    for (const slot of slots)
+        if (!named.has(slot.label))
+            named.set(slot.label, slot.key);
+    const issues = [], reported = new Set();
+    const report = (level, code, detail) => {
+        if (!reported.has(code + detail)) {
+            reported.add(code + detail);
+            issues.push({ level, code, detail });
+        }
+    };
+    const board = new Set(checks.composed?.match(TOKEN) ?? []);
+    const body = spans(template, checks.lines).map(span => {
+        // A number inside a spoken line is speech. Outside one it is a reference typed by hand.
+        if (!span.quoted) {
+            for (const match of span.text.matchAll(/(?<![\p{L}\p{N}_])(?:<(?:Picture|Audio|Video) \d+>|(?:reference |@)?(?:Image|Audio|Video) \d+)(?!\d|\.\d)/giu)) {
+                const label = match[0], key = named.get(label);
+                if (!key)
+                    report('error', 'reference_unknown', label + ' does not identify a named input in this request');
+                else
+                    report(checks.strictReferences ? 'error' : 'warning', 'label_literal', label + ' depends on input order; use {' + key + '}');
+            }
+        }
+        return span.text.replace(TOKEN, token => {
+            const name = NAME.exec(token), key = name ? name[1] + '.' + name[2] : '', label = labels.get(key);
+            // Braces the board itself uses stay as written: always inside a spoken line, elsewhere unless they spell a submitted reference.
+            if (board.has(token) && (span.quoted || !label))
+                return token;
+            if (label)
+                return label;
+            if (ambiguous.includes(key))
+                report('error', 'placeholder_ambiguous', token + ' matches multiple inputs; give the assets distinct names');
+            else if (unlabeled.includes(key))
+                report('error', 'placeholder_unlabeled', `${token} is sent as a timed frame, which this model's prompt cannot name`);
+            else if (name)
+                report('error', 'placeholder_unresolved', `${token} names no submitted reference; available: ${slots.map(slot => '{' + slot.key + '}').join(' ') || 'none'}`);
+            else
+                report('error', 'placeholder_unresolved', `${token} is not a reference name; braces are kept for {id.role}, {id.image} and {id.voice}`);
+            return token;
+        });
+    }).join('');
+    if (loneBrace(template) && !loneBrace(checks.composed ?? ''))
+        report('error', 'placeholder_unresolved', 'a brace stands without its pair; braces are kept for {id.role}, {id.image} and {id.voice}');
+    // A fixed header the adapter states ahead of the prompt is part of what the model reads and what the limit counts.
+    const header = checks.header ?? '';
+    const prompt = body.startsWith(header) ? body : header + body;
+    for (const [label, key] of named)
+        if (!labelPattern(label).test(prompt))
+            report('warning', 'reference_unmentioned', `{${key}} is submitted and the prompt never names it`);
+    for (const line of checks.lines ?? [])
+        if (!prompt.includes(line))
+            report('warning', 'line_missing', `the prompt does not carry the authored line "${line}"`);
+    for (const sentence of checks.sentences ?? [])
+        if (!prompt.includes(sentence.text))
+            report('warning', sentence.code, `the prompt leaves out "${sentence.text}"`);
+    const length = [...prompt].length;
+    if (checks.limit !== undefined && length > checks.limit)
+        report('error', 'prompt_too_long', `${length} characters${header && prompt !== body ? ' with the ' + [...header].length + '-character opening header' : ''}; this model takes ${checks.limit}`);
+    // The adapter's own schema counts UTF-16 units, which is more than the characters when some sit outside the basic plane.
+    else if (checks.schemaLimit !== undefined && prompt.length > checks.schemaLimit)
+        report('error', 'prompt_too_long', `${prompt.length} UTF-16 units; this adapter takes ${checks.schemaLimit}`);
+    return { prompt, body, issues };
+}
+/** The submitted prompt with its numbers turned back into names: what an author edits and sends as `prompt`. */
+export function scenePromptTemplate(prompt, { slots }, header = '', lines) {
+    const names = new Map();
+    // A character's single picture has two names; the role name is the one that stays valid when a second picture is added.
+    for (const slot of slots)
+        if (!names.has(slot.label))
+            names.set(slot.label, slot.key);
+    const headed = Boolean(header) && prompt.startsWith(header);
+    const longestFirst = [...names].sort((a, b) => b[0].length - a[0].length);
+    // A spoken line keeps its words, so a number inside quotation marks is never turned into a name.
+    const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt, lines).map(span => span.quoted ? span.text
+        : longestFirst.reduce((text, [label, key]) => text.replace(labelPattern(label), '{' + key + '}'), span.text)).join('');
+    return { promptTemplate, ...(headed ? { promptHeader: header } : {}) };
+}
+/** Check the ordered script before rendering the provider's numbered references. */
+export function assertSceneDialogue(template, expected, cast, composed, nativeDialogue = true) {
+    const script = expected.flatMap(line => line.tts ? [line.tts] : []);
+    const splitSentences = (text) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu, '$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
+    const original = spans(composed, script);
+    const numbered = original.some(span => !span.quoted && /(?:^|\n)Shot \d+: /u.test(span.text));
+    const unlabel = (text) => numbered ? text.trim().replace(shotLabel, '') : text.trim();
+    const approvedDirections = new Set(original.filter(span => !span.quoted)
+        .flatMap(span => splitSentences(span.text)).map(unlabel));
+    // A draft written before shots were numbered keeps the sentence the planner then wrote between them.
+    if (numbered)
+        approvedDirections.add('Then cut directly');
+    const attributions = [];
+    const visualQuotes = [];
+    for (const [i, span] of original.entries()) {
+        if (!span.quoted)
+            continue;
+        const words = span.text.slice(1, -1);
+        const lead = unlabel(splitSentences(original[i - 1]?.text ?? '').at(-1) ?? '');
+        if (nativeDialogue && words === script[attributions.length])
+            attributions.push(lead);
+        else
+            visualQuotes.push({ words, lead });
+    }
+    const grammar = new SceneEditGrammar(cast);
+    let index = 0;
+    let clause = '', wrappedClause = '';
+    const parts = spans(template, script);
+    for (const [partIndex, span] of parts.entries()) {
+        if (!span.quoted) {
+            const sentences = splitSentences(span.text);
+            wrappedClause = unlabel(span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1) ?? '');
+            clause = parts[partIndex + 1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
+            for (const sentence of sentences) {
+                const text = unlabel(sentence);
+                if (!text || approvedDirections.has(text))
+                    continue;
+                grammar.checkStageDirection(text, nativeDialogue);
+            }
+            continue;
+        }
+        const words = span.text.slice(1, -1);
+        const visual = visualQuotes.findIndex(quote => quote.words === words && quote.lead === clause.trim());
+        if (visual >= 0) {
+            visualQuotes.splice(visual, 1);
+            continue;
+        }
+        if (!nativeDialogue) {
+            if (cast.length)
+                throw new Error('scene_dialogue_mismatch: preserve quoted material and its attribution from the storyboard');
+            continue;
+        }
+        const line = expected[index++];
+        if (!line || line.tts !== words)
+            throw new Error('scene_dialogue_mismatch: keep exactly the approved spoken lines in scene order');
+        if (line.speaker && clause.trim() !== attributions[index - 1] && !grammar.ownsTurn(clause, line.speaker, line.delivery) &&
+            (wrappedClause === clause.trim() || !grammar.ownsTurn(wrappedClause, line.speaker, line.delivery)))
+            throw new Error('scene_dialogue_speaker: introduce the quote directly with its approved speaker. Put complex blocking in a preceding sentence');
+    }
+    if (nativeDialogue && index !== expected.length)
+        throw new Error('scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes');
 }

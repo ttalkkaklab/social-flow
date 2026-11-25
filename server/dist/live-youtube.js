@@ -44,7 +44,7 @@ export async function prepareYoutube(api, config, title, receipt, save) {
         snippet: {
             title,
             description: 'AI character live session · ' + receipt.marker,
-            scheduledStartTime: new Date().toISOString()
+            scheduledStartTime: receipt.scheduledStartTime ?? new Date().toISOString()
         },
         status: { privacyStatus: 'unlisted', selfDeclaredMadeForKids: config.madeForKids },
         contentDetails: {
@@ -231,7 +231,7 @@ export class YoutubeChat {
     }
     async poll(queue, observe) {
         const data = await this.api('GET', 'liveChat/messages', {
-            part: 'snippet',
+            part: 'snippet,authorDetails',
             liveChatId: this.id,
             ...(this.cursor ? { pageToken: this.cursor } : {})
         });
@@ -241,6 +241,7 @@ export class YoutubeChat {
                     observe?.(message.id, message.snippet.displayMessage, message.snippet.authorChannelId);
                 const author = message.snippet.authorChannelId;
                 queue.add({ source: 'youtube', id: message.id, text: message.snippet.displayMessage,
+                    ...(message.authorDetails?.displayName && { displayName: message.authorDetails.displayName.slice(0, 128) }),
                     ...(author && { speaker: 'yt-' + createHash('sha256').update(this.id).update(author).digest('hex').slice(0, 12) }) });
             }
         }

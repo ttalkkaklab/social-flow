@@ -1128,8 +1128,8 @@ resolves supported generator arguments; `plan_video` carries the same acting con
 Legacy lines without `acting` keep baseline delivery. Neither the field nor a successful
 plan certifies the resulting expression or prosody. See the speech contract for examples.
 
-The board may describe exchanges; before the current single-speaker scene builder runs,
-split speaker changes into consecutive shots preserving these line ids.
+A shot may hold an exchange. When a render exceeds the selected model's pinned-voice capacity,
+split at an authored cut into consecutive shots preserving these line ids.
 
 > The example and the character caps below are story-v1 guidance for resumed boards. A
 > `speechPlanVersion:1` board writes every entry in the shape above — `id`, `speaker`,

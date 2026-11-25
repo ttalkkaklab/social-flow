@@ -6,6 +6,6 @@ or send an older model ID as a fallback. Existing converted recordings may still
 be reused with their original provenance; this does not authorize regeneration.
 
 For new work, generate the selected character's speech with Gemini or ElevenLabs
-`eleven_v4`, then drive a supported audio-conditioned video/lip-sync adapter with
+`eleven_v4`, then drive a supported audio-to-video adapter on a fresh render with
 that WAV. See [shot speech](shot-speech.md) and [acting prompts](acting-prompts.md).
 No automatic ASR, listening review or voice-lock approval gate applies.

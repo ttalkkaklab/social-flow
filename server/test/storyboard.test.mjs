@@ -6,7 +6,7 @@
 
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -33,6 +33,7 @@ import {
   shotImageRequest,
   recordShotImage,
   storySceneSchema,
+  storyShotSchema,
   writeStoryScenes,
   writeStorySequences,
   storySequenceSchema,
@@ -268,7 +269,7 @@ describe('file round trip', () => {
   it('creates a board with set, refuses a patch on a missing file, patches an existing one, and drops the approval line', () => {
     const dir = tmp();
     assert.throws(() => applyStoryboard(storyboardApplySchema.parse({ path: dir, scenes: [scene(1)] })), /new board is written with `set`/);
-    const created = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
+    const created = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { STORY: { primaryHookType: 'in_medias_res' }, FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
     assert.ok(created.written && created.created);
     const file = join(dir, 'scenes.js');
     writeFileSync(file, '// approved: 2026-09-10\n' + readFileSync(file, 'utf8'));
@@ -282,7 +283,7 @@ describe('file round trip', () => {
   });
   it('a violation writes nothing; a dry run writes nothing', () => {
     const dir = tmp();
-    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
+    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { STORY: { primaryHookType: 'in_medias_res' }, FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
     const before = readFileSync(join(dir, 'scenes.js'), 'utf8');
     const bad = applyStoryboard(storyboardApplySchema.parse({ path: dir, removeScenes: [2] }));
     assert.ok(!bad.written && bad.findings.some((f) => f.level === 'bad'));
@@ -292,7 +293,7 @@ describe('file round trip', () => {
   });
   it('a sparse plan without STRUCTURE saves and checks clean; an invalid eyeline reference is refused', () => {
     const dir = tmp();
-    const r = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { shots: [{ type: 'points', duration: 5, narration: [{ tts: 'The door closes.' }], beat: 'quiet-ending', shot: { size: 'invented-framing' } }] } }));
+    const r = applyStoryboard(storyboardApplySchema.parse({ path: dir, globals: { STORY: { primaryHookType: 'in_medias_res' } }, set: { shots: [{ type: 'points', duration: 5, narration: [{ tts: 'The door closes.' }], beat: 'quiet-ending', shot: { size: 'invented-framing' } }] } }));
     assert.ok(!r.findings.some(f => f.level === 'bad'), JSON.stringify(r));
     assert.equal(checkStoryboard({ path: dir, draft: true }).violations, 0);
     const invalid = applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { shots: [{ type: 'points', shot: { eyeline: { matchShot: 9 } } }] } }));
@@ -315,7 +316,7 @@ describe('file round trip', () => {
 describe('checkStoryboard', () => {
   it('runs the structure rules and check-scenes.js on a written board', () => {
     const dir = tmp();
-    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
+    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { STORY: { primaryHookType: 'in_medias_res' }, FORMAT: 'shorts-9x16', COMPREHENSION: comprehension } }));
     const r = checkStoryboard({ path: dir, draft: true });
     assert.equal(r.format, 'shorts-9x16');
     assert.equal(r.shots, 4);
@@ -356,16 +357,16 @@ describe('checkStoryboard', () => {
 describe('story first, then characters and lines', () => {
   it('a board records its story language once and keeps it', () => {
     const dir = tmp(), sequences = [{ id: 'q1', title: 'Opening', purpose: 'They meet' }];
-    writeStorySequences({ path: dir, sequences });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences });
     assert.equal(readBoard(dir).win.STORY.language, undefined);   // a board nobody named a language for reads as before
     writeStorySequences({ path: dir, language: 'ja', sequences });
-    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja', audienceSoundVersion: 1 });
+    assert.deepEqual(readBoard(dir).win.STORY, { version: 'story-v2', authoring: 'story-first', language: 'ja', audienceSoundVersion: 1, hookContractVersion: 1, primaryHookType: 'in_medias_res' });
     const other = writeStorySequences({ path: dir, language: 'en', sequences });
     assert.equal(readBoard(dir).win.STORY.language, 'ja');
     assert.ok(other.findings.some((f) => f.level === 'warn' && /^story_language/.test(f.what)));
     // A board written before the record existed is in the language of its shots, not of today's request.
     const old = tmp();
-    writeStorySequences({ path: old, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: old, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: old, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: old, shots: [{ scene: 1, summary: '샷' }] });
     const resumed = writeStorySequences({ path: old, language: 'en', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
@@ -376,7 +377,7 @@ describe('story first, then characters and lines', () => {
   it('story_sequence records the opening plan, a new plan replaces it, and the read returns its reading', () => {
     const dir = tmp(), sequences = [{ id: 'q1', title: '발단', purpose: '만남' }];
     const plan = { promise: '그가 사직서를 냈다', firstFrame: 'a resignation letter lands on the desk' };
-    const first = writeStorySequences(storySequenceSchema.parse({ path: dir, sequences, opening: plan }));
+    const first = writeStorySequences(storySequenceSchema.parse({ path: dir, primaryHookType: 'in_medias_res', sequences, opening: plan }));
     assert.deepEqual(readBoard(dir).win.STORY.opening, plan);
     assert.ok(first.board.includes('opening (short-form): promise "그가 사직서를 냈다" · first frame: a resignation letter lands on the desk'));
     writeStorySequences({ path: dir, sequences, opening: { promise: 'p2', firstFrame: 'f2' } });
@@ -387,10 +388,35 @@ describe('story first, then characters and lines', () => {
     assert.throws(() => storySequenceSchema.parse({ path: dir, sequences, opening: { promise: 'p' } }));
   });
 
+  it('keeps a numbered editorial title across story edits and rejects inconsistent input', () => {
+    const dir = join(tmp(), 'ep09-test', 'storyboard');
+    mkdirSync(dir, { recursive: true });
+    const base = { path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: 'Opening', purpose: 'An encounter' }] };
+    const plan = { episodeNumber: 9, headline: 'Ai kéo ghế?', thumbnailCue: 'Bơ turns around' };
+    for (const type of ['scene', 'reason', 'choice', 'empathy']) {
+      const titlePlan = { ...plan, type };
+      writeStorySequences(storySequenceSchema.parse({ ...base, titlePlan }));
+      writeStorySequences(base);
+      const read = readStoryboard(storyboardReadSchema.parse({ path: dir }));
+      assert.equal(read.title, 'EP09 · Ai kéo ghế?');
+      assert.deepEqual(read.titlePlan, titlePlan);
+    }
+    const win = readBoard(dir).win;
+    win.FORMAT = 'youtube-long-16x9';
+    win.STORY.opening = { promise: 'A reunion', firstFrame: 'An empty chair', widen: 'Who left?' };
+    assert.ok(!openingReading(win).some(line => line.includes('no thumbnail') || line.includes('no title')));
+    const before = readBoard(dir).sha256;
+    for (const patch of [{ type: 'search' }, { headline: ' EP09 · Again' }, { headline: 'Episode 09: Again' }, { headline: 'Hai\ndòng' },
+      { episodeNumber: 0 }, { episodeNumber: 9.1 }, { thumbnailCue: ' ' }, { searchTerm: ' ' }, { episodeNumber: 10 }]) {
+      assert.throws(() => writeStorySequences(storySequenceSchema.parse({ ...base, titlePlan: { ...plan, type: 'scene', ...patch } })));
+    }
+    assert.equal(readBoard(dir).sha256, before);
+  });
+
   it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
     const dir = tmp();
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.throws(() => writeStoryShots({ path: dir, shots: [{ scene: 1, summary: '샷' }] }), /story_order/);
     writeStoryScenes({ path: dir, scenes: [1, 2].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
     writeStoryShots({ path: dir, shots: [{ scene: 2, summary: 'b' }, { scene: 1, summary: 'a1' }, { scene: 1, summary: 'a2' }] });
@@ -413,7 +439,7 @@ describe('story first, then characters and lines', () => {
   });
   it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
     const dir = tmp();
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     const scene = { sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬', turn: '믿음이 깨진다' };
     writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [{ ...scene, charge: { open: '-', close: '--' } }] }));
     assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].charge, { open: '-', close: '--' });
@@ -431,9 +457,34 @@ describe('story first, then characters and lines', () => {
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
+  it('keeps all speakers, a silent visual reference and exact shot anchors across storyboard writes', () => {
+    const dir = tmp(), speakers = ['ada', 'bo', 'cy'], actors = [...speakers, 'dee'];
+    castFile(dir, actors);
+    writeStorySequences({path:dir, primaryHookType: 'in_medias_res', sequences:[{id:'q1',title:'The vote',purpose:'Reach a decision'}]});
+    const scene = {sequence:'q1', no:1, place:'Office', time:'Day', event:'The vote begins', summary:'Three members vote while Dee watches.',
+      speakers, speakerReferences:actors.map(character => ({character, path:`assets/characters/${character}/face.png`}))};
+    writeStoryScenes(storySceneSchema.parse({path:dir, scenes:[scene]}), true);
+    writeFileSync(join(dir, 'opening.png'), png);
+    const cards = [0,1,2,3,4].map(i => ({scene:1, summary:'A member considers the vote.', timeline:{
+      startFrame:i*24, endFrame:(i+1)*24, transition:i ? 'hard_cut' : 'open', framing:'Medium shot.', action:'A hand rises.',
+      images:[{role:'start',path:i ? `view-${i}.png` : 'opening.png',frame:i*24}]} }));
+    writeStoryShots(storyShotSchema.parse({path:dir,shots:cards}));
+    const ids = readBoard(dir).win.SCENES.map(card => card.id);
+    writeShotCharacters({path:dir,shots:ids.map((id,i) => ({id,characters:[actors[i % actors.length]]}))});
+    writeShotDialogue({path:dir,shots:speakers.map((speaker,i) => ({id:ids[i],lines:[{speaker,tts:'Aye.'}]}))});
+    writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{openingPositions:[],emotion:'Relief follows the vote.'}}]});
+    const result = readBoard(dir).win, saved = result.STRUCTURE.scenes[0];
+    assert.deepEqual(saved.speakers, speakers);
+    assert.deepEqual(saved.speakerReferences, scene.speakerReferences);
+    assert.deepEqual(result.SCENES.map(shot => shot.timeline.images), cards.map(shot => shot.timeline.images));
+    assert.deepEqual(result.SCENES.flatMap(shot => shot.narration ?? []).map(line => line.speaker), speakers);
+    assert.equal(saved.videoOpeningSha256, createHash('sha256').update(png).digest('hex'));
+    assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakers:speakers.slice(0,2)}]}), /scene_speaker_mismatch/);
+    assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakerReferences:[scene.speakerReferences[0],scene.speakerReferences[0]]}]}), /scene_reference_owner/);
+  });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [1, 2].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }] });
     castFile(dir, ['mina', 'joon', 'narrator'], { voiceOnly: ['narrator'] });
@@ -454,7 +505,19 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
-    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] }), /shot_speaker_limit/);
+    // A shot keeps the lines of several speakers in spoken order; the selected model's voice capacity is checked at planning.
+    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line => line.speaker), ['mina', 'narrator']);
+    const thought = { id: 'private', speaker: 'mina', voiceoverKind: 'inner_thought', tts: 'She knows.' };
+    const writeLine = line => writeShotDialogue({path:dir, shots:[{id:'s0001',lines:[line]}]});
+    const savedLine = () => readBoard(dir).win.SCENES[0].narration[0];
+    writeLine(thought);
+    assert.equal(savedLine().delivery, 'voiceover');
+    writeLine({id:'private',speaker:'mina',tts:'She already knows.'});
+    assert.equal(savedLine().voiceoverKind, 'inner_thought');
+    assert.throws(() => writeLine({...thought, delivery:'on_screen'}), /requires voiceover/);
+    writeLine({id:'private',speaker:'mina',tts:'She knows.',delivery:'on_screen'});
+    assert.equal(savedLine().voiceoverKind, undefined);
     writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'mina', tts: '괜찮아?' }] }, { id: 's0002', lines: [{ speaker: 'narrator', tts: '그날 밤.' }] }] });
     const shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.character, ['mina']);
@@ -474,7 +537,7 @@ describe('story first, then characters and lines', () => {
 describe('music is decided scene by scene', () => {
   // Three scenes in one sequence whose question scene 2 answers; shots s0001 · s0002 s0003 · s0004.
   const outline = (dir = tmp()) => {
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '편지는 누가 썼나', payoff: 2 }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '편지는 누가 썼나', payoff: 2 }] });
     writeStoryScenes({ path: dir, scenes: [1, 2, 3].map((no) => ({ sequence: 'q1', no, place: '숲', time: '낮', event: 'e', summary: '씬 ' + no })) });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 2, summary: 'b' }, { scene: 2, summary: 'c' }, { scene: 3, summary: 'd' }] });
     return dir;
@@ -555,7 +618,7 @@ describe('clichés are chosen for the story and recorded on the board', () => {
   const episode = (root, topic) => {
     const dir = join(manageProject({ action: 'episode', workspace: root, topic }).episode, 'storyboard');
     castFile(dir, ['mina'], { root: join(root, 'data/c') });
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     return dir;
   };
   const recorded = (dir) => readBoard(dir).win.CLICHES;
@@ -597,7 +660,7 @@ describe('clichés are chosen for the story and recorded on the board', () => {
     const dir = tmp();
     // The board's PRODUCTION as the episode snapshot hands it over: the type and the channel's saved choice.
     const type = (production) => { const { win, header } = readBoard(dir); writeFileSync(join(dir, 'scenes.js'), serializeBoard({ ...win, PRODUCTION: production }, header)); };
-    writeStorySequences({ path: dir, language: 'en', sequences: [{ id: 'q1', title: 'Intro', purpose: 'what it is' }] });
+    writeStorySequences({ path: dir, language: 'en', primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: 'Intro', purpose: 'what it is' }] });
     type({ videoType: { id: 'explainer' } });
     assert.equal(recorded(dir), undefined, 'no open record on a type that only recommends');
     assert.throws(() => writeStoryCliches({ path: dir, uses: [{ id: plain.id }] }), /cliche_user_choice: this episode recommends clichés/);
@@ -701,7 +764,7 @@ describe('icon attributes come after every shot\'s characters', () => {
   // A story-first board with two shots in one scene and mina in the cast.
   const storyBoard = () => {
     const dir = tmp();
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
     castFile(dir, ['mina']);
@@ -845,14 +908,14 @@ describe('icon attributes come after every shot\'s characters', () => {
     assert.match(bad(dir, { shotsById: [{ id: 's0001', shot: { ...shot, shot: { size: 'ms' } } }] }), /story_order: icon attributes before characters/);
     assert.match(bad(dir, { globals: { STORY: { version: 'story-v2' } } }), /story_order: STORY.authoring/);
     const legacy = tmp();
-    applyStoryboard(storyboardApplySchema.parse({ path: legacy, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1, shot: { size: 'ms' } }] }, globals: { STORY: { version: 'story-v2' } } }));
+    applyStoryboard(storyboardApplySchema.parse({ path: legacy, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1, shot: { size: 'ms' } }] }, globals: { STORY: { version: 'story-v2', primaryHookType: 'in_medias_res' } } }));
     assert.doesNotMatch(bad(legacy, { transitions: [{ no: 1, transition: 'cut', reason: 'opening' }] }), /story_order/);
   });
   it('a new board inside an episode starts with story_sequence', () => {
     const root = tmp(), episode = join(root, 'data/c/episodes/e'), dir = join(episode, 'storyboard');
     mkdirSync(dir, { recursive: true });
     assert.throws(() => applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1)]), shots: [{ type: 'points', scene: 1 }] } })), /story_order: a new episode board/);
-    const start = () => writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const start = () => writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.throws(start, /cast_required/);
     writeFileSync(join(dir, 'scenes.js'), 'window.SCENES = [];\n');   // a hand-made empty board waits for the cast too
     assert.throws(start, /cast_required/);
@@ -870,7 +933,7 @@ describe('icon attributes come after every shot\'s characters', () => {
   it('direct story writes wait for the target project even inside a ready parent workspace', () => {
     const parent = tmp(), root = join(parent, 'another project');
     const board = join(root, 'data/c/episodes/test/storyboard');
-    const write = () => writeStorySequences({ path: board, sequences: [{ id: 'opening', title: 'Opening', purpose: 'Introduce the guide' }] });
+    const write = () => writeStorySequences({ path: board, primaryHookType: 'in_medias_res', sequences: [{ id: 'opening', title: 'Opening', purpose: 'Introduce the guide' }] });
     assert.throws(write, /project_setup_required: workspace/);
     assert.throws(() => readFileSync(root), { code: 'ENOENT' });
     mkdirSync(board, { recursive: true });
@@ -903,7 +966,7 @@ describe('icon attributes come after every shot\'s characters', () => {
     manageProject({ action: 'update', workspace: root, expectedRevision: ready.revision, request: 'Plan Reels for this episode', settings: { sns } });
     const dir = join(manageProject({ action: 'episode', workspace: root, topic: 'e1' }).episode, 'storyboard');
     castFile(dir, ['mina'], { root: join(root, 'data/c') });
-    const started = writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    const started = writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     assert.match(started.board.find((l) => l.startsWith('opening (')), /^opening \(short-form · Reels: skip rate counts the first 3 s\): no plan/);
     const { win } = readBoard(dir);
     assert.deepEqual([win.FORMAT, win.PRODUCTION?.mode, win.STORY.authoring], ['shorts-9x16', 'video_50', 'story-first']);
@@ -912,7 +975,7 @@ describe('icon attributes come after every shot\'s characters', () => {
     manageProject({ action: 'update', workspace: root, expectedRevision: revision, request: 'Vietnamese stories', settings: { languages: { speech: 'vi', subtitles: [], review: [] } } });
     const next = join(manageProject({ action: 'episode', workspace: root, topic: 'e2' }).episode, 'storyboard');
     castFile(next, ['mina'], { root: join(root, 'data/c') });
-    writeStorySequences({ path: next, sequences: [{ id: 'q1', title: 'Mở đầu', purpose: 'Gặp nhau' }] });
+    writeStorySequences({ path: next, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: 'Mở đầu', purpose: 'Gặp nhau' }] });
     assert.equal(readBoard(next).win.STORY.language, 'vi');
   });
 });
@@ -928,7 +991,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: [{ id: 'mina', source: '../../../assets/characters/mina/identity.md' }] }));
     writeFileSync(join(dir, 'places/room.png'), png);
     writeFileSync(join(dir, 'places/key.png'), png);
-    writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
+    writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
     writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '방', time: '밤', event: 'e', summary: '씬' }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 1, summary: 'b' }] });
     applyStoryboard({ path: dir, draft: true, expectedSha256: readBoard(dir).sha256, globals: { SB_DOC: { locations: [{ id: 'room', name: '방', imageUrl: 'places/room.png' }],
@@ -1313,12 +1376,19 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), [
       's0001-mina-face', 's0001-friend-face', 's0001-mina-front', 's0001-friend-front']);
     assert.ok(win.SCENES[0].visual.references.every(r => r.use === 'image'));
+    const card = win.SCENES[0], references = card.visual.references.map(ref => ref.id === 's0001-friend-face'
+      ? {...ref, character:'friend', use:'both'} : ref);
+    applyStoryboard({path:dir,draft:true,shotsById:[{id:card.id,shot:{...card,visual:{...card.visual,references}}}]});
+    make(dir,card.id,'start',{location:'room'});
+    assert.deepEqual(readBoard(dir).win.SCENES[0].visual.references.find(ref => ref.id === 's0001-friend-face'),
+      references.find(ref => ref.id === 's0001-friend-face'));
     assert.ok(win.SB_DOC.characters.find(c => c.id === 'friend').panels.face.endsWith('/friend/face.png'));
     writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'first', reason: 'Frame route' } }] });
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['friend'] }] });
     writeShotIcons({ path: dir, shots: [{ id: 's0001', frames: { mode: 'reference', reason: 'MSR route' } }] });
     win = readBoard(dir).win;
-    assert.deepEqual(win.SCENES[0].visual.references.map(r => r.id), ['s0001-friend-face', 's0001-friend-front', 's0001-friend-back']);
+    assert.deepEqual(win.SCENES[0].visual.references.filter(ref => ref.role === 'character').map(ref => ref.id).sort(),
+      ['s0001-friend-back','s0001-friend-face','s0001-friend-front']);
   });
   it('known Qwen routes use identity reference roles without repeating appearance prose', () => {
     const { root, dir } = pictureBoard();
@@ -1491,7 +1561,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.deepEqual(owner.frames,{});
     assert.equal(owner.videoOpeningSha256,undefined);
   });
-  it('scene anchors and the optional shot reference are stored separately and image-only extras stay out of video', () => {
+  it('requires a composition for each shot and retains visible principals and scene anchor roles', () => {
     const {root,dir} = pictureBoard();
     castFile(dir,['mina','friend'],{root:join(root,'data/c')});
     const input = { sequence:'q1', no:1, place:'Room',time:'Night',event:'Meeting',summary:'Two people meet.' };
@@ -1499,7 +1569,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     icons(dir);
     const snapshot = () => readBoard(dir).win;
     const first = 's0001', last = 's0002';
-    assert.deepEqual(createRequire(import.meta.url)('../../skills/storyboard/references/structure-contract.js').imageGaps(snapshot()),[]);
+    const {imageGaps}=createRequire(import.meta.url)('../../skills/storyboard/references/structure-contract.js');
+    assert.deepEqual(imageGaps(snapshot()),['shot s0001 has no shot image','shot s0002 has no shot image']);
     assert.throws(()=>make(dir,last,'start',{role:'scene_start'}),/first card/);
     assert.throws(()=>make(dir,first,'start',{role:'shot_reference',bystanders:['mina']}),/scope/);
     const independentEnd = make(dir,last,'end',{role:'scene_end',location:'room'});
@@ -1507,13 +1578,20 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.doesNotMatch(independentEnd.prompt,/opens on Image 1|Image 1 supplies the opening/);
     const opening = make(dir,first,'start',{role:'scene_start',bystanders:['friend']});
     assert.ok(opening.inputs.some(file=>file.includes('/characters/friend/')));
+    assert.deepEqual(imageGaps(snapshot()),['shot s0002 has no shot image']);
+    const timed = snapshot();
+    timed.SCENES[1].timeline = {startFrame:24, images:[{role:'start',frame:24,path:'places/key.png'}]};
+    assert.deepEqual(imageGaps(timed),[]);
+    timed.SCENES[1].timeline.images[0].frame++;
+    assert.deepEqual(imageGaps(timed),['shot s0002 has no shot image']);
     writeShotCharacters({path:dir,shots:[{id:last,characters:['mina','friend']}]});
     for (const generated of [make(dir,last,'start',{role:'shot_reference'}),make(dir,last,'end',{role:'scene_end'})])
-      assert.ok(generated.inputs.every(file=>!file.includes('/characters/friend/')));
+      assert.ok(generated.inputs.some(file=>file.includes('/characters/friend/')));
 
     const board=snapshot(), frames=board.STRUCTURE.scenes[0].frames;
     assert.match(frames.start,/scene_start/); assert.match(frames.end,/scene_end/);
     assert.match(board.SCENES[1].referenceImage,/shot_reference/);
+    assert.deepEqual(imageGaps(board),[]);
     assert.ok(board.SCENES.every(card=>!card.visual.frames?.start && !card.visual.frames?.end));
     const direction = {openingPositions:[],emotion:'Hope returns.'};
     writeStoryScenes({path:dir,scenes:[{...input,videoDirection:direction}]});
@@ -1521,8 +1599,61 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,createHash('sha256').update(png).digest('hex'));
     writeStoryScenes({path:dir,scenes:[{...input,frames:{}}]});
     assert.equal(snapshot().STRUCTURE.scenes[0].videoOpeningSha256,undefined);
-    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_limit/);
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:[]}]}),/scene_speaker_mismatch/);
     assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...input,speakers:['mina'],speakerReferences:[{character:'extra',path:'places/key.png'}]}]}),/scene_reference_owner/);
+  });
+  it('reuses the opening’s scene geography without copying its crop or losing a reverse view', () => {
+    const {dir} = pictureBoard();
+    const scene = {sequence:'q1',no:1,place:'Room',time:'Night',event:'Meeting',summary:'They talk across a table.',
+      speakers:['mina'], directionDefaults:{axis:'Keep the camera on the aisle end. Mina faces across the table.'}};
+    writeStoryScenes({path:dir,scenes:[scene]});
+    const {win,sha256} = readBoard(dir);
+    applyStoryboard({path:dir,draft:true,expectedSha256:sha256,globals:{SB_DOC:{...win.SB_DOC,locations:[
+      {id:'room',layout:'Separate seats sit on opposing sides of the grill.',invariants:'One green window beyond the table.',
+        panels:{front:'places/room.png',back:'places/back.png'}},
+      {id:'terrace',imageUrl:'places/back.png'},
+    ]}}});
+    chooseEpisodeImage(dir,{engine:'host',model:'host-managed',host:'codex'},'Fixture: inspect the actual host image inputs');
+    writeFileSync(join(dir,'places/back.png'),png);
+    icons(dir);
+    writeShotIcons({path:dir,shots:[{id:'s0002',view:{mode:'three-quarter-left',subject:'Mina waiting',subjectId:'mina',
+      crop:'Mina from the crown to mid-chest, with the aisle at right',reason:'Keep the glance readable.'}}]});
+    const next = {path:dir,id:'s0002',role:'shot_reference',frame:'start',prompt:'Mina looks toward the other seat.'};
+    const unanchored = shotImageRequest(next);
+    assert.ok(unanchored.warnings.some(row=>row.what.startsWith('scene_composition_reference_missing:')));
+    const first = make(dir,'s0001','start',{role:'shot_reference',location:'room'});
+    assert.match(first.prompt,/Separate seats sit on opposing sides of the grill/);
+    assert.match(first.prompt,/Keep the camera on the aisle end/);
+    assert.equal(readBoard(dir).win.SCENES[0].visual.locationId,'room');
+    const later = shotImageRequest(next);
+    assert.equal(later.inputs[0], first.file);
+    assert.deepEqual(later.args.referenceImages,later.inputs);
+    assert.equal(later.refs[0].role,'continuity');
+    assert.equal(later.refs[0].use,'image');
+    assert.match(later.prompt,/Mina from the crown to mid-chest/);
+    assert.match(later.prompt,/Use the current shot’s crop, camera side, visible cast, action phase and prop state/);
+    assert.ok(later.inputHashes[first.file]);
+    const differentPlace = shotImageRequest({...next,location:'terrace'});
+    assert.ok(!differentPlace.inputs.includes(first.file));
+
+    writeShotIcons({path:dir,shots:[{id:'s0002',backgroundView:'back'}]});
+    const reverse = shotImageRequest({...next,props:['key']});
+    assert.deepEqual(reverse.inputs.slice(0,2),[join(dir,'places/back.png'),first.file]);
+    assert.equal(reverse.inputs.length,5);
+    assert.match(reverse.inputs[4],/reference-sheet-[a-f0-9]+\.png$/);
+    assert.equal(readImageMetadata(reverse.inputs[4]).width,1024);
+    assert.match(reverse.prompt,/Image 5, row 1, column 2 shows the key prop/);
+    assert.ok(reverse.inputHashes[join(dir,'places/key.png')]);
+    assert.ok(!reverse.prompt.includes("Keep Image 1's physical arrangement"));
+    storyboardImages.deferShotImage(next, reverse);
+    writeFileSync(reverse.file,png);
+    make(dir,'s0001','start',{role:'shot_reference',location:'room'});
+    const completion = {path:dir,id:next.id,frame:'start',action:'complete',requestId:reverse.requestId};
+    assert.throws(()=>storyboardImages.completeShotImage(completion),/shot_image_request_stale/);
+    const finalOpening = make(dir,'s0002','start',{role:'shot_reference',location:'room'});
+    const finalImage = make(dir,'s0002','end',{role:'scene_end'});
+    assert.equal(finalImage.inputs[0],finalOpening.file);
+    assert.match(finalImage.prompt,/final shot’s opening composition/);
   });
   it('a frame composes the place, then the sheet panels, after every shot has its icons', () => {
     const { root, dir } = pictureBoard();
@@ -1751,7 +1882,7 @@ describe('tool surface', () => {
   });
   it('storyboard_read returns the tree; storyboard_apply rejects an unknown argument', async () => {
     const dir = tmp();
-    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { FORMAT: 'shorts-9x16' } }));
+    applyStoryboard(storyboardApplySchema.parse({ path: dir, set: { structure: structure([scene(1), scene(2)]), shots: board() }, globals: { STORY: { primaryHookType: 'in_medias_res' }, FORMAT: 'shorts-9x16' } }));
     const out = await ROUTES.storyboard_read({ path: dir, level: 'scenes' });
     const tree = JSON.parse(out.content[0].text);
     assert.equal(tree.sequences[0].scenes[1].shots.length, 2);
@@ -1827,8 +1958,8 @@ describe('storyboard_read inspection', () => {
       { id: 's0003', scene: 3, narration: [{ speaker: 'caller', tts: 'Hello.', delivery: 'off_screen' }] }];
     withBoard(dir => {
       const { sceneBoundaries: joins } = readStoryboard(storyboardReadSchema.parse({ path: dir })).boundaryReview;
-      assert.deepEqual(joins.map(row => [row.left.no, row.right.no, row.sameTime, row.speakerLimit]),
-        [[5, 2, true, 'within_two'], [2, 7, false, 'within_two'], [7, 3, true, 'exceeds_two']]);
+      assert.deepEqual(joins.map(row => [row.left.no, row.right.no, row.sameTime, row.speakersKnown]),
+        [[5, 2, true, true], [2, 7, false, true], [7, 3, true, true]]);
       assert.deepEqual(joins[0].right.shotIds, ['s0002']);
       assert.deepEqual(joins[2].speakers, ['father', 'child', 'caller']);
     }, win);
@@ -1844,18 +1975,18 @@ describe('storyboard_read inspection', () => {
     clip.visual = { reuse: { clip: 'call.mp4' } };
     clip.performance = [{ kind: 'dialogue', group: 1, character: 'caller' }];
     recorded.STORY.transcripts = [{ shot: 3, source: 'call.mp4', groups: [{ text: 'Hello.', start: 0, end: 1 }] }];
-    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'exceeds_two');
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakersKnown, true);
     recorded.STORY.transcripts[0].source = 'other.mp4';
-    assert.equal(contract().sceneBoundaries(recorded)[2].speakerLimit, 'unknown');
+    assert.equal(contract().sceneBoundaries(recorded)[2].speakersKnown, false);
     const malformed = structuredClone(win);
     malformed.SCENES = {};
     malformed.STRUCTURE.scenes[0].speakers = 'child';
-    assert.equal(contract().sceneBoundaries(malformed)[0].speakerLimit, 'unknown');
+    assert.equal(contract().sceneBoundaries(malformed)[0].speakersKnown, false);
     delete win.STRUCTURE.scenes[0].speakers;
     delete win.SCENES[1].narration;
     withBoard(dir => {
       const report = readStoryboard(storyboardReadSchema.parse({path: dir})).boundaryReview;
-      assert.equal(report.sceneBoundaries[0].speakerLimit, 'unknown');
+      assert.equal(report.sceneBoundaries[0].speakersKnown, false);
     }, win);
   });
   it('boundary review covers changed speakers, silent action, reverse views and explicit scene changes', () => {
@@ -1979,7 +2110,107 @@ describe('opening reading', () => {
   });
 });
 
+describe('primary opening hook', () => {
+  const sequences = [{ id: 'q1', title: 'The lock', purpose: 'Find the cause' }];
+  const chosen = (dir, id, direction = 'D1') => writeFileSync(join(dir, 'scenario.md'),
+    '---\nversion: scenario-v2\ndirection: ' + direction + '\n---\n```scenario-json\n' + JSON.stringify({primaryHookType:id}) + '\n```\n');
+  const fails = (result, code) => {
+    assert.equal(result.written, false);
+    assert.ok(result.findings.some(finding => finding.code === code), JSON.stringify(result.findings));
+  };
+
+  it('inherits the selected scenario, rejects a diverging write and reconciles against the saved board revision', () => {
+    const dir = tmp();
+    const sequence = extra => writeStorySequences({ path: dir, sequences, ...extra });
+    fails(sequence({}), 'hook_type_required');
+    assert.equal(existsSync(join(dir, 'scenes.js')), false);
+    chosen(dir, 'cause_mystery', 'D2');
+    assert.equal(createRequire(import.meta.url)('../../skills/storyboard/references/opening-hook.js').readSelected(dir).direction, 'D2');
+    fails(sequence({primaryHookType:'live_demonstration'}), 'hook_type_conflict');
+    assert.equal(sequence({}).written, true);
+    const {win, sha256} = readBoard(dir);
+    assert.equal(win.STORY.primaryHookType, 'cause_mystery');
+    assert.equal(win.STORY.hookContractVersion, 1);
+    chosen(dir, 'live_demonstration');
+    fails(sequence({}), 'hook_type_conflict');
+    fails(sequence({primaryHookType:'live_demonstration'}), 'hook_type_conflict');
+    const revise = {primaryHookType:'live_demonstration', previousPrimaryHookType:'cause_mystery', expectedSha256:sha256};
+    assert.throws(() => sequence({...revise, expectedSha256:'0'.repeat(64)}), /head_moved/);
+    assert.ok(sequence(revise).written);
+    assert.equal(sequence({}).written, true);
+    const current = readBoard(dir);
+    assert.equal(current.win.STORY.primaryHookType, 'live_demonstration');
+    fails(applyStoryboard({ path: dir, globals: { STORY: {authoring:'story-first'} } }, {outline:true}), 'hook_type_conflict');
+    writeFileSync(join(dir, 'scenario.md'), 'malformed');
+    fails(sequence({primaryHookType:'live_demonstration'}), 'hook_type_invalid');
+    assert.ok(checkStoryboard({path:dir, draft:true}).structure.some(f=>f.code === 'hook_type_invalid'));
+    assert.equal(readBoard(dir).sha256, current.sha256);
+  });
+
+  it('enrolls a raw draft and a promoted scaffold, and distinguishes archival repairs from opening rewrites', () => {
+    const dir = tmp(), shot = {id:'s0001', type:'points', summary:'A lock clicks'};
+    const raw = extra => applyStoryboard({path:dir, set:{shots:[shot]}, ...extra});
+    fails(raw({}), 'hook_type_required');
+    writeFileSync(join(dir,'scenes.js'), serializeBoard({SCENES:[]}));
+    fails(raw({}), 'hook_type_required');
+    const declare = STORY => applyStoryboard({path:dir,globals:{STORY}}, {outline:true});
+    fails(declare({version:'story-v2',viewerNeed:'Why did the lock click?'}), 'hook_type_required');
+    fails(declare({primaryHookType:['sensory_pattern']}), 'hook_type_invalid');
+    assert.ok(raw({globals:{STORY:{primaryHookType:'sensory_pattern'}}}).written);
+    const newBoard = readBoard(dir).win;
+    assert.equal(newBoard.STORY.hookContractVersion, 1);
+    fails(raw({globals:{STORY:{...newBoard.STORY,primaryHookType:'cause_mystery'}}}), 'hook_type_conflict');
+
+    const old = tmp();
+    writeFileSync(join(old,'scenes.js'), serializeBoard({SCENES:[shot]}));
+    assert.equal(applyStoryboard({path:old, globals:{FORMAT:'shorts-9x16'}}).written, true);
+    const revision = readBoard(old).sha256;
+    const patch = {path:old,shotsById:[{id:shot.id,shot:{...shot,summary:'The door is already open'}}]};
+    fails(applyStoryboard(patch), 'hook_type_required');
+    fails(writeStorySequences({path:old,sequences,primaryHookType:'in_medias_res'}), 'hook_type_conflict');
+    assert.ok(writeStorySequences({path:old,sequences,primaryHookType:'in_medias_res',previousPrimaryHookType:null,expectedSha256:revision}).written);
+    assert.ok(applyStoryboard(patch).written);
+    const damaged = readBoard(old).win;
+    delete damaged.STORY.primaryHookType;
+    delete damaged.STORY.hookContractVersion;
+    writeFileSync(join(old,'scenes.js'), serializeBoard(damaged));
+    writeFileSync(join(old,'opening-review.json'), '{}');
+    fails(applyStoryboard({path:old,globals:{FORMAT:'shorts-9x16'}}), 'hook_type_required');
+    assert.ok(checkStoryboard({path:old,draft:true}).structure.some(f=>f.code === 'hook_type_required'));
+  });
+  it('detects changed rendered words and timed cues across the opening while allowing media and later-shot repairs', () => {
+    const dir = tmp(), sceneNo = 1;
+    const quote = {id:'s0001',type:'quote',scene:sceneNo,duration:1.25,speaker:'Archivist',role:'Witness',
+      text:'The seal was split.',visual:{overlay:'html'}};
+    const insert = {id:'s0002',type:'broll',duration:1.75,after:1,
+      timeline:{startFrame:0,endFrame:42,transition:'hard_cut',framing:'The hinge',action:'Steam escapes.',images:[{frame:12,role:'keyframe',cue:'A drop falls.',path:'hinge.png'}]}};
+    const later = {id:'s0003',type:'points',scene:sceneNo,duration:3,visual:{overlay:'none',action:'They close the lid.'}};
+    writeFileSync(join(dir,'scenes.js'),serializeBoard({SCENES:[insert,quote,later]}));
+    const change = shot => applyStoryboard({path:dir,shotsById:[{id:shot.id,shot}]});
+    fails(change({...quote,text:'The seal was intact.'}), 'hook_type_required');
+    fails(change({...quote,shot:{videoDesign:{before:'The ribbon is already torn.'}}}), 'hook_type_required');
+    fails(change({...insert,timeline:{...insert.timeline,action:'The rivet falls out.'}}), 'hook_type_required');
+    fails(change({...insert,timeline:{...insert.timeline,images:[{...insert.timeline.images[0],cue:'The light turns red.'}]}}), 'hook_type_required');
+    const tail = change({...later,visual:{...later.visual,action:'They lift the lid.'}});
+    assert.ok(tail.written, JSON.stringify(tail.findings));
+    assert.ok(change({...quote,visual:{...quote.visual,bg:'repaired-file.png'}}).written);
+    assert.equal(readBoard(dir).win.STORY?.primaryHookType, undefined);
+  });
+});
+
 describe('scenario_check runner', () => {
+  it('checks every inline candidate before handoff without writing a project or requiring cast', () => {
+    const option = {direction:'D1', text:'The lock clicks twice.', primaryHookType:'sensory_pattern'};
+    const check = synopses => checkScenario(scenarioCheckSchema.parse({synopses}));
+    assert.deepEqual(check([option, {...option,direction:'D2'}]).synopses.map(x => x.primaryHookType), ['sensory_pattern','sensory_pattern']);
+    const result = check([option, {direction:'D1',text:' ',primaryHookType:['sensory_pattern']}]);
+    assert.deepEqual(result.findings.map(f=>f.code), ['synopsis_direction','synopsis_text','hook_type_invalid']);
+    assert.equal(result.synopses, undefined);
+    assert.equal(check([{...option, arbitrary:true}]).findings[0].code, 'synopsis_field');
+    for (const direction of ['D0',' D2','first']) assert.equal(check([{...option,direction}]).findings[0].code, 'synopsis_direction');
+    assert.equal(check([{...option,primaryHookType:null}]).findings[0].code, 'hook_type_required');
+    assert.equal(scenarioCheckSchema.safeParse({path:'scenario.md',synopses:[option]}).success, false);
+  });
   it('returns the checker JSON on exit 1 and turns exit 3 stderr into an input error', () => {
     const dir = tmp();
     const checker = join(dir, 'check-scenario-fixture.js');
@@ -2117,7 +2348,7 @@ it('keeps scene sound decisions through story and structure writes without marki
   const use = { decision: 'use', reason: 'A sustained tone carries the suspicion.' };
   const none = { decision: 'none', reason: 'Her answer lands in the room tone.' };
   const read = () => readStoryboard({ path: dir, level: 'outline', includeTechniques: false }).audienceSpotting;
-  writeStorySequences({ path: dir, sequences });
+  writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences });
   const added = writeStoryScenes(storySceneSchema.parse({ path: dir, scenes: [scenes[0], { ...scenes[1], audienceSound: none }] }));
   assert.equal(added.written, true);
   assert.deepEqual(read().undecided, [1]);
@@ -2151,7 +2382,7 @@ it('round-trips perspective, shift and exit only while the scene uses audience s
   const apply = audienceSound => applyStoryboard(storyboardApplySchema.parse({ path: dir, draft: true, scenes: [scene(1, { summary: story.summary, audienceSound })] }));
   const stored = () => readBoard(dir).win.STRUCTURE.scenes[0].audienceSound;
   const spotted = level => readStoryboard({ path: dir, level, includeTechniques: false }).audienceSpotting.scenes[0];
-  writeFileSync(join(dir, 'scenes.js'), serializeBoard({ STRUCTURE: structure([scene(1), scene(2, { summary: 'She lays the letter down.' })]),
+  writeFileSync(join(dir, 'scenes.js'), serializeBoard({ STORY: { primaryHookType:'in_medias_res', hookContractVersion:1 }, STRUCTURE: structure([scene(1), scene(2, { summary: 'She lays the letter down.' })]),
     SCENES: board().map(shot => ({ ...shot, visual: { character: 'reader' }, narration: [], summary: 'She reads the letter.' })) }));
   assert.equal(save({ ...use, perspective: '  ' + use.perspective + '  ' }).written, true);
   assert.deepEqual(stored(), use);
@@ -2247,7 +2478,7 @@ it('plans, retimes and removes only the audience event; take bytes and end shots
   shots[0].visual = {video:{clip:'selected.mp4'}};
   shots[0].sound = {audioSource:'video',drop:true,effects:[{id:'door',sfx:'door'}]};
   writeFileSync(join(dir,'selected.mp4'),'take 1');
-  applyStoryboard(storyboardApplySchema.parse({path:dir,set:{structure:structure([scene(1),scene(2, { audienceSound: { decision: 'none', reason: 'An unscored reply' } })]),shots}}));
+  applyStoryboard(storyboardApplySchema.parse({path:dir,globals: { STORY: { primaryHookType: 'in_medias_res' } }, set:{structure:structure([scene(1),scene(2, { audienceSound: { decision: 'none', reason: 'An unscored reply' } })]),shots}}));
   assert.deepEqual(readBoard(dir).win.STRUCTURE.scenes[0].audienceSound, {decision:'undecided'});
   const read = (extra = {}) => readStoryboard(storyboardReadSchema.parse({path:dir,includeTechniques:false,...extra}));
   const apply = (extra) => applyStoryboard(storyboardApplySchema.parse({path:dir,expectedSha256:readBoard(dir).sha256,...extra}));

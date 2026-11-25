@@ -8,16 +8,20 @@ description: >
   then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__story_cliche", "mcp__plugin_social-flow_social-flow__story_cliche", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan"]
+allowed-tools: ["mcp__social-flow__scenario_check", "mcp__plugin_social-flow_social-flow__scenario_check", "mcp__social-flow__story_opening_review", "mcp__plugin_social-flow_social-flow__story_opening_review",
+  "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__story_cliche", "mcp__plugin_social-flow_social-flow__story_cliche", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan"]
 ---
-Before drafting a synopsis or storyboard, identify the project directory the user selected.
+For a chat-only synopsis, validate and review the inline prose. Before writing episode
+files or drafting a storyboard, identify the project directory the user selected.
 If it is unclear, ask for it and wait. Follow [project setup](../project-init/SKILL.md)
 until `project_manage status` returns `ready` in that directory.
 
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
-Follow [dialogue coverage](references/dialogue-coverage.md): split at every speaker
-change without making every new speaker the picture's subject. First plan the scene's
+Follow [dialogue coverage](references/dialogue-coverage.md): a shot keeps every line spoken
+in its view, so cut where the staging, the visible evidence or the selected model's
+pinned-voice capacity calls for another view, not at every speaker change, and do not make
+every speaker the picture's subject. First plan the scene's
 [attention and visible changes](references/shot-view.md#plan-attention-across-the-scene),
 then set each shot's size, angle and delivery. Keep silent
 listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
@@ -30,7 +34,14 @@ Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
 Build each scene around the event the viewer follows. Keep its cause, reaction and consequence together across reverse angles, inserts and silent action. Choose the video operation after grouping the shots. At each proposed boundary, read the place, time, event and combined speaker roster in `storyboard_read.boundaryReview.sceneBoundaries`. A genuine time jump, new setting or distinct event earns a new scene, even when one shot tells it. A recurring routine may use a short montage with a visible cue for elapsed time. If a third voice or the selected route's duration forces a split, preserve the handoff and name the production reason. Check that the entire regrouped scene fits before generation.
 
-Declare up to two speakers in `story_scene.speakers` across the entire scene, including off-screen lines and voiceover. Use `[]` for a silent scene. Start a new scene before a third person speaks. The scene owns its speakers' identity references and its optional opening and ending images (`frames.start` and `frames.end`). A shot may have one optional `referenceImage` for composition. The planner attaches it only when the selected operation accepts that use. Supply extra visible cast members as `bystanders` when composing the scene opening with `shot_image`. Submit the complete scene once with `video_plan {episode,sceneNo,requestId}`, including scenes with a single shot.
+Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
+
+Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
+
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
+- Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 **Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story
 sentences, summaries and lines in one language: the one the user names for this episode,
@@ -55,8 +66,10 @@ review HTML. Keep that scope distinction when the user asks to make a story more
 After drafting or revising a synopsis, complete the **required
 [reality check](references/synopsis-reality-check.md)** before presenting it or developing
 scenes. Apply the findings to the prose and show the sources and any unresolved points.
-For a synopsis-only request, deliver the checked prose and brief findings. If the central
-event still depends on an unverified assumption, present it as provisional and stop before
+For each candidate, choose one [primary hook](references/opening-hook-types.json),
+validate it with `scenario_check` and run the [three-second opening review](references/opening-review.md)
+on the finished prose. Include the type, current receipt and findings in a synopsis-only handoff.
+If the central event still depends on an unverified assumption, present it as provisional and stop before
 detailed scenes or production.
 
 For every new or substantially revised synopsis and board, apply
@@ -76,7 +89,13 @@ SNS platforms first. Short-form gets one opening for every platform, built for t
 window (Reels, 3 s): the first frame shows the subject already changed or mid-action and the
 promise is complete by about 3 s. Long-form decides its title and thumbnail first; the first
 7 s confirm them and the next 20 s open a bigger question. Record the plan with
-`story_sequence` `opening`; every board write prints a reading of it and refuses nothing.
+`story_sequence` `opening`. The first sequence inherits `primaryHookType` from the
+selected scenario. On a direct board, supply the type with that first write.
+
+For a numbered story series, choose the episode's public headline when writing the first
+sequence. Save its number, one editorial type and the thumbnail cue with `story_sequence.titlePlan`.
+Use the [numbered title template](references/storyboard-template.md#numbered-episode-titles).
+The approval page and the cover read the same plan. For long-form it supplies the title.
 
 **Clichés (user directive, 2026-11-18).** A drama, comedy or romance episode uses researched
 clichés as story material by default. While casting, writing the synopsis and writing scenes,
@@ -98,7 +117,7 @@ approved videos.
 For saved GenAI selections, use [GenAI operation selection](../_shared/astra-genai.md)
 while preparing sheets and shots. Plan img2img for whole-image changes, inpaint for
 local corrections and MSR for one character's physical dialogue. Silent shots and
-inner thoughts use image2video; thoughts get timed character TTS.
+inner thoughts use image2video. Set `voiceoverKind:"inner_thought"` in `shot_dialogue` and use the thinking character’s timed TTS.
 Record the source, mask or numbered reference roles and the intended operation.
 MSR references are not first/last frames. Preserve the GPT Image 2 rule for readable
 text; do not generate assets merely to test a planning choice.
@@ -158,6 +177,10 @@ The review derives camera icons, cut connections and planned length bars from ex
 For related cuts, use [shot continuity](references/shot-continuity.md): stage concrete
 opening/closing poses and shared blocking before choosing source images. Keep dependent
 actions connected; a source still depicts the opening instant, not the completed action.
+Set the scene's fixed spatial relationships and camera side in `story_scene.directionDefaults`
+before composing the first shot. Name seats or standing marks, facing, eyelines and a fixed
+landmark. Check each shot's own view against that layout. Establish or make that arrangement
+legible at the first opportunity without forcing an establishing shot on a tight opening.
 
 Read [automation guidance](../_shared/automation-guidance.md) and
 [character-led scenarios](references/character-scenarios.md). They define the active
@@ -177,6 +200,12 @@ runtime. Do not open with a target duration, shot count or one-line-per-shot all
 Preserve explicit user limits, approved spending and actual adapter constraints.
 This skill authors the plans; use produce for authorized media at each visual stage.
 Stop at the requested artifact without bypassing required earlier stages.
+
+### Write the selected model's scene prompt
+
+Write **one prompt per complete generated scene**. Read the selected engine, exact model and operation from the episode snapshot. Get the adapter's `sceneWritingGuide` from `video_catalog`, and open its `promptReference` page when the row names one: it holds the ranges the vendor's guide recommends for reference people, files and voice samples. Use the ordered shots to describe the opening, transitions, actions, spoken words, listening characters and the final state. Keep dialogue in its approved language. For provider examples see the [scene writing profiles](../../docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md).
+
+Keep an authored edit in the scene's `videoDirection.promptDrafts` through `story_scene`. Each entry has `engine`, the selected `model` when present, `operation` and `prompt`. Preserve entries for other selections. Give a face and its voice the same cast ID. Use `{mina.face}` or `{mina.voice}` only for references the operation can send. Once the scene's images and samples are ready, run `video_plan` with `episode`, `sceneNo`, `requestId` and `wholeScene:true`. Without an edit the planner composes the model-specific scene. Inspect `args.prompt`, `promptTemplate` and the submitted reference order. To preview another draft pass `prompt` to the same planner. Approve and execute the reviewed plan ID. If the route requires separate renders, revise the scene or select a compatible operation explicitly.
 
 ## 1. Reuse the project's choices and shared cast
 
@@ -264,6 +293,7 @@ change the audience's guess, the actual resolution and the response it enables. 
 ending in the author-facing synopsis. Give the opening its own paragraph: format and
 platforms, first frame, the promise and where it is paid, and on long-form the title,
 thumbnail and the bigger question by 30 s ([opening by format](references/opening-by-format.md#7-write-it-down-and-read-it-back)).
+For alternatives, validate every candidate's ID and review each opening before selection.
 Repair a middle that only postpones the same answer;
 do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
 or existing expectation/change/setup notes, not an added planning schema.
@@ -322,8 +352,7 @@ until one is recorded; nothing waits for it.
 A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
 pictures that carry none: where this is and who else is there, a character's work while it is
 happening, the person a line lands on, the walk or wait between two exchanges. A role the cast
-names — a coach, a shop owner — is seen once in the act. In conventional dialogue coverage, one speaker per shot limits who talks,
-not who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
+names — a coach, a shop owner — is seen once in the act. Who speaks does not decide who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
 can share the frame. Every board write then prints the board as counts — people in frame, shots
 with and without a line, the widest shot of each scene; read them as the board's shape, not as
 targets to reach.
@@ -345,7 +374,7 @@ eyes, mouth, shoulders, hands. "Worried" alone leaves the face to the model, and
 no cue draws a pleasant one; "brows drawn together, eyes searching the tree line, lips pressed
 shut" does not. A mixed label such as "bewildered but grateful" comes out as a smile. The
 silent listener gets a state too. Keep one state per shot: a change of state is the shot's
-action or the next shot. `shot_image` and `shot_prompt` put these words into the prompts.
+action or the next shot. `shot_image` stages the image and the scene writer carries these details into the video prompt.
 
 When a character leaves a shot later, `shot_characters` keeps their lines
 as `off_screen` and warns, and it warns when the start image shows the old cast; revise them
@@ -365,7 +394,7 @@ shot's order: story, characters, then lines and icons. `production_workflow` com
 and lines say.
 
 **Music spotting (user directive, 2026-11-14).** Once the lines are written and before
-`shot_prompt`, decide each scene's music with `story_music`. Start with `story_music {path}`:
+writing the scene prompt, decide each scene's music with `story_music`. Start with `story_music {path}`:
 its report lists the scenes still undecided, payoff and turn scenes marked, and `direction`,
 the notes saved from what the user has said about music on this channel. Follow those notes
 before your own taste. Then give every scene one decision with its reason:
@@ -389,7 +418,7 @@ When the user corrects the music (too much, wrong mood, where it belongs), save 
 in the same turn as a dated line in `production.musicDirection` with `project_manage update`
 ([model settings](../_shared/model-settings.md)), so the next episode starts from it. Nothing
 waits for this step and no tool refuses a board without it; `storyboard_read.musicSpotting`,
-`shot_prompt`, the review page and the build report say which scenes are still open. Legacy
+the review page and the build report say which scenes are still open. Legacy
 boards that play one bed keep `sound.cue` (scenes-schema §Placing cues on a story board).
 
 **Audience-only sound.** Revisit each scene's `audienceSound` once the lines, shots and music
@@ -511,7 +540,7 @@ One shot may carry a complete exchange. Use the ordered `performance` and speech
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 Before committing the shot list, read each complete scene without cuts, then compare the
-proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. In conventional dialogue coverage, merge adjacent shots when they keep one speaker and the frame carries the continuing action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. Merge adjacent shots when the frame carries the continuing action, replies included. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
 Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
 after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
@@ -519,7 +548,7 @@ actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-For conventional dialogue coverage, plan speaker changes with the following choices.
+A speaker change alone does not require a cut; the selected model's pinned-voice capacity applies to each render and `video_plan` reports a scene over it.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
 use speaker-facing OTS/reverse when the speaking face carries the new information, or
 purposeful off_screen speech over a reaction, detail or spatial view when that carries it.
@@ -687,6 +716,12 @@ the content disagree before exporting the review.
 
 ## 6. Validate and deliver the plan honestly
 
+Once the text storyboard has its shot actions and timing, complete the
+[three-second opening review](references/opening-review.md) before exporting or delivering it,
+including a direct board outside a managed workflow. Carry the synopsis receipt into
+this stage. Use the remaining rounds of the same five-edit allowance. Report the current
+disposition and the concrete cue behind it.
+
 Set `SB_DOC.speechPlanVersion:1` and `SB_DOC.performanceTimingVersion:1` on new boards.
 The latter distinguishes new action timing from legacy audio-clock compatibility: drafting
 may show unknown action time, but production needs finite independent-action durations.
@@ -696,7 +731,7 @@ independent script files. Generate readable exports from this source. When the u
 for a check or a blind read, use:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js" storyboard/scenario.md
+node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js" storyboard/scenario.md --authoring
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js" storyboard/ --text
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js" storyboard/ --draft
 ```
@@ -748,7 +783,7 @@ around it, what the prompt must name, and how 9:16 changes it — and a use is a
 convention, not a measured effect. Set the camera move and focus with `shot_icons`, which writes
 `shot.techniques:[{id,reason}]` (a hold, `camera.static`, may go without its reason); give a video move its `speed` (slow, steady, fast) and `target`,
 and a rack focus its `from` and `to` subjects in English, because `shot_image` stages them and
-`shot_prompt` writes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
+the scene writer describes them ("The camera slowly pushes in toward …", "Rack focus from … to …").
 An action beat can lay a beat accent over its move with `shot_icons accents` — `camera.speed-ramp`
 or `camera.impact-shake`, each with `on`, the one moment it fires on in English.
 On a 9:16 board the result lists each chosen value's vertical note; read it before the images.

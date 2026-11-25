@@ -20,15 +20,21 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   const conditioned=buildDesktopBody('audio-to-video',{...audio,...controls,audioPath:'wav',imagePath:'start',prompt:''},{wav:'asset-w',start:'asset-i'});
   for(const [key,value] of Object.entries(controls)) assert.equal(conditioned.params[key],value);
   assert.equal(conditioned.inputs.startFrame.assetId,'asset-i');
-  assert.equal(image.params.promptProvenance,undefined);
+  // A written prompt is sent as finished. Only a call naming typed lets the app rewrite it, and an empty prompt names nothing.
+  assert.equal(image.params.promptProvenance,'enhanced');
+  assert.equal(buildDesktopBody('text-to-video',{...base,promptProvenance:'typed'},{}).params.promptProvenance,'typed');
+  assert.equal(conditioned.params.promptProvenance,undefined);
   assert.throws(()=>buildDesktopBody('image-to-video',{...base,imagePath:'a',promptProvenance:'skip'},{a:'asset-a'}));
   assert.throws(()=>buildDesktopBody('audio-to-video',{...base,audioPath:'wav'},{wav:'w'}));
   assert.throws(()=>buildDesktopBody('image-to-video',{...base,imagePath:'a',loras:[{ref:'opaque'}]},{a:'a'}));
   const edit=buildDesktopBody('retake',{model:base.model,sourceVideoPath:'v',startTime:0,duration:2,targetResolution:{width:576,height:320},reserveUsd:0},{v:'video'});
   assert.deepEqual(edit.params.resolution,{width:576,height:320});assert.equal(edit.params.targetResolution,undefined);
+  // Retake and extend take no rewrite policy, even with a prompt.
+  assert.equal(buildDesktopBody('extend',{model:base.model,prompt:'A ball rolls on',sourceVideoPath:'v',duration:2,reserveUsd:0},{v:'video'}).params.promptProvenance,'enhanced');
   const pins={...base,keyframes:[{imagePath:'a',frameIndex:0,strength:0},{imagePath:'b',frameIndex:48,strength:1}]};
   const keyframes=buildDesktopBody('keyframes',pins,{a:'a',b:'b'});
   assert.equal(keyframes.params.model,'fast');assert.equal(keyframes.keyframes[0].strength,0);
+  assert.equal(keyframes.params.promptProvenance,'enhanced');
   for(const frameIndex of [0,49])assert.equal(DESKTOP_SCHEMAS.keyframes.safeParse({...pins,keyframes:[pins.keyframes[0],{imagePath:'b',frameIndex}]}).success,false);
 });
 test('explicit source windows honor Desktop milliseconds, grid and remaining audio', () => {

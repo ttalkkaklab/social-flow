@@ -13,12 +13,12 @@ approval, score or execution gate. Requested `review-camera` adds an independent
    It includes every join, not just suspected mistakes. `no` is a storage locator,
    not a stable id; use `id` for edits and `playbackPosition` for order. Missing or duplicate
    ids must be resolved before an id-addressed change. Review silent actions and readable
-   two-person exchanges too. Keep replies on one card for an explicit one-take. Otherwise set framing for each speaker's coverage.
+   two-person exchanges too. Keep replies on one card while one view holds the exchange. Set framing for each speaker's coverage where it cuts.
 3. For each join compare three options: hold the current frame, motivate a move/reframe,
-   or cut within the one-speaking-character-per-shot rule. Choose the simplest option that carries the whole performance. Do not replace
+   or cut. Choose the simplest option that carries the whole performance. Do not replace
    every cut with a complicated camera move. State what the viewer must see that the
    current frame cannot convey, or the time/place change or verified generation limit.
-   Check [dialogue coverage](dialogue-coverage.md): conventional coverage gives the reply its own shot in the same scene request. Its attention subject may be a meaningful action, listener, detail or space instead
+   Check [dialogue coverage](dialogue-coverage.md): a reply stays on the card while its view holds the exchange and gets its own shot, in the same scene request, when the evidence needs another view. That shot's attention subject may be a meaningful action, listener, detail or space instead
    of the speaker's face. Choose a reverse when the face carries the change; never force a two-shot or
    relabel a visible hidden-mouth speaker as offscreen merely to reduce cuts.
    A glance, pause, new sentence or hand movement alone is insufficient. Intentional
@@ -96,7 +96,7 @@ keep a cut when its removal loses information, geography, performance or feasibl
 | One student introduces a report, then announces entry in the same locked camera | One performance through the head turn; cut when the newly noticed person is shown. |
 | Refusing a question, then stating a condition, same speaker and listener | Keep the complete answer unless the next view reveals evidence the current frame cannot. |
 | Boss confirms identity, grants permission and sends regards | One sustained performance can include pauses and departure; do not allocate a shot to each clause. |
-| Two people exchange several lines in a readable two-shot | Keep a requested one-take continuous through the replies. For conventional coverage, cut where the next speaker’s view begins. |
+| Two people exchange several lines in a readable two-shot | Keep the replies on the card while the view holds the exchange, a requested one-take included; cut where the evidence needs another view. |
 | Same face/size but an offscreen sound changes its meaning | Keep an earned reaction cut when timing/viewpoint supports it; matching metadata does not mandate merging. |
 | Block then counterattack, adjacent silent beats | Prefer continuous readable action; keep an insert/reverse only for a concrete contact or geography need. |
 | Opposing OTS views have identical size and cast | Compare viewer/subject, axis, reveal and reaction; size/cast equality does not mean the same frame. |

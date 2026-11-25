@@ -14,7 +14,7 @@ test('camera cycle advances on every step and reverses without repeating the end
     [0, 1, 2, 3, 2, 1, 0, 1, 2]
   );
 });
-test('live performance rejects a held image and advances while no one is speaking', () => {
+test('live performance rejects a held image and advances while no one is speaking', async () => {
   const project = mkdtempSync(join(tmpdir(), 'live-motion-test-'));
   let live;
   try {
@@ -41,6 +41,7 @@ test('live performance rejects a held image and advances while no one is speakin
       /still frame/
     );
     live = new MotionAvatar({ project, motionVideo: 'move.mp4', idleVideos: ['move.mp4'] });
+    await assert.rejects(live.render(Buffer.alloc(16),new AbortController().signal),/post_lipsync_forbidden/);
     const first = live.next();
     assert.ok(!first.equals(live.next()));
     for (let n = 0; n < 34; n++) live.next();
@@ -56,6 +57,7 @@ test('each external launch needs a start decision before looking up assets or cr
   const cli = fileURLToPath(new URL('../dist/character-live.bundle.js', import.meta.url));
   const choices = JSON.parse(execFileSync(process.execPath, [cli, 'choices'], { encoding: 'utf8' }));
   assert.deepEqual(choices.choices.map(choice => choice.id), ['ready', 'preview', 'cancel']);
+  assert.ok(choices.speechLanguages.some(item => item.tag === 'vi' && item.label));
   assert.deepEqual(choices.output, [720, 1280]);
   assert.equal(choices.spatialUpscale, false);
   assert.equal(choices.faceComposite, false);

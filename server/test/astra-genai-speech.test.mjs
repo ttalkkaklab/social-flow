@@ -112,3 +112,16 @@ test('an explicit episode default-voice exception survives planning and inspecti
  assert.throws(()=>manageSpeech({path:file,action:'plan_audio',lineId:'l1'}),/character_voice_unregistered/);
  assert.notEqual(fs.readFileSync(file,'utf8'),original);
 });
+
+test('a busy speech GPU (429 with Retry-After) is waited out; quota 429s are not retried',async t=>{
+ const {generateGenaiSpeech}=await import('../dist/astra-genai-speech.js');
+ const {pcmToWav}=await import('../dist/media-utils.js');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'gateway-busy-')),original=globalThis.fetch,key=config.astraGenaiApiKey;
+ config.astraGenaiApiKey='fixture';t.after(()=>{globalThis.fetch=original;config.astraGenaiApiKey=key;fs.rmSync(dir,{recursive:true,force:true});});
+ let calls=0;globalThis.fetch=async()=>++calls===1?new Response('{"error":"Model backend unavailable"}',{status:429,headers:{'Retry-After':'0'}}):new Response(pcmToWav(Buffer.alloc(1600),8000,1));
+ const done=await generateGenaiSpeech({model:'vox',text:'Hello',requestId:'busy',outputPath:dir,filename:'busy.wav'});
+ assert.equal(done.success,true);assert.equal(calls,2);
+ calls=0;globalThis.fetch=async()=>{calls++;return new Response('{"error":"Daily generation limit reached"}',{status:429});};
+ const quota=await generateGenaiSpeech({model:'vox',text:'Hello',requestId:'quota',outputPath:dir,filename:'quota.wav'});
+ assert.equal(quota.success,false);assert.match(quota.error,/HTTP 429/);assert.equal(calls,1);
+});

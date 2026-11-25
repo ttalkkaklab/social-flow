@@ -6,6 +6,47 @@ continue to resolve. New catalog-based LTX planning selects the canonical name.
 MLX-Serve is the internal backend; `engine:"mlx"` in saved settings is unchanged.
 No existing settings or episode snapshots are migrated implicitly.
 
+## Mac image and video settings
+
+Select `{"engine":"mlx","model":"ddalcu/MiniMax-H3-Image-MLX-Serve-4bit"}` for
+images and `{"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","operation":"reference"}`
+for talking shots. The Mac image tools send requests directly to MLX-Serve.
+Check its model catalog for the installed image checkpoint. Use `image_plan`
+and `image_execute` for a managed generation or edit. For an edit, pass
+the source in `imagePath` and up to nine ordered `refImagePaths`. The result
+keeps the source dimensions up to the worker’s 6272-pixel long-side limit.
+The plan records the expected output size. The worker owns the six sampling steps. Use
+GPT Image 2 when the image must display or preserve readable text.
+
+Managed direct H3 image plans pin the MLX endpoint and reference hashes. After
+a disconnect, refresh the original image request with `image_status`. A saved
+native PNG under the plan ID can finish delivery without another inference.
+A request that has not returned any bytes stays unresolved.
+
+A separately selected legacy gateway binding uses its own image receipt and
+request lookup. Existing plans keep their approved destination.
+
+For an on-screen speaker, pin the character's voice sample and list the owned
+face under `voiceReference.imagePaths`. Give each shot its own composition
+image. Keep the dialogue in the storyboard and set `STORY.language`, for example
+`vi`. The planner compiles a speaker tag, a picture index, an audio index and
+the original words in a `<d>[Vietnamese] …</d>` span.
+
+A 240-frame scene at 24 fps needs a 243-frame native take. Managed FastH3
+execution keeps the original MP4 in `.work/fasth3/<plan-id>/native.mp4` and
+delivers the authored frame count with its matching audio duration. After a
+disconnect, call `video_status` with the original request ID and `action:"refresh"`.
+A complete local take can finish delivery without another model invocation.
+If the worker disconnected before returning media, the request remains unresolved.
+
+For character dialogue, inspect `voiceReferenceCheck` on the delivery receipt.
+On the Mac test, a take generated the requested Vietnamese line and replayed
+its Korean reference recording later in the same shot. The waveform check
+reports the reference index, time and correlation for a possible full-sample
+replay. Exclude that interval from speaker-similarity scoring and listen to
+the complete clip before adoption. Short phrases or paraphrases can escape
+the waveform check.
+
 ## Architecture
 
 `local-video-models.ts` is a small Strategy registry. Each entry owns its schema,
@@ -44,57 +85,12 @@ A standalone adapter accepts the following inputs.
 }
 ```
 
-## Verified upstream call surfaces
+## Call contract
 
-Checked on 2026-10-29 against the following primary sources:
-
-- [FastVideo release and examples](https://haoailab.com/blogs/fastvideo-omniref-update/).
-- [FastVideo MLX reference types and validation](https://github.com/hao-ai-lab/FastVideo/blob/7203b4976eefcd70a52728ca1281797ce96734eb/fastvideo/mlx_runtime/minimax_h3_reference.py).
-- [FastVideo MLX generate signature](https://github.com/hao-ai-lab/FastVideo/blob/7203b4976eefcd70a52728ca1281797ce96734eb/fastvideo/mlx_runtime/minimax_h3_pipeline.py).
-- [MLX-Serve HTTP parser](https://github.com/ddalcu/mlx-serve/blob/49977fe79744dbe622403bb0a21ffa831122d516/src/plugins/minimax_h3/plugin.zig) and [reference ordering](https://github.com/ddalcu/mlx-serve/blob/49977fe79744dbe622403bb0a21ffa831122d516/src/plugins/minimax_h3/h3.zig).
-- [Installed conversion model card](https://huggingface.co/ddalcu/FastH3-Omni-MLX-Serve-8bit/blob/main/README.md).
-
-These are different APIs. FastVideo Python accepts `generate(prompt, output_path=..., references=[MiniMaxH3Reference(source=..., media_type="image" | "video" | "audio")], num_steps=8, ...)`. References may also specify `soundtrack`, `fps` and `sample_rate` where applicable. The social-flow adapter uses the separately maintained MLX-Serve HTTP API, not this Python signature.
-
-| social-flow input | MLX-Serve JSON field | Wire value |
-| --- | --- | --- |
-| `referenceImagePaths` | `ref_images` | Ordered base64 PNG/JPEG strings |
-| `referenceVideoPaths` | `ref_videos` | Objects with base64 `frames` and optional WAV `audio` |
-| `referenceAudioPaths` | `ref_audios` | Ordered base64 WAV strings |
-| `referenceSize` | `ref_image_size` | `match` or `max` |
-| `numFrames` | `num_frames` | Exact frame count |
-| `steps` | `steps` | 8 |
-
-The adapter POSTs to `/v1/video/generations` with `model`, `prompt`, `width`, `height`, optional `seed` and `stream:true`. It consumes SSE progress and the final RGB/PCM payload, then writes the MP4 locally. File paths are adapter inputs; they are not passed directly to the HTTP server.
-
-Both the official Ref2VA validator and this conversion require a visual reference: audio-only and text-only requests are rejected. An image reference guides identity/composition; it does not pin the exact first frame. MLX-Serve also parses `first_frame_image` and `last_frame_image` in its shared H3 implementation, but this adapter does not expose those fields: their quality and semantics with this Omni pack have not been verified. `chain_windows > 1` explicitly rejects REF2VA packs. Do not infer these capabilities from FL2VA or hosted services.
-
-The 256 MiB RGB ceiling, 60 MiB encoded upload limit, dimension range and explicit trim opt-in below are adapter policies. They are not universal FastH3 model limits.
-
-## Contract
-
-- Exactly 8 steps. 24 fps, frames on the `17k+5` ladder from 124 through 362.
-  `requiredSeconds` rounds UP on this ladder; LTX still uses `8k+1`.
-- Width/height: multiples of 32, 256–1536. Decoded RGB must fit this adapter's
-  256 MiB compatibility limit (the installed MLX-Serve 26.10.3 UI limit). A 15-second request needs a smaller canvas than a 5-second one.
-- Up to 9 PNG/JPEG images, 3 videos and 3 audio files; at most 12 total and at
-  least one image or video. Each clip is 2–15 seconds; video references total
-  at most 15 seconds. The encoded request must fit 60 MiB.
-- Reference videos are decoded to JPEG frames at 24 fps with a maximum 768px
-  side. Their soundtracks are converted to stereo 32kHz PCM WAV. By default,
-  references that require tail trimming fail. `trimReferenceVideos:true`
-  permits truncation to the output frame count and the `17k+5` ladder; paired
-  audio is trimmed to that same duration. Standalone audio is also converted
-  to stereo 32kHz PCM WAV.
-- `referenceSize:"match"` is the default; `max` costs more time and memory.
-- Prompt image labels are `<Picture N>`. Video soundtrack audio labels precede
-  standalone `<Audio N>` labels. Automatic pinned-character voice mapping
-  probes video soundtracks and offsets standalone audio labels accordingly.
-- This adapter supports reference generation, not first/last keyframes or clip
-  continuation. Reactor's API capabilities must not be assumed for this pack.
-- Voice reference means timbre guidance. Exact supplied speech, original WAV
-  preservation and validated lip-sync remain unsupported. Output quality is
-  `not_reviewed` until actual playback has been inspected.
+The MLX-Serve request fields, reference limits (images, videos, audio, totals and clip lengths), the
+`17k+5` frame ladder, canvas and RGB caps, prompt labels and voice binding are in the
+[video model call reference](video-models.md#fasth3-omni), together with what MLX-Serve, FastVideo and
+the MiniMax model card each accept.
 
 ## Verification
 

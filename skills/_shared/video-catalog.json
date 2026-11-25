@@ -14,11 +14,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -252,11 +255,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -493,11 +499,20 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
+        "maxPinnedVoicesPerRender": {
+          "dreamina-seedance-2-5-260628": 10,
+          "dreamina-seedance-2-5-flash-261115": 5,
+          "dreamina-seedance-2-0-260128": 3,
+          "dreamina-seedance-2-0-fast-260128": 3,
+          "dreamina-seedance-2-0-mini-260615": 3
+        },
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -738,11 +753,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -783,11 +800,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -829,11 +848,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -883,11 +904,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -925,11 +948,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -968,11 +993,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1005,7 +1032,7 @@
     {
       "tool": "astra_genai_text2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "text",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1015,11 +1042,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1041,7 +1070,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "shots",
         "reserveUsd",
         "outputPath",
         "filename"
@@ -1051,13 +1079,13 @@
           "ltx-2.5-22b-distilled",
           "ltx-2.5-22b-dev"
         ],
-        "note": "Use duration, exact numFrames or automatic duration. Optional shots describe 2–4 cuts. Plain distilled generation accepts registered LoRAs on supporting backends."
+        "note": "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
       }
     },
     {
       "tool": "astra_genai_img2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "image",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1065,24 +1093,16 @@
         "timedImages": true,
         "shotScopedReferences": false,
         "frameAddressedNativeDialogue": false,
-        "sceneRenderer": {
-          "model": "ltx-2.5-22b-distilled",
-          "sceneAudioModes": [
-            "native",
-            "mix"
-          ],
-          "sceneRendering": "per_shot",
-          "requiresUserChoice": true,
-          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
-          "validation": "/v1/ltx/v2/scene-to-video/validate"
-        },
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
         "lane": "conditional_reference",
         "dialogue": "requires_subject_references",
         "voiceReference": "backend_dependent_with_subject_references",
@@ -1104,7 +1124,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "shots",
         "reserveUsd",
         "outputPath",
         "filename",
@@ -1136,8 +1155,7 @@
             1,
             2
           ],
-          "capability": "/v1/ltx/msr/capabilities:image_conditioning",
-          "voiceCapability": "voice_references"
+          "capability": "the gateway refuses at submission references its backend does not take"
         },
         "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
       }
@@ -1145,7 +1163,7 @@
     {
       "tool": "astra_genai_audio2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "audio",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1153,23 +1171,15 @@
         "timedImages": true,
         "shotScopedReferences": false,
         "frameAddressedNativeDialogue": false,
-        "sceneRenderer": {
-          "model": "ltx-2.5-22b-dev",
-          "sceneAudioModes": [
-            "conditioning"
-          ],
-          "sceneRendering": "per_shot",
-          "requiresUserChoice": true,
-          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
-          "validation": "/v1/ltx/v2/scene-to-video/validate"
-        },
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1206,9 +1216,58 @@
       }
     },
     {
+      "tool": "astra_genai_scene",
+      "engine": "astra-genai",
+      "deployment": "genai-generations",
+      "operation": "reference",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "sceneAudio": false
+      },
+      "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
+      "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
+        "lane": "conditional_reference",
+        "dialogue": "requires_subject_references",
+        "voiceReference": "backend_dependent_with_subject_references",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "cast",
+        "references",
+        "shots",
+        "resolution",
+        "fps",
+        "seed",
+        "generateAudio",
+        "reserveUsd",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2.5-22b-distilled"
+        ],
+        "note": "One POST /v1/generations mode:\"scene\" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. LTX: 1..4 cast pictures and object references, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames."
+      }
+    },
+    {
       "tool": "astra_genai_msr",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-msr",
+      "deployment": "genai-generations",
       "operation": "reference",
       "sceneInputs": {
         "fpsField": "frameRate",
@@ -1218,11 +1277,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "backend_dependent",
@@ -1269,11 +1331,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1318,11 +1382,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1369,11 +1435,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1414,11 +1482,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1467,11 +1537,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1514,11 +1586,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1553,11 +1627,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1603,11 +1679,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -1655,11 +1734,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1707,11 +1788,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1748,11 +1831,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -1791,11 +1876,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -1833,11 +1920,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2029,11 +2118,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "supplied",
         "dialogue": "allowed",
         "voiceReference": "unsupported",
@@ -2224,11 +2315,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2243,6 +2336,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2348,11 +2442,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2367,6 +2463,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2474,11 +2571,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "requires_model_generated_scene_voice",
         "voiceReference": "unsupported",
@@ -2493,6 +2592,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2599,11 +2699,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2618,6 +2720,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2723,11 +2826,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2740,6 +2846,7 @@
         "model",
         "resolution",
         "durationSeconds",
+        "generateAudio",
         "outputPath",
         "filename",
         "sourceImagePath",
@@ -2752,7 +2859,7 @@
           "MiniMax-H3-Lite",
           "MiniMax-H3-Max"
         ],
-        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
       }
     },
     {
@@ -2768,11 +2875,14 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "supported",
@@ -2785,6 +2895,7 @@
         "model",
         "resolution",
         "durationSeconds",
+        "generateAudio",
         "outputPath",
         "filename",
         "ratio",
@@ -2798,7 +2909,7 @@
           "MiniMax-H3-Lite",
           "MiniMax-H3-Max"
         ],
-        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
       }
     },
     {
@@ -2814,11 +2925,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
       "voice": {
+        "maxPinnedVoicesPerRender": 0,
+        "postLipSync": false,
         "lane": "none",
         "dialogue": "refused",
         "voiceReference": "unsupported",
@@ -2857,11 +2970,13 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
       "voice": {
+        "maxPinnedVoicesPerRender": 3,
+        "postLipSync": false,
         "lane": "reference",
         "dialogue": "allowed",
         "voiceReference": "backend_dependent",

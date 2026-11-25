@@ -26,12 +26,11 @@ test('an unknown remote job pauses admissions and a completed job with a broken 
     const path = new URL(url).pathname;
     if (path === '/asset.mp4') return new Response(null, {status:502});
     if (path === '/v1/models') return Response.json({data:[{id:'ltx-2.5-22b-distilled', parameters_by_mode:{image2video:['num_frames']}}]});
-    if (path.endsWith('/capabilities')) return Response.json({image_conditioning:true, voice_references:true});
     if (path.endsWith('/uploads')) return new Response(null, {status:404});
     if (init.method === 'POST') { submitted++; return Response.json({id:'accepted-job'}); }
     assert.ok(path.endsWith('/accepted-job'));
     polled++;
-    return completed ? Response.json({id:'accepted-job', status:'completed', result:{video_url:'https://cdn.example/asset.mp4'}})
+    return completed ? Response.json({id:'accepted-job', status:'succeeded', outputs:[{url:'https://cdn.example/asset.mp4'}]})
       : new Response(null, {status:403});
   });
   const pool = new LiveRenderPool(1), signal = new AbortController().signal;

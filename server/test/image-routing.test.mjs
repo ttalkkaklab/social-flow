@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import os from 'node:os';
+import {execFileSync} from 'node:child_process';
 import path from 'node:path';
 import { planImage, executeImage, imageStatus, routeLegacyImage } from '../dist/image-routing.js';
 import { imageTransaction } from '../dist/image-state.js';
@@ -49,6 +50,8 @@ test('plan rejects mismatch, unknown fields, invalid operations and escaped outp
   const f = fixture(t);
   assert.throws(() => f.plan('a', { surprise: true }), /argument_unsupported/);
   assert.throws(() => f.plan('a', {}, { tool: 'gpt_image_text2img' }), /selection_mismatch/);
+  assert.throws(() => f.plan('a', {}, { engine: 'gpt-image' }), /image_selection_mismatch: engine/);
+  assert.equal(f.plan('a', {}, { engine: 'zimage' }).id, f.plan('a').id);
   assert.throws(() => f.plan('a', {}, { operation: 'edit' }), /operation_unsupported/);
   assert.throws(() => f.plan('a', { outputPath: '../outside' }), /output_outside/);
   assert.throws(() => f.plan('a', { filename: 'state.json' }));
@@ -201,4 +204,35 @@ test('an adapter failure marked terminal is failed and does not hold the concurr
   const failed = await f.run(p, async () => ({ isError: true, terminal: true, content: [{ type: 'text', text: 'rejected' }] }));
   assert.equal(failed.structuredContent.status, 'failed');
   assert.equal((await f.run(f.plan('next'), async (_tool, args) => output(args))).structuredContent.status, 'completed');
+});
+
+test('direct H3 refresh recovers the approved render after a lost reply without a second dispatch', async t => {
+  const f = fixture(t, {engine:'mlx', model:'ddalcu/MiniMax-H3-Image-MLX-Serve-4bit'});
+  const url = process.env.MLX_SERVE_URL;
+  process.env.MLX_SERVE_URL = 'http://127.0.0.1:1';
+  t.after(() => { if (url === undefined) delete process.env.MLX_SERVE_URL; else process.env.MLX_SERVE_URL = url; });
+  const p = f.plan('attempt-1',{width:256,height:256});
+  assert.deepEqual(p.mlxSize,{width:256,height:256});
+  let calls = 0;
+  const lost = await f.run(p, async (_tool,args) => {
+    calls++;
+    fs.mkdirSync(args.outputPath,{recursive:true});
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=256x256','-frames:v','1','-threads','1',path.join(args.outputPath,args.filename)]);
+    throw new Error('lost response');
+  });
+  assert.equal(lost.structuredContent.status, 'submission_unknown');
+  const query = {directory:f.dir, requestId:p.requestId, action:'refresh'};
+  const recovered = await imageStatus(query);
+  assert.equal(calls,1);
+  assert.equal(recovered.status,'completed');
+  assert.equal(recovered.result.imageReceipt.mlxEndpoint,p.mlxEndpoint);
+  assert.equal(recovered.result.imageReceipt.planId,p.id);
+  assert.ok(fs.existsSync(p.outputFile));
+  await f.run(p,async () => assert.fail('completed request must be reused'));
+  fs.writeFileSync(p.outputFile,'corrupt');
+  await assert.rejects(imageStatus(query));
+  const wrong = f.plan('wrong-size');
+  const rejected = await f.run(wrong,async (_tool,args) => output(args));
+  assert.match(rejected.content[0].text,/image_output_size_mismatch/);
+  assert.ok(!fs.existsSync(wrong.outputFile));
 });

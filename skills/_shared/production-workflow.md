@@ -19,8 +19,11 @@ Create or resume the episode with `project_manage episode`.
 
 The story tools enforce story order and cast readiness. The author completes the required
 [synopsis reality check](../storyboard/references/synopsis-reality-check.md) after drafting or
-revising a synopsis and before handing it over or opening scenes. Independent reviews and
-Blender compositions run on request. Spending limits, generation authorization and adapter
+revising a synopsis and before handing it over or opening scenes. Choose one
+[primary hook](../storyboard/references/opening-hook-types.json) per candidate and carry
+the selected ID into the board. The [opening review](../storyboard/references/opening-review.md)
+runs after each completed synopsis and text board. Other independent reviews and Blender
+compositions run on request. Spending limits, generation authorization and adapter
 input validation stay. Work in this order:
 
 1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
@@ -51,7 +54,7 @@ input validation stay. Work in this order:
    using [shot boundary decisions](../storyboard/references/shot-boundaries.md). Read
    `storyboard_read.boundaryReview` and `videoTiming`, revise unnecessary boundaries, and
    preserve speech/performance/continuity before images. This is authoring, not a new gate.
-   Set shared camera, axis, continuity, lighting and attention with `story_scene.directionDefaults` before the shot images. Set a shot move only where it changes the default.
+   Set the actors' seats or marks, facing and fixed landmarks in `story_scene.directionDefaults.continuity`, and the camera side and eyelines in `axis`. Set each shot's crop and viewpoint with `shot_icons.view`. Set a shot move only where it changes the default.
 5. Props and backgrounds — `SB_DOC.props` and `SB_DOC.locations` with their images.
    Before a prop's description or picture, look up the real thing — the rule or form that
    makes it genuine and saved pictures of actual examples — and record `research` on its
@@ -61,15 +64,15 @@ input validation stay. Work in this order:
    `panels.back`; follow [asset sheets](../storyboard/references/asset-sheets.md).
    Set each shot's opening `shot_icons.backgroundView` against that layout before
    `shot_image` selects its matching panel (front by default).
-6. Generate the scene's chosen opening and ending images from the first and last cards using `shot_image.role` values `scene_start` and `scene_end`. Optionally compose one `shot_reference` per card. A still-camera shot keeps its own source image.
+6. Generate and inspect the first card's image before composing the corresponding scene's other shots. Use `scene_start` for a temporal opening or `shot_reference` for a composition image. Later cards in the same space use the first image as a spatial reference with their own framing, actions and prop states. Use `scene_end` for a temporal ending. It uses the final shot's reference when available. Attach one composition image to every generated shot. A still-camera shot uses its own source image.
 7. Inspect the scene's first frame and save its `videoDirection` with `story_scene`. Keep opening positions, emotion and the continuous audio track on the scene. Record each shot’s interval, camera setup, action, dialogue, incoming transition and frame-addressed images on its card.
-8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. Replan the complete scene after a shot correction.
+8. Generate one video for each scene of generated shots with `video_plan {episode,sceneNo,requestId}` → `video_approve` → `video_execute`. The planner reports missing or unreadable shot images as `shot_image_required` and reports composition images the selected operation omits. Replan the complete scene after a shot correction.
 9. Assembly and delivery (produce). Place the planned audience cues against the accepted cuts
    and mix them with the scene's voice, room tone and music. [Audience cue placement](../produce/references/video-sound.md#audience-effects)
 
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
-every shot's icon attributes, and `shot_prompt` for every picture shot's start image (and
+every shot's icon attributes, and `shot_prompt` for every picture shot's image (and
 the end image a `first_last` plan needs).
 
 The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an
@@ -78,7 +81,8 @@ is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and 
 without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
 story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
 `cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). A synopsis-only
-request stops after the reality check. A text-only storyboard request stops after step 4,
+request ends with its checked prose, opening review receipt and findings.
+A text-only storyboard request ends after step 4 and its opening review,
 with the cast's panels made first under spending authorization. An image request stops
 after step 6. Missing character media or
 spending authorization is reported, never silently bypassed.
@@ -124,17 +128,19 @@ and [review-cut-videos](../review-cut-videos/SKILL.md) run only when the user as
 [generate-cut-videos](../generate-cut-videos/SKILL.md) steps 7–8.
 [generate-cover](../generate-cover/SKILL.md) makes the cover once shots have pictures, any time
 before publishing; it is outside the numbered order. Autoproduce coordinates.
-`storyboard_check` runs every storyboard rule when the user asks; `storyboard_apply`
-refuses only an unreadable board and the story order.
+`storyboard_check` reports board integrity and editorial findings on request.
+Board writes protect story order, cast readiness and the saved primary hook.
 
 ## Progress record
 
 `production_workflow` keeps an optional record per episode (absolute `episode` path):
 `begin` registers a stage's files (`entries:[{id,text,image,images,video}]`), `complete`
 stores their hashes, `rewind` drops a stage's record and `status` shows them. Stages
-complete in any order and no other tool reads this record. The one check left: a story-v2
-`text_storyboard` completes only once every shot has its story and characters
-(`story_outline_required`). For CLI use, put the same JSON in a request file and run
+complete in any order and no other tool reads this record. At `text_storyboard`,
+story-v2 requires each shot's story and characters (`story_outline_required`).
+Enrolled boards require a valid primary hook matching the selected scenario. Completion
+reports the review on the current opening, including unresolved findings. For CLI use,
+put the same JSON in a request file and run
 `node "$CLAUDE_PLUGIN_ROOT/server/dist/bundle.js" --workflow request.json`.
 
 ```json

@@ -20,10 +20,12 @@ test('continuous encoder records live audio, closes utterance and writes decodab
   const poses = Array.from({ length: 8 }, (_, i) => Buffer.alloc(WIDTH * HEIGHT * 3, i * 15));
   const log = [];
   const voices = [
-    { id: 'probe', source: 'operator', text: 'hello', pcm: Buffer.alloc(SAMPLES * 6, 70) },
-    { id: 'cut-short', source: 'operator', text: 'another reply', pcm: Buffer.alloc(SAMPLES * 50, 70) }
+    { id: 'probe', source: 'operator', text: 'hello', pcm: Buffer.alloc(SAMPLES * 6, 70),motion:{id:'probe'} },
+    { id: 'cut-short', source: 'operator', text: 'another reply', pcm: Buffer.alloc(SAMPLES * 50, 70),motion:{id:'cut-short'} }
   ];
   try {
+    await assert.rejects(encode(poses,join(dir,'blocked.flv'),[],0.1,new AbortController().signal,
+      ()=>({...voices[0],motion:undefined}),()=>{}),/post_lipsync_forbidden/);
     await encode(
       poses,
       archive,
@@ -31,7 +33,8 @@ test('continuous encoder records live audio, closes utterance and writes decodab
       1,
       new AbortController().signal,
       () => voices.shift(),
-      (e, v) => log.push([e, v])
+      (e, v) => log.push([e, v]),
+      {startSpeech(){}, next(){return poses[0]}, release(){}}
     );
     assert.deepEqual(
       log.map((s) => s[0]),

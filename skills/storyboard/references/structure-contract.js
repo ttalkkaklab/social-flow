@@ -426,10 +426,8 @@
         return first && second ? first === second : null;
       };
       const speakers = [...new Set([...left.speakers, ...right.speakers])];
-      const speakerLimit = speakers.length > 2 ? 'exceeds_two' :
-        left.speakersKnown && right.speakersKnown ? 'within_two' : 'unknown';
       return { left, right, samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
-        speakers, speakerLimit };
+        speakers, speakersKnown: left.speakersKnown && right.speakersKnown };
     });
   }
 
@@ -438,8 +436,7 @@
     return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime).map(join => ({
       level: 'warn', code: 'scene_boundary_review', where: 'scene ' + join.right.no,
       what: `scene_boundary_review: scenes ${join.left.no} and ${join.right.no} share the same place and time. ` +
-        (join.speakerLimit === 'exceeds_two' ? 'The combined cast exceeds two speakers. Keep the required production boundary and carry the ongoing action across it.' :
-        'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.') }));
+        'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.' }));
   }
 
   function check(win, opts) {
@@ -1131,6 +1128,12 @@
     return n;
   }
 
+  function episodeTitle(win) {
+    const plan = win.STORY && win.STORY.titlePlan;
+    if (plan && Number.isSafeInteger(plan.episodeNumber) && plan.episodeNumber > 0 && typeof plan.headline === 'string' && plan.headline.trim())
+      return 'EP' + String(plan.episodeNumber).padStart(2, '0') + ' · ' + plan.headline.trim();
+  }
+
   /** The board as a tree — sequences → scenes → shots. `level` trims what each shot carries. */
   function outline(win, level) {
     const st = win.STRUCTURE || { sequences: [], scenes: [] };
@@ -1185,6 +1188,7 @@
     shots.forEach((s, i) => { if (s.type === 'outro') playbackIndices.push(i); });
     const scheduled = new Set(playbackIndices);
     return { version: st.version, format: win.FORMAT || 'shorts-9x16', shots: shots.length,
+             ...(episodeTitle(win) ? { title: episodeTitle(win), titlePlan: win.STORY.titlePlan } : {}),
              sequences, unplacedShots: orphans, splicedShots: spliced,
              playback: playbackIndices.map(i => shotRow(shots[i], i)),
              unscheduledShots: shots.flatMap((s, i) => scheduled.has(i) ? [] : [shotRow(s, i)]) };
@@ -1308,25 +1312,49 @@
   }
   // A picture route draws its shot from a generated start image (and an end image when first_last).
   const imageRoute = s => ['still_camera', 'generated_video'].includes(s.shot && s.shot.render && s.shot.render.mode);
-  function sceneOwnsFrames(win, shot) {
-    return shot.shot?.render?.mode === 'generated_video' &&
-      win.STRUCTURE?.scenes?.some(scene => scene.no === shot.scene && scene.frames !== undefined);
+  function frameOwner(win, shot) {
+    if (shot.shot?.render?.mode !== 'generated_video') return undefined;
+    return win.STRUCTURE?.scenes?.find(scene => scene.no === shot.scene &&
+      (scene.frames !== undefined || scene.speakers !== undefined));
+  }
+  function framePlan(shot) {
+    const routing = typeof module === 'object' && module.exports ? require('./render-routing.js') : root.RENDER_ROUTING;
+    return routing.framePlan(shot);
+  }
+  function shotImage(win, shot) {
+    const owner = frameOwner(win, shot);
+    if (owner) {
+      if (text(shot.referenceImage)) return shot.referenceImage;
+      const opening = shot.timeline?.images?.find(pin => pin.role === 'start' && pin.frame === shot.timeline.startFrame);
+      if (text(opening?.path)) return opening.path;
+      const first = win.SCENES.find(card => card?.scene === owner.no);
+      return first === shot ? owner.frames?.start : undefined;
+    }
+    return shot.timeline?.images?.find(pin => pin.role === 'start')?.path || framePlan(shot).start;
   }
   /** Shots still waiting for icon attributes: a render route, and for a picture route its size, angle and frame plan. */
   function iconGaps(win) {
     return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type)).flatMap(s => {
       const p = s.shot || {}, frames = s.visual && s.visual.frames;
       if (!(p.render && p.render.mode)) return ['shot ' + (s.id || '?') + ' has no render route'];
-      return imageRoute(s) && !(p.size && p.angle && (sceneOwnsFrames(win, s) || frames && frames.mode)) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
+      return imageRoute(s) && !(p.size && p.angle && (frameOwner(win, s) || frames && frames.mode)) ? ['shot ' + (s.id || '?') + ' has no size, angle or frame plan'] : [];
     });
   }
-  /** Picture-route shots still waiting for their start image, or the end image a first_last plan needs. */
-  function imageGaps(win) {
-    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s => s && !['broll','outro'].includes(s.type) && imageRoute(s)).flatMap(s => {
-      if (sceneOwnsFrames(win, s)) return [];
-      const frames = s.visual && s.visual.frames || {};
-      return !text(frames.start) ? ['shot ' + (s.id || '?') + ' has no start image']
-        : frames.mode === 'first_last' && !text(frames.end) ? ['shot ' + (s.id || '?') + ' has no end image'] : [];
+  /** Picture-route cards without their own image or any required legacy endpoint. */
+  function imageGaps(win, sceneNo, available = () => true) {
+    return (Array.isArray(win && win.SCENES) ? win.SCENES : []).filter(s =>
+      PLACED(s) && imageRoute(s) && (sceneNo === undefined || s.scene === sceneNo)).flatMap(s => {
+      const id = 'shot ' + (s.id || '?');
+      const image = shotImage(win, s);
+      const owner = frameOwner(win, s);
+      const label = owner ? 'shot image' : 'start image';
+      if (!text(image)) return [id + ' has no ' + label];
+      if (!available(image)) return [id + ' has an unreadable ' + label + ' (' + image + ')'];
+      if (owner) return [];
+      const frames = framePlan(s);
+      if (frames.mode !== 'first_last') return [];
+      if (!text(frames.end)) return [id + ' has no end image'];
+      return available(frames.end) ? [] : [id + ' has an unreadable end image (' + frames.end + ')'];
     });
   }
   /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
@@ -1365,9 +1393,9 @@
     return blockers.concat(check(win, opts).map(f => ({...f, level: f.level === 'later' ? 'later' : 'warn'})));
   }
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
-  const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
+  const api = { VERSION, episodeTitle, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
+                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);

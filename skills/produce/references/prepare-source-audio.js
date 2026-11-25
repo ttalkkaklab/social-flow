@@ -7,9 +7,51 @@ const { execFileSync } = require('child_process');
 const { createHash } = require('crypto');
 const { evaluateWindowScript } = require('../../_shared/scenes-vm.js');
 const speechSpan = require('../../_shared/speech-span.js');
+
+function checkAssemblyRoutes(win,board) {
+  const {assertNoPostLipSync,assertVideoSpeechProvenance,episodeVideoReceipts} = require('../../_shared/speech-contract.js');
+  const receipts = episodeVideoReceipts(win.SCENES ?? [],board);
+  for (const scene of win.STRUCTURE?.scenes ?? []) assertNoPostLipSync(scene.videoDirection);
+  for (const shot of win.SCENES ?? []) {
+    const video = shot.visual?.video ?? {};
+    const thought = shot.narration?.some(line => line.voiceoverKind === 'inner_thought');
+    if (thought && (video.speechStatus === 'stale' || shot.sound?.audioSource === 'video' ||
+        ['native','audio_conditioned'].includes(video.speechBinding?.mode)))
+      throw new Error('speech_video_source_mismatch: bind the current non-speaking picture and external thought before assembly');
+    assertNoPostLipSync({mode:video.mode, operation:video.operation, tool:video.tool, strategy:video.strategy, route:video.route,
+      postLipSync:video.postLipSync, post_lipsync:video.post_lipsync, capabilities:video.capabilities, speechBinding:video.speechBinding,
+      soundtrackRepair:video.soundtrackRepair, reuse:shot.visual?.reuse, sound:shot.sound});
+    for (const file of new Set([video.clip, video.speechBinding?.videoPath, video.soundtrackRepair?.videoPath])) {
+      if (typeof file === 'string') assertVideoSpeechProvenance(path.resolve(board,file),null,{...video.speechBinding,sourceShot:shot,boardDir:board,board:win,assembly:true},receipts);
+    }
+    for (const source of video.soundtrackRepair?.sources ?? []) {
+      if (source.kind === 'native_video' && typeof source.path === 'string')
+        assertVideoSpeechProvenance(path.resolve(board,source.path),null,{},receipts);
+    }
+  }
+  return receipts;
+}
+
+function usesConditioningTrack(scene, board, audio, sceneRender, recordedDriver) {
+  if (scene?.sound?.audioSource === 'video' || !(scene?.narration || []).some(line => line.delivery === 'on_screen' && line.tts?.trim())) return false;
+  const visual = scene.visual ?? {};
+  if (!visual.video && !visual.reuse && !visual.clip && !visual.renderedFile && scene.shot?.render?.mode !== 'generated_video') return false;
+  const clip = visual.video?.clip;
+  const file = clip && require('./check-production.js').assetPath(board, clip);
+  const driver = recordedDriver ?? (file && require('../../_shared/character-speech.js').conditioningAudioSha256(file));
+  const original = driver && fs.existsSync(audio) && (createHash('sha256').update(fs.readFileSync(audio)).digest('hex') === driver ||
+    sceneRender?.shots?.length > 1 && require('./compose-speech.js').matchesConditioningSlice(scene,board,sceneRender,audio,driver));
+  if (!original || visual.video?.groupPlan || visual.reuse ||
+      !['missing','silent'].includes(require('../../_shared/audio-signal.js').inspect(file).status)) {
+    throw new Error('post_lipsync_forbidden: on-screen dialogue needs sound.audioSource video or the original WAV from its silent audio-to-video render');
+  }
+  return true;
+}
+
 function prepare(work, board) {
   work = path.resolve(work); board = path.resolve(board);
   const win = evaluateWindowScript(fs.readFileSync(path.join(board, 'scenes.js'), 'utf8'));
+  const provenance = checkAssemblyRoutes(win,board);
   const cards = path.join(work, 'cards.tsv');
   const rows = fs.readFileSync(cards, 'utf8').split(/\r?\n/);
   const receiptFile = path.join(work, 'source-audio.json');
@@ -25,6 +67,12 @@ function prepare(work, board) {
       if (old && (fields[1] === old.audio || (fields[4] || '').split(',').includes('sync=1'))) {
         if (fields[1] === old.audio) fields[1] = old.originalAudio;
         fields[4] = (fields[4] || '').split(',').filter(option => option && !option.startsWith('sync=')).concat(old.originalSync || []).join(',');
+        rows[i] = fields.join('\t'); changed = true;
+      }
+      const clip = path.resolve(board,scene.visual?.video?.clip ?? '');
+      if (usesConditioningTrack(scene,board,path.resolve(work,fields[1]),provenance.sceneRenders.get(clip),provenance.drivers.get(clip))) {
+        const options = (fields[4] || '').split(',').filter(option => option && !option.startsWith('sync='));
+        fields[4] = [...options,'sync=1'].join(',');
         rows[i] = fields.join('\t'); changed = true;
       }
       continue;
@@ -74,7 +122,7 @@ function prepare(work, board) {
   fs.writeFileSync(receiptFile, JSON.stringify(receipts, null, 2) + '\n');
   return receipts;
 }
-module.exports = { prepare };
+module.exports = { prepare, usesConditioningTrack, checkAssemblyRoutes };
 if (require.main === module) {
   try { console.log(JSON.stringify(prepare(process.argv[2], process.argv[3]))); }
   catch (error) { console.error(error.message); process.exitCode = 1; }

@@ -16,6 +16,7 @@
         "negativePrompt",
         "transparent",
         "loras",
+        "requestId",
         "outputPath",
         "filename"
       ]
@@ -34,6 +35,7 @@
         "negativePrompt",
         "transparent",
         "loras",
+        "requestId",
         "outputPath",
         "filename",
         "imagePath",
@@ -176,6 +178,20 @@
     "promptExtend": "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.",
     "note": "Use GPT Image 2 for readable text. No multi-image fusion."
   },
+  "nativeH3Image": {
+    "engine": "astra-genai-native",
+    "model": "h3-image",
+    "profile": "minimax-h3-image",
+    "protocol": "mlx-serve",
+    "operations": [
+      "text",
+      "edit"
+    ],
+    "referenceImages": 10,
+    "fixedSteps": 6,
+    "editSize": "source",
+    "availability": "Check astra_genai_catalog kind image for the configured gateway binding."
+  },
   "gptModels": [
     "gpt-image-2",
     "gpt-image-1.5",
@@ -244,8 +260,19 @@
       "krea",
       "mage",
       "mage-edit",
-      "qwen-2.1"
+      "qwen-2.1",
+      "h3-image"
     ],
+    "h3Image": {
+      "model": "ddalcu/MiniMax-H3-Image-MLX-Serve-4bit",
+      "operations": [
+        "text",
+        "edit"
+      ],
+      "referenceImages": 10,
+      "fixedSteps": 6,
+      "editSize": "source"
+    },
     "note": "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
   },
   "host": {
