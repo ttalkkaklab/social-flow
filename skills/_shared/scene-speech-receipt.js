@@ -7,7 +7,8 @@ const shaPattern = /^[a-f0-9]{64}$/;
 function mismatch(message) { throw new Error('speech_video_source_mismatch: ' + message); }
 // The operation the gateway's retired per-shot scene route wrote on its receipts (before 2026-11-25). Clips it made are
 // still verified and assembled from their archived requests; nothing plans or submits that route any more.
-const perShotSceneOperation = operation => operation === 'scene-to-video';
+const PER_SHOT_SCENE_OPERATION = 'scene-to-video';
+const perShotSceneOperation = operation => operation === PER_SHOT_SCENE_OPERATION;
 
 function readSceneRequest(file,receipt) {
   if (receipt.version !== 1 || receipt.status !== 'completed' || !receipt.jobId || !shaPattern.test(receipt.fingerprint) ||
@@ -196,4 +197,4 @@ function verifySceneSpeech(wire,plan) {
   return driver;
 }
 
-module.exports = {readSceneRequest,sceneDriver,verifySceneSpeech,performanceWav,perShotSceneOperation};
+module.exports = {readSceneRequest,sceneDriver,verifySceneSpeech,performanceWav,perShotSceneOperation,PER_SHOT_SCENE_OPERATION};

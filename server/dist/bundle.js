@@ -98562,7 +98562,8 @@ var require_scene_speech_receipt = __commonJS({
     function mismatch(message) {
       throw new Error("speech_video_source_mismatch: " + message);
     }
-    var perShotSceneOperation = (operation) => operation === "scene-to-video";
+    var PER_SHOT_SCENE_OPERATION = "scene-to-video";
+    var perShotSceneOperation = (operation) => operation === PER_SHOT_SCENE_OPERATION;
     function readSceneRequest(file3, receipt) {
       if (receipt.version !== 1 || receipt.status !== "completed" || !receipt.jobId || !shaPattern.test(receipt.fingerprint) || receipt.requestId !== "scene-" + receipt.fingerprint) mismatch("invalid completed scene receipt");
       let wire;
@@ -98745,7 +98746,7 @@ var require_scene_speech_receipt = __commonJS({
       }
       return driver;
     }
-    module.exports = { readSceneRequest, sceneDriver, verifySceneSpeech, performanceWav, perShotSceneOperation };
+    module.exports = { readSceneRequest, sceneDriver, verifySceneSpeech, performanceWav, perShotSceneOperation, PER_SHOT_SCENE_OPERATION };
   }
 });
 
@@ -143895,7 +143896,7 @@ var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and 
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan made without sceneRendering carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt, and the GenAI gateway receives the approved text as written. Only sceneRendering per_shot has the gateway write prompts, one per shot. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt. On the GenAI engine the scene is one scene-mode request to POST /v1/generations: the prompt keeps its names and the gateway numbers them without adding a sentence. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 

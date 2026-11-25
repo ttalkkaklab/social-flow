@@ -15,6 +15,8 @@ import {ROUTES} from '../dist/handlers.js';
 import {setupProject,png} from './workflow-fixture.mjs';
 import {config} from '../dist/config.js';
 const require=createRequire(import.meta.url);
+// Receipts of clips the gateway's retired per-shot route made; those clips are still verified.
+const {PER_SHOT_SCENE_OPERATION}=require('../../skills/_shared/scene-speech-receipt.js');
 const voice={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
 const caps={provider:'replaceable',model:'first',audioConditioning:true,lipSync:true,postLipSync:false,evidence:'fixture adapter contract'};
 function spokenClip(file, frequency = 440, color = 'black') {
@@ -725,7 +727,7 @@ for(const render of ['conditioning','native','mix','silent','off-screen'])test('
  }
  writeFileSync(source+'.scene-request.json',JSON.stringify(captured));
  writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,baseUrl:'http://localhost:1',status:'completed',
-   jobId:'scene-render',operation:'scene-to-video',sha256:sha(source),videoPath:source,fingerprint,requestId:'scene-'+fingerprint,
+   jobId:'scene-render',operation:PER_SHOT_SCENE_OPERATION,sha256:sha(source),videoPath:source,fingerprint,requestId:'scene-'+fingerprint,
    ...(!conditioned && {sceneRequestSha256:sha(source+'.scene-request.json')})}));
  const wrongMode=/speech_video_source_mismatch/;
  await assert.rejects(bind(remux),conditioned?/conditioning_audio_unverified/:wrongMode);
@@ -804,7 +806,7 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
    assert.deepEqual(wire.attachments.filter(row=>row.role==='voice_reference').map(row=>row.sha256),pins.filter(Boolean).map(sha));
    const fingerprint='7'.repeat(64);
    writeFileSync(source+'.scene-request.json',JSON.stringify(wire));
-   writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'native-render',operation:'scene-to-video',
+   writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'native-render',operation:PER_SHOT_SCENE_OPERATION,
      videoPath:source,sha256:sha(source),fingerprint,requestId:'scene-'+fingerprint,sceneRequestSha256:sha(source+'.scene-request.json')}));
  }
  save(win);await receipt(ensemble?[first,retake,first]:[first]);
@@ -906,7 +908,7 @@ test('a managed native take follows performance order and explicit dialogue cues
      shots:[{shotId:shot.id,startFrame:0,endFrame:6,transition:'open',action:'She answers.',openingPositions:[],blocking:[],dialogue}]},model);
    const fingerprint='8'.repeat(64);
    writeFileSync(source+'.scene-request.json',JSON.stringify(wire));
-   writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'ordered-render',operation:'scene-to-video',
+   writeFileSync(source+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'ordered-render',operation:PER_SHOT_SCENE_OPERATION,
      videoPath:source,sha256:sha(source),fingerprint,requestId:'scene-'+fingerprint,sceneRequestSha256:sha(source+'.scene-request.json')}));
  }
  await capture();
@@ -1577,7 +1579,7 @@ test('a silent multi-shot A2V render keeps each dialogue at its original frame i
      openingPositions:[],blocking:[],dialogue:[{lineId:s.narration[0].id,speaker:'hero',text:s.narration[0].tts,delivery:'on_screen'}]}))};
  const wire=await captureSceneRequest(scene,model),fingerprint='4'.repeat(64);
  writeFileSync(clip+'.scene-request.json',JSON.stringify(wire));
- writeFileSync(clip+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'scene-render',operation:'scene-to-video',
+ writeFileSync(clip+'.astra-genai.json',JSON.stringify({version:1,status:'completed',jobId:'scene-render',operation:PER_SHOT_SCENE_OPERATION,
    videoPath:clip,sha256:sha(clip),fingerprint,requestId:'scene-'+fingerprint,sceneRequestSha256:sha(clip+'.scene-request.json')}));
  const call=async input=>JSON.parse((await ROUTES.speech_manage({path:target,expectedRevision:manageSpeech({path:target,action:'list'}).revision,...input})).content[0].text);
  const record=(i,audioPath)=>call({action:'attach_audio',lineId:'line'+i,audioPath,generation:{generator:'tts_generate',

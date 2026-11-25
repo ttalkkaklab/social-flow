@@ -173,7 +173,7 @@ test('historical native voice bindings must fit each selected render at assembly
   // A GenAI scene is one render, so three speakers across its cuts exceed two voices.
   stage([['a','b'],['c']],distilled);assert.throws(check,/scene_render_voice_limit/);
   // A clip the retired per-shot route made rendered each card apart and still fits.
-  writeFileSync(picture+'.astra-genai.json',JSON.stringify({version:1,operation:'scene-to-video',status:'completed'}));
+  writeFileSync(picture+'.astra-genai.json',JSON.stringify({version:1,operation:require('../../skills/_shared/scene-speech-receipt.js').PER_SHOT_SCENE_OPERATION,status:'completed'}));
   stage([['a','b'],['c']],distilled);assert.ok(check()[picture]);
   stage([voices,['a']],distilled);assert.throws(check,/scene_render_voice_limit/);
 });

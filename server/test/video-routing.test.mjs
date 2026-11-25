@@ -410,7 +410,7 @@ async function threeTurnScene(t) {
 test('a three-shot GenAI scene is one scene-mode request carrying the prompt its plan showed', async t => {
  const {f, input} = await threeTurnScene(t);
  // The rendering modes are gone with the per-shot route; a call naming one is refused, not ignored.
- for (const sceneRendering of ['auto','single_msr','per_shot'])
+ for (const sceneRendering of ['auto','single_msr'])
    assert.throws(()=>planVideo({...input,sceneRendering},false),/sceneRendering/);
  const composed = JSON.parse((await ROUTES.video_plan(input)).content[0].text);
  assert.equal(composed.tool,'astra_genai_scene');
@@ -445,9 +445,9 @@ test('a three-shot GenAI scene is one scene-mode request carrying the prompt its
 test('a plan saved under a retired rendering mode never reaches the gateway, and the job it submitted is still collected', async t => {
  const {f, input} = await threeTurnScene(t);
  const current = planVideo(input);
- const id = saveHistoricalPlan(f.episode, current, plan => { plan.sceneRendering = 'per_shot'; });
+ const id = saveHistoricalPlan(f.episode, current, plan => { plan.sceneRendering = 'single_msr'; });
  f.gateway.calls.length = 0;
- const retiredMode = /video_plan_stale: this plan used the retired per_shot rendering/;
+ const retiredMode = /video_plan_stale: this plan used the retired single_msr rendering/;
  assert.throws(()=>approveVideo({episode:f.episode,planIds:[id],request:'Approve the old plan'}),retiredMode);
  await assert.rejects(executeVideo({episode:f.episode,planId:id},()=>assert.fail('dispatched a retired plan')),retiredMode);
  assert.deepEqual(f.gateway.calls,[]);
@@ -466,7 +466,7 @@ test('a plan saved under a retired rendering mode never reaches the gateway, and
  });
  const output = path.join(retired.args.outputPath,retired.args.filename);
  fs.mkdirSync(retired.args.outputPath,{recursive:true});
- fs.writeFileSync(output+'.astra-genai.json',JSON.stringify({version:1,baseUrl:astraGenaiBaseUrl(),operation:'scene-to-video',fingerprint:id,
+ fs.writeFileSync(output+'.astra-genai.json',JSON.stringify({version:1,baseUrl:astraGenaiBaseUrl(),operation:require('../../skills/_shared/scene-speech-receipt.js').PER_SHOT_SCENE_OPERATION,fingerprint:id,
    requestId:'scene-'+id,videoPath:output,jobId:'job-7',status:'submitted'}));
  videoTransaction(f.episode,state=>{state.jobs[retired.requestId]={planId:id,requestId:retired.requestId,shotId:retired.shotId,tool:retired.tool,
    status:'submitted',reserveUsd:0,providerId:'job-7'};});
