@@ -1,3 +1,4 @@
+import { stableAudioRuntime } from './stable-audio-mlx.js';
 import { localVoxConfigured } from './local-voxcpm2.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 /**
@@ -49,6 +50,12 @@ const binOk = (p) => {
 export function capabilityStatus() {
     const gemini = has(config.geminiApiKey);
     const mlx = mlxServeConfigured();
+    let stableAudioConfigured = false;
+    try {
+        stableAudioRuntime();
+        stableAudioConfigured = true;
+    }
+    catch { /* Optional local installation. */ }
     const capabilities = [
         {
             capability: 'video_generation',
@@ -103,6 +110,8 @@ export function capabilityStatus() {
         {
             capability: 'music_generation',
             providers: [
+                { provider: 'Stable Audio 3 Medium (local MLX)', configured: stableAudioConfigured, needs: 'Installed Stability AI optimized/mlx runtime and Medium weights (STABLE_AUDIO_MLX_DIR)',
+                    note: 'music_stable_audio_generate — music and audio inpainting' },
                 { provider: 'Eleven Music', configured: has(config.elevenLabsApiKey), needs: 'ELEVENLABS_API_KEY', note: 'Official music_v2 / music_v2_5; select models.music and use music_plan → music_execute' },
                 { provider: 'lyria (Gemini)', configured: gemini, needs: 'GEMINI_API_KEY',
                     note: 'music_generate_song · music_generate_advanced; saved Lyria selection' },

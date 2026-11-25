@@ -4,6 +4,7 @@ import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
+import { generateStableAudio } from './stable-audio-mlx.js';
 import { MUSIC_ADAPTERS, musicCatalog, musicAdapterContracts } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
@@ -832,14 +833,23 @@ export const ROUTES = {
             `Steps: ${result.steps ?? 'model default'}\nSeed: ${result.seed ?? 'random'}\n` +
             `Generation time: ${result.elapsedSeconds}s`);
     },
+    music_stable_audio_generate: async (args) => {
+        try {
+            const output = await generateStableAudio(args);
+            return { ...text(JSON.stringify(output)), musicReceipt: output };
+        }
+        catch (error) {
+            return { ...text(String(error), true), terminal: true };
+        }
+    },
     mlx_music_generate: async (args) => {
         const request = parseArgs(mlx.mlxMusicGenerateSchema, args);
         const result = await mlx.generateMlxMusic(request);
         if (!result.success)
-            return text(`MLX Core music generation failed:\n${result.error}`, true);
-        return text(`Music generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
-            `Duration: ${result.durationSeconds} seconds\nInstrumental: ${request.instrumental}\n` +
-            `Generation time: ${result.elapsedSeconds}s`);
+            return { ...text(`MLX Core music generation failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
+        return { musicReceipt: { model: result.model, audioPath: result.path, durationSeconds: result.durationSeconds }, ...text(`Music generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
+                `Duration: ${result.durationSeconds} seconds\nInstrumental: ${request.instrumental}\n` +
+                `Generation time: ${result.elapsedSeconds}s`) };
     },
     ltx_video_generate: async (args) => {
         const result = await generateLocalVideo('ltx_video_generate', args);

@@ -51619,7 +51619,8 @@ async function requestRaw(method, url, headers2, body, timeoutMs, dispatcher) {
 // src/mlx-serve-client.ts
 var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
 var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
-var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
+var MLX_MUSIC_TIMEOUT_MS = 30 * 6e4;
+var musicTransport = new import_undici2.Agent({ headersTimeout: MLX_MUSIC_TIMEOUT_MS, bodyTimeout: MLX_MUSIC_TIMEOUT_MS });
 var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
 var H3_RENDER_TIMEOUT_MS = 90 * 6e4;
 var h3RenderTransport = new import_undici2.Agent({ headersTimeout: H3_RENDER_TIMEOUT_MS, bodyTimeout: H3_RENDER_TIMEOUT_MS });
@@ -51694,24 +51695,36 @@ var mlxImageEditSchema = external_exports.object({
     }
   }
 });
-var mlxMusicGenerateSchema = external_exports.object({
-  prompt: external_exports.string().min(1, "Prompt is required").max(4e3),
+var musicFields = external_exports.object({
+  prompt: external_exports.string().min(1).max(4e3),
   model: external_exports.string().min(1).optional(),
   lyrics: external_exports.string().max(8e3).optional(),
-  instrumental: external_exports.boolean().optional().default(true),
-  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).optional().default(DEFAULT_MLX_MUSIC_SECONDS),
-  seed: external_exports.number().int().min(0).optional(),
+  instrumental: external_exports.boolean().default(true).describe("Set false and supply lyrics for a sung track."),
+  durationSeconds: external_exports.number().int().min(1).max(MAX_MLX_MUSIC_SECONDS).default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: external_exports.number().int().nonnegative().safe().optional(),
+  steps: external_exports.number().int().min(4).max(100).optional().describe("MiniMax diffusion steps (engine default 30)."),
+  bpm: external_exports.number().int().min(30).max(300).optional().describe("Tempo guidance appended to the MiniMax style caption."),
+  keyscale: external_exports.string().min(1).optional().describe("Key guidance appended to the MiniMax style caption, e.g. F minor."),
   refAudioPath: external_exports.string().min(1).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("audio").optional()
+}).strict();
+function checkLyrics(value, ctx) {
+  if (value.instrumental && value.lyrics?.trim())
+    ctx.addIssue({ code: "custom", message: "instrumental:true cannot be sent beside lyrics. Set instrumental false to sing, or drop lyrics for a bed." });
+}
+var miniMaxMusicSchema = musicFields.omit({ refAudioPath: true }).extend({
+  filename: bareFilenameSchema("audio").refine((name2) => name2.toLowerCase().endsWith(".wav"), "Expected a WAV filename").optional(),
+  durationSeconds: external_exports.number().int().min(1).max(360).default(DEFAULT_MLX_MUSIC_SECONDS).describe("Upper bound in seconds. The song may end earlier.")
 }).superRefine((value, ctx) => {
-  if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
-    ctx.addIssue({
-      code: external_exports.ZodIssueCode.custom,
-      message: "instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed."
-    });
-  }
+  checkLyrics(value, ctx);
+  if (!value.instrumental && !value.lyrics?.trim())
+    ctx.addIssue({ code: "custom", message: "MiniMax Music 3 needs lyrics when instrumental is false" });
 });
+var legacyMusicSchema = musicFields.omit({ steps: true, bpm: true, keyscale: true }).extend({
+  durationSeconds: external_exports.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).default(DEFAULT_MLX_MUSIC_SECONDS)
+}).superRefine(checkLyrics);
+var mlxMusicGenerateSchema = musicFields.superRefine(checkLyrics);
 var mlxVideoGenerateSchema = external_exports.object({
   prompt: external_exports.string().min(1, "Prompt is required").max(32e3),
   model: external_exports.string().min(1).optional(),
@@ -54041,7 +54054,7 @@ function priceOf(tool, args = {}) {
   if (tool === "suno_generate") return { key: "music.suno-generate", quantity: 1 };
   if (tool === "suno_generate_sound") return { key: "music.suno-sound", quantity: 1 };
   if (tool === "suno_generate_lyrics") return { key: "music.suno-lyrics", quantity: 1 };
-  if (tool === "mlx_music_generate") {
+  if (tool === "mlx_music_generate" || tool === "music_stable_audio_generate") {
     return { key: "music.mlx", quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
   }
   if (["astra_text2video", "astra_img2video", "astra_keyframe_video", "astra_audio2video"].includes(tool)) {

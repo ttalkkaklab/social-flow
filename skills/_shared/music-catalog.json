@@ -1,7 +1,23 @@
 {
   "version": 1,
-  "revision": "2026-11-25",
+  "revision": "2026-11-26",
   "models": [
+    {
+      "engine": "mlx",
+      "model": "ddalcu/MiniMax-Music3-MLX-Serve-8bit",
+      "tool": "mlx_music_generate",
+      "vocals": true,
+      "duration": "1–360 seconds, upper bound",
+      "provider": "Local MLX-Serve (8-bit)"
+    },
+    {
+      "engine": "stable-audio-mlx",
+      "model": "stabilityai/stable-audio-3-medium",
+      "tool": "music_stable_audio_generate",
+      "vocals": false,
+      "duration": "Up to 380 seconds, sample-rounded",
+      "provider": "Local Stability AI MLX CLI"
+    },
     {
       "engine": "lyria",
       "model": "lyria-3-clip-preview",
@@ -182,6 +198,26 @@
       ]
     },
     {
+      "tool": "music_stable_audio_generate",
+      "engine": "stable-audio-mlx",
+      "purpose": "Generate music with Stable Audio 3 Medium on Apple Silicon, optionally varying or inpainting a source recording.",
+      "fields": [
+        "model",
+        "prompt",
+        "durationSeconds",
+        "steps",
+        "seed",
+        "cfg",
+        "negativePrompt",
+        "apg",
+        "initAudioPath",
+        "initNoiseLevel",
+        "inpaintRange",
+        "outputPath",
+        "filename"
+      ]
+    },
+    {
       "tool": "mlx_music_generate",
       "engine": "mlx",
       "purpose": "Generate music locally with the selected MLX Core music pack.",
@@ -192,6 +228,9 @@
         "instrumental",
         "durationSeconds",
         "seed",
+        "steps",
+        "bpm",
+        "keyscale",
         "refAudioPath",
         "outputPath",
         "filename"
@@ -218,6 +257,8 @@
     "https://aistudio.google.com/docs/music-generation",
     "https://aistudio.google.com/docs/realtime-music-generation",
     "https://elevenlabs.io/docs/api-reference/music/compose",
-    "https://docs.sunoapi.org/suno-api/generate-music"
+    "https://docs.sunoapi.org/suno-api/generate-music",
+    "https://github.com/ddalcu/mlx-serve/blob/v26.11.3/src/plugins/music3/plugin.zig",
+    "https://github.com/Stability-AI/stable-audio-3/blob/790793b89ddceea612be9ce42ff6830d18f6fa57/optimized/mlx/scripts/sa3_mlx.py"
   ]
 }

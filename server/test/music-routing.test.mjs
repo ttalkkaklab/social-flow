@@ -128,3 +128,22 @@ test('resume finishes an interrupted Suno request from its task ID without resub
   assert.equal(musicStatus({ directory: f.dir, requestId: 'suno-1' }).status, 'completed');
   await assert.rejects(resumeMusic({ directory: f.dir, requestId: 'suno-1', action: 'resume' }), /resume_requires/);
 });
+
+test('Stable Audio reserves zero and binds a relative inpainting source to its content', async t => {
+  const music = { engine: 'stable-audio-mlx', model: 'stabilityai/stable-audio-3-medium' };
+  const f = fixture(t, undefined, music);
+  const file = path.join(f.dir, 'input.wav');
+  fs.writeFileSync(file, wav());
+  const args = { prompt: 'guitar', durationSeconds: 1.5, initAudioPath: 'input.wav', inpaintRange: [0, 1] };
+  const request = { directory: f.dir, requestId: 'edit-1', assetId: 'intro', ...music, args };
+  const plan = planMusic(request);
+  assert.equal(plan.tool, 'music_stable_audio_generate');
+  assert.equal(plan.quote.reserveUsd, 0);
+  assert.equal(plan.args.initAudioPath, file);
+  assert.equal(plan.inputs[file].length, 64);
+  assert.throws(() => planMusic({ ...request, reserveUsd: 0.1 }), /music_quote_required/);
+  const changed = wav();
+  changed.writeInt16LE(123, 44);
+  fs.writeFileSync(file, changed);
+  await assert.rejects(f.run(plan, () => assert.fail('stale input reached generation')), /music_plan_stale/);
+});

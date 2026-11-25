@@ -55,11 +55,13 @@ export async function requestBytes(
   headers: Record<string, string>,
   body?: unknown,
   timeoutMs?: number,
+  dispatcher?: Dispatcher,
 ): Promise<{ ok: boolean; status: number; bytes: Buffer; contentType: string }> {
   const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
   try {
     const res = await fetch(url, {
       method: method.toUpperCase(),
+      ...(dispatcher ? { dispatcher } : {}),
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...headers,
