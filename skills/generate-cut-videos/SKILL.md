@@ -55,13 +55,13 @@ Change the relevant beat, dialogue or image on the storyboard. Regenerate the co
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener
-in conventional OTS coverage. For a requested one-take preserve all speaker turns on the same card and use scene planning. Set each camera setup's size and angle before images.
+in OTS coverage. Keep the speaker turns spoken in one view on the same card, a requested one-take included, and use scene planning. Set each camera setup's size and angle before images.
 Choose the attention subject independently of the speaker using the dialogue coverage
 guide: intentional off_screen physical speech may accompany a hand insert, listener
 reaction or spatial view. Keep its voice ownership without adding a speaking face;
 screen-position bindings describe on_screen speakers only.
 If coverage is wrong, return to the earlier authoring/image stages rather than patching
-the prompt alone. Preserve the single MSR speaker's binding and selected voice.
+the prompt alone. Preserve each MSR speaker's binding and selected voice.
 Dialogue-free cuts use image2video with `frames.mode:"first"`. On LTX, request natural
 ambience and action-timed effects. Use `generateAudio:false` when the edit supplies the
 sound separately, and carry those cues into assembly. Thoughts use image2video with

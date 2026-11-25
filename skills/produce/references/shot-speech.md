@@ -353,8 +353,9 @@ the line sits in the clip and returns `soundtrack` with a suggested `edit.in`/`e
 when silence the performance did not ask for surrounds the line
 ([cinematic edit](cinematic-edit.md)); the measurement is loudness, `not_reviewed`.
 
-`video_plan` keeps the text-free instruction after the compiled native dialogue, on
-single-speaker MSR shots. This is prompt guidance; inspect the generated frames for unwanted captions.
+`video_plan` keeps the text-free instruction after the native dialogue it composes. An authored
+`prompt` that leaves the sentence out is reported as `text_policy_missing`. This is prompt
+guidance; inspect the generated frames for unwanted captions.
 
 Store the route in `visual.video.speechBinding` with line ids and audio hashes. Mark stale
 bindings after edits and clear `speechStatus:stale` only after the new media is generated and

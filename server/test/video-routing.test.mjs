@@ -205,12 +205,18 @@ test('planning compiles camera direction and refuses a caller replacing the scen
  const before=planVideo({episode:f.episode,sceneNo:1,requestId:'direction-a',operation:'image',args:{generateAudio:false}});
  assert.match(before.args.prompt,/slowly pushes in toward the boat/);
  assert.throws(()=>f.plan('manual',{prompt:'A boat crosses a lake. Camera stays locked.'}),/scene_video_prompt/);
+ // An authored prompt is sent in place of the planner's: the plan names it as the source and reports no reading of the prompt it replaces.
+ const own=(requestId,args={})=>planVideo({episode:f.episode,sceneNo:1,requestId,operation:'image',args,prompt:'A boat sits still. The camera holds.'},false);
+ const sent=own('own-a',{generateAudio:false});
+ assert.ok(before.directionBindings.some(binding=>binding.via==='prompt'));
+ assert.deepEqual([sent.sourcePrompt,sent.directionWarnings,sent.directionBindings.filter(binding=>binding.via==='prompt')],['A boat sits still. The camera holds.',[],[]]);
  delete f.board.SCENES[0].visual.video.promptSource;
  f.board.SCENES[0].visual.video.prompt='The camera pulls back.';
  f.save();
  const legacy=planVideo({episode:f.episode,sceneNo:1,requestId:'legacy',operation:'image'});
  assert.match(legacy.directionWarnings.join(),/camera_move_contradicted/);
  assert.ok(legacy.args.prompt.startsWith('The camera pulls back.'));
+ assert.deepEqual(own('own-b').directionWarnings,[]);
  f.board.SCENES[0].visual.video.promptSource={action:'A boat crosses the lake.'};
  f.board.SCENES[0].visual.camera={movement:'static'}; f.save();
  const after=planVideo({episode:f.episode,sceneNo:1,requestId:'direction-b',operation:'image',args:{generateAudio:false}});

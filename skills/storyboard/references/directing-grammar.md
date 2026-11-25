@@ -52,11 +52,11 @@ and inspect actual source images together before video generation. Different cam
 labels or filenames do not establish different pictures.
 
 Choose boundaries when an action, discovery, relationship or emotional state changes.
-In conventional dialogue coverage, cut to the next speaker when the change serves the scene. An authored one-take can keep the reply.
+Cut to the next speaker when the change serves the scene; a view that holds the exchange keeps the reply on its card.
 Consecutive lines by one character can play over one coherent action. Follow
-[dialogue coverage](dialogue-coverage.md): choose the speaking subject for each conventional setup,
-then choose its size and angle. Use speaker-facing OTS/reverse for exchanges and keep
-listeners silent even in a two-shot. Silent/inner-thought pictures use image2video;
+[dialogue coverage](dialogue-coverage.md): choose who speaks in each setup,
+then choose its size and angle. Use speaker-facing OTS/reverse when a face carries the change and keep
+a listener without a line silent, even in a two-shot. Silent/inner-thought pictures use image2video;
 inner thoughts are timed character TTS with closed mouths.
 
 Before choosing movement, describe what the viewer sees now that the previous shot did

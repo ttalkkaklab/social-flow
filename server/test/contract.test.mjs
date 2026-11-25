@@ -73,6 +73,19 @@ describe('tool surface', () => {
     assert.equal(byName.size, TOOLS.length, 'duplicate tool name');
   });
 
+  // The host API reads JSON Schema 2020-12 and drops a tool whose bound is a boolean:
+  // astra_genai_msr, astra_genai_img2video and shot_prompt were lost that way on 2026-11-24.
+  it('numeric bounds are numbers', () => {
+    const walk = (node, where) => {
+      if (!node || typeof node !== 'object') return;
+      for (const [key, value] of Object.entries(node)) {
+        if (key === 'exclusiveMinimum' || key === 'exclusiveMaximum') assert.equal(typeof value, 'number', where);
+        walk(value, where + '.' + key);
+      }
+    };
+    for (const tool of TOOLS) walk(tool.inputSchema, tool.name);
+  });
+
   // The model picks a tool by its description. Two tools with the same text leave it a coin
   // toss — acting_review, tts_review_acting and tts_review_final shared one until 0.118.3.
   it('descriptions are unique', () => {

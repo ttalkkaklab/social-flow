@@ -44,6 +44,9 @@ test('two panels of the same role bind by asset identity across reorderings', ()
   assert.equal(resolveScenePrompt(draft,reversed).prompt,'Use Image 2.');
   assert.ok(resolveScenePrompt('Use {mina.face}.',reversed).issues.some(issue => issue.level === 'error'));
   assert.ok(resolveScenePrompt(draft,bind(['profile','profile'])).issues.some(issue => issue.code === 'placeholder_ambiguous'));
+  // A cast id equal to a shot id never takes the name of that shot's own picture, which travels as a timed frame.
+  const clash = scenePromptSlots('indexed', [{number:1, owner:'s2', role:'face'}, {shotId:'s2', guide:true}]);
+  assert.deepEqual([clash.slots.map(slot => slot.key), clash.unlabeled], [['s2.face'], ['s2.image']]);
 });
 
 test('named clip ownership is independent of cast IDs and normalized cue whitespace', () => {
