@@ -43,5 +43,9 @@ Whether the local build renders 362 frames as asked was not tested.
 - On both, the role of each reference and the voice binding follow the scene.
 
 MiniMax also publishes a six-section prompt format for reference renders, written by its
-own prompt rewriter. The planner does not write that format. The comparison that decided
-this is in the [loop record](../../../docs/loops/037-model-prompt-guidance/h3-prompt-structure.md).
+own prompt rewriter. The planner does not write that format. On one two-speaker scene
+rendered on local FastH3 with two seeds per form, the six-section prompt said both lines word
+for word in both takes and the planner's prompt in one of two; both cut once and kept both
+faces. That was not enough under the rule written before the takes to change the compiler.
+The takes, transcripts and rule are in the
+[loop record](../../../docs/loops/037-model-prompt-guidance/h3-prompt-structure.md).

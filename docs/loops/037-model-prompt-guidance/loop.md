@@ -118,3 +118,41 @@ gaps in that path.
   `video-routing.test.mjs` (a Seedance plan's numbering, earlier-wording draft, advice and
   saved manifest; a 362-frame FastH3 plan). One existing case split a Seedance prompt on
   "Then cut directly." and now splits on the shot labels.
+
+## Evidence before round 1
+
+- **Baseline.** On the unchanged tree at `d9c4b613` the suite ran 1,387 cases: 1,383 passed
+  and four timed out (`a shot cover reaches the library and reports a changed source`,
+  `legacy frame covers render literal copy`, `long-form renders the thumbnail and its Test &
+  Compare variants`, `full builder adds timeline music after editing without requiring a
+  default bed`). The machine was shared with other sessions and a local render at the time
+  (317 s for a suite that takes about 30 s). None of the four is in a module this loop
+  changes.
+- **Same plan before and after.** One two-speaker, two-shot scene was planned on five
+  routes (MSR, FastH3, hosted MiniMax, Seedance 2.0, Seedance 2.5) on the committed build
+  and on the working build. Two runs of the committed build differ from each other in
+  `contextRevision` and `voiceContinuity.revision`, which hash the fixture's temporary
+  paths. On MSR, FastH3 and hosted MiniMax the two builds differ in those two fields and
+  nothing else. On both Seedance series they differ in those two and in the prompt fields
+  (`args.prompt`, `sourcePrompt`, `promptTemplate`, `sceneRequest.prompt`).
+- **Earlier wording still plans.** The `promptTemplate` the committed build returned for the
+  Seedance scene, with "Then cut directly." between the shots, was sent back as `prompt` to
+  the working build on both series. Both planned and submitted the wording as written. The
+  working build's own template also round-trips to the same prompt.
+- **Timestamps do not reach Seedance today.** A scene with a dissolve between its shots is
+  refused on Seedance before and after the change (`scene_inputs_unsupported`), so the
+  timed "At N seconds" heading is not written for this family; only model-paced scenes
+  plan. Shot numbers are therefore the one form the Seedance writer needs.
+- **Reference order.** On the probed scene the face pictures are numbered in the scene's
+  declared speaker order and the voices in speaking order.
+- **Advice on the probed scene.** Seedance 2.0: `reference_assets_over_recommended` (seven
+  files). Seedance 2.5: `voice_sample_length` for each of the two samples, which are shorter
+  than five seconds. MSR, FastH3 and hosted MiniMax: none.
+- **Schema error.** The working build lists its tools with no boolean `exclusiveMinimum`;
+  commit `735379ff` had already replaced it. Nothing was changed for it here.
+- **Style scan.** The D8 scan prints 22 hits, all inside `CLAUDE.md`'s own section that
+  quotes the forms, the same count as before the change.
+- **dev moved.** Nine commits reached dev while this ran (#713, #714). They were merged in
+  before round 1; `server/dist/bundle.js` conflicted and was rebuilt, `npm run check:dist`
+  reports the committed build fresh, and every selftest step of `.github/workflows/check.yml`
+  exits 0.

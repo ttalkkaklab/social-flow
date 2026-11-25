@@ -602,8 +602,9 @@ A Seedance scene of two or more shots introduces each as `Shot N:` on both serie
 2.0 guide recommends shot identifiers and calls precise timing unstable. Those plans get new ids.
 An authored prompt may keep, drop or renumber the label, and a draft with the earlier
 "Then cut directly." between shots still plans. MiniMax's six-section H3 prompt format was
-compared with the planner's own on the local FastH3 build before any compiler change; the
-planner's form stays. The ranges are the vendors' statements and no Seedance or hosted H3
+compared with the planner's own on the local FastH3 build before any compiler change: on one
+scene with two seeds each, the six-section form spoke both lines exactly twice and the planner's
+once, short of the rule set before the takes, so the planner's form stays. The ranges are the vendors' statements and no Seedance or hosted H3
 render was made. Record and evidence:
 [loop 037](docs/loops/037-model-prompt-guidance/loop.md).
 
