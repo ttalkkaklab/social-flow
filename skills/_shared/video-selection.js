@@ -141,7 +141,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rende
   const { selection: savedSelection, source } = choice(storedMembers[0]);
   const owner = scene ?? (selectionOnly && board.STRUCTURE?.scenes?.find(s => s.no === storedMembers[0].scene));
   const speechRoute = owner && sceneSpeechRoute(owner, scene ? storedMembers : scenes.filter(card => card.scene === owner.no),
-    savedSelection);
+    savedSelection, rendering);
   if (scene && speechRoute?.external) {
     // Keep the original off-screen ownership on the board. The picture has no speaking mouth.
     for (let i = 0; i < storedMembers.length; i++)

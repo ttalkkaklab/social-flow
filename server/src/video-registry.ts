@@ -9,7 +9,7 @@ import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
-import { scenePromptProfile } from './scene-prompt-profile.js';
+import { scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
 import { SCENE_ROUTE } from './genai-scene.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
@@ -167,7 +167,7 @@ export function videoCatalog() {
   return {
     version: 1,
     adapters: Object.entries(VIDEO_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
-      sceneInputs: sceneInputCapabilities(tool), sceneCutTiming:scenePromptProfile(tool).cutTiming, voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
+      sceneInputs: sceneInputCapabilities(tool), sceneCutTiming:scenePromptProfile(tool).cutTiming, sceneWritingGuide:sceneWritingGuide(scenePromptProfile(tool)), voice: videoVoiceCapabilities(tool), ...(tool === 'mlx_video_generate' ? { deprecated: true, replacement: 'ltx_video_generate' } : {}),
       fields: keys(a.schema), modelConstraints: HOSTED_VIDEO_ROUTES[tool] ? HOSTED_VIDEO_ROUTES[tool].modelConstraints : localVideoStrategy(tool) ? { frames: localVideoStrategy(tool)!.frames, note: tool === 'fasth3_omni_reference' ? '8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation.' : 'LTX 8k+1 frames; MLX-Serve backend.' } : a.engine === 'seedance' ? seedance.SEEDANCE_MODEL_SPECS :
         a.engine === 'astra-genai-desktop' ? { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } :
         tool === 'astra_genai_msr' ? { note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.' } :

@@ -116,7 +116,7 @@ export function speechRevision(line, character) {
 function currentAudio(line, character) {
     try {
         if (line.audio)
-            characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line);
+            characterSpeechContract().verifiedSpeechGeneration(line.audio.path, line.audio.generation, character?.tts, line, { required: character?.tts?.engine === 'mlx-audio', referenceSha256: character?.voiceReference?.sha256 });
         return !!line.audio && line.audio.revision === speechRevision(line, character) && line.audio.generation?.text === line.tts &&
             voiceContract().generationVoiceErrors(character?.tts, line.audio.generation, line).length === 0 &&
             existsSync(line.audio.path) && hash(readFileSync(line.audio.path)) === line.audio.sha256;
@@ -139,6 +139,9 @@ export function speechAudioPlan(line, character, context) {
     const direction = actingContract().directionSupport(voice, line.acting);
     const language = validator.normalizeLanguage(voice.language);
     const compiled = compileActing(line.tts, line.acting || undefined, { ...voice, language });
+    if (compiled.generator === 'tts_local_voxcpm2' && character?.voiceReference) {
+        Object.assign(compiled.generation, { referenceAudio: character.voiceReference.path, referenceSha256: character.voiceReference.sha256 });
+    }
     const modelContract = resolveTtsModel(String(voice.engine), typeof voice.model === 'string' ? voice.model.trim() : undefined);
     return { ...compiled, capabilities: modelContract, arguments: compiled.generation, expectedText: line.tts, speechRevision: speechRevision(line, character), language, direction, review: 'not_reviewed' };
 }
@@ -318,14 +321,15 @@ export function manageSpeech(args, options = {}) {
             const audioPath = resolve(dirname(file), args.audioPath);
             if (!args.generation || args.generation.text !== line.tts)
                 throw new Error('Attach the actual generation arguments and exact line text');
-            const voice = audioCharacter(line.speaker)?.tts;
+            const actor = audioCharacter(line.speaker);
+            const voice = actor?.tts;
             const voiceErrors = voiceContract().generationVoiceErrors(voice, args.generation, line);
             if (voiceErrors.length)
                 throw new Error('Generation arguments do not match the pinned character voice: ' + voiceErrors.join('; '));
             const bytes = readFileSync(audioPath);
             if (!bytes.length)
                 throw new Error('Audio file is empty');
-            const generation = characterSpeechContract().verifiedSpeechGeneration(audioPath, args.generation, voice, line, { required: voice?.engine === 'astra-genai' });
+            const generation = characterSpeechContract().verifiedSpeechGeneration(audioPath, args.generation, voice, line, { required: ['astra-genai', 'mlx-audio'].includes(String(voice?.engine)), referenceSha256: actor?.voiceReference?.sha256 });
             const priorAudio = line.audio;
             const audioHash = hash(bytes), lineRevision = speechRevision(line, character(line.speaker));
             const video = object(object(scene.visual).video), binding = object(video.speechBinding);
@@ -643,7 +647,7 @@ export function manageSpeech(args, options = {}) {
     }
     const audioPlans = args.action === 'plan_audio' ? selected.map(({ scene, line }) => {
         const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname(file), board: win });
-        const generation = { ...result.generation, ...(result.generator === 'tts_astra_genai' ? {
+        const generation = { ...result.generation, ...(['tts_astra_genai', 'tts_local_voxcpm2'].includes(result.generator) ? {
                 speechContext: { path: file, lineId: line.id, expectedRevision: revision },
             } : {}) };
         return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };

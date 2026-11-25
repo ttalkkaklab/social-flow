@@ -171,6 +171,8 @@ export function priceOf(tool, args = {}) {
             return { key: null, quantity: null, note: 'Invalid duration plan: ' + String(error) };
         }
     }
+    if (tool === 'tts_local_voxcpm2')
+        return { key: 'tts.voxcpm2-local', quantity: str(args.text, '').length / 1000, note: 'Local MLX inference' };
     if (tool === 'tts_astra_genai')
         return { key: 'tts.astra-genai', quantity: null, note: 'Gateway speech pricing unverified' };
     if (['astra_genai_catalog', 'astra_genai_jobs', 'astra_genai_desktop_status'].includes(tool))
@@ -362,7 +364,7 @@ function charUnits(args) {
 /** True for the tools whose calls belong in an episode's cost ledger. */
 export function isBillableTool(tool) {
     // This wrapper records each synthesis and review itself, including rejected takes.
-    if (['tts_astra_genai', 'tts_route', 'tts_generate_checked', 'character_voice_audition', 'tts_review_acting'].includes(tool))
+    if (['tts_local_voxcpm2', 'tts_astra_genai', 'tts_route', 'tts_generate_checked', 'character_voice_audition', 'tts_review_acting'].includes(tool))
         return false;
     if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool))
         return false;

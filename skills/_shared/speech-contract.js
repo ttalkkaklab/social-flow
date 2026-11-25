@@ -12,7 +12,8 @@ function compileActing(text, acting, voice) {
   for(const key of ['voiceId','model','stylePrompt','voiceDirection'])if(typeof voice[key]==='string')voice[key]=voice[key].trim();
   if(typeof voice.language==='string')voice.language=require('./character-voice.js').normalizeLanguage(voice.language);
   const {resolveTtsModel}=require('./tts-models.js');
-  if (!['gemini','elevenlabs','astra-genai'].includes(voice.engine)) throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
+  if (['supertonic', 'mlx'].includes(voice.engine)) throw new Error('This legacy TTS engine was removed; select a supported speech model');
+  if (!['gemini','elevenlabs','astra-genai', 'mlx-audio'].includes(voice.engine)) throw new Error('Choose a supported speech engine: gemini, elevenlabs, astra-genai or mlx-audio');
   if (voice.engine==='elevenlabs' && voice.model!==undefined && voice.model!=='eleven_v4') throw new Error('Explicitly update this character to eleven_v4 before generating new speech');
   const contract=resolveTtsModel(voice.engine,voice.model);
   const performance = acting || {};
@@ -21,6 +22,11 @@ function compileActing(text, acting, voice) {
   const direction=resolvedStyle(voice,acting),support=directionSupport(voice,acting);
   if (!support.supported && voice.engine === 'gemini') throw new Error(support.warnings.join('; '));
   const tags = performance.tags || [];
+  if (contract.direction === 'local') {
+    if (tags.length || !support.supported) throw new Error('Local VoxCPM2 accepts free-text instructions up to 2000 characters');
+    return {generator: contract.single, generation: {model: contract.model, voice: voice.voiceId, text,
+      ...(direction ? {instructions: direction} : {})}};
+  }
   if (contract.direction === 'gateway') {
     if (tags.length) throw new Error('Gateway speech does not support inline acting tags');
     return {generator:'tts_astra_genai',generation:{model:voice.model,text,voice:voice.voiceId,speed:voice.speed ?? 1,
@@ -51,7 +57,7 @@ function compileActing(text, acting, voice) {
       ...(stylePrompt ? { stylePrompt } : {}),
     } };
   }
-  throw new Error('Choose a supported engine: Gemini or ElevenLabs v4; local TTS has been removed');
+  throw new Error('Choose a supported speech engine: gemini, elevenlabs, astra-genai or mlx-audio');
 }
 
 // Reject executable legacy modes and caller-supplied capabilities, including nested saved plans.

@@ -18,6 +18,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -258,6 +259,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -501,6 +503,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
       "voice": {
         "maxPinnedVoicesPerRender": {
           "dreamina-seedance-2-5-260628": 10,
@@ -754,6 +757,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -801,6 +805,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -849,6 +854,7 @@
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -905,6 +911,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -949,6 +956,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -994,6 +1002,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1043,6 +1052,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1113,6 +1123,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 2,
         "postLipSync": false,
@@ -1205,6 +1216,7 @@
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1260,6 +1272,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
       "voice": {
         "maxPinnedVoicesPerRender": 2,
         "postLipSync": false,
@@ -1313,6 +1326,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1364,6 +1378,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1417,6 +1432,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1464,6 +1480,7 @@
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1519,6 +1536,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1568,6 +1586,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1609,6 +1628,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1661,6 +1681,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 3,
         "postLipSync": false,
@@ -1715,6 +1736,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1769,6 +1791,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1812,6 +1835,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1857,6 +1881,7 @@
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -1901,6 +1926,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2099,6 +2125,7 @@
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use the supplied performance as the scene clock. Direct visible reactions and mouth movement against the recording and its pauses.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2296,6 +2323,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2422,6 +2450,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2550,6 +2579,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2677,6 +2707,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
+      "sceneWritingGuide": "Open with the framing and subject. Use timed beats for a sequence, a speaker attribution for every line and a separate sound direction. Reuse the approved voice description when generated speech is allowed.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2803,6 +2834,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2850,6 +2882,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
       "voice": {
         "maxPinnedVoicesPerRender": 3,
         "postLipSync": false,
@@ -2898,6 +2931,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
+      "sceneWritingGuide": "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2943,6 +2977,7 @@
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
+      "sceneWritingGuide": "Use a contained location and action. Anchor each speaking face and voice, describe restrained camera movement and place dialogue next to the speaker.",
       "voice": {
         "maxPinnedVoicesPerRender": 3,
         "postLipSync": false,

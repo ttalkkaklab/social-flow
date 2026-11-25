@@ -263,12 +263,12 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-    const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming };
+    const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
     const providerTimeline = sceneTimelineWords(timeline, scene, {
         ...providerTiming, includeDialogue: !options.bindDialogue,
         describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue,
     });
-    const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue);
+    const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
     const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };

@@ -2,7 +2,7 @@
 
 Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
 
-For structured distilled LTX scenes with flexible cuts, the planner sends the ordered cards to the scene gateway. It validates one shared MSR generation for up to four shots, 361 frames and two pinned voices. The approved plan records `single_msr` or `per_shot`. Choose `per_shot` for exact cut frames or isolated speaker control. The gateway keeps a single public job in both modes.
+With an explicit `sceneRendering:"auto"` request for a distilled LTX scene, the planner sends the ordered cards to the scene gateway. It validates one shared MSR generation for up to four shots, 361 frames and two pinned voices. The approved plan records `single_msr` or `per_shot`. Choose `per_shot` for exact cut frames or isolated speaker control. The gateway keeps a single public job in both modes.
 
 Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 

@@ -58,7 +58,7 @@ function sceneCast(scene, cards) {
   return sceneSpeech(scene, cards).physical;
 }
 
-function sceneSpeechRoute(scene, cards, selection) {
+function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
   const {physical, visible} = sceneSpeech(scene, cards, true);
   const speakers = visible ? physical : [];
   const direction = scene.videoDirection || {};
@@ -90,11 +90,11 @@ function sceneSpeechRoute(scene, cards, selection) {
     card.referenceImage || card.timeline?.images?.some(pin => pin.role === 'start') || card.visual?.frames?.start);
   const visualReferences = scene.speakerReferences?.length || cards.some(card =>
     card.timeline?.images?.some(pin => pin.role === 'face') || card.visual?.references?.some(ref => ref.use !== 'image' && ref.role === 'character'));
-  if (cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
+  if (requestedRendering && cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
     operation = 'image';
     const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
     rendering = cards.some(card => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 ||
-      frames > 361 || cards.length > 4 || cards.some(card => card.timeline?.dialogueCues?.length)
+      frames > 361 || cards.length > 4
       ? 'per_shot' : 'auto';
   } else if (cutScene && operation === 'image' && (mixedCuts || speakers.length > 2 || anchoredCuts)) {
     rendering = 'per_shot';

@@ -123,6 +123,7 @@ seedance.2-0-mini-video.720p	second	0.045	derived	dreamina-seedance-2-0-mini-260
 # Gemini bills in audio tokens (25/second), not characters. The values below take 1M characters
 # at the measured Korean speech rate of 6.55 chars/s and fold the result back to a per-1,000-char price.
 tts.local	1000 chars	0.000	official	Supertonic local — no network, no key. Electricity only
+tts.voxcpm2-local	1000 chars	0.000	local	VoxCPM2 in mlx-audio on the local Mac. No provider charge.
 tts.mlx	1000 chars	0.000	official	mlx_tts_generate — MLX Core / mlx-serve on-device. Quantity is input chars ÷ 1000. Electricity only
 tts.gemini-flash	1000 chars	0.038	derived	$38/1M chars (1eabc4fb:docs/research/2026-08-11-local-tts-and-commercial-api)
 tts.gemini-pro	1000 chars	0.076	derived	$76/1M chars — fallback when flash refuses

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { episodePathArg, meteredPrice, priceOf, recordUsage } from './usage-ledger.js';
 import { prepareSpeech, SPEECH_GENERATORS } from './tts-adapters.js';
-import { getTtsModels, resolveTtsModel } from './tts-models.js';
+import { getTtsModels, resolveTtsModel, speechProvider } from './tts-models.js';
 import { withSpeechRequestId } from './tts-execution.js';
 import { disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
@@ -22,7 +22,7 @@ export async function routeSpeech(input: z.input<typeof speechRouteSchema>) {
   const request = speechRouteSchema.parse(input);
   if (request.action === 'capabilities') return { models: getTtsModels(), gateway: { generator: 'tts_astra_genai', discovery: 'astra_genai_catalog kind:speech', model: 'explicit deployment alias', review: 'not_reviewed' }, review: 'not_reviewed' };
   const prepared = prepareSpeech(request.generator!, request.generation);
-  const model = resolveTtsModel(prepared.generator === 'tts_astra_genai' ? 'astra-genai' : prepared.generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', String(prepared.args.model));
+  const model = resolveTtsModel(speechProvider(prepared.generator), String(prepared.args.model));
   const gate = resolveToolGate(prepared.generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   const plan = { generator: prepared.generator, generation: prepared.args, capabilities: model,
     enabled: gate.enabled, gateReason: gate.reason, review: 'not_reviewed',

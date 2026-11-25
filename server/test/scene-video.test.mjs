@@ -147,7 +147,16 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.match(providerPrompt, /Keep the gaze steady/);
   assert.doesNotMatch(providerPrompt, /s000[12]|Frame 171/);
   assert.equal(wire.shots[1].dialogue[0].frame,171);
-  assert.throws(()=>planVideo(f.input), /s0001@171.*performance_audio/);
+  assert.throws(()=>planVideo(f.input), error=>{
+    assert.deepEqual(error.sceneRequest.cuts,request.cuts);
+    assert.deepEqual(error.sceneRequest.shotIds,request.shotIds);
+    assert.deepEqual(error.sceneRequest.images.filter(i=>i.reference?.scope==='scene').map(i=>i.character), ['nephew','miran','nephew','miran']);
+    assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
+    assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),
+      [['s0002','end',170],['s0001','start',171]]);
+    assert.deepEqual(error.missing.filter(m=>m.input==='position').map(m=>m.frame),[0,171]);
+    return true;
+  });
   assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
   const board = path.join(f.dir,'scenes.js');
   fs.appendFileSync(board, '\nwindow.PRODUCTION='+JSON.stringify({videoAuthorization:{
@@ -275,8 +284,9 @@ function pinnedActor(dir, id, face, frequency) {
   return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
 }
 
-test('EP13 keeps five Linh face pins and only her third-shot voice in one native scene submission', async t => {
+test('explicit legacy shot rendering keeps five Linh face pins and only her third-shot voice', async t => {
   const f = busking(t);
+  f.input.sceneRendering = 'per_shot';
   delete f.scene.audio;
   f.scene.openingPositions = [
     {character:'bo',images:[],position:'At the flower stall.'},
@@ -427,7 +437,7 @@ test('native scene children bind the active voices locally and reject three spea
   save();
   const options = {...f.input,sceneRendering:'per_shot'};
   const plan = planVideo(options,false);
-  assert.equal(planVideo(f.input,false).sceneRendering,'per_shot');
+  assert.throws(() => planVideo(f.input,false), /scene_prompt_unsupported/);
   const {body} = await buildSceneWire(plan.sceneRequest,plan.selection.model,plan.selection.resolution);
   const firstFaces = body.shots[0].images.filter(pin => pin.role === 'face');
   const listenerSlot = firstFaces.findIndex(pin => pin.character === listener.id);
