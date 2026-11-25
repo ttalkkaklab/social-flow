@@ -3,6 +3,8 @@
 Read this file only when resuming an existing unversioned or story-v1 episode.
 Never use it to author or review a new scenario-v2/story-v2 episode. Current authorization,
 budget, speech and automation policies still override historical instructions here.
+The Lyria names in the historical BGM examples identify the adapters used for those files.
+Use the saved music model through [music routing](../../_shared/music-routing.md) for any new bed on a resumed episode.
 For new work, return to the corresponding SKILL.md and character-scenarios.md.
 
 ## Contents
@@ -722,12 +724,12 @@ the price.
   out and this step copies or generates a single `.work/bgm.wav`. If the channel has a
   shared bed, just copy it.
   `python3 ${CLAUDE_PLUGIN_ROOT}/skills/channel/references/resolve-asset.py data/<channel> bgm default`
-  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, put a
-  30-second `music_generate_clip` instrumental at `.work/bgm.wav`. Include
+  — if a path comes back, copy it to `.work/bgm.wav`. Otherwise, plan a 30-second instrumental bed with `music_plan` using the saved
+  model and pass its `directory` and `planId` to `music_execute` for `.work/bgm.wav`. Include
   "leaves space for a spoken voiceover, no melody in the vocal frequency range"
   in the prompt. To reuse the same tone next episode, copy it to
   `assets/audio/bgm/default.wav` and add it to the catalog with its provenance in the
-  note (`lyria-clip · <prompt> · <date>`, assets-catalog-template.md). One bed still
+  note (`<model> · <prompt> · <date>`, assets-catalog-template.md). One bed still
   opens out of the way: the builder holds it a further 6 LU down under card 0
   (`BGM_HOOK_LU`) and ramps back from card 1.
   **No `window.MUSIC` cues unattended.** Cues are made with `music_generate`

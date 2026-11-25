@@ -100167,7 +100167,7 @@ var require_music_catalog = __commonJS({
   "../skills/_shared/music-catalog.json"(exports, module) {
     module.exports = {
       version: 1,
-      revision: "2026-11-21",
+      revision: "2026-11-25",
       models: [
         {
           engine: "lyria",
@@ -100241,6 +100241,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "music_generate_clip",
           engine: "lyria",
+          purpose: "Generate a fixed 30-second Google Lyria clip from a single prompt.",
           fixedModel: "lyria-3-clip-preview",
           fields: [
             "prompt",
@@ -100251,6 +100252,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "music_generate_song",
           engine: "lyria",
+          purpose: "Generate an instrumental or vocal track with Google Lyria Clip or 3.5, with optional lyrics.",
           fields: [
             "model",
             "prompt",
@@ -100263,6 +100265,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "music_generate",
           engine: "lyria",
+          purpose: "Generate a Google Lyria RealTime instrumental from one prompt for a requested duration.",
           fixedModel: "models/lyria-realtime-exp",
           fields: [
             "prompt",
@@ -100278,6 +100281,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "music_generate_advanced",
           engine: "lyria",
+          purpose: "Blend weighted prompts and adjust musical controls for a Google Lyria RealTime instrumental.",
           fixedModel: "models/lyria-realtime-exp",
           fields: [
             "prompts",
@@ -100290,6 +100294,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "suno_generate",
           engine: "suno-api",
+          purpose: "Generate two song variants through the third-party sunoapi.org V6 API.",
           fields: [
             "prompt",
             "lyrics",
@@ -100315,6 +100320,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "suno_generate_sound",
           engine: "suno-api",
+          purpose: "Disabled. The sunoapi.org sounds API has no documented way to retrieve the finished audio.",
           fields: [
             "prompt",
             "model",
@@ -100329,6 +100335,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "music_elevenlabs_generate",
           engine: "elevenlabs",
+          purpose: "Generate an ElevenLabs music track from a prompt or a section-by-section composition plan.",
           fields: [
             "modelId",
             "prompt",
@@ -100344,6 +100351,7 @@ var require_music_catalog = __commonJS({
         {
           tool: "mlx_music_generate",
           engine: "mlx",
+          purpose: "Generate music locally with the selected MLX Core music pack.",
           fields: [
             "prompt",
             "model",
@@ -116150,14 +116158,54 @@ var MUSIC_MODELS = [
   ...["music_v2", "music_v2_5"].map((model2) => ({ engine: "elevenlabs", model: model2, tool: "music_elevenlabs_generate", vocals: true, duration: "3\u2013600 seconds", provider: "ElevenLabs official" }))
 ];
 var MUSIC_ADAPTERS = {
-  music_generate_clip: { engine: "lyria", schema: musicClipSchema, fixedModel: "lyria-3-clip-preview" },
-  music_generate_song: { engine: "lyria", schema: lyriaSongSchema, modelField: "model" },
-  music_generate: { engine: "lyria", schema: musicGenerateSchema, fixedModel: "models/lyria-realtime-exp" },
-  music_generate_advanced: { engine: "lyria", schema: musicAdvancedSchema, fixedModel: "models/lyria-realtime-exp" },
-  suno_generate: { engine: "suno-api", schema: sunoGenerateSchema, modelField: "model" },
-  suno_generate_sound: { engine: "suno-api", schema: sunoSoundSchema, modelField: "model" },
-  music_elevenlabs_generate: { engine: "elevenlabs", schema: elevenMusicSchema, modelField: "modelId" },
-  mlx_music_generate: { engine: "mlx", schema: mlxMusicGenerateSchema, modelField: "model" }
+  music_generate_clip: {
+    engine: "lyria",
+    schema: musicClipSchema,
+    fixedModel: "lyria-3-clip-preview",
+    purpose: "Generate a fixed 30-second Google Lyria clip from a single prompt."
+  },
+  music_generate_song: {
+    engine: "lyria",
+    schema: lyriaSongSchema,
+    modelField: "model",
+    purpose: "Generate an instrumental or vocal track with Google Lyria Clip or 3.5, with optional lyrics."
+  },
+  music_generate: {
+    engine: "lyria",
+    schema: musicGenerateSchema,
+    fixedModel: "models/lyria-realtime-exp",
+    purpose: "Generate a Google Lyria RealTime instrumental from one prompt for a requested duration."
+  },
+  music_generate_advanced: {
+    engine: "lyria",
+    schema: musicAdvancedSchema,
+    fixedModel: "models/lyria-realtime-exp",
+    purpose: "Blend weighted prompts and adjust musical controls for a Google Lyria RealTime instrumental."
+  },
+  suno_generate: {
+    engine: "suno-api",
+    schema: sunoGenerateSchema,
+    modelField: "model",
+    purpose: "Generate two song variants through the third-party sunoapi.org V6 API."
+  },
+  suno_generate_sound: {
+    engine: "suno-api",
+    schema: sunoSoundSchema,
+    modelField: "model",
+    purpose: "Disabled. The sunoapi.org sounds API has no documented way to retrieve the finished audio."
+  },
+  music_elevenlabs_generate: {
+    engine: "elevenlabs",
+    schema: elevenMusicSchema,
+    modelField: "modelId",
+    purpose: "Generate an ElevenLabs music track from a prompt or a section-by-section composition plan."
+  },
+  mlx_music_generate: {
+    engine: "mlx",
+    schema: mlxMusicGenerateSchema,
+    modelField: "model",
+    purpose: "Generate music locally with the selected MLX Core music pack."
+  }
 };
 function shape(schema2) {
   if (schema2 instanceof external_exports.ZodEffects) return shape(schema2.innerType());
@@ -116174,20 +116222,22 @@ function parseMusicArgs(tool2, input) {
 }
 function musicAdapterContracts(engine2, model2) {
   const known = model2 === void 0 || engine2 === "mlx" || MUSIC_MODELS.some((row) => row.engine === engine2 && row.model === model2);
-  return adapterContracts(
-    "music",
-    musicCatalog().adapters.filter((row) => known && row.engine === engine2 && (!model2 || !row.fixedModel || row.fixedModel === model2)),
-    MUSIC_ADAPTERS,
-    { engine: engine2, model: model2 }
-  );
+  const matches = musicCatalog().adapters.filter((row) => {
+    if (!known || row.engine !== engine2) return false;
+    if (model2 === void 0) return true;
+    if (row.fixedModel) return row.fixedModel === model2;
+    const { schema: schema2, modelField } = MUSIC_ADAPTERS[row.tool];
+    return !!modelField && shape(schema2)[modelField].safeParse(model2).success;
+  });
+  return adapterContracts("music", matches, MUSIC_ADAPTERS, { engine: engine2, model: model2 });
 }
 function musicCatalog() {
   return {
     version: 1,
-    revision: "2026-11-21",
+    revision: "2026-11-25",
     models: MUSIC_MODELS,
     noGeneration: { engine: "none" },
-    adapters: Object.entries(MUSIC_ADAPTERS).map(([tool2, a]) => ({ tool: tool2, engine: a.engine, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
+    adapters: Object.entries(MUSIC_ADAPTERS).map(([tool2, a]) => ({ tool: tool2, engine: a.engine, purpose: a.purpose, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
     local: { engine: "mlx", tool: "mlx_music_generate", model: "Exact installed MLX Core music pack ID; no automatic pack selection" },
     unimplemented: [
       { engine: "suno-official", reason: "Official platform exists; authenticated request schema not verified", source: "https://platform.suno.com/" },
@@ -124765,7 +124815,7 @@ var MUSIC_TOOLS = [
   {
     name: "music_catalog",
     title: "Inspect music models",
-    description: "Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call. Name an engine, and a model to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across music adapters and parameters.options the adapter's own.",
+    description: "List music models and the purpose of each provider adapter. Use this to select BGM or song models, inspect duration controls, or choose engine:none to reuse existing music or leave scenes unscored. Returns exact model IDs, adapter fields and sources without a provider call. Filter by engine and optionally model to get parameters.common and parameters.options as JSON Schema. For a new track, pass the selected adapter fields to music_plan.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       engine: { type: "string", enum: ["lyria", "suno-api", "elevenlabs", "mlx"], description: "Music engine as saved in models.music.engine, e.g. lyria." },
       model: { type: "string", description: "One exact model of that engine, e.g. lyria-3.5. Needs engine." }
@@ -124775,7 +124825,7 @@ var MUSIC_TOOLS = [
   {
     name: "music_plan",
     title: "Plan music from saved settings",
-    description: "Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute \u2014 use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.",
+    description: "Create a local music plan from the saved model and any episode or shot override. Use music_catalog to find the adapter fields for args. Checks the inputs and records reference hashes, the cost estimate and the final WAV path without a provider call. Pass the returned directory and planId to music_execute to generate the track. The id field is an alias for planId.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       ...context,
       engine: { type: "string", description: "Optional assertion of the saved music engine. A different saved engine refuses the plan (music_selection_mismatch); a plan never switches the selection." },
@@ -144223,7 +144273,7 @@ Story planning: use \`story_intensity_plan\` to develop story pressure and \`sto
 
 Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\` (the clich\xE9s it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` \u2192 \`music_plan\` \u2192 \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
 TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
@@ -146781,7 +146831,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
   // ── Music generation (Google Lyria) ────────────
   {
     name: "music_generate_clip",
-    title: "Music generation (30s clip)",
+    title: "Generate a 30-second Google Lyria clip",
     annotations: HINT.generate,
     description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
@@ -146811,12 +146861,12 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
   },
   {
     name: "music_generate",
-    title: "Music generation (set duration)",
+    title: "Generate a single-prompt Lyria RealTime instrumental",
     annotations: HINT.generate,
     description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) \u2014 e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text \u2014 music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics \u2014 Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Lyria RealTime generates instrumentals. For a sung track, check vocal support in music_catalog. For weighted musical ideas or density, brightness and seed controls on this model, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -146861,12 +146911,12 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
   },
   {
     name: "music_generate_advanced",
-    title: "Music generation (weighted prompts \xB7 fine control)",
+    title: "Generate a weighted-prompt Lyria RealTime instrumental",
     annotations: HINT.generate,
     description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas \u2014 e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] \u2014 or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) \u2014 record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request \u2014 music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only \u2014 sung songs go to suno_generate).
+For one prompt and a duration on this model, music_generate takes both directly. For a sung track, check vocal support in music_catalog.
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
     inputSchema: {
@@ -146986,7 +147036,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}\u2013${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics \u2014 mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use in place of the saved music model \u2014 new music runs music_plan \u2192 music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
+Use music_plan \u2192 music_execute with the saved music model for production. Keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -147163,7 +147213,7 @@ Returns: a capability menu \u2014 video_generation, image_generation, tts, music
   },
   {
     name: "music_list_options",
-    title: "Music option list",
+    title: "List suggested genres, moods and instruments",
     annotations: HINT.local,
     description: `List suggested genres, moods, and instruments for music generation.
 
@@ -147264,7 +147314,7 @@ Returns: categorized text lists \u2014 32 genres, 25 moods, 22 instruments (non-
   },
   {
     name: "suno_generate_sound",
-    title: "Suno loopable BGM",
+    title: "Suno sound generation (unavailable)",
     annotations: HINT.generate,
     description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
@@ -148870,8 +148920,9 @@ var musicContextSchema = { type: "object", description: "Managed music context; 
   reserveUsd: { type: "number", minimum: 0, description: "Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap." }
 }, required: ["directory", "assetId", "requestId"] };
 for (const tool2 of TOOLS) {
-  if (!MUSIC_ADAPTERS[tool2.name]) continue;
-  tool2.description = "Generate music with the selected provider. Configured production requires musicContext and routes through music_plan \u2192 music_execute. Do NOT use to inspect models \u2014 use music_catalog. " + tool2.description;
+  const adapter2 = MUSIC_ADAPTERS[tool2.name];
+  if (!adapter2) continue;
+  tool2.description = adapter2.purpose + " For configured production, use music_plan \u2192 music_execute. Direct calls in that context require musicContext. " + tool2.description;
   tool2.inputSchema.properties = { ...tool2.inputSchema.properties, musicContext: musicContextSchema };
   if (tool2.name === "suno_generate_sound") tool2.description = "Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.";
   if (tool2.name === "suno_generate") {
@@ -149143,7 +149194,7 @@ function planMusic(raw) {
 }
 function musicPlanSummary(plan2) {
   const { args, sourceArgs: _source, ...summary2 } = plan2;
-  return { ...summary2, fields: Object.keys(args), review: "not_reviewed" };
+  return { ...summary2, planId: plan2.id, fields: Object.keys(args), review: "not_reviewed" };
 }
 async function executeMusic(raw, dispatch) {
   gate2("music_execute");
@@ -158839,11 +158890,11 @@ TIPS for better results:
 - Combine genre + mood for more specific output (e.g., "calm jazz", "energetic techno")
 - Specify instruments for desired sound palette
 - Use BPM to control tempo (60=slow, 120=moderate, 180=fast)
-- New music follows music_plan \u2192 music_execute with the saved model; music_generate_clip is the standalone 30s Lyria clip (describe BPM/key/mood in the prompt)
-- For exact durations (5-300s), use music_generate (Lyria RealTime)
+- Check the saved model's inputs with music_catalog. Pass the directory and planId from music_plan to music_execute.
+- For a saved Lyria RealTime model, request 5\u2013300 seconds with durationSeconds.
 - For BGM under narration, ask for space in the vocal frequency range
 
-ADVANCED CONTROLS (music_generate_advanced):
+LYRIA REALTIME CONTROLS (music_plan args.config for weighted prompts):
 - guidance (0-6): How closely to follow the prompt (higher = more faithful)
 - density (0-1): Note density (0=sparse, 1=dense)
 - brightness (0-1): Tonal brightness (0=dark, 1=bright)

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "2026-11-21",
+  "revision": "2026-11-25",
   "models": [
     {
       "engine": "lyria",
@@ -74,6 +74,7 @@
     {
       "tool": "music_generate_clip",
       "engine": "lyria",
+      "purpose": "Generate a fixed 30-second Google Lyria clip from a single prompt.",
       "fixedModel": "lyria-3-clip-preview",
       "fields": [
         "prompt",
@@ -84,6 +85,7 @@
     {
       "tool": "music_generate_song",
       "engine": "lyria",
+      "purpose": "Generate an instrumental or vocal track with Google Lyria Clip or 3.5, with optional lyrics.",
       "fields": [
         "model",
         "prompt",
@@ -96,6 +98,7 @@
     {
       "tool": "music_generate",
       "engine": "lyria",
+      "purpose": "Generate a Google Lyria RealTime instrumental from one prompt for a requested duration.",
       "fixedModel": "models/lyria-realtime-exp",
       "fields": [
         "prompt",
@@ -111,6 +114,7 @@
     {
       "tool": "music_generate_advanced",
       "engine": "lyria",
+      "purpose": "Blend weighted prompts and adjust musical controls for a Google Lyria RealTime instrumental.",
       "fixedModel": "models/lyria-realtime-exp",
       "fields": [
         "prompts",
@@ -123,6 +127,7 @@
     {
       "tool": "suno_generate",
       "engine": "suno-api",
+      "purpose": "Generate two song variants through the third-party sunoapi.org V6 API.",
       "fields": [
         "prompt",
         "lyrics",
@@ -148,6 +153,7 @@
     {
       "tool": "suno_generate_sound",
       "engine": "suno-api",
+      "purpose": "Disabled. The sunoapi.org sounds API has no documented way to retrieve the finished audio.",
       "fields": [
         "prompt",
         "model",
@@ -162,6 +168,7 @@
     {
       "tool": "music_elevenlabs_generate",
       "engine": "elevenlabs",
+      "purpose": "Generate an ElevenLabs music track from a prompt or a section-by-section composition plan.",
       "fields": [
         "modelId",
         "prompt",
@@ -177,6 +184,7 @@
     {
       "tool": "mlx_music_generate",
       "engine": "mlx",
+      "purpose": "Generate music locally with the selected MLX Core music pack.",
       "fields": [
         "prompt",
         "model",

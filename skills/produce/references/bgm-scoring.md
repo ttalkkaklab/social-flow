@@ -121,7 +121,7 @@ happen to end on its own downbeat clicks once per lap. Measured on our 90s meleo
 in a single sample at 90.00s. `bgm-bed.sh` crossfades the bed onto itself instead
 (`BGM_LOOP_XF`, 2.0s). In a synthetic reproduction the butt-join left a sample jump 4.4× the
 local median at every lap; the crossfaded render left none. The better fix is still to not loop
-at all — `music_generate` takes an exact length up to 300s.
+at all. When the saved model is Lyria RealTime, `music_plan` accepts a requested duration of up to 300 seconds.
 
 ### Effects and room tone — measured like the bed
 
@@ -216,14 +216,14 @@ Changing `bpm` or `scale` mid-stream needs a context reset, and the vendor recom
 prompt changes because transitions "can be a bit abrupt".
 
 `window.MUSIC` takes that format directly — `prompts: [{ text, weight }]` with `density` and
-`brightness`, which produce sends to `music_generate_advanced` (scenes-schema §music cues). Two
+`brightness`. For a saved Lyria RealTime model, pass the weights in `args.prompts`
+and the controls in `args.config` to `music_plan` (scenes-schema §music cues). Two
 cues that share their text and differ in weights move less at the crossfade than two written
 from scratch.
 
 For our purpose the prompt has one job beyond mood: **leave the voice its band**. "leaves space for
 a spoken voiceover, no melody in the vocal frequency range" is the established wording. The bed is
-instrumental by construction — sung vocals fight the voiceover, which is why `suno_generate` is
-for episodes where the song itself is the piece.
+instrumental so the narration stays clear. Reserve sung vocals for episodes where the song itself is the piece.
 
 ## 5. What did not survive
 

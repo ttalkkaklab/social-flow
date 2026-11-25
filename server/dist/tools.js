@@ -55,10 +55,9 @@ import { speechCatalogSchema, speechPlanSchema, speechExecuteSchema, speechStatu
  * review gate, so a call is an immediately public post, and the descriptions
  * say never to call without user approval.
  *
- * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
- * music (music_*) on GEMINI_API_KEY. Sung full songs are suno_generate
- * (sunoapi.org third-party REST, SUNO_API_KEY). New music runs music_plan →
- * music_execute with the saved models.music; sound effects are
+ * Generation tools use provider-specific credentials. New music runs through
+ * music_plan → music_execute with the saved models.music. The catalog identifies
+ * the Lyria, ElevenLabs, sunoapi.org and local MLX adapters. Sound effects use
  * sfx_elevenlabs_generate. Descriptions carry the short-form pipeline context
  * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
@@ -923,7 +922,7 @@ Story planning: use \`story_intensity_plan\` to develop story pressure and \`sto
 
 Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` → \`music_plan\` → \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
 TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
@@ -3392,7 +3391,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     // ── Music generation (Google Lyria) ────────────
     {
         name: 'music_generate_clip',
-        title: 'Music generation (30s clip)',
+        title: 'Generate a 30-second Google Lyria clip',
         annotations: HINT.generate,
         description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
@@ -3422,12 +3421,12 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     },
     {
         name: 'music_generate',
-        title: 'Music generation (set duration)',
+        title: 'Generate a single-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Lyria RealTime generates instrumentals. For a sung track, check vocal support in music_catalog. For weighted musical ideas or density, brightness and seed controls on this model, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -3472,12 +3471,12 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     },
     {
         name: 'music_generate_advanced',
-        title: 'Music generation (weighted prompts · fine control)',
+        title: 'Generate a weighted-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only — sung songs go to suno_generate).
+For one prompt and a duration on this model, music_generate takes both directly. For a sung track, check vocal support in music_catalog.
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
         inputSchema: {
@@ -3597,7 +3596,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use in place of the saved music model — new music runs music_plan → music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
+Use music_plan → music_execute with the saved music model for production. Keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -3762,7 +3761,7 @@ Returns: a capability menu — video_generation, image_generation, tts, music_ge
     },
     {
         name: 'music_list_options',
-        title: 'Music option list',
+        title: 'List suggested genres, moods and instruments',
         annotations: HINT.local,
         description: `List suggested genres, moods, and instruments for music generation.
 
@@ -3863,7 +3862,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
     },
     {
         name: 'suno_generate_sound',
-        title: 'Suno loopable BGM',
+        title: 'Suno sound generation (unavailable)',
         annotations: HINT.generate,
         description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
@@ -5334,9 +5333,10 @@ const musicContextSchema = { type: 'object', description: 'Managed music context
         reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap.' },
     }, required: ['directory', 'assetId', 'requestId'] };
 for (const tool of TOOLS) {
-    if (!MUSIC_ADAPTERS[tool.name])
+    const adapter = MUSIC_ADAPTERS[tool.name];
+    if (!adapter)
         continue;
-    tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
+    tool.description = adapter.purpose + ' For configured production, use music_plan → music_execute. Direct calls in that context require musicContext. ' + tool.description;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
     if (tool.name === 'suno_generate_sound')
         tool.description = 'Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';

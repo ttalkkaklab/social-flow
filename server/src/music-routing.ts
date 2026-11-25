@@ -114,7 +114,7 @@ export function planMusic(raw: unknown): MusicPlan {
 /** Report the plan without copying the full lyrics into every response. */
 export function musicPlanSummary(plan: MusicPlan) {
   const { args, sourceArgs: _source, ...summary } = plan;
-  return { ...summary, fields: Object.keys(args), review: 'not_reviewed' };
+  return { ...summary, planId: plan.id, fields: Object.keys(args), review: 'not_reviewed' };
 }
 export type MusicDispatch = (tool: string, args: Record<string, unknown>) => Promise<ToolResult>;
 export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promise<ToolResult> {

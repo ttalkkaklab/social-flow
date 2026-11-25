@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseMusicArgs, musicCatalog } from '../dist/music-registry.js';
+import { parseMusicArgs, musicCatalog, musicAdapterContracts } from '../dist/music-registry.js';
 import { TOOLS } from '../dist/tools.js';
 import { isBillableTool } from '../dist/usage-ledger.js';
 test('Suno V6 validates native requirements and refuses retired models without substitution', () => {
@@ -22,4 +22,11 @@ test('routing tools are exposed once and do not produce duplicate ledger charges
   }
   assert.ok(musicCatalog().models.every(m => TOOLS.some(t => t.name === m.tool)));
   assert.ok(musicCatalog().unimplemented.some(p => p.engine === 'suno-official'));
+});
+test('the catalog describes each adapter and scopes Lyria RealTime to its two instrumental tools', () => {
+  const { adapters } = musicCatalog();
+  assert.ok(adapters.every(row => row.engine && row.purpose.trim()));
+  const realtime = musicAdapterContracts('lyria', 'models/lyria-realtime-exp').adapters;
+  assert.deepEqual(realtime.map(row => row.tool).sort(), ['music_generate', 'music_generate_advanced']);
+  for (const row of realtime) assert.equal(row.purpose, adapters.find(adapter => adapter.tool === row.tool).purpose);
 });
