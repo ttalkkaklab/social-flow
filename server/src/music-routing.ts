@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { MUSIC_ADAPTERS, MUSIC_MODELS, parseMusicArgs } from './music-registry.js';
+import { assertSelection } from './adapter-parameters.js';
 
 import { musicTransaction, readMusicState } from './music-state.js';
 import { atomicJson, canonicalPath, routingHash, withinDirectory } from './routing-files.js';
@@ -29,7 +30,7 @@ export const musicContext = (directory: string, assetId: string): Context =>
   (load(selectionHelper) as { readMusicContext(directory: string, assetId: string): Context }).readMusicContext(directory, assetId);
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const musicPlanSchema = z.object({ directory: z.string().min(1), assetId: idSchema, requestId: idSchema,
-  tool: z.string().optional(),
+  engine: z.string().min(1).optional(), model: z.string().min(1).optional(), tool: z.string().optional(),
   reserveUsd: z.number().finite().nonnegative().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const musicExecuteSchema = z.object({ directory: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 const authorizationSchema = z.object({ reference: z.string().min(1), maxUsd: z.number().finite().nonnegative(),
@@ -82,6 +83,7 @@ export function planMusic(raw: unknown): MusicPlan {
   requireReadyProject(input.directory);
   const context = musicContext(input.directory, input.assetId);
   const { selection } = context;
+  assertSelection('music', selection, input);
   if (selection.engine === 'none') throw new Error('music_generation_disabled: this selection uses existing music or no score');
   const tool = input.tool ?? (selection.engine === 'mlx' ? 'mlx_music_generate' :
     MUSIC_MODELS.find(m => m.engine === selection.engine && m.model === selection.model)?.tool);

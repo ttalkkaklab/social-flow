@@ -530,6 +530,50 @@ plan's direction record. Cast, shots and lines stay on the board as the evidence
 limits and attachment. See
 [scene prompt design](docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md).
 
+## Prompt ownership and the engine interface (user directive, 2026-11-25)
+
+A video model takes one prompt for each call, so the prompt belongs to the scene, where the
+session can read and adjust it, and no request this plugin builds asks the GenAI gateway to
+write one for a single call. The gateway wrote it on two paths: `shots[]` text on the GenAI
+text and image adapters, and the `single_msr` and `auto` rendering modes. The adapters now
+refuse `shots` and `video_plan` refuses those modes (`scene_render_selection`). A scene that
+fits one model call is planned without `sceneRendering`: the planner writes its one prompt,
+the plan returns it as `promptTemplate`, an edited copy comes back as `prompt` under the
+bounded-edit rules above, and the GenAI gateway receives the approved text as the request's
+prompt (captured on the distilled LTX image route, for the planner's own prompt and for an
+edited one). Other engines' adapters keep their own wire dialect. On the
+distilled LTX route the model paces the cuts (`scene_cut_timing_model_paced`), and the plan
+names each later shot whose composition image the operation cannot send
+(`shot_reference_omitted`).
+
+`sceneRendering:"per_shot"` is the one exception and says so. The gateway's scene route
+renders each shot apart and writes each shot's prompt from the manifest; it has no field for
+a caller's prompt. Only a call naming `per_shot` reaches that route. Its plan carries
+`gateway_composed_prompt` and returns no `promptTemplate`, a wording change goes on the shot
+card, and a validation answer for any other execution is refused. A plan saved under a
+retired mode reads `video_plan_stale` at approval and execution, before any upload;
+`video_status` still collects a job it had submitted. `validateScenePayload` is removed: it
+posted the shot manifest to the image route's validation endpoint with no mode named.
+
+Desktop's default provenance, `typed`, lets the app's enhancement settings rewrite a prompt.
+The gateway Desktop adapters send `promptProvenance:"enhanced"` for a written prompt unless
+the call names `typed`. The GenAI image adapter sends `promptExtend` false unless the call
+sets it.
+
+`video_catalog`, `image_catalog` and `music_catalog` list every adapter when called with no
+argument. With an `engine`, and an `operation` or for music a `model`, they return the
+matching adapters (`ltx-desktop-local` alone still answers with the app's live catalog) with their parameters as JSON Schema read from each adapter's own zod
+schema: `parameters.common` holds the names that mean the same across that media type, such as
+the prompt, model, seed and output path, and `parameters.options` the adapter's own. `video_plan`, `image_plan` and `music_plan` take
+`engine` and `model` as a check on the saved selection. A mismatch is refused
+(`model_selection_mismatch`, `image_selection_mismatch`, `music_selection_mismatch`) and a
+plan never switches the selection. The video catalog reads timed images, the scene renderer
+and pinned voices from each registry entry.
+
+That the kept routes add no words is read from the gateway's source, and no render compared
+a plugin-written prompt with a gateway-written one. Record and evidence:
+[loop 036](docs/loops/036-prompt-ownership/loop.md).
+
 ## English video prompts (user directive, 2026-10-31)
 
 Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the

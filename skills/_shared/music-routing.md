@@ -2,7 +2,10 @@
 
 New generated music follows `music_catalog → music_plan → music_execute`. Read
 `music_status` after interruptions. A channel bed is reused by naming it as a cue's `asset`; a file made for another episode's cue is never a substitute (user directive 2026-11-14). No provider
-fallback or quality score changes the saved choice.
+fallback or quality score changes the saved choice. `music_catalog {engine, model}` returns
+that engine's adapters with their parameters as JSON Schema (`parameters.common`,
+`parameters.options`). `music_plan` takes `engine` and `model` as a check on the saved
+selection and never switches it (`music_selection_mismatch`).
 
 ## Settings and layers
 

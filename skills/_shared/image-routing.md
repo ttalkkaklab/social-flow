@@ -3,6 +3,10 @@
 Use `image_catalog` → `image_plan` → `image_execute`. The catalog lists installed
 adapters and dated model contracts, not proof of provider access or perceptual quality.
 `image_status` reads receipts and can explicitly reconcile an ambiguous terminal request.
+`image_catalog {engine, operation}` returns that engine's adapters with their parameters as
+JSON Schema, the shared names in `parameters.common` and the adapter's own in
+`parameters.options`. `image_plan` takes `engine` and `model` as a check on the saved
+selection and never switches it (`image_selection_mismatch`).
 No automatic model substitution, generation retry or subjective review gate exists.
 
 ## Layers
