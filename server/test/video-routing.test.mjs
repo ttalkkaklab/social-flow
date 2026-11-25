@@ -972,6 +972,10 @@ test('hosted reference video binds one or two voices and ends its image list wit
  assert.equal(silent.tool,'minimax_img2video');
  assert.match(silent.args.prompt,/No speech/);
  assert.equal(path.basename(silent.args.sourceImagePath),'start.png');
+ assert.equal(silent.args.generateAudio,true);
+ f.board.SCENES[1].visual.video.prompt='Hero walks on. Audio: silent';
+ f.save();
+ assert.equal(planVideo({episode:f.episode,sceneNo:2,requestId:'quiet'}).args.generateAudio,false);
 });
 
 test('sceneNo refuses a frame-addressed cut on I2V and preserves ordered dialogue on a legacy single-shot board', async t => {
@@ -2404,4 +2408,12 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
   const accepted = await get('focus');
   assert.equal(buildGenaiMsrBody(genaiMsrSchema.parse(accepted.args)).prompt,accepted.sceneRequest.prompt);
   assert.ok(accepted.args.prompt.endsWith(focus + ' Hero (Image 1) waits by the door.'));
+});
+
+test('a Seedance 2.5 face video takes the @ label the rest of its prompt uses', async () => {
+  const {VIDEO_ADAPTERS} = await import('../dist/video-registry.js');
+  const cast = [{character:'hero', face:{taskId:'cgt-1'}, bodyView:'front', bodyPath:'hero.png', voiceRequired:false}];
+  const bind = model => VIDEO_ADAPTERS.seedance_reference.bindCharacterSources({model, prompt:'p'}, cast).prompt;
+  assert.match(bind('dreamina-seedance-2-5-260628'), /Use @Video 1 only for hero/);
+  assert.match(bind('dreamina-seedance-2-0-260128'), /Use Video 1 only for hero/);
 });

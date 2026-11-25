@@ -540,7 +540,7 @@ Each takes first+last frames. `seedance_text2video`, `seedance_img2video` and
 
 Seedance 2.5 and Flash accept up to 10 and 5 reference videos or audio clips respectively. Both accept audio alone. With 2.0, pair audio with an image or video. Use `ratio:"adaptive"` for 2.5 first/last frames, edits and extensions. In a reference call use `omniReferenceTaskType:"edit"` and `durationSeconds:-1` to edit the input video, or `"extend"` to generate its continuation. Select `"reference"` for a new shot using the supplied assets. Auto duration reserves the maximum output length. The plugin saves MP4.
 
-Check the [ModelArk contract and examples](../../../docs/research/2026-11-22-seedance-api/README.md). Enable the model in the BytePlus console before calling it.
+Check the [Seedance call reference](../../../docs/video-models.md#seedance-byteplus-modelark). Enable the model in the BytePlus console before calling it.
 
 ---
 

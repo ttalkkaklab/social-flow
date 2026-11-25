@@ -2309,6 +2309,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2435,6 +2436,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2563,6 +2565,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2690,6 +2693,7 @@
         "aspectRatio",
         "generateAudio",
         "negativePrompt",
+        "enhancePrompt",
         "seed",
         "outputPath",
         "filename",
@@ -2815,6 +2819,7 @@
         "model",
         "resolution",
         "durationSeconds",
+        "generateAudio",
         "outputPath",
         "filename",
         "sourceImagePath",
@@ -2827,7 +2832,7 @@
           "MiniMax-H3-Lite",
           "MiniMax-H3-Max"
         ],
-        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
       }
     },
     {
@@ -2863,6 +2868,7 @@
         "model",
         "resolution",
         "durationSeconds",
+        "generateAudio",
         "outputPath",
         "filename",
         "ratio",
@@ -2876,7 +2882,7 @@
           "MiniMax-H3-Lite",
           "MiniMax-H3-Max"
         ],
-        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+        "note": "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
       }
     },
     {

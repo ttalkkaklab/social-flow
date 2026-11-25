@@ -338,7 +338,7 @@ describe('mlx generate — mocked fetch', () => {
       numFrames: 192,
     });
     assert.equal(result.success, false);
-    assert.match(result.error, /over the 800MB cap/);
+    assert.match(result.error, /over the 768MB cap/);
     assert.equal(posted, false);
   });
 });

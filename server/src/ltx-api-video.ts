@@ -66,7 +66,8 @@ export function ltxApiAudioSeconds(file: string): number {
 
 /** The wire body; planning calls it too so size and length problems surface before money is reserved. */
 export function buildLtxApiBody(request: LtxApiImg2VideoRequest | LtxApiAudio2VideoRequest): { endpoint: string; body: Record<string, unknown> } {
-  const image = (file: string) => dataUri(file, IMAGE_EXT, 7 * 1048576);
+  // The LTX API measures data URI limits on the encoded size (docs.ltx.video input formats).
+  const image = (file: string) => dataUri(file, IMAGE_EXT, 7 * 1048576, 'encoded');
   const body: Record<string, unknown> = { model: request.model, resolution: request.resolution, fps: request.fps,
     prompt: request.prompt, ...(request.sourceImagePath ? { image_uri: image(request.sourceImagePath) } : {}),
     ...(request.lastImagePath ? { last_frame_uri: image(request.lastImagePath) } : {}),
@@ -74,7 +75,7 @@ export function buildLtxApiBody(request: LtxApiImg2VideoRequest | LtxApiAudio2Vi
   if ('audioPath' in request) {
     const seconds = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
     if (seconds < 2 || seconds > max) throw new Error(`${request.model} at ${request.resolution} takes 2–${max} s of audio; ${request.audioPath} runs ${seconds.toFixed(2)} s`);
-    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
+    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576, 'encoded');
   } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
   if (JSON.stringify(body).length > 32 * 1048576) throw new Error('LTX request body exceeds 32 MB; use smaller frames or audio');
   return { endpoint: 'audioPath' in request ? 'audio-to-video' : 'image-to-video', body };

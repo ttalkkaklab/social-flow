@@ -92,7 +92,7 @@ export function prepareVideoSound(tool, input, sound = {}) {
         throw new Error('Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction');
     const args = { ...input };
     // The genai audio-to-video soundtrack is always the supplied audio; it has no generateAudio switch.
-    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
+    if ((native.length || conditioned.length || sound.audioSource === 'video') && (tool.startsWith('seedance_') || tool.startsWith('astra_') || tool.startsWith('minimax_') || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !['astra_genai_audio2video', 'astra_genai_msr'].includes(tool)) {
         if (input.generateAudio === false)
             throw new Error('Cannot discard the requested input soundtrack');
         if (!tool.startsWith('astra_genai_desktop_'))

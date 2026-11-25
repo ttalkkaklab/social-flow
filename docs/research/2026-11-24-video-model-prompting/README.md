@@ -1,5 +1,7 @@
 # Directing recurring speakers and cuts in generated video
 
+> This study covers prompt writing. Each model's request fields and reference limits are in the [video model call reference](../../video-models.md).
+
 Research date: 24 November 2026. This study compares model-author guides, provider APIs and Social Flow's installed video catalog. The examples are proposed directions for the same scene. No video was generated or auditioned for this study.
 
 For the proposed scene-only authoring workflow, see the [scene prompt design](scene-prompt-design.md). The shot-prompt tool references below describe the research snapshot.

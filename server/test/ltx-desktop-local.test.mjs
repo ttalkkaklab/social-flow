@@ -262,3 +262,11 @@ test('managed recovery completes the original Desktop request after interrupted 
   assert.deepEqual(fs.readFileSync(JSON.parse((await execute()).content[0].text).videoPath), mp4);
   assert.equal(submissions, 1);
 });
+
+test('a downloaded model whose spec carries null capabilities still lists', async (t) => {
+  local(t);
+  const nullSpec = structuredClone(specs);
+  nullSpec.downloaded_local_models[0].spec.capabilities = null;
+  t.mock.method(globalThis, 'fetch', async () => json(nullSpec));
+  assert.deepEqual((await localDesktopCatalog()).models.map((m) => m.capabilities), [null]);
+});

@@ -45,6 +45,9 @@ const common = {
   resolution: z.enum(['720p', '1080p', '4k']).default('720p'),
   aspectRatio: z.enum(['16:9', '9:16']).default('16:9'),
   generateAudio: z.boolean().default(true), negativePrompt: z.string().optional(),
+  // Vertex defaults enhancePrompt to true and may rewrite the prompt. Sent only when set: whether 3.1 accepts
+  // false is untested live.
+  enhancePrompt: z.boolean().optional().describe('Vertex prompt enhancement; omitted keeps the vendor default (on). false asks Veo to use the prompt as written.'),
   seed: z.number().int().min(0).max(0xffffffff).optional(),
   outputPath: z.string().optional(), filename: bareFilenameSchema('video').optional(),
 };
@@ -93,8 +96,8 @@ export function buildVeoBody(request: VeoRequest) {
     aspectRatio = sourceAspect;
     instance.video = { mimeType: 'video/mp4', bytesBase64Encoded: fs.readFileSync(file).toString('base64') };
   }
-  const { resolution, generateAudio, negativePrompt, seed } = request;
-  return { instances: [instance], parameters: { sampleCount: 1, aspectRatio, resolution, generateAudio, negativePrompt, seed,
+  const { resolution, generateAudio, enhancePrompt, negativePrompt, seed } = request;
+  return { instances: [instance], parameters: { sampleCount: 1, aspectRatio, resolution, generateAudio, enhancePrompt, negativePrompt, seed,
     ...('durationSeconds' in request ? { durationSeconds: request.durationSeconds } : {}) } };
 }
 

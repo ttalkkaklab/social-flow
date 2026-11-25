@@ -94150,6 +94150,7 @@ var require_video_catalog = __commonJS({
             "aspectRatio",
             "generateAudio",
             "negativePrompt",
+            "enhancePrompt",
             "seed",
             "outputPath",
             "filename",
@@ -94276,6 +94277,7 @@ var require_video_catalog = __commonJS({
             "aspectRatio",
             "generateAudio",
             "negativePrompt",
+            "enhancePrompt",
             "seed",
             "outputPath",
             "filename",
@@ -94404,6 +94406,7 @@ var require_video_catalog = __commonJS({
             "aspectRatio",
             "generateAudio",
             "negativePrompt",
+            "enhancePrompt",
             "seed",
             "outputPath",
             "filename",
@@ -94531,6 +94534,7 @@ var require_video_catalog = __commonJS({
             "aspectRatio",
             "generateAudio",
             "negativePrompt",
+            "enhancePrompt",
             "seed",
             "outputPath",
             "filename",
@@ -94656,6 +94660,7 @@ var require_video_catalog = __commonJS({
             "model",
             "resolution",
             "durationSeconds",
+            "generateAudio",
             "outputPath",
             "filename",
             "sourceImagePath",
@@ -94668,7 +94673,7 @@ var require_video_catalog = __commonJS({
               "MiniMax-H3-Lite",
               "MiniMax-H3-Max"
             ],
-            note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+            note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
           }
         },
         {
@@ -94704,6 +94709,7 @@ var require_video_catalog = __commonJS({
             "model",
             "resolution",
             "durationSeconds",
+            "generateAudio",
             "outputPath",
             "filename",
             "ratio",
@@ -94717,7 +94723,7 @@ var require_video_catalog = __commonJS({
               "MiniMax-H3-Lite",
               "MiniMax-H3-Max"
             ],
-            note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
+            note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed."
           }
         },
         {
@@ -113987,7 +113993,7 @@ var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
 var H3_RENDER_TIMEOUT_MS = 90 * 6e4;
 var h3RenderTransport = new import_undici.Agent({ headersTimeout: H3_RENDER_TIMEOUT_MS, bodyTimeout: H3_RENDER_TIMEOUT_MS });
 var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
-var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MAX_VIDEO_RGB_BYTES = 768 * 1024 * 1024;
 var MLX_IMAGE_DIMENSION_STEP = 16;
 var MIN_MLX_IMAGE_DIMENSION = 256;
 var MAX_MLX_IMAGE_DIMENSION = 2048;
@@ -124987,10 +124993,10 @@ function mediaType(file2, allowed) {
   if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path8.basename(file2)}; use ${allowed.join(", ")}`);
   return MIME[ext];
 }
-function dataUri(file2, allowed, maxBytes) {
+function dataUri(file2, allowed, maxBytes, measure = "file") {
   const type = mediaType(file2, allowed);
-  const size = fs9.statSync(file2).size;
-  if (size > maxBytes) throw new Error(`${path8.basename(file2)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
+  const raw = fs9.statSync(file2).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
+  if (size > maxBytes) throw new Error(`${path8.basename(file2)} is ${(size / 1048576).toFixed(1)} MB${measure === "encoded" ? " once base64-encoded" : ""}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs9.readFileSync(file2).toString("base64")}`;
 }
 var sleep5 = (ms) => new Promise((resolve16) => setTimeout(resolve16, ms));
@@ -125105,7 +125111,7 @@ function ltxApiAudioSeconds(file2) {
   return seconds2;
 }
 function buildLtxApiBody(request) {
-  const image2 = (file2) => dataUri(file2, IMAGE_EXT, 7 * 1048576);
+  const image2 = (file2) => dataUri(file2, IMAGE_EXT, 7 * 1048576, "encoded");
   const body = {
     model: request.model,
     resolution: request.resolution,
@@ -125118,7 +125124,7 @@ function buildLtxApiBody(request) {
   if ("audioPath" in request) {
     const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
     if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
-    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
+    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576, "encoded");
   } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
   if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
   return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
@@ -125266,7 +125272,7 @@ function buildDesktopBody(operation, input, assets) {
   };
   if (targetResolution) params.resolution = targetResolution;
   const edits = ["extend", "retake"].includes(operation);
-  if (!edits && params.prompt) params.promptProvenance ??= "enhanced";
+  if (params.prompt) params.promptProvenance ??= "enhanced";
   if (operation === "keyframes") return {
     params: { ...params, model: "fast" },
     keyframes: keyframes2.map(({ imagePath: file2, ...frame2 }) => ({ ...ref(file2), ...frame2 }))
@@ -130403,6 +130409,9 @@ var common3 = {
   aspectRatio: external_exports.enum(["16:9", "9:16"]).default("16:9"),
   generateAudio: external_exports.boolean().default(true),
   negativePrompt: external_exports.string().optional(),
+  // Vertex defaults enhancePrompt to true and may rewrite the prompt. Sent only when set: whether 3.1 accepts
+  // false is untested live.
+  enhancePrompt: external_exports.boolean().optional().describe("Vertex prompt enhancement; omitted keeps the vendor default (on). false asks Veo to use the prompt as written."),
   seed: external_exports.number().int().min(0).max(4294967295).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -130458,12 +130467,13 @@ function buildVeoBody(request) {
     aspectRatio = sourceAspect;
     instance.video = { mimeType: "video/mp4", bytesBase64Encoded: fs16.readFileSync(file2).toString("base64") };
   }
-  const { resolution: resolution2, generateAudio, negativePrompt, seed } = request;
+  const { resolution: resolution2, generateAudio, enhancePrompt, negativePrompt, seed } = request;
   return { instances: [instance], parameters: {
     sampleCount: 1,
     aspectRatio,
     resolution: resolution2,
     generateAudio,
+    enhancePrompt,
     negativePrompt,
     seed,
     ..."durationSeconds" in request ? { durationSeconds: request.durationSeconds } : {}
@@ -130576,7 +130586,7 @@ var localSpecs = external_exports.object({
     external_exports.object({
       model: modelId,
       spec: external_exports.object({
-        capabilities: external_exports.object({ t2v: external_exports.boolean(), i2v: external_exports.boolean(), a2v: external_exports.boolean() }),
+        capabilities: external_exports.object({ t2v: external_exports.boolean(), i2v: external_exports.boolean(), a2v: external_exports.boolean() }).nullable(),
         supported_resolutions_durations: matrix,
         a2v_supported_resolutions_durations: matrix.nullish(),
         dropped_aspect_cells: external_exports.array(droppedAspect).nullish()
@@ -130637,7 +130647,8 @@ function validateDesktopFiles(args) {
     if (typeof file2 !== "string") continue;
     mediaType(
       file2,
-      field2 === "audioPath" ? [".mp3", ".wav", ".ogg", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
+      // LTX Desktop's asset ingest refuses .ogg.
+      field2 === "audioPath" ? [".mp3", ".wav", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
     );
     const stat5 = statSync13(file2);
     if (!stat5.isFile() || stat5.size === 0) throw new Error("Expected a nonempty local media file: " + file2);
@@ -130675,7 +130686,7 @@ async function checkDesktopOffering(args, minimumSeconds) {
   const model2 = catalog2.models.find((item) => item.id === args.model);
   const audio = typeof args.audioPath === "string";
   const operation = audio ? "a2v" : args.imagePath ? "i2v" : "t2v";
-  if (catalog2.unavailableReason || !model2?.capabilities[operation])
+  if (catalog2.unavailableReason || !model2?.capabilities?.[operation])
     throw new Error(
       catalog2.unavailableReason || "Selected local model or operation is unavailable: " + args.model
     );
@@ -130892,6 +130903,7 @@ var common5 = {
   model: external_exports.enum(Object.keys(MINIMAX_MODELS)).default("MiniMax-H3").describe("MiniMax H3 model id, e.g. MiniMax-H3."),
   resolution: external_exports.enum(["480P", "768P", "2K"]).default("768P").describe("Output resolution; 2K only on MiniMax-H3."),
   durationSeconds: external_exports.number().int().min(4).max(MINIMAX_MAX_SECONDS).default(5).describe("Whole seconds, 4\u201315 (MiniMax-H3-Max 5\u201315)."),
+  generateAudio: external_exports.boolean().optional().describe("Native soundtrack; false renders a silent clip. Omitted: the vendor default, on."),
   outputPath: external_exports.string().optional().describe("Output directory."),
   filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
 };
@@ -130942,6 +130954,7 @@ function buildMinimaxBody(request) {
     content: [{ type: "text", text: request.prompt }, ...content],
     resolution: request.resolution,
     duration: request.durationSeconds,
+    ...request.generateAudio === void 0 ? {} : { generate_audio: request.generateAudio },
     ..."ratio" in request ? { ratio: request.ratio } : {},
     // Max rewrites prompts by default; the compiled speaker bindings must reach the model as written.
     ...request.model === "MiniMax-H3-Max" ? { extra: { prompt_expansion_mode: "disabled" } } : {}
@@ -131288,7 +131301,7 @@ var reference = (engine, deployment, schema2, facts = {}) => ({ ...entry(engine,
 var SEEDANCE = { modelConstraints: SEEDANCE_MODEL_SPECS };
 var SEEDANCE_VOICES = Object.fromEntries(Object.entries(SEEDANCE_MODEL_SPECS).map(([model2, spec]) => [model2, spec.referenceAudio.maxClips]));
 var DESKTOP = { modelConstraints: { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } };
-var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
+var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
 var HEYGEN = { modelConstraints: { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } };
 var LOCAL_NOTES = {
   ltx_video_generate: "LTX 8k+1 frames; MLX-Serve backend.",
@@ -131314,7 +131327,8 @@ var VIDEO_ADAPTERS = Object.freeze({
         throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
       const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
       const offset = videos.reduce((count2, files3) => count2 + (Array.isArray(files3) ? files3.length : 0), 0);
-      const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      const label = (index) => formatReferenceLabel(scenePromptProfile("seedance_reference", args.model).referenceLabels, "video", index);
+      const notes = [...originals.values()].map((character, index) => `Use ${label(offset + index + 1)} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return {
         ...args,
         realFaceInput: cast.some((person) => person.face) || args.realFaceInput === true,
@@ -132477,7 +132491,7 @@ function prepareVideoVoice(tool2, input, context2) {
   const visual = object5(context2.shot.visual);
   const seedanceDialogue = tool2 === "seedance_reference" && lines.some((line) => ["on_screen", "off_screen"].includes(String(line.delivery)));
   const nativeSlot = seedanceDialogue || Boolean(visual.clip) || context2.shot.type === "broll";
-  const audible = msr || (tool2 !== "astra_genai_desktop_keyframes" || args.audio === true) && (tool2 === "fasth3_omni_reference" || tool2.startsWith("minimax_") || tool2.startsWith("heygen_") || (tool2.startsWith("astra_") ? args.generateAudio !== false : args.generateAudio === true));
+  const audible = msr || (tool2 !== "astra_genai_desktop_keyframes" || args.audio === true) && (tool2 === "fasth3_omni_reference" || tool2.startsWith("heygen_") || (tool2.startsWith("astra_") || tool2.startsWith("minimax_") ? args.generateAudio !== false : args.generateAudio === true));
   const lane = msr ? "reference" : VIDEO_ADAPTERS[tool2]?.voice ?? "none";
   const supplied = lane === "supplied";
   const onScreen = lines.some((line) => line.delivery === "on_screen");
@@ -134677,7 +134691,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     throw new Error(`reference_speech_route: ${tool2} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
   const visual = context2.shot.visual;
   const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
-  const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "seedance_img2video" && SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.audio || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.soundtrack);
+  const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "minimax_img2video" || tool2 === "seedance_img2video" && SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.audio || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.soundtrack);
   const sound = context2.shot.sound;
   const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? "").trim());
@@ -148428,7 +148442,7 @@ var vendorTool = (name2, title, description, schema2) => ({
 });
 TOOLS.push(
   ...Object.entries(HOSTED_VIDEO_ROUTES).map(([name2, route]) => vendorTool(name2, route.title, route.description, route.schema)),
-  vendorTool("minimax_img2video", "Generate a MiniMax H3 video from frames", "Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4\u201315 s, native audio always on. For cuts no character speaks in. Do NOT use for spoken cuts \u2014 use minimax_reference with the speaker's voice sample.", minimaxImg2VideoSchema),
+  vendorTool("minimax_img2video", "Generate a MiniMax H3 video from frames", "Create a MiniMax H3 clip (MINIMAX_API_KEY) from a first frame and an optional last frame, 4\u201315 s, native audio on unless generateAudio is false. For cuts no character speaks in. Do NOT use for spoken cuts \u2014 use minimax_reference with the speaker's voice sample.", minimaxImg2VideoSchema),
   vendorTool("minimax_reference", "Generate a MiniMax H3 video from references", 'Create a MiniMax H3 clip from reference pictures (character panels, the start image last) and voice samples; the prompt names them "reference image N" and "reference audio N". The first frame is not pinned. Do NOT use for silent cuts \u2014 use minimax_img2video.', minimaxReferenceSchema),
   vendorTool("heygen_img2video", "Generate a HeyGen Video 1 clip from frames", "Create a HeyGen Video 1 clip (HEYGEN_API_KEY) that opens exactly on the first frame, with an optional end image, 5\u201315 s, native audio always on. Files upload to HeyGen assets first. For cuts no character speaks in. Do NOT use for spoken cuts \u2014 use heygen_reference.", heygenImg2VideoSchema),
   vendorTool("heygen_reference", "Generate a HeyGen Video 1 clip from references", "Create a HeyGen Video 1 clip from reference pictures (<Picture N>, the start image last) and voice samples (<Audio N>). The first frame is not pinned, and the voice-sample behaviour is documented only by secondary sources. Do NOT use for silent cuts \u2014 use heygen_img2video.", heygenReferenceSchema)
