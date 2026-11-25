@@ -186,7 +186,7 @@ never enables an unimplemented API.
 
 ## Dialogue coverage and native renders
 
-Conventional coverage follows one speaker per shot. In an authored one-take, retain the replies and check the selected adapter's capacity. A distilled LTX render can bind two pinned voices to the first two subject slots. A scene with cuts can use different subjects on successive child renders. The hosted reference adapters receive their own ordered pictures and voice samples. On their reference-only routes the opening picture guides composition. A hosted LTX audio-to-video request takes the composed track as `args.audioPath`.
+A shot keeps every line spoken in its view, replies included. Each native render binds the selected adapter's number of pinned voices, and `video_plan` reports a render over it (`scene_render_voice_limit`). A distilled LTX render can bind two pinned voices to the first two subject slots. A scene with cuts can use different subjects on successive child renders. The hosted reference adapters receive their own ordered pictures and voice samples. On their reference-only routes the opening picture guides composition. A hosted LTX audio-to-video request takes the composed track as `args.audioPath`.
 
 Use the composed opening image, `generateAudio:false` and closed-mouth action for
 thoughts. `speech_manage` plans external TTS voiceover and binds assembly to

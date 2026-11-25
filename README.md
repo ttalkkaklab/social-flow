@@ -133,7 +133,7 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-Conventional dialogue coverage follows one speaker per shot. A scripted one-take may include replies within the selected model’s capacity.
+A shot keeps the lines spoken in its view, replies included. The selected video model limits the pinned voices of one render, and `video_plan` reports a scene over it.
 [Scene attention](skills/storyboard/references/shot-view.md#plan-attention-across-the-scene)
 chooses the visible evidence independently of the voice: faces, consequential details,
 discovery POVs or spatial relationships. Addressing someone does not pull that listener
@@ -146,8 +146,8 @@ See [dialogue coverage](skills/storyboard/references/dialogue-coverage.md).
 reports `directionBindings` for prompt, image, adapter and assembly inputs. It compiles to
 the adapter's own prompt limit (2,000 characters on the GenAI image and MSR lanes), dropping
 design notes, the beats' acting fields and then expressions before the camera move, action or
-lines, and reports a hand-written or legacy prompt that drops, locks or reverses the board's move
-(`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
+lines, and reports a hand-written or legacy prompt saved on the board that drops, locks or reverses
+the board's move (`camera_move_missing`, `camera_move_contradicted`). Board writes count unchosen moves, and
 `shot_icons` names video shots it leaves without one (`camera_move_unset`).
 
 Motion-graphic shots now persist `shot.motionGraphic`: a semantic type, viewer intent,
@@ -417,7 +417,7 @@ The current shot supplies the next camera view, action and prop state.
 
 ## Scene video generation
 
-Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
+Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. A plan rendered in one request returns `promptTemplate`, the submitted prompt with named references such as `{hero.face}` and `{hero.voice}`; edit it and plan again with `prompt` to send your own wording, and the planner fills in the reference numbers of the request it submits. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
 
 ## Persistent 3D locations
 
@@ -1028,8 +1028,9 @@ Local speech synthesis is removed, including Supertonic and MLX TTS.
   with `not_reviewed`. A requested adversarial improvement loop evaluates real audio
   against its stated target and records each finding; it does not become the default.
 - **Use WAV for assembly.** Keep provider timestamps and actual generated duration;
-  resample sources where required. A mixed-speaker dialogue take still needs a supported
-  scene/line binding before it can enter the current single-speaker scene builder.
+  resample sources where required. When TTS voices a shot with several speakers, attach
+  each line's own audio and let `compose-speech.js` build the card's track; one
+  mixed-speaker take cannot stand for its lines.
 - **BGM follows saved `models.music`** through `music_plan → music_execute`.
   Existing channel audio is reused first. See the [provider research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-music-models/README.md)
   for official contracts, Korean support evidence and third-party boundaries.

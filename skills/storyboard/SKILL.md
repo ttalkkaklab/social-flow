@@ -16,8 +16,10 @@ until `project_manage status` returns `ready` in that directory.
 
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
-Follow [dialogue coverage](references/dialogue-coverage.md): split at every speaker
-change without making every new speaker the picture's subject. First plan the scene's
+Follow [dialogue coverage](references/dialogue-coverage.md): a shot keeps every line spoken
+in its view, so cut where the staging, the visible evidence or the selected model's
+pinned-voice capacity calls for another view, not at every speaker change, and do not make
+every speaker the picture's subject. First plan the scene's
 [attention and visible changes](references/shot-view.md#plan-attention-across-the-scene),
 then set each shot's size, angle and delivery. Keep silent
 listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
@@ -333,8 +335,7 @@ until one is recorded; nothing waits for it.
 A scene's lines do not make its shot list (user directive 2026-11-17). Before any line, write the
 pictures that carry none: where this is and who else is there, a character's work while it is
 happening, the person a line lands on, the walk or wait between two exchanges. A role the cast
-names — a coach, a shop owner — is seen once in the act. In conventional dialogue coverage, one speaker per shot limits who talks,
-not who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
+names — a coach, a shop owner — is seen once in the act. Who speaks does not decide who is seen: the listener, a third cast member (`bystanders`) and unnamed people (`extras`)
 can share the frame. Every board write then prints the board as counts — people in frame, shots
 with and without a line, the widest shot of each scene; read them as the board's shape, not as
 targets to reach.
@@ -522,7 +523,7 @@ One shot may carry a complete exchange. Use the ordered `performance` and speech
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 Before committing the shot list, read each complete scene without cuts, then compare the
-proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. In conventional dialogue coverage, merge adjacent shots when they keep one speaker and the frame carries the continuing action. Split when a reveal, reaction, action boundary, viewpoint or necessary
+proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. Merge adjacent shots when the frame carries the continuing action, replies included. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
 Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
 after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
@@ -530,7 +531,7 @@ actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-For conventional dialogue coverage, plan speaker changes with the following choices.
+A speaker change alone does not require a cut; the selected model's pinned-voice capacity applies to each render and `video_plan` reports a scene over it.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
 use speaker-facing OTS/reverse when the speaking face carries the new information, or
 purposeful off_screen speech over a reaction, detail or spatial view when that carries it.

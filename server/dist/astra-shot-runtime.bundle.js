@@ -53975,6 +53975,7 @@ var videoPlanSchema = external_exports.object({
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
+  prompt: external_exports.string().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})

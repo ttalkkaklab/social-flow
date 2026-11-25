@@ -480,7 +480,9 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
-    assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] }), /shot_speaker_limit/);
+    // A shot keeps the lines of several speakers in spoken order; the selected model's voice capacity is checked at planning.
+    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
+    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line => line.speaker), ['mina', 'narrator']);
     const thought = { id: 'private', speaker: 'mina', voiceoverKind: 'inner_thought', tts: 'She knows.' };
     const writeLine = line => writeShotDialogue({path:dir, shots:[{id:'s0001',lines:[line]}]});
     const savedLine = () => readBoard(dir).win.SCENES[0].narration[0];

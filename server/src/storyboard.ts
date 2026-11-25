@@ -1992,9 +1992,6 @@ export function writeShotDialogue(args: z.infer<typeof shotDialogueSchema>): App
     const index = shotIndex(shots, id, 'shot_dialogue');
     const cast = contract().castOf(shots[index]);
     if (!cast) throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
-    const oneTake = st.scenes.find(scene => scene.no === shots[index].scene)?.videoDirection?.oneTake;
-    if (!oneTake && new Set(lines.map((line) => line.speaker)).size > 1)
-      throw new Error(`shot_speaker_limit: ${id} has more than one speaker; split at each speaker change, then set each shot's size and angle`);
     const old: Line[] = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n): Line => {

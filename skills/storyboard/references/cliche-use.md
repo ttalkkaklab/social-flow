@@ -119,7 +119,7 @@ Each layer is chosen at the step that can still absorb it.
   wrong makes the opening read at once. The opening plan itself follows
   [opening by format](opening-by-format.md).
 - **Scenes.** A place or a staged moment the viewer knows saves the seconds an explanation
-  would take, which matters most in a short. Conventional coverage follows one speaker per shot. Preserve authored one-takes. Allow at
+  would take, which matters most in a short. A shot keeps the lines spoken in its view; the selected model limits the pinned voices of one render. Preserve authored one-takes. Allow at
   most four principal characters, and a line pattern borrowed from a cliché still has to be
   the line this character would say here.
 - **Shots.** A directing cliché becomes ordinary shot attributes. Nothing is drawn over video

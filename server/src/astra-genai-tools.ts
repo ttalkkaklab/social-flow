@@ -5,7 +5,8 @@ import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { GENAI_VIDEO_MODELS, genaiSampling, genaiVisualSampling, genaiShotsSchema } from './astra-genai-video.js';
 
-export const openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: 'openApi3' });
+// The default target writes exclusiveMinimum as a number. The openApi3 target writes a boolean, which the host API rejects and drops the whole tool.
+export const openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { $refStrategy: 'none' });
 
 const subjectVoice = {
   nonCharacter: { type: 'boolean', description: 'Set true for an object or prop reference with no character. Character panels belong in openingPositions.' },

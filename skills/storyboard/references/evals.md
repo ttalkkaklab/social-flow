@@ -49,7 +49,7 @@ answer key. Keep artifacts local under data/. No paid generation is implied.
 
 Input: a nervous employee accepts an intimidating manager's invitation, follows them
 home, discovers a playful collection and first relaxes when the manager is embarrassed.
-Keep the established words and one speaker per generated unit. Supply a draft that
+Keep the established words and each line's speaker. Supply a draft that
 alternates speaker portraits and friendly two-shots before the discovery. Ask for a
 revision without media generation.
 
@@ -331,7 +331,7 @@ Pass evidence: the revised synopsis specifies the choice, the cost of confession
 the actual resolution and its consequence. If the viewer knows the secret first, the scene
 shows its origin and each character's information access. A witness can refuse or negotiate
 for an independent reason. The board preserves the hiding, trigger and response in the
-correct order and gives each speaking character separate coverage. No new required fields,
+correct order and keeps each line with its speaker in the view where it is spoken. No new required fields,
 quota of twists or automatic review. A synopsis-only request stops at prose.
 
 ## Plausible pressure and a fixed ending

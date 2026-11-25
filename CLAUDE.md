@@ -349,12 +349,15 @@ for a second or more of silence before a line. Each of these reports; none refus
 trim is applied without the author. Attaching other footage removes the old trim. Filmed sync
 footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
 
-## Dialogue coverage (user directive, 2026-11-09)
+## Dialogue coverage (user directive, 2026-11-09; speaker limit by model 2026-11-24)
 
-Each shot contains lines from at most one character. Split at every speaker change,
-including readable two-shots; consecutive lines by that character may share a shot.
-Keep two visible principal characters when the listener belongs in frame, but keep the
-listener silent. The speaker limit divides generation units, not attention subjects.
+One speaker per shot was a plugin rule; the models bind several pinned voices in one render.
+A shot keeps every line spoken in its view, replies included, and `shot_dialogue` no longer
+refuses a second speaker. The limit is the selected model's pinned voices per render (the
+scene, or one shot under `sceneRendering:"per_shot"`), counted over natively voiced lines;
+`video_plan` reports a render over it (`scene_render_voice_limit`). Cut where the staging,
+the visible evidence or that capacity calls for another view. A visible listener without a
+line stays silent.
 Choose the scene's visible evidence before cast/lines: speaker-facing OTS or close-ups
 when the face matters, purposeful off_screen speech over listener reactions, details,
 POVs or spatial views when those carry the change. Addressing a listener never requires
@@ -372,7 +375,7 @@ with native MSR thoughts. Existing usable clips do not require regeneration.
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-Conventional MSR coverage follows one speaker per shot. For a one-take exchange, bind both speakers to the inspected
+For two on-screen MSR speakers in a shot, bind both to the inspected
 start image by viewer-relative position and appearance with `shot_prompt.speakerBindings`;
 repeat the identity and image/audio mapping on compiled turns. Keep dialogue in
 `shot_dialogue` and action in `shot_prompt`. Recompile saved action with current icons
@@ -472,7 +475,7 @@ cafe doorway shifts left in the footage. On the GenAI image and MSR lanes, which
 audio-to-video lane takes 5,000, and its prompts were rewritten by hand all the same). So
 `video_plan` compiles the board prompt to the adapter's limit, leaving out design notes, the
 beats' acting fields and then expressions before the camera, action or lines; beats say an
-action once and drop voice direction a model does not voice. A hand-written prompt that drops or
+action once and drop voice direction a model does not voice. A hand-written prompt saved on the board that drops or
 locks the board's move is named (`camera_move_missing`, `camera_move_contradicted`); `shot_icons`
 names video shots left with no move (`camera_move_unset`) and a call that holds every video shot
 it sets; board writes count unchosen moves. Each of these reports; none refuses, and no share of
@@ -496,6 +499,23 @@ cue, scenes that do not follow each other, or an offset that leaves no cue to pl
 receipt check reads cues the board names, so a channel bed copied in as the legacy `bgm.wav`
 is outside it. See `skills/storyboard/SKILL.md` §3.
 
+## Authored scene prompts (user directive, 2026-11-24)
+
+The planner composed every scene prompt from the shot cards, so the session could not adjust
+its wording for a model. `video_plan` takes `prompt`, the whole provider prompt, and every plan
+rendered in one request returns `promptTemplate` to edit. References are named, never
+numbered: `{castId.<role>}`, `{castId.image}` for a single picture, `{castId.voice}`,
+`{referenceId.image}`, `{shotId.image}`. The planner fills in the numbers of the request it
+submits and changes nothing else in the text. Braces are kept for names:
+a spoken line keeps the braces the board gave it, and any other brace that is neither a name
+nor in the board's own text is refused. It also refuses a name with no submitted reference, a
+shot image sent as a timed frame, a prompt over the model's limit, an empty prompt and per-shot
+rendering, and passes on an adapter's own rule for its prompt (`prompt_refused`). `promptIssues` reports a hand-typed number, an unnamed reference, and
+a line, text-free sentence or silent-picture sentence the planner's own prompt carries and the
+author's leaves out. Camera direction is not read from an authored prompt. Cast, shots and
+lines stay on the board as the evidence for lengths, limits and attachment. See
+`skills/generate-cut-videos/SKILL.md`.
+
 ## English video prompts (user directive, 2026-10-31)
 
 Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the
@@ -516,7 +536,7 @@ gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
 
 An episode came out as fifty waist-up pictures of whoever was speaking: its shots were cut one
 per line, so none showed the place, the work a character does or the person a line lands on.
-One speaker per shot limits who talks in an LTX clip, not who is seen. `shot_characters` takes
+Who speaks does not decide who is seen. `shot_characters` takes
 `bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
 described in English. `visual.character` still lists those the video call references. A shot
 shows at most four of the cast. `shot_image` draws a bystander from their face and front

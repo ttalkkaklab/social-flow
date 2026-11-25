@@ -10654,7 +10654,7 @@ var require_parse = __commonJS({
         while (ch && ch <= " ") {
           next();
         }
-      }, word = function() {
+      }, word2 = function() {
         switch (ch) {
           case "t":
             next("t");
@@ -10756,7 +10756,7 @@ var require_parse = __commonJS({
           case "-":
             return number3();
           default:
-            return ch >= "0" && ch <= "9" ? number3() : word();
+            return ch >= "0" && ch <= "9" ? number3() : word2();
         }
       };
       return function(source, reviver) {
@@ -67208,12 +67208,12 @@ var require_cache = __commonJS({
       return value.replace(/[\t ]+$/, "");
     }
     function findUnescapedQuote(value, start) {
-      let escaped = false;
+      let escaped2 = false;
       for (let i2 = start; i2 < value.length; i2++) {
-        if (escaped) {
-          escaped = false;
+        if (escaped2) {
+          escaped2 = false;
         } else if (value[i2] === "\\") {
-          escaped = true;
+          escaped2 = true;
         } else if (value[i2] === '"') {
           return i2;
         }
@@ -67225,13 +67225,13 @@ var require_cache = __commonJS({
       let start = 0;
       let quoteStart = -1;
       let inQuote = false;
-      let escaped = false;
+      let escaped2 = false;
       for (let i2 = 0; i2 < value.length; i2++) {
         if (inQuote) {
-          if (escaped) {
-            escaped = false;
+          if (escaped2) {
+            escaped2 = false;
           } else if (value[i2] === "\\") {
-            escaped = true;
+            escaped2 = true;
           } else if (value[i2] === '"') {
             inQuote = false;
             quoteStart = -1;
@@ -94924,7 +94924,7 @@ var require_film_techniques = __commonJS({
         "camera.weapon-cam": { "avoid": "\uC3D8\uB294 \uC0AC\uB78C\uACFC \uD45C\uC801\uC758 \uC704\uCE58\uB97C \uC55E\uC5D0\uC11C \uBCF4\uC5EC \uC8FC\uC9C0 \uC54A\uC740 \uCEF7, \uBC1C\uC0AC\uCCB4\uAC00 \uC5EC\uB7FF\uC77C \uB54C.", "pair": "\uB2F9\uAE30\uAC70\uB098 \uACA8\uB204\uB294 \uCEF7 \u2192 \uC6E8\uD3F0 \uCEA0 \u2192 \uBA85\uC911\uC774\uB098 \uBE57\uB098\uAC10\uC758 \uACB0\uACFC \uCEF7.", "specify": "\uD45C\uC801(shot_icons move\uC758 target), \uBC1C\uC0AC\uCCB4\uC640 \uD654\uBA74\uC5D0 \uAC78\uB9AC\uB294 \uBD80\uBD84(\uD654\uC0B4\uCD09\xB7\uCE7C\uB05D)\uC740 action \uBB38\uC7A5\uC5D0, \uC9C0\uB098\uAC00\uB294 \uB79C\uB4DC\uB9C8\uD06C, \uBA48\uCD94\uB294 \uC9C0\uC810\uACFC \uADF8\uB54C \uD45C\uC801\uC758 \uC0C1\uD0DC." },
         "camera.pass-through": { "avoid": "\uD1B5\uACFC\uD560 \uD2C8\uC774 \uC5C6\uB294 \uD2B8\uC778 \uACF5\uAC04, \uC9C0\uB9AC\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCD94\uACA9. \uBB38 \uD558\uB098\uB97C \uC9C0\uB098 \uBA48\uCD94\uB294 \uC9C4\uC785\uC774\uBA74 \uD478\uC2DC \uD328\uC2A4\uD2B8.", "pair": "\uCD94\uACA9\uC758 \uBC29\uD5A5\uACFC \uCD9C\uAD6C\uB97C \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uD1B5\uACFC\uD560 \uAC83\uC744 \uC21C\uC11C\uB300\uB85C(\uBE68\uB7AB\uC904\uC758 \uCC9C, \uCC3D\uBB38, \uB09C\uAC04 \uC0AC\uC774), \uADF8\uB54C\uB9C8\uB2E4 \uC778\uBB3C\uC774 \uD558\uB294 \uB2E4\uB978 \uB3D9\uC791(\uC219\uC784\xB7\uB3CC\uC544\uAC10), \uB05D \uD504\uB808\uC784." },
         "camera.drone-dive": { "avoid": "\uB192\uC774 \uCC28\uAC00 \uC5C6\uB294 \uC7A5\uC18C, \uAEBE\uC774\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uACBD\uB85C. \uC9C0\uD615 \uC0AC\uC774\uC758 \uAD7D\uC740 \uAE38\uC744 \uBCF4\uC5EC \uC8FC\uB294 \uBE44\uD589\uC740 \uB4DC\uB860 \uACBD\uB85C \uD504\uB9AC\uC14B(drone-flythrough)\uC774 \uB9E1\uB294\uB2E4.", "pair": "\uAC00\uC7A5\uC790\uB9AC\uC640 \uADF8 \uC544\uB798 \uB192\uC774\uB97C \uBCF4\uC5EC \uC900 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4.", "specify": "\uC218\uD3C9 \uAD6C\uAC04\uC758 \uB192\uC774\uC640 \uB530\uB77C\uAC00\uB294 \uB300\uC0C1, \uC218\uD3C9\uC5D0\uC11C \uC218\uC9C1\uC73C\uB85C \uAEBE\uC774\uB294 \uC9C0\uC810(\uC808\uBCBD \uB05D\xB7\uC625\uC0C1 \uB09C\uAC04), \uAEBE\uC778 \uB4A4 \uD654\uBA74 \uC544\uB798\uC5D0 \uBCF4\uC774\uB294 \uAC83. \uD504\uB808\uC784 \uACC4\uD68D\uC774 first_last\uBA74 \uC218\uD3C9 \uC2DC\uC791\uACFC \uB0B4\uB824\uB2E4\uBCF4\uB294 \uB05D\uC744 \uB530\uB85C \uADF8\uB9B0\uB2E4." },
-        "camera.relay": { "avoid": "\uB300\uC0AC\uAC00 \uC624\uAC00\uB294 \uC7A5\uBA74(\uC0F7\uB2F9 \uD654\uC790\uB294 \uD55C \uBA85), \uC778\uBB3C \uC704\uCE58\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCCAB \uCEF7, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C\uC744 \uB118\uB294 \uBD84\uB7C9. \uD55C \uBC88\uC5D0 \uB098\uC624\uC9C0 \uC54A\uC73C\uBA74 \uC0F7\uC744 \uB098\uB220 \uD729 \uC804\uD658\uC73C\uB85C \uC787\uB294\uB2E4.", "pair": "\uACF5\uAC04\uACFC \uC778\uC6D0\uC744 \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4. \uB871\uD14C\uC774\uD06C \uC2DC\uAC04(timing.long-take)\uACFC \uD568\uAED8 \uACE0\uB978\uB2E4.", "specify": "\uB118\uAE30\uB294 \uC21C\uC11C(\uB204\uAD6C \u2192 \uB204\uAD6C \u2192 \uB204\uAD6C), \uB118\uAE38 \uB54C\uB9C8\uB2E4\uC758 \uACC4\uAE30 \uB3D9\uC791(\uC219\uC784\xB7\uBA54\uCE58\uAE30), \uB05D \uD504\uB808\uC784. \uCC38\uC870 \uC774\uBBF8\uC9C0\uB97C \uBC1B\uB294 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uC774\uACE0 \uB098\uBA38\uC9C0\uB294 \uAC89\uBAA8\uC2B5\uC73C\uB85C \uC801\uB294\uB2E4." },
+        "camera.relay": { "avoid": "\uD654\uC790 \uC218\uAC00 \uBAA8\uB378\uC774 \uD55C \uB80C\uB354\uC5D0 \uBB36\uB294 \uACE0\uC815 \uC74C\uC131 \uC218\uB97C \uB118\uB294 \uC7A5\uBA74, \uC778\uBB3C \uC704\uCE58\uB97C \uC138\uC6B0\uC9C0 \uC54A\uC740 \uCCAB \uCEF7, \uC5B4\uB311\uD130 \uAE38\uC774 \uC0C1\uD55C\uC744 \uB118\uB294 \uBD84\uB7C9. \uD55C \uBC88\uC5D0 \uB098\uC624\uC9C0 \uC54A\uC73C\uBA74 \uC0F7\uC744 \uB098\uB220 \uD729 \uC804\uD658\uC73C\uB85C \uC787\uB294\uB2E4.", "pair": "\uACF5\uAC04\uACFC \uC778\uC6D0\uC744 \uBCF4\uC5EC \uC900 \uB113\uC740 \uCEF7 \uB4A4\uC5D0 \uC628\uB2E4. \uB871\uD14C\uC774\uD06C \uC2DC\uAC04(timing.long-take)\uACFC \uD568\uAED8 \uACE0\uB978\uB2E4.", "specify": "\uB118\uAE30\uB294 \uC21C\uC11C(\uB204\uAD6C \u2192 \uB204\uAD6C \u2192 \uB204\uAD6C), \uB118\uAE38 \uB54C\uB9C8\uB2E4\uC758 \uACC4\uAE30 \uB3D9\uC791(\uC219\uC784\xB7\uBA54\uCE58\uAE30), \uB05D \uD504\uB808\uC784. \uCC38\uC870 \uC774\uBBF8\uC9C0\uB97C \uBC1B\uB294 \uC8FC\uC694 \uC778\uBB3C\uC740 \uB450 \uBA85\uAE4C\uC9C0\uC774\uACE0 \uB098\uBA38\uC9C0\uB294 \uAC89\uBAA8\uC2B5\uC73C\uB85C \uC801\uB294\uB2E4." },
         "camera.speed-ramp": { "avoid": "\uB290\uB824\uC9C0\uB294 \uC9C0\uC810\uC774 \uB450 \uACF3 \uC774\uC0C1\uC778 \uCEF7, \uB300\uC0AC\uAC00 \uC788\uB294 \uCEF7(\uC785 \uBAA8\uC591\uACFC \uC18C\uB9AC\uAC00 \uC5B4\uAE0B\uB09C\uB2E4), \uD0C0\uACA9\uC774 \uC5EC\uB7EC \uBC88\uC778 \uB09C\uC804.", "pair": "\uC55E\uB4A4 \uCEF7\uC740 \uC815\uC0C1 \uC18D\uB3C4\uB85C \uB454\uB2E4. \uB290\uB824\uC9C4 \uB3D9\uC548 \uCE74\uBA54\uB77C\uB294 \uACE0\uC815\uD558\uAC70\uB098 \uCC9C\uCC9C\uD788 \uC606\uC73C\uB85C \uD750\uB978\uB2E4.", "specify": "\uB290\uB824\uC9C0\uB294 \uC21C\uAC04 \uD558\uB098(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C), \uADF8\uB3D9\uC548 \uACF5\uC911\uC5D0 \uB5A0 \uC788\uB294 \uAC83(\uBB3C\uBC29\uC6B8\xB7\uD30C\uD3B8), \uD480\uB9AC\uB294 \uC2DC\uC810." },
         "camera.impact-shake": { "avoid": "\uACC4\uC18D \uC774\uC5B4\uC9C0\uB294 \uD754\uB4E4\uB9BC(\uADF8\uAC74 \uD578\uB4DC\uD5EC\uB4DC\uB2E4), \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uD074\uB85C\uC988\uC5C5, \uC6D0\uC778\uC774 \uD654\uBA74\uC774\uB098 \uC18C\uB9AC\uC5D0 \uC5C6\uB294 \uD754\uB4E4\uB9BC.", "pair": "\uACE0\uC815 \uD504\uB808\uC784 \uC704\uC5D0 \uC5B9\uC744 \uB54C \uAC00\uC7A5 \uD06C\uAC8C \uC77D\uD78C\uB2E4. \uCDA9\uACA9\uC74C\uC744 \uAC19\uC740 \uC0F7\uC758 \uD6A8\uACFC\uC74C\uC5D0 \uC801\uB294\uB2E4.", "specify": "\uD754\uB4E4\uB9BC\uC758 \uC6D0\uC778\uC774 \uB418\uB294 \uC0AC\uAC74(shot_icons accents\uC758 on\uC5D0 \uC601\uC5B4\uB85C: each footfall, the landing), \uD69F\uC218, \uC0AC\uC774\uC0AC\uC774\uC758 \uBA48\uCDA4." },
         "framing.els": { "avoid": "\uC778\uBB3C\uC744 \uC54C\uC544\uBCF4\uAC70\uB098 \uD45C\uC815\uC744 \uC77D\uC5B4\uC57C \uD558\uB294 \uCEF7. \uD734\uB300\uD3F0 \uD654\uBA74\uC5D0\uC11C\uB294 \uB113\uC740 \uD48D\uACBD\uC758 \uD798\uC774 \uC904\uC5B4\uB4E0\uB2E4.", "pair": "\uAC10\uC815 \uD074\uB85C\uC988\uC5C5\uACFC \uBC88\uAC08\uC544 \uBD99\uC774\uBA74 \uC7A5\uBA74\uC758 \uAC15\uB3C4\uAC00 \uC720\uC9C0\uB41C\uB2E4.", "specify": "\uC778\uBB3C \uC218\uC640 \uD654\uBA74 \uC18D \uC704\uCE58, \uD654\uBA74 \uB192\uC774 \uB300\uBE44 \uD06C\uAE30, \uAE30\uC900 \uB79C\uB4DC\uB9C8\uD06C, \uC9C0\uD3C9\uC120 \uB192\uC774, \uC2DC\uAC04\uB300\xB7\uB0A0\uC528.", "vertical": "\uAC74\uBB3C\xB7\uC808\uBCBD\xB7\uD558\uB298 \uAC19\uC740 \uC138\uB85C \uC694\uC18C\uB97C \uCD95\uC73C\uB85C \uC4F0\uACE0, \uCE74\uBA54\uB77C\uB97C \uBE44\uC2A4\uB4EC\uD788 \uB450\uC5B4 \uD3ED\uC744 \uB9CC\uB4E0\uB2E4. \uC9C0\uD3C9\uC120\uC740 \uD654\uBA74 \uD55C\uAC00\uC6B4\uB370\uB97C \uD53C\uD55C\uB2E4." },
@@ -96167,9 +96167,9 @@ var require_scene_acting = __commonJS({
       return /[ăơưđẠ-ỹ]/i.test(words) ? "vi" : "latin";
     }
     function latinSyllables(words, language) {
-      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word) => {
-        const groups = count2(word.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
-        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word) && !(language === "en" && /[^aeiouy]le$/i.test(word));
+      return (words.match(/[\p{Script=Latin}'’]+/gu) || []).reduce((total, word2) => {
+        const groups = count2(word2.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase(), /[aeiouyæœø]+/g);
+        const silent = (language === "en" || language === "fr") && groups > 1 && /[^aeiouy]es?$/i.test(word2) && !(language === "en" && /[^aeiouy]le$/i.test(word2));
         return total + Math.max(1, groups - (silent ? 1 : 0));
       }, 0);
     }
@@ -96591,7 +96591,7 @@ var require_character_identity = __commonJS({
     var HEIGHT_COUNT = new RegExp(HEADS + String.raw`(?:heads?[\s-]+(?:tall|high)\b|head[\s-]heights?\b|등신|頭身)`, "gi");
     var BARE_COUNT = new RegExp(HEADS + String.raw`(?:heads\b(?![\s-]*(?:wide|long|broad|across|deep|thick|taller|shorter|higher|lower|above|below|more|less))|(?<=-)head\b(?![-\w]))`, "gi");
     var NUMBER_WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
-    var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word) => NUMBER_WORDS.indexOf(word.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
+    var inDigits = (text5) => text5.replace(new RegExp(String.raw`\b(?:${NUMBER_WORDS.join("|")})\b`, "gi"), (word2) => NUMBER_WORDS.indexOf(word2.toLowerCase())).replace(/(\d+)[\s-]+and[\s-]+a[\s-]+half\b/gi, "$1.5");
     function headsTall(character) {
       const field2 = character?.physical?.proportions;
       if (field2?.status !== "confirmed") return null;
@@ -98242,8 +98242,8 @@ var require_render_routing = __commonJS({
         const wrap = (value, limit2) => {
           const rows = [];
           let line = "";
-          for (const word of String(value).split(/\s+/).filter(Boolean)) {
-            const candidate2 = line ? line + " " + word : word;
+          for (const word2 of String(value).split(/\s+/).filter(Boolean)) {
+            const candidate2 = line ? line + " " + word2 : word2;
             if (Array.from(candidate2).length <= limit2) {
               line = candidate2;
               continue;
@@ -98252,7 +98252,7 @@ var require_render_routing = __commonJS({
               rows.push(line);
               line = "";
             }
-            let chars = Array.from(word);
+            let chars = Array.from(word2);
             while (chars.length > limit2) {
               rows.push(chars.slice(0, limit2).join(""));
               chars = chars.slice(limit2);
@@ -98442,19 +98442,19 @@ var require_audio_signal = __commonJS({
       );
       if (result.error || result.status !== 0 || !/^out_time_us=[1-9]\d*$/m.test(result.stdout))
         throw new Error("cannot decode audio signal");
-      const spans = [];
+      const spans2 = [];
       let start = 0;
       for (const [, event, time3] of result.stderr.matchAll(/silence_(start|end):\s*(-?[\d.]+(?:e[+-]?\d+)?)/gi)) {
         if (event === "start") start = Number(time3);
-        else spans.push([start, Number(time3)]);
+        else spans2.push([start, Number(time3)]);
       }
       const peak = /Peak level dB: (-inf|[+-]?[\d.]+)\s*$/m.exec(result.stderr)?.[1];
       if (peak === void 0) throw new Error("cannot measure decoded audio peak");
       const silent = peak === "-inf" || Number(peak) <= SILENCE_DB;
-      return { status: silent ? "silent" : "signal", spans, duration: duration5 };
+      return { status: silent ? "silent" : "signal", spans: spans2, duration: duration5 };
     }
-    function covers(spans, start, seconds2, tolerance = 0) {
-      return spans.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
+    function covers(spans2, start, seconds2, tolerance = 0) {
+      return spans2.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
     }
     function decodedAudioHash(file) {
       return execFileSync20("ffmpeg", [
@@ -100824,8 +100824,8 @@ var require_structure_contract = __commonJS({
           if (c.eyeHeight !== void 0 && Math.abs(c.eyeHeight - 1 / 3) > 0.15) add("eye height departs from the upper-third convention; review the image", "warn");
           const layout = sh.space && sh.space.layout;
           if (typeof layout === "string") {
-            const escaped = c.subject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-            const match2 = layout.match(new RegExp("(?:^|[,;]\\s*)" + escaped + "\\s+(?:is\\s+)?on the (left|right)(?: third| side)?", "i"));
+            const escaped2 = c.subject.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const match2 = layout.match(new RegExp("(?:^|[,;]\\s*)" + escaped2 + "\\s+(?:is\\s+)?on the (left|right)(?: third| side)?", "i"));
             if (match2 && match2[1].toLowerCase() !== c.position) add("space.layout and composition.position disagree", "warn");
           }
         });
@@ -126685,7 +126685,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
 }
 
 // src/astra-genai-tools.ts
-var openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { target: "openApi3" });
+var openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { $refStrategy: "none" });
 var subjectVoice = {
   nonCharacter: { type: "boolean", description: "Set true for an object or prop reference with no character. Character panels belong in openingPositions." },
   audioPath: { type: "string", description: "Local voice sample (wav, mp3, m4a, ogg) for this subject; subjects 1 and 2 only. Voice only, no background sound." },
@@ -130117,6 +130117,102 @@ function sceneTimelineWords(timeline, scene, options = {}) {
   }
   return rows.filter(Boolean).join("\n");
 }
+var TOKEN = /\{[^{}\n]*\}/g;
+var NAME2 = /^\{([\p{L}\p{N}_-]+)\.([\p{L}\p{N}_-]+)\}$/u;
+var escaped = (text4) => text4.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+var labelPattern = (label) => new RegExp("(?<![\\p{L}\\p{N}])" + escaped(label) + "(?!\\d|\\.\\d)", "gu");
+var QUOTED = /"[^"\n]*"|“[^”\n]*”|「[^」\n]*」/g;
+var spans = (text4) => {
+  const parts = [];
+  let at = 0;
+  for (const quote of text4.matchAll(QUOTED)) {
+    parts.push({ text: text4.slice(at, quote.index), quoted: false }, { text: quote[0], quoted: true });
+    at = quote.index + quote[0].length;
+  }
+  return [...parts, { text: text4.slice(at), quoted: false }];
+};
+var loneBrace = (text4) => /[{}]/.test(text4.replace(TOKEN, ""));
+var word = (text4) => text4.replace(/[^\p{L}\p{N}_-]+/gu, "-").replace(/^-+|-+$/g, "");
+function scenePromptSlots(style, images = [], voices = []) {
+  const slots = [], unlabeled = /* @__PURE__ */ new Set();
+  const owned = /* @__PURE__ */ new Map();
+  for (const image2 of images) {
+    if (image2.number === void 0) {
+      if (image2.shotId && (image2.guide || !image2.owner)) unlabeled.add(word(image2.shotId) + ".image");
+      continue;
+    }
+    const label = formatReferenceLabel(style, "image", image2.number);
+    if (image2.owner) owned.set(image2.owner, [...owned.get(image2.owner) ?? [], { role: word(image2.role ?? "") || "image", label }]);
+    else slots.push({ key: word((image2.guide ? image2.shotId : void 0) ?? image2.id ?? "reference" + image2.number) + ".image", label });
+  }
+  for (const [owner, rows] of owned) {
+    const seen = /* @__PURE__ */ new Map();
+    for (const row of rows) {
+      const count2 = (seen.get(row.role) ?? 0) + 1;
+      seen.set(row.role, count2);
+      slots.push({ key: word(owner) + "." + row.role + (count2 > 1 ? count2 : ""), label: row.label });
+    }
+    if (rows.length === 1 && rows[0].role !== "image" && !unlabeled.has(word(owner) + ".image")) slots.push({ key: word(owner) + ".image", label: rows[0].label });
+  }
+  for (const voice of voices) if (voice.audioIndex) slots.push({ key: word(voice.speaker) + ".voice", label: formatReferenceLabel(style, "audio", voice.audioIndex) });
+  const keys2 = /* @__PURE__ */ new Set();
+  return {
+    slots: slots.filter((slot) => NAME2.test("{" + slot.key + "}") && !keys2.has(slot.key) && keys2.add(slot.key)),
+    unlabeled: [...unlabeled].filter((key) => !keys2.has(key))
+  };
+}
+function resolveScenePrompt(template, { slots, unlabeled }, checks = {}) {
+  const labels = new Map(slots.map((slot) => [slot.key, slot.label]));
+  const named = /* @__PURE__ */ new Map();
+  for (const slot of slots) if (!named.has(slot.label)) named.set(slot.label, slot.key);
+  const issues = [], reported = /* @__PURE__ */ new Set();
+  const report = (level, code, detail) => {
+    if (!reported.has(code + detail)) {
+      reported.add(code + detail);
+      issues.push({ level, code, detail });
+    }
+  };
+  const board = new Set(checks.composed?.match(TOKEN) ?? []);
+  const body = spans(template).map((span) => {
+    if (!span.quoted) {
+      for (const [label, key] of named) if (labelPattern(label).test(span.text))
+        report("warning", "label_literal", `"${label}" is written as a number; write {${key}} so it follows the submitted order`);
+    }
+    return span.text.replace(TOKEN, (token) => {
+      const name = NAME2.exec(token), key = name ? name[1] + "." + name[2] : "", label = labels.get(key);
+      if (board.has(token) && (span.quoted || !label)) return token;
+      if (label) return label;
+      if (unlabeled.includes(key)) report("error", "placeholder_unlabeled", `${token} is sent as a timed frame, which this model's prompt cannot name`);
+      else if (name) report("error", "placeholder_unresolved", `${token} names no submitted reference; available: ${slots.map((slot) => "{" + slot.key + "}").join(" ") || "none"}`);
+      else report("error", "placeholder_unresolved", `${token} is not a reference name; braces are kept for {id.role}, {id.image} and {id.voice}`);
+      return token;
+    });
+  }).join("");
+  if (loneBrace(template) && !loneBrace(checks.composed ?? ""))
+    report("error", "placeholder_unresolved", "a brace stands without its pair; braces are kept for {id.role}, {id.image} and {id.voice}");
+  const header = checks.header ?? "";
+  const prompt = body.startsWith(header) ? body : header + body;
+  for (const [label, key] of named) if (!labelPattern(label).test(prompt))
+    report("warning", "reference_unmentioned", `{${key}} is submitted and the prompt never names it`);
+  for (const line of checks.lines ?? []) if (!prompt.includes(line))
+    report("warning", "line_missing", `the prompt does not carry the authored line "${line}"`);
+  for (const sentence2 of checks.sentences ?? []) if (!prompt.includes(sentence2.text))
+    report("warning", sentence2.code, `the prompt leaves out "${sentence2.text}"`);
+  const length = [...prompt].length;
+  if (checks.limit !== void 0 && length > checks.limit)
+    report("error", "prompt_too_long", `${length} characters${header && prompt !== body ? " with the " + [...header].length + "-character opening header" : ""}; this model takes ${checks.limit}`);
+  else if (checks.schemaLimit !== void 0 && prompt.length > checks.schemaLimit)
+    report("error", "prompt_too_long", `${prompt.length} UTF-16 units; this adapter takes ${checks.schemaLimit}`);
+  return { prompt, body, issues };
+}
+function scenePromptTemplate(prompt, { slots }, header = "") {
+  const names = /* @__PURE__ */ new Map();
+  for (const slot of slots) if (!names.has(slot.label)) names.set(slot.label, slot.key);
+  const headed = Boolean(header) && prompt.startsWith(header);
+  const longestFirst = [...names].sort((a, b) => b[0].length - a[0].length);
+  const promptTemplate = spans(headed ? prompt.slice(header.length) : prompt).map((span) => span.quoted ? span.text : longestFirst.reduce((text4, [label, key]) => text4.replace(labelPattern(label), "{" + key + "}"), span.text)).join("");
+  return { promptTemplate, ...headed ? { promptHeader: header } : {} };
+}
 
 // src/video-image-inputs.ts
 import path20 from "node:path";
@@ -132121,6 +132217,7 @@ var videoPlanSchema = external_exports.object({
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
+  prompt: external_exports.string().optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -132208,7 +132305,7 @@ function checkVideoEnvironment(tool2) {
 function saveVideoPlan(plan2) {
   const file = path27.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file)) {
-    const { promptProfile: _profile, ...manifest2 } = plan2;
+    const { promptProfile: _profile, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
     atomicJson(file, manifest2);
   }
   fs19.rmSync(blockedPlanFile(plan2.episode, plan2.requestId), { force: true });
@@ -132417,6 +132514,23 @@ function planVideo(raw, persist = true) {
   const input = videoPlanSchema.parse(raw);
   return buildVideoPlan(input, resolvePlanContext(input), persist);
 }
+function numberedImages(args, bindings = [], speakers = [], cast, episode, firstShot) {
+  const list = Array.isArray(args.referenceImagePaths) ? args.referenceImagePaths : Array.isArray(args.references) ? args.references.map((ref) => ref?.imagePath) : [];
+  const positions = Array.isArray(args.openingPositions) ? args.openingPositions : [];
+  const panel = (file) => file ? fs19.realpathSync(path27.resolve(episode, "storyboard", file)) : void 0;
+  const taken = /* @__PURE__ */ new Set();
+  return bindings.filter((binding) => binding.submitted).map((binding) => {
+    const scene = binding;
+    const at = list.findIndex((file, index) => !taken.has(index) && file === binding.path);
+    if (at >= 0) taken.add(at);
+    const number3 = at < 0 ? void 0 : at + 1;
+    const person = cast.find((person2) => [panel(person2.face?.path), panel(person2.bodyPath)].includes(binding.path));
+    const owner = scene.character ?? speakers.find((speaker) => number3 && speaker.imageIndices?.includes(number3))?.speaker ?? positions.find((row) => number3 && row.images.includes(number3))?.character ?? person?.character;
+    const guide = binding.id === "start" || binding.id === "end" || Boolean(scene.shotId && binding.id === scene.shotId + "-composition");
+    const role = binding.role !== "character" ? binding.role : owner && binding.id.includes(owner + "-") ? binding.id.slice(binding.id.lastIndexOf(owner + "-") + owner.length + 1) : person && panel(person.face?.path) === binding.path ? "face" : "image";
+    return { number: number3, owner: guide ? void 0 : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === "start" ? firstShot : void 0), guide };
+  });
+}
 function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (!input.sceneRendering && context2.speechRoute?.rendering) input = { ...input, sceneRendering: context2.speechRoute.rendering };
   const sourceArgs = input.args;
@@ -132484,6 +132598,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (modelVoice && input.args.generateAudio === false)
     throw new Error("scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue");
   if (input.shotBindings && !input.sceneRendering) throw new Error("scene_render_bindings: select per_shot rendering");
+  if (input.prompt !== void 0) {
+    if (!input.prompt.trim()) throw new Error("scene_prompt_empty: write the prompt, or leave it out for the composed one");
+    if (input.prompt.length > 32e3) throw new Error("prompt_too_long: a prompt takes at most 32000 characters");
+    if (input.sceneRendering)
+      throw new Error("scene_prompt_unsupported: an authored prompt describes one render of the whole scene; per-shot rendering writes each shot from its own card");
+  }
   if (input.sceneRendering) {
     for (const card of context2.sceneMembers ?? []) {
       const turns = card.narration?.filter((line) => line.tts?.trim()) ?? [];
@@ -132729,20 +132849,25 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     callArgs = { ...callArgs, generateAudio: true };
   }
   if (silentPicture) checkVoiceoverDirection(String(callArgs.prompt ?? ""), lines, true);
-  const sourcePrompt = scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
+  const replaced = input.prompt !== void 0;
+  const sourcePrompt = replaced ? input.prompt : scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
+  const outsidePrompt = (bindings = []) => {
+    const kept = bindings.filter((binding) => binding.via !== "prompt");
+    return kept.length ? { directionBindings: kept } : {};
+  };
   const boardCamera = shot.visual?.camera ?? {};
   const rawPrompt = input.args.prompt ?? video2?.prompt;
-  const drift = !scene && !compiled && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
+  const drift = !scene && !compiled && !replaced && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
-  const directionOf = (c) => c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...c ? { performance: c.performance } : {} } : c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
   for (const guide of sceneRequest?.shotReferenceImages ?? []) {
     if (!guide.submitted) cutWarnings.push("shot_reference_omitted: " + guide.shotId + " receives no composition image. " + guide.reason);
   }
   let direction = sceneCamera ? {
     sourcePrompt,
-    directionWarnings: [...sceneCamera.warnings, ...cutWarnings],
-    ...sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
+    directionWarnings: [...replaced ? [] : sceneCamera.warnings, ...cutWarnings],
+    ...replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}
   } : directionOf(compiled);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("model_selection_mismatch: host has no server adapter");
@@ -132840,7 +132965,41 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (person.voiceRequired && !voice.voiceContinuity?.speakers.some((s2) => s2.speaker === person.character && s2.reference?.provenance === "pinned_settings_and_bytes" && s2.audioIndex))
       throw new Error("character_voice_required: " + tool2 + " cannot bind the selected voice sample for " + person.character);
   }
-  const args = parseVideoArgs(tool2, voice.args);
+  const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings;
+  const promptSlots = scenePromptSlots(
+    promptProfile.referenceLabels,
+    numberedImages(voice.args, imageBindings, voice.voiceContinuity?.speakers, cast, context2.episode, String(context2.sceneMembers?.[0]?.id ?? shot.id ?? "")),
+    voice.voiceContinuity?.speakers
+  );
+  const authored = input.prompt !== void 0;
+  let promptIssues;
+  if (authored) {
+    const composed = String(voice.args.prompt ?? "");
+    const listed = openingPositionsSchema.safeParse(voice.args.openingPositions);
+    const positions = !listed.success ? void 0 : sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length ? sceneCastProse("", listed.data, voice.voiceContinuity.speakers).positions : listed.data;
+    const carried = (text4) => Boolean(text4 && composed.includes(text4));
+    const resolved = resolveScenePrompt(input.prompt, promptSlots, {
+      composed,
+      header: openingPrompt("", positions),
+      limit: promptLimit,
+      schemaLimit: videoPromptLimit(tool2),
+      lines: lines.map((line) => line.tts?.trim()).filter((text4) => carried(text4)),
+      sentences: [{ code: "text_policy_missing", text: videoTextPolicy() }, { code: "silent_direction_missing", text: silentSuffix }].filter((sentence2) => carried(sentence2.text))
+    });
+    const refused = resolved.issues.filter((issue2) => issue2.level === "error");
+    if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
+    promptIssues = resolved.issues;
+    voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...positions ? { openingPositions: positions } : {} } };
+  }
+  let args;
+  try {
+    args = parseVideoArgs(tool2, voice.args);
+  } catch (error2) {
+    const issue2 = authored && error2 instanceof external_exports.ZodError ? error2.issues.find((issue3) => issue3.path[0] === "prompt") : void 0;
+    if (!issue2) throw error2;
+    throw new Error(/^[a-z_]+: /.test(issue2.message) ? issue2.message : "prompt_refused: " + issue2.message);
+  }
+  if (authored) args.prompt = voice.args.prompt;
   if (silentPicture) checkVoiceoverDirection(args, lines, true);
   const adaptiveDuration = selection.engine === "seedance" && args.durationSeconds === -1;
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
@@ -132851,13 +133010,13 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (Array.isArray(args.openingPositions)) {
     const positions = args.openingPositions;
     const opening2 = openingPrompt(String(args.prompt), positions);
-    if (sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
+    if (!authored && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length) {
       const prose = sceneCastProse(opening2, positions, voice.voiceContinuity.speakers);
       args.openingPositions = prose.positions;
       args.prompt = prose.prompt;
     } else args.prompt = opening2;
   }
-  if (!Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
+  if (!authored && !Array.isArray(args.openingPositions) && sceneRequest?.modelPacedCuts && voice.voiceContinuity?.speakers.length)
     args.prompt = sceneCastProse(String(args.prompt), scene?.openingPositions ?? [], voice.voiceContinuity.speakers).prompt;
   if (VIDEO_ADAPTERS[tool2].voice === "supplied" && typeof args.audioPath === "string" && durationPlan.requiredSeconds !== void 0) {
     const sourceSeconds = ltxApiAudioSeconds(path27.resolve(context2.episode, args.audioPath));
@@ -132917,7 +133076,6 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
   }
-  const imageBindings = sceneRequest && images.imageBindings ? sceneImageBindings(sceneRequest, tool2, images.imageBindings) : images.imageBindings;
   const characterBindings = tool2 === "seedance_reference" ? seedanceBindings(
     context2.episode,
     context2.sceneMembers ?? [context2.shot],
@@ -132944,6 +133102,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     ...characterBindings ? { characterBindings } : {},
     ...cast.length ? { characterInputs: cast } : {},
     ...sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {},
+    ...authored ? { authoredPrompt: input.prompt, ...promptIssues.length ? { promptIssues } : {} } : {},
     version: 1,
     episode: context2.episode,
     shotId: context2.shotId,
@@ -132964,7 +133123,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     quote,
     execution: "server"
   };
-  const plan2 = { ...body, id: hash2(body), ...prepared ? { promptProfile } : {} };
+  const plan2 = {
+    ...body,
+    id: hash2(body),
+    ...prepared ? { promptProfile } : {},
+    ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions)) : {}
+  };
   return persist ? saveVideoPlan(plan2) : plan2;
 }
 function authorization(context2) {
@@ -133071,7 +133235,7 @@ function approvedContext(plan2) {
   }
 }
 function rebuildPlan(plan2) {
-  return planVideo({ episode: plan2.episode, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, sceneRendering: plan2.sceneRendering, shotBindings: plan2.shotBindings, maxCostUsd: plan2.maxCostUsd, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote }, false);
+  return planVideo({ episode: plan2.episode, ...plan2.sceneNo !== void 0 ? { sceneNo: plan2.sceneNo } : { shotId: plan2.shotId }, requestId: plan2.requestId, sceneRendering: plan2.sceneRendering, shotBindings: plan2.shotBindings, maxCostUsd: plan2.maxCostUsd, ...plan2.authoredPrompt !== void 0 ? { prompt: plan2.authoredPrompt } : {}, tool: plan2.tool, args: plan2.sourceArgs ?? plan2.args, purpose: plan2.purpose, basedOnRequestId: plan2.basedOnRequestId, changeNote: plan2.changeNote }, false);
 }
 async function executeVideo(raw, dispatch) {
   const request = videoExecuteSchema.parse(raw), episode = fs19.realpathSync(request.episode);
@@ -135678,9 +135842,6 @@ function writeShotDialogue(args) {
     const index = shotIndex(shots, id, "shot_dialogue");
     const cast = contract().castOf(shots[index]);
     if (!cast) throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
-    const oneTake = st.scenes.find((scene) => scene.no === shots[index].scene)?.videoDirection?.oneTake;
-    if (!oneTake && new Set(lines.map((line) => line.speaker)).size > 1)
-      throw new Error(`shot_speaker_limit: ${id} has more than one speaker; split at each speaker change, then set each shot's size and angle`);
     const old = shots[index].narration ?? [];
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n) => {
@@ -145783,7 +145944,7 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
 
 Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
-In conventional dialogue coverage each shot has one speaker. An explicit one-take may include replies. bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: up to four named cast members in the shot. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; bystanders have no separate video input unless a reference explicitly names them. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
+A shot may carry lines from several of its characters; the selected video model limits how many pinned voices one render takes, and video_plan reports a scene over it (scene_render_voice_limit). bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: up to four named cast members in the shot. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; bystanders have no separate video input unless a reference explicitly names them. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 
 Every board write answers with the board first, as counts: people in frame, shots with and without a line, sizes, the widest shot of each scene. They are counts, not targets.
 
@@ -145814,7 +145975,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Before writing, read the exchange in order from each speaker's current knowledge: who hears this, what earlier event triggers it, and what response does the speaker want now? A future proposal or scene outcome cannot motivate an earlier reply. Set the actual addressee in performance.to through storyboard_apply; do not assume every line addresses the audience. Use check-story.js --text/--map for review so listeners and event order survive export. See storyboard's causal-dialogue reference. This guidance is editorial, not an automated judgment of meaning.
 
-Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Keep consecutive lines from one speaker in the same shot. For conventional dialogue coverage split at speaker changes (shot_speaker_limit). An explicitly requested one-take keeps the ordered lines on the same shot, including replies. Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. For a private thought set voiceoverKind to inner_thought and use the character's speaker id. The line uses voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. A shot keeps every line spoken during its camera setup, replies included; cut where the staging needs another view, not at each speaker change. The selected video model limits the pinned voices of one render, which video_plan reports (scene_render_voice_limit). Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. For a private thought set voiceoverKind to inner_thought and use the character's speaker id. The line uses voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT write a line the approved scenario does not give: where it reports that someone speaks without the words, write no line for that moment \u2014 stage it so the words are not needed (the listener's face, the speaker's back, distance) or ask. Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
@@ -145967,7 +146128,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
 
 Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its image or a first_last shot its end image, and for a cut that is not generated_video.
 
-For MSR on-screen dialogue, keep one speaking character per shot. Inspect the start image and pass speakerBindings for that speaker: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. Two people may be visible, but the listener stays silent. Purposeful off_screen speech preserves the authored detail, listener or space view; do not add a speaking face to satisfy a binding.
+For MSR on-screen dialogue, inspect the start image and pass speakerBindings for each on-screen speaker, at most two: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. A visible listener without a line stays silent. Purposeful off_screen speech preserves the authored detail, listener or space view; do not add a speaking face to satisfy a binding.
 
 Returns: the file written and the prompt. Stores promptSource so video_plan recompiles the current icon attributes at request time.`,
     inputSchema: {
@@ -146200,6 +146361,7 @@ TOOLS.push(
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
+      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "The whole provider prompt, written for the selected model. Every plan rendered in one request returns promptTemplate, the submitted prompt with each reference number turned into a name; edit it and send it here. Name references instead of numbering them: {castId.face} or another picture role, {castId.image} for a single picture, {castId.voice}, {referenceId.image}, {shotId.image}. A name takes the number of the submitted request wherever it stands, and nothing else in the text changes, white space included; an adapter that trims its own prompt (GenAI MSR, audio-to-video and Desktop, LTX Desktop, Veo) drops white space at the two ends when it sends. Braces are kept for names: a spoken line keeps the braces the board gave it, and any other brace that is neither a name nor in the board's own text is refused. On the GenAI LTX lanes the opening positions (returned as promptHeader) precede the prompt and count toward the limit. Refused: a name with no submitted reference or another brace (placeholder_unresolved), a shot image sent as a timed frame (placeholder_unlabeled), a prompt over the model limit or 32000 characters (prompt_too_long), an empty prompt (scene_prompt_empty), per-shot rendering, which writes each shot from its own card and returns no template (scene_prompt_unsupported). The adapter checks the text as it checks its own (video_prompt_language, video_voiceover_embedded, and prompt_refused with the adapter's message for any other rule it has for a prompt). Reported in promptIssues: a number typed outside quotation marks (label_literal), a submitted reference never named (reference_unmentioned), and what the composed prompt carries and this one leaves out (line_missing, text_policy_missing, silent_direction_missing). Camera direction is not read from this text." },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: "none" }),
       sceneRendering: { type: "string", enum: ["per_shot"], description: "Use the saved model\u2019s per-shot renderer for one scene job. The planner can select this for compatible multi-shot dialogue that needs different voice references across cuts. Review the render plan before approval." },
       maxCostUsd: { type: "number", minimum: 0, description: "Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval." },
