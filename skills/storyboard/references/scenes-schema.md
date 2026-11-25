@@ -2179,7 +2179,7 @@ character: [                         // an entry may carry its jurisdiction inst
 
 `shot_characters` writes this field in the storyboard's second step, after every shot story.
 
-**Character reference slots.** `visual.character` accepts up to four cast IDs. A trio or quartet uses one face image per ID on LTX. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
+**Character reference slots.** `visual.character` accepts up to four cast IDs. Production GenAI scenes use two identities and two character images in total. The writer splits a third referenced person at the preceding cut. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
 
 **People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
 `visual.bystanders` — up to two cast ids seen without an on-screen line, four of the cast in a
@@ -2204,8 +2204,7 @@ is scoped** — one reference alone has nothing to leak into.
 
 On a story-first board the id must be a `storyboard/cast.json` member, and its references are
 the sheet panels its `panels.json` registers: one character sends face, front and back; two send
-each face, then each front (`video-model-selection.md` §The character panels). `shot_image` and
-`video_plan` build that set — the storyboard says **who is on screen**, not which panel. An older
+each face, then each front for `shot_image` (`video-model-selection.md` §The character panels). GenAI video uses at most two pictures for the entire scene — the storyboard says **who is on screen**, not which panel. An older
 board without a cast resolves the id against `PRODUCTION.cast` first, then the channel panels
 (`resolve-asset.py <channel dir> character <id>` → `assets/characters/<id>/`).
 

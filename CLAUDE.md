@@ -401,7 +401,7 @@ and the plan records a warning. A request that sends a sample to a gateway witho
 support is a hard `msr_voice_unsupported` error. There is no external TTS lane for MSR,
 so its lines get no per-line TTS: `speech_manage` plans and binds an MSR shot as `native`
 (line revisions, no line audio) and an edited line marks the clip stale (2026-10-31).
-A cut without physical dialogue uses img2video; inner thoughts use separate timed TTS. A character's default MSR references are
+A cut without physical dialogue uses img2video; inner thoughts use separate timed TTS. The standalone shot adapter's default MSR references are
 its sheet panels — face close-up, headless front and headless back (2026-10-31): one
 character uses all three; two use each face, then each front; the shot's start image (its characters,
 place and props composed by `shot_image`) takes the background slot, and the plain place picture stays out.
@@ -597,10 +597,12 @@ Scene mode only (the user's choice). A scene without a cast picture also sends i
 an `object` reference. A scene saved on `ltx-2.5-22b-dev`, a scene with a supplied soundtrack
 and a line pinned to a frame are refused at planning (`scene_mode_model_unsupported`,
 `scene_mode_audio_unsupported`, `scene_inputs_unsupported`), and one GenAI scene binds at most
-two pinned voices across all its cuts. The people the scene's shots reference become one scene
-cast with the panels the sheet rule gives that many (one: face, front, back; two: each face, then
-each front; three or four: one face each), and a person who enters later gets an opening row that
-says so; more than four is refused (`scene_cast_exceeded`). An ending or timed picture inside a
+two pinned voices across all its cuts. The production GPU budget (2026-11-26) allows two
+referenced people and two character images per scene. The planner uses a face and body panel
+for one person or one face each for two. Storyboard writes split at the first authored cut
+that needs a third identity. Keep shot order and dialogue, inspect the new opening and
+rebase frame cues. A shot or requested one-take that needs three reports `scene_cast_exceeded`.
+An ending or timed picture inside a
 shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
 each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The gateway
 caps the numbered scene prompt (2,000 characters on `ltx-2.5-22b-distilled`); a longer one is
@@ -648,7 +650,7 @@ with a non-Latin name by character id and report a non-English voice description
 
 ## LTX character references (user directive, 2026-11-21)
 
-A shot can reference up to four principal characters on MSR and reference-conditioned distilled I2V. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
+The standalone MSR and distilled I2V adapters have four subject slots. Episode scenes use the two-person, two-picture production budget above. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
 with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), and `video_plan` plans each
 scene as one GenAI scene-mode request. GenAI submissions wait up to 15 minutes for the
@@ -1031,7 +1033,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it; GenAI scene mode renders its own soundtrack and refuses such a scene. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references at most two people and two character pictures in total. One character can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third referenced person. Restage a single shot that requires three and flag a requested one-take for a decision.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Before generating images, save the scene's seats or standing marks, fixed landmarks, facing and camera axis in `story_scene.directionDefaults`. Compose and inspect the first shot before the other shots. `shot_image` uses the first available scene image for the physical layout of later shots in the same space. The authored shot still defines the current viewpoint, crop, expression, action phase and prop state. A built set with actor blocking takes precedence. See [scene image generation](skills/generate-cut-images/SKILL.md).

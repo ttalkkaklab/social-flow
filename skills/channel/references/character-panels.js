@@ -165,7 +165,11 @@ function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
     return { id: `${shotId}-${id}-msr`, path: path.relative(boardDir, file).split(path.sep).join('/'),
       role: 'character', use, purpose: fitting ? `${id}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id}: ONE person, exact face, hair, physique and outfit` };
   });
-  const views = ids.length > 2 ? ['face'] : ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
+  let views = ids.length > 2 ? ['face'] : ids.length === 1 ? ['face', 'front', 'back'] : ['face', 'front'];
+  if (options.maxPictures && ids.length) {
+    views = views.slice(0, Math.floor(options.maxPictures / ids.length));
+    if (ids.length === 1 && options.bodyView === 'back') views[1] = 'back';
+  }
   // A board may have the panels but no structured cast snapshot yet. Read the usual outfit from its owner.
   const outfits = new Map();
   for (const [id, { folder, entries }] of sheets) {

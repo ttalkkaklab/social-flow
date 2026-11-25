@@ -107,15 +107,13 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, generateAu
   }
 }
 
-const personRoles = new Set(['character','face','outfit','bystander']);
-const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
+const {castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceConflict, MAX_SCENE_CHARACTER_IMAGES} = require('./scene-references.js');
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
 // `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
 function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false, model) {
-  const registry = board.SB_DOC?.characters ?? [];
-  const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
-  const voiceOnly = new Set(actors.filter(actor => actor.voiceOnly === true).map(actor => actor.id));
+  const registry = referenceOwners(board, boardDir);
+  const {actors, voiceOnly, canonical, owners, registeredOwner} = registry;
   const speakers = sceneCast(scene, cards).filter(id => !voiceOnly.has(id));
   const declaredRefs = scene.speakerReferences ?? [];
   const h3 = engine === 'astra-genai' && model === 'minimax-h3';
@@ -125,25 +123,16 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     throw new Error('scene_reference_owner: register the owner of every scene identity reference');
   if (scene.speakerReferences?.some(ref => voiceOnly.has(ref.character)))
     throw new Error('scene_reference_owner: a voice-only speaker has no visual identity in this scene');
-  const owners = new Map();
-  const canonical = file => {
-    const local = path.resolve(boardDir, file);
-    return fs.existsSync(local) ? fs.realpathSync(local) : local;
-  };
-  for (const actor of actors) for (const file of [actor.imageUrl, ...Object.values(actor.panels || {}), ...(actor.voiceReference?.imagePaths || [])]) {
-    if (typeof file === 'string') owners.set(canonical(file), actor.id);
-  }
-  function registeredOwner(file) {
-    if (!file) return;
-    const source = canonical(file);
-    return owners.get(source) || source.match(/[/\\]assets[/\\]characters[/\\]([^/\\]+)[/\\]/)?.[1];
-  }
-  function ownerOf(ref, card) {
-    const registered = registeredOwner(ref.path);
-    if (registered && ref.character && registered !== ref.character)
-      throw new Error('scene_reference_owner: conflicting owner for ' + ref.path);
-    if (registered || ref.character) return registered || ref.character;
-    return speakers.find(id => ref.id === id || ref.id === id+'-face' || ref.id?.startsWith(card.id+'-'+id+'-'));
+  const ownerOf = (ref, card) => registry.ownerOf(ref, card, speakers);
+  const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
+  const ltx = engine === 'astra-genai';
+  const groups = ltx && !perShot && !conditioning ? sceneReferenceGroups(scene, cards, registry) : [];
+  const conflict = referenceConflict(scene, groups);
+  if (conflict) throw Object.assign(new Error(conflict.message), {report:conflict});
+  if (ltx && !perShot && cards.some(card => card.visual?.characterInputs?.length)) {
+    const {resolveShotCharacterInputs} = require('../channel/references/character-panels.js');
+    cards = cards.map(card => card.visual?.characterInputs?.length
+      ? resolveShotCharacterInputs(card, boardDir, false, board.SB_DOC?.characters) : card);
   }
   const sheets = new Map();
   for (const character of identities) {
@@ -166,8 +155,6 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     }
   }
   const references = [];
-  const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
-  const ltx = engine === 'astra-genai';
   for (const character of identities) {
     const actor = actors.find(c => c.id === character);
     let face = sheets.get(character)?.face ?? actor?.panels?.face;
@@ -194,21 +181,30 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     } else if (ltx && scene.speakers && !conditioning)
       throw new Error('character_panel_missing: scene ' + scene.no + ' speaker ' + character + ' needs a registered face');
   }
-  // GenAI scene mode takes one cast for the whole scene: everyone its shots reference, with the panels the sheet rule
-  // gives that many people (one: face, front, back; two: faces, then fronts; three or four: faces). User's choice 2026-11-25.
-  const sceneCastIds = ltx && !perShot && !conditioning ? [...new Set([...cards.flatMap(card => [
-    ...castIds(card.visual?.character ?? card.visual?.characters),
-    ...(card.visual?.references ?? []).filter(ref => personRoles.has(ref.role) && ref.role !== 'bystander' && ref.use !== 'image').map(ref => ownerOf(ref, card)),
-  ]), ...identities])].filter(id => id && !voiceOnly.has(id)) : [];
-  if (!h3 && sceneCastIds.length > 4)
-    throw new Error('scene_cast_exceeded: scene ' + scene.no + ' references ' + sceneCastIds.join(', ') + '; GenAI scene mode takes at most four people. Split the scene or show someone as a bystander');
+  let sceneCastIds = [...(groups[0]?.characters ?? [])];
   let panels;
-  // A board without shared panel sheets keeps each shot's own references, as before.
-  try { if (sceneCastIds.length && !declaredRefs.length && (!h3 || sceneCastIds.length <= 4)) panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no, sceneCastIds, 'video'); }
-  catch { sceneCastIds.length = 0; }
-  if (panels) references.splice(0, references.length, ...panels.map(ref => ({...ref, scope:'scene',
-    character:sceneCastIds.find(id => ref.id === 'scene-' + scene.no + '-' + id + '-' + ref.id.split('-').at(-1))})));
-  else sceneCastIds.length = 0;
+  if (sceneCastIds.length) {
+    const body = cards.flatMap(card => card.visual?.characterInputs ?? []).find(input => input.bodyView)?.bodyView;
+    try {
+      panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no,
+        sceneCastIds, 'video', {maxPictures:MAX_SCENE_CHARACTER_IMAGES, bodyView:body});
+    } catch { /* Legacy boards can supply their own faces without shared sheets. */ }
+  }
+  if (panels) {
+    const chosen = panels.flatMap(ref => {
+      const character = sceneCastIds.find(id => ref.id === 'scene-' + scene.no + '-' + id + '-' + ref.id.split('-').at(-1));
+      if (declaredRefs.some(entry => entry.character === character))
+        return ref.id.endsWith('-face') ? references.filter(entry => entry.character === character) : [];
+      return [{...ref, character, scope:'scene'}];
+    });
+    references.splice(0, references.length, ...chosen);
+  } else sceneCastIds = [];
+  if (scene.referenceSplitFrom && ltx && scene.videoDirection && cards[0]) {
+    const first = cards[0], needed = new Set([...castIds(first.visual?.character ?? first.visual?.characters),
+      ...orderedSpeech(first).filter(line => line.delivery === 'on_screen' && line.tts?.trim()).map(line => line.speaker)]);
+    const missing = [...needed].filter(id => !scene.videoDirection.openingPositions?.some(row => row.character === id));
+    if (missing.length) throw new Error('scene_split_opening_positions: inspect the opening of ' + first.id + ' and describe where ' + missing.join(', ') + ' starts with story_scene');
+  }
   const entering = rows => !sceneCastIds.length || !rows ? rows : [...rows, ...sceneCastIds.filter(id => !rows.some(row => row.character === id))
     .map(character => ({character, images:[], position:'Not in the opening view; appears in a later shot.'}))];
   const positions = (rows, refs) => rows?.map(row => ({...row, images:ltx

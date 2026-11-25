@@ -10,6 +10,7 @@
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
+import sceneLimits from '../../skills/_shared/genai-scene-limits.json' with { type: 'json' };
 import path from 'node:path';
 import { bareFilenameSchema } from './media-utils.js';
 import { scenePromptTemplate } from './scene-prompt.js';
@@ -40,9 +41,9 @@ export const genaiSceneSchema = z.object({
   prompt: z.string().min(1).max(16000).describe('The whole scene in one prompt. Name inputs with placeholders: {cast.role}, ' +
     '{cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them.'),
   cast: z.array(z.object({
-    id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(9),
+    id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
     voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
-  }).strict()).max(9).default([]),
+  }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two referenced people').default([]),
   references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
   shots: z.array(z.object({
     id, frames: z.number().int().positive(),
@@ -65,10 +66,12 @@ export const genaiSceneSchema = z.object({
   if (new Set(ids).size !== ids.length) issue('Cast, reference and shot IDs share one namespace and must be distinct');
   for (const member of args.cast) if (new Set(member.images.map(i => i.role)).size !== member.images.length)
     issue(member.id + ': picture roles must be distinct');
-  const subjects = args.cast.reduce((n, m) => n + m.images.length, 0) + args.references.filter(r => r.role === 'object').length;
+  const characterImages = args.cast.reduce((n, m) => n + m.images.length, 0);
+  if (characterImages > sceneLimits.maxCharacterImages) issue('scene_character_image_limit: select at most two character pictures across the scene; use one per person for a pair');
+  const subjects = characterImages + args.references.filter(r => r.role === 'object').length;
   const [width, height] = args.resolution.split('x').map(Number);
   if (args.model === 'minimax-h3') {
-    const pictures = args.cast.reduce((sum, member) => sum + member.images.length, 0) + args.references.length + args.shots.filter(shot => shot.imagePath).length;
+    const pictures = characterImages + args.references.length + args.shots.filter(shot => shot.imagePath).length;
     if (pictures < 1 || pictures > 9) issue('H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.');
     if (args.cast.filter(member => member.voicePath).length > 3) issue('H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.');
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)

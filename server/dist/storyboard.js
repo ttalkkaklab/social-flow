@@ -158,6 +158,7 @@ export const sceneSpeakersSchema = z.array(nonEmpty).refine(ids => new Set(ids).
 export const sceneSchema = z
     .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
+    referenceSplitFrom: z.number().int().positive().optional().describe('Original scene number of a GenAI character-reference split'),
     place: z.string().optional().describe('One place — the slugline location'),
     time: z.string().optional().describe('One continuous stretch of time — 낮 · 밤 · 새벽 · 10년 뒤'),
     event: z.string().optional().describe('The one thing that happens in this scene'),
@@ -661,6 +662,7 @@ function applyTransition(shots, at, change) {
     shots[at] = { ...source, transition: change.transition, edit };
 }
 export const storyboardApplySchema = z.object({
+    splitReferenceScenes: z.boolean().optional().describe('Apply GenAI reference splits to an existing storyboard'),
     path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
     set: z.object({ structure: structureSchema.optional(), shots: z.array(shotSchema).min(1) }).optional()
@@ -895,6 +897,8 @@ export function applyPatch(win, patch, opts = {}) {
     if (patch.scenes)
         scenes = upsertBy(scenes, patch.scenes.map((scene) => {
             const old = scenes.find(existing => existing.no === scene.no);
+            if (scene.referenceSplitFrom === undefined && old?.referenceSplitFrom)
+                scene = { ...scene, referenceSplitFrom: old.referenceSplitFrom };
             if (scene.frames === undefined && old?.frames)
                 scene = { ...scene, frames: old.frames };
             if (scene.speakerReferences === undefined && old?.speakerReferences)
@@ -1070,9 +1074,13 @@ export function applyPatch(win, patch, opts = {}) {
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
     if (win.STORY?.authoring === 'story-first' && next.STORY?.authoring !== 'story-first')
         findings.push({ level: 'bad', where: 'STORY', what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
+    findings.push(...validateShots(shots));
+    if (opts.referenceDirectory && !findings.some(f => f.level === 'bad')) {
+        const { splitReferenceScenes } = loadFromHere(join(REFERENCES_DIR, 'split-reference-scenes.js'));
+        findings.push(...splitReferenceScenes(next, win, opts.referenceDirectory, patch.splitReferenceScenes));
+    }
     if (next.STRUCTURE !== undefined)
         findings.push(...validateStructure(next.STRUCTURE));
-    findings.push(...validateShots(shots));
     let synced = 0;
     if (!findings.some((f) => f.level === 'bad')) {
         synced = contract().sync(next);
@@ -1267,7 +1275,7 @@ export function applyStoryboard(args, opts = {}) {
         && ['props', 'propContinuity'].some(key => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key])));
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
-    const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
+    const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists, referenceDirectory: dirname(file) });
     const hook = hookContract().resolveBoardHook(win, next, args, { directory: dirname(file), outline: opts.outline, ...opts.hookChange });
     if (hook.issue)
         findings.push(hook.issue);
@@ -1288,7 +1296,8 @@ export function applyStoryboard(args, opts = {}) {
         const members = (next.SCENES ?? []).filter(card => card.scene === scene.no);
         if (scene.frames !== undefined && !scene.frames.start && !members[0]?.timeline?.images?.some(image => image.role === 'start'))
             delete scene.videoOpeningSha256;
-        else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection)
+        else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection &&
+            (!scene.referenceSplitFrom || existsSync(resolve(dirname(file), scene.frames.start))))
             scene.videoOpeningSha256 = createHash('sha256').update(readFileSync(resolve(dirname(file), scene.frames.start))).digest('hex');
         sceneCasting.sceneCast(scene, members);
         if (scene.speakers?.length || scene.speakerReferences?.length) {
@@ -1552,28 +1561,6 @@ export function writeStorySequences(args) {
     const result = writeOutline(args.path, sha256, win, { ...st, sequences }, undefined, args.language, args.opening, hookChange, args.titlePlan);
     return { ...result, findings: [...result.findings, ...notes] };
 }
-/** Reindex scene-keyed editorial notes in the same write as the board. Shot numbers and receipt IDs are stable. */
-function renumberSceneNotes(win, numbers) {
-    const globals = {};
-    const doc = win.SB_DOC;
-    if (doc) {
-        const notes = { ...doc };
-        for (const key of ['sceneNotes', 'audioNotes', 'privacy']) {
-            const value = doc[key];
-            if (value && typeof value === 'object' && !Array.isArray(value))
-                notes[key] = Object.fromEntries(Object.entries(value).map(([id, entry]) => [numbers.get(Number(id)) ?? id, entry]));
-        }
-        if (JSON.stringify(notes) !== JSON.stringify(doc))
-            globals.SB_DOC = notes;
-    }
-    const cliches = win.CLICHES;
-    if (Array.isArray(cliches?.uses)) {
-        const uses = cliches.uses.map(use => Array.isArray(use?.scenes) ? { ...use, scenes: use.scenes.map(no => numbers.get(no) ?? no) } : use);
-        if (JSON.stringify(uses) !== JSON.stringify(cliches.uses))
-            globals.CLICHES = { ...cliches, uses };
-    }
-    return globals;
-}
 /** Split at a stable shot ID and assign scene numbers in playback order across sequences. */
 function splitStoryScene(args, win, st) {
     const { beforeShot, newSceneNo: requestedNo } = args.split;
@@ -1647,7 +1634,9 @@ function splitStoryScene(args, win, st) {
     const sequences = st.sequences.map(q => ({ ...q,
         scenes: q.scenes.flatMap(no => no === source.no ? [leftNo, newSceneNo] : [numbers.get(no)]),
         ...(q.payoff !== undefined ? { payoff: numbers.get(q.payoff) ?? q.payoff } : {}) }));
-    const baseScenes = st.scenes.map(scene => ({ ...scene, no: numbers.get(scene.no) ?? scene.no }));
+    const baseScenes = st.scenes.map(scene => ({ ...scene, no: numbers.get(scene.no) ?? scene.no,
+        ...(scene.referenceSplitFrom ? { referenceSplitFrom: numbers.get(scene.referenceSplitFrom) ?? scene.referenceSplitFrom } : {}) }));
+    const { renumberSceneNotes } = loadFromHere(join(REFERENCES_DIR, 'split-reference-scenes.js'));
     return { shots: revised, scenes: parts, sequences, baseScenes, globals: renumberSceneNotes(win, numbers) };
 }
 function assertArchivedSceneDrafts(next, previous) {

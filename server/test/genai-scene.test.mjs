@@ -68,6 +68,17 @@ test('a compilation that moves labels, length or cuts is refused before approval
   assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, shots:[{id:'s1', start_frame:0}, {id:'s2', start_frame:56}]}}), /genai_scene_cuts/);
 });
 
+test('direct scene requests enforce two identities and two character images before upload', () => {
+  const person = id => ({id, images:[{role:'face',imagePath:id+'.png'}]});
+  const cast = ['a','b','c'].map(person);
+  assert.throws(() => sceneArgs({cast}), /scene_cast_exceeded/);
+  const pair = cast.slice(0,2);
+  assert.equal(sceneArgs({cast:pair, references:[{id:'key',role:'object',imagePath:'key.png'}]}).cast.length,2);
+  pair[0].images.push({role:'front',imagePath:'front.png'});
+  assert.throws(() => sceneArgs({cast:pair}), /scene_character_image_limit/);
+  assert.equal(sceneArgs({cast:pair.slice(0,1)}).cast[0].images.length,2);
+});
+
 test('a voice sample longer than scene mode takes is refused before anything is reserved', t => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-voice-'));
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
@@ -79,10 +90,10 @@ test('a voice sample longer than scene mode takes is refused before anything is 
 });
 
 test('H3 validates its own frame grid and numbers all shot pictures separately from voices', () => {
-  const cast=['a','b','c'].map(id=>({id,images:[{role:'face',imagePath:id+'.png'}],voicePath:id+'.wav'}));
+  const cast=['a','b'].map(id=>({id,images:[{role:'face',imagePath:id+'.png'}],voicePath:id+'.wav'}));
   const shots=[{id:'s1',frames:78,imagePath:'wide.png'},{id:'s2',frames:90,imagePath:'reverse.png'}];
   const input=sceneArgs({model:'minimax-h3',cast,shots,prompt:'{s1.image} then {s2.image}. {b.face} with {b.voice}.'});
-  const labels=sceneLabels(input),prompt='<Picture 4> then <Picture 5>. <Picture 2> with <Audio 2>.';
+  const labels=sceneLabels(input),prompt='<Picture 3> then <Picture 4>. <Picture 2> with <Audio 2>.';
   assert.equal(resolveScenePrompt(input.prompt,labels),prompt);
   assert.equal(checkSceneValidation(input,{resolved:{labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]}}).numFrames,175);
   const sized = {...input,referenceImageShortEdge:1536};

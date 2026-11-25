@@ -34726,7 +34726,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.0",
+  version: "0.131.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -35456,6 +35456,14 @@ async function uploadOnce(bytes, contentType, sha256, cacheKey) {
 // src/genai-scene.ts
 import { execFileSync } from "node:child_process";
 import { statSync as statSync3 } from "node:fs";
+
+// ../skills/_shared/genai-scene-limits.json
+var genai_scene_limits_default = {
+  maxReferencedCharacters: 2,
+  maxCharacterImages: 2
+};
+
+// src/genai-scene.ts
 import path5 from "node:path";
 
 // src/scene-edit-grammar.ts
@@ -35531,9 +35539,9 @@ var genaiSceneSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(16e3).describe("The whole scene in one prompt. Name inputs with placeholders: {cast.role}, {cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them."),
   cast: external_exports.array(external_exports.object({
     id,
-    images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(9),
+    images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(9).default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -35558,10 +35566,12 @@ var genaiSceneSchema = external_exports.object({
   if (new Set(ids).size !== ids.length) issue("Cast, reference and shot IDs share one namespace and must be distinct");
   for (const member of args.cast) if (new Set(member.images.map((i) => i.role)).size !== member.images.length)
     issue(member.id + ": picture roles must be distinct");
-  const subjects = args.cast.reduce((n, m) => n + m.images.length, 0) + args.references.filter((r) => r.role === "object").length;
+  const characterImages = args.cast.reduce((n, m) => n + m.images.length, 0);
+  if (characterImages > genai_scene_limits_default.maxCharacterImages) issue("scene_character_image_limit: select at most two character pictures across the scene; use one per person for a pair");
+  const subjects = characterImages + args.references.filter((r) => r.role === "object").length;
   const [width, height] = args.resolution.split("x").map(Number);
   if (args.model === "minimax-h3") {
-    const pictures = args.cast.reduce((sum, member) => sum + member.images.length, 0) + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
+    const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
     if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
     if (args.cast.filter((member) => member.voicePath).length > 3) issue("H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)

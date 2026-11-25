@@ -5312,7 +5312,7 @@ storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextS
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards split across authored cuts when a third video identity enters. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
     inputSchema: {
@@ -5365,6 +5365,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
             events: { type: 'array', items: { type: 'object' }, description: 'Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order.' },
           } },
         } },
+        splitReferenceScenes: { type: 'boolean', description: 'Split existing GenAI scenes before a shot introduces a third referenced character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged.' },
         dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
         draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
       },
