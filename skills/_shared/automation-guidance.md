@@ -2,8 +2,10 @@
 
 Follow the [production order](production-workflow.md). The story tools enforce story order
 and cast readiness. Authors complete the [synopsis reality check](../storyboard/references/synopsis-reality-check.md)
-before delivering a new or revised synopsis or opening scenes. Independent reviews and
-Blender compositions run only when the user asks.
+before delivering a new or revised synopsis or opening scenes. Run the
+[three-second opening review](../storyboard/references/opening-review.md) on the finished
+synopsis and again on the text board. Both stages share five revisions. Other independent
+reviews and Blender compositions run on request.
 Each shot's video waits for the user's yes to that shot (`video_approve`), or their
 approval of every shot. This does not authorize spending, publication or automatic speech scoring.
 

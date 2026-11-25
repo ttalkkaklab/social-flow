@@ -48,6 +48,9 @@ test('image and audio bodies go to their endpoints; audio sets the length', t =>
   assert.equal(ltxApiAudio2VideoSchema.safeParse({ audioPath: voice, lastImagePath: image, prompt: 'x' }).success, false);
   const long = path.join(dir, 'l.wav'); execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=d=12', long]);
   assert.throws(() => buildLtxApiBody(ltxApiAudio2VideoSchema.parse({ prompt: '', sourceImagePath: image, audioPath: long })), /2–10 s/);
+  // The vendor measures data URI limits on the base64 text: 6 MiB on disk is 8 MiB inline, over 7.
+  const big = path.join(dir, 'big.png'); fs.writeFileSync(big, Buffer.alloc(6 * 1048576));
+  assert.throws(() => buildLtxApiBody(ltxApiImg2VideoSchema.parse({ prompt: 'x', sourceImagePath: big })), /once base64-encoded/);
 });
 
 test('the job is polled on its own endpoint and saved', async t => {

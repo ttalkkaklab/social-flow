@@ -2,34 +2,37 @@
 
 ## Contents
 
-- [One speaking character per shot](#one-speaking-character-per-shot)
+- [Speakers and cuts](#speakers-and-cuts)
 - [Author before generating](#author-before-generating)
 - [Silent pictures and inner thoughts](#silent-pictures-and-inner-thoughts)
 - [Worked cases](#worked-cases)
 
-## One speaking character per shot
+## Speakers and cuts
 
-For an explicit one-take, keep every speaker turn on a single shot. Follow the changing attention with blocking or a continuous camera move. If the selected model cannot bind the voices, report that limitation. The conventional coverage below applies when the user leaves cuts to the director.
+A shot card is one camera setup and holds every line spoken during it, replies included
+(user directive, 2026-11-24). The limit belongs to the selected video model: one native render
+binds a fixed number of pinned voices (`video_catalog` `voice.maxPinnedVoicesPerRender`; two on
+distilled LTX, three on Seedance 2.0 reference), and `video_plan` reports a render over it as
+`scene_render_voice_limit`. Cut where the staging, the visible evidence or that capacity calls
+for another view, not at every speaker change. Across cards an exchange keeps its spoken
+order; never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs, exact
+words, delivery, acting, pauses and reactions. Several speakers in one render raise the
+speaker-assignment risk; check who voices each line in the take.
 
-In conventional coverage each shot carries lines from at most one character (user directive, 2026-11-09).
-Split at every speaker change, including a reply in an otherwise readable two-shot.
-Consecutive lines by the same speaker can share a shot. A → B → A needs three shots;
-never gather A's nonconsecutive lines and lose the reply's order. Keep line IDs, exact
-words, delivery, acting, pauses and reactions. This reduces MSR speaker-assignment risk;
-it does not guarantee model adherence.
+For an explicit one-take, keep every speaker turn on a single shot. Follow the changing attention with blocking or a continuous camera move. If the selected model cannot bind the voices, report that limitation.
 
-LTX can reference up to four visible principals. A silent cast member can have their own image slot. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. The single-speaker rule assigns lines to shot cards. The scene is generated once. Before allocating lines, choose the visible evidence for the complete scene
+LTX can reference up to four visible principals. A silent cast member can have their own image slot. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. A line belongs to the shot card whose view it is spoken in. The scene is generated once. Before allocating lines, choose the visible evidence for the complete scene
 using [shot-view](shot-view.md#plan-attention-across-the-scene). Then set size, angle and
 delivery for each unit. A reply may stay on a meaningful detail or listener reaction;
 it does not automatically need a reverse. Never ask one generated clip to invent cuts.
 
 | Beat | Shot size and camera angle | Audio |
 | --- | --- | --- |
-| The speaker's expression carries new information | Speaker-facing OTS or close-up; reverse only when the reply's face matters | One on_screen speaker; other visible mouths stay closed. |
+| The speaker's expression carries new information | Speaker-facing OTS or close-up; reverse only when the reply's face matters | The on_screen speaker mouths the line; other visible mouths stay closed. |
 | Words conceal an action or emotion | Insert on a tightening grip, hidden object or hesitant foot | Physical speech is off_screen when the speaking face is outside the crop; retain the speaker's identity and voice. |
 | The listener's response changes the meaning | Listener reaction or their consequential action | The other character speaks off_screen; the listener does not mouth their words. |
-| Distance, access or a power relation matters | Wide view, doorway framing or motivated rear view exposing the relation | One physical speaker; choose delivery from the actual crop, not a desire for more sizes. |
-| Shared action or spatial relation | Medium/wide two-shot when the action needs both bodies | One speaker only; reply gets its own shot. |
+| Distance, access or a power relation matters | Wide view, doorway framing or motivated rear view exposing the relation | Choose delivery from the actual crop, not a desire for more sizes. |
+| Shared action or spatial relation | Medium/wide two-shot when the action needs both bodies | Both may speak in turn when both faces read; a reply that needs another view gets its own shot. |
 | Discovery before a reaction | Named observer's POV of the clue, then the changed response when needed | Silent image2video or purposeful off_screen physical speech; do not reveal the reaction before its cause. |
 | Inner thought | Reaction close-up or purposeful POV/detail; no speaking mouth | image2video plus timed character TTS. |
 
@@ -40,10 +43,10 @@ resulting shot with `shot_icons`; then create its own opening image.
 
 ## Author before generating
 
-1. For conventional coverage, before `shot_dialogue`, split the planned exchange at every speaker change and
-   compare the single speaking identity and delivery with the authored crop. For an existing
-   multi-speaker board, repair it before final `shot_icons`. Snapshot the complete affected
-   shots and narration records before splitting. Create the next visual beat with `story_shot`, then set its `shot_characters`.
+1. Before `shot_dialogue`, decide where the exchange cuts and compare each speaking identity
+   and delivery with the authored crop. To split a shot, at a staging change or because
+   `video_plan` reports its render over the model's voice capacity, snapshot the complete
+   affected shots and narration records first. Create the next visual beat with `story_shot`, then set its `shot_characters`.
    `story_shot` appends a new shot to its scene: read it back, then move the complete new
    record immediately after the source with one `storyboard_apply` using `removeShotIds`
    and `insertShots:[{afterId:sourceId,shots:[completeNewShot]}]`. Keep its stable ID;
@@ -60,8 +63,8 @@ resulting shot with `shot_icons`; then create its own opening image.
    before/after line records for omissions, duplicates and acting loss. Reconcile story/event
    links, performance groups, transitions, continuity and speech-derived timing.
 2. Keep both principal characters in `visual.character` when a listener's shoulder or
-   head is visible. A silent foreground listener is still cast; one speaking character
-   does not mean one visible character. Omit a character only if entirely outside frame.
+   head is visible. A silent foreground listener is still cast; who speaks
+   does not decide who is visible. Omit a character only if entirely outside frame.
 3. For OTS, name the foreground listener and the far, speaking face. In the reverse,
    exchange those roles while keeping cameras on the same side of the dialogue axis.
    Preserve complementary eyelines, world positions, prop ownership, lighting and action
@@ -76,7 +79,7 @@ resulting shot with `shot_icons`; then create its own opening image.
    to add the speaker's face. A visible hand still belongs in the cast. Explain why the
    face is outside the crop; off_screen is not a workaround for accidental occlusion.
 5. After images, write `shot_prompt` action/end/sound in English. Dialogue stays only in
-   `shot_dialogue`; do not paste spoken quotes into action. For an on_screen MSR speaker, inspect
+   `shot_dialogue`; do not paste spoken quotes into action. For each on_screen MSR speaker (at most two), inspect
    the start image and pass `speakerBindings` with its viewer-relative position and
    appearance. Image/Audio indices are reference slots, not left/right.
    Rebuild bindings after image changes, including a reverse; never copy them blindly.
@@ -91,21 +94,25 @@ resulting shot with `shot_icons`; then create its own opening image.
 
 ## Silent pictures and inner thoughts
 
-In an MSR project, use MSR only for a single character's physical dialogue
+In an MSR project, use MSR only for physical dialogue
 (`on_screen`, or intentional `off_screen`). Silent shots and shots containing only
 `voiceover` use image2video, keeping the saved engine/model/resolution. Set
 `frames.mode:"first"`, not `reference`; use the composed shot image as the first frame.
 Never send inner thoughts as MSR prompt dialogue or a character voice reference.
 Separate a character's physical speech and inner thoughts into shots with their own
-route. Outside explicit one-take scenes, the single-shot tools report `shot_speaker_limit` for multiple speakers;
-explicit silent/voiceover MSR plans report `msr_speech_route` before generation.
+route. Explicit silent/voiceover MSR plans report `msr_speech_route` before generation.
 
-Mark an inner thought `delivery:"voiceover"` with the character's own speaker ID, not
+Set `voiceoverKind:"inner_thought"` on the line in `shot_dialogue`. It sets
+`delivery:"voiceover"` and keeps the thought out of model dialogue. Use the character's own speaker ID, not
 the narrator's. Retain its acting/performance metadata and explain the thought in the
-story/action. Keep visible mouths closed and omit speech text from the video prompt.
+story/action. Give the visual prompt the gesture that triggers the thought and the other character’s ongoing action. Omit the words, vocal direction and an addressee from the picture prompt. Keep visible mouths closed during the thought. Let the listener react to the next audible line.
 Generate each line with the pinned character voice using the saved TTS provider, attach
 its real audio and measure it. Use `speech_manage` timing and `compose-speech.js` to
 place it at the authored lead-in, speech interval and tail-out alongside action beats.
+For a frame-specific onset, set the thought's line ID in `timeline.dialogueCues`.
+The mixer subtracts the shot's start frame and uses the scene frame rate. It retains
+the surrounding silence through the end of the shot. Save that cue on the storyboard
+before planning video. Render-time bindings may repeat the saved frame.
 Retime from measured audio before `video_plan`; plan video for the full composed/action
 duration and split if it exceeds the adapter limit. Never truncate a thought, accelerate
 speech silently, loop footage or freeze-pad a short clip to cover missing action.
@@ -118,13 +125,13 @@ to MSR instead. See [shot speech](../../produce/references/shot-speech.md).
 
 ## Worked cases
 
-- **A asks, B answers, A reacts aloud:** three shot cards in playback order for conventional coverage. The scene gets one video request. Compare the speaking face with the evidence that changes: B's tightened grip
+- **A asks, B answers, A reacts aloud:** one shot card when one view holds the exchange, or cards in playback order when the evidence changes view. The scene gets one video request. Compare the speaking face with the evidence that changes: B's tightened grip
   under A's question, the obstacle B indicates while answering, then A's changed face.
   Use that alternative only if those actions belong to the story. OTS/reverse remains
-  valid when the faces carry the change; preserve one speaker and the authored delivery.
+  valid when the faces carry the change; preserve each line's speaker and authored delivery.
 - **A continues for three lines:** one sustained view can carry all three; the view may
   show A, the listener or a meaningful action. Do not add cutaways just to vary the sizes.
-- **Both faces readable:** in an explicit one-take both speakers may take their turns in frame.
+- **Both faces readable:** both speakers may take their turns in one shot.
 - **A thinks, then speaks:** thought close-up uses image2video plus A's timed TTS;
   the next shot uses MSR for A's physical speech. The thought never animates a mouth.
 - **Silent action/reaction:** image2video with no invented dialogue or TTS take.

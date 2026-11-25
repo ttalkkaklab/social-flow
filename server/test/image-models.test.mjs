@@ -22,3 +22,12 @@ test('MLX checks actual pack operation, reference limit, transparency and Turbo 
   assert.doesNotThrow(() => validateMlxImageOperation('custom-pack', 'text', {}));
   assert.throws(() => validateMlxImageOperation('custom-pack', 'edit', {}), /operation_unsupported/);
 });
+
+test('direct H3 image accepts a source and nine references on its fixed schedule', () => {
+  const model = 'ddalcu/MiniMax-H3-Image-MLX-Serve-4bit';
+  assert.doesNotThrow(() => validateMlxImageOperation(model, 'edit', { refImagePaths: Array(9).fill('face.png') }));
+  assert.throws(() => validateMlxImageOperation(model, 'edit', { refImagePaths: Array(10).fill('face.png') }), /reference_limit/);
+  assert.throws(() => validateMlxImageOperation(model, 'variation', {}), /operation_unsupported/);
+  assert.throws(() => validateMlxImageOperation(model, 'text', { steps: 8 }), /six-step/);
+  assert.throws(() => validateMlxImageOperation(model, 'edit', { width: 512, height: 320 }), /source dimensions/);
+});

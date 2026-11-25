@@ -48,6 +48,11 @@ test('shared voice changes are visible before a new take without migrating snaps
   assert.throws(() => characterSpeech(f.character, context), /character_voice_stale/); // Same-model exceptions must name the voice.
   f.board.PRODUCTION.modelSettings.overrides.speech.voiceId = 'hero';
   assert.equal(characterSpeech(f.character, context).tts.voiceId, 'hero');
+  const speech = {engine:voice.engine, model:voice.model, voiceId:'hero'};
+  f.board.PRODUCTION.modelSettings.overrides = [{scope:'shot', request:'Use this voice for one shot', speech}];
+  assert.throws(() => characterSpeech(f.character, context), /character_voice_stale/);
+  f.board.PRODUCTION.modelSettings.overrides.push({scope:'episode', request:'Keep the approved voice', speech});
+  assert.equal(characterSpeech(f.character, context).tts.voiceId, 'hero');
   assert.equal(characterSpeech({id:'hero'}, context).tts.voiceId, 'new-hero');
 });
 test('episode gateway preflight refuses context omission, argument substitution, stale plans and output symlinks', t => {
@@ -87,4 +92,19 @@ test('a receipt is bound to the actual generator, voice and WAV; caller metadata
   assert.throws(()=>verifiedSpeechGeneration(audio,proof,voice,f.line),/speech_receipt_mismatch/);
   assert.throws(()=>verifiedSpeechGeneration(audio,{...proof,receiptPath:undefined},voice,f.line,{required:true}),/speech_receipt_required/);
   assert.doesNotThrow(()=>verifiedSpeechGeneration(audio,{...proof,receiptPath:undefined},voice,f.line)); // Existing attachments stay reusable.
+});
+
+test('a local take with the previous sample digest cannot satisfy the new pin', t => {
+  const f = fixture(t);
+  const audio = join(f.dir, 'local-voice.wav');
+  const receiptPath = audio + '.json';
+  writeFileSync(audio, 'local recording');
+  const local = {...voice, engine:'mlx-audio', voiceId:'default'};
+  const {generator, generation} = compileActing(f.line.tts, f.line.acting, local);
+  const original = hash('first voice');
+  const proof = {generator, voiceSettings:generation, text:f.line.tts, language:'ko', receiptPath};
+  writeFileSync(receiptPath, JSON.stringify({status:'completed', generator, result:{success:true, audioPath:audio},
+    audioSha256:hash(readFileSync(audio)), generation:{...generation, referenceSha256:original}}));
+  assert.doesNotThrow(() => verifiedSpeechGeneration(audio, proof, local, f.line, {required:true, referenceSha256:original}));
+  assert.throws(() => verifiedSpeechGeneration(audio, proof, local, f.line, {required:true, referenceSha256:hash('second voice')}), /local conditioning/);
 });

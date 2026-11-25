@@ -4,16 +4,17 @@ import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
-import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
+import { MUSIC_ADAPTERS, musicCatalog, musicAdapterContracts } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
-import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
+import { IMAGE_ADAPTERS, imageCatalog, imageAdapterContracts } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
 import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
-import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
+import { VIDEO_ADAPTERS, videoCatalog, videoAdapterContracts } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
+import { runOpeningReview } from './opening-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 
@@ -53,6 +54,7 @@ import * as astraVideo from './astra-video-client.js';
 import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
 import { generateNativeImage } from './astra-genai-native-image.js';
 import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
+import { localVoxSchema } from './local-voxcpm2.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
 import { randomUUID } from 'node:crypto';
 import { genaiCatalog, genaiJobs } from './astra-genai-client.js';
@@ -67,7 +69,7 @@ import { CHANNEL_SLUG_RE } from './config.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
-import { localDesktopCatalog } from './ltx-desktop-local.js';
+import { localDesktopCatalog, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -261,6 +263,7 @@ function knownKeys(schema: z.ZodTypeAny): Set<string> | undefined {
       return new Set(Object.keys((def.shape as () => Record<string, unknown>)()));
     }
     current = def.schema ?? def.innerType;
+    if (!current) return undefined;
   }
   return undefined;
 }
@@ -903,7 +906,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_generate: async (args) => {
     const request = parseArgs(mlx.mlxImageGenerateSchema, args);
     const result = await mlx.generateMlxImage(request);
-    if (!result.success) return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: true };
+    if (!result.success) return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
     return text(
       `Image generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Size: ${result.width}x${result.height}\nSteps: ${result.steps ?? 'model default'}\n` +
@@ -913,7 +916,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   mlx_image_edit: async (args) => {
     const request = parseArgs(mlx.mlxImageEditSchema, args);
     const result = await mlx.editMlxImage(request);
-    if (!result.success) return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: true };
+    if (!result.success) return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
     return text(
       `Image edited via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +
@@ -968,8 +971,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','ltx_video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
   astra_genai_jobs: async args => text(JSON.stringify(await genaiJobs(args))),
+  tts_local_voxcpm2: async args => {
+    const generation = localVoxSchema.parse(args);
+    const result = await routeSpeech({action: 'execute', generator: 'tts_local_voxcpm2', generation: {...generation, outputPath: generation.outputPath || process.cwd()}, requestId: randomUUID()});
+    return text(JSON.stringify(result), 'success' in result && result.success === false);
+  },
   tts_astra_genai: async args => {
     const generation = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),
@@ -989,6 +997,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
   astra_genai_audio2video: async args => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),
   astra_genai_msr: async args => text(JSON.stringify(await generateGenaiVideo('msr', args))),
+  astra_genai_scene: async args => text(JSON.stringify(await generateGenaiVideo('scene', args))),
   astra_genai_edit: async args => {
     const result = await generateGenaiImage(args, 'edit');
     return { ...text(JSON.stringify(result)), imageReceipt: result };
@@ -1644,7 +1653,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   speech_manage: async (args) => {
     const input = parseArgs(speechManageSchema, args);
     if (input.action !== 'list') requireReadyProject(input.path);
-    return text(JSON.stringify(manageSpeech(input), null, 2));
+    return text(JSON.stringify(manageSpeech(input, {registeredNativeAttachment:true}), null, 2));
   },
   host_review: async (args) => text(JSON.stringify(await hostReview(args), null, 2)),
   acting_review: async (args) => text(JSON.stringify(await reviewActing(parseArgs(actingReviewSchema, args)), null, 2)),
@@ -1714,6 +1723,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
     return text(storyboard.renderCheck(r));
   },
+  story_opening_review: async args => text(JSON.stringify(await runOpeningReview(args))),
   scenario_check: async (args) => {
     const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
     return text(JSON.stringify(r, null, 2));
@@ -1744,9 +1754,15 @@ export const dispatchVideo = (name: string, args: Record<string, unknown>) => vi
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
+/** A catalog call names nothing for the whole list, or an engine (and one narrowing field) for that engine's parameter schemas. */
+const catalogQuery = <Field extends 'operation' | 'model'>(field: Field) =>
+  z.object({ engine: z.string().min(1).optional(), [field]: z.string().min(1).optional() } as Record<'engine' | Field, z.ZodOptional<z.ZodString>>).strict()
+    .refine(query => query.engine !== undefined || query[field] === undefined, { message: 'catalog_engine_required: name the engine with ' + field });
 ROUTES.video_catalog = async args => {
-  const {engine} = z.object({engine:z.literal('ltx-desktop-local').optional()}).strict().parse(args ?? {});
-  return text(JSON.stringify(engine ? await localDesktopCatalog() : videoCatalog(), null, 2));
+  const { engine, operation } = catalogQuery('operation').parse(args ?? {});
+  // The Desktop application answers for itself when only its engine is named; its adapters' parameters need the operation too.
+  const catalog = !engine ? videoCatalog() : engine === LOCAL_DESKTOP_ENGINE && !operation ? await localDesktopCatalog() : videoAdapterContracts(engine, operation);
+  return text(JSON.stringify(catalog, null, 2));
 };
 ROUTES.video_plan = async args => {
   const input = videoPlanSchema.parse(args);
@@ -1756,7 +1772,7 @@ ROUTES.video_plan = async args => {
     if (report?.videoSubmitted === false) return seedancePreflightError({...report, executable:false, requestId:input.requestId});
     if (!(error instanceof SceneInputError)) throw error;
     return { ...text(JSON.stringify({ code:'scene_inputs_unsupported', executable:false, requestId:input.requestId, tool:error.tool,
-      model:error.model, deployment:await inspectSceneInputContract(error, input.validateScenePayload ? {requestId:input.requestId, args:input.args} : undefined),
+      model:error.model, deployment:await inspectSceneInputContract(error),
       missing:error.missing, sceneRequest:error.sceneRequest }, null, 2)), isError:true };
   }
 };
@@ -1769,7 +1785,10 @@ ROUTES.video_status = async args => text(JSON.stringify(await videoStatus(args),
 const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
 const dispatchImage = (name: string, args: Record<string, unknown>) => imageDispatch[name](args);
 for (const name of Object.keys(IMAGE_ADAPTERS)) ROUTES[name] = args => routeLegacyImage(name, args, dispatchImage);
-ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_catalog = async args => {
+  const { engine, operation } = catalogQuery('operation').parse(args ?? {});
+  return text(JSON.stringify(engine ? imageAdapterContracts(engine, operation) : imageCatalog(), null, 2));
+};
 ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args), null, 2));
@@ -1819,7 +1838,10 @@ ROUTES.shot_image = async args => {
 const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
 const dispatchMusic = (name: string, args: Record<string, unknown>) => musicDispatch[name](args);
 for (const name of Object.keys(MUSIC_ADAPTERS)) ROUTES[name] = args => routeLegacyMusic(name, args, dispatchMusic);
-ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
+ROUTES.music_catalog = async args => {
+  const { engine, model } = catalogQuery('model').parse(args ?? {});
+  return text(JSON.stringify(engine ? musicAdapterContracts(engine, model) : musicCatalog(), null, 2));
+};
 ROUTES.music_plan = async args => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
 ROUTES.music_status = async args => (args as { action?: unknown })?.action === 'resume' ? resumeMusic(args) : text(JSON.stringify(musicStatus(args), null, 2));

@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / "docs"
 CHAPTERS = (
     "README.md", "getting-started.md", "configuration.md", "making-an-episode.md",
-    "publishing.md", "troubleshooting.md", "image-request-recovery.md", "stock-media.md", "mlx-ltx-2.5.md",
+    "publishing.md", "troubleshooting.md", "image-request-recovery.md", "stock-media.md", "video-models.md", "mlx-ltx-2.5.md",
     "fasth3-omni.md", "tool-contracts.md", "pipeline-manifest.md",
     "design-system/DESIGN.md", "design-system/MOTION.md", "design-system/FONTS.md",
 )

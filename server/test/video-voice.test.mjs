@@ -6,6 +6,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { prepareVideoVoice, resolveCharacterVoice } from '../dist/video-voice.js';
 import { videoVoiceCapabilities } from '../dist/video-registry.js';
+import { currentSceneVoice } from '../../skills/_shared/scene-voice.js';
 
 const tts = { engine:'gemini', model:'gemini-2.5-flash-preview-tts', voiceId:'Kore', language:'ko', speed:1, voiceDirection:'Low dry voice, Seoul accent.' };
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -115,6 +116,7 @@ test('missing selected audition evidence warns without substituting an older sam
 
 test('FastH3 native voices use Picture and Audio labels without exact lip-sync claims', t => {
   const ctx=fixture(t), [hero,friend]=ctx.board.SB_DOC.characters;
+  ctx.board.STORY = {language:'vi'};
   const result=prepareVideoVoice('fasth3_omni_reference', {prompt:'Act.', referenceImagePaths:[hero.voiceReference.imagePaths[0],friend.voiceReference.imagePaths[0]]},ctx);
   assert.equal(result.voiceContinuity.strategy,'reference_voice');
   assert.match(result.args.prompt,/hero.*<Picture 1>.*<Audio 1>/);
@@ -123,7 +125,8 @@ test('FastH3 native voices use Picture and Audio labels without exact lip-sync c
     prompt:'The first view. The second view.', referenceImagePaths:result.args.referenceImagePaths,
   }, {...ctx, sceneDirection:{openingPositions:[]}, bindSceneTurns:(prompt, turns) =>
     prompt.replace('The first view.', 'The first view. ' + turns[0]).replace('The second view.', 'The second view. ' + turns[1])});
-  assert.match(withCuts.args.prompt,/The first view\. [^"]*<Audio 1>[^"]*"Hello hero" The second view\. [^"]*<Audio 2>[^"]*"Hello friend"/);
+  assert.match(withCuts.args.prompt, /The first view\. <Subject 1>.*<Audio 1>.*\(S1\) says <d>\[Vietnamese\] Hello hero<\/d> The second view\. <Subject 2>.*<Audio 2>.*\(S2\) says <d>\[Vietnamese\] Hello friend<\/d>/);
+  assert.equal(withCuts.args.prompt.split('Hello hero').length, 2);
   assert.equal(videoVoiceCapabilities('fasth3_omni_reference').exactAudioPreservation,false);
 });
 test('MSR attaches each pinned sample to the subject that shows its speaker', t => {
@@ -166,6 +169,10 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   assert.match(result.args.prompt, /other visible mouths stay closed/);
   assert.deepEqual(ctx.board.SB_DOC.characters, [{ id: 'hero', name: 'Hero' }], 'planning does not rewrite the board');
 
+  const selected=()=>currentSceneVoice(ctx.board,path.join(ctx.episode,'storyboard'),ctx.shot,'hero');
+  assert.deepEqual(selected(),result.voiceContinuity.speakers[0].reference);
+  ctx.board.SB_DOC.characters[0].tts=tts;
+  assert.deepEqual(selected(),result.voiceContinuity.speakers[0].reference);
   ctx.board.SB_DOC.characters[0].tts = { ...tts, voiceId: 'Orus' };
   const override = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.equal(override.voiceContinuity.speakers[0].tts.voiceId, 'Orus');
@@ -177,6 +184,7 @@ test('MSR resolves an id-only story-first cast from its selected audition and au
   const missing = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
   assert.equal(missing.args.references[0].audioPath, undefined, 'missing selected evidence cannot fall back to old voice.wav');
   assert.match(missing.voiceContinuity.warnings.join('\n'), /instead of substituting/);
+  assert.throws(selected,/voice_reference_stale/);
 });
 test('MSR compiles ordered speaker/image/voice/position bindings and refuses ambiguous embedded scripts', t => {
   const ctx = fixture(t), [hero, friend] = ctx.board.SB_DOC.characters;
@@ -219,7 +227,9 @@ test('MSR voices a speaker it cannot sample from the prompt and refuses the reti
   assert.equal(silent.args.prompt, input.prompt);
   ctx.shot.narration[0].delivery = 'voiceover';
   const voiceover = prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true });
-  assert.match(voiceover.args.prompt, /hero speaks in voiceover/);
+  assert.doesNotMatch(voiceover.args.prompt, /hero speaks in voiceover|Hello hero/);
+  assert.match(voiceover.args.prompt, /"문 닫아"/);
+  assert.deepEqual(voiceover.voiceContinuity.speakers.map(entry => entry.speaker), ['friend']);
   assert.doesNotMatch(voiceover.args.prompt, /Image 3 speaks with visible lip movement/);
   ctx.shot.visual.video = { voice: 'prompt' };
   assert.throws(() => prepareVideoVoice('astra_genai_msr', input, { ...ctx, msrVoice: true }), /retired/);
@@ -310,4 +320,13 @@ test('id-only voice-only speakers resolve pinned speech with pending body detail
  const warnings=[],resolved=resolveCharacterVoice({id:'caller',voiceOnly:true},ctx,warnings);
  assert.deepEqual(resolved.tts,tts);
  assert.deepEqual(warnings,[]);
+ ctx.board.SB_DOC.characters={caller:{voiceOnly:true}};
+ const sample=path.join(folder,'voice.wav');fs.writeFileSync(sample,'original caller sample');
+ const selected=()=>currentSceneVoice(ctx.board,path.join(ctx.episode,'storyboard'),ctx.shot,'caller');
+ assert.deepEqual(selected(),{path:sample,sha256:digest('original caller sample'),provenance:'legacy_sample_unverified'});
+ const caller=ctx.board.SB_DOC.characters.caller;
+ caller.voiceReference={path:'../assets/characters/caller/voice.wav',tts,sha256:digest('original caller sample')};
+ assert.equal(selected().provenance,'pinned_settings_and_bytes');
+ fs.writeFileSync(sample,'second caller sample');
+ assert.throws(selected,/voice_reference_stale/);
 });

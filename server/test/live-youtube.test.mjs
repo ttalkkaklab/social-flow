@@ -148,15 +148,16 @@ test('YouTube chat honors polling interval and cursor and ignores non-message ev
       nextPageToken: 'next',
       pollingIntervalMillis: 8000,
       items: [
-        { id: '1', snippet: { type: 'textMessageEvent', displayMessage: 'hello' } },
+        { id: '1', authorDetails:{displayName:'민지'}, snippet: { type: 'textMessageEvent', displayMessage: 'hello' } },
         { id: '2', snippet: { type: 'userBannedEvent', displayMessage: 'skip' } }
       ]
     };
   }, 'chat');
   assert.equal(await chat.poll(q), 8000);
   await chat.poll(q);
+  assert.equal(pages[0].part, 'snippet,authorDetails');
   assert.equal(pages[1].pageToken, 'next');
-  assert.deepEqual(q.next(), { source: 'youtube', id: '1', text: 'hello' });
+  assert.deepEqual(q.next(), { source: 'youtube', id: '1', text: 'hello', displayName:'민지' });
   assert.equal(q.next(), undefined);
 });
 test('resuming a ready room keeps its original key and never creates or takes over an active stream', async () => {

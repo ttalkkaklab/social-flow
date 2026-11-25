@@ -49,6 +49,12 @@ gone from every machine that runs this plugin.
 
 ## Local GenAI connection — owner directive, 2026-11-07
 
+2026-11-24: the GenAI gateway no longer binds MLX servers (`mlx-serve`,
+`mlx-audio`). A local gateway on that version cannot serve `qwen-image-fast` or
+the MLX `voxcpm2` binding described below. MLX images go through the direct
+`mlx` lane (`mlx_image_generate` / `mlx_image_edit`); `voxcpm2` speech is served
+by the production gateway, whose voices must be registered there first.
+
 For `/Volumes/data/story/insight`, `astra-genai-native` / `qwen-image-fast` means
 the local GenAI gateway at `http://127.0.0.1:18081`, backed by MLX Serve
 (`qwen-image-2.1-turbo`). Before generation, verify the image endpoint and credential

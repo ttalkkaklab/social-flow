@@ -1,5 +1,5 @@
 import { createRequire } from 'node:module';
-import { nonEnglishOutsideQuotes } from './prompt-language.js';
+import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 const load = createRequire(import.meta.url);
 export const videoTextPolicy = () => String(load('../../skills/_shared/scene-acting.js').VIDEO_TEXT_POLICY);
 const object = (value) => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -94,11 +94,32 @@ export function sceneVoiceDirection(acting, spoken, legacy = false) {
         return true;
     }).join(' ');
 }
-export function scenePromptText(scene, camera, timeline, lines, bindTurns) {
+export function scenePromptText(scene, camera, timeline, lines, bindTurns, profile) {
     const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
         .map(l => [sceneVoiceDirection(l.acting, l.tts), l.speaker + ' (' + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(' '));
-    return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue, videoTextPolicy()]
-        .filter(Boolean).join('\n');
+    const oneTake = scene.oneTake && 'One continuous take. No cuts.';
+    const beats = [timeline, ...dialogue];
+    const ordered = () => {
+        switch (profile?.writer) {
+            case 'recorded':
+                return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound];
+            case 'msr':
+                return [scene.action, camera, scene.emotion, oneTake, ...beats, scene.sound];
+            case 'hostedH3':
+                return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && 'Environmental sound: ' + scene.sound];
+            case 'fastH3':
+            case 'seedance':
+                return [scene.action, scene.emotion, camera, oneTake, ...beats, scene.sound];
+            case 'veo':
+            case 'heygen':
+                return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && 'Sound: ' + scene.sound];
+            case 'ltx':
+                return [camera, scene.emotion, scene.action, oneTake, ...beats, scene.sound];
+            default:
+                return [scene.emotion, scene.action, scene.sound, camera, oneTake, ...beats];
+        }
+    };
+    return [...ordered(), videoTextPolicy()].filter(Boolean).join('\n');
 }
 /** Report clear omissions, holds and reversals in uncompiled prompt text. */
 export function cameraDrift(prompt, movement) {
@@ -161,7 +182,9 @@ export function shotVisualDirection(shot, concise = false) {
 }
 const directions = () => load('../../skills/storyboard/references/scene-direction.js');
 export function resolvedDirection(scene, cards) { return directions().resolve(scene, cards); }
-export function withSceneCamera(shot, scenes) { return directions().withCameraDefaults([shot], scenes)[0]; }
+export function withSceneCamera(shot, scenes) {
+    return load('../../skills/_shared/scene-acting.js').withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
+}
 export function attributeWords(key, row, camera = {}) {
     if (key === 'camera')
         return row.id || row.source === 'shot'
@@ -175,13 +198,23 @@ export function sceneShotNotes(card, concise = false) {
     return { action: actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound: english(notes.sound), blocking: english(notes.blocking),
         end: english(notes.end), beats: [...notes.beats, ...notes.motion].map(english).filter(Boolean) };
 }
-export function shotVisualWords(shot, rows, common, end, framing, concise = false) {
+export function shotVisualParts(shot, rows, common, end, framing, concise = false) {
     const dir = shotVisualDirection(shot, concise), visual = object(shot.visual), camera = object(visual.camera);
     const expression = expressionWords(shot);
-    return [...new Set([framing, dir.framing, ...dir.openingView, dir.focusWords, dir.depthWords, ...dir.accentWords,
-            ...Object.entries(rows).filter(([key]) => !common[key]).map(([key, row]) => attributeWords(key, row, camera)),
-            dir.settle && sentence('Closing frame: ' + dir.settle), expression && sentence('Expressions: ' + expression),
-            end && sentence('End on ' + end)].filter((v) => !!v && !nonEnglishOutsideQuotes(v)))].join(' ');
+    // Lighting and attention are design notes; the screen axis and continuity keep the space.
+    const rowKind = (key) => key === 'camera' ? 'camera' : ['lighting', 'attention'].includes(key) ? 'design' : 'space';
+    const parts = [{ kind: 'framing', text: framing }, { kind: 'framing', text: dir.framing },
+        ...dir.openingView.map(text => ({ kind: 'view', text })), { kind: 'focus', text: dir.focusWords }, { kind: 'depth', text: dir.depthWords },
+        ...dir.accentWords.map(text => ({ kind: 'accent', text })),
+        ...Object.entries(rows).filter(([key]) => !common[key]).map(([key, row]) => ({ kind: rowKind(key), text: attributeWords(key, row, camera) })),
+        { kind: 'settle', text: dir.settle && sentence('Closing frame: ' + dir.settle) }, { kind: 'expression', text: expression && sentence('Expressions: ' + expression) },
+        { kind: 'end', text: end && sentence('End on ' + end) }];
+    const seen = new Set();
+    return parts.filter((part) => typeof part.text === 'string' && Boolean(part.text) &&
+        !nonEnglishOutsideQuotes(part.text) && !seen.has(part.text) && Boolean(seen.add(part.text)));
+}
+export function shotVisualWords(shot, rows, common, end, framing, concise = false) {
+    return shotVisualParts(shot, rows, common, end, framing, concise).map(part => part.text).join(' ');
 }
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */
 export function compileVideoPrompt(shot, source, names = {}, options = {}) {
@@ -231,6 +264,13 @@ export function compileVideoPrompt(shot, source, names = {}, options = {}) {
     const fitWarnings = !limit || !step ? [] : [prompt.length > limit
             ? `prompt_over_limit: ${prompt.length} characters after leaving out the ${dropped.slice(0, step).join(', ')}; the adapter takes ${limit}. Shorten the action, end or sound in shot_prompt`
             : `prompt_fitted: left out the ${dropped.slice(0, step).join(', ')} to fit the adapter's ${limit} characters; the camera, action and lines are whole`];
+    // The shot compiler can also preview several deliveries. The native line is allowed
+    // to have the same words as a thought; inspect the authored direction before adding it.
+    for (const value of [source.action, source.end, source.sound])
+        if (value)
+            checkVoiceoverDirection(value, lines);
+    if (mode === 'voiceover')
+        checkVoiceoverDirection(prompt, lines, true);
     const foreign = nonEnglishOutsideQuotes(prompt);
     if (foreign && options.validateLanguage !== false)
         throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks; write action and direction in English`);

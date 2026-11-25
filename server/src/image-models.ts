@@ -21,8 +21,9 @@ export function assertImageModelAvailable(model: string, now = new Date()): void
   if (contract.shutdown && now.toISOString().slice(0, 10) >= contract.shutdown)
     throw new Error('image_model_retired: ' + model + '; select a replacement explicitly');
 }
-export type MlxImageFamily = 'flux-klein' | 'krea' | 'mage' | 'mage-edit' | 'qwen-2.1' | 'unknown';
+export type MlxImageFamily = 'flux-klein' | 'krea' | 'mage' | 'mage-edit' | 'qwen-2.1' | 'h3-image' | 'unknown';
 export function mlxImageFamily(model = ''): MlxImageFamily {
+  if (/^(?:[^/]+\/)?MiniMax-H3-Image(?:-MLX-Serve-(?:4|8)bit)?$/i.test(model)) return 'h3-image';
   if (/qwen.*image.*2[.-]1/i.test(model)) return 'qwen-2.1';
   if (/mage[-_]?flow/i.test(model)) return /edit/i.test(model) ? 'mage-edit' : 'mage';
   if (/krea[-_]?2/i.test(model)) return 'krea';
@@ -32,14 +33,20 @@ export function mlxImageFamily(model = ''): MlxImageFamily {
 /** Unknown packs keep basic text generation, but advanced capabilities must be registered. */
 export function validateMlxImageOperation(model: string | undefined, operation: 'text' | 'edit' | 'variation', args: Record<string, unknown>): void {
   const family = mlxImageFamily(model);
-  if (operation === 'edit' && !['flux-klein', 'mage-edit', 'qwen-2.1'].includes(family))
+  if (operation === 'edit' && !['flux-klein', 'mage-edit', 'qwen-2.1', 'h3-image'].includes(family))
     throw new Error('image_operation_unsupported: select an identified editing pack');
   if (operation === 'variation' && !['flux-klein', 'krea'].includes(family))
     throw new Error('image_operation_unsupported: this pack has no verified strength-based variation');
   if (args.transparent === true && family !== 'qwen-2.1')
     throw new Error('image_transparency_unsupported: transparent requires Qwen-Image-2.1');
   const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === 'qwen-2.1' ? 9 : 3)) throw new Error('image_reference_limit');
+  if (refs > (family === 'qwen-2.1' || family === 'h3-image' ? 9 : 3)) throw new Error('image_reference_limit');
+  if (family === 'h3-image') {
+    if (args.steps !== undefined || args.transparent !== undefined || args.strength !== undefined)
+      throw new Error('image_operation_unsupported: H3 Image uses its six-step schedule; omit steps, transparent and strength');
+    if (operation === 'edit' && (args.width !== undefined || args.height !== undefined))
+      throw new Error('image_edit_size: H3 Image takes the source dimensions; omit width and height');
+  }
   if (family === 'qwen-2.1' && /turbo/i.test(model || '') && args.steps !== undefined && args.steps !== 8)
     throw new Error('image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule');
 }

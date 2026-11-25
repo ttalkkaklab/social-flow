@@ -38,6 +38,10 @@ export function videoDurationLimits(tool, input = {}) {
     else if (tool === 'astra_genai_msr') {
         limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
     }
+    else if (tool === 'astra_genai_scene') {
+        // A GenAI scene renders on the same LTX grid and is cut back to the storyboard's frames.
+        limits = { ...GENAI_MSR_FRAMES, frameRate: input.fps ?? GENAI_MSR_FRAMES.frameRate };
+    }
     else if (DURATION_TOOLS.includes(tool) && tool.startsWith('astra_')) {
         const mode = tool === 'astra_audio2video' ? 'audio2video' : tool === 'astra_keyframe_video' ? 'keyframe'
             : input.tier === 'guided' ? 'guided' : input.tier === 'fast' ? 'guided_fast' : input.tier === 'hq' ? 'guided_hq' : 'generate';

@@ -883,6 +883,7 @@ export interface AstraVideoUpload {
   uploadId: string;
   bytes: number;
   kind: string;
+  wavSha256?: string;
   expiresAt?: string;
   duration?: number;
   width?: number;
@@ -1252,13 +1253,15 @@ export async function uploadFile(filePath: string): Promise<AstraVideoUpload> {
   }
 
   await waitForUploadSlot();
+  const contents = fs.readFileSync(resolved);
+  if (contents.length > limit) throw new Error('File exceeds the upload ceiling: ' + path.basename(resolved));
   const headers = authHeaders();
   const result = await withBackoff('upload', async () => {
     try {
       const response = await fetch(`${astraVideoBaseUrl()}/v1/uploads`, {
         method: 'POST',
         headers: { ...headers, 'Content-Type': contentType },
-        body: fs.readFileSync(resolved),
+        body: contents,
         signal: AbortSignal.timeout(TRANSFER_TIMEOUT_MS),
       });
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -1284,6 +1287,7 @@ export async function uploadFile(filePath: string): Promise<AstraVideoUpload> {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
+    ...(contentType === 'audio/wav' ? {wavSha256:createHash('sha256').update(contents).digest('hex')} : {}),
     ...(parsed.expires_at !== undefined ? { expiresAt: parsed.expires_at } : {}),
     ...(parsed.duration !== undefined ? { duration: parsed.duration } : {}),
     ...(parsed.width !== undefined ? { width: parsed.width } : {}),
@@ -1432,6 +1436,7 @@ async function runJob(
   outputPath: string | undefined,
   filename: string | undefined,
   signal?: AbortSignal,
+  conditioningAudioSha256?: string,
 ): Promise<AstraVideoResponse> {
   // The host may stop waiting before this worker finishes. Keep the job identity and
   // completed response on disk so a transport timeout never requires blind resubmission.
@@ -1443,7 +1448,8 @@ async function runJob(
   signal?.throwIfAborted();
   const jobId = await submitJob(body);
   recordVideoSubmission(jobId);
-  const submitted = { jobId, mode, prompt, videoPath, submittedAt: new Date().toISOString(), submittedRequest: body };
+  const submitted = { jobId, mode, prompt, videoPath, submittedAt: new Date().toISOString(), submittedRequest: body,
+    ...(conditioningAudioSha256 ? {conditioningAudioSha256} : {}) };
   writeReceipt({ ...submitted, status: 'submitted' });
   const { bytes, request, elapsedSeconds } = await awaitResult(jobId, signal).catch((error) => {
     if (error instanceof FailedVideoJob) writeReceipt({...submitted, status: 'failed', error: error.message});
@@ -1502,9 +1508,10 @@ export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<
   if (image && image.kind !== 'image') throw new Error('ASTRA video imagePath must upload as image');
   const images = image ? [{ uploadId: image.uploadId, frameIdx: 0, strength: args.strength }] : undefined;
   const uploaded = { audioUploadId, audioExpiresAt: audio?.expiresAt, audioDuration: audio?.duration };
+  const driver = !args.audioStartTime && args.audioMaxDuration === undefined ? audio?.wavSha256 : undefined;
   if (!args.expectLipSync) {
     const body = buildJobBody('audio2video', { ...args, audioUploadId, images });
-    return { ...await runJob('audio2video', args.prompt, body, args.outputPath, args.filename), ...uploaded };
+    return { ...await runJob('audio2video', args.prompt, body, args.outputPath, args.filename, undefined, driver), ...uploaded };
   }
   // LTX 2.5 sometimes ignores the voice, and which seeds do is luck: same audio, image and
   // prompt, a new seed only. Never an error — the best clip ships with its findings.
@@ -1517,7 +1524,7 @@ export async function generateFromAudio(args: AstraAudio2VideoRequest): Promise<
     const body = buildJobBody('audio2video', { ...args, seed, audioUploadId, images });
     let result: AstraVideoResponse;
     try {
-      result = await runJob('audio2video', args.prompt, body, args.outputPath, filename);
+      result = await runJob('audio2video', args.prompt, body, args.outputPath, filename, undefined, driver);
     } catch (error) {
       if (attempt === 1) throw error;
       // A failed retry must not cost the clip already on disk.

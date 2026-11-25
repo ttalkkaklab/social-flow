@@ -27,6 +27,7 @@ const common = {
   model: z.enum(Object.keys(MINIMAX_MODELS) as [MinimaxModel, ...MinimaxModel[]]).default('MiniMax-H3').describe('MiniMax H3 model id, e.g. MiniMax-H3.'),
   resolution: z.enum(['480P', '768P', '2K']).default('768P').describe('Output resolution; 2K only on MiniMax-H3.'),
   durationSeconds: z.number().int().min(4).max(MINIMAX_MAX_SECONDS).default(5).describe('Whole seconds, 4–15 (MiniMax-H3-Max 5–15).'),
+  generateAudio: z.boolean().optional().describe('Native soundtrack; false renders a silent clip. Omitted: the vendor default, on.'),
   outputPath: z.string().optional().describe('Output directory.'),
   filename: bareFilenameSchema('video').optional().describe('MP4 filename.'),
 };
@@ -75,6 +76,7 @@ export function buildMinimaxBody(request: MinimaxImg2VideoRequest | MinimaxRefer
   }
   const body = { model: request.model, content: [{ type: 'text', text: request.prompt }, ...content],
     resolution: request.resolution, duration: request.durationSeconds,
+    ...(request.generateAudio === undefined ? {} : { generate_audio: request.generateAudio }),
     ...('ratio' in request ? { ratio: request.ratio } : {}),
     // Max rewrites prompts by default; the compiled speaker bindings must reach the model as written.
     ...(request.model === 'MiniMax-H3-Max' ? { extra: { prompt_expansion_mode: 'disabled' } } : {}) };

@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { bindRegisteredPanels, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
+import { bindRegisteredPanels, bindSceneAdapter, checkSceneDeployment, inspectSceneInputContract, prepareSceneRequest, mapSceneInputs, SceneInputError } from '../dist/scene-video.js';
 import { readCapture, captureScene } from './fixtures/scene-capture.mjs';
 import { approveVideo, executeVideo, planManagedVideo, planVideo, videoStatus } from '../dist/video-routing.js';
 import { config } from '../dist/config.js';
@@ -33,7 +33,7 @@ function busking(t) {
  data.write('RIFF'); data.writeUInt32LE(data.length-8,4); data.write('WAVEfmt ',8);
  data.writeUInt32LE(16,16); data.writeUInt16LE(1,20); data.writeUInt16LE(1,22);
  data.writeUInt32LE(8000,24); data.writeUInt32LE(16000,28); data.writeUInt16LE(2,32); data.writeUInt16LE(16,34);
- data.write('data',36); data.writeUInt32LE(data.length-44,40); data.writeInt16LE(9000,44+14000*2);
+ data.write('data',36); data.writeUInt32LE(data.length-44,40); for (let sample=14000; sample<18000; sample++) data.writeInt16LE(Math.round(9000*Math.sin(sample/4)),44+sample*2);
  fs.writeFileSync(path.join(dir,scene.audio.path),data);
  const save = () => fs.writeFileSync(path.join(dir,'scenes.js'),
    'window.STRUCTURE='+JSON.stringify({scenes:[{no:1,videoDirection:scene}]})+';\nwindow.SCENES='+JSON.stringify(members)+';');
@@ -60,48 +60,16 @@ test('EP01 delivers one multipart request with three shots, six file parts and o
  assert.match(final.prompt,/s0001 [\s\S]*s0002 [\s\S]*s0003 [\s\S]*Seorin steps[\s\S]*Mai An joins[\s\S]*Tu Vi enters/);
  assert.deepEqual([final.audio.startFrame,final.audio.endFrame,final.audio.cues[0].frame],[0,360,42]);
  assert.equal(final.audio.sha256,createHash('sha256').update(fs.readFileSync(path.join(f.dir,f.scene.audio.path))).digest('hex'));
- const blocked=await ROUTES.video_plan({...f.input,operation:'audio'});
- assert.equal(blocked.isError,true);
- const report=JSON.parse(blocked.content[0].text);
- assert.equal(report.executable,false); assert.equal(report.planId,undefined);
- assert.deepEqual(report.sceneRequest,request);
- assert.deepEqual(report.missing.map(m=>[m.input,m.frame]),[
-   ['transition',42],['transition',52],
- ]);
+ await assert.rejects(ROUTES.video_plan({...f.input,operation:'audio'}), /scene_speech_route/);
  assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
+ assert.throws(()=>mapSceneInputs(request,'astra_genai_audio2video'), e =>
+   e.missing.filter(m=>m.input==='transition').length===2);
  f.members[2].visual.camera={movement:'pan right',target:'the dancers',end:'The dancers fill the frame.'};
  f.save();
- const moved=await ROUTES.video_plan({...f.input,operation:'audio'});
- assert.match(JSON.parse(moved.content[0].text).sceneRequest.prompt,/s0003 [^\n]*?pan[^\n]*Closing frame: The dancers fill the frame/i);
- for (const op of ['image','text']) {
-   assert.throws(()=>planVideo({...f.input,operation:op}),e=>e.missing.some(m=>m.input==='audio') &&
-     e.missing.filter(m=>m.input==='transition').length===2);
- }
- f.scene.oneTake=true; f.save();
- assert.throws(()=>planVideo(f.input),/scene_one_take/);
-});
-
-test('one-take endpoint board reaches the A2V body with a single audio file and both endpoint images',t=>{
- const f=busking(t);
- const first=f.members[0];
- f.members.splice(1);
- first.duration=15;
- first.timeline.endFrame=360;
- first.timeline.images.push({role:'end',frame:359,path:'images/ending.png'});
- f.scene.oneTake=true; f.save();
- const plan=planVideo(f.input);
- assert.equal(plan.tool,'astra_genai_audio2video');
- assert.match(plan.args.prompt,/One continuous take/);
- const body=buildGenaiAudioBody(plan.args);
- assert.deepEqual(Object.keys(body).sort(),['audio_uri','fps','image_uri','last_frame_uri','model','prompt','resolution']);
- assert.equal(body.audio_uri,'data:audio/wav;base64,'+fs.readFileSync(path.join(f.dir,f.scene.audio.path)).toString('base64'));
- assert.deepEqual(plan.sceneRequest.cuts,[]);
- assert.deepEqual(plan.imageBindings.map(p=>[p.shotId,p.frame,p.role,p.parameter]),
-   [['s0001',0,'start','imagePath'],['s0001',359,'end','lastFramePath']]);
- assert.throws(()=>planVideo({...f.input,sceneNo:undefined,shotId:first.id}),/sceneNo|shotId/);
- first.timeline.images.push({role:'face',frame:0,path:'images/duo.png',character:'mai-an'});
- f.save();
- assert.deepEqual(buildGenaiAudioBody(planVideo(f.input).args),body);
+ const moved=f.capture(input=>input);
+ assert.match(moved.request.prompt,/s0003 [^\n]*?pan[^\n]*Closing frame: The dancers fill the frame/i);
+ f.scene.oneTake=true;
+ assert.throws(()=>f.capture(input=>input),/scene_one_take/);
 });
 
 test('EP2 keeps the dolly in one shot and binds Miran’s line, position and references at the cut', async t => {
@@ -151,77 +119,19 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.match(providerPrompt, /Keep the gaze steady/);
   assert.doesNotMatch(providerPrompt, /s000[12]|Frame 171/);
   assert.equal(wire.shots[1].dialogue[0].frame,171);
+  // Scene mode opens the second shot on its start picture and paces the cut itself. It leaves the ending picture out
+  // and names it in the plan, but a line pinned to a frame is refused for the scene adapter before anything is uploaded.
   assert.throws(()=>planVideo(f.input), error=>{
+    assert.equal(error.tool,'astra_genai_scene');
     assert.deepEqual(error.sceneRequest.cuts,request.cuts);
     assert.deepEqual(error.sceneRequest.shotIds,request.shotIds);
     assert.deepEqual(error.sceneRequest.images.filter(i=>i.reference?.scope==='scene').map(i=>i.character), ['nephew','miran','nephew','miran']);
     assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
-    assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),
-      [['s0002','end',170],['s0001','start',171]]);
-    assert.deepEqual(error.missing.filter(m=>m.input==='position').map(m=>m.frame),[0,171]);
+    assert.deepEqual(error.missing.filter(m=>m.input==='image'),[]);
+    assert.deepEqual(error.missing.filter(m=>m.input==='position'),[]);
     return true;
   });
   assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
-  const board = path.join(f.dir,'scenes.js');
-  fs.appendFileSync(board, '\nwindow.PRODUCTION='+JSON.stringify({videoAuthorization:{
-    reference:'Fixture scene spending approval', maxUsd:0, maxConcurrent:1, maxAttempts:1}})+';');
-  const before = fs.readFileSync(board);
-  const key = config.astraGenaiApiKey, originalFetch = globalThis.fetch;
-  config.astraGenaiApiKey = 'fixture';
-  t.after(()=>{globalThis.fetch=originalFetch;config.astraGenaiApiKey=key});
-  const route = '/v1/ltx/v2/scene-to-video', submitted = [], validated = [];
-  const requestId = f.input.requestId;
-  const file = '11'.repeat(16), jobId = '22'.repeat(16);
-  let providerStatus = 'processing';
-  globalThis.fetch = async (url,options) => {
-    const pathname = new URL(url).pathname;
-    if (pathname === '/v1/uploads') return Response.json({upload_id:file,chunk_size:1048576,chunks:1});
-    if (options.method === 'PUT') return Response.json({});
-    if (pathname.endsWith('/complete')) return Response.json({file_id:file,uri:'genai-file://'+file});
-    if (pathname === route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],motion_prefix:true,timed_dialogue:'supplied_performance'});
-    if (pathname === route+'/validate') {
-      validated.push(JSON.parse(options.body));
-      return Response.json({schema_valid:true, model:'ltx-2.5-22b-distilled', shots:2});
-    }
-    if (pathname === route) {
-      assert.equal(options.headers['X-Request-ID'],'scene-'+plan.id);
-      submitted.push(JSON.parse(options.body));
-      throw new Error('Lost the response after acceptance');
-    }
-    assert.equal(options.method,'GET');
-    assert.ok([route+'/requests/scene-'+plan.id,route+'/'+jobId].includes(pathname));
-    return Response.json({request_id:'scene-'+plan.id,id:jobId,status:providerStatus});
-  };
-  const motionPrefix = path.join(f.episode,'camera.mp4'), performanceAudio = path.join(f.episode,'line.wav');
-  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=size=64x64:rate=24','-frames:v','9',motionPrefix]);
-  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','anullsrc=r=48000:cl=stereo','-t','4.375',performanceAudio]);
-  const plan = await planManagedVideo({...f.input,sceneRendering:'per_shot',shotBindings:[{
-    shotId:'s0002', keyframes:[{path:'images/trio.png',frame:48}], guidance:{negativePrompt:'captions',guidanceScale:2},
-    motionPrefix,
-  },{shotId:'s0001',performanceAudio}]});
-  approveVideo({episode:f.episode,planIds:[plan.id],request:'Generate the two shots under one scene job'});
-  const run = () => executeVideo({episode:f.episode,planId:plan.id},()=>assert.fail('unexpected ordinary I2V submission'));
-  await assert.rejects(run(), /Lost the response/);
-  assert.equal(submitted.length,1);
-  assert.deepEqual(validated,[submitted[0],submitted[0]]);
-  assert.deepEqual(submitted[0].shots.map(s=>[s.shot_id,s.start_frame,s.end_frame,s.dialogue[0].speaker]),
-    [['s0002',0,171,'nephew'],['s0001',171,276,'miran']]);
-  assert.equal(submitted[0].shots[1].dialogue[0].frame,171);
-  assert.equal(submitted[0].shots[1].performance_uri,'genai-file://'+file);
-  assert.equal(submitted[0].shots[0].motion_uri,'genai-file://'+file);
-  assert.equal(submitted[0].shots[1].transition,'hard_cut');
-  assert.deepEqual(submitted[0].shots.map(s=>s.images.map(i=>i.role)),[['start','keyframe','end','face','face'],['start','face','face']]);
-  assert.equal(submitted[0].shots[0].images[1].frame,48);
-  assert.deepEqual(submitted[0].shots.map(s=>s.negative_prompt),['captions',undefined]);
-  assert.deepEqual(submitted[0].shots.map(s=>[Boolean(s.motion_uri),Boolean(s.performance_uri)]),[[true,false],[false,true]]);
-  for (const file of [motionPrefix,performanceAudio]) assert.equal(plan.inputs[file],createHash('sha256').update(fs.readFileSync(file)).digest('hex'));
-  assert.deepEqual(submitted[0].shots.map(s=>s.opening_positions),setups.map(s=>s[8].map(row=>({...row,images:[row.character==='nephew'?1:2]}))));
-  await videoStatus({episode:f.episode,requestId,action:'refresh'});
-  assert.equal((await videoStatus({episode:f.episode,requestId})).providerId,jobId);
-  providerStatus = 'failed';
-  assert.equal((await videoStatus({episode:f.episode,requestId,action:'refresh'})).status,'failed');
-  assert.equal(submitted.length,1);
-  assert.deepEqual(fs.readFileSync(board),before);
   const legacy = structuredClone(request);
   const panel = legacy.images.find(i=>i.role==='face');
   delete panel.character;
@@ -237,101 +147,62 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.throws(()=>planVideo(f.input),/scene_dialogue_timing/);
 });
 
-test('a refused I2V scene reads the selected endpoint and renderer contract without submitting media',async t=>{
+function pinnedActor(dir, id, face, frequency) {
+  const sample = path.join(dir, id + '.wav');
+  execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i',`sine=frequency=${frequency}:duration=0.5`,sample]);
+  const tts = {engine:'gemini', voiceId:id, language:'vi', speed:1};
+  const sha256 = createHash('sha256').update(fs.readFileSync(sample)).digest('hex');
+  return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
+}
+
+test('a GenAI scene binds the pinned voices of its whole scene in one render', async t => {
+  const f = busking(t);
+  delete f.scene.audio;
+  const cast = ['seorin','mai-an','tu-vi'].map((id,i)=>pinnedActor(f.dir,id,'images/'+['solo','duo','trio'][i]+'.png',400+i*150));
+  const line = (speaker,id) => ({id,speaker,delivery:'on_screen',tts:'Your turn.'});
+  for (const [i,shot] of f.members.entries()) {
+    shot.visual.video.model = 'ltx-2.5-22b-distilled';
+    shot.timeline.openingPositions = f.scene.openingPositions;
+    shot.narration = [line(cast[i].id,shot.id+'-l1')];
+  }
+  f.members[0].narration.push(line(cast[1].id,'reply'));
+  const listener = {id:'listener',panels:{face:'images/listener.png'}};
+  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=16x16','-frames:v','1',path.join(f.dir,listener.panels.face)]);
+  cast.push(listener);
+  // Only the scene opening stages this silent person. The child cards have no local hint.
+  f.scene.openingPositions = [...f.scene.openingPositions,{character:listener.id,images:[],position:'Near the witness rail.'}];
+  const save = () => {
+    f.save();
+    fs.appendFileSync(path.join(f.dir,'scenes.js'),'\nwindow.SB_DOC='+JSON.stringify({characters:cast})+
+      '; window.STRUCTURE.scenes[0].speakerReferences='+JSON.stringify([{character:listener.id,path:listener.panels.face}])+';');
+  };
+  save();
+  // A GenAI scene is one render, so its three speakers need three pinned voices where scene mode takes two.
+  assert.throws(()=>planVideo(f.input,false),/scene_render_voice_limit: scene 1 needs 3 pinned voices/);
+  f.members.splice(1);
+  f.scene.oneTake = true;
+  f.members[0].narration.push(line('tu-vi','third'));
+  save();
+  assert.throws(()=>planVideo(f.input,false),/scene_render_voice_limit: s0001.*one-take/);
+});
+
+test('a refused GenAI scene reads what scene mode takes from the common catalog without submitting media',async t=>{
   const key=config.astraGenaiApiKey, fetch=globalThis.fetch;
   config.astraGenaiApiKey='fixture';
   t.after(()=>{config.astraGenaiApiKey=key;globalThis.fetch=fetch});
-  const control={descriptions:'prompt',frame_accurate_cuts:false,shot_scoped_references:false,frame_addressed_native_dialogue:false};
-  const schema=name=>({$ref:'#/components/schemas/'+name});
-  const list=name=>({type:'array',items:schema(name)});
-  const definition={paths:{'/v1/ltx/v2/image-to-video':{post:{requestBody:{content:{'application/json':{schema:schema('Input')}}}}}},
-    components:{schemas:{Input:{properties:{shots:{anyOf:[{type:'null'},list('Shot')]},keyframes:list('Pin'),references:list('Subject')}},
-      Shot:{properties:{description:{},transition:{}}}, Pin:{properties:{frame_idx:{}}},Subject:{properties:{audio_uri:{}}}}}};
+  const scene={pipeline:'msr',voices:{max:2,max_seconds:10},shots:{max:8,cuts:'model_paced'}};
   const routes=[];
   globalThis.fetch=async(url,options)=>{
     routes.push(new URL(url).pathname);
     assert.equal(options.method,'GET'); assert.equal(options.body,undefined);
-    return Response.json(routes.at(-1)==='/openapi.json'?definition:{pipelines:[{pipeline:'msr',shot_control:control}]});
+    return Response.json({data:[{id:'ltx-2.5-22b-distilled',kind:'video',scene}]});
   };
-  const refusal=new SceneInputError('astra_genai_img2video',{images:[{role:'face'}]},[],'ltx-2.5-22b-distilled');
+  const refusal=new SceneInputError('astra_genai_scene',{images:[{role:'face'}]},[],'ltx-2.5-22b-distilled');
   const contract=await inspectSceneInputContract(refusal);
-  assert.deepEqual(routes.sort(),['/openapi.json','/v1/ltx/v2/capabilities']);
-  assert.deepEqual(contract.shotControl,control);
-  assert.deepEqual(contract.shotFields,['description','transition']);
-  assert.deepEqual(contract.temporalImageFields,['frame_idx']);
-  assert.deepEqual(contract.referenceFields,['audio_uri']);
-  const f=busking(t);
-  const compiled=f.capture(request=>request).request;
-  const voicePath=path.join(f.dir,f.scene.audio.path);
-  compiled.shots[1].dialogue=[{lineId:'reply',speaker:'miran',text:'제가 찢었습니다.',delivery:'on_screen',
-    frame:compiled.shots[1].startFrame,voice:{path:voicePath}}];
-  const refused=new SceneInputError('astra_genai_img2video',compiled,[],'ltx-2.5-22b-distilled','576x1024');
-  const input={requestId:'scene-1',args:{reserveUsd:0}};
-  assert.equal((await inspectSceneInputContract(refused,input)).validation.status,'not_sent');
-  const endpoint='/v1/ltx/v2/image-to-video/validate';
-  definition.paths[endpoint]=definition.paths['/v1/ltx/v2/image-to-video'];
-  const discovery=globalThis.fetch;
-  let posts=0, wireHash;
-  globalThis.fetch=async(url,options)=>{
-    if(options.method==='GET') return discovery(url,options);
-    assert.equal(new URL(url).pathname,endpoint);
-    assert.equal(options.headers['X-Request-ID'],input.requestId);
-    wireHash=createHash('sha256').update(options.body).digest('hex');
-    const body=JSON.parse(options.body);
-    assert.deepEqual(body.shots.map(s=>s.shot_id),compiled.shotIds);
-    assert.equal(body.resolution,refused.resolution);
-    assert.equal(body.num_frames,compiled.frameCount);
-    assert.equal(body.shots[1].transition,'hard_cut');
-    assert.equal(body.shots[1].dialogue[0].frame,body.shots[1].start_frame);
-    assert.equal(body.shots[1].dialogue[0].voice_uri,'data:audio/wav;base64,'+fs.readFileSync(voicePath,'base64'));
-    assert.equal(body.scene_audio.audio_uri,body.shots[1].dialogue[0].voice_uri);
-    assert.equal(body.shots.flatMap(s=>s.images).length,compiled.images.length);
-    assert.equal(JSON.stringify(body).split('제가 찢었습니다.').length,2);
-    posts++;
-    return Response.json({error:{message:'body.shots.0.images: extra inputs'}},{status:400});
-  };
-  const checked=await inspectSceneInputContract(refused,input);
-  assert.equal(checked.validation.status,'schema_rejected');
-  assert.equal(checked.validation.httpStatus,400);
-  assert.equal(checked.validation.bodySha256,wireHash);
-  assert.equal(posts,1);
-  // A large soundtrack also used as a voice sample travels unchanged through the standard chunked upload.
-  fs.appendFileSync(voicePath,Buffer.alloc(4_500_000));
-  const sessions=new Map(), finished=new Map();
-  globalThis.fetch=async(url,options)=>{
-    const route=new URL(url).pathname;
-    if(options.method==='GET') return discovery(url,options);
-    if(route==='/v1/uploads'){
-      const info=JSON.parse(options.body), id=String(sessions.size+1);
-      sessions.set(id,info);
-      return Response.json({upload_id:id,chunk_size:5*1024*1024,chunks:1});
-    }
-    if(options.method==='PUT'){
-      const id=route.split('/')[3], sha=createHash('sha256').update(options.body).digest('hex');
-      assert.equal(sha,sessions.get(id).sha256);
-      finished.set(id,sha);
-      return Response.json({});
-    }
-    if(route.endsWith('/complete')){
-      const id=route.split('/')[3];
-      assert.ok(finished.has(id));
-      return Response.json({file_id:id,uri:'genai-file://'+id});
-    }
-    assert.equal(route,endpoint);
-    assert.ok(Buffer.byteLength(options.body)<8000000);
-    const body=JSON.parse(options.body);
-    assert.equal(body.image_uri,body.shots[0].images.find(p=>p.role==='start').image_uri);
-    assert.equal(body.scene_audio.audio_uri,body.shots[1].dialogue[0].voice_uri);
-    assert.ok(body.shots.flatMap(s=>s.images).every(p=>p.image_uri.startsWith('genai-file://')));
-    return Response.json({error:{message:'unsupported shot inputs'}},{status:400});
-  };
-  const staged=(await inspectSceneInputContract(refused,input)).validation;
-  assert.equal(staged.status,'schema_rejected');
-  assert.equal(staged.attachments.length,compiled.images.length+2);
-  assert.equal(staged.requestBody.shots[1].dialogue[0].text,'제가 찢었습니다.');
-  assert.equal(staged.bodySha256,createHash('sha256').update(JSON.stringify(staged.requestBody)).digest('hex'));
-  assert.equal(checked.validation.requestBody,undefined);
-  assert.equal(staged.attachments.at(-1).sha256,createHash('sha256').update(fs.readFileSync(voicePath)).digest('hex'));
+  assert.deepEqual(routes,['/v1/models']);
+  assert.deepEqual([contract.status,contract.endpoint,contract.mode],['verified','/v1/generations','scene']);
+  assert.deepEqual(contract.scene,scene);
+  assert.equal(await inspectSceneInputContract(new SceneInputError('seedance_reference',{images:[]},[])),undefined);
   globalThis.fetch=async()=>Response.json({},{status:503});
   assert.equal((await inspectSceneInputContract(refusal)).status,'unverified');
 });
@@ -354,74 +225,43 @@ test('Desktop keyframes receive each asset index only on an active compatible de
      generation_combinations:{'720p':{fps_to_durations:{24:[4]},aspect_ratios:['16:9']}},
    }]:[]});
  };
- const input=f.input;
- assert.throws(()=>planVideo({...input,args:{...input.args,duration:8}}),/scene_video_timing/);
- await assert.rejects(planManagedVideo(input),e=>e.missing[0].input==='deployment');
- assert.ok(!fs.existsSync(path.join(f.episode,'.work/video-routing/plans')));
+ const {request}=f.capture(input=>input);
+ const tool = 'astra_genai_desktop_keyframes';
+ assert.throws(()=>planVideo({...f.input,operation:'keyframe'}),/scene_speech_route/);
+ assert.throws(()=>planVideo(f.input),/scene_inputs_unsupported/);
+ const mapped=bindSceneAdapter(request,tool,m.visual.video.model,m,{duration:4},f.episode);
+ const args={...mapped.args,prompt:request.prompt,reserveUsd:0,model:m.visual.video.model,resolution:'720p',aspectRatio:'16:9',fps:24};
+ await assert.rejects(checkSceneDeployment(request,tool,args),e=>e.missing[0].input==='deployment');
  enabled=true;
- const plan=await planManagedVideo(input);
- const ids=Object.fromEntries(plan.args.keyframes.map(pin=>[pin.imagePath,path.basename(pin.imagePath)]));
- const body=buildDesktopBody('keyframes',plan.args,ids);
+ await checkSceneDeployment(request,tool,args);
+ const ids=Object.fromEntries(args.keyframes.map(pin=>[pin.imagePath,path.basename(pin.imagePath)]));
+ const body=buildDesktopBody('keyframes',args,ids);
  assert.deepEqual(body.keyframes.map(p=>[p.assetId,p.frameIndex]),[['opening.png',0],['play-contact.png',42],['ending.png',83]]);
- assert.throws(()=>mapSceneInputs({...plan.sceneRequest,cuts:[{from:'s1',to:'s2',frame:42,transition:'hard_cut'}]},plan.tool),
+ assert.throws(()=>mapSceneInputs({...request,cuts:[{from:'s1',to:'s2',frame:42,transition:'hard_cut'}]},tool),
    error=>error.missing.length===1 && error.missing[0].input==='transition');
 });
 
-test('a saved one-take A2V request keeps the original audio, five intermediate cues and both endpoint fields', t => {
-  const f = busking(t), first = f.members[0];
-  const cards = f.members.flatMap(m => m.timeline.images);
-  f.members.splice(1);
-  first.duration = 15;
-  first.timeline.endFrame = 360;
-  delete first.timeline.images;
-  first.visual.frames = {
-    mode:'first_last', start:cards[0].path, end:cards.at(-1).path,
-    storyboardKeyframes:cards.map(p => ({file:p.path, startFrame:p.frame})),
-  };
-  f.scene.oneTake = true;
-  f.save();
-  const args = {...f.input.args, imagePath:path.join(f.dir,cards[0].path),
-    lastFramePath:path.join(f.dir,cards.at(-1).path), audioPath:path.join(f.dir,f.scene.audio.path)};
-  const plan = planVideo({...f.input,args});
-  const body = buildGenaiAudioBody(plan.args);
-  assert.deepEqual(body.keyframes.map(p => p.frame_idx), [42,52,112,191,336]);
-  assert.deepEqual(plan.imageBindings.filter(p => p.submitted).map(p => p.frame).sort((a,b)=>a-b),[0,42,52,112,191,336,359]);
-  assert.equal(body.audio_uri,'data:audio/wav;base64,'+fs.readFileSync(args.audioPath).toString('base64'));
-  assert.throws(()=>planVideo({...f.input,args:{...args,imagePath:args.lastFramePath}}),/image_plan_mismatch/);
-  first.visual.frames.keyframes = [{image:cards[2].path,atSeconds:42/24,state:'The dancer steps forward.',strength:0.4}];
-  f.save();
-  const revised = planVideo({...f.input,args});
-  assert.deepEqual(revised.args.keyframes.map(p=>[path.basename(p.imagePath),p.frameIdx,p.strength]), [['solo.png',42,0.4]]);
-  assert.match(revised.args.prompt,/At 1\.75 seconds: The dancer steps forward/);
-});
-
-test('a distilled I2V prop stays separate from the opening image and silent dancers',async t=>{
+test('a distilled GenAI scene keeps a prop separate from the opening image and silent dancers',t=>{
  const f=busking(t), m=f.members[0];
  delete f.scene.audio; f.members.splice(1);
  m.duration=3; m.timeline.endFrame=72;
  m.timeline.action='The plaza stays empty until Mai An enters from the left.';
  m.visual.video.model='ltx-2.5-22b-distilled';
  m.visual.references = [{id:'bag',role:'prop',use:'video',purpose:'A canvas bag.',path:'images/duo.png'}];
- f.scene.openingPositions[1].images=[1]; f.save();
- const key=config.astraGenaiApiKey, fetch=globalThis.fetch;
- config.astraGenaiApiKey='fixture'; t.after(()=>{config.astraGenaiApiKey=key;globalThis.fetch=fetch});
- let enabled=false;
- globalThis.fetch=async (url,opts)=>{
-   assert.equal(opts.method,'GET');assert.ok(String(url).endsWith('/msr/capabilities'));
-   return Response.json({image_conditioning:enabled});
- };
- await assert.rejects(planManagedVideo(f.input),e=>e.missing[0].input==='deployment');
- enabled=true;
- const plan=await planManagedVideo(f.input);
- assert.deepEqual(plan.args.references.map(p=>path.basename(p.imagePath)),['duo.png']);
- assert.equal(plan.imageBindings.find(i=>i.id==='start').path,path.join(f.dir,'images/opening.png'));
+ f.save();
+ const plan=planVideo(f.input,false);
+ assert.equal(plan.tool,'astra_genai_scene');
+ // The prop is a subject of its own, and the opening picture opens the only shot.
+ assert.deepEqual(plan.args.references.map(ref=>[ref.role,path.basename(ref.imagePath)]),[['object','duo.png']]);
+ assert.deepEqual(plan.args.cast,[]);
+ assert.deepEqual(plan.args.shots.map(shot=>[shot.id,shot.frames,path.basename(shot.imagePath)]),[['s0001',72,'opening.png']]);
  assert.match(plan.args.prompt,/mai-an: Off screen/);
  assert.match(plan.args.prompt,/no subtitles/);
  m.timeline.images[0].strength=0.25; f.save();
- assert.throws(()=>planVideo(f.input), /scene_inputs_unsupported/);
+ assert.throws(()=>planVideo(f.input,false), /scene_inputs_unsupported/);
 });
 
-test('a 25-frame silent scene retains its length and excludes all three face references', t => {
+test('a 25-frame silent scene retains its length and all three authored face references', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.scene.oneTake = true;
@@ -435,16 +275,17 @@ test('a 25-frame silent scene retains its length and excludes all three face ref
   }
   f.save();
   const image = planVideo({...f.input,operation:'image'});
-  assert.equal(image.args.numFrames,25);
-  assert.equal(image.args.duration,undefined);
-  assert.equal(image.args.references,undefined);
+  assert.equal(image.tool,'astra_genai_scene');
+  assert.deepEqual(image.args.shots.map(shot=>shot.frames),[25]);
+  assert.deepEqual(image.args.cast.flatMap(member=>member.images.map(picture=>path.basename(picture.imagePath))),['solo.png','duo.png','trio.png']);
+  assert.ok(image.args.cast.every(member=>!member.voicePath));
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];
   f.save();
-  assert.equal(planVideo({...f.input,operation:'text'}).args.numFrames,25);
+  assert.throws(()=>planVideo({...f.input,operation:'text'}),/scene_speech_route/);
 });
 
-test('Veo reference scenes omit silent cast panels and keep prop assets separate from temporal frames', t => {
+test('Veo image-to-video identifies unsupported silent cast panels and keeps the opening frame', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.members.splice(1);
@@ -458,41 +299,33 @@ test('Veo reference scenes omit silent cast panels and keep prop assets separate
   shot.visual.video = {engine:'veo',model:'veo-3.1-fast-generate-001',resolution:'720p'};
   shot.visual.frames = {mode:'reference', start:'images/opening.png'};
   f.save();
-  assert.throws(() => planVideo({...f.input,args:{}}), e => e.sceneRequest.images.length === 0);
-  shot.timeline.images = [];
-  shot.visual.references = [{id:'wheel',role:'prop',use:'video',purpose:'The bicycle wheel.',path:'images/solo.png'}];
-  f.save();
-  const plan = planVideo({...f.input,args:{}});
-  const [wire] = buildVeoBody(plan.args).instances;
-  assert.equal(wire.referenceImages.length,1);
-  assert.ok(wire.referenceImages[0].image.bytesBase64Encoded);
-  assert.equal(wire.image,undefined);
-  shot.timeline.images.push({role:'start',path:'images/opening.png',frame:0});
-  f.save();
-  assert.throws(() => planVideo({...f.input,args:{}}), /scene_inputs_unsupported/);
-  delete shot.visual.frames;
-  shot.timeline.images = [];
-  delete shot.visual.references;
-  shot.visual.video.operation='text';
+  assert.throws(()=>planVideo({...f.input,args:{}}), error=>{
+    assert.deepEqual(error.missing.map(p=>[p.shotId,p.frame,p.role,path.basename(p.path)]),
+      [['s0001',0,'face','solo.png'],['s0001',0,'outfit','duo.png']]);
+    return true;
+  });
+  shot.timeline.images=[];
   f.scene.openingPositions[1].images=[];
   f.save();
-  assert.throws(()=>planVideo({...f.input,args:{durationSeconds:4}}),/scene_video_timing/);
+  const plan=planVideo({...f.input,args:{}});
+  const [wire]=buildVeoBody(plan.args).instances;
+  assert.ok(wire.image.bytesBase64Encoded);
+  assert.equal(wire.referenceImages,undefined);
+  shot.visual.references=[{id:'wheel',role:'prop',use:'video',purpose:'Bicycle wheel.',path:'images/solo.png'}];
+  f.save();
+  assert.throws(()=>planVideo({...f.input,operation:'reference',args:{}}),/scene_speech_route/);
+  assert.throws(()=>planVideo({...f.input,args:{}}),/scene_inputs_unsupported/);
 });
 
 
-test('supplied scene audio binds the selected model and original file to per-shot plans', t => {
+test('a GenAI scene with a supplied soundtrack is refused, because scene mode renders its own', async t => {
   for (const mode of ['mix','conditioning']) {
     const f=busking(t);
     f.scene.audio.mode=mode;
-    for (const shot of f.members) {
-      shot.visual.video.operation=mode==='mix' ? 'image' : 'audio';
-      shot.visual.video.model=mode==='mix' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev';
-    }
+    f.members[0].narration=[{id:'line',speaker:'seorin',delivery:mode==='conditioning'?'on_screen':'off_screen',tts:'Ready?'}];
+    for (const shot of f.members) shot.visual.video.model='ltx-2.5-22b-distilled';
     f.save();
-    const plan=planVideo({...f.input,sceneRendering:'per_shot'},false);
-    const track=plan.sceneRequest.audio;
-    assert.equal(plan.inputs[track.path],createHash('sha256').update(fs.readFileSync(track.path)).digest('hex'));
-    assert.equal(track.mode,mode);
+    assert.throws(()=>planVideo(f.input,false),/scene_mode_audio_unsupported/);
   }
 });
 
@@ -510,7 +343,7 @@ test('declaring the scene cast without endpoint images still allows model-paced 
   assert.equal(compile().modelPacedCuts, undefined);
 });
 
-test('scene camera returns to its default after the insert and every shot cue reaches the wire body', async () => {
+test('scene camera returns to its default after the insert and every shot cue reaches its shot', async () => {
   const scene = {emotion:'Suspicion turns to relief.', openingPositions:[], fps:24};
   const defaults = {camera:'camera.static', axis:'Stay on the window side.', lighting:'Dusk light.', attention:'Watch the lamp.'};
   const board = {STRUCTURE:{scenes:[{no:1,directionDefaults:defaults}]}};
@@ -526,42 +359,41 @@ test('scene camera returns to its default after the insert and every shot cue re
   cards[1].shot = {size:'cu',angle:'eye',techniques:[{id:'camera.rack-focus',from:'the seal',to:'the lamp'}], space:{light:'A passing shadow.'},
     videoDesign:{motion:{beats:[{at:0.5,state:'A hairline crack opens in the wax.'}]}}};
   const build = list => prepareSceneRequest(1,list,scene,'/unused',[],{bindDialogue:false,bindOpening:false,suffix:''},()=>null,board);
+  // What the scene compiles for each shot: the framing and action its part of the one scene prompt is written from.
+  const shotText = (compiled, i) => [compiled.shots[i].framing, compiled.shots[i].action].join(' ');
   const {request,providerPrompt} = build(cards);
-  const {buildSceneWire} = await import('../dist/scene-video.js');
-  const {body} = await buildSceneWire(request,'ltx-2.5-22b-distilled','720p');
-  assert.doesNotMatch(body.prompt,/static|Dusk|Watch the lamp/);
-  assert.match(body.prompt,/window side/);
+  assert.match(providerPrompt,/window side/);
   for (const i of [0,2]) {
-    assert.match(body.shots[i].description,/static frame/);
-    assert.match(body.shots[i].description,/Dusk light/);
-    assert.match(body.shots[i].description,/Watch the lamp/);
+    assert.match(shotText(request,i),/static frame/);
+    assert.match(shotText(request,i),/Dusk light/);
+    assert.match(shotText(request,i),/Watch the lamp/);
   }
   for (const phrase of ['slowly pushes','broken seal','Settle on the seal','right profile','Close-up','eye level','Tap the brass bell twice','Rack focus from the seal to the lamp','lower eyelid','folds the letter','passing shadow']) {
-    assert.ok(body.shots[1].description.includes(phrase),phrase);
+    assert.ok(shotText(request,1).includes(phrase),phrase);
     assert.ok(providerPrompt.includes(phrase),phrase);
   }
-  assert.doesNotMatch(body.shots[1].description,/static frame|Dusk/);
-  assert.match(body.shots[1].description,/Read the seal.*Press the signet.*At 0.5 s into this shot: A hairline crack/);
-  assert.equal(body.shots[1].description.match(/Press the signet/g).length,1);
-  assert.doesNotMatch(body.prompt + body.shots[2].description,/Press the signet|hairline crack/);
-  const single = await buildSceneWire(build([cards[0]]).request,'ltx-2.5-22b-distilled','720p');
-  assert.match(single.body.prompt,/Suspicion turns to relief/);
-  assert.match(single.body.prompt,/static frame/);
+  assert.doesNotMatch(shotText(request,1),/static frame|Dusk/);
+  assert.match(shotText(request,1),/Read the seal.*Press the signet.*At 0.5 s into this shot: A hairline crack/);
+  assert.equal(shotText(request,1).match(/Press the signet/g).length,1);
+  assert.doesNotMatch(shotText(request,2),/Press the signet|hairline crack/);
+  const single = build([cards[0]]).providerPrompt;
+  assert.match(single,/Suspicion turns to relief/);
+  assert.match(single,/static frame/);
   const acting = {context:'The clerk is watching.',intent:'Make the guard underestimate her.',emotion:'Panic gives way to defiance.',
     visual:'Her hand grips the lock.',direction:'Stammer on the first syllable.',vocal:'Drop to a whisper.',tags:['sighs','Sighs.'],leadInSeconds:1.5,tailOutSeconds:0.75};
   const line = {id:'l1',speaker:'miran',delivery:'on_screen',tts:'Not yet.',acting};
   const spoken = {...cards[0], narration:[line], timeline:{...cards[0].timeline,dialogueCues:[{lineId:'l1',frame:0}]}};
   for (const list of [[spoken], [spoken,...cards.slice(1)]]) {
-    const directed = await buildSceneWire(build(list).request,'ltx-2.5-22b-distilled','720p');
-    const first = directed.body.shots[0];
+    const directed = build(list).request;
+    const first = directed.shots[0];
     for (const cue of [acting.intent,acting.emotion,acting.context,acting.visual,'Anticipation 1.5 seconds','reaction 0.75 seconds'])
-      assert.ok(first.description.includes(cue),cue);
+      assert.ok(shotText(directed,0).includes(cue),cue);
     assert.equal(first.dialogue[0].text,line.tts);
     assert.equal(first.dialogue[0].direction,'Stammer on the first syllable. Drop to a whisper. sighs');
     assert.ok(build(list).providerPrompt.includes(first.dialogue[0].direction));
-    assert.ok(!first.description.includes(acting.vocal));
-    assert.ok(!first.description.includes(line.tts));
-    assert.ok(!directed.body.shots.slice(1).some(s=>s.description.includes(acting.visual)));
+    assert.ok(!shotText(directed,0).includes(acting.vocal));
+    assert.ok(!shotText(directed,0).includes(line.tts));
+    assert.ok(!directed.shots.slice(1).some((_,i)=>shotText(directed,i+1).includes(acting.visual)));
   }
   const exchange = {...cards[0], narration:[
     {id:'answer',speaker:'miran',delivery:'on_screen',tts:'Locked.'},
@@ -570,17 +402,15 @@ test('scene camera returns to its default after the insert and every shot cue re
     performance:[{kind:'dialogue',group:2,character:'miran'},{kind:'action',text:'Touch the latch.'},{kind:'dialogue',group:1,character:'miran'}]};
   for (const list of [[exchange],[exchange,...cards.slice(1)]]) {
     const {request} = build(list);
-    const wire = await buildSceneWire(request,'ltx-2.5-22b-distilled','720p');
-    assert.deepEqual(wire.body.shots[0].dialogue.map(l=>[l.id,l.text,l.frame]),[['question','Is it open?',1],['answer','Locked.',20]]);
-    assert.match(wire.body.shots[0].description,/As miran speaks\. Touch the latch\. As miran speaks\./);
-    assert.doesNotMatch(wire.body.shots[0].description, /question|answer/);
-    assert.doesNotMatch(wire.body.shots[0].description,/Is it open\?|Locked\./);
+    assert.deepEqual(request.shots[0].dialogue.map(l=>[l.lineId,l.text,l.frame]),[['question','Is it open?',1],['answer','Locked.',20]]);
+    assert.match(shotText(request,0),/As miran speaks\. Touch the latch\. As miran speaks\./);
+    assert.doesNotMatch(shotText(request,0), /question|answer/);
+    assert.doesNotMatch(shotText(request,0),/Is it open\?|Locked\./);
   }
   const film = (await import('../../skills/storyboard/references/film-techniques.js')).default;
   for (const entry of film.entries.filter(e=>e.fields.movement && e.fields.speed)) {
     defaults.camera = entry.id;
-    const paced = await buildSceneWire(build([cards[0]]).request,'ltx-2.5-22b-distilled','720p');
-    assert.match(paced.body.prompt, entry.fields.speed === 'slow' ? /slowly/ : /quickly/,entry.id);
+    assert.match(build([cards[0]]).providerPrompt, entry.fields.speed === 'slow' ? /slowly/ : /quickly/,entry.id);
   }
   defaults.camera = 'camera.static';
   delete cards[1].visual.camera.view;
@@ -588,11 +418,11 @@ test('scene camera returns to its default after the insert and every shot cue re
   cards[1].visual.frames = {mode:'first_last', endState:'The raven closes its claw around the sapphire.'};
   cards[1].shot.depth = {mode:'shallow',reads:1,focus:'the brass bell',sound:'near'};
   for (const attention of ['From the seal to the lamp', 'the brass bell']) {
-    const checked = await buildSceneWire(build(cards).request,'ltx-2.5-22b-distilled','720p');
-    assert.doesNotMatch(checked.body.prompt + checked.body.shots[1].description,/Watch the lamp/);
-    assert.ok(checked.body.shots[1].description.includes('Attention: ' + attention));
-    assert.match(checked.body.shots[1].description,/claw around the sapphire/);
-    assert.match(checked.body.shots[2].description,/Watch the lamp/);
+    const checked = build(cards).request;
+    assert.doesNotMatch(shotText(checked,1),/Watch the lamp/);
+    assert.ok(shotText(checked,1).includes('Attention: ' + attention));
+    assert.match(shotText(checked,1) + ' ' + (checked.shots[1].closingState ?? ''),/claw around the sapphire/);
+    assert.match(shotText(checked,2),/Watch the lamp/);
     cards[1].shot.techniques = [];
   }
   delete board.STRUCTURE.scenes[0].directionDefaults;
@@ -602,6 +432,70 @@ test('scene camera returns to its default after the insert and every shot cue re
   assert.match(legacy.shots[2].framing,/locked/);
 });
 
+
+test('private words stay out of speech instructions while a visual object can share a short thought', async t => {
+  const f = busking(t), card = f.members[0];
+  delete f.scene.audio;
+  const line = {id:'private', speaker:'mai-an', delivery:'voiceover', voiceoverKind:'inner_thought', tts:'Stop.'};
+  card.narration = [line];
+  const plan = () => prepareSceneRequest(1,[card],f.scene,f.episode,[line],
+    {bindDialogue:false,bindOpening:false,suffix:''},()=>null).request;
+  // The words the scene's one prompt is written from for this shot.
+  const shotWords = () => { const shot = plan().shots[0]; return [shot.framing, shot.action].join(' '); };
+  const sceneAction = f.scene.action;
+  card.timeline.action = 'She talks to Ben in a low voice.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She leans toward Ben.';
+  f.scene.action = 'In the opening shot she says: “Goodbye.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  f.scene.action = sceneAction;
+  card.timeline.action = 'She mutters Stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She hisses stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She whispers under her breath, stop.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'Stop, she whispers under her breath.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'Her lips form Stop slowly.';
+  assert.throws(plan, /video_voiceover_embedded/);
+  card.timeline.action = 'She pushes the stop button as the radio whispers.';
+  assert.match(shotWords(),/stop button/);
+  line.tts = 'Wait.';
+  for (const action of ['She sings Wait twice.', 'She shapes Wait with her lips.',
+    'His mouth forms Wait.', 'Her lips shape Wait.', 'Her voice repeats Wait.']) {
+    card.timeline.action = action;
+    assert.throws(plan, /video_voiceover_embedded/);
+  }
+  card.timeline.action = 'Two friends wait at the door.';
+  assert.match(shotWords(),/Two friends wait at the door/);
+  card.timeline.action = 'Mia and Ben wait at the door.';
+  assert.match(shotWords(),/Mia and Ben wait at the door/);
+  line.tts = 'Stop.';
+  card.timeline.action = 'She watches the second hand stop.';
+  const clock = shotWords();
+  assert.match(clock, /She watches the second hand stop/);
+  line.tts = "I can't trust him.";
+  card.timeline.action = 'She whispers, “I can’t trust him.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  line.tts = 'Please, stop.';
+  card.timeline.action = 'She whispers “Please stop.”';
+  assert.throws(plan, /video_voiceover_embedded/);
+  line.tts = 'Stop.';
+  card.timeline.action = 'She looks at the door.';
+  line.acting = {visual:'She mutters Stop.'};
+  assert.throws(plan, /video_voiceover_embedded/);
+  delete line.acting;
+  line.tts = 'The door.';
+  card.timeline.action = 'She closes the door.';
+  const compiled = plan();
+  assert.match(shotWords(),/She closes the door/);
+  assert.equal(compiled.shots[0].dialogue,undefined);
+  line.tts = 'The red front door.';
+  card.timeline.action = 'She closes the red front door.';
+  const longerObject = shotWords();
+  assert.match(longerObject,/She closes the red front door/);
+});
 
 test('keeps simultaneous actions with the correct spoken turn in provider prose', async () => {
   const {default: {notes: sceneDirectionNotes}} = await import('../../skills/storyboard/references/scene-direction.js');

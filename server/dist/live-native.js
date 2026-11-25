@@ -18,6 +18,9 @@ function speechFrames(text, language) {
     const seconds = estimateSpeechSeconds(text, language) ?? Math.max(2, Array.from(text).length / 7);
     return Math.max(49, 1 + 8 * Math.ceil(((seconds + 0.65) * 24 - 1) / 8));
 }
+export function fitsLiveShot(text, language) {
+    return speechFrames(text, language) <= 361;
+}
 export function openingParts(text, language) {
     if (speechFrames(text, language) <= 361)
         return [text];
@@ -113,10 +116,20 @@ export class NativeTalk {
         const outputPath = join(this.project, '.social-flow', 'live-genai');
         return { ...request, outputPath, filename: key + '.mp4' };
     }
-    async cached(text, signal) {
+    fileFor(text) {
         const input = this.videoInput(text);
-        const receipt = join(input.outputPath, input.filename) + '.astra-genai.json';
-        if (!existsSync(receipt) || JSON.parse(readFileSync(receipt, 'utf8')).status !== 'completed')
+        return join(input.outputPath, input.filename);
+    }
+    hasCompleted(text) {
+        const file = this.fileFor(text);
+        const receipt = file + '.astra-genai.json';
+        if (!existsSync(file) || !existsSync(receipt))
+            return false;
+        const saved = JSON.parse(readFileSync(receipt, 'utf8'));
+        return saved.status === 'completed' && saved.sha256 === createHash('sha256').update(readFileSync(file)).digest('hex');
+    }
+    async cached(text, signal) {
+        if (!this.hasCompleted(text))
             return;
         return this.render(text, signal);
     }

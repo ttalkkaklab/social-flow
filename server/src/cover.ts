@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { PLUGIN_ROOT, readBoard, scenesPath, shotIdSchema, type Board } from './storyboard.js';
+import { PLUGIN_ROOT, contract, readBoard, scenesPath, shotIdSchema, titlePlanSchema, type TitlePlan, type Board } from './storyboard.js';
 import { readImageState } from './image-state.js';
 import { workflowEpisode } from './production-workflow.js';
 import { episodeHandoff } from './project.js';
@@ -77,7 +77,9 @@ type Source = ({ kind: 'shot'; shotId: string } | { kind: 'frame'; video: string
   & { path: string; sha256: string };
 type Copy = z.infer<typeof copySchema> | null;
 type Look = { source: Source; focus: { x: number; y: number }; copy: Copy };
-export type CoverDecision = { version: 1; language: string; reason: string; format: string } & Look & { variants: Look[] };
+const coverBriefSchema = titlePlanSchema.omit({ searchTerm: true });
+type CoverBrief = z.infer<typeof coverBriefSchema>;
+export type CoverDecision = { version: 1; language: string; reason: string; format: string; titleBrief?: CoverBrief } & Look & { variants: Look[] };
 
 // ── paths ────────────────────────────────────────────────────────────────
 type Episode = { board: ReturnType<typeof readBoard>; storyboard: string; episode: string; format: string; spec: CoverFormat };
@@ -184,13 +186,22 @@ function copyWarnings(ep: Episode, copy: Copy, language: string, label: string):
   const max = unit === 'chars' ? ep.spec.copyMax.chars : ep.spec.copyMax.words;
   return n > max ? [{ code: 'cover_copy_long', message: `${label}copy runs ${n} ${unit}; this format reads best at ${max} or fewer` }] : [];
 }
-/** Copy the title already says, checked whenever output/youtube/meta.md has a title. */
+function coverBrief(ep: Episode): CoverBrief | undefined {
+  const plan = (ep.board.win.STORY as { titlePlan?: TitlePlan } | undefined)?.titlePlan;
+  if (!plan) return undefined;
+  const { searchTerm, ...brief } = titlePlanSchema.parse(plan);
+  return brief;
+}
+
+/** Check against both the storyboard headline and any platform-specific title. */
 function titleWarnings(ep: Episode, decision: { copy: Copy; variants: { copy: Copy }[] }): Warning[] {
-  const title = youtubeTitle(ep);
-  if (!title) return [];
+  const titles = [coverBrief(ep)?.headline, youtubeTitle(ep)];
   const norm = (s: string) => s.normalize('NFC').toLowerCase().replace(/[\s\p{P}]/gu, '');
-  return [decision, ...decision.variants].flatMap((look, i) => look.copy && norm(look.copy.text) && norm(title).includes(norm(look.copy.text))
-    ? [{ code: 'cover_copy_repeats_title', message: `${i ? `variant ${VARIANT_LABELS[i]}: ` : ''}copy "${look.copy.text}" repeats the title "${title}"; the cover adds what the title does not say` }] : []);
+  return [decision, ...decision.variants].flatMap((look, i) => {
+    const copy = look.copy && norm(look.copy.text);
+    const title = copy && titles.find(t => t && norm(t).includes(copy));
+    return title ? [{ code: 'cover_copy_repeats_title', message: `${i ? `variant ${VARIANT_LABELS[i]}: ` : ''}copy "${look.copy!.text}" repeats the title "${title}"` }] : [];
+  });
 }
 
 function lookOf(ep: Episode, base: { source: SourceInput; focus?: { x: number; y: number }; copy: Copy }, warnings: Warning[], label: string): Look {
@@ -215,7 +226,8 @@ export function setCover(path: string, input: z.infer<typeof coverDecisionSchema
     warnings.push(...copyWarnings(ep, look.copy, language, i ? `variant ${VARIANT_LABELS[i]}: ` : ''));
     warnings.push(...sizeWarnings(ep, look, i ? `variant ${VARIANT_LABELS[i]}: ` : ''));
   }
-  const decision: CoverDecision = { version: 1, language, reason: input.reason, format: ep.format, ...main, variants };
+  const titleBrief = coverBrief(ep);
+  const decision: CoverDecision = { version: 1, language, reason: input.reason, format: ep.format, ...main, variants, ...(titleBrief ? { titleBrief } : {}) };
   warnings.push(...titleWarnings(ep, decision));
   const file = join(ep.storyboard, 'cover.json');
   atomicWrite(file, JSON.stringify(decision, null, 2) + '\n');
@@ -246,6 +258,7 @@ const storedSourceSchema = z.union([
 ].map(s => s.extend({ path: z.string().min(1), sha256: z.string().regex(/^[a-f0-9]{64}$/) })) as unknown as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
 const storedLookSchema = z.object({ source: storedSourceSchema, focus: focusSchema, copy: copySchema.nullable() }).strict();
 const storedDecisionSchema = storedLookSchema.extend({
+  titleBrief: coverBriefSchema.optional(),
   version: z.literal(1), language: z.string().min(1), reason: z.string().min(1), format: z.string().min(1), variants: z.array(storedLookSchema).max(2),
 }).strict();
 
@@ -410,6 +423,8 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
   const ep = episodeOf(path);
   const decision = readDecision(ep);
   if (!decision) throw new Error('cover_decision_missing: write the decision with episode_cover set first');
+  if (canonical(coverBrief(ep)) !== canonical(decision.titleBrief))
+    throw new Error('cover_title_changed: read the current title and thumbnail cue, then set the cover again');
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
   const dir = join(ep.episode, 'output', 'cover');
   mkdirSync(join(dir, 'previews'), { recursive: true });
@@ -574,11 +589,15 @@ export function cutPreviews(shot: string, dir: string, stem: string, kind: 'vert
 export function readCover(path: string): Record<string, unknown> {
   const ep = episodeOf(path);
   const story = ep.board.win.STORY as { opening?: { title?: string; thumbnail?: string } } | undefined;
-  const plan = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : undefined;
+  const brief = coverBrief(ep);
+  const plan = brief ? { ...brief, title: contract().episodeTitle(ep.board.win), thumbnail: brief.thumbnailCue }
+    : story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : undefined;
   const base = { format: ep.format, unverified: ep.spec.unverified, ...(plan ? { plan } : {}) };
   let decision: CoverDecision | undefined;
   try { decision = readDecision(ep); } catch (e) { return { status: 'unreadable', reason: (e as Error).message, ...base, next: 'episode_cover set again' }; }
   if (!decision) return { status: 'missing', ...base, next: 'episode_cover set: choose the moment, the copy and why' };
+  if (canonical(brief) !== canonical(decision.titleBrief))
+    return { status: 'stale', changed: ['titlePlan'], ...base, decision, publish: { stale: true }, next: 'episode_cover set with the current title and thumbnail cue, then render' };
   const dir = join(ep.episode, 'output', 'cover'), renderFile = join(dir, 'render.json');
   if (!existsSync(renderFile)) return { status: 'unrendered', decision, ...base, next: 'episode_cover render' };
   let render: Render;

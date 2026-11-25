@@ -37,6 +37,8 @@ test('frames and references go out under their roles; Max keeps the prompt as wr
   const frames = buildMinimaxBody(minimaxImg2VideoSchema.parse({ prompt: 'x', sourceImagePath: image, lastImagePath: image }));
   assert.deepEqual(frames.content.map(c => c.role ?? c.type), ['text', 'first_frame', 'last_frame']);
   assert.equal(frames.ratio, undefined);
+  assert.equal(Object.hasOwn(frames, 'generate_audio'), false);
+  assert.equal(buildMinimaxBody(minimaxImg2VideoSchema.parse({ prompt: 'x', sourceImagePath: image, generateAudio: false })).generate_audio, false);
   const refs = buildMinimaxBody(minimaxReferenceSchema.parse({ prompt: 'x', model: 'MiniMax-H3-Max', ratio: '16:9', durationSeconds: 5, referenceImagePaths: [image], referenceAudioPaths: [voice] }));
   assert.deepEqual(refs.content.map(c => c.role ?? c.type), ['text', 'reference_image', 'reference_audio']);
   assert.deepEqual(refs.extra, { prompt_expansion_mode: 'disabled' });

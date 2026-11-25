@@ -4,8 +4,8 @@ Apply this to every new or substantially revised synopsis and storyboard, togeth
 [episode anticipation](episode-anticipation.md). That reference decides what the episode
 promises and how it pays; this one decides where and how fast the promise reaches the viewer
 for the episode's format (short-form or long-form) and the platforms it will be posted to.
-It is the default writing process (user directive, 2026-11-18). It is not a score, a schema
-requirement or a gate: board writes print a reading of the plan and never refuse.
+Board writes report how the plan fits these format windows. Choose the episode's
+[primary hook and review its first three seconds](opening-review.md) as part of authoring.
 
 Evidence: [research page](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks/index.html) and its
 two reports (short-form, long-form) in the same folder. Grades used below: **measured**
@@ -177,7 +177,7 @@ Threads has no video opening; its first line follows the platform playbook.
   format and platforms it was planned for; the first frame; the promise (the first line, or
   the visible event that states it); suspense or curiosity, and where the episode pays it;
   for long-form, the title, the thumbnail picture and the bigger question raised by 30 s. A
-  synopsis-only request stops here.
+  synopsis-only request delivers this prose with its selected type and opening review.
 - **Board.** `story_sequence` records the plan as `STORY.opening`: `promise`, `firstFrame`,
   and on long-form `title`, `thumbnail` and `widen`. A new value replaces the old one.
 - **Shots.** The first shot's story enacts `firstFrame`; the first line in `shot_dialogue`

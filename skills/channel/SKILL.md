@@ -79,7 +79,7 @@ reused in two or more episodes; single-episode artifacts go in the topic's `.wor
 
 3. **Assign the TTS voice** — use `tts_list_voices` for Gemini or
    `tts_elevenlabs_voices` for the ElevenLabs account. Follow the saved speech model;
-   ElevenLabs permits `eleven_v4` only. Local TTS is removed. Pin the voice ID and
+   ElevenLabs permits `eleven_v4` only. For a local VoxCPM2 audition choose `mlx-audio/voxcpm2` with voice ID `default`. Pin the voice ID and
    identity settings. Keep line-specific emotion in `narration[].acting`, not the
    character's identity. Follow [acting prompts](../produce/references/acting-prompts.md).
    Change the identity voice only when the user requests it.

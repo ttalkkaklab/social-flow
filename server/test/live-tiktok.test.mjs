@@ -26,10 +26,11 @@ test('TikTok keeps the issued transport and signed stream key intact', () => {
 
 test('TikFinity chat requires a stable ID, ignores gifts and isolates speaker aliases by session', () => {
   const raw = JSON.stringify({ event: 'chat', data: { common: { msgId: '7100000099999999999' },
-    comment: '  hello  ', user: { uniqueId: 'viewer' } } });
+    comment: '  hello  ', user: { uniqueId: 'viewer', nickname: 'Mina' } } });
   const event = tikfinityComment(raw, 'room-a');
   assert.equal(event.id, '7100000099999999999');
   assert.equal(event.text, 'hello');
+  assert.equal(event.displayName, 'Mina');
   assert.equal(event.speaker, tikfinityComment(raw, 'room-a').speaker);
   assert.notEqual(event.speaker, tikfinityComment(raw, 'room-b').speaker);
   for (const payload of [null, { event: 'gift', data: { msgId: '1', comment: 'gift' } },

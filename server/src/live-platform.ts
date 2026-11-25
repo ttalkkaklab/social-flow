@@ -15,6 +15,9 @@ export interface PlatformOptions {
   title?: string;
   probe?: string;
   resumeFrom?: string;
+  faqCount?: number;
+  scheduledStartTime?: string;
+  knowledgeFingerprint?: string;
   log: LiveLog;
 }
 

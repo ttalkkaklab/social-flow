@@ -1,5 +1,7 @@
 # Seedance 영상 생성 API 모델과 요청 스키마
 
+> This is the 2026-11-22 research record. The current Seedance call schema, reference limits and portrait route are in the [video model call reference](../../video-models.md#seedance-byteplus-modelark).
+
 2026년 11월 22일 KST 기준, BytePlus가 가장 최근에 발표한 모델은 **Dreamina Seedance 2.5 Flash**다. Flash는 한 번에 최대 30초, 720p까지 생성한다. 일반 2.5는 같은 길이에서 4K를 지원하며 허용하는 참조 파일도 더 많다. 아래 필드와 예시는 Social Flow가 기본값으로 쓰는 BytePlus ModelArk 싱가포르 API 기준이다. 중국 본토 Volcengine의 주소와 모델 ID도 별도로 확인했다. ttalkkakman 키로 싱가포르 모델 목록을 조회했고 2.x 다섯 모델이 모두 반환됐다. [11월 출시 공지](https://docs.byteplus.com/en/docs/modelark/model-release-announcement) · [공식 모델 목록](https://docs.byteplus.com/en/docs/ModelArk/model-list) · [Volcengine 모델 비교표](https://docs.volcengine.com/docs/ark/seedance-2-5?lang=zh)
 
 ## 모델과 출력

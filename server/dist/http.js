@@ -3,11 +3,12 @@ import { config } from './config.js';
  * Shared fetch wrapper — turns timeouts and network errors into a structured result.
  * The response body is returned verbatim, unparsed (the LLM consumer reads it directly).
  */
-export async function requestRaw(method, url, headers, body, timeoutMs) {
+export async function requestRaw(method, url, headers, body, timeoutMs, dispatcher) {
     const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
     try {
         const res = await fetch(url, {
             method: method.toUpperCase(),
+            ...(dispatcher ? { dispatcher } : {}),
             headers: {
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...headers,

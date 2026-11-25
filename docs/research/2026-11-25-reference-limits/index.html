@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How many characters, voices and shot pictures one request can reference on MiniMax H3 ref2va, LTX-2.5 MSR and Seedance 2.0 and 2.5, read from the upstream sources.">
+<title>Reference limits for MiniMax H3, LTX-2.5 MSR and Seedance · social-flow</title>
+<link rel="stylesheet" href="../../assets/reference.css">
+<style>
+  :root {
+    --h3: #257de0;
+    --msr: #f47230;
+    --scene: #00b894;
+    --h3-tint: #e4effc;
+    --msr-tint: #fde8dc;
+    --scene-tint: #d9f4ee;
+    --sd20: #6250d6;
+    --sd25: #00b894;
+    --grid: #e7e7e7;
+    --axis: #c2c2c2;
+  }
+  main { max-width: 52rem; }
+  .lede { font-size: 1.12rem; max-width: 44rem; }
+  .meta { color: var(--text-soft); font-size: .9rem; margin: -.6rem 0 1.6rem; }
+  h3 { margin: 1.8rem 0 .4rem; font-size: 1.08rem; }
+  section { scroll-margin-top: 1.5rem; }
+  section + section { border-top: 1px solid var(--border); margin-top: 2.75rem; padding-top: .75rem; }
+  figure { margin: 1.25rem 0; }
+  figcaption { color: var(--text-soft); font-size: .88rem; margin-top: .5rem; max-width: 44rem; }
+  pre code { background: none; font-size: .84rem; }
+  pre.sample { white-space: pre-wrap; overflow-wrap: anywhere; }
+  td code, th code { white-space: nowrap; }
+  td.wrap code { white-space: normal; }
+  .table-scroll table { min-width: 34rem; }
+
+  /* Two answers side by side */
+  .answers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .answer { border: 1px solid var(--border); border-top: .3rem solid var(--h3); border-radius: .4rem; padding: 1rem 1.1rem; }
+  .answer.msr { border-top-color: var(--msr); }
+  .answer.sd20 { border-top-color: var(--sd20); }
+  .answer.sd25 { border-top-color: var(--sd25); }
+  .answer h3 { margin: 0 0 .6rem; }
+  .answer dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .9rem; margin: 0; font-size: .94rem; }
+  .answer dt { font-weight: 700; font-variant-numeric: tabular-nums; }
+  .answer dd { margin: 0; }
+
+  /* Where a number comes from */
+  .src { display: inline-block; border: 1px solid var(--axis); border-radius: .25rem; padding: 0 .4rem; font-size: .78rem; line-height: 1.5; white-space: nowrap; color: var(--text); background: var(--paper); }
+  .src.code { border-style: solid; background: var(--tint); }
+  .src.default { border-style: dotted; }
+  .src.open { border-style: dashed; color: var(--text-soft); }
+  .keys { display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; padding: 0; margin: .75rem 0; list-style: none; font-size: .9rem; }
+
+  /* Slot strips */
+  .strip { margin: .9rem 0 1.3rem; }
+  .strip p { margin: 0 0 .35rem; font-size: .92rem; }
+  .slots { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+  .slots.nine { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+  .slots.five { grid-template-columns: repeat(5, minmax(0, 1fr)); max-width: 34rem; }
+  .slots li { border-top: .3rem solid var(--axis); background: var(--tint); padding: .35rem .3rem .45rem; font-size: .76rem; line-height: 1.3; min-height: 4.1rem; overflow-wrap: anywhere; }
+  .slots b { display: block; font-size: .8rem; }
+  .slots .id { border-top-color: var(--h3); background: var(--h3-tint); }
+  .slots .shot { border-top-color: var(--msr); background: var(--msr-tint); }
+  .slots .bg { border-top-color: var(--scene); background: var(--scene-tint); }
+  .slots .free { border-top-style: dashed; color: var(--text-soft); }
+  .slots .voice { display: block; margin-top: .2rem; font-weight: 700; }
+  .legend { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; padding: 0; margin: .6rem 0; list-style: none; font-size: .86rem; }
+  .legend i { display: inline-block; width: .8rem; height: .8rem; margin-right: .35rem; border-radius: .15rem; vertical-align: -.08rem; background: var(--axis); }
+  .legend .id i { background: var(--h3); }
+  .legend .shot i { background: var(--msr); }
+  .legend .bg i { background: var(--scene); }
+  .legend .free i { background: none; border: 1px dashed var(--axis); }
+  .legend .sd20 i { background: var(--sd20); }
+  .legend .sd25 i { background: var(--sd25); }
+  .legend .try i { background: repeating-linear-gradient(45deg, var(--tint) 0 3px, var(--axis) 3px 5px); }
+  .slots.thirty { grid-template-columns: repeat(10, minmax(0, 1fr)); }
+  .slots.thirty li { min-height: 3.3rem; }
+  .slots.twelve { grid-template-columns: repeat(12, minmax(0, 1fr)); max-width: 34rem; }
+  .slots.twelve li { min-height: 0; padding: .3rem 0; text-align: center; font-size: .8rem; font-weight: 700; }
+  .slots .try { background: repeating-linear-gradient(45deg, var(--tint) 0 4px, #dfe3e8 4px 7px); }
+
+  /* Flows */
+  .flow { list-style: none; margin: 1rem 0; padding: 0; counter-reset: step; max-width: 44rem; }
+  .flow > li { counter-increment: step; position: relative; border: 1px solid var(--border); border-radius: .4rem; padding: .7rem .9rem .7rem 3rem; background: var(--paper); }
+  .flow > li::before { content: counter(step); position: absolute; left: .85rem; top: .7rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; background: var(--tint); border: 1px solid var(--border); text-align: center; font-size: .85rem; line-height: 1.45rem; font-weight: 700; }
+  .flow > li + li { margin-top: 1.6rem; }
+  .flow > li + li::after { content: ""; position: absolute; left: 1.55rem; top: -1.45rem; height: 1.1rem; border-left: 2px solid var(--axis); }
+  .flow p { margin: 0; }
+  .flow .no { margin-top: .35rem; color: var(--text-soft); font-size: .9rem; }
+  .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr)); gap: 1.25rem; }
+  .lanes h3 { margin-top: .5rem; }
+
+  .labels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; margin: .8rem 0; padding: 0; list-style: none; max-width: 40rem; }
+  .labels li { background: var(--tint); padding: .5rem .55rem; font-size: .82rem; line-height: 1.4; border-top: .3rem solid var(--axis); }
+  .labels .id { border-top-color: var(--h3); background: var(--h3-tint); }
+  .labels .vid { border-top-color: var(--scene); background: var(--scene-tint); }
+  .labels .aud { border-top-color: var(--msr); background: var(--msr-tint); }
+  .labels code { background: none; display: block; font-weight: 700; }
+
+  .note { border-left: .2rem solid var(--axis); background: var(--tint); padding: .6rem 1rem; margin: 1rem 0; font-size: .94rem; max-width: 44rem; }
+  .chart { width: 100%; height: auto; max-width: 42rem; display: block; }
+  .chart text { font: 12px Inter, system-ui, sans-serif; fill: #1f2328; }
+  .chart .soft { fill: #59636e; }
+  .chart .bar { cursor: default; }
+  .chart .bar:hover { opacity: .82; }
+  .sources li { margin: .35rem 0; }
+
+  @media (max-width: 48rem) {
+    .answers, .lanes { grid-template-columns: 1fr; }
+    .labels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .slots li { font-size: .66rem; padding: .3rem .15rem; min-height: 4.6rem; }
+    .slots b { font-size: .7rem; }
+    .slots.thirty { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .slots.thirty li { min-height: 3.6rem; }
+  }
+  @media print {
+    section { break-inside: avoid-page; }
+    .slots li, .labels li, .answer { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#top">Skip to the page</a>
+<header><a href="../../index.html">social-flow</a><a href="https://github.com/ttalkkaklab/social-flow">GitHub repository</a></header>
+<div class="layout">
+<nav aria-label="On this page"><h2>On this page</h2><ul>
+<li><a href="#top">The short answer</a></li>
+<li><a href="#evidence">How to read the evidence</a></li>
+<li><a href="#h3">MiniMax H3 ref2va</a></li>
+<li><a href="#msr">LTX-2.5 with Licon MSR</a></li>
+<li><a href="#seedance">Seedance 2.0 and 2.5</a></li>
+<li><a href="#compare">Side by side</a></li>
+<li><a href="#fit">Fitting a scene into one request</a></li>
+<li><a href="#wrapper">Wrapper figures against upstream</a></li>
+<li><a href="#open">Open questions</a></li>
+<li><a href="#sources">Sources</a></li>
+</ul></nav>
+<main>
+<article id="top">
+<h1>Reference limits for MiniMax H3, LTX-2.5 MSR and Seedance</h1>
+<p><em>This is the 2026-11-25 study with its quoted sources. The current limits for every video model are in the <a href="../../video-models.md">video model call reference</a>.</em></p>
+<p class="meta">Read from the upstream sources on 25 November 2026. Each number carries a mark saying where it comes from.</p>
+
+<p class="lede">One MiniMax H3 ref2va request takes nine pictures, three voice samples and three videos, twelve files in all. One LTX-2.5 request with the Licon MSR adapter takes five reference pictures and two voice samples. One Seedance request takes nine images, three videos and three audio clips on the 2.0 series, and thirty, ten and ten on 2.5. None of these models sets a number of characters. A character usually costs a picture slot, and backgrounds and shot pictures draw on the same slots, so that budget is the working limit.</p>
+
+<div class="answers">
+  <div class="answer">
+    <h3>MiniMax H3 ref2va</h3>
+    <dl>
+      <dt>9</dt><dd>pictures, shared by character identity, backgrounds, props and shot compositions</dd>
+      <dt>3</dt><dd>standalone audio clips, the documented way to pin a speaker's timbre</dd>
+      <dt>3</dt><dd>reference videos</dd>
+      <dt>12</dt><dd>files across all three kinds, with at least one picture or video</dd>
+    </dl>
+  </div>
+  <div class="answer msr">
+    <h3>LTX-2.5 with Licon MSR V2</h3>
+    <dl>
+      <dt>5</dt><dd>reference pictures: <code>pic1</code> to <code>pic4</code> and one <code>background</code></dd>
+      <dt>2</dt><dd>voice samples, on <code>pic1</code> and <code>pic2</code> only</dd>
+      <dt>0</dt><dd>reference videos</dd>
+      <dt>no cap</dt><dd>documented for LTX-2.5 frame stills. They are a separate input, and no upstream example combines them with MSR</dd>
+    </dl>
+  </div>
+  <div class="answer sd20">
+    <h3>Seedance 2.0, 2.0 fast, 2.0 mini</h3>
+    <dl>
+      <dt>9</dt><dd>reference images, shared by characters, settings, props and shot pictures. Its guide reports less stable output past 4 reference people</dd>
+      <dt>3</dt><dd>reference audio clips, 15 seconds in total</dd>
+      <dt>3</dt><dd>reference videos, 15 seconds in total</dd>
+      <dt>15</dt><dd>assets in all. Audio needs an image or a video beside it</dd>
+    </dl>
+  </div>
+  <div class="answer sd25">
+    <h3>Seedance 2.5</h3>
+    <dl>
+      <dt>30</dt><dd>reference images. Its guide recommends 1 to 8 subjects referenced by image</dd>
+      <dt>10</dt><dd>reference audio clips, 30 seconds in total</dd>
+      <dt>10</dt><dd>reference videos, 30 seconds in total</dd>
+      <dt>50</dt><dd>assets in all. 2.5 flash takes 10, 5 and 5, which is 20</dd>
+    </dl>
+  </div>
+</div>
+
+<p>A shot picture means something different in each model. H3 reads it as one more numbered reference with no time attached. LTX-2.5 takes a still at a frame index through its own image conditioning, outside the five MSR slots. No upstream source documents how such stills behave across cuts, or shows them used together with MSR. Seedance numbers a shot picture as one more reference, as H3 does. Its 2.5 guide adds a keyframe instruction that the output follows "relatively strictly". An exact first or last frame is a separate mode on Seedance and cannot be mixed with references.</p>
+
+<section id="evidence">
+<h2>How to read the evidence</h2>
+<p>Five kinds of support appear in the tables. A wrapper or gateway figure is none of them. Those are listed separately in <a href="#wrapper">Wrapper figures against upstream</a>. Seedance has no public weights or code, so its figures rest on documentation alone.</p>
+<ul class="keys">
+  <li><span class="src">author</span> stated by the model's author in a card, paper or guide</li>
+  <li><span class="src code">code</span> checked by the author's released code</li>
+  <li><span class="src default">default</span> a value an example workflow ships with</li>
+  <li><span class="src">maintainer</span> said by a maintainer in an issue thread</li>
+  <li><span class="src open">unverified</span> not found in any source read</li>
+</ul>
+</section>
+
+<section id="h3">
+<h2>MiniMax H3 ref2va</h2>
+<p>H3 is published as two transformer partitions. The ref2va partition conditions on an ordered list of pictures, videos and audio clips. The limits below are the ones MiniMax documents for the released checkpoint. The diffusers pipeline checks them, and its own comment says they "bound nothing but this block's own validation".</p>
+
+<div class="table-scroll"><table>
+<thead><tr><th>Input</th><th>Limit</th><th>Support</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Pictures</td><td>9</td><td><span class="src">author</span> <span class="src code">code</span></td><td>Subject, style, scene and shot composition all use this one pool.</td></tr>
+<tr><td>Videos</td><td>3</td><td><span class="src">author</span> <span class="src code">code</span></td><td>The card asks for 2 to 15 seconds each and 15 seconds in total. The pipeline does not check length and truncates each clip to the generated duration.</td></tr>
+<tr><td>Audio clips</td><td>3</td><td><span class="src">author</span> <span class="src code">code</span></td><td>Same length wording on the card. A clip can be a voice or music. A video's own soundtrack is labelled separately and is outside this count.</td></tr>
+<tr><td>All files</td><td>12</td><td><span class="src">author</span> <span class="src code">code</span></td><td>The hosted API page lists 9, 3 and 3 and does not mention 12.</td></tr>
+<tr><td>Audio alone</td><td>refused</td><td><span class="src code">code</span></td><td>An audio clip needs at least one picture or video beside it.</td></tr>
+<tr><td>Characters, subjects, speakers</td><td>not stated</td><td></td><td><code>&lt;Subject N&gt;</code> and <code>(S1)</code> are prompt text. No source gives a maximum and no released code counts them.</td></tr>
+<tr><td>Length</td><td>5 to 15 s at 24 fps</td><td><span class="src code">code</span></td><td>Frames snap up to <code>17n + 5</code>, so 124 to 345. The card says 4 to 15 seconds.</td></tr>
+<tr><td>Canvas</td><td>multiples of 32</td><td><span class="src code">code</span></td><td>The short edge defaults to 768.</td></tr>
+</tbody></table></div>
+
+<h3>Nine pictures, however you spend them</h3>
+<p>A character usually costs one picture, and two when a face and an outfit are sent separately. Every shot picture and background comes out of the same nine. Two things loosen the count. One picture can hold more than one character: the guide says "one reference asset may provide multiple subjects". A reference video can define a character as well, as the guide's worked example does for both of its people.</p>
+
+<ul class="legend" aria-label="Slot colours">
+  <li class="id"><i></i>character identity</li>
+  <li class="shot"><i></i>shot composition</li>
+  <li class="bg"><i></i>background or prop</li>
+  <li class="free"><i></i>unused</li>
+</ul>
+
+<figure>
+<div class="strip">
+  <p>The request supplied for this study: two faces and three shot pictures. Four slots stay free.</p>
+  <ol class="slots nine">
+    <li class="id"><b>Picture 1</b>Miran face</li><li class="id"><b>Picture 2</b>Jun face</li>
+    <li class="shot"><b>Picture 3</b>shot 1</li><li class="shot"><b>Picture 4</b>shot 2</li><li class="shot"><b>Picture 5</b>shot 3</li>
+    <li class="free"><b>6</b>free</li><li class="free"><b>7</b>free</li><li class="free"><b>8</b>free</li><li class="free"><b>9</b>free</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Three characters with one picture each and one background leave five shot pictures.</p>
+  <ol class="slots nine">
+    <li class="id"><b>Picture 1</b>face A</li><li class="id"><b>Picture 2</b>face B</li><li class="id"><b>Picture 3</b>face C</li>
+    <li class="bg"><b>Picture 4</b>room</li>
+    <li class="shot"><b>Picture 5</b>shot 1</li><li class="shot"><b>Picture 6</b>shot 2</li><li class="shot"><b>Picture 7</b>shot 3</li><li class="shot"><b>Picture 8</b>shot 4</li><li class="shot"><b>Picture 9</b>shot 5</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Two characters with a face and an outfit each also leave five.</p>
+  <ol class="slots nine">
+    <li class="id"><b>Picture 1</b>face A</li><li class="id"><b>Picture 2</b>outfit A</li><li class="id"><b>Picture 3</b>face B</li><li class="id"><b>Picture 4</b>outfit B</li>
+    <li class="shot"><b>Picture 5</b>shot 1</li><li class="shot"><b>Picture 6</b>shot 2</li><li class="shot"><b>Picture 7</b>shot 3</li><li class="shot"><b>Picture 8</b>shot 4</li><li class="shot"><b>Picture 9</b>shot 5</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Nine shot pictures leave no separate identity anchor. Characters then exist only inside the shot pictures.</p>
+  <ol class="slots nine">
+    <li class="shot"><b>Picture 1</b>shot 1</li><li class="shot"><b>Picture 2</b>shot 2</li><li class="shot"><b>Picture 3</b>shot 3</li><li class="shot"><b>Picture 4</b>shot 4</li><li class="shot"><b>Picture 5</b>shot 5</li><li class="shot"><b>Picture 6</b>shot 6</li><li class="shot"><b>Picture 7</b>shot 7</li><li class="shot"><b>Picture 8</b>shot 8</li><li class="shot"><b>Picture 9</b>shot 9</li>
+  </ol>
+</div>
+<figcaption>Characters with their own picture ≤ 9 − shot pictures − background and prop pictures. Standalone voice clips ≤ 3. The official English examples read for this study go no further than four subjects, four pictures and two speakers, so the full nine and the third voice are not shown in them.</figcaption>
+</figure>
+
+<h3>Who can speak</h3>
+<p>The prompt guide binds a voice sample to a speaker in a sentence: <code>&lt;Audio 1&gt; is the voice-timbre reference for &lt;Subject 1&gt; (S1).</code> A speaker without a sample is allowed. The guide's own three-shot example gives <code>(S1)</code> a sample and lets <code>(S2)</code> speak "in a casual young male voice" from the description alone. So three standalone clips can pin three speakers, and further speakers get whatever voice the description produces. The guide also counts a reference video's enabled soundtrack as an audio asset. Whether that pins a fourth voice is not shown anywhere.</p>
+
+<h3>How a reference gets its number</h3>
+<p>The diffusers pipeline numbers references per kind, in the order of the list. A video that carries sound takes an audio number first and then its video number.</p>
+<figure>
+<ol class="labels" aria-label="Example: references in list order and the labels they receive">
+  <li class="id">image<code>&lt;Picture 1&gt;</code></li>
+  <li class="id">image<code>&lt;Picture 2&gt;</code></li>
+  <li class="vid">video with sound<code>&lt;Audio 1&gt;</code><code>&lt;Video 1&gt;</code></li>
+  <li class="aud">audio<code>&lt;Audio 2&gt;</code></li>
+</ol>
+<figcaption>Four references produce five labels. Reordering the list is a different request: the order also advances the model's shared audio and video clock. The soundtrack of a video is not counted against the three audio clips or the twelve files.</figcaption>
+</figure>
+<p class="note">The prompt guide says something else: "An ordinary reference video does not create <code>&lt;Audio N&gt;</code> merely because the file contains sound." The pipeline labels every soundtracked video. The guide does not say what makes a soundtrack "enabled", so check the numbering whenever a reference video has sound.</p>
+
+<h3>Request shape at each layer</h3>
+<p>The same model is reached through three surfaces. The limits are the same and the field names are not.</p>
+
+<p><strong>diffusers modular pipeline</strong> <span class="src code">code</span></p>
+<pre><code>pipe = ModularPipeline.from_pretrained("MiniMaxAI/MiniMax-H3", workflow="ref2va")
+pipe.load_components(dtype=torch.bfloat16)
+
+results = pipe(
+    prompt="…",
+    references=[
+        MiniMaxH3ImageReference.from_file("miran-face.png"),   # &lt;Picture 1&gt;
+        MiniMaxH3ImageReference.from_file("shot-01.png"),      # &lt;Picture 2&gt;
+        MiniMaxH3AudioReference.from_file("miran-voice.wav"),  # &lt;Audio 1&gt;
+    ],
+    num_frames=124,            # required; snapped up to 17n + 5
+    height=768, width=448,     # multiples of 32
+    output=["videos", "audio", "sampling_rate"],
+)</code></pre>
+
+<p><strong>Self-hosted server from the model card</strong> <span class="src">author</span></p>
+<pre><code>POST /v1/videos
+{
+  "task": "ref2va",
+  "prompt": "…",
+  "conditions": [
+    { "type": "video", "uri": "https://…/source.mp4", "role": "reference" },
+    { "type": "audio", "uri": "https://…/voice.mp3",  "role": "reference" }
+  ],
+  "target": { "short_edge": 768, "aspect_ratio": "auto", "duration_seconds": 5 },
+  "seed": 0
+}</code></pre>
+
+<p><strong>MiniMax hosted API</strong> <span class="src">author</span></p>
+<pre><code>POST /v2/video_generation
+{
+  "model": "MiniMax-H3",
+  "content": [
+    { "type": "text", "text": "… Voice timbre follows reference audio 1." },
+    { "type": "image_url", "image_url": { "url": "…" }, "role": "reference_image" },
+    { "type": "video_url", "video_url": { "url": "…" }, "role": "reference_video" },
+    { "type": "audio_url", "audio_url": { "url": "…" }, "role": "reference_audio" }
+  ],
+  "resolution": "768P",
+  "duration": 5,
+  "ratio": "adaptive"
+}</code></pre>
+<p>On the hosted API a request with any <code>reference_*</code> item cannot also carry <code>first_frame</code> or <code>last_frame</code>. A text item holds at most 7,000 characters.</p>
+
+<h3>Prompt labels</h3>
+<div class="table-scroll"><table>
+<thead><tr><th>Label</th><th>Meaning</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td><code>&lt;Picture N&gt;</code> <code>&lt;Video N&gt;</code> <code>&lt;Audio N&gt;</code></td><td>The Nth reference of that kind. Video and audio numbers are independent.</td><td><span class="src">author</span> <span class="src code">code</span></td></tr>
+<tr><td><code>&lt;Subject N&gt;</code></td><td>A thing used in the target video. One subject can come from several references, and one reference can supply several subjects.</td><td><span class="src">author</span></td></tr>
+<tr><td><code>(S1)</code>, <code>(S2)</code></td><td>A stable speaker ID, written after the subject that speaks.</td><td><span class="src">author</span></td></tr>
+<tr><td><code>&lt;d&gt;[Vietnamese] …&lt;/d&gt;</code></td><td>Spoken words with their language.</td><td><span class="src">author</span></td></tr>
+<tr><td class="wrap"><code>[Shot 2] At 00:03.000, the shot cuts to …</code></td><td>A cut, with the time the author's examples give it.</td><td><span class="src">author</span></td></tr>
+</tbody></table></div>
+<p>These labels are the output format of MiniMax's prompt rewriter. Whether the generation model needs the full form, or follows the plain form in the supplied request equally well, is not measured in any source read.</p>
+
+<h3>The supplied request, checked</h3>
+<pre class="sample"><code>{
+  "task": "ref2va",
+  "width": 448, "height": 768,
+  "num_frames": 294,
+  "seed": 42,
+  "prompt": "Miran is &lt;Picture 1&gt; and speaks with &lt;Audio 1&gt;. Jun is &lt;Picture 2&gt; and speaks with &lt;Audio 2&gt;. …\n[Shot 1] Match the front view in &lt;Picture 3&gt;. …\n[Shot 2] Hard cut to the reverse angle in &lt;Picture 4&gt;. …\n[Shot 3] Hard cut to the side view in &lt;Picture 5&gt;. …",
+  "references": [
+    { "type": "image", "path": "/example/miran-face.png" },
+    { "type": "image", "path": "/example/jun-face.png" },
+    { "type": "image", "path": "/example/shot-01-front.png" },
+    { "type": "image", "path": "/example/shot-02-reverse.png" },
+    { "type": "image", "path": "/example/shot-03-side.png" },
+    { "type": "audio", "path": "/example/miran-voice.wav" },
+    { "type": "audio", "path": "/example/jun-voice.wav" }
+  ]
+}</code></pre>
+<p>This is the job format of an in-house worker, not an upstream schema. Its fields map onto the diffusers call.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Field</th><th>Upstream counterpart</th><th>Check</th></tr></thead>
+<tbody>
+<tr><td><code>task: "ref2va"</code></td><td><code>workflow="ref2va"</code></td><td>Selects the reference partition.</td></tr>
+<tr><td><code>references[].type</code>, <code>path</code></td><td><code>MiniMaxH3ImageReference.from_file(path)</code> and the audio and video classes</td><td>5 pictures of 9, 2 audio clips of 3, 7 files of 12.</td></tr>
+<tr><td>list order</td><td>label numbering</td><td>Pictures first, then audio, gives Picture 1 to 5 and Audio 1 to 2, as the prompt assumes.</td></tr>
+<tr><td><code>num_frames: 294</code></td><td><code>num_frames</code></td><td>294 = 17 × 17 + 5, on the grid. 12.25 seconds at 24 fps.</td></tr>
+<tr><td><code>width</code>, <code>height</code></td><td><code>width</code>, <code>height</code></td><td>448 and 768 are multiples of 32.</td></tr>
+<tr><td><code>seed</code></td><td><code>generator</code></td><td>One generator draws the reference, video and audio noise in turn.</td></tr>
+</tbody></table></div>
+<p>The request is inside every documented limit. The three shot pictures are untimed references. The model decides where each cut falls.</p>
+</section>
+
+<section id="msr">
+<h2>LTX-2.5 with Licon MSR</h2>
+<p>MSR, Multiple Subject Reference, is an adapter from Licon Studio for LTX-2.5. The author's workflow runs it on the distilled transformer. Each reference picture is encoded as its own group of tokens with a learned slot number. V2 of the adapter adds voice references. Lightricks' own multi-subject method is different: one composite sheet of characters, props and locations on a black background.</p>
+
+<div class="table-scroll"><table>
+<thead><tr><th>Input</th><th>Limit</th><th>Support</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Reference pictures</td><td>5</td><td><span class="src">author</span> <span class="src code">code</span></td><td>The node raises an error outside 1 to 5.</td></tr>
+<tr><td>Sockets</td><td><code>pic1</code>, <code>pic2</code>, <code>pic3</code>, <code>pic4</code>, <code>background</code></td><td><span class="src code">code</span></td><td><code>pic1</code> is required. Without a background the most is four.</td></tr>
+<tr><td>Voice samples</td><td>2</td><td><span class="src">author</span> <span class="src code">code</span></td><td><code>audio_ref1</code> belongs to <code>pic1</code> and <code>audio_ref2</code> to <code>pic2</code>. A third input exists in the code and is hidden from the interface.</td></tr>
+<tr><td>Voice length</td><td>5 s per slot</td><td><span class="src code">code</span></td><td>Read from the V2 weights' metadata. Anything longer is truncated.</td></tr>
+<tr><td>Frames per reference</td><td>25 or 33</td><td><span class="src code">code</span> <span class="src default">default</span></td><td>The workflow ships with 33. Training used 25.</td></tr>
+<tr><td>Strength</td><td>0 to 1</td><td><span class="src code">code</span></td><td>The node calls it <code>strength</code>. It defaults to 1.</td></tr>
+<tr><td>Subjects beyond the slots</td><td>no count</td><td><span class="src">author</span></td><td>A slot identifies a picture. It does not promise one entity per picture.</td></tr>
+<tr><td>Speaking characters that hold up</td><td>2</td><td><span class="src">maintainer</span></td><td>Lightricks' reply to a three-speaker report. See below.</td></tr>
+</tbody></table></div>
+
+<h3>Five slots</h3>
+<ul class="legend" aria-label="Slot colours">
+  <li class="id"><i></i>character or object picture</li>
+  <li class="bg"><i></i>background</li>
+  <li class="free"><i></i>unused</li>
+</ul>
+<figure>
+<div class="strip">
+  <p>The layout of the author's published examples: two people and a scene. The background takes the next number, so the prompt calls it Image 3.</p>
+  <ol class="slots five">
+    <li class="id"><b>pic1</b>person A<span class="voice">audio_ref1</span></li>
+    <li class="id"><b>pic2</b>person B<span class="voice">audio_ref2</span></li>
+    <li class="free"><b>pic3</b>empty</li><li class="free"><b>pic4</b>empty</li>
+    <li class="bg"><b>back&shy;ground</b>scene, Image 3</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Four faces and a background fill the adapter. Only the first two can carry a voice.</p>
+  <ol class="slots five">
+    <li class="id"><b>pic1</b>face A<span class="voice">audio_ref1</span></li>
+    <li class="id"><b>pic2</b>face B<span class="voice">audio_ref2</span></li>
+    <li class="id"><b>pic3</b>face C</li><li class="id"><b>pic4</b>face D</li>
+    <li class="bg"><b>back&shy;ground</b>scene, Image 5</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>A face and an outfit for each of two people fill it as well. The two voiced faces must sit in <code>pic1</code> and <code>pic2</code>.</p>
+  <ol class="slots five">
+    <li class="id"><b>pic1</b>face A<span class="voice">audio_ref1</span></li>
+    <li class="id"><b>pic2</b>face B<span class="voice">audio_ref2</span></li>
+    <li class="id"><b>pic3</b>outfit A</li><li class="id"><b>pic4</b>outfit B</li>
+    <li class="bg"><b>back&shy;ground</b>scene, Image 5</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>The request supplied for this study uses one slot. Its four shot stills are not MSR references.</p>
+  <ol class="slots five">
+    <li class="id"><b>pic1</b>Miran<span class="voice">audio_ref1</span></li>
+    <li class="free"><b>pic2</b>empty</li><li class="free"><b>pic3</b>empty</li><li class="free"><b>pic4</b>empty</li>
+    <li class="free"><b>back&shy;ground</b>empty</li>
+  </ol>
+</div>
+<figcaption>Characters with their own picture ≤ 4, or fewer when a character takes two slots. Speakers with a pinned voice ≤ 2. No published example fills the fourth or fifth slot.</figcaption>
+</figure>
+
+<h3>Five is where the training data stops</h3>
+<p>The slot number goes through a small network that accepts any integer, so nothing in the architecture stops at five. The paper says this "is not evidence of reliable generation with an unlimited number of references". The training set explains the number.</p>
+<figure>
+<svg class="chart" viewBox="0 0 640 300" role="img" aria-labelledby="t2-title t2-desc">
+  <title id="t2-title">Share of MSR training examples by number of reference images</title>
+  <desc id="t2-desc">Two images 20.35 percent, three 25.99, four 29.53, five 23.89, six 0.12, seven 0.08, eight 0.04.</desc>
+  <g stroke="#e7e7e7" stroke-width="1">
+    <line x1="60" x2="620" y1="183.3" y2="183.3"/><line x1="60" x2="620" y1="116.7" y2="116.7"/><line x1="60" x2="620" y1="50" y2="50"/>
+  </g>
+  <g class="soft" text-anchor="end">
+    <text class="soft" x="52" y="254">0</text><text class="soft" x="52" y="187">10%</text><text class="soft" x="52" y="121">20%</text><text class="soft" x="52" y="54">30%</text>
+  </g>
+  <g fill="#257de0">
+    <path class="bar" d="M78,250 V118.3 Q78,114.3 82,114.3 H118 Q122,114.3 122,118.3 V250 Z"><title>2 reference images: 20.35% of examples</title></path>
+    <path class="bar" d="M158,250 V80.7 Q158,76.7 162,76.7 H198 Q202,76.7 202,80.7 V250 Z"><title>3 reference images: 25.99% of examples</title></path>
+    <path class="bar" d="M238,250 V57.1 Q238,53.1 242,53.1 H278 Q282,53.1 282,57.1 V250 Z"><title>4 reference images: 29.53% of examples</title></path>
+    <path class="bar" d="M318,250 V94.7 Q318,90.7 322,90.7 H358 Q362,90.7 362,94.7 V250 Z"><title>5 reference images: 23.89% of examples</title></path>
+    <rect class="bar" x="398" y="248.5" width="44" height="1.5"><title>6 reference images: 0.12% of examples</title></rect>
+    <rect class="bar" x="478" y="248.5" width="44" height="1.5"><title>7 reference images: 0.08% of examples</title></rect>
+    <rect class="bar" x="558" y="248.5" width="44" height="1.5"><title>8 reference images: 0.04% of examples</title></rect>
+  </g>
+  <line x1="60" x2="620" y1="250" y2="250" stroke="#c2c2c2" stroke-width="1"/>
+  <g text-anchor="middle">
+    <text x="100" y="108">20.35</text><text x="180" y="70">25.99</text><text x="260" y="47">29.53</text><text x="340" y="84">23.89</text>
+    <text x="420" y="242">0.12</text><text x="500" y="242">0.08</text><text x="580" y="242">0.04</text>
+    <text class="soft" x="100" y="268">2</text><text class="soft" x="180" y="268">3</text><text class="soft" x="260" y="268">4</text><text class="soft" x="340" y="268">5</text><text class="soft" x="420" y="268">6</text><text class="soft" x="500" y="268">7</text><text class="soft" x="580" y="268">8</text>
+    <text class="soft" x="340" y="292">Reference images in one training example</text>
+  </g>
+  <g stroke="#59636e" stroke-width="1" fill="none">
+    <path d="M78,30 V24 H362 V30"/><path d="M398,214 V208 H602 V214"/>
+  </g>
+  <text x="78" y="17">the public workflow accepts these</text>
+  <text x="398" y="201">0.24% together</text>
+</svg>
+<figcaption>Share of examples in the adapter's visual training stage, from Table 2 of the MSR paper. The table has no row for a single reference. The counts are image slots, not subjects. The paper states that "generalization to larger numbers has not been established".</figcaption>
+</figure>
+
+<h3>Three speakers</h3>
+<p>A user reported on the Lightricks repository that one or two referenced characters work well and that a third speaking character makes identities blend and lines land on the wrong person. A Lightricks member answered on 4 November 2026 and the issue was closed as not planned:</p>
+<blockquote><p>Keeping identity and dialogue bound correctly across three or more referenced speakers is beyond what the current model handles reliably; two subjects is the practical sweet spot today. … we suggest keeping two speaking subjects per shot and covering the third with cuts or reverse shots.</p></blockquote>
+<p>The paper lists two related failures: subjects with similar looks or clothes can blend, and appearance can drift when a character turns or returns after a cut.</p>
+
+<h3>How a reference enters the model</h3>
+<ol class="flow">
+  <li><p>One still per slot. A multi-view collage in one picture is still one reference.</p></li>
+  <li><p>The still is repeated for 25 or 33 frames and encoded by the video VAE on its own. That makes 4 or 5 latent frames per reference.</p></li>
+  <li><p>The slot's learned embedding is added to every token of that group.</p></li>
+  <li><p>The group joins the sequence as clean tokens with a small negative time offset. For three references at 25 fps the offsets are −0.12, −0.08 and −0.04 seconds.</p></li>
+  <li><p>After sampling, the node chain crops the reference tokens off before decoding.</p></li>
+</ol>
+<p>Voice references use a different arrangement: one 5-second window per picture slot, laid out before the clip with a 0.04-second margin. A missing sample leaves its window empty and does not renumber the others.</p>
+
+<h3>Shot stills are a different input</h3>
+<p>The <code>images</code> list in the supplied request is LTX-2.5's own image conditioning. It does not use an MSR slot and it is not limited by the five. The two inputs come from different surfaces. The Licon workflow has no frame-conditioning node beside its reference guide, and the LTX-2 pipelines have no MSR. Sending both in one request is the in-house backend's composition, and no upstream example shows it.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Question</th><th>What the sources say</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td>How many stills</td><td>The command line takes <code>--image PATH FRAME_IDX STRENGTH</code> any number of times. No count check was found in the pipeline code.</td><td><span class="src code">code</span></td></tr>
+<tr><td>A documented cap</td><td>None. LTX Desktop stops at 10 keyframes as an application rule. The hosted API accepts a first and a last frame only.</td><td><span class="src open">unverified</span></td></tr>
+<tr><td>Which frames</td><td>A guide binding accepts any frame of the clip. A replace binding needs frame 0 or <code>1 + 8k</code>. The clip length is <code>8n + 1</code>.</td><td><span class="src">author</span> <span class="src code">code</span></td></tr>
+<tr><td>Cuts in one clip</td><td>LTX-2.5 generates several shots from one prompt. The guide says to prefer 2 to 4 shots and to name each transition in words, such as "A hard cut transitions to…".</td><td><span class="src">author</span></td></tr>
+<tr><td>A still at every cut</td><td>Not described anywhere. The guide advises a single continuous take when a first-frame image is given, unless the prompt describes a cut away from it.</td><td><span class="src open">unverified</span></td></tr>
+<tr><td>What the MSR author does</td><td>The published V2 example runs five shots and two speakers from three reference pictures, with every cut written in the prompt and no shot stills.</td><td><span class="src default">default</span></td></tr>
+</tbody></table></div>
+
+<h3>Request shape at each layer</h3>
+<p><strong>Licon Multi-Reference Guide node</strong> <span class="src code">code</span></p>
+<pre><code>pic1            IMAGE   required
+pic2 … pic4     IMAGE   optional
+background      IMAGE   optional, counts toward the five
+audio_ref1      LATENT  optional, voice for pic1
+audio_ref2      LATENT  optional, voice for pic2
+strength        FLOAT   0.0 – 1.0, default 1.0
+reference_frames        "25" | "33", default "33"</code></pre>
+
+<p><strong>LTX-2 pipelines</strong> <span class="src">author</span> <span class="src code">code</span></p>
+<pre><code>--image PATH FRAME_IDX STRENGTH      # repeatable; frame 0 is first-frame conditioning
+
+opening = ImageConditioningInput.replace("opening.png", frame_idx=0, strength=1.0)
+guide   = ImageConditioningInput.guide("guide.png", frame_idx=80, strength=0.8)</code></pre>
+
+<p><strong>LTX hosted API, image to video</strong> <span class="src">author</span></p>
+<pre><code>{
+  "model": "ltx-2-5-pro",
+  "prompt": "…",
+  "image_uri": "…",
+  "last_frame_uri": "…",
+  "duration": 8
+}</code></pre>
+<p>The hosted API has no MSR references and no stills at arbitrary frames.</p>
+
+<h3>Prompt labels</h3>
+<div class="table-scroll"><table>
+<thead><tr><th>Line</th><th>Use</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td class="wrap"><code>Image 1: Young man, short black hair, pink puffer jacket …</code></td><td>Describe each reference and say whether it gives a character, an object, clothing or the background.</td><td><span class="src">author</span></td></tr>
+<tr><td class="wrap"><code>Image 3: Scene, large concert stage …</code></td><td>The background, under the next number.</td><td><span class="src default">default</span></td></tr>
+<tr><td class="wrap"><code>Audio 1: Male voice, belongs only to Image 1.</code></td><td>Tie each voice sample to its picture.</td><td><span class="src">author</span> <span class="src default">default</span></td></tr>
+<tr><td class="wrap"><code>Audio 2 (Image 2): "…"</code></td><td>A spoken line, with its voice and speaker.</td><td><span class="src default">default</span></td></tr>
+<tr><td class="wrap"><code>The camera cuts to an over-the-shoulder close shot …</code></td><td>A cut, written as prose.</td><td><span class="src default">default</span></td></tr>
+</tbody></table></div>
+<p>The paper calls these "useful interface conventions rather than a claim that one exact prompt syntax is necessary". The card adds one known problem: without background music in the voice sample, environmental sound may not be generated correctly.</p>
+
+<h3>The supplied request, checked</h3>
+<pre class="sample"><code>{
+  "mode": "msr",
+  "width": 576, "height": 1024,
+  "frame_rate": 24,
+  "num_frames": 289,
+  "seed": 42,
+  "prompt": "Miran searches the hallway table. Miran (Image 1, Audio 1) says \"…\"\nA hard cut moves to the next shot.\nReverse angle. …",
+  "reference_strength": 1,
+  "reference_frames": 33,
+  "references": [
+    { "upload_id": "…", "background": false, "audio_upload_id": "…" }
+  ],
+  "images": [
+    { "frame_idx": 0,   "upload_id": "…", "strength": 1.0 },
+    { "frame_idx": 72,  "upload_id": "…", "strength": 1.0 },
+    { "frame_idx": 144, "upload_id": "…", "strength": 1.0 },
+    { "frame_idx": 216, "upload_id": "…", "strength": 1.0 }
+  ]
+}</code></pre>
+<p>This is the request format of an in-house backend, not an upstream schema.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Field</th><th>Upstream counterpart</th><th>Check</th></tr></thead>
+<tbody>
+<tr><td><code>references[0]</code></td><td><code>pic1</code></td><td>1 slot of 5.</td></tr>
+<tr><td><code>references[].background</code></td><td><code>background</code> socket</td><td>None sent.</td></tr>
+<tr><td><code>references[].audio_upload_id</code></td><td><code>audio_ref1</code>, <code>audio_ref2</code></td><td>1 voice of 2, on the first slot as required.</td></tr>
+<tr><td><code>reference_strength: 1</code></td><td><code>strength</code></td><td>The default.</td></tr>
+<tr><td><code>reference_frames: 33</code></td><td><code>reference_frames</code></td><td>One of the two accepted values.</td></tr>
+<tr><td><code>num_frames: 289</code></td><td><code>--num-frames</code></td><td>289 = 8 × 36 + 1. 12.04 seconds at 24 fps.</td></tr>
+<tr><td><code>width</code>, <code>height</code></td><td><code>--width</code>, <code>--height</code></td><td>576 and 1024 are divisible by 32.</td></tr>
+<tr><td><code>images[]</code></td><td><code>--image PATH FRAME_IDX STRENGTH</code></td><td>Frames 72, 144 and 216 are valid for a guide binding. A replace binding would need 73, 145 and 217.</td></tr>
+</tbody></table></div>
+<p>The reference and voice inputs are well inside the documented limits, and four shots sit at the top of the recommended range. The part with no upstream support is the stills: the combination of MSR references with frame stills, and a still at each of the three cuts. Nothing read says the model will cut at those frames or reproduce those pictures.</p>
+</section>
+
+<section id="seedance">
+<h2>Seedance 2.0 and 2.5</h2>
+<p>Dreamina Seedance is a hosted model family served through BytePlus ModelArk. The 2.0 series has three models, 2.0, 2.0 fast and 2.0 mini. The 2.5 series has two, 2.5 and 2.5 flash. No weights or inference code are public, so every figure below comes from the ModelArk documentation and none could be checked against code. The pages carry no revision number and were read on 25 November 2026.</p>
+
+<div class="table-scroll"><table>
+<thead><tr><th>Input</th><th>2.0 series</th><th>2.5</th><th>2.5 flash</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td>Reference images</td><td>9</td><td>30</td><td>10</td><td><span class="src">author</span></td></tr>
+<tr><td>Reference videos</td><td>3</td><td>10</td><td>5</td><td><span class="src">author</span></td></tr>
+<tr><td>Reference audio clips</td><td>3</td><td>10</td><td>5</td><td><span class="src">author</span></td></tr>
+<tr><td>All reference assets</td><td>15</td><td>50</td><td>20</td><td><span class="src">author</span></td></tr>
+<tr><td>Each video</td><td>2 to 15 s, 15 s in total</td><td colspan="2">2 to 30 s, 30 s in total</td><td><span class="src">author</span></td></tr>
+<tr><td>Each audio clip</td><td>2 to 15 s, 15 s in total</td><td colspan="2">2 to 30 s, 30 s in total</td><td><span class="src">author</span></td></tr>
+<tr><td>Audio with no image or video</td><td>refused</td><td colspan="2">accepted</td><td><span class="src">author</span></td></tr>
+<tr><td>Output length</td><td>4 to 15 s</td><td colspan="2">4 to 30 s</td><td><span class="src">author</span></td></tr>
+<tr><td>Output resolution</td><td>480p to 4k. Fast and mini: 480p, 720p</td><td>480p to 4k</td><td>480p, 720p</td><td><span class="src">author</span></td></tr>
+<tr><td>Characters or speakers</td><td colspan="3">not stated</td><td></td></tr>
+<tr><td>Recommended subjects</td><td>up to 4 reference people, 4 to 5 assets in all</td><td colspan="2">1 to 8 by image, 1 to 5 by audio or video</td><td><span class="src">author</span></td></tr>
+<tr><td>Real human faces</td><td colspan="3">no direct upload</td><td><span class="src">author</span></td></tr>
+</tbody></table></div>
+<p>The total of 15 for the 2.0 series appears only as a sum in the 2.5 tutorial's comparison table. The 2.0 tutorial and the API reference list the three counts and give no total. An image must be under 30 MB with sides of 300 to 6000 px, a video at most 200 MB and an audio clip at most 15 MB in wav or mp3. The request body stops at 64 MB.</p>
+
+<h3>The image budget</h3>
+<p>Characters, settings, props and shot pictures are all reference images and are numbered in one sequence.</p>
+<ul class="legend" aria-label="Slot colours">
+  <li class="id"><i></i>character</li>
+  <li class="bg"><i></i>setting or prop</li>
+  <li class="shot"><i></i>shot picture or keyframe</li>
+  <li class="free"><i></i>unused</li>
+</ul>
+<figure>
+<div class="strip">
+  <p>Seedance 2.0: two characters, a setting and five shot pictures leave one of nine.</p>
+  <ol class="slots nine">
+    <li class="id"><b>Image 1</b>character A</li><li class="id"><b>Image 2</b>character B</li><li class="bg"><b>Image 3</b>setting</li><li class="shot"><b>Image 4</b>shot 1</li><li class="shot"><b>Image 5</b>shot 2</li><li class="shot"><b>Image 6</b>shot 3</li><li class="shot"><b>Image 7</b>shot 4</li><li class="shot"><b>Image 8</b>shot 5</li><li class="free"><b>9</b>free</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Seedance 2.5: the prompt guide's own worked example defines six characters and two settings in eight of thirty images.</p>
+  <ol class="slots thirty">
+    <li class="id"><b>1</b>character</li><li class="id"><b>2</b>character</li><li class="id"><b>3</b>character</li><li class="bg"><b>4</b>setting</li><li class="bg"><b>5</b>setting</li><li class="id"><b>6</b>character</li><li class="id"><b>7</b>character</li><li class="id"><b>8</b>character</li><li class="free"><b>9</b>free</li><li class="free"><b>10</b>free</li><li class="free"><b>11</b>free</li><li class="free"><b>12</b>free</li><li class="free"><b>13</b>free</li><li class="free"><b>14</b>free</li><li class="free"><b>15</b>free</li><li class="free"><b>16</b>free</li><li class="free"><b>17</b>free</li><li class="free"><b>18</b>free</li><li class="free"><b>19</b>free</li><li class="free"><b>20</b>free</li><li class="free"><b>21</b>free</li><li class="free"><b>22</b>free</li><li class="free"><b>23</b>free</li><li class="free"><b>24</b>free</li><li class="free"><b>25</b>free</li><li class="free"><b>26</b>free</li><li class="free"><b>27</b>free</li><li class="free"><b>28</b>free</li><li class="free"><b>29</b>free</li><li class="free"><b>30</b>free</li>
+  </ol>
+</div>
+<div class="strip">
+  <p>Seedance 2.5, an illustration: four characters with a face and a body picture each, two settings and seven keyframes use seventeen. Keyframes sit in one run so the prompt can say "Use Images 11 to 17 in order as keyframes."</p>
+  <ol class="slots thirty">
+    <li class="id"><b>1</b>char A face</li><li class="id"><b>2</b>char A body</li><li class="id"><b>3</b>char B face</li><li class="id"><b>4</b>char B body</li><li class="id"><b>5</b>char C face</li><li class="id"><b>6</b>char C body</li><li class="id"><b>7</b>char D face</li><li class="id"><b>8</b>char D body</li><li class="bg"><b>9</b>setting</li><li class="bg"><b>10</b>setting</li><li class="shot"><b>11</b>key 1</li><li class="shot"><b>12</b>key 2</li><li class="shot"><b>13</b>key 3</li><li class="shot"><b>14</b>key 4</li><li class="shot"><b>15</b>key 5</li><li class="shot"><b>16</b>key 6</li><li class="shot"><b>17</b>key 7</li><li class="free"><b>18</b>free</li><li class="free"><b>19</b>free</li><li class="free"><b>20</b>free</li><li class="free"><b>21</b>free</li><li class="free"><b>22</b>free</li><li class="free"><b>23</b>free</li><li class="free"><b>24</b>free</li><li class="free"><b>25</b>free</li><li class="free"><b>26</b>free</li><li class="free"><b>27</b>free</li><li class="free"><b>28</b>free</li><li class="free"><b>29</b>free</li><li class="free"><b>30</b>free</li>
+  </ol>
+</div>
+<figcaption>Characters with their own image ≤ the image limit − settings − props − shot pictures. Filling the limit is not what the guides recommend, as the next part shows. Seedance 2.5 flash has ten images.</figcaption>
+</figure>
+
+<h3>How many subjects the guides recommend</h3>
+<p>Both prompt guides give figures well under the input limits. They are advice, and no request is refused for going past them. The 2.0 guide counts reference people. The 2.5 guide counts subjects. A subject is not only a person: the guide lists "characters, animals, props, locations, and more".</p>
+<ul class="legend" aria-label="Range colours">
+  <li class="id"><i></i>"generally produce better results"</li>
+  <li class="try"><i></i>"stability may decrease"</li>
+  <li class="free"><i></i>outside the guides' ranges</li>
+</ul>
+<figure>
+<div class="strip">
+  <p>Seedance 2.0: reference people</p>
+  <ol class="slots twelve" aria-label="1 to 4 stable, more than 4 less stable"><li class="id">1</li><li class="id">2</li><li class="id">3</li><li class="id">4</li><li class="try">5</li><li class="try">6</li><li class="try">7</li><li class="try">8</li><li class="try">9</li><li class="try">10</li><li class="try">11</li><li class="try">12</li></ol>
+</div>
+<div class="strip">
+  <p>Seedance 2.5: subjects referenced by image</p>
+  <ol class="slots twelve" aria-label="1 to 8 recommended, 9 to 12 less stable"><li class="id">1</li><li class="id">2</li><li class="id">3</li><li class="id">4</li><li class="id">5</li><li class="id">6</li><li class="id">7</li><li class="id">8</li><li class="try">9</li><li class="try">10</li><li class="try">11</li><li class="try">12</li></ol>
+</div>
+<div class="strip">
+  <p>Seedance 2.5: subjects referenced by audio or video</p>
+  <ol class="slots twelve" aria-label="1 to 5 recommended, 6 to 10 less stable"><li class="id">1</li><li class="id">2</li><li class="id">3</li><li class="id">4</li><li class="id">5</li><li class="try">6</li><li class="try">7</li><li class="try">8</li><li class="try">9</li><li class="try">10</li><li class="free">11</li><li class="free">12</li></ol>
+</div>
+<div class="strip">
+  <p>Seedance 2.5: reference images in a video edit</p>
+  <ol class="slots twelve" aria-label="1 to 5 recommended, 6 to 8 less stable"><li class="id">1</li><li class="id">2</li><li class="id">3</li><li class="id">4</li><li class="id">5</li><li class="try">6</li><li class="try">7</li><li class="try">8</li><li class="free">9</li><li class="free">10</li><li class="free">11</li><li class="free">12</li></ol>
+</div>
+<figcaption>Counts the two prompt guides call stable. The 2.0 row is its statement that stability drops "when the number of reference people exceeds 4", drawn to the same scale. Neither guide gives measurements behind its figures.</figcaption>
+</figure>
+<ul>
+<li>With more than five subjects the 2.5 guide calls single-view images "generally more stable" and asks for extra views as separate images.</li>
+<li>For a subject's audio or video reference the 2.5 guide says 5 to 10 seconds "generally works better".</li>
+<li>Past four reference people the 2.0 guide expects "an incorrect number of people" or duplicated characters. Its own case put in 8 reference characters and got 9 people. The workaround it gives is to compose groups of at most four into images first and generate the video from those images.</li>
+<li>The 2.0 guide recommends 4 to 5 assets in a request: "1-2 character images (facial close-up / full body) + 1 scene image + 1 camera movement video + 1 audio clip". It adds: "It is not recommended to use the full asset limit."</li>
+<li>For character images the 2.0 guide asks for "independent single-person photos" and says three-view or multi-view sheets are "not recommended", because they can make the model draw the same character twice. The 2.5 guide supports multi-view images.</li>
+</ul>
+
+<h3>Voices</h3>
+<p>A reference audio clip can carry a voice timbre, music or spoken content. The prompt says which.</p>
+<div class="table-scroll"><table>
+<thead><tr><th></th><th>2.0 series</th><th>2.5 series</th></tr></thead>
+<tbody>
+<tr><th>Binding sentence</th><td class="wrap"><code>"Character" says: "lines", voice timbre references "Audio n".</code></td><td class="wrap"><code>Images 1-2 are Character 1 and correspond to Audio 1; Images 3-4 are Character 2 and correspond to Audio 2.</code></td></tr>
+<tr><th>Clips</th><td>3, sharing 15 s</td><td>10, sharing 30 s. 5 on flash</td></tr>
+<tr><th>Several speakers, each with a clip</th><td>No example in the tutorial or the prompt guide. Three pinned voices is our reading of the clip count.</td><td>The prompt guide gives the mapping sentence and no full example.</td></tr>
+</tbody></table></div>
+<p>The shared length is the tighter limit. At the 5 to 10 seconds the 2.5 guide recommends per subject, 30 seconds holds three to six voices. Ten voices need clips of 3 seconds or less. On the 2.0 series three clips must average 5 seconds. These figures are our arithmetic from the documented limits.</p>
+<p>A speaker needs no clip. Both guides show dialogue between characters defined by images alone. The largest such prompt, with five named speakers across eight images, is a troubleshooting case in the 2.5 guide: "characters may be mismatched with their reference images, voice timbres, or order of appearance". Its remedy is to upload assets in the order the subjects first appear and to renumber the prompt to match. The 2.0 guide has its own entry for a generated voice that "differs significantly from the reference voice", and its fix is to describe the voice in words beside the audio reference.</p>
+
+<h3>Four ways to give a shot picture</h3>
+<div class="table-scroll"><table>
+<thead><tr><th>Way</th><th>What the documents say</th><th>Versions</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td><code>first_frame</code>, <code>last_frame</code> roles</td><td>One or two images that the clip starts and ends on. This mode and reference mode "cannot be mixed".</td><td>both</td><td><span class="src">author</span></td></tr>
+<tr><td>A reference image named as the opening frame in the prompt</td><td>Reaches first frame plus references "indirectly". For a strict match the documents send you back to the first-frame mode.</td><td>both</td><td><span class="src">author</span></td></tr>
+<tr><td>Several panels in one image</td><td>The 2.0 guide shows a sequence image with a prompt asking for its frames "in strict predefined order". The 2.5 guide recommends 15 panels or fewer in simple line art and says the result "will not be followed exactly frame by frame".</td><td>both</td><td><span class="src">author</span> <span class="src default">default</span></td></tr>
+<tr><td>Keyframe references</td><td>Each shot picture is its own reference image, in order, and the prompt opens with "Use Images X to X in order as keyframes." The output aligns "relatively strictly". The example uses seven.</td><td>2.5</td><td><span class="src">author</span></td></tr>
+<tr><td>Keyframe references on 2.0</td><td>Not in the 2.0 guide or tutorial.</td><td>2.0</td><td><span class="src open">unverified</span></td></tr>
+</tbody></table></div>
+<p>Cuts are written as <code>Shot 1</code>, <code>Shot 2</code> in both versions. The 2.0 guide warns that timing by seconds "is unstable". The 2.5 guide accepts whole-second timestamps. Neither gives a recommended number of shots. One 2.5 example runs 9 shots in about 30 seconds. Keyframes have no count of their own and come out of the image limit.</p>
+
+<h3>Real faces</h3>
+<p>Neither series accepts a directly uploaded image or video that contains a real human face. The documents give three routes: a preset digital character, an authorised real-person asset, and a face-containing output generated under the same account in the last 30 days. The first two are passed as <code>asset://&lt;ASSET_ID&gt;</code> in place of a URL. The prompt still refers to that asset as <code>Image n</code>, because an asset ID in prompt text is not supported.</p>
+
+<h3>Request shape</h3>
+<p>Both series use one endpoint. The field names below are from the API reference. The media and prompt are an illustration.</p>
+<pre><code>POST https://ark.ap-southeast.bytepluses.com/api/v3/contents/generations/tasks
+{
+  "model": "dreamina-seedance-2-5-260628",
+  "content": [
+    { "type": "text", "text": "Image 1 is Mina and uses the voice timbre from Audio 1. …" },
+    { "type": "image_url", "role": "reference_image", "image_url": { "url": "…/mina.png" } },
+    { "type": "image_url", "role": "reference_image", "image_url": { "url": "asset://…" } },
+    { "type": "video_url", "role": "reference_video", "video_url": { "url": "…/move.mp4" } },
+    { "type": "audio_url", "role": "reference_audio", "audio_url": { "url": "…/mina.wav" } }
+  ],
+  "resolution": "720p",
+  "ratio": "9:16",
+  "duration": 12,
+  "generate_audio": true
+}</code></pre>
+<div class="table-scroll"><table>
+<thead><tr><th>Field</th><th>2.0 series</th><th>2.5 series</th></tr></thead>
+<tbody>
+<tr><td>Model IDs</td><td class="wrap"><code>dreamina-seedance-2-0-260128</code>, <code>…-2-0-fast-260128</code>, <code>…-2-0-mini-260615</code></td><td class="wrap"><code>dreamina-seedance-2-5-260628</code>, <code>…-2-5-flash-261115</code></td></tr>
+<tr><td>Image <code>role</code></td><td colspan="2"><code>first_frame</code>, <code>last_frame</code>, <code>reference_image</code></td></tr>
+<tr><td>Video and audio <code>role</code></td><td colspan="2"><code>reference_video</code>, <code>reference_audio</code></td></tr>
+<tr><td><code>url</code></td><td colspan="2">A URL, a Base64 string for images and audio, or <code>asset://&lt;ASSET_ID&gt;</code></td></tr>
+<tr><td><code>duration</code></td><td>Default 5. 4 to 15, or −1</td><td>Default −1. 4 to 30, or −1</td></tr>
+<tr><td><code>resolution</code></td><td colspan="2">Default <code>720p</code></td></tr>
+<tr><td><code>ratio</code></td><td><code>16:9</code>, <code>4:3</code>, <code>1:1</code>, <code>3:4</code>, <code>9:16</code>, <code>21:9</code>, <code>adaptive</code></td><td>The same values. Its guide says inputs can steer the output to any ratio from 0.4 to 2.5. Editing and extension require <code>adaptive</code>.</td></tr>
+<tr><td><code>generate_audio</code></td><td colspan="2">Default true</td></tr>
+<tr><td><code>omni_reference_task_type</code>, <code>output_format</code></td><td>not available</td><td><code>auto</code>, <code>reference</code>, <code>edit</code>, <code>extend</code>. <code>mp4</code> or <code>mov</code></td></tr>
+<tr><td><code>draft</code></td><td>not available</td><td>2.5 only, not flash</td></tr>
+<tr><td><code>seed</code>, <code>frames</code></td><td colspan="2">The reference lists only Seedance 1.0 pro models as supported</td></tr>
+<tr><td>Prompt length</td><td colspan="2">Recommended at most 500 Chinese characters or 1,000 English words. No hard limit is stated.</td></tr>
+</tbody></table></div>
+
+<h3>Prompt labels</h3>
+<div class="table-scroll"><table>
+<thead><tr><th>Line</th><th>Use</th><th>Support</th></tr></thead>
+<tbody>
+<tr><td><code>Image n</code>, <code>Video n</code>, <code>Audio n</code></td><td>"Asset type + number". The number is the asset's position among assets of the same type in the request, from 1.</td><td><span class="src">author</span></td></tr>
+<tr><td><code>@Image 1</code>, <code>[Image 1]</code>, <code>&lt;Image 1&gt;</code></td><td>Forms the official examples also use, in both versions. No document ties a form to a version.</td><td><span class="src default">default</span></td></tr>
+<tr><td class="wrap"><code>Define the woman wearing a red dress and a straw hat in Image 1 as Subject 1</code></td><td>The 2.0 guide's way to name one of several subjects in an image.</td><td><span class="src">author</span></td></tr>
+<tr><td class="wrap"><code>Image 1 depicts the protagonist John and uses the voice timbre from Audio 1.</code></td><td>The 2.5 guide's mapping of a character to an image and a voice.</td><td><span class="src">author</span></td></tr>
+<tr><td class="wrap"><code>Qin Xiulian says: {一张去大城的票。}</code></td><td>A spoken line in an example. Other examples use quotation marks.</td><td><span class="src default">default</span></td></tr>
+<tr><td><code>Shot 1 | 0-2s</code></td><td>A shot. The seconds are for 2.5 only.</td><td><span class="src">author</span></td></tr>
+<tr><td class="wrap"><code>Use Images 1 to 7 in order as keyframes.</code></td><td>Keyframe references on 2.5, as the first sentence.</td><td><span class="src">author</span></td></tr>
+</tbody></table></div>
+<p>The 2.5 guide advises against putting the mapping only inside an image, such as a name written on a character's picture, because it "can easily cause character confusion or duplication".</p>
+</section>
+
+<section id="compare">
+<h2>Side by side</h2>
+<ul class="legend" aria-label="Series">
+  <li class="id"><i></i>MiniMax H3 ref2va</li>
+  <li class="shot"><i></i>LTX-2.5 with MSR V2</li>
+  <li class="sd20"><i></i>Seedance 2.0 series</li>
+  <li class="sd25"><i></i>Seedance 2.5</li>
+</ul>
+<figure>
+<svg class="chart" viewBox="0 0 680 332" role="img" aria-labelledby="cmp-title cmp-desc">
+  <title id="cmp-title">Documented reference inputs per request</title>
+  <desc id="cmp-desc">Reference pictures: H3 9, MSR 5, Seedance 2.0 9, Seedance 2.5 30. Pinned voice clips: H3 3, MSR 2, Seedance 2.0 3, Seedance 2.5 10. Reference videos: H3 3, MSR 0, Seedance 2.0 3, Seedance 2.5 10. Files in one request: H3 12, MSR 7, Seedance 2.0 15, Seedance 2.5 50.</desc>
+  <g stroke="#e7e7e7" stroke-width="1"><line x1="286.4" x2="286.4" y1="20" y2="304"/><line x1="372.8" x2="372.8" y1="20" y2="304"/><line x1="459.2" x2="459.2" y1="20" y2="304"/><line x1="545.6" x2="545.6" y1="20" y2="304"/><line x1="632.0" x2="632.0" y1="20" y2="304"/></g>
+  <line x1="200" x2="200" y1="20" y2="304" stroke="#c2c2c2" stroke-width="1"/>
+  <g text-anchor="middle"><text class="soft" x="200.0" y="322">0</text><text class="soft" x="286.4" y="322">10</text><text class="soft" x="372.8" y="322">20</text><text class="soft" x="459.2" y="322">30</text><text class="soft" x="545.6" y="322">40</text><text class="soft" x="632.0" y="322">50</text></g>
+  <g text-anchor="end"><text x="188" y="59">Reference pictures</text><text x="188" y="131">Pinned voice clips</text><text x="188" y="203">Reference videos</text><text x="188" y="275">Files in one request</text></g>
+  <g fill="#257de0"><path class="bar" d="M200,28 H273.8 Q277.8,28 277.8,32 V36 Q277.8,40 273.8,40 H200 Z"><title>MiniMax H3: 9 reference pictures</title></path><path class="bar" d="M200,100 H221.9 Q225.9,100 225.9,104 V108 Q225.9,112 221.9,112 H200 Z"><title>MiniMax H3: 3 voice clips</title></path><path class="bar" d="M200,172 H221.9 Q225.9,172 225.9,176 V180 Q225.9,184 221.9,184 H200 Z"><title>MiniMax H3: 3 reference videos</title></path><path class="bar" d="M200,244 H299.7 Q303.7,244 303.7,248 V252 Q303.7,256 299.7,256 H200 Z"><title>MiniMax H3: 12 files in one request</title></path></g>
+  <g fill="#f47230"><path class="bar" d="M200,42 H239.2 Q243.2,42 243.2,46 V50 Q243.2,54 239.2,54 H200 Z"><title>LTX-2.5 MSR: 5 reference pictures</title></path><path class="bar" d="M200,114 H213.3 Q217.3,114 217.3,118 V122 Q217.3,126 213.3,126 H200 Z"><title>LTX-2.5 MSR: 2 voice clips</title></path><rect class="bar" x="200" y="186" width="1.5" height="12"><title>LTX-2.5 MSR: no reference videos</title></rect><path class="bar" d="M200,258 H256.5 Q260.5,258 260.5,262 V266 Q260.5,270 256.5,270 H200 Z"><title>LTX-2.5 MSR: 7 files in one request</title></path></g>
+  <g fill="#6250d6"><path class="bar" d="M200,56 H273.8 Q277.8,56 277.8,60 V64 Q277.8,68 273.8,68 H200 Z"><title>Seedance 2.0: 9 reference pictures</title></path><path class="bar" d="M200,128 H221.9 Q225.9,128 225.9,132 V136 Q225.9,140 221.9,140 H200 Z"><title>Seedance 2.0: 3 voice clips</title></path><path class="bar" d="M200,200 H221.9 Q225.9,200 225.9,204 V208 Q225.9,212 221.9,212 H200 Z"><title>Seedance 2.0: 3 reference videos</title></path><path class="bar" d="M200,272 H325.6 Q329.6,272 329.6,276 V280 Q329.6,284 325.6,284 H200 Z"><title>Seedance 2.0: 15 files in one request</title></path></g>
+  <g fill="#00b894"><path class="bar" d="M200,70 H455.2 Q459.2,70 459.2,74 V78 Q459.2,82 455.2,82 H200 Z"><title>Seedance 2.5: 30 reference pictures</title></path><path class="bar" d="M200,142 H282.4 Q286.4,142 286.4,146 V150 Q286.4,154 282.4,154 H200 Z"><title>Seedance 2.5: 10 voice clips</title></path><path class="bar" d="M200,214 H282.4 Q286.4,214 286.4,218 V222 Q286.4,226 282.4,226 H200 Z"><title>Seedance 2.5: 10 reference videos</title></path><path class="bar" d="M200,286 H628.0 Q632.0,286 632.0,290 V294 Q632.0,298 628.0,298 H200 Z"><title>Seedance 2.5: 50 files in one request</title></path></g>
+  <g style="font-size:11px"><text x="283.8" y="38">9</text><text x="249.2" y="52">5</text><text x="283.8" y="66">9</text><text x="465.2" y="80">30</text><text x="231.9" y="110">3</text><text x="223.3" y="124">2</text><text x="231.9" y="138">3</text><text x="292.4" y="152">10</text><text x="231.9" y="182">3</text><text x="206.0" y="196">0</text><text x="231.9" y="210">3</text><text x="292.4" y="224">10</text><text x="309.7" y="254">12</text><text x="266.5" y="268">7</text><text x="335.6" y="282">15</text><text x="638.0" y="296">50</text></g>
+</svg>
+<figcaption>Counts of files one request can reference. The MSR total is five pictures plus two voice samples. Shot stills on LTX-2.5 are left out because no cap is documented for them. Seedance 2.5 flash, not drawn, takes 10 images, 5 audio clips and 5 videos, 20 in all. A higher count is room for more inputs. It is not a measured number of characters the model keeps apart.</figcaption>
+</figure>
+
+<div class="table-scroll"><table style="min-width: 46rem">
+<thead><tr><th></th><th>MiniMax H3 ref2va</th><th>LTX-2.5 with MSR V2</th><th>Seedance 2.0 series</th><th>Seedance 2.5</th></tr></thead>
+<tbody>
+<tr><th>Character pictures</th><td>From a pool of 9 shared with shot pictures and backgrounds</td><td>Up to 4, with a separate background slot</td><td>From a pool of 9 shared with settings and shot pictures. The guide reports less stable output past 4 reference people</td><td>From a pool of 30, or 10 on flash. The guide recommends 1 to 8 subjects by image</td></tr>
+<tr><th>Pinned voices</th><td>3 standalone audio clips, bound to speakers in the prompt</td><td>2, fixed to <code>pic1</code> and <code>pic2</code></td><td>3 audio clips. A binding sentence is documented, no multi-speaker example</td><td>10 audio clips, or 5 on flash, mapped to characters in the prompt</td></tr>
+<tr><th>Voice sample length</th><td>2 to 15 s each, 15 s in total, on the card</td><td>5 s window per slot, the rest truncated</td><td>2 to 15 s each, 15 s in total</td><td>2 to 30 s each, 30 s in total. 5 to 10 s recommended</td></tr>
+<tr><th>Speakers without a sample</th><td>Allowed, voiced from a description</td><td>Allowed, voiced from the remaining context</td><td>Allowed, voiced from the prompt</td><td>Allowed, voiced from the prompt</td></tr>
+<tr><th>Speakers shown to work</th><td>Two in the official examples</td><td>Two. Lightricks calls three unreliable</td><td>Two in the guide's dialogue examples</td><td>No dedicated example. A troubleshooting case has five named speakers without voice clips, with a character swapped until the assets were reordered</td></tr>
+<tr><th>Shot pictures</th><td>Untimed references inside the 9</td><td>Stills at a frame index in LTX-2.5 itself, outside the 5, with no documented cap and no example alongside MSR</td><td>Untimed references inside the 9. A sequence image is shown in the guide.</td><td>Keyframe references inside the 30, followed "relatively strictly". A storyboard image of 15 panels or fewer.</td></tr>
+<tr><th>Where a cut falls</th><td>Written in the prompt. The examples add a timecode.</td><td>Written in the prompt. 2 to 4 shots recommended.</td><td><code>Shot N</code> in the prompt. Timing by seconds is unstable.</td><td><code>Shot N</code> or whole-second timestamps</td></tr>
+<tr><th>Exact first frame</th><td>A different task, fl2va. The hosted API refuses to mix it with references.</td><td>A still at frame 0 in LTX-2.5 itself. No upstream example pairs it with MSR.</td><td>The <code>first_frame</code> role, a mode that cannot be mixed with references</td><td>Same as 2.0</td></tr>
+<tr><th>Reference labels</th><td><code>&lt;Picture N&gt;</code>, <code>&lt;Video N&gt;</code>, <code>&lt;Audio N&gt;</code></td><td><code>Image N</code>, <code>Audio N</code></td><td><code>Image n</code>, <code>Video n</code>, <code>Audio n</code></td><td>Same as 2.0</td></tr>
+<tr><th>Frame grid</th><td><code>17n + 5</code> at 24 fps, 5 to 15 s</td><td><code>8n + 1</code>. Published MSR clips run 289 and 361 frames at 24 fps.</td><td>No frame count. Whole seconds, 4 to 15</td><td>No frame count. Whole seconds, 4 to 30</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="fit">
+<h2>Fitting a scene into one request</h2>
+<p>These checks follow from the limits above. Passing them means the request is accepted. It does not mean the result holds every identity and voice.</p>
+<div class="lanes">
+  <div>
+    <h3>MiniMax H3 ref2va</h3>
+    <ol class="flow">
+      <li><p>Count the pictures: identity, background, prop and shot. Nine or fewer?</p><p class="no">If not, put two characters in one picture, drop outfit or shot pictures, or split the scene.</p></li>
+      <li><p>Count the standalone voice clips. Three or fewer?</p><p class="no">If not, describe the extra voices in words or split the scene.</p></li>
+      <li><p>Twelve files or fewer, with at least one picture or video?</p></li>
+      <li><p>Does a reference video carry sound?</p><p class="no">If so, renumber the <code>&lt;Audio N&gt;</code> labels.</p></li>
+      <li><p>Set a frame count on <code>17n + 5</code> between 124 and 345.</p></li>
+      <li><p>Write each cut in the prompt. The shot pictures carry no time.</p></li>
+    </ol>
+  </div>
+  <div>
+    <h3>LTX-2.5 with MSR</h3>
+    <ol class="flow">
+      <li><p>Count the reference pictures. Four or fewer, plus at most one background?</p><p class="no">If not, merge views into one sheet or split the scene.</p></li>
+      <li><p>Do more than two characters speak?</p><p class="no">If so, keep two speakers per request and cover the third in another shot.</p></li>
+      <li><p>Put the two voiced characters in <code>pic1</code> and <code>pic2</code>. Keep each sample's useful part inside 5 seconds.</p></li>
+      <li><p>Keep to 2 to 4 shots and name each transition in the prompt.</p></li>
+      <li><p>Set a frame count on <code>8n + 1</code>.</p></li>
+      <li><p>Stills after frame 0 are optional and unsupported by any document. Inspect the render before relying on them.</p></li>
+    </ol>
+  </div>
+  <div>
+    <h3>Seedance 2.0 and 2.5</h3>
+    <ol class="flow">
+      <li><p>Count the images: characters, settings, props and shot pictures. Within 9 on the 2.0 series, 30 on 2.5 or 10 on flash?</p><p class="no">If not, drop extra views or shot pictures, or split the scene.</p></li>
+      <li><p>More than four reference people on 2.0? On 2.5, more than eight subjects by image or five by audio or video?</p><p class="no">If so, expect retries. On 2.0 compose groups of up to four into images first. On 2.5 use single-view images above five subjects.</p></li>
+      <li><p>Count the voice clips and add up their length: 3 clips in 15 seconds on 2.0, 10 clips in 30 seconds on 2.5.</p><p class="no">On 2.0 an audio clip also needs an image or a video in the request.</p></li>
+      <li><p>Does any image or video show a real person's face?</p><p class="no">If so, use an asset ID or an output generated by the same account in the last 30 days.</p></li>
+      <li><p>Must the first frame match a picture exactly?</p><p class="no">If so, use the first-frame mode and give up references. On 2.5, keyframe references come close while keeping them.</p></li>
+      <li><p>Order the assets by first appearance and map each character to its images and audio in the prompt.</p></li>
+      <li><p>Write each cut as <code>Shot N</code>. Add whole-second timestamps on 2.5 only.</p></li>
+    </ol>
+  </div>
+</div>
+</section>
+
+<section id="wrapper">
+<h2>Wrapper figures against upstream</h2>
+<p>The in-house GenAI gateway puts H3 and LTX-2.5 behind one API. Its figures were read from its development branch on 25 November 2026 and are listed here only to show where they agree with the sources. Treat a wrapper figure with no upstream counterpart as a policy of the wrapper.</p>
+<div class="table-scroll"><table>
+<thead><tr><th>Wrapper figure</th><th>Upstream</th><th>Reading</th></tr></thead>
+<tbody>
+<tr><td>MSR: 4 subjects and 1 background</td><td>Node sockets</td><td>Agrees</td></tr>
+<tr><td>MSR: voices on subjects 1 and 2</td><td>Model card</td><td>Agrees</td></tr>
+<tr><td>MSR: <code>reference_frames</code> 25 or 33</td><td>Node</td><td>Agrees</td></tr>
+<tr><td>MSR: voice sample up to 10 s</td><td>5 s window, rest truncated</td><td>Wrapper rule. The model uses 5 seconds.</td></tr>
+<tr><td>LTX: up to 8 timed images, 8 shots</td><td>No documented cap. 2 to 4 shots recommended.</td><td>Wrapper rule</td></tr>
+<tr><td>LTX: MSR references and frame stills in one request</td><td>No upstream example</td><td>Wrapper composition</td></tr>
+<tr><td>H3: 9 pictures, 3 videos, 3 audio clips, 12 files</td><td>Model card and diffusers</td><td>Agrees</td></tr>
+<tr><td>H3: 124 to 345 frames</td><td>diffusers, 5 to 15 s on <code>17n + 5</code></td><td>Agrees</td></tr>
+<tr><td>H3: voice sample up to 15 s each</td><td>Card: 15 s in total across clips</td><td>Looser than the card</td></tr>
+<tr><td>H3 scene mode: no reference videos</td><td>3 allowed</td><td>Narrower than the model</td></tr>
+</tbody></table></div>
+<p>The plugin's local adapter, <code>fasth3_omni_reference</code>, runs a distilled H3 pack on MLX-Serve, which enforces the same 9, 3, 3 and 12. See <a href="../../index.html#fasth3-omni">FastH3 Omni video</a>.</p>
+<p>The plugin reaches Seedance through its own ModelArk adapter. Its limits of 9 images and 3 audio clips on the 2.0 series, 30 and 10 on 2.5 and 10 and 5 on 2.5 flash agree with the documentation. It writes <code>Image 1</code> for 2.0 and <code>@Image 1</code> for 2.5. The documentation uses both forms in examples for either version, so that split is a plugin convention.</p>
+<p class="note">Reported by the gateway's own notes and not measured for this study: on production LTX renders, cuts requested at frames 48 and 49 landed at 37 and 44, and only the opening still was reproduced. That matches the absence of upstream support for stills at cuts. It covers a small number of runs.</p>
+</section>
+
+<section id="open">
+<h2>Open questions</h2>
+<ul>
+<li>H3 with all nine pictures, or with three pinned voices. The English examples read stop at four pictures and two speakers.</li>
+<li>Whether a soundtracked reference video should get an <code>&lt;Audio N&gt;</code> label, and whether that soundtrack can pin a voice beyond the three standalone clips. The pipeline and the prompt guide disagree on the label.</li>
+<li>Whether H3's limits are a property of the weights. The pipeline's comment says a fine-tune could raise them. MiniMax's own inference code is not public.</li>
+<li>MSR with four or five slots filled. The training data covers it and no example shows it.</li>
+<li>The hidden third audio input of the MSR node, and whether the adapter was trained with it.</li>
+<li>Which LTX version the adapter was trained on. The paper's table says "LTX (22B)" and the card says LTX-2.5.</li>
+<li>Where MSR reference tokens sit. The paper and the weights' metadata say they are prepended. The node appends them as keyframes. The transformer code was not read.</li>
+<li>LTX-2.5 frame stills together with MSR references, and stills at shot boundaries in a multi-shot clip.</li>
+<li>How many characters Seedance keeps distinct near its image limit. The guides' figures, four reference people on 2.0 and 1 to 8 subjects by image on 2.5, come with no measurements.</li>
+<li>Whether the Seedance 2.0 series holds several speakers bound to separate clips. Its tutorial documents the sentence for one and shows no multi-speaker example.</li>
+<li>Whether the keyframe instruction works on Seedance 2.0. It is documented for 2.5 only.</li>
+<li>Recommended subject counts for Seedance 2.5 flash, which has a third of the images.</li>
+<li>The limits of the Dreamina app, a different surface from the API. A search summary gave 12 assets for 2.0 there, and that page was not opened.</li>
+</ul>
+</section>
+
+<section id="sources">
+<h2>Sources</h2>
+<p>All read on 25 November 2026. Links are pinned to the revision read where the host allows it.</p>
+<ul class="sources">
+<li><a href="https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/12253298adb81e36757eabebb81d2ba1c0cc70cc/README.md">MiniMax H3 model card</a>: input specifications, output duration, the self-hosted request script.</li>
+<li><a href="https://github.com/huggingface/diffusers/blob/2dfe4932476aca0837b7b09a36549232416282ed/src/diffusers/modular_pipelines/minimax_h3/before_encoder.py">diffusers <code>before_encoder.py</code></a>, <a href="https://github.com/huggingface/diffusers/blob/2dfe4932476aca0837b7b09a36549232416282ed/src/diffusers/modular_pipelines/minimax_h3/references.py"><code>references.py</code></a> and <a href="https://github.com/huggingface/diffusers/blob/2dfe4932476aca0837b7b09a36549232416282ed/src/diffusers/modular_pipelines/minimax_h3/encoders.py"><code>encoders.py</code></a>: reference validation, classes and label numbering.</li>
+<li><a href="https://github.com/huggingface/diffusers/blob/2dfe4932476aca0837b7b09a36549232416282ed/docs/source/en/api/pipelines/minimax_h3.md">diffusers MiniMax H3 pipeline guide</a>: the ref2va call and generation constraints.</li>
+<li><a href="https://github.com/MiniMax-AI/MiniMax-H3/blob/199b7d0e1fd95e7b3eafa8c15eca692534142427/skills/h3-prompt-writing/references/ref-en.txt">MiniMax H3 reference prompt guide</a>: subjects, speaker IDs, audio labels and the worked example.</li>
+<li><a href="https://platform.minimax.io/docs/api-reference/video-generation-v2-create">MiniMax hosted API, create video generation task</a>: content roles and media limits.</li>
+<li><a href="https://huggingface.co/LiconStudio/LTX-2.5-Multiple-Subject-Reference/blob/aa19b48f845995525d8ace60cdc89b842e951ce6/README.md">Licon MSR model card</a>, with its V2 weights' metadata and published example prompts.</li>
+<li><a href="https://github.com/liconstudio/ComfyUI-LTX2.5-MSR/blob/03061c18f8a79d26f3c63931dd8e28f5e5d872a6/nodes.py">ComfyUI-LTX2.5-MSR <code>nodes.py</code></a> and its <a href="https://github.com/liconstudio/ComfyUI-LTX2.5-MSR/blob/03061c18f8a79d26f3c63931dd8e28f5e5d872a6/README-AVref.md">audio reference notes</a>: sockets, slot checks and audio windows.</li>
+<li><a href="https://arxiv.org/abs/2609.18393v1">MSR: Multiple Subject Reference for Video Generation</a>: slot definition, Table 2, limitations and the audio appendix.</li>
+<li><a href="https://github.com/Lightricks/LTX-2/issues/320">Lightricks/LTX-2 issue 320</a>: the three-speaker report and reply.</li>
+<li><a href="https://github.com/Lightricks/LTX-2/blob/c3a7efb18256cba2d76cc32f5b47811d7c9ad642/packages/ltx-pipelines/docs/conditioning.md">LTX-2 conditioning types</a>: guide and replace bindings.</li>
+<li><a href="https://huggingface.co/Lightricks/LTX-2.5">LTX-2.5 model card</a>: native multishot, the <code>--image</code> flag and the frame grid.</li>
+<li><a href="https://docs.ltx.io/api-documentation/implementation-guides/prompting-guide">LTX prompting guide</a> and <a href="https://docs.ltx.io/api-documentation/api-reference/async-video-generation/submit-image-to-video">hosted image-to-video reference</a>: multi-shot prompts and the hosted inputs.</li>
+<li><a href="https://github.com/Lightricks/LTX-Desktop/blob/2ab055b98f7590581c56f9e0b2ff55ac56d459b7/backend/api_types.py">LTX Desktop <code>api_types.py</code></a>: the application's keyframe cap.</li>
+</ul>
+<p>Seedance, from BytePlus ModelArk. These pages have no revision to pin and may change.</p>
+<ul class="sources">
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/seedance-2-0">Dreamina Seedance 2.0 series tutorial</a>: model IDs, reference counts, the audio rule and the prompt formulas.</li>
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/seedance-2-5">Dreamina Seedance 2.5 series tutorial</a>: the comparison table, asset totals and input requirements.</li>
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/create-video-generation-task-api">Create video generation task API</a>: content roles, per-series limits, mutually exclusive modes and request fields.</li>
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/seedance-2-0-prompt-guide">Seedance 2.0 series prompt guide</a>: subject definition, shot numbering, the recommended asset mix, the four-person note and the sequence-image example.</li>
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/seedance-2-5-prompt-guide">Seedance 2.5 series prompt guide</a>: recommended subject counts, asset mapping, storyboards, keyframes and the differences from 2.0.</li>
+<li><a href="https://ai.byteplus.com/ark/region:ap-southeast-1/docs/seedance-portrait-asset-guide">Create portrait videos with Dreamina Seedance models</a>: the real-face rule and asset IDs.</li>
+</ul>
+<p>The Volcengine pages in Chinese give the same counts. They were read through a summary and are not cited for any figure.</p>
+<p>Two Lightricks blog posts on scene coherence and character reference sheets could not be opened and are not used.</p>
+</section>
+</article>
+</main>
+</div>
+</body>
+</html>

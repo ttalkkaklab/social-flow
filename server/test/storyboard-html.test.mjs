@@ -6,10 +6,63 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
+import { createHash, webcrypto } from 'node:crypto';
+import { runOpeningReview } from '../dist/opening-review.js';
 const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const review = require('../../skills/storyboard/references/video-production.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
+
+test('the offline opening review labels the selected hook and suppresses a verdict after the board changes', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'opening-board-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const file = join(dir, 'scenes.js');
+  const story = {primaryHookType: 'cause_mystery', language: 'en'};
+  const shot = {id: 's0001', type: 'generated', scene: 1, duration: 3, shot: {videoDesign: {before: 'One dumpling has split.'}}};
+  function save() {
+    const src = 'window.STORY = ' + JSON.stringify(story) + ';\nwindow.SCENES = ' + JSON.stringify([shot]) + ';\n';
+    writeFileSync(file, src);
+    return createHash('sha256').update(src).digest('hex');
+  }
+  const board = {stage: 'storyboard', path: dir, expectedSha256: save()};
+  const draft = await runOpeningReview({...board, action: 'prepare', surface: 'reels', audience: 'Home cooks'});
+  const {direction, sourceRevision, packetDigest} = draft.packets[0];
+  const verdicts = ['reader-a', 'reader-b', 'reader-c'].map(reviewerId => ({
+    reviewerId, ratings: Array.from({length: 5}, () => ({score: 0})), reasonToStay: 'The split dumpling at 0 s invites a cause.',
+  }));
+  await runOpeningReview({...board, action: 'record', runId: draft.runId, direction, sourceRevision, packetDigest, policyVersion: draft.policyVersion, verdicts, eligibleForRestore:false, editorialFinding:'The promised cause never appears.'});
+  storyboardHtml(dir);
+  const template = readFileSync(join(dir, 'storyboard.html'), 'utf8');
+  const start = template.indexOf('  async function currentOpeningReview()');
+  const renderer = template.slice(start, template.indexOf('  // Character count', start));
+  const strings = [...template.matchAll(/^      openingReview: \{[^]*?^      \},$/gm)].map(m => runInNewContext('({' + m[0].slice(0, -1) + '})').openingReview);
+  const window = {crypto: webcrypto};
+  function reload() {
+    runInNewContext(readFileSync(file, 'utf8'), {window});
+    runInNewContext(readFileSync(join(dir, 'review-files.js'), 'utf8'), {window});
+  }
+  const render = (lang, words) => runInNewContext(renderer + '\ncurrentOpeningReview().then(openingReviewRows)', {
+    window, TextEncoder, LANG: lang, T: {openingReview: words}, esc: String,
+  });
+  reload();
+  assert.equal(Object.keys(window.REVIEW_HOOK_LABELS).length, 18);
+  for (const [index, lang] of ['en', 'ko'].entries()) {
+    const html = await render(lang, strings[index]);
+    assert.ok(html.includes(window.REVIEW_HOOK_LABELS.cause_mystery[lang]));
+    assert.ok(html.includes(strings[index].pass) && html.includes(strings[index].editorial));
+    assert.ok(html.includes(strings[index].ineligible));
+    assert.match(html, /The promised cause never appears\./);
+    assert.match(html, /The split dumpling at 0 s invites a cause\./);
+  }
+  shot.shot.videoDesign.before = 'A cook walks into the empty shop.';
+  save();
+  reload();
+  assert.match(await render('en', strings[0]), /Refresh the review export/);
+  assert.doesNotMatch(await render('en', strings[0]), /Within ceiling/);
+  storyboardHtml(dir);
+  reload();
+  assert.match(await render('en', strings[0]), /Opening changed since review/);
+});
 
 test('review durations preserve fractional seconds before switching to minutes', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
@@ -20,6 +73,22 @@ test('review durations preserve fractional seconds before switching to minutes',
   assert.equal(render(7.75), '7.75s');
   assert.equal(render(0.1 + 0.2), '0.3s');
   assert.equal(render(150), '2.5m');
+});
+
+test('the offline header shows a numbered headline and its cue while legacy boards keep their display title', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'numbered-title-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  storyboardHtml(dir);
+  const window = {};
+  runInNewContext(readFileSync(join(dir, 'structure-contract.js'), 'utf8'), { window });
+  const html = readFileSync(join(dir, 'storyboard.html'), 'utf8');
+  const header = html.slice(html.indexOf('  var numberedTitle'), html.indexOf('  if (THEME.motionGraphicTheme)', html.indexOf('  var numberedTitle')));
+  const escape = value => String(value).replaceAll('<', '&lt;');
+  const render = () => runInNewContext(header + '\nh', { window, LANG: 'en', h: '', copy: escape, esc: escape, DOC: { displayTitle: 'Old title' } });
+  assert.match(render(), />Old title</);
+  window.STORY = { titlePlan: { episodeNumber: 11, headline: 'Ba Mochi?', type: 'reason', thumbnailCue: 'Show <Mochi>', searchTerm: 'phỏng vấn' } };
+  const output = render();
+  for (const text of ['EP11 · Ba Mochi?', 'Reason', 'Show &lt;Mochi>', 'phỏng vấn']) assert.ok(output.includes(text));
 });
 
 test('cast cards show the episode wardrobe and continuity when reusing a character sheet', () => {
@@ -72,7 +141,7 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   const plan = { sceneNo: 1, shotIds: [first.id, second.id], prompt: 'Saved <take>', requestId: 'take-1', stale: false };
   const context = { LANG: 'en', window: { VIDEO_PRODUCTION: { candidates: [plan] }, VIDEO_PRODUCTION_REVIEW: review },
     grp: { scene: 1, items: [first, second].map((s, i) => ({ s, i })) }, sc: { videoDirection: { sound: 'Street noise' } },
-    first, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
+    first, second, WIDE: false, REF_LANES: {}, refLane: () => ({ name: 'Test model', slots: 0 }),
     safeSrc: () => '', esc: s => String(s).replaceAll('<', '&lt;'),
     T: { shotCap: n => 'Shot ' + n, sceneNamed: n => 'Scene ' + n }, DOC: {}, OFF_GLYPH: '' };
   const render = expression => runInNewContext(functions + '\n' + expression, context);
@@ -112,12 +181,17 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   assert.doesNotMatch(card, /Earlier single-shot prompt|>Prompt<|>Video prompt</);
   assert.match(render('shotBodyHtml(first, [], false, 1)'), /Earlier single-shot prompt/);
   context.window.STRUCTURE = {scenes:[{no:1,speakers:[],frames:{start:'opening.png'}}]};
+  context.window.STRUCTURE_CONTRACT = require('../../skills/storyboard/references/structure-contract.js');
+  context.window.SCENES = [first, second];
   Object.assign(first,{scene:1,shot:{render:{mode:'generated_video'}}});
+  Object.assign(second,{scene:1,shot:{render:{mode:'generated_video'}}});
   const sceneCard = () => render('shotBodyHtml(first, [], true, 1)');
-  assert.match(sceneCard(),/shot-body lines-only/);
-  assert.doesNotMatch(sceneCard(),/shot-refs|Start image|End image/);
-  first.referenceImage = 'guide.png';
   context.safeSrc = file => file;
+  assert.match(sceneCard(),/Shot reference.*opening.png/s);
+  const laterCard = render('shotBodyHtml(second, [], true, 2)');
+  assert.match(laterCard,/Shot image required/);
+  assert.doesNotMatch(laterCard,/opening.png/);
+  first.referenceImage = 'guide.png';
   assert.match(sceneCard(),/Shot reference.*guide.png/s);
   assert.doesNotMatch(sceneCard(),/shot-refs|opening.png/);
 });

@@ -10,6 +10,10 @@ function seconds(value, fallback, label, max=2) {
   if (typeof n !== 'number' || !Number.isFinite(n) || n < 0 || n > max) throw new Error(label + ' must be seconds in 0..' + max);
   return n;
 }
+// The builder delays the separate voice track by this margin at the start of the card.
+function narrationPre(edit, transition, sync) {
+  return seconds(edit.pre, sync ? 0 : transition.startsWith('dip') ? .30 : 0, 'edit.pre');
+}
 function parseOptions(text) {
   const out = {};
   for (const part of (text || '').split(',').filter(Boolean)) {
@@ -36,13 +40,14 @@ function compile(scenes, text, {videoWarningsApproved=false}={}) {
     if (carry.test(t) && join<.08) throw new Error('A moving transition needs at least 0.08 seconds');
     if (!carry.test(t) && edit.transitionSeconds!==undefined) throw new Error('transitionSeconds applies only to moving transitions');
     const start = seconds(edit.in,0,'edit.in',3600);
-    const pre = seconds(edit.pre, opts.sync==='1'?0:t.startsWith('dip')?.30:0,'edit.pre');
+    const pre = narrationPre(edit, t, opts.sync==='1');
     const post = seconds(edit.post,.12,'edit.post');
     if (carry.test(t) && pre!==0) throw new Error('A split edit must start the next voice at the card boundary (pre=0)');
     if (start && s.visual?.slide) throw new Error('Slide reveal timing cannot use edit.in; author the source animation timing');
-    // A clip that carries its own voice (audioSource video) is trimmed as one body: in and out
-    // move picture and sound together, so the silent acting around a native line can go.
-    const ownVoice = s.sound?.audioSource==='video';
+    // An embedded soundtrack or a verified slice of the original conditioning WAV
+    // follows the same source interval as its footage.
+    const binding = s.visual?.video?.speechBinding;
+    const ownVoice = s.sound?.audioSource==='video' || (opts.sync==='1' && binding?.mode==='audio_conditioned' && Boolean(binding.conditioningAudioSha256));
     if (edit.out!==undefined && (!ownVoice || typeof edit.out!=='number' || !Number.isFinite(edit.out) || edit.out<=start))
       throw new Error('shot '+(i+1)+': edit.out is the source second where a card that plays its clip soundtrack (audioSource video) ends; it must be later than edit.in');
     if (opts.sync==='1' && ((start && !ownVoice) || pre || edit.post>0 || carry.test(t))) throw new Error('Sync footage requires cut, in=0 and no audio margins');
@@ -85,7 +90,7 @@ function preview(scenes, options) {
   const cards=scenes.flatMap((s,i)=>['broll','outro'].includes(s.type)?[]:[`${i}\tvoice.wav\t0\tnone\t${s.visual?.sync===true?'sync=1':''}`]).join('\n');
   return compile(scenes,cards,options).plan;
 }
-module.exports={compile,write,carry,preview,parseOptions};
+module.exports={compile,write,carry,preview,parseOptions,narrationPre};
 if(require.main===module){try{
   const board=path.resolve(process.argv[2]||'storyboard');
   const win=require('../../autoproduce/references/cost-preview.js').readScenes(path.join(board,'scenes.js'));

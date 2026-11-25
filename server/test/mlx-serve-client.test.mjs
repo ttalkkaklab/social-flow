@@ -188,6 +188,22 @@ describe('mlx generate — mocked fetch', () => {
     }
   });
 
+  it('keeps H3 requests unresolved on a lost render response and treats a rejected input as terminal', async () => {
+    const model = 'ddalcu/MiniMax-H3-Image-MLX-Serve-4bit';
+    const dir = mkdtempSync(join(tmpdir(), 'mlx-h3-lost-'));
+    try {
+      for (const status of [502,400]) {
+        globalThis.fetch = async url => {
+          if (String(url).endsWith('/health')) return jsonResponse(200,{ok:true});
+          if (String(url).endsWith('/v1/models')) return jsonResponse(200,{data:[{id:model,state:'ready',capabilities:['image']}]});
+          return jsonResponse(status,{error:'render failed'});
+        };
+        const result = await generateMlxImage({prompt:'a dish',model,width:256,height:256,outputPath:dir,filename:'dish.png'});
+        assert.equal(result.submissionUnknown,status === 502);
+      }
+    } finally { rmSync(dir,{recursive:true,force:true}); }
+  });
+
   it('edit posts mode:edit and not multipart /v1/images/edits', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'mlx-edit-'));
     const src = join(dir, 'src.png');
@@ -322,7 +338,7 @@ describe('mlx generate — mocked fetch', () => {
       numFrames: 192,
     });
     assert.equal(result.success, false);
-    assert.match(result.error, /over the 800MB cap/);
+    assert.match(result.error, /over the 768MB cap/);
     assert.equal(posted, false);
   });
 });

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 export const openingPositionsSchema = z.array(z.object({
     character: z.string().trim().min(1).describe('Cast ID, or an English character name for a standalone render.'),
-    images: z.array(z.number().int().min(1).max(4)).describe('1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference.'),
+    images: z.array(z.number().int().positive()).describe('1-based subject image numbers for this person, including clothing panels. Use [] for a bystander without a reference.'),
     position: z.string().trim().min(1).refine(value => !nonEnglishOutsideQuotes(value), 'Describe the opening position in English')
         .describe('Where the viewer sees this person at the start: side, depth, posture or orientation, and a visible landmark. Describe an off-screen start explicitly.'),
 }).strict(), { required_error: 'openingPositions required: inspect the opening image and describe each character and its reference images' }).describe('Required with MSR references. Identify every character in the opening scene, including silent listeners. Use [] only for a character-free scene.');
@@ -48,16 +48,15 @@ export const shotTimelineSchema = z.object({
             issue('Identify the owner of a face or outfit reference');
     }
 });
-export const sceneShotBindingsSchema = z.array(z.object({
-    shotId: z.string().min(1), openingPositions: openingPositionsSchema.optional(),
-    framing: sceneText.optional(), action: sceneText.optional(),
-    keyframes: z.array(z.object({ path: z.string().trim().min(1), frame, strength: z.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
-    guidance: z.object({ negativePrompt: sceneText, guidanceScale: z.number().gt(1).max(10) }).strict().optional(),
-    motionPrefix: z.string().trim().min(1).optional().describe('Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion.'),
-    performanceAudio: z.string().trim().min(1).optional().describe('Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening.'),
-    dialogueCues: z.array(z.object({ lineId: z.string().min(1), frame: z.number().int().nonnegative() }).strict()).optional(),
-}).strict()).min(1);
+const scenePromptDrafts = z.array(z.object({
+    engine: z.string().trim().min(1),
+    model: z.string().trim().min(1).optional(),
+    operation: z.string().trim().min(1),
+    prompt: z.string().min(1).max(32000).refine(text => !!text.trim(), 'Enter a complete scene prompt'),
+}).strict()).refine(drafts => new Set(drafts.map(d => JSON.stringify([d.engine, d.model, d.operation]))).size === drafts.length, 'Keep one edited scene prompt per engine, model and operation');
 export const sceneVideoDirectionSchema = z.object({
+    motionReferencePaths: z.array(z.string().trim().min(1)).min(1).max(3).optional().describe('Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot.'),
+    promptDrafts: scenePromptDrafts.optional().describe('Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections.'),
     openingPositions: openingPositionsSchema,
     dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),

@@ -1,3 +1,4 @@
+import { localVoxConfigured } from './local-voxcpm2.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 /**
  * capability_status — what this machine can actually do right now.
@@ -88,7 +89,7 @@ export function capabilityStatus(): {
         { provider: 'ltx-desktop-local', configured: localDesktopConfigured(), needs: 'Running LTX Desktop and LTX_DESKTOP_API_KEY',
           note: 'Use video_catalog with engine ltx-desktop-local to list downloaded offerings on this machine.' },
         { provider: 'astra-genai-desktop', configured: has(desktopGatewayKey()), needs: process.env.ASTRA_GENAI_DESKTOP_URL ? 'ASTRA_GENAI_DESKTOP_API_KEY' : 'ASTRA_GENAI_API_KEY', note: 'Gateway text/image/audio video, extend/retake/keyframes; discover installed models and LoRA refs with astra_genai_catalog.' },
-        { provider: 'astra-genai (LTX v2 gateway)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
+        { provider: 'astra-genai (common generation API)', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY',
           note: 'astra_genai_text2video · astra_genai_img2video · astra_genai_audio2video (audio-length clip, mono/stereo, 7350-96000 Hz, data URI ≤15,000,000 base64 chars) · astra_genai_msr (four subjects + background) · astra_genai_video_status; separate gateway token, no LoRA; configuration is not a live check' },
         { provider: 'astra video (self-hosted LTX-2.5)', configured: has(config.astraVideoApiKey), needs: 'ASTRA_VIDEO',
           note: 'astra_text2video · astra_img2video · astra_keyframe_video · astra_audio2video · astra_ic_lora · astra_video_upscale (pixel-upscaler-x2, 2x of a source up to about 512x896) · astra_video_retake · astra_video_capabilities · astra_video_list_uploads · astra_video_delete_upload (upload management requires server endpoint support; configuration is not a live check) — our own box, no per-call bill, but ONE render at a time (66-184s each plus queue); the batch lane, not the interactive one' },
@@ -111,6 +112,8 @@ export function capabilityStatus(): {
     {
       capability: 'tts',
       providers: [
+        { provider: 'mlx-audio', configured: localVoxConfigured(), needs: 'Local VoxCPM2 Python and model directory',
+          note: 'tts_local_voxcpm2 via tts_route. Paths configured; synthesis is checked on execution.' },
         { provider: 'astra-genai', configured: has(config.astraGenaiApiKey), needs: 'ASTRA_GENAI_API_KEY', note: 'tts_astra_genai; discover aliases, voices and capabilities with astra_genai_catalog kind:speech. Configuration is not a health check.' },
         { provider: 'gemini', configured: gemini, needs: 'GEMINI_API_KEY',
           note: 'tts_generate · tts_multi_speaker · tts_gemini_38' },

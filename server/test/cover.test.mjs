@@ -70,10 +70,15 @@ test('a shot cover reaches the library and reports a changed source', { skip: !c
   const { dir, sb, channel } = episode(t, { inChannel: true });
   writeFileSync(join(sb, 'storyboard.html'), '<html><head></head><body></body></html>');
   writeFileSync(join(sb, 'storyboard.md'), '# EP1 · Example');
+  const scenes = join(sb, 'scenes.js');
+  writeFileSync(scenes, readFileSync(scenes, 'utf8') + '\nwindow.STORY.titlePlan = ' + JSON.stringify({
+    episodeNumber: 1, type: 'choice', headline: 'Should I ask?', thumbnailCue: 'Show the letter before opening',
+  }) + ';');
   setCover(sb, decision({ copy: { text: '찢을까 말까', emphasis: '찢을까' }, focus: { x: 0.5, y: 0.4 } }));
   const { render, libraryWarning } = await renderCover(sb);
   assert.equal(libraryWarning, undefined);
   const index = readFileSync(join(channel, 'storyboards', 'index.html'), 'utf8');
+  assert.ok(index.includes('EP01 · Should I ask?'));
   assert.match(index, /src="\.\.\/episodes\/ep01-test\/output\/cover\/cover-9x16\.jpg"/);
   const main = render.files.find(f => f.role === 'main');
   assert.deepEqual([main.name, main.width, main.height], ['cover-9x16.jpg', 1080, 1920]);
@@ -91,6 +96,30 @@ test('a shot cover reaches the library and reports a changed source', { skip: !c
   assert.equal(stale.publish.stale, true);
   await assert.rejects(renderCover(sb), /cover_source_changed/);
 
+});
+
+test('a cover carries the board brief and requires a new decision after an editorial change', async t => {
+  const { sb } = episode(t);
+  const file = join(sb, 'scenes.js');
+  const original = readFileSync(file, 'utf8');
+  const brief = { episodeNumber: 101, type: 'reason', headline: 'Why this chair?', thumbnailCue: 'Show the empty seat' };
+  const writePlan = extra => writeFileSync(file, original + '\nwindow.STORY.titlePlan = ' + JSON.stringify({ ...brief, ...extra }) + ';');
+  writePlan({});
+  assert.equal(readCover(sb).plan.title, 'EP101 · Why this chair?');
+  assert.equal(readCover(sb).plan.type, 'reason');
+  assert.equal(readCover(sb).plan.thumbnailCue, brief.thumbnailCue);
+  const result = setCover(sb, decision({ copy: { text: 'chair' } }));
+  assert.deepEqual(result.decision.titleBrief, brief);
+  assert.ok(result.warnings.some(w => w.code === 'cover_copy_repeats_title'));
+  writePlan({ searchTerm: 'chair' });
+  assert.equal(readCover(sb).status, 'unrendered');
+  for (const edit of [{ type: 'choice' }, { headline: 'Another chair?' }, { thumbnailCue: 'Show the listener' }]) {
+    writePlan(edit);
+    assert.equal(readCover(sb).publish.stale, true);
+    await assert.rejects(renderCover(sb), /cover_title_changed/);
+  }
+  setCover(sb, decision());
+  assert.equal(readCover(sb).status, 'unrendered');
 });
 
 test('the configuration stays a literal whatever the copy holds', () => {

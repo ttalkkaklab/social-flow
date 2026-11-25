@@ -289,7 +289,7 @@ notes; do not add a compulsory tension schema or a new approval pause.
 After converting, read only the ordered performance and reconstruct who knows the secret,
 what each option costs and what changed. Then compare that reconstruction with the synopsis.
 Repair a lost cue where it belongs rather than add a narrator explaining an unperformed
-betrayal. Respect one speaking character per shot and at most four principal characters in
+betrayal. The selected model limits the pinned voices of one render. Preserve scripted one-takes and the limit of four principal characters in
 frame; split coverage without changing the disclosure order or losing a silent listener.
 An actual requested review is separate from this author's preservation pass.
 
