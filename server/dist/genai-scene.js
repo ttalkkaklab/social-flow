@@ -10,6 +10,7 @@
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
+import sceneLimits from '../../skills/_shared/genai-scene-limits.json' with { type: 'json' };
 import path from 'node:path';
 import { bareFilenameSchema } from './media-utils.js';
 import { scenePromptTemplate } from './scene-prompt.js';
@@ -32,9 +33,9 @@ export const genaiSceneSchema = z.object({
     prompt: z.string().min(1).max(16000).describe('The whole scene in one prompt. Name inputs with placeholders: {cast.role}, ' +
         '{cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them.'),
     cast: z.array(z.object({
-        id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(9),
+        id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
         voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
-    }).strict()).max(9).default([]),
+    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two referenced people').default([]),
     references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
     shots: z.array(z.object({
         id, frames: z.number().int().positive(),
@@ -55,7 +56,10 @@ export const genaiSceneSchema = z.object({
     for (const member of args.cast)
         if (new Set(member.images.map(i => i.role)).size !== member.images.length)
             issue(member.id + ': picture roles must be distinct');
-    const subjects = args.cast.reduce((n, m) => n + m.images.length, 0) + args.references.filter(r => r.role === 'object').length;
+    const pictures = args.cast.reduce((n, m) => n + m.images.length, 0);
+    if (pictures > sceneLimits.maxCharacterImages)
+        issue('scene_character_image_limit: select at most two character pictures across the scene; use one per person for a pair');
+    const subjects = pictures + args.references.filter(r => r.role === 'object').length;
     if (subjects < 1 || subjects > LIMITS.subjects)
         issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
     if (args.references.filter(r => r.role === 'background').length > LIMITS.backgrounds)

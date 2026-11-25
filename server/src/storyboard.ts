@@ -234,6 +234,7 @@ export const sceneSpeakersSchema = z.array(nonEmpty).refine(ids => new Set(ids).
 export const sceneSchema = z
   .object({
     no: z.number().int().positive().describe('Scene number — the value shots point at with `scene`'),
+    referenceSplitFrom: z.number().int().positive().optional().describe('Original scene number of a GenAI character-reference split'),
     place: z.string().optional().describe('One place — the slugline location'),
     time: z.string().optional().describe('One continuous stretch of time — 낮 · 밤 · 새벽 · 10년 뒤'),
     event: z.string().optional().describe('The one thing that happens in this scene'),
@@ -723,6 +724,7 @@ function applyTransition(shots: Shot[], at: number, change: TransitionChange): v
 }
 
 export const storyboardApplySchema = z.object({
+  splitReferenceScenes: z.boolean().optional().describe('Apply GenAI reference splits to an existing storyboard'),
   path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
   draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
   set: z.object({ structure: structureSchema.optional(), shots: z.array(shotSchema).min(1) }).optional()
@@ -900,7 +902,7 @@ function syncCopiedShotAttributes(previous: Shot | undefined, shot: Shot): Shot 
     ...(copy(2) ? {visual:{...shot.visual,action}} : {})} as Shot;
 }
 
-export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outline?: boolean; cliches?: boolean; creating?: boolean } = {}): { win: Board; findings: Finding[]; synced: number } {
+export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outline?: boolean; cliches?: boolean; creating?: boolean; referenceDirectory?: string } = {}): { win: Board; findings: Finding[]; synced: number } {
 /** Apply a patch in memory — the pure half of storyboard_apply, so a test or an API handler can run it without a file. */
   const next: Board = { ...win };
   if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
@@ -965,6 +967,7 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
   // it had, so editing a scene's text does not silently send it back to undecided.
   if (patch.scenes) scenes = upsertBy(scenes, patch.scenes.map((scene) => {
     const old = scenes.find(existing => existing.no === scene.no);
+    if (scene.referenceSplitFrom === undefined && old?.referenceSplitFrom) scene = {...scene, referenceSplitFrom:old.referenceSplitFrom};
     if (scene.frames === undefined && old?.frames) scene = {...scene,frames:old.frames};
     if (scene.speakerReferences === undefined && old?.speakerReferences) scene = {...scene,speakerReferences:old.speakerReferences};
     if (scene.speakers === undefined && old?.speakers) scene = {...scene, speakers:old.speakers};
@@ -1129,8 +1132,14 @@ export function applyPatch(win: Board, patch: StoryboardApplyArgs, opts: { outli
   if (!shots.length && !opts.outline) findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
   if ((win.STORY as { authoring?: unknown } | undefined)?.authoring === 'story-first' && (next.STORY as { authoring?: unknown } | undefined)?.authoring !== 'story-first')
     findings.push({ level: 'bad', where: 'STORY', what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
-  if (next.STRUCTURE !== undefined) findings.push(...validateStructure(next.STRUCTURE));
   findings.push(...validateShots(shots));
+  if (opts.referenceDirectory && !findings.some(f => f.level === 'bad')) {
+    const {splitReferenceScenes} = loadFromHere(join(REFERENCES_DIR, 'split-reference-scenes.js')) as {
+      splitReferenceScenes(board: Board, previous: Board, dir: string, includeExisting?: boolean): Finding[];
+    };
+    findings.push(...splitReferenceScenes(next, win, opts.referenceDirectory, patch.splitReferenceScenes));
+  }
+  if (next.STRUCTURE !== undefined) findings.push(...validateStructure(next.STRUCTURE));
   let synced = 0;
   if (!findings.some((f) => f.level === 'bad')) {
     synced = contract().sync(next);
@@ -1317,7 +1326,7 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     && ['props', 'propContinuity'].some(key => JSON.stringify(previousDoc?.[key]) !== JSON.stringify(incomingDoc?.[key])));
   if (changesProps && exists && args.expectedSha256 !== originalHash)
     throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
-  const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
+  const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists, referenceDirectory:dirname(file) });
   const hook = hookContract().resolveBoardHook(win, next, args, { directory: dirname(file), outline: opts.outline, ...opts.hookChange });
   if (hook.issue) findings.push(hook.issue);
   if (hook.story) next.STORY = hook.story;
@@ -1333,7 +1342,8 @@ export function applyStoryboard(args: StoryboardApplyArgs, opts: { outline?: boo
     const previous = win.STRUCTURE?.scenes?.find(old => old.no === scene.no);
     const members = (next.SCENES ?? []).filter(card => card.scene === scene.no);
     if (scene.frames !== undefined && !scene.frames.start && !members[0]?.timeline?.images?.some(image => image.role === 'start')) delete scene.videoOpeningSha256;
-    else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection)
+    else if (scene.frames?.start && scene.frames.start !== previous?.frames?.start && scene.videoDirection &&
+        (!scene.referenceSplitFrom || existsSync(resolve(dirname(file), scene.frames.start))))
       scene.videoOpeningSha256 = createHash('sha256').update(readFileSync(resolve(dirname(file),scene.frames.start))).digest('hex');
     sceneCasting.sceneCast(scene, members);
     if (scene.speakers?.length || scene.speakerReferences?.length) {

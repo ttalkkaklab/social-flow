@@ -201,14 +201,18 @@ test('three speaking subjects exceed one distilled MSR render, including an unin
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest','friend']);
  const input={episode:f.episode,sceneNo:1,requestId:'three-voices',args:{reserveUsd:0}};
  const check=()=>planVideo(input);
- assert.throws(check,/scene_render_voice_limit:.*3 pinned voices.*accepts 2.*split/i);
+ // All three faces are explicitly bound at the opening, even though the third line arrives later.
+ assert.throws(check, e => e.report?.shotId === 's1' && !e.report.splitBefore.length);
+ f.board.STRUCTURE.scenes[0].videoDirection.openingPositions.pop();
+ f.save();
+ assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.join() === 's3');
  const [shot]=f.board.SCENES;
  shot.narration=f.board.SCENES.flatMap(card=>card.narration);
  shot.duration=169/24;
  f.board.SCENES=[shot];
  f.board.STRUCTURE.scenes[0].videoDirection.oneTake=true;
  f.save();
- assert.throws(check,/scene_render_voice_limit:.*3 pinned voices.*accepts 2.*one.take/i);
+ assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.length === 0 && /one-take/.test(e.message));
  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
 });
 test('remuxing the same recording cannot authorize a second speaker',async t=>{
@@ -1933,48 +1937,29 @@ test('a guide on the first shot of a silent GenAI scene leaves the request uncha
   assert.ok(plan.directionWarnings.some(message => message.startsWith('shot_reference_omitted: ' + guide.shotId)));
 });
 
-test('a GenAI scene sends four silent subjects and one background, names the ending it leaves out and refuses a fifth person', t => {
-  const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'});
-  const directory=path.join(f.episode,'storyboard');
-  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc=size=64x64:rate=1',
-    '-frames:v','8',path.join(directory,'source-%d.png')]);
-  const characters=['ada','bo','cy','dan','eve'].map((id,i)=>({id,panels:{face:'source-'+(i+1)+'.png'}}));
-  const [ada,bo,cy,dan,eve]=characters;
-  const subject=actor=>({id:actor.id+'-face',role:'character',character:actor.id,path:actor.panels.face,
-    use:'video',purpose:'Preserve the face of '+actor.id+'.'});
-  const position=actor=>({character:actor.id,images:[],position:'Standing by the door.'});
-  const frames={start:'source-6.png',end:'source-7.png'}, background='source-8.png';
-  const scene={no:1,speakers:[],frames,speakerReferences:[ada,bo].map(actor=>({character:actor.id,path:actor.panels.face})),
-    videoDirection:{openingPositions:characters.slice(0,4).map(position),emotion:'The visitors relax.'}};
-  const shot={id:'s1',scene:1,duration:121/24,narration:[],visual:{character:characters.slice(0,4).map(actor=>actor.id),
-    references:[subject(cy),{id:'hall',role:'background',path:background,use:'video',purpose:'Keep the tiled hall.'}]},
-    timeline:{startFrame:0,endFrame:121,transition:'open',framing:'Wide shot.',action:'The visitors enter the hall.',
-      images:[{frame:0,path:dan.panels.face,role:'face',character:dan.id}]}};
-  f.board.SCENES=[shot];
-  f.board.STRUCTURE={scenes:[scene]};
-  f.board.SB_DOC={characters};
-  f.save();
-  const input={episode:f.episode,sceneNo:1,requestId:'crowd',args:{reserveUsd:0}};
-  // Scene mode opens the shot on one picture and has no slot for the scene's ending, so the plan names the picture it leaves out.
-  assert.ok(planVideo(input,false).directionWarnings.includes('scene_picture_omitted: s1 end picture at frame 120 is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot'));
-  delete frames.end;
-  f.save();
-  const plan=planVideo(input);
-  assert.equal(plan.tool,'astra_genai_scene');
-  assert.equal(plan.args.shots[0].imagePath,path.join(directory,frames.start));
-  assert.deepEqual(plan.args.references.map(ref=>[ref.role,ref.imagePath]),[['background',path.join(directory,background)]]);
-  const labels=sceneLabels(plan.args), prompt=numbered(plan);
-  for (const actor of [ada,bo,cy,dan]) {
-    const member=plan.args.cast.find(person=>person.id===actor.id);
-    assert.deepEqual(member.images.map(image=>image.imagePath),[path.join(directory,actor.panels.face)]);
-    assert.ok(prompt.includes(actor.id+' ('+labels[actor.id+'.'+member.images[0].role]+')'),actor.id);
-  }
-  shot.visual.character.push(eve.id);
-  shot.visual.references.push(subject(eve));
-  scene.videoDirection.openingPositions.push(position(eve));
-  f.save();
-  assert.throws(()=>planVideo(input),/scene_cast_exceeded: scene 1 references ada, bo, cy, dan, eve/);
-  assert.deepEqual(fs.readdirSync(path.join(f.episode,'.work/video-routing/plans')),[plan.id+'.json']);
+test('GenAI counts a silent bystander only when their identity is sent to video, including a timeline face', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
+  const dir = path.join(f.episode, 'storyboard');
+  const ids = ['ada','bo','cy'];
+  for (const file of [...ids, 'end', 'hall']) fs.writeFileSync(path.join(dir,file+'.png'),png);
+  f.board.SB_DOC = {characters:ids.map(id => ({id, panels:{face:id+'.png'}}))};
+  f.board.STRUCTURE = {scenes:[{no:1, speakers:[], frames:{start:'opening.png',end:'end.png'},
+    speakerReferences:ids.slice(0,2).map(character => ({character,path:character+'.png'})),
+    videoDirection:{openingPositions:ids.map(character => ({character,images:[],position:'By the door.'})),emotion:'They relax.'}}]};
+  const shot = {id:'s0001', scene:1, duration:121/24, narration:[],
+    visual:{character:ids.slice(0,2), bystanders:['cy'], references:[
+      {id:'cy-face',character:'cy',role:'bystander',use:'image',path:'cy.png',purpose:'Draw the witness.'},
+      {id:'hall',role:'background',use:'video',path:'hall.png',purpose:'Keep the tiled hall.'}]},
+    timeline:{startFrame:0,endFrame:121,transition:'open',framing:'Wide shot.',action:'The visitors enter.',images:[]}};
+  f.board.SCENES = [shot]; f.save();
+  const input = {episode:f.episode,sceneNo:1,requestId:'silent-refs',args:{reserveUsd:0}};
+  const plan = planVideo(input,false);
+  assert.deepEqual(plan.args.cast.map(person => person.id),['ada','bo']);
+  assert.deepEqual(plan.args.references.map(ref => ref.role),['background']);
+  assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_picture_omitted: s0001 end')));
+  shot.timeline.images.push({frame:0,path:'cy.png',role:'face',character:'cy'}); f.save();
+  assert.throws(() => planVideo(input,false), error => error.report?.shotId === shot.id &&
+    error.report.characters.join() === 'ada,bo,cy' && !error.report.splitBefore.length);
 });
 
 test('a GenAI scene sends one cast for the people of all its shots, by the panel rule for that count', t => {
@@ -1998,13 +1983,13 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
   }
   f.save();
   const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false);
-  // Two people take each face, then each front; the backs are left out and named.
+  // Each person gets one face. The plan identifies the omitted body panels.
   assert.deepEqual(plan.args.cast.map(member => [member.id, member.images.map(image => path.basename(image.imagePath))]),
-    [['hero', ['face.png', 'front.png']], ['guest', ['face.png', 'front.png']]]);
+    [['hero', ['face.png']], ['guest', ['face.png']]]);
   assert.deepEqual(plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 3).join(' ')),
-    ['s0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'back')]);
+    ['s0 ' + panel('hero', 'front'), 's0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'front'), 's1 ' + panel('guest', 'back')]);
   // The person who enters later still has an opening row, so the gateway is told where they start.
-  assert.match(plan.args.prompt, /guest \(\{guest\.face\}, \{guest\.front\}\): Not in the opening view; appears in a later shot\./);
+  assert.match(plan.args.prompt, /guest \(\{guest\.(?:face|image)\}\): Not in the opening view; appears in a later shot\./);
   // Over the cap the scene is composed again with fewer optional words, in a fixed order: design notes and expressions
   // go, the action and lines stay, and the plan says what was left out.
   const host = f.board.SCENES[0].visual;
@@ -2017,7 +2002,7 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
   assert.doesNotMatch(fitted.args.prompt, /hall lamp|brows raised/);
   assert.match(fitted.args.prompt, /The host waits\.[\s\S]*The guest steps in\./);
   // The short panel sentence keeps every reference name whole, so the gateway's numbering still reaches it.
-  assert.match(fitted.args.prompt, /\{hero\.face\} \(face\), \{hero\.front\} \(headless front body\): one person, hero\./);
+  assert.match(fitted.args.prompt, /\{hero\.(?:face|image)\}/);
   // The gateway caps the numbered prompt; a scene still longer at the last step is refused before any file is uploaded.
   f.board.SCENES[1].visual.action = 'The guest steps in. '.repeat(100).trim();
   f.save();

@@ -414,7 +414,7 @@
           else identified = false;
         });
       }
-      return { no, place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
+      return { no, ...(scene?.referenceSplitFrom ? {referenceSplitFrom:scene.referenceSplitFrom} : {}), place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
         shotIds: shots.map(shot => shot.id ?? null), speakers: [...speakers], speakersKnown: identified };
     });
     return runs.slice(1).map((right, index) => {
@@ -424,14 +424,15 @@
         return first && second ? first === second : null;
       };
       const speakers = [...new Set([...left.speakers, ...right.speakers])];
-      return { left, right, samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
+      const referenceSplit = right.referenceSplitFrom && right.referenceSplitFrom === (left.referenceSplitFrom ?? left.no);
+      return { left, right, ...(referenceSplit ? {reason:'scene_character_reference_limit'} : {}), samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
         speakers, speakersKnown: left.speakersKnown && right.speakersKnown };
     });
   }
 
   function sceneBoundaryFindings(win) {
     if (win.STORY?.authoring !== 'story-first') return [];
-    return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime).map(join => ({
+    return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime && join.reason !== 'scene_character_reference_limit').map(join => ({
       level: 'warn', code: 'scene_boundary_review', where: 'scene ' + join.right.no,
       what: `scene_boundary_review: scenes ${join.left.no} and ${join.right.no} share the same place and time. ` +
         'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.' }));
