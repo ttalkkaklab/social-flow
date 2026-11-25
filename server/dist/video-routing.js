@@ -807,7 +807,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         throw new Error(`reference_speech_route: ${tool} renders a shot whose character speaks; plan silent and voiceover/inner-thought shots with operation:"image" and external timed TTS for voiceover; split mixed deliveries first`);
     const visual = context.shot.visual;
     const silentPicture = !lines.some(line => line.delivery === 'on_screen' || line.delivery === 'off_screen');
-    const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'seedance_img2video' && SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL)]?.audio || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.soundtrack);
+    const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'minimax_img2video' || tool === 'seedance_img2video' && SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL)]?.audio || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.soundtrack);
     // Voiceover pictures use their own timed speech track.
     const sound = context.shot.sound;
     const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;

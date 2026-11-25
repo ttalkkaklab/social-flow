@@ -50539,6 +50539,12 @@ function scenePromptProfile(tool, model2) {
 function usesGeneratedVoice(tool, dialogueVoice) {
   return dialogueVoice === "model_generated" && scenePromptProfile(tool).allowsGeneratedVoice;
 }
+function formatReferenceLabel(style, kind, index) {
+  const label = kind[0].toUpperCase() + kind.slice(1);
+  if (style === "picture_audio_tags") return "<" + (kind === "image" ? "Picture" : label) + " " + index + ">";
+  if (style === "reference_indexed") return "reference " + kind + " " + index;
+  return (style === "at_indexed" ? "@" : "") + label + " " + index;
+}
 
 // src/config.ts
 import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
@@ -50703,10 +50709,10 @@ function mediaType(file, allowed) {
   if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path2.basename(file)}; use ${allowed.join(", ")}`);
   return MIME[ext];
 }
-function dataUri(file, allowed, maxBytes) {
+function dataUri(file, allowed, maxBytes, measure = "file") {
   const type = mediaType(file, allowed);
-  const size = fs2.statSync(file).size;
-  if (size > maxBytes) throw new Error(`${path2.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
+  const raw = fs2.statSync(file).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
+  if (size > maxBytes) throw new Error(`${path2.basename(file)} is ${(size / 1048576).toFixed(1)} MB${measure === "encoded" ? " once base64-encoded" : ""}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs2.readFileSync(file).toString("base64")}`;
 }
 var sleep = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
@@ -50821,7 +50827,7 @@ function ltxApiAudioSeconds(file) {
   return seconds2;
 }
 function buildLtxApiBody(request) {
-  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576);
+  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576, "encoded");
   const body = {
     model: request.model,
     resolution: request.resolution,
@@ -50834,7 +50840,7 @@ function buildLtxApiBody(request) {
   if ("audioPath" in request) {
     const seconds2 = ltxApiAudioSeconds(request.audioPath), max = ltxApiAudioMax(request.model, request.resolution);
     if (seconds2 < 2 || seconds2 > max) throw new Error(`${request.model} at ${request.resolution} takes 2\u2013${max} s of audio; ${request.audioPath} runs ${seconds2.toFixed(2)} s`);
-    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576);
+    body.audio_uri = dataUri(request.audioPath, AUDIO_EXT, 15 * 1048576, "encoded");
   } else Object.assign(body, { duration: request.durationSeconds, generate_audio: request.generateAudio });
   if (JSON.stringify(body).length > 32 * 1048576) throw new Error("LTX request body exceeds 32 MB; use smaller frames or audio");
   return { endpoint: "audioPath" in request ? "audio-to-video" : "image-to-video", body };
@@ -50922,6 +50928,9 @@ var common2 = {
   aspectRatio: external_exports.enum(["16:9", "9:16"]).default("16:9"),
   generateAudio: external_exports.boolean().default(true),
   negativePrompt: external_exports.string().optional(),
+  // Vertex defaults enhancePrompt to true and may rewrite the prompt. Sent only when set: whether 3.1 accepts
+  // false is untested live.
+  enhancePrompt: external_exports.boolean().optional().describe("Vertex prompt enhancement; omitted keeps the vendor default (on). false asks Veo to use the prompt as written."),
   seed: external_exports.number().int().min(0).max(4294967295).optional(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").optional()
@@ -50977,12 +50986,13 @@ function buildVeoBody(request) {
     aspectRatio = sourceAspect;
     instance.video = { mimeType: "video/mp4", bytesBase64Encoded: fs4.readFileSync(file).toString("base64") };
   }
-  const { resolution: resolution2, generateAudio, negativePrompt, seed } = request;
+  const { resolution: resolution2, generateAudio, enhancePrompt, negativePrompt, seed } = request;
   return { instances: [instance], parameters: {
     sampleCount: 1,
     aspectRatio,
     resolution: resolution2,
     generateAudio,
+    enhancePrompt,
     negativePrompt,
     seed,
     ..."durationSeconds" in request ? { durationSeconds: request.durationSeconds } : {}
@@ -51234,7 +51244,7 @@ var localSpecs = external_exports.object({
     external_exports.object({
       model: modelId,
       spec: external_exports.object({
-        capabilities: external_exports.object({ t2v: external_exports.boolean(), i2v: external_exports.boolean(), a2v: external_exports.boolean() }),
+        capabilities: external_exports.object({ t2v: external_exports.boolean(), i2v: external_exports.boolean(), a2v: external_exports.boolean() }).nullable(),
         supported_resolutions_durations: matrix,
         a2v_supported_resolutions_durations: matrix.nullish(),
         dropped_aspect_cells: external_exports.array(droppedAspect).nullish()
@@ -51295,7 +51305,8 @@ function validateDesktopFiles(args) {
     if (typeof file !== "string") continue;
     mediaType(
       file,
-      field === "audioPath" ? [".mp3", ".wav", ".ogg", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
+      // LTX Desktop's asset ingest refuses .ogg.
+      field === "audioPath" ? [".mp3", ".wav", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
     );
     const stat2 = statSync4(file);
     if (!stat2.isFile() || stat2.size === 0) throw new Error("Expected a nonempty local media file: " + file);
@@ -51333,7 +51344,7 @@ async function checkDesktopOffering(args, minimumSeconds) {
   const model2 = catalog.models.find((item) => item.id === args.model);
   const audio = typeof args.audioPath === "string";
   const operation = audio ? "a2v" : args.imagePath ? "i2v" : "t2v";
-  if (catalog.unavailableReason || !model2?.capabilities[operation])
+  if (catalog.unavailableReason || !model2?.capabilities?.[operation])
     throw new Error(
       catalog.unavailableReason || "Selected local model or operation is unavailable: " + args.model
     );
@@ -51623,7 +51634,7 @@ var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
 var H3_RENDER_TIMEOUT_MS = 90 * 6e4;
 var h3RenderTransport = new import_undici2.Agent({ headersTimeout: H3_RENDER_TIMEOUT_MS, bodyTimeout: H3_RENDER_TIMEOUT_MS });
 var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
-var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+var MAX_VIDEO_RGB_BYTES = 768 * 1024 * 1024;
 var MLX_IMAGE_DIMENSION_STEP = 16;
 var MIN_MLX_IMAGE_DIMENSION = 256;
 var MAX_MLX_IMAGE_DIMENSION = 2048;
@@ -53531,6 +53542,7 @@ var common5 = {
   model: external_exports.enum(Object.keys(MINIMAX_MODELS)).default("MiniMax-H3").describe("MiniMax H3 model id, e.g. MiniMax-H3."),
   resolution: external_exports.enum(["480P", "768P", "2K"]).default("768P").describe("Output resolution; 2K only on MiniMax-H3."),
   durationSeconds: external_exports.number().int().min(4).max(MINIMAX_MAX_SECONDS).default(5).describe("Whole seconds, 4\u201315 (MiniMax-H3-Max 5\u201315)."),
+  generateAudio: external_exports.boolean().optional().describe("Native soundtrack; false renders a silent clip. Omitted: the vendor default, on."),
   outputPath: external_exports.string().optional().describe("Output directory."),
   filename: bareFilenameSchema("video").optional().describe("MP4 filename.")
 };
@@ -53663,7 +53675,7 @@ var reference = (engine, deployment, schema, facts = {}) => ({ ...entry(engine, 
 var SEEDANCE = { modelConstraints: SEEDANCE_MODEL_SPECS };
 var SEEDANCE_VOICES = Object.fromEntries(Object.entries(SEEDANCE_MODEL_SPECS).map(([model2, spec]) => [model2, spec.referenceAudio.maxClips]));
 var DESKTOP = { modelConstraints: { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } };
-var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
+var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
 var HEYGEN = { modelConstraints: { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } };
 var LOCAL_NOTES = {
   ltx_video_generate: "LTX 8k+1 frames; MLX-Serve backend.",
@@ -53689,7 +53701,8 @@ var VIDEO_ADAPTERS = Object.freeze({
         throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
       const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
       const offset = videos.reduce((count2, files) => count2 + (Array.isArray(files) ? files.length : 0), 0);
-      const notes = [...originals.values()].map((character, index) => `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+      const label = (index) => formatReferenceLabel(scenePromptProfile("seedance_reference", args.model).referenceLabels, "video", index);
+      const notes = [...originals.values()].map((character, index) => `Use ${label(offset + index + 1)} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return {
         ...args,
         realFaceInput: cast.some((person) => person.face) || args.realFaceInput === true,
@@ -55892,7 +55905,7 @@ function prepareVideoSound(tool, input, sound = {}) {
   if (native.length && /Audio:\s*silent\b/i.test(String(input.prompt)))
     throw new Error("Native SFX conflict with Audio: silent in the prompt; revise the authored sound direction");
   const args = { ...input };
-  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_") || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
+  if ((native.length || conditioned.length || sound.audioSource === "video") && (tool.startsWith("seedance_") || tool.startsWith("astra_") || tool.startsWith("minimax_") || HOSTED_VIDEO_ROUTES[tool]?.soundtrack) && !["astra_genai_audio2video", "astra_genai_msr"].includes(tool)) {
     if (input.generateAudio === false) throw new Error("Cannot discard the requested input soundtrack");
     if (!tool.startsWith("astra_genai_desktop_")) args.generateAudio = true;
   }

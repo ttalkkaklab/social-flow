@@ -30,7 +30,7 @@ test('native feature bodies separate temporal references, audio opt-in, edit cap
   const edit=buildDesktopBody('retake',{model:base.model,sourceVideoPath:'v',startTime:0,duration:2,targetResolution:{width:576,height:320},reserveUsd:0},{v:'video'});
   assert.deepEqual(edit.params.resolution,{width:576,height:320});assert.equal(edit.params.targetResolution,undefined);
   // Retake and extend take no rewrite policy, even with a prompt.
-  assert.equal(buildDesktopBody('extend',{model:base.model,prompt:'A ball rolls on',sourceVideoPath:'v',duration:2,reserveUsd:0},{v:'video'}).params.promptProvenance,undefined);
+  assert.equal(buildDesktopBody('extend',{model:base.model,prompt:'A ball rolls on',sourceVideoPath:'v',duration:2,reserveUsd:0},{v:'video'}).params.promptProvenance,'enhanced');
   const pins={...base,keyframes:[{imagePath:'a',frameIndex:0,strength:0},{imagePath:'b',frameIndex:48,strength:1}]};
   const keyframes=buildDesktopBody('keyframes',pins,{a:'a',b:'b'});
   assert.equal(keyframes.params.model,'fast');assert.equal(keyframes.keyframes[0].strength,0);

@@ -8,8 +8,9 @@ limits, what the planner writes for this family and what was tested.
 Where the other facts live:
 
 - The local adapter's contract, reference counts and sample lengths:
-  [FastH3 contract](../../../docs/fasth3-omni.md#contract).
-- The hosted adapter's parameters: `video_catalog {engine:"minimax", operation:"reference"}`.
+  [call reference: FastH3 Omni](../../../docs/video-models.md#fasth3-omni).
+- The hosted adapter's parameters: `video_catalog {engine:"minimax", operation:"reference"}`, and its
+  wire request and limits: [call reference: MiniMax](../../../docs/video-models.md#minimax-hosted-video-minimax-open-platform).
 - Sources for every upstream figure below, with the passages quoted:
   [reference limits study](../../../docs/research/2026-11-25-reference-limits/index.html#h3).
 
