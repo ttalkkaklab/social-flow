@@ -14,6 +14,7 @@ import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPl
 import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
+import { runOpeningReview } from './opening-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
 import { reviewActing as reviewTtsActing, actingReviewSchema as ttsActingReviewSchema } from './tts-acting-review.js';
 
@@ -262,6 +263,7 @@ function knownKeys(schema: z.ZodTypeAny): Set<string> | undefined {
       return new Set(Object.keys((def.shape as () => Record<string, unknown>)()));
     }
     current = def.schema ?? def.innerType;
+    if (!current) return undefined;
   }
   return undefined;
 }
@@ -1720,6 +1722,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const r = storyboard.checkStoryboard(parseArgs(storyboard.storyboardCheckSchema, args));
     return text(storyboard.renderCheck(r));
   },
+  story_opening_review: async args => text(JSON.stringify(await runOpeningReview(args))),
   scenario_check: async (args) => {
     const r = storyboard.checkScenario(parseArgs(storyboard.scenarioCheckSchema, args));
     return text(JSON.stringify(r, null, 2));

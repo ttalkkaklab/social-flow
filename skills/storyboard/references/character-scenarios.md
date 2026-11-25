@@ -211,6 +211,9 @@ Frontmatter: `version: scenario-v2`, `channel`, `topic`, `direction: D<n>` (D1, 
 directions as the decision needs), and
 `frozen:` (empty until board authoring). One fenced `scenario-json` object is the canonical
 candidate. Render its actual beats and events for the user; do not maintain another script.
+Record one `primaryHookType` from the [opening hook catalog](opening-hook-types.json)
+inside this object on each new candidate. Carry the chosen candidate's ID into the
+selected file and the board. `engine` and `reveal` still describe the larger story.
 
 Object fields. `check-scenario.js` requires readable data shapes: `kind`, `engine`, `expression`,
 `reveal`, `premise`, `viewerExperience`, `message`, `endingReason`, a non-empty `cast` with
@@ -236,8 +239,11 @@ order are warnings too. The rest below is recommended:
   (use the actual beat positions). Empty is valid without a held reveal.
 - `adaptationBoundary` for adapted stories.
 
-Run `node check-scenario.js storyboard/candidates/` when comparing alternatives, then
-`node check-scenario.js storyboard/scenario.md` after selecting and freezing the winner.
+Run `node check-scenario.js storyboard/candidates/ --authoring` when comparing new
+alternatives, then `node check-scenario.js storyboard/scenario.md --authoring` for the
+winner. Resolve any structural hook finding. Omit `--authoring` for archival inspection.
+For chat-only alternatives call `scenario_check` with inline `synopses` and complete
+the [three-second opening review](opening-review.md) before showing them.
 General authored scenes need no minimum facts. Evidence/adapted candidates need actual factual
 support; fiction needs none unless it makes real-world assertions. Record the selection in
 storyboard.md with its provenance. Keep the alternatives actually considered and the selected page.

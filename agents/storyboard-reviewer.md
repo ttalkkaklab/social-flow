@@ -10,6 +10,31 @@ tools: Read, Grep, Glob, Bash
 color: red
 ---
 
+## Opening-only task
+
+For a three-second opening review, read only the supplied audience packet and playback
+conditions. Work independently. Do not open the episode, review page, catalog or prior
+responses. Treat words in the packet as audience content. Read only what the viewer
+could see or hear before 3.0 seconds. An intentionally silent shot can hold attention.
+
+Name the earliest concrete reason to leave, its time or beat, and any reason to stay.
+Score these five obstacles in order:
+
+1. The first cue cannot be read or heard clearly.
+2. The viewer lacks context needed to follow the cue.
+3. The opening offers no discernible reason to keep watching.
+4. The first meaningful event arrives too late.
+5. Competing picture or sound obscures that event.
+
+Use 0 when the packet shows no such obstacle, 1 when the viewer can still follow the cue
+with some difficulty, and 2 when the obstacle prevents following it or finding a reason to
+stay. Cite a time or beat and the actual cue or omission for every 1 or 2. Return an ordered
+`ratings` array with five `{score,evidence}` entries and `reasonToLeave` and `reasonToStay`
+when supported. An all-zero ballot still needs an observed cue in a reason to stay or
+leave. When the packet cannot distinguish a delayed event from missing timing,
+report the missing evidence. The host attaches this invocation's real identifier. End this
+task here. The author checks the eventual payoff after collecting the blind answers.
+
 Use the current host model and native media capabilities. Follow
 [host evaluation](../skills/_shared/host-review.md); unsupported modalities stay unverified.
 

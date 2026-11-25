@@ -1,0 +1,128 @@
+[
+  {
+    "id": "cause_mystery",
+    "family": "Curiosity",
+    "en": "Cause mystery",
+    "ko": "원인 미스터리",
+    "criterion": "Explain an anomalous observation using evidence."
+  },
+  {
+    "id": "identify_from_clues",
+    "family": "Curiosity",
+    "en": "Identify from clues",
+    "ko": "식별·추리",
+    "criterion": "Identify an unknown person, object or source from available clues."
+  },
+  {
+    "id": "predict_outcome",
+    "family": "Curiosity",
+    "en": "Predict the outcome",
+    "ko": "예측 질문",
+    "criterion": "Commit to a prediction before seeing the outcome."
+  },
+  {
+    "id": "expectation_violation",
+    "family": "Surprise",
+    "en": "Expectation violation",
+    "ko": "기대 위반",
+    "criterion": "Notice something contradict an expectation set by the scene."
+  },
+  {
+    "id": "challenge_belief",
+    "family": "Surprise",
+    "en": "Challenge a belief",
+    "ko": "통념 반박",
+    "criterion": "Reconsider a recognizable claim in light of counterevidence."
+  },
+  {
+    "id": "story_outcome_first",
+    "family": "Surprise",
+    "en": "Story outcome first",
+    "ko": "이미 일어난 결과",
+    "criterion": "See a later story event and want to know how the characters reached it."
+  },
+  {
+    "id": "in_medias_res",
+    "family": "Tension and relationships",
+    "en": "In medias res",
+    "ko": "사건 한복판",
+    "criterion": "Join an unfinished action whose outcome matters."
+  },
+  {
+    "id": "deadline_choice",
+    "family": "Tension and relationships",
+    "en": "Deadline and choice",
+    "ko": "마감과 선택",
+    "criterion": "See a choice, a deadline and the cost of delay."
+  },
+  {
+    "id": "conflict_reaction",
+    "family": "Tension and relationships",
+    "en": "Conflict and reaction",
+    "ko": "갈등과 반응",
+    "criterion": "See a boundary crossed and watch the recipient respond."
+  },
+  {
+    "id": "finished_result_first",
+    "family": "Utility and evidence",
+    "en": "Finished result first",
+    "ko": "결과 선공개",
+    "criterion": "See a finished result and want the method, effort or cost."
+  },
+  {
+    "id": "side_by_side_comparison",
+    "family": "Utility and evidence",
+    "en": "Side-by-side comparison",
+    "ko": "전후·나란히 비교",
+    "criterion": "Compare states or alternatives under legible conditions."
+  },
+  {
+    "id": "live_demonstration",
+    "family": "Utility and evidence",
+    "en": "Live demonstration",
+    "ko": "실험·현장 시연",
+    "criterion": "Watch a test begin and judge the evidence it produces."
+  },
+  {
+    "id": "everyday_frustration",
+    "family": "Relevance and trust",
+    "en": "Everyday frustration",
+    "ko": "생활 불편·공감",
+    "criterion": "Recognize a familiar difficulty and want a response."
+  },
+  {
+    "id": "audience_condition",
+    "family": "Relevance and trust",
+    "en": "Audience condition",
+    "ko": "시청자·조건 특정",
+    "criterion": "Recognize a situation or condition that applies to them."
+  },
+  {
+    "id": "firsthand_access",
+    "family": "Relevance and trust",
+    "en": "Firsthand access",
+    "ko": "기록·현장 접근",
+    "criterion": "Inspect an original record, location or access the author can substantiate."
+  },
+  {
+    "id": "point_of_view_roleplay",
+    "family": "Form and sensory cues",
+    "en": "Point-of-view roleplay",
+    "ko": "관점·상황극",
+    "criterion": "Experience a situation from the enacted viewpoint."
+  },
+  {
+    "id": "participation_challenge",
+    "family": "Form and sensory cues",
+    "en": "Participation challenge",
+    "ko": "미션·따라 하기",
+    "criterion": "Try a task with understandable rules and an observable result."
+  },
+  {
+    "id": "sensory_pattern",
+    "family": "Form and sensory cues",
+    "en": "Sensory pattern",
+    "ko": "소리·동작·반복",
+    "criterion": "Follow a distinctive sound, movement or repetition as it develops."
+  }
+]
