@@ -77,3 +77,15 @@ test('a voice sample longer than scene mode takes is refused before anything is 
   assert.throws(() => checkSceneVoices({ cast: cast(sample(12)) }), /scene_voice_too_long: hero's voice sample runs 12\.0 s/);
   assert.throws(() => checkSceneVoices({ cast: cast(path.join(dir, 'missing.wav')) }), /scene_voice_unreadable/);
 });
+
+test('H3 validates its own frame grid and numbers all shot pictures separately from voices', () => {
+  const cast=['a','b','c'].map(id=>({id,images:[{role:'face',imagePath:id+'.png'}],voicePath:id+'.wav'}));
+  const shots=[{id:'s1',frames:78,imagePath:'wide.png'},{id:'s2',frames:90,imagePath:'reverse.png'}];
+  const input=sceneArgs({model:'minimax-h3',cast,shots,prompt:'{s1.image} then {s2.image}. {b.face} with {b.voice}.'});
+  const labels=sceneLabels(input),prompt='<Picture 4> then <Picture 5>. <Picture 2> with <Audio 2>.';
+  assert.equal(resolveScenePrompt(input.prompt,labels),prompt);
+  assert.equal(checkSceneValidation(input,{resolved:{labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]}}).numFrames,175);
+  assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:346}]}).success,false);
+  assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:60}]}).success,false);
+  assert.equal(genaiSceneSchema.safeParse({...input,cast:[...cast,{...cast[0],id:'d'}]}).success,false);
+});

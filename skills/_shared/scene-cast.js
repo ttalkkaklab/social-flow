@@ -94,7 +94,7 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, generateAu
     const capacity = entry?.voice.maxPinnedVoicesPerRender;
     limit = typeof capacity === 'number' ? capacity : capacity?.[model];
   }
-  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
+  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled' && !(tool === 'astra_genai_scene' && model === 'minimax-h3'))
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
   // One render binds the whole scene's voices. A clip the retired per-shot route made rendered each card apart (perCard).
   for (const group of perCard ? cards.map(card => [card]) : [cards]) {
@@ -112,13 +112,15 @@ const castIds = value => [].concat(value || []).map(person => typeof person === 
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
 // `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
-function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
+function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false, model) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
   const voiceOnly = new Set(actors.filter(actor => actor.voiceOnly === true).map(actor => actor.id));
   const speakers = sceneCast(scene, cards).filter(id => !voiceOnly.has(id));
   const declaredRefs = scene.speakerReferences ?? [];
-  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character)])];
+  const h3 = engine === 'astra-genai' && model === 'minimax-h3';
+  const visibleH3 = h3 && !declaredRefs.length ? cards.flatMap(card => castIds(card.visual?.character ?? card.visual?.characters)).filter(id => !voiceOnly.has(id)) : [];
+  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character), ...visibleH3])];
   if (declaredRefs.some(ref => !actors.some(actor => actor.id === ref.character)))
     throw new Error('scene_reference_owner: register the owner of every scene identity reference');
   if (scene.speakerReferences?.some(ref => voiceOnly.has(ref.character)))
@@ -198,11 +200,11 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     ...castIds(card.visual?.character ?? card.visual?.characters),
     ...(card.visual?.references ?? []).filter(ref => personRoles.has(ref.role) && ref.role !== 'bystander' && ref.use !== 'image').map(ref => ownerOf(ref, card)),
   ]), ...identities])].filter(id => id && !voiceOnly.has(id)) : [];
-  if (sceneCastIds.length > 4)
+  if (!h3 && sceneCastIds.length > 4)
     throw new Error('scene_cast_exceeded: scene ' + scene.no + ' references ' + sceneCastIds.join(', ') + '; GenAI scene mode takes at most four people. Split the scene or show someone as a bystander');
   let panels;
   // A board without shared panel sheets keeps each shot's own references, as before.
-  try { if (sceneCastIds.length && !declaredRefs.length) panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no, sceneCastIds, 'video'); }
+  try { if (sceneCastIds.length && !declaredRefs.length && (!h3 || sceneCastIds.length <= 4)) panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no, sceneCastIds, 'video'); }
   catch { sceneCastIds.length = 0; }
   if (panels) references.splice(0, references.length, ...panels.map(ref => ({...ref, scope:'scene',
     character:sceneCastIds.find(id => ref.id === 'scene-' + scene.no + '-' + id + '-' + ref.id.split('-').at(-1))})));

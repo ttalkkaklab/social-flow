@@ -212,7 +212,7 @@ export function resolveScenePrompt(template: string, {slots, unlabeled, ambiguou
   return {prompt, body, issues};
 }
 
-/** The submitted prompt with its numbers turned back into names: what an author edits and sends as `prompt`. */
+/** The submitted prompt with its numbers turned back into names: the editable storyboard prompt. */
 export function scenePromptTemplate(prompt: string, {slots}: Pick<ReturnType<typeof scenePromptSlots>, 'slots'>, header = '', lines?: readonly string[]) {
   const names = new Map<string, string>();
   // A character's single picture has two names; the role name is the one that stays valid when a second picture is added.
@@ -227,7 +227,7 @@ export function scenePromptTemplate(prompt: string, {slots}: Pick<ReturnType<typ
 
 /** Check the ordered script before rendering the provider's numbered references. */
 export function assertSceneDialogue(template: string, expected: readonly {speaker?: string; tts?: string; delivery?: string}[],
-  cast: PromptCast, composed: string, nativeDialogue = true): void {
+  cast: PromptCast, composed: string, nativeDialogue = true, storyboardDirections = false): void {
   const script = expected.flatMap(line => line.tts ? [line.tts] : []);
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed,script);
@@ -257,7 +257,7 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
       clause = parts[partIndex+1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
       for (const sentence of sentences) {
         const text = unlabel(sentence);
-        if (!text || approvedDirections.has(text)) continue;
+        if (!text || approvedDirections.has(text) || storyboardDirections) continue;
         grammar.checkStageDirection(text,nativeDialogue);
       }
       continue;

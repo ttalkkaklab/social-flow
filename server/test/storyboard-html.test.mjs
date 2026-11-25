@@ -157,10 +157,13 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   for (const candidate of [{ ...plan, stale: true }, { ...plan, stale: null }, { ...plan, shotIds: [second.id, first.id] }]) {
     context.window.VIDEO_PRODUCTION.candidates = [candidate];
     const html = scene();
-    assert.match(html, /Storyboard draft.*Street noise.*Shot 1 · 0–2 s.*Step left.*Shot 2 · 2–3 s.*Clap/s);
+    assert.match(html, /Shot directions.*Street noise.*Shot 1 · 0–2 s.*Step left.*Shot 2 · 2–3 s.*Clap/s);
     assert.doesNotMatch(html, /<details/);
     assert.doesNotMatch(html, /Saved &lt;take>/);
   }
+  context.sc.videoDirection.prompt = 'Hold <here>.\nThen cut.';
+  assert.match(scene(), /<pre>Hold &lt;here>\.\nThen cut\.<\/pre>/);
+  delete context.sc.videoDirection.prompt;
   const notes = render('sceneNotesHtml(grp, "Cast and settings", "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
   assert.equal(notes.match(/role="tab"/g).length, 3);
   assert.match(notes, /aria-controls="scene-notes-1-settings" aria-selected="true".*aria-controls="scene-notes-1-sound" aria-selected="false"/s);
@@ -291,7 +294,7 @@ test('a background export shows the saved scene prompt when the board matches an
   }
   assert.match(exportCard(plan), /Saved request · inputs unverified.*<pre>First line\n  indentation and &lt;camera> preserved\.<\/pre>/s);
   const outdated = exportCard({ ...plan, contextRevision: 'older' });
-  assert.match(outdated, /Storyboard draft/);
+  assert.match(outdated, /Shot directions/);
   assert.doesNotMatch(outdated, /First line/);
 });
 

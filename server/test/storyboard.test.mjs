@@ -437,6 +437,28 @@ describe('story first, then characters and lines', () => {
     assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
     assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
   });
+  it('splits a scene and writes both prompts atomically at an existing shot', () => {
+    const dir=tmp(), scene={sequence:'q1',no:1,place:'Workshop',time:'Day',event:'A handover',summary:'The key changes hands.',speakers:[]};
+    writeStorySequences({path:dir,primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door'}]});
+    writeStoryScenes({path:dir,scenes:[scene,{...scene,no:2}]});
+    const timeline=(start,end)=>({startFrame:start,endFrame:end,transition:start?'hard_cut':'open',framing:'Medium shot.',action:'Turn the key.'});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'Lift the key.',timeline:timeline(0,24)},
+      {scene:1,summary:'Turn the key.',timeline:timeline(24,60)},{scene:2,summary:'Walk inside.'}]});
+    const specs=[{...scene,videoDirection:{emotion:'Expectant.',openingPositions:[],prompt:'Lift the key.'}},
+      {...scene,no:3,videoDirection:{emotion:'Relief.',openingPositions:[],prompt:'Turn the key.'}}];
+    const drafts=['first','second'].map(model=>({engine:'test',model,operation:'reference',prompt:model}));
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{emotion:'Concern.',openingPositions:[],promptDrafts:drafts}}]}),/scene_split_required/);
+    const before=readBoard(dir).sha256;
+    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs.slice(1)}),/scene_split_prompts/);
+    assert.equal(readBoard(dir).sha256,before);
+    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}));
+    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}));
+    const {win}=readBoard(dir);
+    assert.deepEqual(win.STRUCTURE.sequences[0].scenes,[1,3,2]);
+    assert.deepEqual(win.SCENES.map(s=>[s.id,s.scene]),[['s0001',1],['s0002',3],['s0003',2]]);
+    assert.deepEqual([win.SCENES[1].timeline.startFrame,win.SCENES[1].timeline.endFrame,win.SCENES[1].timeline.transition],[0,36,'open']);
+    assert.deepEqual([1,3].map(no=>win.STRUCTURE.scenes.find(s=>s.no===no).videoDirection.prompt),['Lift the key.','Turn the key.']);
+  });
   it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
     const dir = tmp();
     writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });

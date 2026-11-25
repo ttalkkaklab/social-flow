@@ -1428,6 +1428,10 @@ export const storySequenceSchema = z.object({
 }).strict();
 export const storySceneSchema = z.object({
   path: outlinePath,
+  split: z.object({
+    beforeShot: shotIdSchema.describe('First existing shot of the second scene. The first scene must retain at least one shot.'),
+    newSceneNo: z.number().int().positive().describe('Unused scene number inserted immediately after the first scene in playback order.'),
+  }).strict().optional().describe('Move the suffix of a scene into its own storyboard scene in the same write as both complete prompts.'),
   scenes: z.array(z.object({
     sequence: nonEmpty.describe('The id of the sequence this scene belongs to — written first with story_sequence'),
     no: z.number().int().positive(),
@@ -1523,16 +1527,83 @@ export function writeStorySequences(args: z.infer<typeof storySequenceSchema>): 
   return { ...result, findings: [...result.findings, ...notes] };
 }
 
+/** Split at a stable shot ID. Other scenes keep their numbers and their production histories. */
+function splitStoryScene(args: z.infer<typeof storySceneSchema>, win: Board, st: Structure) {
+  const {beforeShot,newSceneNo} = args.split!;
+  const shots = win.SCENES ?? [];
+  const first = shots.find(shot => shot.id === beforeShot);
+  const source = st.scenes.find(scene => scene.no === first?.scene);
+  if (first && source?.no === newSceneNo && shots.find(shot => shot.scene === newSceneNo)?.id === beforeShot) {
+    const group = st.sequences.find(q => q.scenes.includes(newSceneNo));
+    const previous = group?.scenes[group.scenes.indexOf(newSceneNo) - 1];
+    const pair = [previous,newSceneNo].map(no => args.scenes.find(scene => scene.no === no));
+    const same = pair.every(scene => scene?.sequence === group?.id && scene?.videoDirection?.prompt &&
+      scene.videoDirection.prompt === st.scenes.find(saved => saved.no === scene.no)?.videoDirection?.prompt);
+    if (same) return {shots,scenes:args.scenes.map(scene => ({...scene,videoDirection:scene.videoDirection && {
+      ...st.scenes.find(saved => saved.no === scene.no)?.videoDirection,...scene.videoDirection}})),sequences:st.sequences};
+  }
+  if (!first || !source || st.scenes.some(scene => scene.no === newSceneNo))
+    throw new Error('scene_split_boundary: name an existing shot and an unused scene number');
+  const members = shots.filter(shot => shot.scene === source.no), boundary = members.indexOf(first);
+  if (boundary < 1) throw new Error('scene_split_boundary: split between two existing shots');
+  const sequence = st.sequences.find(sequence => sequence.scenes.includes(source.no));
+  const left = args.scenes.find(scene => scene.no === source.no), right = args.scenes.find(scene => scene.no === newSceneNo);
+  if (!sequence || !left?.videoDirection?.prompt || !right?.videoDirection?.prompt ||
+      left.sequence !== sequence.id || right.sequence !== sequence.id)
+    throw new Error('scene_split_prompts: supply both scenes and their complete prompts in the original sequence');
+  if (source.videoDirection?.audio && (!left.videoDirection.audio || !right.videoDirection.audio ||
+      left.videoDirection.audio.path === right.videoDirection.audio.path))
+    throw new Error('scene_split_audio: supply the two edited scene tracks');
+  const fps = source.videoDirection?.fps ?? 24;
+  if ((left.videoDirection.fps ?? fps) !== fps || (right.videoDirection.fps ?? fps) !== fps)
+    throw new Error('scene_split_timing: keep the frame rate of the existing shot timings');
+  const offset = first.timeline?.startFrame ?? Math.round(members.slice(0,boundary).reduce((sum,shot) => sum + (shot.duration ?? 0),0) * fps);
+  const moved = new Set(members.slice(boundary).map(shot => shot.id));
+  const revised = shots.map(shot => {
+    if (!moved.has(shot.id)) return shot;
+    const tl = shot.timeline;
+    if (tl && tl.startFrame < offset) throw new Error('scene_split_timing: inconsistent shot timeline');
+    const timeline = tl && {...tl,startFrame:tl.startFrame-offset,endFrame:tl.endFrame-offset,
+      ...(shot === first ? {transition:'open' as const} : {}),
+      ...(tl.images ? {images:tl.images.map(pin => ({...pin,frame:pin.frame-offset}))} : {}),
+      ...(tl.dialogueCues ? {dialogueCues:tl.dialogueCues.map(cue => ({...cue,frame:cue.frame-offset}))} : {})};
+    return {...shot,scene:newSceneNo,...(shot === first ? {transition:undefined} : {}),...(timeline ? {timeline} : {})};
+  });
+  const keyframes = source.videoDirection?.keyframes ?? [];
+  const opening = first.timeline?.images?.find(pin => pin.role === 'start')?.path ?? first.referenceImage;
+  const leftFrames = left.frames ?? (source.frames ? {start:source.frames.start} : undefined);
+  const rightFrames = right.frames ?? {start:opening,...(source.frames?.end ? {end:source.frames.end} : {})};
+  const parts = args.scenes.map(scene => {
+    if (scene !== left && scene !== right) return scene;
+    const direction = scene.videoDirection!;
+    const pins = scene === left ? keyframes.filter(pin => pin.frame < offset) :
+      keyframes.filter(pin => pin.frame > offset).map(pin => ({...pin,frame:pin.frame-offset}));
+    if (scene === right && keyframes.some(pin => pin.frame === offset && pin.path !== rightFrames.start))
+      throw new Error('scene_split_timing: use the former boundary keyframe as the new scene opening');
+    return {...scene,frames:scene === left ? leftFrames : rightFrames,videoDirection:{...direction,fps,
+      ...(!direction.keyframes && pins.length ? {keyframes:pins} : {})}};
+  });
+  const sequences = st.sequences.map(q => q.id !== sequence.id ? q :
+    {...q,scenes:q.scenes.flatMap(no => no === source.no ? [no,newSceneNo] : [no])});
+  return {shots:revised,scenes:parts,sequences};
+}
+
 export function writeStoryScenes(args: z.infer<typeof storySceneSchema>, requireSceneCast = false): ApplyResult {
   const { win, st, sha256 } = readOutline(args.path);
   requireEpisodeCast(args.path, win);
   if (!st.sequences.length) throw new Error('story_order: write the sequences first with story_sequence');
   let { sequences, scenes } = st;
-  for (const { sequence, ...scene } of args.scenes) {
+  const split = args.split && splitStoryScene(args, win, st);
+  if (split) sequences = split.sequences;
+  for (const { sequence, ...scene } of split?.scenes ?? args.scenes) {
     if (!sequences.some((q) => q.id === sequence)) throw new Error(`story_order: sequence ${sequence} does not exist — write it with story_sequence`);
-    const members = win.SCENES?.filter(shot => shot.scene === scene.no) ?? [];
+    const members = (split?.shots ?? win.SCENES)?.filter(shot => shot.scene === scene.no) ?? [];
     if (scene.videoDirection?.oneTake && members.length > 1) throw new Error('scene_one_take: this scene already has multiple shot cards');
     const existing = scenes.find(old => old.no === scene.no);
+    const drafts = scene.videoDirection?.promptDrafts;
+    if (!scene.videoDirection?.prompt && drafts && new Set(drafts.map(draft => draft.prompt)).size > 1 &&
+        JSON.stringify(drafts) !== JSON.stringify(existing?.videoDirection?.promptDrafts))
+      throw new Error('scene_split_required: save one active videoDirection.prompt. Split the storyboard scene if both prompts are intended for production.');
     if (requireSceneCast && !existing && scene.speakers === undefined)
       throw new Error('scene_speakers_required: list the speakers when creating a scene, or use [] for a silent scene');
     const first = members[0];
@@ -1548,7 +1619,7 @@ export function writeStoryScenes(args: z.infer<typeof storySceneSchema>, require
       ? (q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] })
       : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
   }
-  return writeOutline(args.path, sha256, win, { ...st, sequences, scenes });
+  return writeOutline(args.path, sha256, win, { ...st, sequences, scenes }, split?.shots);
 }
 
 export function writeStoryShots(args: z.infer<typeof storyShotSchema>): ApplyResult {

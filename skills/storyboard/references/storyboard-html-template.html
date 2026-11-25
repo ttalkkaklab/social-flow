@@ -2970,14 +2970,19 @@ window.STORYBOARD_READY = (async function () {
   }
   function sceneVideoPromptHtml(sc, grp) {
     var ko = LANG === "ko", dir = sc && sc.videoDirection || {}, members = grp.items.map(function (item) { return item.s; });
-    var plan = currentScenePlan(grp);
+    var plan = currentScenePlan(grp), draft = dir.prompt;
+    if (!draft && dir.promptDrafts && window.PRODUCTION_MODE && window.PRODUCTION_MODE.sceneProductionPrompt)
+      draft = window.PRODUCTION_MODE.sceneProductionPrompt(dir, reviewVideoSelection(members[0]));
     var approved = ((window.VIDEO_APPROVALS || {}).scenes || {})[grp.scene];
     var full = "", status = ko ? "스토리보드 초안" : "Storyboard draft";
     if (plan) {
       status = plan.stale === null ? (ko ? "저장한 요청 · 참조 파일 미검증" : "Saved request · inputs unverified") :
         (ko ? "저장한 요청 계획" : "Saved request plan");
       full = '<p>' + esc((ko ? "요청 " : "Request ") + plan.requestId) + '</p><pre>' + esc(plan.prompt) + '</pre>';
+    } else if (typeof draft === "string" && draft.trim()) {
+      full = '<pre>' + esc(draft) + '</pre>';
     } else {
+      status = ko ? "샷별 연출 메모" : "Shot directions";
       var rows = [], resolver = window.SCENE_DIRECTION, coverage = resolver && resolver.resolve(sc || {}, members);
       function attribute(key, row) {
         var entry = row.id && window.FILM_TECHNIQUES.byId[row.id];

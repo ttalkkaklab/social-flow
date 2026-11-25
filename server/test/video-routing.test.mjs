@@ -250,7 +250,7 @@ test('planning compiles camera direction and refuses a caller replacing the scen
  assert.match(after.args.prompt,/holds a static frame/);
  assert.doesNotMatch(after.args.prompt,/Old camera|pushes in/);
  assert.equal(after.directionBindings.find(b=>b.attribute==='move').via,'prompt');
- assert.throws(()=>f.plan('raw-shots',{shots:[{description:'A different scene.'}]}),/Unsupported seedance_img2video argument: shots/);
+ assert.throws(()=>f.plan('raw-shots',{shots:[{description:'A different scene.'}]}),/scene_split_required/);
 });
 test('snapshot wins over current defaults; explicit shot replaces episode override', t=>{
  const f=fixture(t); const current=settings.readSettings(f.root);
@@ -869,7 +869,7 @@ test('a GenAI reference project plans silent and thought shots as scenes on thei
  shot.visual.frames={mode:'reference',start:'../opening.png'};
  shot.visual.video.promptSource={action:'The character notices the open door.'};
  f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};
- const plan=(generateAudio)=>planVideo({episode:f.episode,sceneNo:1,requestId:'thought',args:{duration:5,reserveUsd:0.25,generateAudio}});
+ const plan=(generateAudio)=>planVideo({episode:f.episode,sceneNo:1,requestId:'thought',args:{duration:5,reserveUsd:0.25,generateAudio}},false);
  for(const narration of [[],[{id:'l1',speaker:'hero',delivery:'voiceover',tts:'A secret thought.'}]]) {
   shot.narration=narration;
   shot.performance=narration.length ? undefined : [{kind:'action',character:'hero',text:'Glances toward the open door.',durationSeconds:1}];
@@ -1288,7 +1288,8 @@ test('Google Cloud Veo uses saved settings, model-specific budgets, voice policy
   assert.equal(plan.tool, 'veo_img2video');
   assert.equal(plan.args.aspectRatio, '9:16');
   assert.equal(plan.quote.reserveUsd, 0.8);
-  assert.equal(f.plan('quiet', { generateAudio: false }).quote.reserveUsd, 0.64);
+  assert.throws(() => f.plan('quiet', { generateAudio: false }), /scene_prompt_mismatch/);
+  assert.equal(planVideo({episode:f.episode,sceneNo:1,requestId:'estimate',args:{durationSeconds:8,generateAudio:false}},false).quote.reserveUsd,0.64);
   f.board.SCENES[0].narration = [{ speaker:'hero', delivery:'on_screen', tts:'Hello' }];
   f.save();
   assert.throws(() => f.plan('spoken'), /scene_speech_route|Unsupported Veo operation/);
@@ -2159,6 +2160,10 @@ test('an authored scene prompt names its references and takes the numbers the ga
  assert.equal(numbered(compiled),compiled.sceneRequest.prompt);
  // The author's sentences go out as written after the opening positions this lane always states; only the names change.
  const own='{hero.face} waits by the left door and says with {hero.voice}, "You came." {guest.image} answers with {guest.voice}, "I stayed."';
+ assert.throws(()=>planVideo({...input,args:{...input.args,shots:[{id:'s1'}]}}),/scene_split_required/);
+ assert.throws(()=>planVideo({...input,prompt:own}),/scene_prompt_mismatch/);
+ f.board.STRUCTURE.scenes[0].videoDirection.prompt=own;
+ f.save();
  const authored=planVideo({...input,prompt:own});
  const body='Image 1 waits by the left door and says with Audio 1, "You came." Image 2 answers with Audio 2, "I stayed."';
  assert.ok(authored.sceneRequest.prompt.startsWith('Opening frame') && authored.sceneRequest.prompt.endsWith('\n\n'+body));
@@ -2177,6 +2182,8 @@ test('an authored scene prompt names its references and takes the numbers the ga
  let sent;
  await f.execute(authored,async(tool,args)=>{sent=args.prompt;return result;});
  assert.equal(sent,authored.args.prompt);
+ delete f.board.STRUCTURE.scenes[0].videoDirection.prompt;
+ f.save();
  // The author can retrieve the original edit. Scene mode sends the author's white space as written, so none is reported as normalized.
  const spaced=' \n'+own.replace(' waits','  waits\n')+'  \n';
  const normalized=planVideo({...input,prompt:spaced},false);
@@ -2206,6 +2213,23 @@ test('an authored scene prompt names its references and takes the numbers the ga
  line.tts='You came.';f.save();
  const again=planVideo({...input,prompt:compiled.promptTemplate},false);
  assert.deepEqual([again.args.prompt,again.promptIssues],[compiled.args.prompt,undefined]);
+});
+
+test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned voices', async t => {
+ const f=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'astra-genai',model:'minimax-h3',resolution:'288x512'},[72,72]);
+ f.board.SCENES[1].referenceImage='guest.png';
+ const direction=f.board.STRUCTURE.scenes[0].videoDirection;
+ direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\n{guest.face} speaks in the voice of {guest.voice}: "I stayed."';
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'first-take',maxCostUsd:0};
+ const p=planVideo(input);
+ assert.equal(p.args.prompt,direction.prompt);
+ assert.deepEqual(p.args.shots.map(s=>s.id),p.shotIds);
+ assert.ok(p.args.shots.every(s=>s.imagePath));
+ assert.deepEqual(p.args.cast.map(c=>c.id),['hero','guest']);
+ assert.ok(p.args.cast.every(c=>c.voicePath.endsWith('-32000.wav')));
+ assert.equal(planVideo({...input,requestId:'second-take'}).args.prompt,p.args.prompt);
+ assert.throws(()=>planVideo({...input,requestId:'suffix',prompt:'Only the second shot.'}),/scene_prompt_mismatch/);
 });
 
 test('storyboard edits are scoped to the selected scene model and operation', async t => {

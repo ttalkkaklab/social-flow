@@ -56,6 +56,8 @@ const scenePromptDrafts = z.array(z.object({
 
 export const sceneVideoDirectionSchema = z.object({
   motionReferencePaths: z.array(z.string().trim().min(1)).min(1).max(3).optional().describe('Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot.'),
+  prompt: z.string().min(1).max(32000).refine(text => !!text.trim(), 'Enter the complete scene prompt')
+    .optional().describe('One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts.'),
   promptDrafts: scenePromptDrafts.optional().describe('Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections.'),
   openingPositions: openingPositionsSchema,
   dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
