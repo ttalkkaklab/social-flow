@@ -77,10 +77,10 @@ export function buildDesktopBody(operation, input, assets) {
     };
     if (targetResolution)
         params.resolution = targetResolution;
-    // Desktop's default (typed) lets the app rewrite the prompt. A written prompt reaches generation as written
-    // unless the call names typed (user directive 2026-11-25). Extend and retake take no policy.
+    // Desktop's default (typed) lets the app rewrite the prompt, on extend and retake from the source video's
+    // stills too. A written prompt reaches generation as written unless the call names typed (user directive 2026-11-25).
     const edits = ['extend', 'retake'].includes(operation);
-    if (!edits && params.prompt)
+    if (params.prompt)
         params.promptProvenance ??= 'enhanced';
     if (operation === 'keyframes')
         return { params: { ...params, model: 'fast' },

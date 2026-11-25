@@ -34,8 +34,8 @@ const H3_RENDER_TIMEOUT_MS = 90 * 60_000;
 const h3RenderTransport = new Agent({headersTimeout:H3_RENDER_TIMEOUT_MS, bodyTimeout:H3_RENDER_TIMEOUT_MS});
 export const MLX_MESH_TIMEOUT_MS = 15 * 60_000;
 
-/** Node heap ceiling for decoded RGB — 1088×1920×8s at 24fps is ~1.2GB and is refused. */
-export const MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
+/** MLX-Serve's own frame payload cap (src/sdk/media/video_out.zig, 768 MiB); a larger request is refused there. */
+export const MAX_VIDEO_RGB_BYTES = 768 * 1024 * 1024;
 
 export const MLX_IMAGE_DIMENSION_STEP = 16;
 export const MIN_MLX_IMAGE_DIMENSION = 256;

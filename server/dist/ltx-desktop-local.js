@@ -60,7 +60,7 @@ const localSpecs = z.object({
     downloaded_local_models: z.array(z.object({
         model: modelId,
         spec: z.object({
-            capabilities: z.object({ t2v: z.boolean(), i2v: z.boolean(), a2v: z.boolean() }),
+            capabilities: z.object({ t2v: z.boolean(), i2v: z.boolean(), a2v: z.boolean() }).nullable(),
             supported_resolutions_durations: matrix,
             a2v_supported_resolutions_durations: matrix.nullish(),
             dropped_aspect_cells: z.array(droppedAspect).nullish(),
@@ -117,7 +117,9 @@ export function validateDesktopFiles(args) {
         const file = args[field];
         if (typeof file !== 'string')
             continue;
-        mediaType(file, field === 'audioPath' ? ['.mp3', '.wav', '.ogg', '.m4a'] : ['.jpg', '.jpeg', '.png', '.webp']);
+        mediaType(file, 
+        // LTX Desktop's asset ingest refuses .ogg.
+        field === 'audioPath' ? ['.mp3', '.wav', '.m4a'] : ['.jpg', '.jpeg', '.png', '.webp']);
         const stat = statSync(file);
         if (!stat.isFile() || stat.size === 0)
             throw new Error('Expected a nonempty local media file: ' + file);
@@ -164,7 +166,7 @@ export async function checkDesktopOffering(args, minimumSeconds) {
     const model = catalog.models.find((item) => item.id === args.model);
     const audio = typeof args.audioPath === 'string';
     const operation = audio ? 'a2v' : args.imagePath ? 'i2v' : 't2v';
-    if (catalog.unavailableReason || !model?.capabilities[operation])
+    if (catalog.unavailableReason || !model?.capabilities?.[operation])
         throw new Error(catalog.unavailableReason || 'Selected local model or operation is unavailable: ' + args.model);
     const matrix = audio ? model.a2v_supported_resolutions_durations : model.supported_resolutions_durations;
     const cell = matrix?.[String(args.resolution)];

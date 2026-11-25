@@ -35,11 +35,11 @@ export function mediaType(file: string, allowed: readonly string[]): string {
   if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path.basename(file)}; use ${allowed.join(', ')}`);
   return MIME[ext];
 }
-/** Local file → data URI under a decoded-size cap. */
-export function dataUri(file: string, allowed: readonly string[], maxBytes: number): string {
+/** Local file → data URI under a size cap, read on the file or, for a vendor that measures the base64 text, on the encoding. */
+export function dataUri(file: string, allowed: readonly string[], maxBytes: number, measure: 'file' | 'encoded' = 'file'): string {
   const type = mediaType(file, allowed);
-  const size = fs.statSync(file).size;
-  if (size > maxBytes) throw new Error(`${path.basename(file)} is ${(size / 1048576).toFixed(1)} MB; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
+  const raw = fs.statSync(file).size, size = measure === 'encoded' ? 4 * Math.ceil(raw / 3) : raw;
+  if (size > maxBytes) throw new Error(`${path.basename(file)} is ${(size / 1048576).toFixed(1)} MB${measure === 'encoded' ? ' once base64-encoded' : ''}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
   return `data:${type};base64,${fs.readFileSync(file).toString('base64')}`;
 }
 

@@ -464,11 +464,12 @@ No example grants spending permission. `capability_status` checks credentials on
   NAG depends on local text encoding and compatible runtime settings. Desktop A2V accepts one opening image.
   The [upstream two-stage pipeline](https://github.com/Lightricks/LTX-2/blob/daa6b16fc7f0f1628f2c9e36a303e3312b333cc6/packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py)
   also exposes multiple image conditions, model weights and sampler settings.
-  Text/I2V/A2V/keyframes accept `promptProvenance:"typed"|"enhanced"`.
+  Every Desktop operation accepts `promptProvenance:"typed"|"enhanced"`.
   The adapters send `enhanced` for a written prompt, so it reaches generation without
   another rewrite (user directive 2026-11-25). Name `typed` to let the app's enhancement
   settings rewrite it; that is the Desktop default the adapters no longer fall back on.
-  Extend and retake take no policy. This is the native
+  Extend and retake follow the same rule: Desktop rewrites a `typed` prompt there from
+  stills of the source video. This is the native
   contract's provenance label, not evidence of approval or visual quality; it does
   not guarantee that the generated action will follow the prompt.
   `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary

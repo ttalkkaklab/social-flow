@@ -130,9 +130,9 @@ export function prepareVideoVoice(tool, input, context) {
     const visual = object(context.shot.visual);
     const seedanceDialogue = tool === 'seedance_reference' && lines.some(line => ['on_screen', 'off_screen'].includes(String(line.delivery)));
     const nativeSlot = seedanceDialogue || Boolean(visual.clip) || context.shot.type === 'broll';
-    // FastH3 and the hosted MiniMax/HeyGen lanes always render a soundtrack.
-    const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('minimax_') || tool.startsWith('heygen_') ||
-        (tool.startsWith('astra_') ? args.generateAudio !== false : args.generateAudio === true)));
+    // FastH3 and HeyGen always render a soundtrack; MiniMax does unless generateAudio is false.
+    const audible = msr || ((tool !== 'astra_genai_desktop_keyframes' || args.audio === true) && (tool === 'fasth3_omni_reference' || tool.startsWith('heygen_') ||
+        (tool.startsWith('astra_') || tool.startsWith('minimax_') ? args.generateAudio !== false : args.generateAudio === true)));
     const lane = msr ? 'reference' : VIDEO_ADAPTERS[tool]?.voice ?? 'none';
     const supplied = lane === 'supplied';
     const onScreen = lines.some(line => line.delivery === 'on_screen');

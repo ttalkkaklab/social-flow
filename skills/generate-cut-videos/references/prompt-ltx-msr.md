@@ -9,6 +9,8 @@ the board when a take fails.
 Where the other facts live:
 
 - The request contract, frame grid and prompt length: [MSR and v2 video](../../_shared/astra-genai.md#msr-and-v2-video).
+- Slots, voice binding and limits beside the gateway's and Licon's own:
+  [call reference: ASTRA GenAI](../../../docs/video-models.md#astra-genai-gateway-ltx-25-and-licon-msr).
 - Which panels fill the subject slots and where the start image goes:
   [scene frames and adapter inputs](../../_shared/video-routing.md#scene-frames-and-adapter-inputs).
 - Sources for every upstream figure below, with the passages quoted:

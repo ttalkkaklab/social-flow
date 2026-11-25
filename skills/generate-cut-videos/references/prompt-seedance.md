@@ -13,6 +13,8 @@ Where the other facts live:
   [Prompt grammar: Seedance](../../produce/references/video-model-selection.md#prompt-grammar--seedance).
 - Which picture and sample a speaker sends:
   [the Seedance character contract](../../_shared/video-routing.md).
+- The request body, reference counts per model and the portrait asset route:
+  [call reference: Seedance](../../../docs/video-models.md#seedance-byteplus-modelark).
 - Sources for every vendor figure below, with the passages quoted:
   [reference limits study](../../../docs/research/2026-11-25-reference-limits/index.html#seedance).
 

@@ -9,7 +9,7 @@ import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
-import { promptGuidance, scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
+import { formatReferenceLabel, promptGuidance, scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
 import { GENAI_SCENE_MODELS, genaiSceneSchema } from './genai-scene.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
@@ -64,7 +64,7 @@ const reference = (engine: string, deployment: string, schema: z.ZodTypeAny, fac
 const SEEDANCE = { modelConstraints: seedance.SEEDANCE_MODEL_SPECS };
 const SEEDANCE_VOICES = Object.fromEntries(Object.entries(seedance.SEEDANCE_MODEL_SPECS).map(([model, spec]) => [model, spec.referenceAudio.maxClips]));
 const DESKTOP = { modelConstraints: { discovery: 'astra_genai_catalog', note: 'Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false.' } };
-const MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: 'MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed.' } };
+const MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: 'MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio on unless generateAudio is false. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed.' } };
 const HEYGEN = { modelConstraints: { models: ['heygen-video-1'], note: 'HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned.' } };
 const LOCAL_NOTES: Record<string, string> = {
   ltx_video_generate: 'LTX 8k+1 frames; MLX-Serve backend.',
@@ -92,8 +92,9 @@ export const VIDEO_ADAPTERS: Readonly<Record<string, VideoAdapter>> = Object.fre
         throw new Error('character_inputs_mismatch: use the face sources declared on the storyboard');
       const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
       const offset = videos.reduce<number>((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
+      const label = (index: number) => formatReferenceLabel(scenePromptProfile('seedance_reference', args.model).referenceLabels, 'video', index);
       const notes = [...originals.values()].map((character, index) =>
-        `Use Video ${offset + index + 1} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
+        `Use ${label(offset + index + 1)} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return { ...args, realFaceInput: cast.some(person => person.face) || args.realFaceInput === true,
         ...(taskIds.length ? { referenceVideoTaskIds: taskIds, prompt:[args.prompt, ...notes].join('\n') } : {}) };
     },

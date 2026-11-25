@@ -23,6 +23,8 @@ test('model and operation constrain resolution, references, frames and length in
   const two = buildVeoBody(veoImageSchema.parse({ ...base, sourceImagePath: file, lastImagePath: file }));
   assert.deepEqual(two.instances, [{ prompt, image, lastFrame: image }]);
   assert.equal(two.parameters.generateAudio, false);
+  assert.equal(two.parameters.enhancePrompt, undefined);
+  assert.equal(buildVeoBody(veoImageSchema.parse({ ...base, sourceImagePath: file, enhancePrompt: false })).parameters.enhancePrompt, false);
   const refs = { ...base, referenceImagePaths: [file] };
   assert.deepEqual(buildVeoBody(veoReferenceSchema.parse(refs)).instances, [{ prompt, referenceImages: [{ image, referenceType: 'asset' }] }]);
   for (const extra of [{ sourceImagePath: file }, { lastImagePath: file }, { durationSeconds: 4 }, { referenceImagePaths: Array(4).fill(file) },
