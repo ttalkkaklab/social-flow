@@ -3595,7 +3595,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         annotations: HINT.generateLocal,
         description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
-Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
+Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (MiniMax Music 3: 1–360 seconds, other packs: ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
 Use music_plan → music_execute with the saved music model for production. Keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
@@ -3623,20 +3623,23 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
                     default: true,
                 },
                 durationSeconds: {
-                    type: 'number',
-                    description: `Length in seconds (default: ${DEFAULT_MLX_MUSIC_SECONDS}, ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}).`,
-                    minimum: MIN_MLX_MUSIC_SECONDS,
+                    type: 'integer',
+                    description: `Length in whole seconds. MiniMax Music 3 accepts an upper bound of 1–360; other packs accept ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}.`,
+                    minimum: 1,
                     maximum: MAX_MLX_MUSIC_SECONDS,
                     default: DEFAULT_MLX_MUSIC_SECONDS,
                 },
                 seed: {
                     type: 'number',
-                    description: 'Random seed. Omit for a random seed.',
+                    description: 'Sampling seed. MiniMax Music 3 defaults to 42.',
                     minimum: 0,
                 },
+                steps: { type: 'integer', minimum: 4, maximum: 100, description: 'MiniMax Music 3 diffusion steps, default 30.' },
+                bpm: { type: 'integer', minimum: 30, maximum: 300, description: 'MiniMax tempo guidance appended to the caption.' },
+                keyscale: { type: 'string', description: 'MiniMax key guidance for the caption, e.g. F minor.' },
                 refAudioPath: {
                     type: 'string',
-                    description: 'Optional reference clip (absolute path, sent as base64).',
+                    description: 'Reference clip for compatible packs. MiniMax Music 3 rejects reference audio.',
                 },
                 outputPath: {
                     type: 'string',
@@ -3707,7 +3710,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                         models: { type: 'object', additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(['video', 'music', 'image', 'speech'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'stable-audio-mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                                         model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music).' },
                                         ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },

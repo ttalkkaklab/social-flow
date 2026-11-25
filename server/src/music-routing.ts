@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { MUSIC_ADAPTERS, MUSIC_MODELS, parseMusicArgs } from './music-registry.js';
 import { assertSelection } from './adapter-parameters.js';
 
+import { stableAudioRuntime } from './stable-audio-mlx.js';
 import { musicTransaction, readMusicState } from './music-state.js';
 import { atomicJson, canonicalPath, routingHash, withinDirectory } from './routing-files.js';
 import { readMusicMetadata, normalizeMusicFile } from './music-media.js';
@@ -46,13 +47,14 @@ function gate(tool: string): void {
   const state = resolveToolGate(tool, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!state.enabled) throw new Error('music_tool_disabled: ' + state.reason);
 }
-function environment(tool: string): void {
+function environment(tool: string, args: Record<string, unknown>): void {
   gate(tool);
   for (const binary of ['ffmpeg', 'ffprobe']) execFileSync(binary, ['-version'], { timeout: 10000, stdio: 'ignore' });
   const engine = MUSIC_ADAPTERS[tool].engine;
   if (engine === 'lyria') requireGeminiKey();
   if (engine === 'suno-api') requireSunoKey();
   if (engine === 'elevenlabs') requireElevenLabsKey();
+  if (engine === 'stable-audio-mlx') stableAudioRuntime(typeof args.initAudioPath === 'string');
   if (engine === 'mlx' && !mlxServeConfigured()) throw new Error('music_provider_unconfigured: MLX Core');
 }
 function inputFiles(args: Record<string, unknown>, directory: string): Record<string, string> {
@@ -64,6 +66,7 @@ function inputFiles(args: Record<string, unknown>, directory: string): Record<st
     return resolved;
   };
   if (typeof args.refAudioPath === 'string') args.refAudioPath = resolve(args.refAudioPath);
+  if (typeof args.initAudioPath === 'string') args.initAudioPath = resolve(args.initAudioPath);
   return inputs;
 }
 function bindSelection(tool: string, input: Record<string, unknown>, selection: Selection) {
@@ -101,7 +104,7 @@ export function planMusic(raw: unknown): MusicPlan {
   if (!withinDirectory(context.directory, String(args.outputPath))) throw new Error('music_raw_output_outside_directory');
   const inputs = inputFiles(args, context.directory);
   if (Object.hasOwn(inputs, outputFile)) throw new Error('music_output_overwrites_input');
-  const local = selection.engine === 'mlx';
+  const local = selection.engine === 'mlx' || selection.engine === 'stable-audio-mlx';
   if (local ? input.reserveUsd !== undefined && input.reserveUsd !== 0 : !Number.isFinite(input.reserveUsd) || (input.reserveUsd ?? 0) <= 0)
     throw new Error('music_quote_required: positive total provider estimate for API, zero for local; not an invoice cap');
   const quote = { reserveUsd: input.reserveUsd ?? 0, basis: local ? 'Local compute; hardware excluded' : 'Caller estimate including all returned tracks; not a provider invoice cap', revision: '2026-10-18' };
@@ -140,7 +143,7 @@ export async function executeMusic(raw: unknown, dispatch: MusicDispatch): Promi
   if (context.revision !== plan.contextRevision) throw new Error('music_plan_stale: selection or authorization changed');
   const fresh = planMusic({ directory, assetId: plan.assetId, requestId: plan.requestId, tool: plan.tool, args: plan.sourceArgs, reserveUsd: plan.quote.reserveUsd });
   if (fresh.id !== id) throw new Error('music_plan_stale: inputs or contract changed');
-  environment(plan.tool);
+  environment(plan.tool, plan.args);
   const auth = context.authorization === undefined && plan.quote.reserveUsd === 0
     ? { reference: 'local execution', maxUsd: 0, maxConcurrent: 1, maxAttempts: 3, openingSpendUsd: undefined }
     : authorizationSchema.parse(context.authorization);

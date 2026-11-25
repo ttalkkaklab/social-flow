@@ -14,7 +14,7 @@ const ENGINES = {
   video: VIDEO_ENGINES,
   speech: ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
-  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'],
+  music: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'stable-audio-mlx', 'none'],
 };
 const RETIRED_ELEVENLABS_MODELS = ['eleven_multilingual_v2', 'eleven_v3', 'eleven_v3_conversational', 'eleven_flash_v2_5', 'eleven_turbo_v2_5'];
 function retiredSpeech(choice) {

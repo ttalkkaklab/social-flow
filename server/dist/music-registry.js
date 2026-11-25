@@ -1,10 +1,13 @@
 import { z } from 'zod';
 import { musicClipSchema, musicGenerateSchema, musicAdvancedSchema } from './music-client.js';
 import { sunoGenerateSchema, sunoSoundSchema, assertGenerateArgs, SUNO_V6_MODELS, SUNO_SOUND_UNVERIFIED } from './suno-client.js';
-import { mlxMusicGenerateSchema } from './mlx-serve-client.js';
+import { MINIMAX_MUSIC3_MODEL, mlxMusicGenerateSchema, mlxMusicSchemaForModel } from './mlx-serve-client.js';
 import { lyriaSongSchema, elevenMusicSchema } from './music-song-client.js';
+import { STABLE_AUDIO_MEDIUM, stableAudioSchema } from './stable-audio-mlx.js';
 import { adapterContracts } from './adapter-parameters.js';
 export const MUSIC_MODELS = [
+    { engine: 'mlx', model: MINIMAX_MUSIC3_MODEL, tool: 'mlx_music_generate', vocals: true, duration: '1–360 seconds, upper bound', provider: 'Local MLX-Serve (8-bit)' },
+    { engine: 'stable-audio-mlx', model: STABLE_AUDIO_MEDIUM, tool: 'music_stable_audio_generate', vocals: false, duration: 'Up to 380 seconds, sample-rounded', provider: 'Local Stability AI MLX CLI' },
     { engine: 'lyria', model: 'lyria-3-clip-preview', tool: 'music_generate_song', vocals: true, duration: '30 seconds; fixed', provider: 'Google official' },
     { engine: 'lyria', model: 'lyria-3.5', tool: 'music_generate_song', vocals: true, duration: 'Prompt-directed; measure output', provider: 'Google official' },
     { engine: 'lyria', model: 'models/lyria-realtime-exp', tool: 'music_generate_advanced', vocals: false, duration: '5–300 seconds; local stream collection limit', provider: 'Google official' },
@@ -26,6 +29,8 @@ export const MUSIC_ADAPTERS = {
         purpose: 'Disabled. The sunoapi.org sounds API has no documented way to retrieve the finished audio.' },
     music_elevenlabs_generate: { engine: 'elevenlabs', schema: elevenMusicSchema, modelField: 'modelId',
         purpose: 'Generate an ElevenLabs music track from a prompt or a section-by-section composition plan.' },
+    music_stable_audio_generate: { engine: 'stable-audio-mlx', schema: stableAudioSchema, modelField: 'model',
+        purpose: 'Generate music with Stable Audio 3 Medium on Apple Silicon, optionally varying or inpainting a source recording.' },
     mlx_music_generate: { engine: 'mlx', schema: mlxMusicGenerateSchema, modelField: 'model',
         purpose: 'Generate music locally with the selected MLX Core music pack.' },
 };
@@ -38,10 +43,11 @@ export function parseMusicArgs(tool, input) {
     const adapter = MUSIC_ADAPTERS[tool];
     if (!adapter)
         throw new Error('music_adapter_unsupported');
+    const schema = tool === 'mlx_music_generate' ? mlxMusicSchemaForModel(typeof input.model === 'string' ? input.model : undefined) : adapter.schema;
     for (const key of Object.keys(input))
-        if (!Object.hasOwn(shape(adapter.schema), key))
+        if (!Object.hasOwn(shape(schema), key))
             throw new Error('music_argument_unsupported: ' + key);
-    const args = adapter.schema.parse(input);
+    const args = schema.parse(input);
     if (tool === 'suno_generate')
         assertGenerateArgs(sunoGenerateSchema.parse(args));
     if (tool === 'suno_generate_sound')
@@ -61,17 +67,23 @@ export function musicAdapterContracts(engine, model) {
         const { schema, modelField } = MUSIC_ADAPTERS[row.tool];
         return !!modelField && shape(schema)[modelField].safeParse(model).success;
     });
+    if (engine === 'mlx' && model) {
+        const schema = mlxMusicSchemaForModel(model);
+        return adapterContracts('music', matches.map(row => ({ ...row, fields: Object.keys(shape(schema)) })), { mlx_music_generate: { schema } }, { engine, model });
+    }
     return adapterContracts('music', matches, MUSIC_ADAPTERS, { engine, model });
 }
 export function musicCatalog() {
-    return { version: 1, revision: '2026-11-25', models: MUSIC_MODELS,
+    return { version: 1, revision: '2026-11-26', models: MUSIC_MODELS,
         noGeneration: { engine: 'none' },
         adapters: Object.entries(MUSIC_ADAPTERS).map(([tool, a]) => ({ tool, engine: a.engine, purpose: a.purpose, fixedModel: a.fixedModel, fields: Object.keys(shape(a.schema)) })),
         local: { engine: 'mlx', tool: 'mlx_music_generate', model: 'Exact installed MLX Core music pack ID; no automatic pack selection' },
         unimplemented: [{ engine: 'suno-official', reason: 'Official platform exists; authenticated request schema not verified', source: 'https://platform.suno.com/' },
             { engine: 'lyria-vertex', reason: 'Separate Cloud authentication and predict contract; not a Gemini adapter' }],
         sources: ['https://aistudio.google.com/docs/music-generation', 'https://aistudio.google.com/docs/realtime-music-generation',
-            'https://elevenlabs.io/docs/api-reference/music/compose', 'https://docs.sunoapi.org/suno-api/generate-music'],
+            'https://elevenlabs.io/docs/api-reference/music/compose', 'https://docs.sunoapi.org/suno-api/generate-music',
+            'https://github.com/ddalcu/mlx-serve/blob/v26.11.3/src/plugins/music3/plugin.zig',
+            'https://github.com/Stability-AI/stable-audio-3/blob/790793b89ddceea612be9ce42ff6830d18f6fa57/optimized/mlx/scripts/sa3_mlx.py'],
     };
 }
 export function isManagedMusicCall(tool, args) {

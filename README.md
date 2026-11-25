@@ -520,7 +520,7 @@ the whole projection rather than a bill that has already partly arrived.
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `ltx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Seedance 2.x (ModelArk) per second · ASTRA GenAI (LTX) | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Seedance face-policy table |
 | **Speech (TTS)** | Your own recording or local VoxCPM2 | Gemini TTS, gateway speech or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. Local VoxCPM2 runs on Apple Silicon. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
-| **Music (BGM)** | Saved MLX music pack or reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
+| **Music (BGM)** | MiniMax Music 3, Stable Audio 3 Medium or a reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
 
 A near-zero run is possible: local images, local transcription, no generated video, no
 BGM. Local VoxCPM2 can synthesize the dialogue. Each take records the selected model and review status. What you give up is a proper cover frame (it
@@ -815,10 +815,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 176 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 177 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 176 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 177 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -895,7 +895,7 @@ channel's tone, theme and pinned character voice IDs (the speech model itself is
 
 <a id="mcp-tools"></a>
 
-## MCP tool surface (176 tools)
+## MCP tool surface (177 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -957,7 +957,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Google Lyria adapters | `music_generate_song` / `music_generate_clip` / `music_generate` / `music_generate_advanced` / `music_list_options` | Clip / 3.5 songs, 30-second clips, single-prompt or weighted-prompt RealTime instrumentals, and style suggestions, respectively. `GEMINI_API_KEY` |
 | ElevenLabs adapter | `music_elevenlabs_generate` | Official Eleven Music v2 / v2.5; prompt or composition plan. `ELEVENLABS_API_KEY` |
 | sunoapi.org tools | `suno_generate` / `suno_generate_lyrics` / `suno_credits` | sunoapi.org third-party V6 family, not Suno Platform. `suno_generate_sound` is refused: the provider documents no way to fetch a finished sounds task. `SUNO_API_KEY` |
-| Local MLX adapter | `mlx_music_generate` | Exact installed MLX Core music pack, local compute; default instrumental |
+| Local MLX music | `mlx_music_generate` / `music_stable_audio_generate` | MiniMax Music 3 through MLX-Serve and Stable Audio 3 Medium through its MLX CLI. [Model settings, inputs and examples](skills/_shared/music-routing.md#local-music-on-apple-silicon) |
 | 3D | `mlx_3d_generate` | MLX Core / mlx-serve (GLB from an image, consumed by the offline HTML mesh slide lane) |
 | 3D previz | `blender_scene_read` / `blender_scene_build` / `blender_camera_set` / `blender_object_animate` / `blender_pose_key` / `blender_motion_import` / `blender_render_previz` | **Optional before a generated video cut** (user directive 2026-09-11, optional since 2026-10-18) — the same plan renders in three.js through `previz-template.html` + `previz-runtime.js` when Blender is not installed. The local Blender, headless (**no API key, no network, no add-on, no GUI** — needs Blender 4.2+). Reads a .blend; builds a set of grey proxies — a person is a jointed mannequin on a 19-bone rig — plus dog·car·box·cylinder·sphere and GLB imports at the cut's frame range and resolution; places and keys the camera by location, look-at target and lens in metres, degrees and mm; keys objects and people's roots through space; poses a person by channel (raise, elbow, knee, bow …) or retargets a BVH/FBX motion-capture clip onto it, scaled, faced and floored; renders a clean H.264 previz plus stamped stills in Workbench or Eevee. Camera, blocking and body timing as numbers, iterated for free before any paid generation, then handed through `video_plan` → `video_execute` as the reference video of a Seedance 2.x cut — the hand-off (previz → camera and timing, still → first frame, sheets → look, prompt → acting) is in [blender-previz.md](skills/storyboard/references/blender-previz.md) §6 |
 | Growth review | `threads_draft_create` / `threads_review_submit` | Persist drafts and quote-grounded voice/purpose/flow reviews; no model API calls |

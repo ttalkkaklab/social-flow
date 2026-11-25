@@ -37,6 +37,7 @@
         "ASTRA_GENAI_DESKTOP_API_KEY",
         "ASTRA_VIDEO",
         "ASTRA_VIDEO_URL",
+        "STABLE_AUDIO_MLX_DIR",
         "MLX_SERVE_URL",
         "MLX_SERVE_API_KEY",
         "SUNO_API_KEY",

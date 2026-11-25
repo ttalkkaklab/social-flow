@@ -30,3 +30,26 @@ test('the catalog describes each adapter and scopes Lyria RealTime to its two in
   assert.deepEqual(realtime.map(row => row.tool).sort(), ['music_generate', 'music_generate_advanced']);
   for (const row of realtime) assert.equal(row.purpose, adapters.find(adapter => adapter.tool === row.tool).purpose);
 });
+
+test('local catalogs and planned arguments follow the selected runtime', () => {
+  const model = 'ddalcu/MiniMax-Music3-MLX-Serve-8bit';
+  const mini = args => parseMusicArgs('mlx_music_generate', { model, prompt: 'piano', ...args });
+  assert.equal(mini({ durationSeconds: 1, steps: 4, bpm: 30 }).durationSeconds, 1);
+  for (const args of [{ durationSeconds: 361 }, { steps: 3 }, { bpm: 301 }, { instrumental: false },
+    { instrumental: true, lyrics: 'sing' }, { refAudioPath: 'source.wav' }, { filename: 'clip.mp3' }, { timesignature: '4/4' }]) {
+    assert.throws(() => mini(args));
+  }
+  const options = musicAdapterContracts('mlx', model).adapters[0].parameters.options.properties;
+  assert.equal(options.durationSeconds.maximum, 360);
+  assert.equal(options.steps.minimum, 4);
+  assert.ok(!options.refAudioPath);
+  const legacy = musicAdapterContracts('mlx', 'existing-pack').adapters[0].parameters.options.properties;
+  assert.equal(legacy.durationSeconds.minimum, 10);
+  assert.ok(legacy.refAudioPath && !legacy.bpm);
+
+  const stable = args => parseMusicArgs('music_stable_audio_generate', { prompt: 'piano', ...args });
+  assert.equal(stable({ durationSeconds: 8.5, cfg: 2, negativePrompt: 'vocals' }).steps, 8);
+  for (const args of [{ durationSeconds: 381 }, { seed: -1 }, { negativePrompt: 'vocals' },
+    { inpaintRange: [1, 3] }, { initAudioPath: 'a.wav', inpaintRange: [1, 31] },
+    { filename: 'song.mp3' }, { model }, { lyrics: 'sing' }]) assert.throws(() => stable(args));
+});

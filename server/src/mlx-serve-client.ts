@@ -22,13 +22,15 @@ import { mlxImageFamily, validateMlxImageOperation } from './image-models.js';
 import { readImageMetadata } from './image-media.js';
 import { mlxServeApiKey, mlxServeUrl } from './config.js';
 import { requestBytes, requestRaw } from './http.js';
+import { validatePcmWav } from './tts-audio.js';
 import { bareFilenameSchema, pcmToWav, resolveOutputFile, saveAudioFile, saveMediaFile } from './media-utils.js';
 
 export const MLX_HEALTH_TIMEOUT_MS = 3_000;
 export const MLX_MODELS_TIMEOUT_MS = 10_000;
 export const MLX_LOAD_TIMEOUT_MS = 10 * 60_000;
 export const MLX_IMAGE_TIMEOUT_MS = 15 * 60_000;
-export const MLX_MUSIC_TIMEOUT_MS = 10 * 60_000;
+export const MLX_MUSIC_TIMEOUT_MS = 30 * 60_000;
+const musicTransport = new Agent({ headersTimeout: MLX_MUSIC_TIMEOUT_MS, bodyTimeout: MLX_MUSIC_TIMEOUT_MS });
 export const MLX_VIDEO_TIMEOUT_MS = 20 * 60_000;
 const H3_RENDER_TIMEOUT_MS = 90 * 60_000;
 const h3RenderTransport = new Agent({headersTimeout:H3_RENDER_TIMEOUT_MS, bodyTimeout:H3_RENDER_TIMEOUT_MS});
@@ -179,32 +181,45 @@ export const mlxImageEditSchema = z.object({
   }
 });
 
-export const mlxMusicGenerateSchema = z
-  .object({
-    prompt: z.string().min(1, 'Prompt is required').max(4_000),
-    model: z.string().min(1).optional(),
-    lyrics: z.string().max(8_000).optional(),
-    instrumental: z.boolean().optional().default(true),
-    durationSeconds: z
-      .number()
-      .int()
-      .min(MIN_MLX_MUSIC_SECONDS)
-      .max(MAX_MLX_MUSIC_SECONDS)
-      .optional()
-      .default(DEFAULT_MLX_MUSIC_SECONDS),
-    seed: z.number().int().min(0).optional(),
-    refAudioPath: z.string().min(1).optional(),
-    outputPath: z.string().optional(),
-    filename: bareFilenameSchema('audio').optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.instrumental && value.lyrics && value.lyrics.trim().length > 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'instrumental:true cannot be sent beside lyrics — mlx-serve returns 400. Set instrumental false to sing, or drop lyrics for a bed.',
-      });
-    }
-  });
+export const MINIMAX_MUSIC3_MODEL = 'ddalcu/MiniMax-Music3-MLX-Serve-8bit';
+const musicFields = z.object({
+  prompt: z.string().min(1).max(4_000),
+  model: z.string().min(1).optional(),
+  lyrics: z.string().max(8_000).optional(),
+  instrumental: z.boolean().default(true).describe('Set false and supply lyrics for a sung track.'),
+  durationSeconds: z.number().int().min(1).max(MAX_MLX_MUSIC_SECONDS).default(DEFAULT_MLX_MUSIC_SECONDS),
+  seed: z.number().int().nonnegative().safe().optional(),
+  steps: z.number().int().min(4).max(100).optional().describe('MiniMax diffusion steps (engine default 30).'),
+  bpm: z.number().int().min(30).max(300).optional().describe('Tempo guidance appended to the MiniMax style caption.'),
+  keyscale: z.string().min(1).optional().describe('Key guidance appended to the MiniMax style caption, e.g. F minor.'),
+  refAudioPath: z.string().min(1).optional(),
+  outputPath: z.string().optional(),
+  filename: bareFilenameSchema('audio').optional(),
+}).strict();
+
+function checkLyrics(value: { instrumental: boolean; lyrics?: string }, ctx: z.RefinementCtx) {
+  if (value.instrumental && value.lyrics?.trim())
+    ctx.addIssue({ code: 'custom', message: 'instrumental:true cannot be sent beside lyrics. Set instrumental false to sing, or drop lyrics for a bed.' });
+}
+
+const miniMaxMusicSchema = musicFields.omit({ refAudioPath: true }).extend({
+  filename: bareFilenameSchema('audio').refine(name => name.toLowerCase().endsWith('.wav'), 'Expected a WAV filename').optional(),
+  durationSeconds: z.number().int().min(1).max(360).default(DEFAULT_MLX_MUSIC_SECONDS).describe('Upper bound in seconds. The song may end earlier.'),
+}).superRefine((value, ctx) => {
+  checkLyrics(value, ctx);
+  if (!value.instrumental && !value.lyrics?.trim())
+    ctx.addIssue({ code: 'custom', message: 'MiniMax Music 3 needs lyrics when instrumental is false' });
+});
+const legacyMusicSchema = musicFields.omit({ steps: true, bpm: true, keyscale: true }).extend({
+  durationSeconds: z.number().int().min(MIN_MLX_MUSIC_SECONDS).max(MAX_MLX_MUSIC_SECONDS).default(DEFAULT_MLX_MUSIC_SECONDS),
+}).superRefine(checkLyrics);
+
+// Standalone calls can omit the pack. Apply its exact contract once MLX-Serve resolves it.
+export const mlxMusicGenerateSchema = musicFields.superRefine(checkLyrics);
+export function mlxMusicSchemaForModel(model?: string) {
+  if (!model) return mlxMusicGenerateSchema;
+  return model === MINIMAX_MUSIC3_MODEL || model === 'MiniMax-Music3-MLX-Serve-8bit' ? miniMaxMusicSchema : legacyMusicSchema;
+}
 
 export const mlxVideoGenerateSchema = z
   .object({
@@ -627,12 +642,8 @@ export async function editMlxImage(request: MlxImageEditRequest): Promise<MlxFil
   return result;
 }
 
-function wavLooksValid(buf: Buffer): boolean {
-  return buf.length >= 12 && buf.subarray(0, 4).toString('ascii') === 'RIFF' && buf.subarray(8, 12).toString('ascii') === 'WAVE';
-}
-
 function jsonErrorFromBytes(bytes: Buffer, contentType: string, status: number): string | undefined {
-  const asText = bytes.toString('utf8');
+  const asText = bytes.toString('utf8', 0, 1000);
   if (contentType.includes('json') || asText.trimStart().startsWith('{')) {
     return translateUpstream(`HTTP ${status}: ${asText.slice(0, 1_000)}`);
   }
@@ -640,12 +651,15 @@ function jsonErrorFromBytes(bytes: Buffer, contentType: string, status: number):
   return undefined;
 }
 
-export async function generateMlxMusic(request: MlxMusicGenerateRequest): Promise<MlxFileResult> {
+export async function generateMlxMusic(input: MlxMusicGenerateRequest): Promise<MlxFileResult> {
   const health = await mlxHealth();
   if (!health.ok) return { success: false, error: health.error };
-  const resolved = await resolveModel('music', request.model);
+  const resolved = await resolveModel('music', input.model);
   if (!resolved.ok) return { success: false, error: resolved.error };
 
+  const checked = mlxMusicSchemaForModel(resolved.model).safeParse(input);
+  if (!checked.success) return { success: false, error: checked.error.message };
+  const request: MlxMusicGenerateRequest = checked.data;
   const body: Record<string, unknown> = {
     prompt: request.prompt,
     model: resolved.model,
@@ -654,6 +668,9 @@ export async function generateMlxMusic(request: MlxMusicGenerateRequest): Promis
   };
   if (request.lyrics !== undefined) body.lyrics = request.lyrics;
   if (request.seed !== undefined) body.seed = request.seed;
+  if (request.steps !== undefined) body.steps = request.steps;
+  if (request.bpm !== undefined) body.bpm = request.bpm;
+  if (request.keyscale !== undefined) body.keyscale = request.keyscale;
   if (request.refAudioPath) {
     const clip = fileToBase64(request.refAudioPath);
     if (!clip.ok) return { success: false, error: clip.error };
@@ -667,16 +684,20 @@ export async function generateMlxMusic(request: MlxMusicGenerateRequest): Promis
     authHeaders(),
     body,
     MLX_MUSIC_TIMEOUT_MS,
+    musicTransport,
   );
   if (!res.ok) {
     const text = res.bytes.toString('utf8');
-    if (isUnreachable(res.status, text)) return { success: false, error: mlxDownHint(text) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${text.slice(0, 1_000)}`) };
+    if (isUnreachable(res.status, text)) return { success: false, submissionUnknown: true, error: mlxDownHint(text) };
+    return { success: false, submissionUnknown: res.status >= 500, error: translateUpstream(`HTTP ${res.status}: ${text.slice(0, 1_000)}`) };
   }
   const jsonErr = jsonErrorFromBytes(res.bytes, res.contentType, res.status);
-  if (jsonErr) return { success: false, error: jsonErr };
-  if (!wavLooksValid(res.bytes)) {
-    return { success: false, error: `Music response is not a WAV (got ${res.contentType || 'unknown type'}, ${res.bytes.length} bytes)` };
+  if (jsonErr) return { success: false, submissionUnknown: true, error: jsonErr };
+  let durationSeconds: number;
+  try {
+    durationSeconds = validatePcmWav(res.bytes);
+  } catch (error) {
+    return { success: false, submissionUnknown: true, error: 'Invalid MLX music response: ' + String(error) };
   }
 
   const outFile = saveAudioFile(
@@ -688,7 +709,7 @@ export async function generateMlxMusic(request: MlxMusicGenerateRequest): Promis
     success: true,
     path: outFile,
     model: resolved.model,
-    durationSeconds: request.durationSeconds,
+    durationSeconds,
     elapsedSeconds: Math.round((Date.now() - startedAt) / 1000),
   };
 }

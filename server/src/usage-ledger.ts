@@ -327,7 +327,7 @@ export function priceOf(
   if (tool === 'suno_generate_sound') return { key: 'music.suno-sound', quantity: 1 };
   if (tool === 'suno_generate_lyrics') return { key: 'music.suno-lyrics', quantity: 1 };
 
-  if (tool === 'mlx_music_generate') {
+  if (tool === 'mlx_music_generate' || tool === 'music_stable_audio_generate') {
     return { key: 'music.mlx', quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
   }
   if (['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video'].includes(tool)) {

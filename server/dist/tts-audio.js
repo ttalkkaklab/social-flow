@@ -13,41 +13,43 @@ export function decodeSpeechBase64(data) {
         throw new Error('Empty speech audio');
     return bytes;
 }
+export function validatePcmWav(bytes) {
+    if (bytes.length < 44 || bytes.toString('ascii', 0, 4) !== 'RIFF' ||
+        bytes.toString('ascii', 8, 12) !== 'WAVE' || bytes.readUInt32LE(4) + 8 !== bytes.length) {
+        throw new Error('Invalid or truncated WAV');
+    }
+    let byteRate = 0, blockAlign = 0, dataSize = 0, offset = 12;
+    for (; offset + 8 <= bytes.length;) {
+        const size = bytes.readUInt32LE(offset + 4), start = offset + 8;
+        if (start + size > bytes.length)
+            throw new Error('Truncated WAV chunk');
+        const id = bytes.toString('ascii', offset, offset + 4);
+        if (id === 'fmt ') {
+            if (size < 16 || byteRate)
+                throw new Error('Invalid WAV format');
+            const format = bytes.readUInt16LE(start), channels = bytes.readUInt16LE(start + 2);
+            const rate = bytes.readUInt32LE(start + 4), bits = bytes.readUInt16LE(start + 14);
+            byteRate = bytes.readUInt32LE(start + 8);
+            blockAlign = bytes.readUInt16LE(start + 12);
+            if (![1, 3].includes(format) || channels < 1 || channels > 8 || rate < 8000 || rate > 192000 ||
+                !(format === 3 ? [32, 64] : [8, 16, 24, 32]).includes(bits) || blockAlign !== channels * bits / 8 || byteRate !== rate * blockAlign) {
+                throw new Error('Invalid WAV encoding');
+            }
+        }
+        if (id === 'data')
+            dataSize += size;
+        offset = start + size + (size & 1);
+    }
+    if (offset !== bytes.length || !byteRate || !dataSize || dataSize % blockAlign !== 0)
+        throw new Error('Invalid WAV data');
+    return dataSize / byteRate;
+}
 export function validateSpeechAudio(bytes, extension) {
     extension = extension.toLowerCase();
     if (!bytes.length)
         throw new Error('Empty speech audio');
-    if (extension === 'wav') {
-        if (bytes.length < 44 || bytes.toString('ascii', 0, 4) !== 'RIFF' ||
-            bytes.toString('ascii', 8, 12) !== 'WAVE' || bytes.readUInt32LE(4) + 8 !== bytes.length) {
-            throw new Error('Invalid or truncated speech WAV');
-        }
-        let byteRate = 0, blockAlign = 0, dataSize = 0, offset = 12;
-        for (; offset + 8 <= bytes.length;) {
-            const size = bytes.readUInt32LE(offset + 4), start = offset + 8;
-            if (start + size > bytes.length)
-                throw new Error('Truncated speech WAV chunk');
-            const id = bytes.toString('ascii', offset, offset + 4);
-            if (id === 'fmt ') {
-                if (size < 16 || byteRate)
-                    throw new Error('Invalid speech WAV format');
-                const format = bytes.readUInt16LE(start), channels = bytes.readUInt16LE(start + 2);
-                const rate = bytes.readUInt32LE(start + 4), bits = bytes.readUInt16LE(start + 14);
-                byteRate = bytes.readUInt32LE(start + 8);
-                blockAlign = bytes.readUInt16LE(start + 12);
-                if (![1, 3].includes(format) || channels < 1 || channels > 8 || rate < 8000 || rate > 192000 ||
-                    !(format === 3 ? [32, 64] : [8, 16, 24, 32]).includes(bits) || blockAlign !== channels * bits / 8 || byteRate !== rate * blockAlign) {
-                    throw new Error('Invalid speech WAV encoding');
-                }
-            }
-            if (id === 'data')
-                dataSize += size;
-            offset = start + size + (size & 1);
-        }
-        if (offset !== bytes.length || !byteRate || !dataSize || dataSize % blockAlign !== 0)
-            throw new Error('Invalid speech WAV data');
-        return dataSize / byteRate;
-    }
+    if (extension === 'wav')
+        return validatePcmWav(bytes);
     // Compressed formats need demuxing and decoding; metadata alone accepts corrupt payloads.
     const dir = mkdtempSync(join(tmpdir(), 'speech-probe-'));
     try {

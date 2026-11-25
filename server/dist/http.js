@@ -33,11 +33,12 @@ export async function requestRaw(method, url, headers, body, timeoutMs, dispatch
  * TTS and music endpoints reply with raw audio/wav. Decoding that through
  * res.text() corrupts the RIFF header, so those callers use this instead.
  */
-export async function requestBytes(method, url, headers, body, timeoutMs) {
+export async function requestBytes(method, url, headers, body, timeoutMs, dispatcher) {
     const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
     try {
         const res = await fetch(url, {
             method: method.toUpperCase(),
+            ...(dispatcher ? { dispatcher } : {}),
             headers: {
                 ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...headers,
