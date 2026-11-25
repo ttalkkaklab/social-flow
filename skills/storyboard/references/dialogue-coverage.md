@@ -78,7 +78,7 @@ resulting shot with `shot_icons`; then create its own opening image.
    speech, inspect the planned detail, listener or space instead; do not widen the crop
    to add the speaker's face. A visible hand still belongs in the cast. Explain why the
    face is outside the crop; off_screen is not a workaround for accidental occlusion.
-5. After images, write `shot_prompt` action/end/sound in English. Dialogue stays only in
+5. Record action, closing state and sound as shot attributes. Confirm speaker positions after inspecting their image. Dialogue stays only in
    `shot_dialogue`; do not paste spoken quotes into action. For each on_screen MSR speaker (at most two), inspect
    the start image and pass `speakerBindings` with its viewer-relative position and
    appearance. Image/Audio indices are reference slots, not left/right.

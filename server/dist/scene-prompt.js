@@ -62,8 +62,12 @@ export function sceneTimelineWords(timeline, scene, options = {}) {
         const duration = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
         const hold = describeDelivery && options.cutTiming === 'approximate_holds' &&
             `Hold this view for about ${duration} ${duration === 1 ? 'second' : 'seconds'}.`;
+        const positions = (shot.openingPositions || []).filter(person => index !== 0 ||
+            !scene.openingPositions?.some(initial => initial.character === person.character && initial.position === person.position));
+        const opening = positions.map(person => person.character + ': ' + person.position.replace(/[.!?]+$/, '') + '.').join(' ');
         rows.push([
             shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : undefined), hold,
+            opening && 'At the start of this shot, ' + opening,
             ...[shot.framing, shot.blocking, shot.action].filter(value => value && !wholeTake.has(value)),
             ...cues, ...guides, shot.sound && shot.sound !== scene.sound && 'Sound: ' + shot.sound,
             describeDelivery && deliveryDirection(lines), ...spoken,

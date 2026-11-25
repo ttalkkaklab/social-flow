@@ -3,6 +3,7 @@
 Read this file only when resuming an existing unversioned or story-v1 episode.
 Never use it to author or review a new scenario-v2/story-v2 episode. Current authorization,
 budget, speech and automation policies still override historical instructions here.
+Archived model prompts can be inspected. All edits record attributes and the next video request compiles the current board. The archived prompt-writing steps and missing-prompt review findings below have been retired.
 For new work, return to the corresponding SKILL.md and character-scenarios.md.
 
 ## Contents
@@ -711,58 +712,7 @@ Core rules:
     the existing sentence-length limits; preserve the channel's 존댓말 or 반말.
 
 - THEME is copied verbatim from the profile §3 values.
-- **Every generated-video shot leaves here with its camera decided** — `visual.camera`'s four
-  slots (`movement` · `speed` · `framing` · `end`) filled on b-roll, motion-background scenes,
-  and quote speech clips. The clip prompt is assembled out of them here and stored; leave `end`
-  empty and the ending nobody reviewed is exactly the last second that drifts.
-  `movement: "static"` is a decision, not a blank. On a `still_camera` cut the move is
-  `shot.render.camera` (effect · target · reason, render-routing.md) through the camera HTML
-  runtime; this block is optional there, its `movement` the legacy Ken Burns vocabulary for a
-  card that reaches the builder as an image (the feel: directing-grammar §5's Still column). The vocabulary rules (vendor words, one move,
-  no seconds, no exclusions) are `references/scenes-schema.md` §camera, and the move itself
-  comes from the shot's `feel` (directing-grammar §4–§5) — it supports the feel, it doesn't
-  carry it alone, and `framing` restates the shot's size and angle in the engine's words.
-- **Composition uses `shot.composition`** (scenes-schema §Composition): plan visible faces and directional subjects, inherit FORMAT safe zones, and keep space.layout consistent. The frame icon shows the plan; intentional departures need a reason.
-- **Gaze sequences declare `shot.eyeline`** using scenes-schema §Eyeline: write the subject, target, screen direction, target distance and linked cut. The eye icon reads this record. Unrelated cuts can omit it; movement-only axes use `none` with a reason. New gaze scenes fill every relevant cut; legacy omissions warn.
-- **Depth is a count, recorded in `shot.depth`** (scenes-schema §Depth of field): one thing to read → `shallow` with the sharp plane named (a person's eyes), two or more → `deep` with the planes listed front to back, `none` with a reason on flat routes. The two-plane icon reads this record. A still-camera focus-in or rack-focus cut is always shallow; a blurred background is never the default.
-
-- **Every generated still leaves here with its floor plan decided** — `shot.space` filled
-  (`frame: "camera"` · `layout` — empty only on an `insert`/`ecu` that fills the frame with one
-  object · `facing` when a person is on screen · `line` when two people, or a person and what
-  they look at, share the scene). Image models do not infer camera position or object-centric
-  left/right (directing-grammar §3.5). The assembler writes the prefix; the scene and mood follow. A
-  motion prompt for image→video does **not** rewrite sides, facing, or lighting — the PNG
-  already locked them. A quote speech clip has no still, so its prompt carries the shot's
-  `From the camera: …` sentence (`assemble-bg-prompt.js --space-only`).
-- **Declare `shot.cutType` on every generated still and video cut** when the episode defines
-  `PRODUCTION.cast` or any cut type: `action`, `reaction`, `insert`, `document`, `map` or `scenery`.
-  Put each episode character's appearance once in `PRODUCTION.cast[id].sheet`, outside `videoDesign` and `shot.space`.
-- **Name whoever is on screen** in `visual.character`, with the subject first. A matching episode
-  cast id takes priority; other ids come from the channel's `assets/catalog.md`
-  (`channel/references/resolve-asset.py --list <channel dir>`). **Where a generated clip hands over more than one
-  reference, write each entry as `{ id, scope }`** — one clause per reference saying what it
-  governs and where it may appear ("controls the helmet and body only", "appears only in the last
-  second, and its face never transfers"). Unscoped references leak into each other, and the check
-  strip warns on a multi-reference clip with no scope anywhere (scenes-schema §character reference).
-- **Select Seedance per cut** using produce `references/video-model-selection.md` §Seedance
-  per-cut selection. Each motion background chooses its model and resolution.
-  `PRODUCTION.videoModel` records the default or `model:"mixed"` (§1.7). Seedance 2.x can
-  receive the previz as a reference video. Multiple character/product references: 2.0; fixed voice or over nine reference
-  images: 2.5. Record the purpose, reason, face eligibility and reference paths beside the
-  prompt (scenes-schema §Motion background). Rebuild the cost preview after any change;
-  its generation settings are the ones produce sends. Keep the episode video cap without filling unused slots.
-- **Every generated-video shot leaves here as one API call with its final prompt stored**
-  (scenes-schema §clip prompt). The scene is the call: pick the planned route (`visual.engine`,
-  Seedance when absent; a slot naming `engine:"veo"` reuses its existing clip under
-  `visual.reuse` or picks a supported engine), fit `duration` to that route's server-validated grid, and assemble the
-  prompt with `references/assemble-bg-prompt.js --clip --from scenes.js --shot N --engine
-  <route>` — the four camera slots become the span, `--motion` carries what moves in the
-  picture, `--locks` the positive-locks tail on a multi-reference call, and the `visual.audio`
-  sentence closes it. Store the stdout whole (`visual.prompt` · `visual.video.prompt` ·
-  `visual.clip.prompt` per type); produce sends it verbatim and the check strip warns on a
-  generated shot without one. Exclusion nouns go in the sibling `negative` field, never the
-  body. The assembler blocks what each route can't take — timecodes and digit seconds on
-  seedance (in-clip state changes are written in words).
+- Record the video route, shot timing, camera, action, closing state and sound as attributes. On a video request, compile the ordered scene from its latest board with `video_plan`.
 - **A generated clip's `duration` comes from what the cut is for**, not from a default — insert
   3–4s, action 5–7s, a face carrying emotion 7–10s, an establishing shot 5–8s, a deliberate long
   take 10s+ with one move; the directing-grammar §5 row for the shot's feel refines it, and a
@@ -961,7 +911,7 @@ once, in this order, before §5:
   written out), one move per cut chosen from the feel, a cut length from what the cut is for
   (scenes-schema §cut length), the engine the route names (a real face never goes to Seedance
   2.x, a spoken cut never to an adapter without a voice lane — `../produce/references/video-model-selection.md`),
-  and the stored clip prompt saying what the slots say.
+  and the current shot attributes.
 - **The sound** — `visual.audio` written on every generated video shot, voice casting against
   profile §2 (never three speakers in one scene), `tts` spellings for digits and swallowed
   endings (「에이트」), every `sound.cue` naming a cue that exists, the drop spent on the line the
@@ -975,7 +925,7 @@ approval screen is where a defect on the board gets its human look.
 
 Every still, slide art and clip this episode needs is **decided here and generated by produce
 after approval** (produce §1.5 stills · §3 clips · §3.6 slides). What leaves this section is a
-stored prompt, an engine choice and a price. No API call runs, so a board the user sends back
+set of shot attributes, an engine choice and a price. No API call runs, so a board the user sends back
 costs nothing — which is the whole reason the plan and the spend were split (owner directive,
 2026-09-04).
 
@@ -1073,22 +1023,14 @@ Two generated forms count against the slot cap together:
   said (absolute rule 9 means that stretch uses the video's own audio, and using both slots
   cuts roughly 8 seconds out of the time spent delivering information). Per slot write the
   **used length `duration` (4s by default) and the reason for it**, `after`, `src`, the camera
-  slots and audio, and store the assembled final prompt in `visual.prompt` (§clip prompt —
-  `--clip --engine seedance`). Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
+  slots, subject motion and audio. Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin on 2026-10-31
   because none takes a voice reference. Two slots using the same PNG means the same shot twice — specify a different
   source per slot.
 - **Motion background (`visual.video`)** — the scene itself as video. The scene's still becomes
   a parameter for a video laid under the background, and **narration, captions, and subtitles
   stay**. Use it where the movement itself is the content. `duration` inside one clip
   (seedance 4–15s on the 2.0 grades and 4–30s on 2.5 — the previz route every motion background takes — server-validated) · points only · not combined with
-  per-line illustrations. Store the assembled prompt in `visual.video.prompt` (§clip prompt —
-  `--clip --engine seedance --locks "…"`). Three rules hold on that route and the assembler
-  exits 1 on each: the body is **English** (Korean only inside a dialogue quote), it **never
-  re-describes the layout, facing or lighting** the still draws — re-describing makes the model
-  redesign it — and it **closes on a consistency lock**, the only place an exclusion can go on
-  Seedance. Who the subject *is* may stay; where things sit
-  may not. Write `visual.audio` anyway — the build discards the clip's sound, but the model
-  composes a calmer clip when it isn't left to invent a soundtrack. **Every generated cut is planned in 3D first** (user directive 2026-09-11) — `blender_scene_build` → `blender_camera_set` → `blender_render_previz`, or `previz-template.html` rendered with `render-motion-slide.mjs --previz` where Blender is missing — at the cut's billed length, 24 fps, one flat colour per actor, stored as `visual.video.previz` (`renderer` · `clip` · `firstFrame` · `sha256` · `camera.movement`; `modelPurpose:"previz"` on the API lane), and `check-scenes.js` refuses the cut without it ([blender-previz.md](blender-previz.md) §6):
+  per-line illustrations. Write the subject motion and sound as shot attributes. **Every generated cut is planned in 3D first** (user directive 2026-09-11) — `blender_scene_build` → `blender_camera_set` → `blender_render_previz`, or `previz-template.html` rendered with `render-motion-slide.mjs --previz` where Blender is missing — at the cut's billed length, 24 fps, one flat colour per actor, stored as `visual.video.previz` (`renderer` · `clip` · `firstFrame` · `sha256` · `camera.movement`; `modelPurpose:"previz"` on the API lane), and `check-scenes.js` refuses the cut without it ([blender-previz.md](blender-previz.md) §6):
   the still is edited from the previz's first frame (§6.6), produce hands the clip to Seedance 2.x as `Video 1` with the still as `Image 1` — or, on a host video tool, the still and the prompt carry the previz (§6.7) — and `spatial-prompts.js` writes the binding sentences.
 **Backgrounds that become video sources** (scenes with b-roll attached, motion-background
 scenes) have to be photorealistic people planned onto `gpt_image_text2img` (high), not the

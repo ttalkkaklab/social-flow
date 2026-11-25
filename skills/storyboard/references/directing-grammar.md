@@ -202,7 +202,9 @@ plane window, `ls` is recognising someone across the street, `fs` is sharing a l
 `ms` is across a meeting table, `mcu` is across a coffee table, `cu` is the moment before they
 cry when nothing else is visible, and `ecu` is when only the eyes are remembered.
 
-| `shot.size` | Name (on set) | Frame bottom / what's in | What it tells or makes the audience feel | Default use | Phone distance (standing adult) | Sound that matches |
+Use the phone examples when scouting. Set the actual lens, camera position and listening perspective for each setup. A frame size can work with many distances and sound perspectives.
+
+| `shot.size` | Name (on set) | Frame bottom / what's in | What it tells or makes the audience feel | Default use | Example phone distance (standing adult) | Example sound perspective |
 |---|---|---|---|---|---|---|
 | `els` | extreme long shot (완전 풀) | person under 1/10 of the height (a dot) — the place is the subject | alone · powerless · the world is big · **or** scale when the frame holds many people | openings, endings, "nobody here" | 20 m or more | space (wind, traffic, echo) loud; no human voice needed |
 | `ls` | long shot · wide (와이드) | full body with room above and below, 40–60 % of the height | where we are, how many, how far apart — the **establishing** job | the first shot of a scene; situation explanation | 5–6 m — walk, don't zoom | space forward; lines may be faint |
@@ -213,18 +215,8 @@ cry when nothing else is visible, and `ecu` is when only the eyes are remembered
 | `cu` | close-up (클로즈업) | shoulder line at the bottom, **crown lightly cropped**, almost no headroom | "look at this now" — the director's command; the emotion workhorse | the one line that matters in the scene | step back 1.5–2 m and use the 2× tele — never lean in | voice and breath forward |
 | `choker` | choker | forehead to chin | emotion at its peak | once, at the peak | — | breath forward |
 | `ecu` | extreme close-up (완전 붙여) | eyes only, mouth only, fingertips | detail, the peak of tension | name the detail and the change it reveals | — | the detail's own sound |
-| `insert` | insert (인서트) | an object, a hand, a screen — no face | the one thing that matters; one insert replaces three lines of dialogue | "the phone is ringing" | — | the object's sound |
 
-Compositions that ride on top of the size — write them in `shot.size` when they say more than the
-distance does: `two` (two-shot), `three` (three-shot), `ots` (over the shoulder), `pov` (the
-character's eyes — view from the character eyes, no view of their face), `back` (from behind — the face withheld),
-`cutaway` (away from the action to something in the scene), `reaction` (the face that saw it).
-`ws` is the legacy key for `ls`. Composition labels `two`, `three`, `ots`,
-`pov`, `back`, `cutaway` and `reaction` remain supported for old boards, but do not
-imply a crop. New boards store the actual distance in `shot.size` and describe
-participants/viewpoint separately in `visual.camera.framing` and `shot.techniques`.
-Use `framing.mfs` for mid-thigh and `framing.ms` for waist-up. The canonical labels,
-size prompt words and icons live together in `film-techniques.js`.
+Record the visible scale in `shot.size`. A new shot records participant count in `shot.arrangement`, viewpoint in `visual.camera.view.mode` and editorial purpose in `shot.cutRole`. Use `shot_icons.arrangement`, `view` and `cutRole` to set them. The reader recognizes historical size labels such as `two`, `ots` and `reaction`; on their own they establish no scale. A medium two-shot can become an over-the-shoulder reaction without changing the crop. `mfs` ends at mid-thigh and `ms` at the waist on a standing person.
 
 Two names from the set that are roles, not sizes — write the size and let `shot.info` carry
 the role: an **establishing shot** (설정샷, "에스타 하나 따놔") is the first shot of a scene that
@@ -254,10 +246,7 @@ Rules that come with the dial `[course]`:
 - **Length follows the event.** Allow time to read the relevant geography or detail and to
   complete the action, speech and reaction. No wide-to-close duration ratio or minimum insert
   hold applies. Do not pad speech or add a silent wide solely to satisfy a ratio.
-- **Sound follows the size.** Wide → space loud and lines distant; close → lines and breath
-  forward. A wide shot with studio-clean dialogue reads as fake without the viewer knowing why;
-  a close-up with distant sound reads as "something's off". Write it into `visual.audio` on
-  generated shots and let the builder's mix follow on filmed ones.
+- **Sound perspective has its own point of view.** A wide view can stay close to a speaker and a close-up can keep a whole room audible. Choose the listening distance for the scene, then adjust it locally when the story calls attention to a sound.
 - **Don't fake a wide by zooming out in a small room** — the frame size is right and the space
   goes flat. If you can't step back, stop at `fs`.
 
@@ -279,25 +268,23 @@ are. `check-scenes.js` fails any shot but the outro with no
 |---|---|---|
 | where we are, what time, how many people, how far apart | `ls` — `els` when the place itself is the subject | the establishing job; a closer size loses the place, the head count or the distance |
 | how big this is — a crowd, a fleet, a hall | `els` with many subjects (`high`/`overhead` helps) | the tiny figures read as scale only because there are many **and they fill the frame**; the same figure alone reads as lonely. Count whatever the viewer counts — people, ships, roofs. A handful swallowed by the space (thirteen ships in a foggy strait, a horizon of enemy sails behind them) belongs to the next row, not this one, and `shot.why` says so |
-| alone · nowhere to run · the world is big | `els`, one figure (or a few lost in the space), no human voice | Mad Max's cliff — the smallness says the sentence, so don't narrate it on top |
+| alone · nowhere to run · the world is big | `els`, one figure or a few lost in the space | Mad Max's cliff — the smallness says the sentence, so don't narrate it on top |
 | what the body does — a walk, a dance, a fight, a costume, a gesture that needs the whole body | `fs` | head to toe with no slack; `ms` cuts the action off, `ls` shrinks it |
-| two people and the room between them | `mfs` or `two` | both bodies with a little room — the distance between them is the information |
+| two people and the room between them | `mfs` with `arrangement: "two"` if both bodies should be legible | both bodies with a little room — the distance between them is the information |
 | three or more people — a crew, a boat, a table | `ls` first, then `ms` on the hands or `cu` on the one face | the head count and who stands where come before any gesture; `three` at `mfs`/`ms` shows the group, not the place, and pays no establishing debt |
 | two things, two places or two states side by side in a live shot — a fridge and a shelf, before and after | `ls` (a wide of the two, nobody's face) | the comparison is the information; an `insert` shows one of them and loses the other |
-| what someone explains with their hands · a person and the thing they handle | `ms` — only when the face is in the frame | face, hands and context together — the dialogue default. If the screen shows only the hands and the thing (no face), it is an `insert`, however much the hands are "explaining" |
+| Someone explains with their hands | A medium shot can hold the gesture, the tool and the speaker. | For the tool alone, record the tool as the subject and choose how tightly it is framed. |
 | a person telling me — a talking head, an interview, the hook cut | `mcu` | face and hands together for the last time; the news and interview size, at `eye` |
 | the one line that matters · the face that saw it | `cu` when the expression carries new information | "look at this now" — the command; a wider size spreads the attention. The whole face is in, crown lightly cropped — a helmet or a hat cropping the top does not make it a `choker` |
-| the peak — one tear, one word, one trembling hand — the moment the episode has been building to (the towel coming off the dyed hair, the order finally given, the heel leaving the floor) | `choker` / `ecu` when the named detail carries the beat | the detail is the whole information — eyes only, mouth only, fingertips; when the whole face is still in the frame it is a `cu`. `ecu` is a face or a hand — a tight detail of an object is still an `insert` |
-| the thing itself — a screen, a hand, a document, an object that replaces three lines, at any tightness | `insert` | no face; the object's own sound |
-| an HTML slide — a rendered object, a chart, a text plate | `insert` when one object or one figure fills the stage (still one object when it changes through stages — a bean losing its gas, a hair losing its melanin); `ls` for a chart, a timeline or a layout — anything that compares or orders two or more values or things (two bars are a comparison, so `ls`; a mechanism whose parts are being compared — a big chainring against a small sprocket — is a comparison too) | the subject on the stage is sized the way a person would be, and `angle` is written `eye` (the field has no blank value); there is no room to hear, so the sound rule doesn't apply — the narration and the slide's bed |
+| One tear, one word or a trembling hand carries the beat | Use a big close-up or extreme close-up when the detail fills the frame. | Describe the actual crop. A close-up can show a face, part of a person or an object. |
+| A screen, a hand or a document reveals information | Choose the physical scale that makes it legible. | Set `cutRole: "insert"` when the edit cuts to that detail. Specify the sound from the listening perspective. |
+| An HTML graphic, chart, diagram or text plate | Set the graphic treatment and the arrangement of elements on the canvas. | Its layout determines which figures, labels and comparisons are visible. |
 
 The mismatches this table catches: `cu`/`ecu`/`insert` on a shot whose info is the place or the
 head count (the viewer never learns where they are); `ls`/`els` on the one line that has to land
 on a face (the command is whispered from across the street); `ms` on a walk or a fight (the body
 is cut mid-action); `mcu` on a detail the hand is holding (the object is too small to read); a
-tiny figure meant as scale with nobody else in the frame; a wide shot whose sound line says the
-lines are clear (at `ls`/`els` the space is in front and the people in the picture are far — only
-the narrator's voice-over, which is not in the picture, stays clean); a composition tag whose
+tiny figure meant as scale with nobody else in the frame; a composition tag whose
 distance names one size and describes another (`back` "at `fs`" cut at mid-thigh is `mfs`).
 
 ---
@@ -419,8 +406,7 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-The storyboard runs it when the shot plan is written (SKILL.md §4, cut and stage the scenes) and stores the full stdout as `bgPrompt`;
-produce sends that string to the engine unchanged.
+The board stores the composition and any mood or exclusions. On an image request, the image planner assembles these fields for the selected engine.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
 Rules:
@@ -489,9 +475,9 @@ move while the other dials stayed at their defaults.
 | height | `static` at `low` / `high` / `overhead` | see §3 — the angle does the work and the camera stays still | `static` is a decision, not an empty slot |
 | viewpoint | `handheld` | presence · unease · the documentary feel — and it cuts the AI look | micro-shake only; it reads real |
 | viewpoint | snorricam (camera fixed to the body) | a mind coming apart — the person locked, the world shaking | no vendor row — write `handheld` in `movement` and describe the body-locked frame in `framing` |
-| viewpoint | `pov` (in `framing`: view from the character eyes, no view of their face) | inside the character | |
-| viewpoint | rear / `back` (in `framing`: the back fills the frame, static) | withholding the face — the audience imagines the feeling | a held laugh, a quiet reaction |
-| distortion · focus | rack focus | hidden information revealed — the camera doesn't move, the focus crosses from front to back | 3–4 s, the insert length. No vendor row — `movement: static`, the focus shift goes in `framing`/`end` |
+| viewpoint | Set `view.mode: "pov"` and identify the observer in `viewerId`. | See the action from that person’s eyes. | Name the visible subject and select its crop. |
+| viewpoint | Set `view.mode: "rear"`. | Withhold the face. | Set the crop and camera movement separately. |
+| focus | rack focus | Shift sharpness from one subject to another when the cue occurs. | Set `shot_icons.focus.from`, `to` and `on`. Select the camera movement independently. |
 | distortion · focus | `dutch` (in `shot.angle`, camera static) | something is wrong | see §3 — story-specific reason written |
 | distortion · focus | push past (dolly through a doorway, a window) | a scene change done by camera instead of by cut | no vendor row (no `push`) — `movement: dolly in`, the doorway in `framing`, the far room in `end` |
 | — | `static` | the default body register; what every other move is measured against | "not moving" is a choice |
@@ -622,12 +608,12 @@ scene that needs a held view uses an authored hold rather than alternating effec
 | fate · the whole picture in one frame (운명·요약) | `ls`/`els` | `overhead` | `static` | slow `out`, or `hold` + `drift` | action-led | space | |
 | shock · alone in it · the world backs away (충격·고립) | `mcu` | `eye` | `dolly zoom in` | `punch` | action-led | the surroundings drop out, one hit, then only the person's own sound (*Jaws*: the beach noise leaves, Brody stays) | either direction; needs depth cues behind the person (`shot.depth` deep) and a subject who stands still |
 | cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | action-led | the room closes in — a low drone rises | use only when the perspective change serves this beat |
-| hidden information revealed (숨은 정보 공개) | two planes, or `insert` | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | action-led | the object's sound | an insert replaces three lines |
+| hidden information revealed (숨은 정보 공개) | A scale that keeps the foreground and background legible, or a close-up of the detail | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | action-led | the object's sound | an insert replaces three lines |
 | the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | action-led | footsteps, passing space | |
-| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | action-led | breathing, footsteps | |
+| inside the character · immersion (몰입·1인칭) | Scale the visible subject to the detail the audience needs. | `eye` | `tracking` if following | `in` + `drift` | action-led | breathing, footsteps | Set the observer in `view.mode: "pov"`, or choose `rear` to follow behind a character. |
 | presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | action-led | room tone | cuts the AI look |
 | trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` + `drift` | action-led | voice clean | `[study]` the default for hook cuts and quote clips |
-| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` + `drift` | action-led | no face — the sound does the face's job | |
+| withhold · let them imagine (감추기·상상) | A close-up can hold the back of the head. | `eye` | `static` | `hold` + `drift` | action-led | footsteps stop | Set `view.mode: "rear"` to withhold the face. |
 | transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | action-led | whoosh or a hard cut | |
 | closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | action-led | space | the person shrinks as the frame rises |
 | detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | action-led | the detail's sound | name the detail and the change it reveals |
@@ -658,7 +644,7 @@ what the audience is supposed to get.
 7. **Start with one primary move.** A compound move needs a coherent path and support
    from the chosen adapter. Static is valid; do not add movement to satisfy a quota.
 8. **Eye level on the hook cut and every speech clip** unless a reason is written. `[study]`
-9. **Sound follows size** (§2).
+9. Set the listening perspective and check that its changes serve the cut (§2).
 10. **The feel is written before the dials.** A feel written after the camera was chosen is a
     caption for the camera; the review reads it as unset.
 11. **A scene keeps its `space.line`.** Two people (or a person and what they look at) lock
@@ -746,8 +732,7 @@ below are what the script's standing notes carry `[course]`.
   is the worst of both and the cut jumps. Decisively different, or not different at all. (The screencast lane is the exception by design: a person
   talking to camera while the screen rolls is the vlog contract — the flow of speech, not the
   continuity of the frame, governs, so the silence cuts there don't read as jumps.)
-- **Sound follows size** — a wide shot may have the room; a close-up needs the voice clean.
-  One mic position per sitting; move seats and the join is audible.
+- Choose the listening perspective from the scene or shot. A wide shot can carry a close-miked voice. Check the sound on both sides of the edit when the microphone moves.
 
 ---
 
@@ -762,7 +747,7 @@ below are what the script's standing notes carry `[course]`.
 | `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
 | `visual.camera` | generated shots | produce (assembles the prompt, adds nothing) · reviewer camera mode (slots, vendor words, one move, `end`) |
 | `duration` | generated clips · filmed shots | measured speech, action, reaction and edit handles; the cut-length table is a starting guide |
-| `visual.audio` | generated shots | produce · reviewer sound mode (sound follows size) |
+| `visual.audio` | generated shots | produce · reviewer sound mode (chosen listening perspective) |
 
 The check strip in `storyboard.html` warns on: a shot with no `shot.feel` or no `shot.size`, a
 `shot.size` or `shot.angle` outside the vocabulary, contradictory technique selections, a scene opening close
@@ -789,10 +774,8 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   180° rule (the line, four legal crossings, "A left, B right"); L06 the 30° rule (jump cuts,
   axial cut, cutting on action, the vlog contract); L07 eyeline match (reciprocal gaze,
   target eye height and distance, POV and reaction, offscreen markers).
-- Film-directing daily course, L11 deep focus and shallow depth of field (2026-08-26): count
-  what must be read (one → shallow, two or more → deep); eyes as the focus plane; *Citizen
-  Kane* three-plane simultaneity; sound perspective follows depth; the blurred background is
-  a choice, not a default; phone portrait mode and mask edges.
+- Film-directing daily course, L11 deep focus and shallow depth of field (2026-08-26): subjects and
+  focus planes, *Citizen Kane* three-plane simultaneity, phone portrait mode and mask edges.
 - Film-directing daily course, L13 pan and tilt · L14 dolly, truck and tracking · L15 dolly
   zoom (2026-08-28 ~ 08-30): a move has a hold on each end and a named A and B; pan proves a
   shared space where a cut cannot; tilt up is scale by time; tilt vs pedestal; 24 fps strobing
@@ -867,16 +850,7 @@ universal 5% inset. Check the actual final crop and moving-shot endpoints.
 
 ## L11 — Deep focus and shallow depth of field
 
-Use `shot.depth` (scenes-schema §Depth of field). Decide by counting: how many things must
-the viewer read in this frame at once? One → shallow depth of field with the sharp plane
-named, and on a person that plane is the eyes. Two or more → deep focus with every plane
-listed front to back, the way *Citizen Kane* keeps the boy in the window, the mother at the
-table and the banker in one sharp frame. A departure needs a reason on the record; a
-blurred background is never the default, and a still whose key subject is soft has failed.
-Depth and sound perspective move together: shallow brings the voice forward and dims the
-room, deep lets every source be heard. The still lane fakes focus with a mask, so a
-focus-in or rack-focus cut is always shallow, and objects at one distance that blur
-differently expose the mask. Check depth on the actual image and clip, not on the record.
+Choose the subject or planes the audience should see sharply. Two faces on one plane can both be sharp in a shallow shot. Record any focus handoff with its subjects and an action or sound cue. Set listening perspective separately. Review both the focus change and the sound against the finished take. The still-camera focus effect uses a mask and can show edge artifacts.
 
 ## L13–L15 — Camera moves: pan and tilt, dolly and truck, dolly zoom
 

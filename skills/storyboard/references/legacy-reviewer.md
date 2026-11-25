@@ -3,6 +3,7 @@
 Read this file only when resuming an existing unversioned or story-v1 episode.
 Never use it to author or review a new scenario-v2/story-v2 episode. Current authorization,
 budget, speech and automation policies still override historical instructions here.
+Archived model prompts can be inspected. All edits record attributes and the next video request compiles the current board. The archived prompt-writing steps and missing-prompt review findings below have been retired.
 For new work, return to the corresponding SKILL.md and character-scenarios.md.
 
 ## Contents
@@ -1138,12 +1139,7 @@ appears in `visual.slide.plan` and maps to the narration groups.
 In scope, **on generated shots on top**: `broll` shots, motion-background scenes (`visual.video`),
 and `quote` speech clips (`visual.clip`) — anything produce will hand to a video adapter
 — the four slots, the vendor words, one move chosen from the feel, the cut length, the engine
-fit, and **the stored clip prompt** (scenes-schema §clip prompt): each generated shot is one
-API call whose final prompt is stored on the shot (`visual.prompt` · `visual.video.prompt` ·
-`visual.clip.prompt`) in the planned route's grammar (`visual.engine`, Seedance when absent, or the host video tool
-when `PRODUCTION.videoProvider` is `host`, CLAUDE.md §Host media tools first); produce sends it
-verbatim, so what you read here is what the model gets. A slot that still names `engine:"veo"`
-keeps its existing clip under `visual.reuse` or picks a supported engine. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
+fit, and the current attributes from which the requested scene will be compiled. On a still, `camera.movement` picks the builder's Ken Burns move (the still lane — eased
 zoom towards a focus point, pan, cover punch, handheld drift; directing-grammar §5 Still
 column) and `speed` sets how hard the window moves (the §4 still-lane beat ladder — the two
 fast rows are rationed like the close-up, so read a `fast`/`very fast` still against its
@@ -1204,11 +1200,7 @@ finding; a silent departure is.
   object-centric left/right and ignore metres (directing-grammar §3.5). The fix is the
   visible result (`faces left of frame`) and `shot.size` for distance. Run
   `assemble-bg-prompt.js --check` on the string if unsure.
-- **P0-11 the stored clip prompt is missing, or fights the slots** — a generated shot with no
-  stored prompt hands produce a call nobody reviewed; a prompt that pans where the slot
-  dollies, frames closer than `framing` says, or re-describes the space the PNG already drew
-  is two instructions fighting. The prompt is assembled from the slots
-  (`assemble-bg-prompt.js --clip`) — when they disagree, one of them was edited by hand.
+- **P0-11 conflicting camera directions** — Compare the framing, movement, landing and named subject with the approved scene geography. When a generation plan exists, check those values in its actual request.
 - **P0-12 timing grammar wrong for the route** — a timecode (`[00:04]`) or digit seconds in a
   seedance-routed prompt (2.0 self-reports unstable precision timing), or a `duration` outside
   the routed engine's server grid — Seedance 2.0 grades take 4–15s, 2.5 takes 4–30s. In-clip
@@ -1236,7 +1228,7 @@ shot/reverse-shot or POV/reaction sequence; do not penalize each reply as emphas
 |---|---|---|---|
 | Feel written and served | 30 | `shot.feel` is a feeling (not a restated `info`, not "cinematic"/"dynamic"); `size` and `angle` match the directing-grammar §5 row for it, or a reason for leaving the row is written on the shot; the size also shows what `info` needs (§2.1 — the establishing shot of a scene wide, the line that matters on the face, the object as an insert); the hook cut and speech clips sit at `eye`; on a generated still, `shot.space` is in the camera frame with `layout` and (when a person is on screen) `facing` as the visible result, no banned language | every shot |
 | Rationing and sequencing | 10 | this shot doesn't break the across-shot rules — a second close-up (`cu`·`choker`·`ecu`) in the scene, a third `choker`/`ecu` in the episode, a second `dutch` or one without its reason, a close-up opening not paid back by the next shot, a wide under 1.5× the close beside it, a later shot of the scene that flips `space.line` without a legal 180° crossing written (directing-grammar §6 rule 11), a shot after the first with no `transition`, a `jcut` where time, place or attention moved between the two shots, a join that says something other than what happened between them (the ordered table in scenes-schema §scene transition), consecutive stills of the same size and angle in one scene (directing-grammar §6 rule 16) | every shot |
-| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the stored clip prompt exists, says what the slots say, and keeps the route's timing grammar | generated shots |
+| Slots complete, in the engine's own words, one move chosen from the feel | 30 | four slots filled, vendor vocabulary, one move, and the move sits in the §4–§5 rows for that feel (a `dolly in` on "loss" or a `dolly out` on "realisation" contradicts it); the shot attributes identify the subject, movement and landing; a requested plan uses the selected route’s timing grammar | generated shots |
 | Length fits the purpose | 15 | matches the §cut length table and the feel row, it is the length that will be used, and it sits inside the routed engine's server grid (Seedance 2.0 grades 4–15s · 2.5 4–30s) | generated shots |
 | Engine and reference fit | 10 | the right lane for what's on screen, references inside the cap, cast ids real | generated shots |
 | An `end` worth stopping on | 5 | names a composition the frame can actually land on, not a mood | generated shots |
