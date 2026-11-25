@@ -54948,8 +54948,16 @@ function serializeBoard(win, header = []) {
   return lines.join("\n") + "\n";
 }
 var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
+var titlePlanSchema = external_exports.object({
+  episodeNumber: external_exports.number().int().positive().safe(),
+  type: external_exports.enum(["scene", "reason", "choice", "empathy"]),
+  headline: nonEmpty.regex(/^[^\r\n\u2028\u2029]+$/, "Write a single-line headline").regex(/^(?!ep(?:isode)?\.?\s*\d)/i, "Write the headline without the episode prefix").describe("Public headline in the episode language, without the EP number"),
+  thumbnailCue: nonEmpty.describe("Visible moment and complementary copy idea for this title type"),
+  searchTerm: nonEmpty.optional().describe("Optional search phrase that fits the story")
+}).strict();
 var storySequenceSchema = external_exports.object({
   path: outlinePath,
+  titlePlan: titlePlanSchema.optional(),
   primaryHookType: primaryHookTypeSchema.optional(),
   previousPrimaryHookType: primaryHookTypeSchema.nullable().optional(),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),

@@ -92,6 +92,11 @@ promise is complete by about 3 s. Long-form decides its title and thumbnail firs
 `story_sequence` `opening`. The first sequence inherits `primaryHookType` from the
 selected scenario. On a direct board, supply the type with that first write.
 
+For a numbered story series, choose the episode's public headline when writing the first
+sequence. Save its number, one editorial type and the thumbnail cue with `story_sequence.titlePlan`.
+Use the [numbered title template](references/storyboard-template.md#numbered-episode-titles).
+The approval page and the cover read the same plan. For long-form it supplies the title.
+
 **Clichés (user directive, 2026-11-18).** A drama, comedy or romance episode uses researched
 clichés as story material by default. While casting, writing the synopsis and writing scenes,
 name what the story is missing, ask `cliches.js pick` for candidates that do that job, keep

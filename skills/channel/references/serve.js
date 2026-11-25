@@ -257,7 +257,7 @@ function listStoryboards(root, slug) {
       const fmt = typeof win?.FORMAT === 'string' ? win.FORMAT : scenes?.match(/window\.FORMAT\s*=\s*["']([^"']+)["']/)?.[1];
       const scenario = readInside(dir, path.join(sb, 'scenario.md'));
       const heading = firstHeading(md)?.replace(TITLE_SUFFIX_RE, '');
-      const title = episodeTitle(topic, [fm.title, win?.SB_DOC?.title, firstHeading(scenario), heading]);
+      const title = (win && require('../../storyboard/references/structure-contract.js').episodeTitle(win)) || episodeTitle(topic, [fm.title, win?.SB_DOC?.title, firstHeading(scenario), heading]);
       const st = states.get(topic) || {};
       const base = '/files/' + slug + '/episodes/' + encodeURIComponent(topic) + '/';
       const cover = coverImage(dir, episode, fmt);

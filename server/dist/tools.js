@@ -12,7 +12,7 @@ import { IMAGE_ADAPTERS } from './image-registry.js';
 import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
-import { primaryHookTypeIds, audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
+import { titlePlanSchema, primaryHookTypeIds, audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
 import { openingReviewSchema } from './opening-review.js';
@@ -4645,6 +4645,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read for an intentional change to the saved hook.' },
                 previousPrimaryHookType: { anyOf: [{ type: 'string', enum: primaryHookTypeIds }, { type: 'null' }], description: 'Expected old selection for a deliberate change. Use null to enroll an existing unclassified board.' },
                 language: { type: 'string', description: 'The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user\'s request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.' },
+                titlePlan: zodToJsonSchema(titlePlanSchema, { $refStrategy: 'none' }),
                 sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
                             id: { type: 'string', description: 'Stable id, e.g. "q1"' },
                             title: { type: 'string', description: 'The heading the review page draws' },

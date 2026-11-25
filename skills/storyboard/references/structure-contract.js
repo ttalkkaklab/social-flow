@@ -1128,6 +1128,12 @@
     return n;
   }
 
+  function episodeTitle(win) {
+    const plan = win.STORY && win.STORY.titlePlan;
+    if (plan && Number.isSafeInteger(plan.episodeNumber) && plan.episodeNumber > 0 && typeof plan.headline === 'string' && plan.headline.trim())
+      return 'EP' + String(plan.episodeNumber).padStart(2, '0') + ' · ' + plan.headline.trim();
+  }
+
   /** The board as a tree — sequences → scenes → shots. `level` trims what each shot carries. */
   function outline(win, level) {
     const st = win.STRUCTURE || { sequences: [], scenes: [] };
@@ -1182,6 +1188,7 @@
     shots.forEach((s, i) => { if (s.type === 'outro') playbackIndices.push(i); });
     const scheduled = new Set(playbackIndices);
     return { version: st.version, format: win.FORMAT || 'shorts-9x16', shots: shots.length,
+             ...(episodeTitle(win) ? { title: episodeTitle(win), titlePlan: win.STORY.titlePlan } : {}),
              sequences, unplacedShots: orphans, splicedShots: spliced,
              playback: playbackIndices.map(i => shotRow(shots[i], i)),
              unscheduledShots: shots.flatMap((s, i) => scheduled.has(i) ? [] : [shotRow(s, i)]) };
@@ -1386,7 +1393,7 @@
     return blockers.concat(check(win, opts).map(f => ({...f, level: f.level === 'later' ? 'later' : 'warn'})));
   }
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
-  const api = { VERSION, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
+  const api = { VERSION, episodeTitle, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
                 check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;

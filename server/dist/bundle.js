@@ -101750,6 +101750,11 @@ var require_structure_contract = __commonJS({
         });
         return n;
       }
+      function episodeTitle(win) {
+        const plan2 = win.STORY && win.STORY.titlePlan;
+        if (plan2 && Number.isSafeInteger(plan2.episodeNumber) && plan2.episodeNumber > 0 && typeof plan2.headline === "string" && plan2.headline.trim())
+          return "EP" + String(plan2.episodeNumber).padStart(2, "0") + " \xB7 " + plan2.headline.trim();
+      }
       function outline(win, level) {
         const st = win.STRUCTURE || { sequences: [], scenes: [] };
         const shots = Array.isArray(win.SCENES) ? win.SCENES : [];
@@ -101826,6 +101831,7 @@ var require_structure_contract = __commonJS({
           version: st.version,
           format: win.FORMAT || "shorts-9x16",
           shots: shots.length,
+          ...episodeTitle(win) ? { title: episodeTitle(win), titlePlan: win.STORY.titlePlan } : {},
           sequences,
           unplacedShots: orphans,
           splicedShots: spliced,
@@ -102029,6 +102035,7 @@ var require_structure_contract = __commonJS({
       const PRODUCTION_MODES = ["full_video", "video_80", "video_50", "video_30", "video_lt10", "no_video"];
       const api2 = {
         VERSION: VERSION2,
+        episodeTitle,
         COMPOSITION_SCHEMA,
         validateComposition,
         compositionNeeded,
@@ -136766,7 +136773,14 @@ function applyPatch(win, patch, opts = {}) {
     if (k === "SCENES" || k === "STRUCTURE") throw new Error(`set ${k} through the dedicated fields, not globals`);
     if (k === "CLICHES" && !opts.cliches && sameShape(v) !== sameShape(win.CLICHES))
       throw new Error("cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user's pick \u2014 storyboard_apply globals cannot change it");
-    next[k] = v;
+    if (k === "STORY" && v && typeof v === "object" && "titlePlan" in v) {
+      const plan2 = titlePlanSchema.parse(v.titlePlan);
+      const episodeSlug = basename8(dirname8(dirname8(scenesPath(patch.path))));
+      const numbered = /^ep(\d+)(?:[-_]|$)/i.exec(episodeSlug);
+      if (numbered && Number(numbered[1]) !== plan2.episodeNumber)
+        throw new Error(`episode_number_mismatch: ${episodeSlug} cannot use EP${plan2.episodeNumber}`);
+      next[k] = { ...v, titlePlan: plan2 };
+    } else next[k] = v;
   }
   const previousStory = win.STORY;
   if ((opts.creating ?? Object.keys(win).length === 0) || previousStory?.audienceSoundVersion === 1)
@@ -137052,10 +137066,11 @@ function openingReading(win, platforms = []) {
   const windows = platforms.filter((p) => typeof p === "string" && Object.hasOwn(table, p)).map((p) => table[p]);
   const flat = (text4) => String(text4).replace(/\s+/g, " ").trim();
   const head = `opening (${long ? "long-form" : "short-form"}${windows.length ? ` \xB7 ${windows.join(" \xB7 ")}` : ""})`;
-  const plan2 = win.STORY.opening;
+  const story = win.STORY;
+  const plan2 = story.opening;
   const lines = [!plan2?.promise || !flat(plan2.promise) ? `${head}: no plan \u2014 story_sequence opening records the promise and the first frame${long ? ", the title and thumbnail it confirms and the bigger question" : ""} (references/opening-by-format.md)` : `${head}: promise "${flat(plan2.promise)}" \xB7 first frame: ${plan2.firstFrame ? flat(plan2.firstFrame) : "not written"}`];
   if (long && plan2?.promise && flat(plan2.promise)) {
-    const missing = [!plan2.title && "title", !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
+    const missing = [!contract().episodeTitle(win) && !plan2.title && "title", !story.titlePlan?.thumbnailCue && !plan2.thumbnail && "thumbnail", !plan2.widen && "bigger question"].filter(Boolean);
     if (missing.length) lines.push(`opening: no ${missing.join(", ")} \u2014 the first 30 s confirms the title and thumbnail, then opens a bigger question`);
   }
   const inside2 = [];
@@ -137249,8 +137264,16 @@ function applyStoryboard(args, opts = {}) {
   return result;
 }
 var outlinePath = external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing) or its scenes.js");
+var titlePlanSchema = external_exports.object({
+  episodeNumber: external_exports.number().int().positive().safe(),
+  type: external_exports.enum(["scene", "reason", "choice", "empathy"]),
+  headline: nonEmpty.regex(/^[^\r\n\u2028\u2029]+$/, "Write a single-line headline").regex(/^(?!ep(?:isode)?\.?\s*\d)/i, "Write the headline without the episode prefix").describe("Public headline in the episode language, without the EP number"),
+  thumbnailCue: nonEmpty.describe("Visible moment and complementary copy idea for this title type"),
+  searchTerm: nonEmpty.optional().describe("Optional search phrase that fits the story")
+}).strict();
 var storySequenceSchema = external_exports.object({
   path: outlinePath,
+  titlePlan: titlePlanSchema.optional(),
   primaryHookType: primaryHookTypeSchema.optional(),
   previousPrimaryHookType: primaryHookTypeSchema.nullable().optional(),
   expectedSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
@@ -137309,7 +137332,7 @@ function readOutline(path40) {
   const { win, sha256: sha2563 } = existsSync28(file2) ? readBoard(file2) : { win: {}, sha256: createHash24("sha256").digest("hex") };
   return { win, st: win.STRUCTURE ?? emptyStructure(), sha256: sha2563 };
 }
-function writeOutline(path40, sha2563, win, structure, shots, language, opening, hookChange) {
+function writeOutline(path40, sha2563, win, structure, shots, language, opening, hookChange, titlePlan) {
   const savedStory = win.STORY;
   const generic = !savedStory || savedStory.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1;
   const enrollingArchive = hookChange?.previous === null && !!win.SCENES?.length;
@@ -137325,8 +137348,9 @@ function writeOutline(path40, sha2563, win, structure, shots, language, opening,
   const speech = language ?? handoff?.LANGUAGES?.speech;
   const written = !!win.SCENES?.length;
   const takesLanguage = !!language && story?.language === void 0 && !written;
-  const globals = story ? takesLanguage || opening ? { STORY: { ...story, ...takesLanguage ? { language } : {}, ...opening ? { opening } : {} } } : void 0 : {
-    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {}, ...opening ? { opening } : {} },
+  const editorial = { ...opening ? { opening } : {}, ...titlePlan ? { titlePlan } : {} };
+  const globals = story ? takesLanguage || opening || titlePlan ? { STORY: { ...story, ...takesLanguage ? { language } : {}, ...editorial } } : void 0 : {
+    STORY: { version: "story-v2", authoring: "story-first", ...speech ? { language: speech } : {}, ...editorial },
     ...handoff?.FORMAT && win.FORMAT === void 0 ? { FORMAT: handoff.FORMAT } : {},
     ...handoff?.PRODUCTION && win.PRODUCTION === void 0 ? { PRODUCTION: handoff.PRODUCTION } : {},
     // A type that applies clichés by default starts with an open record, so each write says it is undecided
@@ -137356,7 +137380,7 @@ function writeStorySequences(args) {
     expectedSha256: args.expectedSha256,
     ...args.previousPrimaryHookType !== void 0 ? { previous: args.previousPrimaryHookType } : {}
   };
-  const result = writeOutline(args.path, sha2563, win, { ...st, sequences }, void 0, args.language, args.opening, hookChange);
+  const result = writeOutline(args.path, sha2563, win, { ...st, sequences }, void 0, args.language, args.opening, hookChange, args.titlePlan);
   return { ...result, findings: [...result.findings, ...notes] };
 }
 function writeStoryScenes(args, requireSceneCast = false) {
@@ -147745,6 +147769,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         expectedSha256: { type: "string", pattern: "^[a-f0-9]{64}$", description: "Current scenes.js hash from storyboard_read for an intentional change to the saved hook." },
         previousPrimaryHookType: { anyOf: [{ type: "string", enum: primaryHookTypeIds }, { type: "null" }], description: "Expected old selection for a deliberate change. Use null to enroll an existing unclassified board." },
         language: { type: "string", description: `The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user's request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.` },
+        titlePlan: zodToJsonSchema(titlePlanSchema, { $refStrategy: "none" }),
         sequences: { type: "array", minItems: 1, description: "Sequences in playback order", items: { type: "object", additionalProperties: false, required: ["id", "title", "purpose"], properties: {
           id: { type: "string", description: 'Stable id, e.g. "q1"' },
           title: { type: "string", description: "The heading the review page draws" },
@@ -149776,6 +149801,7 @@ var episodeCoverSchema = external_exports.object({
   action: external_exports.enum(["set", "render", "read"]),
   decision: coverDecisionSchema.optional()
 }).strict();
+var coverBriefSchema = titlePlanSchema.omit({ searchTerm: true });
 function episodeOf(path40) {
   const board = readBoard(path40);
   const storyboard = realpathSync12(dirname11(scenesPath(path40)));
@@ -149880,11 +149906,20 @@ function copyWarnings(ep, copy, language, label) {
   const max = unit === "chars" ? ep.spec.copyMax.chars : ep.spec.copyMax.words;
   return n > max ? [{ code: "cover_copy_long", message: `${label}copy runs ${n} ${unit}; this format reads best at ${max} or fewer` }] : [];
 }
+function coverBrief(ep) {
+  const plan2 = ep.board.win.STORY?.titlePlan;
+  if (!plan2) return void 0;
+  const { searchTerm, ...brief } = titlePlanSchema.parse(plan2);
+  return brief;
+}
 function titleWarnings(ep, decision) {
-  const title = youtubeTitle(ep);
-  if (!title) return [];
+  const titles = [coverBrief(ep)?.headline, youtubeTitle(ep)];
   const norm = (s2) => s2.normalize("NFC").toLowerCase().replace(/[\s\p{P}]/gu, "");
-  return [decision, ...decision.variants].flatMap((look, i2) => look.copy && norm(look.copy.text) && norm(title).includes(norm(look.copy.text)) ? [{ code: "cover_copy_repeats_title", message: `${i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""}copy "${look.copy.text}" repeats the title "${title}"; the cover adds what the title does not say` }] : []);
+  return [decision, ...decision.variants].flatMap((look, i2) => {
+    const copy = look.copy && norm(look.copy.text);
+    const title = copy && titles.find((t2) => t2 && norm(t2).includes(copy));
+    return title ? [{ code: "cover_copy_repeats_title", message: `${i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""}copy "${look.copy.text}" repeats the title "${title}"` }] : [];
+  });
 }
 function lookOf(ep, base, warnings, label) {
   if (base.copy?.emphasis && !base.copy.text.includes(base.copy.emphasis)) throw new Error(`cover_emphasis_missing: ${label}emphasis "${base.copy.emphasis}" is not part of "${base.copy.text}"`);
@@ -149909,7 +149944,8 @@ function setCover(path40, input) {
     warnings.push(...copyWarnings(ep, look.copy, language, i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""));
     warnings.push(...sizeWarnings(ep, look, i2 ? `variant ${VARIANT_LABELS[i2]}: ` : ""));
   }
-  const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main2, variants };
+  const titleBrief = coverBrief(ep);
+  const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main2, variants, ...titleBrief ? { titleBrief } : {} };
   warnings.push(...titleWarnings(ep, decision));
   const file2 = join19(ep.storyboard, "cover.json");
   atomicWrite(file2, JSON.stringify(decision, null, 2) + "\n");
@@ -149942,6 +149978,7 @@ var storedSourceSchema = external_exports.union([
 ].map((s2) => s2.extend({ path: external_exports.string().min(1), sha256: external_exports.string().regex(/^[a-f0-9]{64}$/) })));
 var storedLookSchema = external_exports.object({ source: storedSourceSchema, focus: focusSchema, copy: copySchema.nullable() }).strict();
 var storedDecisionSchema = storedLookSchema.extend({
+  titleBrief: coverBriefSchema.optional(),
   version: external_exports.literal(1),
   language: external_exports.string().min(1),
   reason: external_exports.string().min(1),
@@ -150112,6 +150149,8 @@ async function renderCover(path40) {
   const ep = episodeOf(path40);
   const decision = readDecision(ep);
   if (!decision) throw new Error("cover_decision_missing: write the decision with episode_cover set first");
+  if (canonical4(coverBrief(ep)) !== canonical4(decision.titleBrief))
+    throw new Error("cover_title_changed: read the current title and thumbnail cue, then set the cover again");
   if (decision.format !== ep.format) throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
   const dir = join19(ep.episode, "output", "cover");
   mkdirSync19(join19(dir, "previews"), { recursive: true });
@@ -150306,7 +150345,8 @@ function cutPreviews(shot, dir, stem, kind, spec) {
 function readCover(path40) {
   const ep = episodeOf(path40);
   const story = ep.board.win.STORY;
-  const plan2 = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : void 0;
+  const brief = coverBrief(ep);
+  const plan2 = brief ? { ...brief, title: contract().episodeTitle(ep.board.win), thumbnail: brief.thumbnailCue } : story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : void 0;
   const base = { format: ep.format, unverified: ep.spec.unverified, ...plan2 ? { plan: plan2 } : {} };
   let decision;
   try {
@@ -150315,6 +150355,8 @@ function readCover(path40) {
     return { status: "unreadable", reason: e2.message, ...base, next: "episode_cover set again" };
   }
   if (!decision) return { status: "missing", ...base, next: "episode_cover set: choose the moment, the copy and why" };
+  if (canonical4(brief) !== canonical4(decision.titleBrief))
+    return { status: "stale", changed: ["titlePlan"], ...base, decision, publish: { stale: true }, next: "episode_cover set with the current title and thumbnail cue, then render" };
   const dir = join19(ep.episode, "output", "cover"), renderFile = join19(dir, "render.json");
   if (!existsSync37(renderFile)) return { status: "unrendered", decision, ...base, next: "episode_cover render" };
   let render;
