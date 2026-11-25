@@ -72,7 +72,7 @@ function fixture(t, video = selection, auth = {}) {
  settings.snapshotSettings(root,episode);
  approveVideo({episode,auto:true,request:'Fixture: approve every shot'});
  fs.writeFileSync(path.join(episode,'storyboard/opening.png'),png);
- const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,maxAttempts:3,...auth}},
+ const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,...auth}},
    SCENES:['s1','s2'].map(id=>({id,visual:{frames:{mode:'first',start:'opening.png'},video:{...video,prompt:'A boat crosses a lake.'}}}))};
  const save = () => {
    for (const [index, card] of board.SCENES.entries()) card.scene ??= index + 1;
@@ -321,12 +321,10 @@ test('a signed historical plan without a speaker route cannot be approved or dis
  await assert.rejects(executeVideo({episode:f.episode,planId:id},()=>assert.fail('historical plan dispatched')),/video_plan_stale/);
  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/state.json')),false);
 });
-test('budget and attempts gate before dispatch and include prior successful reservations',async t=>{
- const f=fixture(t,selection,{maxUsd:1.5,maxAttempts:2});let calls=0;
+test('budget gates before dispatch and includes prior successful reservations',async t=>{
+ const f=fixture(t,selection,{maxUsd:1.5});let calls=0;
  await f.execute(f.plan(),async()=>{calls++;return result;});
  await assert.rejects(f.execute(f.plan('b'),async()=>{calls++;return result;}),/budget/);assert.equal(calls,1);
- f.board.PRODUCTION.videoAuthorization.maxUsd=10;f.board.PRODUCTION.videoAuthorization.maxAttempts=1;f.save();
- await assert.rejects(f.execute(f.plan('c'),async()=>result),/attempt/);
 });
 test('off-screen-only Seedance dialogue keeps the supplied voice outside the picture', t => {
  const f=fixture(t,{...selection,operation:'reference'}), shot=f.board.SCENES[0];
@@ -348,22 +346,32 @@ test('off-screen-only Seedance dialogue keeps the supplied voice outside the pic
  assert.throws(()=>planVideo(input),/scene_speech_route/);
 });
 
-test('overlapping scene and shot requests share the member attempt limit', async t => {
- for (const sceneFirst of [false,true]) {
-  const f=fixture(t,selection,{maxAttempts:1});
-  f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'The lake is calm.'}}]};
-  fs.writeFileSync(path.join(f.episode,'storyboard','lake.png'),png);
-  for (const shot of f.board.SCENES) {
-   shot.scene=shot.id === 's2' ? 1 : 2; shot.duration=4;
-   shot.visual.frames={mode:'first',start:'lake.png'};
-   shot.visual.video.prompt='The lake is calm.';
-  }
-  f.save();
-  const make = target => planVideo({episode:f.episode,operation:'image',args:{generateAudio:false},...target});
-  const scene=make({sceneNo:1,requestId:'lake-scene'}), shot=make({sceneNo:1,requestId:'second-scene-attempt'});
-  await f.execute(sceneFirst ? scene : shot,async()=>result);
-  await assert.rejects(f.execute(sceneFirst ? shot : scene,async()=>assert.fail('limit bypassed')),/video_attempt_limit: s2/);
+test('five attempts belong to the scene number across revisions and shot moves', async t => {
+ const f = fixture(t, selection, { maxUsd: 50, maxAttempts: 1 });
+ const first = f.plan('take-1');
+ await f.execute(first, async () => ({ isError: true, terminal: true, content: [{ type: 'text', text: 'Provider failed' }] }));
+ assert.equal(f.state().jobs['take-1'].status, 'failed');
+
+ const historical = saveHistoricalPlan(f.episode, first, plan => {
+  delete plan.sceneNo;
+  delete plan.shotIds;
+  plan.requestId = 'shot-only';
+  plan.args.filename = 'shot-only.mp4';
+ });
+ const state = f.state();
+ state.jobs['shot-only'] = { ...state.jobs['take-1'], requestId: 'shot-only', planId: historical };
+ fs.writeFileSync(path.join(f.episode, '.work/video-routing/state.json'), JSON.stringify(state));
+
+ for (let attempt = 2; attempt <= 5; attempt++) {
+  await f.execute(f.plan('take-' + attempt), async () => result);
  }
+ const [firstShot, secondShot] = f.board.SCENES;
+ [firstShot.scene, secondShot.scene] = [2, 1];
+ f.save();
+ await assert.rejects(f.execute(f.plan('sixth', {}, secondShot.id), async () => assert.fail('sixth attempt dispatched')),
+  /video_attempt_limit: scene 1/);
+ await f.execute(f.plan('other-scene', {}, firstShot.id), async () => result);
+ assert.equal(f.state().jobs['other-scene'].status, 'completed');
 });
 test('concurrent execution reserves once; duplicate in-flight call never dispatches',async t=>{
  const f=fixture(t,selection,{maxConcurrent:1});let release;const wait=new Promise(r=>release=r);let calls=0;const p=f.plan();

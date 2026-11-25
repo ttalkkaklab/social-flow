@@ -95348,6 +95348,7 @@ var require_production_mode = __commonJS({
         }
         return { selection, source: source2 };
       }
+      const SCENE_VIDEO_ATTEMPT_LIMIT = 5;
       const CHOICES = ["full_video", "video_80", "video_50", "video_30", "video_lt10", "no_video"];
       const CUT_TYPES = ["action", "reaction", "insert", "document", "map", "scenery"];
       const MODES = { full_video: "\uC804\uCCB4 \uC601\uC0C1", video_80: "80% \uC774\uC0C1 \uC601\uC0C1", video_50: "50% \uC774\uC0C1 \uC601\uC0C1", video_30: "30% \uC774\uC0C1 \uC601\uC0C1", video_lt10: "10% \uBBF8\uB9CC \uC601\uC0C1", no_video: "0% \uC601\uC0C1", hook_only: "\uD6C5\uB9CC \uC601\uC0C1 (\uAE30\uC874 \uC2B9\uC778)", stills_only: "\uC815\uC9C0 \uC804\uC6A9 (\uAE30\uC874 \uC2B9\uC778)", hybrid: "\uD63C\uD569 \uC81C\uC791 (\uAE30\uC874 \uC2B9\uC778)" };
@@ -95891,13 +95892,10 @@ var require_production_mode = __commonJS({
         const auth2 = p.videoAuthorization;
         const count = (v, max) => v === void 0 || Number.isInteger(v) && v >= 1 && v <= max;
         if (auth2 !== void 0) {
-          if (!auth2 || typeof auth2 !== "object" || Array.isArray(auth2) || !text4(auth2.reference) || !Number.isFinite(auth2.maxUsd) || auth2.maxUsd < 0 || !count(auth2.maxConcurrent, 64) || !count(auth2.maxAttempts, 20) || auth2.openingSpendUsd !== void 0 && (!Number.isFinite(auth2.openingSpendUsd) || auth2.openingSpendUsd < 0) || Object.keys(auth2).some((k) => !["reference", "maxUsd", "maxConcurrent", "maxAttempts", "openingSpendUsd"].includes(k)))
-            errors.push("PRODUCTION.videoAuthorization needs reference and maxUsd \u2265 0, with maxConcurrent 1\u201364 and maxAttempts 1\u201320 when given");
-        } else {
-          if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
-            errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
-          if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
-            errors.push("PRODUCTION.maxAttempts must be 1\u20135 total attempts per clip (including the first)");
+          if (!auth2 || typeof auth2 !== "object" || Array.isArray(auth2) || !text4(auth2.reference) || !Number.isFinite(auth2.maxUsd) || auth2.maxUsd < 0 || !count(auth2.maxConcurrent, 64) || auth2.openingSpendUsd !== void 0 && (!Number.isFinite(auth2.openingSpendUsd) || auth2.openingSpendUsd < 0) || Object.keys(auth2).some((k) => !["reference", "maxUsd", "maxConcurrent", "maxAttempts", "openingSpendUsd"].includes(k)))
+            errors.push("PRODUCTION.videoAuthorization needs reference and maxUsd \u2265 0, with maxConcurrent 1\u201364 when given");
+        } else if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0) {
+          errors.push("PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap");
         }
         if (requireApproval && auth2 === void 0 && !["stills_only", "no_video"].includes(p.mode) && (!p.approval || !["user", "standing"].includes(p.approval.kind) || !text4(p.approval.reference) || !Number.isFinite(Date.parse(p.approval.at)) || !text4(p.approval.quoteFingerprint)))
           errors.push("PRODUCTION.approval needs kind, reference, at and the approved cost quoteFingerprint");
@@ -96049,7 +96047,7 @@ var require_production_mode = __commonJS({
           generatedVideoMax: production.mode === "hook_only" ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2)
         };
       }
-      const api2 = { videoSlot, resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+      const api2 = { SCENE_VIDEO_ATTEMPT_LIMIT, videoSlot, resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check: check2, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
       if (typeof module === "object" && module.exports) module.exports = api2;
       else root.PRODUCTION_MODE = api2;
     })(typeof window === "object" ? window : globalThis);
@@ -102687,10 +102685,9 @@ var require_production_cost = __commonJS({
         fs26.rmSync(dir, { recursive: true, force: true });
       }
     }
-    function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
+    function buildQuote(win, { krwPerUsd, legacy, attempts }) {
       if (!Number.isFinite(krwPerUsd) || krwPerUsd <= 0) throw new Error("krwPerUsd must be positive");
-      const p = win.PRODUCTION || {}, attempts = p.maxAttempts ?? 3;
-      if (!Number.isInteger(attempts) || attempts < 1 || attempts > 5) throw new Error("maxAttempts must be 1\u20135");
+      const p = win.PRODUCTION || {};
       const reuseErrors = (win.SCENES || []).flatMap(mode.reuseErrors);
       if (reuseErrors.length) throw new Error(reuseErrors.join("; "));
       const reusedClips = (win.SCENES || []).filter(mode.reused).length;
@@ -102751,11 +102748,25 @@ var require_production_cost = __commonJS({
         result.vendorSource = [...hostedEngines].map((engine) => engine === "veo" ? "https://cloud.google.com/model-garden/pricing" : engine === "ltx-desktop-local" ? "Local Desktop GPU" : "https://docs.ltx.io/pricing").join(" ");
       }
       result.quoteFingerprint = digest6(JSON.stringify(result));
-      if (!legacy && p.renderRatioVersion === void 0 && p.approval?.quoteFingerprint && p.approval.quoteFingerprint !== result.quoteFingerprint) {
-        const old = quote(win, { krwPerUsd, legacy: true });
-        if (old.quoteFingerprint === p.approval.quoteFingerprint) return old;
-      }
       return result;
+    }
+    function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
+      const p = win.PRODUCTION || {};
+      const attempts = p.maxAttempts ?? 3;
+      const priorAttempts = Number.isInteger(attempts) && attempts >= 1 && attempts <= 5 ? attempts : null;
+      const limit2 = mode.SCENE_VIDEO_ATTEMPT_LIMIT;
+      const current = buildQuote(win, { krwPerUsd, legacy, attempts: legacy ? priorAttempts ?? limit2 : limit2 });
+      const approved = p.approval?.quoteFingerprint;
+      if (legacy || !approved || approved === current.quoteFingerprint) return current;
+      if (priorAttempts !== null && priorAttempts !== limit2) {
+        const previous = buildQuote(win, { krwPerUsd, legacy: false, attempts: priorAttempts });
+        if (previous.quoteFingerprint === approved) return previous;
+      }
+      if (p.renderRatioVersion === void 0 && priorAttempts !== null) {
+        const previous = buildQuote(win, { krwPerUsd, legacy: true, attempts: priorAttempts });
+        if (previous.quoteFingerprint === approved) return previous;
+      }
+      return current;
     }
     function comparisonResolution(win) {
       const p = win.PRODUCTION || {};
@@ -102786,7 +102797,7 @@ var require_production_cost = __commonJS({
       if (args.includes("--seconds")) {
         const seconds2 = Number(value2("--seconds")), clip2 = args.includes("--clip-seconds") ? Number(value2("--clip-seconds")) : 5;
         if (!(seconds2 > 0 && seconds2 <= 3600 && clip2 >= 4 && clip2 <= 12)) throw new Error("Use --seconds 1\u20133600 and --clip-seconds 4\u201312");
-        win = { PRODUCTION: { maxAttempts: 3 }, SCENES: Array.from({ length: Math.ceil(seconds2 / clip2) }, (_, i2) => ({ type: "points", duration: Math.min(clip2, seconds2 - i2 * clip2), visual: {} })) };
+        win = { SCENES: Array.from({ length: Math.ceil(seconds2 / clip2) }, (_, i2) => ({ type: "points", duration: Math.min(clip2, seconds2 - i2 * clip2), visual: {} })) };
       } else {
         const target = args[0];
         if (!target || target.startsWith("--")) throw new Error("usage: production-cost.js <storyboard dir|scenes.js> [--json] or --seconds 75");
@@ -105581,12 +105592,8 @@ var require_check_production = __commonJS({
       } else if (beforeCall !== null) {
         const row = option.rows.find((r2) => r2.shot === beforeCall);
         if (!row) errors.push("Requested shot has no priced video generation");
-        const lines = fs26.existsSync(ledger) ? fs26.readFileSync(ledger, "utf8").split(/\r?\n/).filter((l) => /^(seedance|veo)\./.test(l)) : [];
-        if (lines.some((l) => !/video:shot=\d+:attempt=\d+/.test(l))) errors.push("Every video ledger line needs video:shot=N:attempt=M for retry accounting");
         const revision = p.generationRevision;
         if (revision !== void 0 && !/^[a-zA-Z0-9_-]+$/.test(revision)) errors.push("Invalid generationRevision");
-        const attempts = lines.filter((l) => l.includes(`video:shot=${beforeCall}:`) && (!revision || l.split(/\s+/).includes(`revision=${revision}`))).length;
-        if (attempts >= p.maxAttempts) errors.push("This shot has exhausted the approved attempt limit");
         const pending2 = option.rows.filter((r2) => {
           if (r2.shot === beforeCall) return true;
           try {
@@ -135179,7 +135186,8 @@ function authorization(context2) {
       reference: external_exports.string().min(1),
       maxUsd: external_exports.number().finite().nonnegative(),
       maxConcurrent: external_exports.number().int().min(1).max(64).default(1),
-      maxAttempts: external_exports.number().int().min(1).max(20).default(3),
+      maxAttempts: external_exports.unknown().optional(),
+      // Accept the obsolete field on saved boards.
       // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
       openingSpendUsd: external_exports.number().finite().nonnegative().optional()
     }).strict().parse(p.videoAuthorization);
@@ -135190,11 +135198,7 @@ function authorization(context2) {
   const helper2 = fileURLToPath8(new URL("../../skills/autoproduce/references/production-cost.js", import.meta.url));
   const quote = load10(helper2).quote(context2.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error("Existing quote changed; spending authorization does not cover this plan");
-  return {
-    maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd),
-    maxConcurrent: 1,
-    maxAttempts: external_exports.number().int().min(1).max(5).parse(p.maxAttempts)
-  };
+  return { maxUsd: external_exports.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1 };
 }
 var videoApproveSchema = external_exports.object({
   episode: external_exports.string().min(1),
@@ -135306,6 +135310,7 @@ async function executeVideo(raw, dispatch) {
   if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
   checkVideoEnvironment(plan2.tool);
   const auth2 = authorization(context2);
+  const { SCENE_VIDEO_ATTEMPT_LIMIT } = load10("../../skills/storyboard/references/production-mode.js");
   const cached2 = videoTransaction(episode, (state) => {
     const existing = state.jobs[plan2.requestId];
     if (existing) {
@@ -135326,9 +135331,9 @@ async function executeVideo(raw, dispatch) {
     if (occupied.length >= auth2.maxConcurrent) throw new Error("video_concurrency_limit: pending jobs include ambiguous submissions");
     const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
     if (used + plan2.quote.reserveUsd > auth2.maxUsd + 1e-9) throw new Error("video_budget_exceeded");
-    for (const shotId of plan2.shotIds ?? [plan2.shotId]) {
-      const attempts = priorPlans.filter((previous) => (previous.shotIds ?? [previous.shotId]).includes(shotId)).length;
-      if (attempts >= auth2.maxAttempts) throw new Error("video_attempt_limit: " + shotId);
+    const attempts = priorPlans.filter((previous) => previous.sceneNo === plan2.sceneNo).length;
+    if (attempts >= SCENE_VIDEO_ATTEMPT_LIMIT) {
+      throw new Error(`video_attempt_limit: scene ${plan2.sceneNo} has used all ${SCENE_VIDEO_ATTEMPT_LIMIT} attempts`);
     }
     state.jobs[plan2.requestId] = {
       planId: id2,

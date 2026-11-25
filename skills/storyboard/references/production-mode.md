@@ -117,8 +117,8 @@ subscription price for this plugin's BytePlus API calls. Report unknown prices a
 
 Show, for **each** choice: model/provider, resolution, generated audio on/off, clip count,
 generated seconds, first-pass USD, retry-inclusive USD range, approximate KRW, its explicit
-exchange-rate assumption, and the **maximum video budget to approve**. Attempts include the
-first call: the default range is 2–3 total attempts per shot, not 2–3 extra retries. Under
+exchange-rate assumption, and the **maximum video budget to approve**. Show the first-pass
+estimate and the estimate for two to five total attempts per scene. Under
 `videoProvider:'host'` show the tool and its ceiling (Grok `image_to_video`, 720p, 1–15 s) where
 the model and price would be.
 Identify provisional alternatives; they are comparison assumptions, not automatically rewritten
@@ -213,7 +213,6 @@ window.PRODUCTION = {
   renderRatioVersion: 1,              // marks the six-ratio contract; absent on legacy boards
   imageProvider: 'host',              // host | api — from the saved image selection
   videoProvider: 'host',              // host | astra | api — from the saved video selection
-  maxAttempts: 3,                     // total per shot, first attempt included
   videoBudgetUsd: 15,                 // example ONLY: use the cap actually approved
   comparison: { model: 'dreamina-seedance-2-0-fast-260128', resolution: '720p' },
   previz: { renderer: 'blender',        // optional; blender | threejs — copied from models.json production.previzRenderer
@@ -289,14 +288,15 @@ complete config is required for new unattended production; without it report
 `project_setup_required` and defer. Keep existing standing budgets. Do not ask for models
 again on later ticks.
 
-A growth plan can explicitly authorize `video_budget_usd` and `video_max_attempts`. Its
+A growth plan can explicitly authorize `video_budget_usd`. Its
 `production_mode`, `previz_renderer` and `video_model` fields (the `autoproduce:` block) are
 legacy overrides, read only when the directory settings lack that field or when a resumed
-board already carries them. Copy the cap/attempts and identify that exact plan in an
+board already carries them. Copy the budget and identify that exact plan in an
 approval; a selection copied from models.json records `kind:'standing'` with the settings
 path as reference. A plain `autoproduce:true` does not authorize a switch to full_video.
 Resumed legacy approvals retain hybrid; if a plan's written scope cannot cover the estimate,
 hold before spending and ask at the next human interaction. Never raise an unattended cap.
+Video generation allows five attempts per scene, including the first.
 
 ## Evaluation scenarios
 

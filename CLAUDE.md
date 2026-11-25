@@ -1029,6 +1029,8 @@ Write one storyboard card per shot and compile one video request per scene. A cu
 
 Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
 
+Allow up to five video generation attempts per scene in an episode, including the first. Count managed jobs by their recorded `sceneNo`. Editing the scene's shots or prompt keeps its existing attempts.
+
 Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.

@@ -53,7 +53,7 @@ Plan each scene for one model call: the plan returns the prompt it will send as 
 
 ## Correcting a scene take
 
-Change the relevant beat, dialogue or image on the storyboard. Regenerate the complete scene using its selected model and one reviewed request. Retain the previous candidate until the new take has been reviewed.
+Change the relevant beat, dialogue or image on the storyboard. Regenerate the complete scene using its selected model and one reviewed request. Each scene has up to five generation attempts, including its first take. For a host handoff, apply the same limit to the host's scene requests. Retain the previous candidate until the new take has been reviewed.
 
 For dialogue, read [dialogue coverage](../storyboard/references/dialogue-coverage.md)
 before writing prompts. Confirm the visible speaking face and silent foreground listener

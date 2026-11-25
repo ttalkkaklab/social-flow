@@ -52,6 +52,7 @@
     }
     return { selection, source };
   }
+  const SCENE_VIDEO_ATTEMPT_LIMIT = 5;
   const CHOICES = ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'];
   const CUT_TYPES = ['action', 'reaction', 'insert', 'document', 'map', 'scenery'];
   const MODES = { full_video: '전체 영상', video_80: '80% 이상 영상', video_50: '50% 이상 영상', video_30: '30% 이상 영상', video_lt10: '10% 미만 영상', no_video: '0% 영상', hook_only: '훅만 영상 (기존 승인)', stills_only: '정지 전용 (기존 승인)', hybrid: '혼합 제작 (기존 승인)' };
@@ -591,21 +592,17 @@
     // images (z-image-turbo) record imageProvider "api" like every other image engine (production-mode.md).
     // Unlike the two API vendors a video call spends wall clock instead of money, so it carries no price record.
     if (p.videoProvider !== undefined && !['host', 'api', 'astra'].includes(p.videoProvider)) errors.push('PRODUCTION.videoProvider must be host, api or astra');
-    // A standing videoAuthorization (video_plan reads it first, video-routing.ts) replaces the
-    // per-episode budget and attempt fields; the same bounds as the server.
+    // Standing videoAuthorization replaces the legacy budget. Accept maxAttempts on old boards.
     const auth = p.videoAuthorization;
     const count = (v, max) => v === undefined || (Number.isInteger(v) && v >= 1 && v <= max);
     if (auth !== undefined) {
       if (!auth || typeof auth !== 'object' || Array.isArray(auth) || !text(auth.reference) || !Number.isFinite(auth.maxUsd) || auth.maxUsd < 0
-          || !count(auth.maxConcurrent, 64) || !count(auth.maxAttempts, 20)
+          || !count(auth.maxConcurrent, 64)
           || (auth.openingSpendUsd !== undefined && (!Number.isFinite(auth.openingSpendUsd) || auth.openingSpendUsd < 0))
           || Object.keys(auth).some(k => !['reference', 'maxUsd', 'maxConcurrent', 'maxAttempts', 'openingSpendUsd'].includes(k)))
-        errors.push('PRODUCTION.videoAuthorization needs reference and maxUsd ≥ 0, with maxConcurrent 1–64 and maxAttempts 1–20 when given');
-    } else {
-      if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0)
-        errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
-      if (!Number.isInteger(p.maxAttempts) || p.maxAttempts < 1 || p.maxAttempts > 5)
-        errors.push('PRODUCTION.maxAttempts must be 1–5 total attempts per clip (including the first)');
+        errors.push('PRODUCTION.videoAuthorization needs reference and maxUsd ≥ 0, with maxConcurrent 1–64 when given');
+    } else if (!Number.isFinite(p.videoBudgetUsd) || p.videoBudgetUsd < 0) {
+      errors.push('PRODUCTION.videoBudgetUsd must be a finite nonnegative episode cap');
     }
     // no_video (and legacy stills_only) buys no generated video, so there is no cost quote to
     // fingerprint and nothing for the user to approve. Every other mode carries one.
@@ -783,7 +780,7 @@
       // hook_only: the hook plus every imported clip — reuse is outside the count but still a slot.
       generatedVideoMax: production.mode === 'hook_only' ? 1 + scenes.filter(reused).length : RATIOS[production.mode] ? scenes.filter(eligible).length : Math.min(base.generatedVideoMax ?? 2, 2) };
   }
-  const api = { videoSlot, resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
+  const api = { SCENE_VIDEO_ATTEMPT_LIMIT, videoSlot, resolveVideoChoice, BANDS, ratioMode, ratioBounds, ratioErrors, videoRender, bandContract, CAMERA_INPUT_SCHEMA, cameraInputErrors, CAMERA_PRESETS, isDrone, droneErrors, droneSample, droneSlots, droneBinding, droneCameraKeys, droneSceneErrors, STYLES, MODES, CHOICES, CUT_TYPES, RATIOS, videoCap, newCut, generated, hookScene, coverageErrors, CAMERA_SLOTS, PREVIZ_RENDERERS, VIDEO_MODELS, ASTRA_RESOLUTION, ASTRA_WIDE_RESOLUTION, astraResolution, packPresets, ALL_LOOKS, shotStyle, shotStyleErrors, eligible, reused, reuseErrors, full, signature, check, policy, motionErrors, missingCameraSlots, cameraErrors, cameraWarnings, cameraDirectionWarnings, episodeMoveErrors, moveOf, travels, MOVES, staticCamera, finalState };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.PRODUCTION_MODE = api;
 })(typeof window === 'object' ? window : globalThis);

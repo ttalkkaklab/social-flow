@@ -25,10 +25,9 @@ function pricedRows(scenes, production) {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
+function buildQuote(win, { krwPerUsd, legacy, attempts }) {
   if (!Number.isFinite(krwPerUsd) || krwPerUsd <= 0) throw new Error('krwPerUsd must be positive');
-  const p = win.PRODUCTION || {}, attempts = p.maxAttempts ?? 3;
-  if (!Number.isInteger(attempts) || attempts < 1 || attempts > 5) throw new Error('maxAttempts must be 1–5');
+  const p = win.PRODUCTION || {};
   const reuseErrors = (win.SCENES || []).flatMap(mode.reuseErrors);
   if (reuseErrors.length) throw new Error(reuseErrors.join('; '));
   const reusedClips = (win.SCENES || []).filter(mode.reused).length;
@@ -83,12 +82,27 @@ function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
     result.vendorSource = [...hostedEngines].map(engine => engine === 'veo' ? 'https://cloud.google.com/model-garden/pricing' : engine === 'ltx-desktop-local' ? 'Local Desktop GPU' : 'https://docs.ltx.io/pricing').join(' ');
   }
   result.quoteFingerprint = digest(JSON.stringify(result));
-  // Resume a pre-six-choice approval only when its original complete quote still matches.
-  if (!legacy && p.renderRatioVersion === undefined && p.approval?.quoteFingerprint && p.approval.quoteFingerprint !== result.quoteFingerprint) {
-    const old = quote(win, { krwPerUsd, legacy: true });
-    if (old.quoteFingerprint === p.approval.quoteFingerprint) return old;
-  }
   return result;
+}
+function quote(win, { krwPerUsd = 1400, legacy = false } = {}) {
+  const p = win.PRODUCTION || {};
+  const attempts = p.maxAttempts ?? 3;
+  const priorAttempts = Number.isInteger(attempts) && attempts >= 1 && attempts <= 5 ? attempts : null;
+  const limit = mode.SCENE_VIDEO_ATTEMPT_LIMIT;
+  const current = buildQuote(win, { krwPerUsd, legacy, attempts: legacy ? priorAttempts ?? limit : limit });
+  const approved = p.approval?.quoteFingerprint;
+  if (legacy || !approved || approved === current.quoteFingerprint) return current;
+
+  // Resume only an exact match to the approved quote from before the scene limit.
+  if (priorAttempts !== null && priorAttempts !== limit) {
+    const previous = buildQuote(win, { krwPerUsd, legacy: false, attempts: priorAttempts });
+    if (previous.quoteFingerprint === approved) return previous;
+  }
+  if (p.renderRatioVersion === undefined && priorAttempts !== null) {
+    const previous = buildQuote(win, { krwPerUsd, legacy: true, attempts: priorAttempts });
+    if (previous.quoteFingerprint === approved) return previous;
+  }
+  return current;
 }
 function comparisonResolution(win) {
   const p = win.PRODUCTION || {};
@@ -122,7 +136,7 @@ function main() {
   if (args.includes('--seconds')) {
     const seconds = Number(value('--seconds')), clip = args.includes('--clip-seconds') ? Number(value('--clip-seconds')) : 5;
     if (!(seconds > 0 && seconds <= 3600 && clip >= 4 && clip <= 12)) throw new Error('Use --seconds 1–3600 and --clip-seconds 4–12');
-    win = { PRODUCTION: { maxAttempts: 3 }, SCENES: Array.from({ length: Math.ceil(seconds / clip) }, (_, i) =>
+    win = { SCENES: Array.from({ length: Math.ceil(seconds / clip) }, (_, i) =>
       ({ type: 'points', duration: Math.min(clip, seconds - i * clip), visual: {} })) };
   } else {
     const target = args[0];
