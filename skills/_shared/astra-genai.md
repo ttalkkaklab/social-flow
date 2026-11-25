@@ -38,8 +38,8 @@ use timed external TTS. `generateAudio:false` strips the generated soundtrack.
 
 T2V and I2V accept `numFrames` (25..361, 8k+1) or whole-second `duration`.
 Omit both for automatic length without an end image or subject references.
-`shots` contains two to four descriptions with optional audio instructions.
-Omit the first transition. Later shots use `hard_cut`. The combined prompt fits 2,000 characters.
+The prompt is sent as written and fits 2,000 characters. Describe every cut in it.
+The adapters take no `shots` text (user directive 2026-11-25).
 Standalone MSR accepts `skipStage2` for a half-size preview where the backend supports it.
 
 I2V and A2V accept timed `keyframes` on gateways advertising
@@ -445,9 +445,10 @@ No example grants spending permission. `capability_status` checks credentials on
   The [upstream two-stage pipeline](https://github.com/Lightricks/LTX-2/blob/daa6b16fc7f0f1628f2c9e36a303e3312b333cc6/packages/ltx-pipelines/src/ltx_pipelines/a2vid_two_stage.py)
   also exposes multiple image conditions, model weights and sampler settings.
   Text/I2V/A2V/keyframes accept `promptProvenance:"typed"|"enhanced"`.
-  Omitted preserves the Desktop default (`typed`), which can rewrite the prompt
-  according to the app's enhancement settings. Use `enhanced` for a caller-finished
-  prompt that must reach generation without another rewrite. This is the native
+  The adapters send `enhanced` for a written prompt, so it reaches generation without
+  another rewrite (user directive 2026-11-25). Name `typed` to let the app's enhancement
+  settings rewrite it; that is the Desktop default the adapters no longer fall back on.
+  Extend and retake take no policy. This is the native
   contract's provenance label, not evidence of approval or visual quality; it does
   not guarantee that the generated action will follow the prompt.
   `allowAudioTruncation` defaults false: pad audio to the next 8k+1 frame boundary

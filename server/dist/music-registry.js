@@ -3,6 +3,7 @@ import { musicClipSchema, musicGenerateSchema, musicAdvancedSchema } from './mus
 import { sunoGenerateSchema, sunoSoundSchema, assertGenerateArgs, SUNO_V6_MODELS, SUNO_SOUND_UNVERIFIED } from './suno-client.js';
 import { mlxMusicGenerateSchema } from './mlx-serve-client.js';
 import { lyriaSongSchema, elevenMusicSchema } from './music-song-client.js';
+import { adapterContracts } from './adapter-parameters.js';
 export const MUSIC_MODELS = [
     { engine: 'lyria', model: 'lyria-3-clip-preview', tool: 'music_generate_song', vocals: true, duration: '30 seconds; fixed', provider: 'Google official' },
     { engine: 'lyria', model: 'lyria-3.5', tool: 'music_generate_song', vocals: true, duration: 'Prompt-directed; measure output', provider: 'Google official' },
@@ -38,6 +39,11 @@ export function parseMusicArgs(tool, input) {
     if (tool === 'suno_generate_sound')
         throw new Error(SUNO_SOUND_UNVERIFIED);
     return args;
+}
+/** One engine's adapters, and those serving one model when named, each with its parameters as JSON Schema: shared names apart from its own. */
+export function musicAdapterContracts(engine, model) {
+    const known = model === undefined || engine === 'mlx' || MUSIC_MODELS.some(row => row.engine === engine && row.model === model);
+    return adapterContracts('music', musicCatalog().adapters.filter(row => known && row.engine === engine && (!model || !row.fixedModel || row.fixedModel === model)), MUSIC_ADAPTERS, { engine, model });
 }
 export function musicCatalog() {
     return { version: 1, revision: '2026-11-21', models: MUSIC_MODELS,

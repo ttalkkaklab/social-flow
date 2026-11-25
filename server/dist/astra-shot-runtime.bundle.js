@@ -51078,7 +51078,7 @@ var common3 = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
-  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: enhanced sends a caller-finished prompt without another rewrite; typed lets the app's automatic enhancement settings rewrite it. Omitted sends enhanced for a written prompt, e.g. 'typed' to opt into the app's rewrite. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -53256,7 +53256,6 @@ var capabilitiesSchema = external_exports.object({
   version: external_exports.literal(1),
   execution: external_exports.literal("per_shot"),
   transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
-  execution_modes: external_exports.array(external_exports.string()).optional(),
   motion_prefix: external_exports.boolean().optional(),
   timed_dialogue: external_exports.string().nullish(),
   scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
@@ -53296,11 +53295,6 @@ function devNegativeRule(args, ctx) {
   if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
 var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
-var genaiShotsSchema = external_exports.array(external_exports.object({
-  description: external_exports.string().trim().min(1).max(2e3),
-  audio: external_exports.string().trim().min(1).max(2e3).optional(),
-  transition: external_exports.literal("hard_cut").optional()
-}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
 var temporalImages = external_exports.array(external_exports.object({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -53335,7 +53329,6 @@ var textVideoFields = external_exports.object({
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  shots: genaiShotsSchema.optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
@@ -53355,15 +53348,6 @@ function localVideoTiming(args, ctx) {
     ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
   if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
-  if (args.shots) {
-    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
-    const parts = [openingPrompt(args.prompt, args.openingPositions)];
-    args.shots.forEach((shot, i2) => {
-      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
-      if (shot.audio) parts.push("Audio: " + shot.audio);
-    });
-    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
-  }
 }
 var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
   localVideoTiming(args, ctx);
@@ -53641,9 +53625,9 @@ function videoDurationLimits(tool, input = {}) {
       throw new Error("frameRate must be finite in 1..60");
     limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
   } else {
-    const local2 = localVideoStrategy(tool);
-    if (!local2) return null;
-    limits = { ...local2.frames };
+    const local3 = localVideoStrategy(tool);
+    if (!local3) return null;
+    limits = { ...local3.frames };
     if (tool === "fasth3_omni_reference") {
       const width = input.width ?? 768, height = input.height ?? 448;
       if (typeof width !== "number" || typeof height !== "number" || width <= 0 || height <= 0)
@@ -53669,15 +53653,28 @@ function resolveVideoDuration(tool, input) {
   return { args, timing: timing2 };
 }
 
+// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
+
 // src/video-registry.ts
 var load5 = createRequire5(import.meta.url);
-var entry = (engine, deployment, operation, schema) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema) => ({ ...entry(engine, deployment, "reference", schema), voice: "reference" });
+var entry = (engine, deployment, operation, schema, facts = {}) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none", ...facts });
+var reference = (engine, deployment, schema, facts = {}) => ({ ...entry(engine, deployment, "reference", schema, facts), voice: "reference" });
+var SEEDANCE = { modelConstraints: SEEDANCE_MODEL_SPECS };
+var SEEDANCE_VOICES = Object.fromEntries(Object.entries(SEEDANCE_MODEL_SPECS).map(([model2, spec]) => [model2, spec.referenceAudio.maxClips]));
+var DESKTOP = { modelConstraints: { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } };
+var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
+var HEYGEN = { modelConstraints: { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } };
+var LOCAL_NOTES = {
+  ltx_video_generate: "LTX 8k+1 frames; MLX-Serve backend.",
+  fasth3_omni_reference: "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation."
+};
+var local2 = (tool) => ({ modelConstraints: { frames: LOCAL_VIDEO_MODELS[tool].frames, note: LOCAL_NOTES[tool] } });
 var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema, SEEDANCE),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema, SEEDANCE),
   seedance_reference: {
-    ...reference("seedance", "byteplus", seedanceReferenceSchema),
+    ...reference("seedance", "byteplus", seedanceReferenceSchema, { ...SEEDANCE, pinnedVoices: SEEDANCE_VOICES }),
     bindCharacterSources(args, cast) {
       const originals = /* @__PURE__ */ new Map();
       for (const person of cast) {
@@ -53702,35 +53699,64 @@ var VIDEO_ADAPTERS = Object.freeze({
   },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => [
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema)
+    entry(
+      "astra-genai-desktop",
+      "gateway-desktop-v1",
+      { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature,
+      schema,
+      feature === "keyframes" ? { ...DESKTOP, timedImages: true } : DESKTOP
+    )
   ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema, { modelConstraints: {
+    models: GENAI_VIDEO_MODELS,
+    note: "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
+  } }),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema, {
+    timedImages: true,
+    pinnedVoices: 2,
+    voiceOnSubjects: true,
+    sceneRenderer: { model: "ltx-2.5-22b-distilled", sceneAudioModes: ["native", "mix"] },
+    modelConstraints: {
+      models: GENAI_VIDEO_MODELS,
+      references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" },
+      note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
+    }
+  }),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema, {
+    timedImages: true,
+    sceneRenderer: { model: "ltx-2.5-22b-dev", sceneAudioModes: ["conditioning"] },
+    modelConstraints: {
+      models: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"],
+      note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+    }
+  }),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
+    note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
+  } }),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema, { timedImages: true }),
   astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
   astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
   astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool, model2]) => [
-    tool,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema),
+  ...Object.fromEntries(Object.keys(LOCAL_VIDEO_MODELS).map((tool) => {
+    const model2 = LOCAL_VIDEO_MODELS[tool];
+    return [tool, model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema, local2(tool)) : entry("mlx", "local-mlx", model2.operation, model2.schema, local2(tool))];
+  })),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema, { ...local2("ltx_video_generate"), replacement: "ltx_video_generate" }),
   // Hosted vendors through the common layer (vendor-video.ts). Image lanes render silent cuts;
   // spoken cuts use the reference lanes (MiniMax, HeyGen) or LTX audio-to-video.
   ...HOSTED_VIDEO_ROUTES,
-  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema),
-  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema),
-  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema),
-  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
+  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema, MINIMAX),
+  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema, MINIMAX),
+  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema, HEYGEN),
+  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema, { ...HEYGEN, voiceByBackend: true })
 });
 var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
 function voiceReferenceLimit(tool, model2) {
-  if (tool === "seedance_reference") return SEEDANCE_MODEL_SPECS[model2 ?? DEFAULT_SEEDANCE_MODEL]?.referenceAudio.maxClips ?? 0;
-  if (tool === "astra_genai_img2video" || tool === "astra_genai_msr") return 2;
+  const own = VIDEO_ADAPTERS[tool]?.pinnedVoices;
+  if (typeof own === "number") return own;
+  if (own) return own[model2 ?? DEFAULT_SEEDANCE_MODEL] ?? 0;
   let schema = VIDEO_ADAPTERS[tool]?.schema;
   while (schema instanceof external_exports.ZodEffects) schema = schema.innerType();
   let field = schema instanceof external_exports.ZodObject ? schema.shape.referenceAudioPaths : void 0;
@@ -54018,6 +54044,7 @@ var load9 = createRequire11(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
+var RENDERING_REFUSAL = "scene_render_selection: per_shot is the only rendering mode. Leave sceneRendering out to plan the scene as one render: the plan returns promptTemplate and takes an authored prompt. single_msr and auto had the gateway write that prompt and are retired";
 function selectedVideoTool(selection, operation = selection.operation) {
   if (operation === "image" && selection.engine === "mlx" && selection.model && localVideoStrategy("ltx_video_generate")?.acceptsModel(selection.model))
     return "ltx_video_generate";
@@ -54028,8 +54055,7 @@ var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   sceneNo: external_exports.number().int().positive(),
   requestId: idSchema,
-  validateScenePayload: external_exports.boolean().optional(),
-  sceneRendering: external_exports.enum(["auto", "single_msr", "per_shot"]).optional(),
+  sceneRendering: external_exports.enum(["per_shot"], { errorMap: () => ({ message: RENDERING_REFUSAL }) }).optional(),
   shotBindings: sceneShotBindingsSchema.optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
@@ -54037,6 +54063,8 @@ var videoPlanSchema = external_exports.object({
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
   wholeScene: external_exports.literal(true).optional(),
   prompt: external_exports.string().optional(),
+  engine: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -54326,6 +54354,8 @@ var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
   assetId: idSchema2,
   requestId: idSchema2,
+  engine: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
   operation: external_exports.enum(["text", "edit", "variation"]).optional(),
   tool: external_exports.string().optional(),
   reserveUsd: external_exports.number().finite().nonnegative().optional(),

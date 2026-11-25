@@ -14,7 +14,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
@@ -255,7 +254,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
@@ -499,7 +497,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
@@ -753,7 +750,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -801,7 +797,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -850,7 +845,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
@@ -907,7 +901,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -952,7 +945,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -998,7 +990,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1048,7 +1039,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1077,7 +1067,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "shots",
         "reserveUsd",
         "outputPath",
         "filename"
@@ -1087,7 +1076,7 @@
           "ltx-2.5-22b-distilled",
           "ltx-2.5-22b-dev"
         ],
-        "note": "Use duration, exact numFrames or automatic duration. Optional shots describe 2–4 cuts. Plain distilled generation accepts registered LoRAs on supporting backends."
+        "note": "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
       }
     },
     {
@@ -1108,18 +1097,12 @@
             "mix"
           ],
           "sceneRendering": "per_shot",
-          "executionModes": [
-            "auto",
-            "single_msr",
-            "per_shot"
-          ],
-          "requiresUserChoice": false,
+          "promptWriter": "gateway",
           "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
           "validation": "/v1/ltx/v2/scene-to-video/validate"
         },
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "gateway_prompt_only",
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
@@ -1148,7 +1131,6 @@
         "resolution",
         "fps",
         "generateAudio",
-        "shots",
         "reserveUsd",
         "outputPath",
         "filename",
@@ -1203,16 +1185,12 @@
             "conditioning"
           ],
           "sceneRendering": "per_shot",
-          "executionModes": [
-            "per_shot"
-          ],
-          "requiresUserChoice": true,
+          "promptWriter": "gateway",
           "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
           "validation": "/v1/ltx/v2/scene-to-video/validate"
         },
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
@@ -1268,7 +1246,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "approximate_holds",
@@ -1322,7 +1299,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1374,7 +1350,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1428,7 +1403,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1476,7 +1450,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
@@ -1532,7 +1505,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1582,7 +1554,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1624,7 +1595,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1677,7 +1647,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
@@ -1732,7 +1701,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1787,7 +1755,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1831,7 +1798,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -1877,7 +1843,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
@@ -1922,7 +1887,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -2121,7 +2085,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": true
       },
       "sceneCutTiming": "cut_order",
@@ -2319,7 +2282,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
@@ -2446,7 +2408,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
@@ -2575,7 +2536,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
@@ -2703,7 +2663,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "time_ranges",
@@ -2830,7 +2789,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -2878,7 +2836,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",
@@ -2927,7 +2884,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": true,
         "endingImage": true,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "cut_order",
@@ -2973,7 +2929,6 @@
         "frameAddressedNativeDialogue": false,
         "openingImage": false,
         "endingImage": false,
-        "shotDescriptions": "prompt",
         "sceneAudio": false
       },
       "sceneCutTiming": "action_beats",

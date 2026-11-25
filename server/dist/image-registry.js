@@ -6,6 +6,7 @@ import { mlxImageGenerateSchema, mlxImageEditSchema } from './mlx-serve-client.j
 import { zimageGenerateSchema } from './zimage-client.js';
 import { GPT_IMAGE_MODELS, GPT_IMAGE_CONTRACTS, assertImageModelAvailable, validateMlxImageOperation } from './image-models.js';
 import { validateImageBase64 } from './image-media.js';
+import { adapterContracts } from './adapter-parameters.js';
 export const IMAGE_ADAPTERS = Object.freeze({
     astra_genai_image_generate: { engine: 'astra-genai-native', operation: 'text', schema: nativeImageSchema },
     astra_genai_image_edit: { engine: 'astra-genai-native', operation: 'edit', schema: nativeImageEditSchema },
@@ -54,6 +55,10 @@ export function parseImageArgs(tool, input) {
     if (adapter.engine === 'mlx' && args.model)
         validateMlxImageOperation(String(args.model), adapter.operation === 'edit' ? 'edit' : args.imagePath ? 'variation' : 'text', args);
     return args;
+}
+/** One engine's adapters, and one operation's when named, each with its parameters as JSON Schema: shared names apart from its own. */
+export function imageAdapterContracts(engine, operation) {
+    return adapterContracts('image', imageCatalog().adapters.filter(row => row.engine === engine && (!operation || row.operation === operation)), IMAGE_ADAPTERS, { engine, operation });
 }
 export function imageCatalog() {
     return { version: 1, revision: '2026-10-18',

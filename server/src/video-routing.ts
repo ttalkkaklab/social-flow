@@ -38,6 +38,7 @@ import { prepareVideoVoice, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
+import { assertSelection } from './adapter-parameters.js';
 import { assertSceneDialogue, resolveScenePrompt, scenePromptSlots, scenePromptTemplate, type PromptImage, type PromptIssue } from './scene-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
@@ -53,8 +54,12 @@ const structurePath = fileURLToPath(new URL('../../skills/storyboard/references/
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string; operation?: string }
-type SceneRendering = 'auto' | 'single_msr' | 'per_shot';
-interface SpeechRoute {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; rendering?:SceneRendering; external:boolean; opening?:string}
+/** The one rendering mode a call can name: each shot rendered apart by the gateway's scene route, which writes each shot's prompt. */
+type SceneRendering = 'per_shot';
+const RENDERING_REFUSAL = 'scene_render_selection: per_shot is the only rendering mode. Leave sceneRendering out to plan the scene as one render: ' +
+  'the plan returns promptTemplate and takes an authored prompt. single_msr and auto had the gateway write that prompt and are retired';
+/** `rendering` is what the scene's cards ask for. 'auto' marks a cut scene that would also fit one render; approved plans hash it. */
+interface SpeechRoute {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; rendering?:'auto'|'per_shot'; external:boolean; opening?:string}
 interface Context {
   speechRoute?: SpeechRoute;
   sceneNo?: number; sceneOwnsFrames?: boolean; timed?: boolean; shotIds?: string[]; sceneDirection?: SceneVideoDirection; sceneMembers?: Record<string, unknown>[];
@@ -178,12 +183,13 @@ function stable(value: unknown): unknown {
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z.number().int().positive(), requestId: idSchema,
-  validateScenePayload: z.boolean().optional(), sceneRendering:z.enum(['auto','single_msr','per_shot']).optional(), shotBindings:sceneShotBindingsSchema.optional(),
+  sceneRendering:z.enum(['per_shot'], {errorMap:() => ({message:RENDERING_REFUSAL})}).optional(), shotBindings:sceneShotBindingsSchema.optional(),
   purpose: z.enum(['draft', 'final', 'revision']).optional(),
   basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
   maxCostUsd: z.number().nonnegative().finite().optional(),
   wholeScene: z.literal(true).optional(),
   prompt: z.string().optional(),
+  engine: z.string().min(1).optional(), model: z.string().min(1).optional(),
   operation: z.string().optional(), tool: z.string().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const videoExecuteSchema = z.object({ episode: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
 export interface VideoPlan {
@@ -301,6 +307,8 @@ function saveVideoPlan(plan: VideoPlan) {
   if (!fs.existsSync(file)) {
     // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
     const {promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest} = plan;
+    // A per_shot plan's gateway warning is said with the plan, outside the manifest an approval covers.
+    if (manifest.sceneRendering) delete manifest.promptIssues;
     atomicJson(file, manifest);
   }
   fs.rmSync(blockedPlanFile(plan.episode, plan.requestId), {force:true});
@@ -412,14 +420,11 @@ async function validateShotRenderPlan(plan: VideoPlan) {
   // Nothing is uploaded for a scene this deployment would refuse.
   const refused = sceneRequestIssues(scene, capabilities, {bindings:plan.shotBindings, model});
   if (refused.length) throw new Error('scene_render_inputs_unsupported:\n' + refused.join('\n'));
-  const executionMode = plan.sceneRendering === 'auto' && !capabilities.executionModes.includes('auto') ? 'per_shot' : plan.sceneRendering!;
-  if (!capabilities.executionModes.includes(executionMode))
-    throw new Error('scene_render_selection: this gateway does not advertise ' + plan.sceneRendering);
-  const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings, executionMode);
+  const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings);
   if (plan.conditioningInputs && prepared.attachments.find(file => file.role === 'scene_audio')?.sha256 !== plan.conditioningInputs.driverSha256)
     throw new Error('video_plan_stale: the staged conditioning master differs from the approved scene');
-  const execution = await validateSceneBody(prepared.body, sceneRequestId(plan.id), {model, shots:plan.shotIds!.length, execution:executionMode});
-  return {...prepared, execution, ...(plan.conditioningInputs ? {conditioningInputs:plan.conditioningInputs} : {})};
+  await validateSceneBody(prepared.body, sceneRequestId(plan.id), {model, shots:plan.shotIds!.length});
+  return {...prepared, execution:'per_shot' as const, ...(plan.conditioningInputs ? {conditioningInputs:plan.conditioningInputs} : {})};
 }
 
 async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnType<typeof validateShotRenderPlan>>): Promise<ToolResult> {
@@ -439,6 +444,10 @@ async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnTyp
 }
 
 type PlanInput = z.infer<typeof videoPlanSchema>;
+/** What a per_shot plan says about its prompts. The scene route has no field for a caller's own. */
+const GATEWAY_WRITES_PROMPTS: PromptIssue = {level:'warning', code:'gateway_composed_prompt',
+  detail:'The gateway renders each shot apart and writes each shot\'s prompt from this manifest. No promptTemplate is returned and no authored prompt is taken. ' +
+    'Revise a shot through its card, or plan without sceneRendering when the scene fits one render.'};
 
 function requireSpeechSignal(file: string, code: string): number {
   const signal = load('../../skills/_shared/audio-signal.js').inspect(file);
@@ -474,6 +483,7 @@ function resolvePlanContext(input: PlanInput) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context = routingContext(input.episode, undefined, input.sceneNo, false, input.sceneRendering);
   requireSupportedSelection(context.selection);
+  assertSelection('video', context.selection, input);
   const structure = load(structurePath) as {
     imageGaps(board: Context['board'], sceneNo: number, available: (file: string) => boolean): string[];
   };
@@ -541,9 +551,7 @@ async function prepareManagedPlan(input: PlanInput) {
     await refreshGenaiMsrVoice();
   let plan = buildVideoPlan(input, resolved, false);
   if (plan.sceneRendering) {
-    const checked = await validateShotRenderPlan(plan);
-    if (plan.sceneRendering === 'auto')
-      plan = buildVideoPlan({...input, sceneRendering:checked.execution}, resolved, false);
+    await validateShotRenderPlan(plan);
     return saveVideoPlan(plan);
   }
   if (plan.characterBindings) await checkRegisteredBindings(plan.characterBindings);
@@ -594,11 +602,8 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
 }
 function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
   if (!input.sceneRendering && context.speechRoute?.rendering)
-    throw new Error('scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request.');
-  if (input.sceneRendering === 'auto' && (context.speechRoute?.rendering === 'per_shot' || input.shotBindings?.length))
-    input = {...input, sceneRendering:'per_shot'};
-  if (input.sceneRendering === 'single_msr' && context.speechRoute?.rendering === 'per_shot')
-    throw new Error('scene_render_selection: these shot controls require per_shot rendering');
+    throw new Error('scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request, ' +
+      'or name sceneRendering:"per_shot", where the gateway writes each shot\'s prompt.');
   const sourceArgs = input.args;
   const speakers = context.speechRoute!.speakers;
   const opening = context.speechRoute!.opening;
@@ -689,7 +694,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (!input.prompt.trim()) throw new Error('scene_prompt_empty: write the prompt, or leave it out for the composed one');
     if (input.prompt.length > 32_000) throw new Error('prompt_too_long: a prompt takes at most 32000 characters');
     if (input.sceneRendering)
-      throw new Error('scene_prompt_unsupported: an authored prompt describes one render of the whole scene; per-shot rendering writes each shot from its own card');
+      throw new Error('scene_prompt_unsupported: an authored prompt describes one render of the whole scene. Under per_shot the gateway writes each shot\'s prompt from its card');
   }
   if (input.sceneRendering) {
     for (const card of context.sceneMembers ?? []) {
@@ -781,13 +786,11 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     const filename = settings.filename ?? 'video-'+input.requestId+'.mp4';
     resolveOutputFile(outputPath,filename,'video');
     const args = {model:selection.model,resolution:selection.resolution, prompt:request.prompt, reserveUsd:settings.reserveUsd,outputPath,filename};
-    const modelPaced = input.sceneRendering === 'single_msr';
     const body = {...take, version:1 as const, episode:context.episode, shotId:context.shotId, requestId:input.requestId,
-      ...(modelPaced ? {directionWarnings:['The model chooses cut and speech timing in one MSR generation.']} : {}),
       ...(conditioningInputs ? {conditioningInputs} : {}),
-      sceneRendering:input.sceneRendering, ...(cast.length ? {characterInputs:cast} : {}), ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:{...request,...(modelPaced ? {modelPacedCuts:true} : {}),...(!speakers.length ? {silentPicture:true as const} : {})}, tool, args, sourceArgs:input.args, inputs, selection,
+      sceneRendering:input.sceneRendering, ...(cast.length ? {characterInputs:cast} : {}), ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:{...request,...(!speakers.length ? {silentPicture:true as const} : {})}, tool, args, sourceArgs:input.args, inputs, selection,
       source:context.source, contextRevision:context.revision,quote:quoteFor(tool,args),execution:'server' as const};
-    const plan = {...body,id:hash(body)};
+    const plan = {...body,id:hash(body),promptIssues:[GATEWAY_WRITES_PROMPTS]};
     if (persist) throw new Error('scene_render_validation: use video_plan to validate deployed renderer inputs before approval');
     return plan;
   }
@@ -848,7 +851,7 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       prompt: [args.prompt, silentSuffix].filter(Boolean).join(' ') } : args;
   };
   let callArgs = withPrompt(compiled?.prompt ?? video?.prompt);
-  if (input.args.shots !== undefined || input.args.prompt !== undefined && (scene || input.args.prompt !== video?.prompt))
+  if (input.args.prompt !== undefined && (scene || input.args.prompt !== video?.prompt))
     throw new Error('scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene');
   const members = context.sceneMembers ?? [];
   const bindTurns = Boolean(bindDialogueSeparately || tool === 'astra_genai_msr' || tool && VENDOR_REFERENCE_TOOLS.includes(tool));
@@ -1298,6 +1301,9 @@ async function adaptiveSeedanceOutputError(plan: VideoPlan): Promise<string | un
 
 function approvedContext(plan: VideoPlan) {
   if (!plan.sceneNo) throw new Error('scene_video_scope: use video_status for a historical shot receipt; new generation requires a scene plan');
+  // A plan saved under single_msr or auto asked the gateway to write the scene prompt. Its job, if one was submitted, is still read by video_status.
+  if (plan.sceneRendering && (plan.sceneRendering as string) !== 'per_shot')
+    throw new Error('video_plan_stale: this plan used the retired ' + plan.sceneRendering + ' rendering. Plan the scene again without sceneRendering');
   try { return routingContext(plan.episode, plan.shotId, plan.sceneNo, false, plan.sceneRendering); }
   catch (error) {
     const report = (error as {report?: Record<string, unknown>})?.report;

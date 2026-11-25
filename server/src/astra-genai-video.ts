@@ -58,12 +58,6 @@ function devNegativeRule(args: { negativePrompt?: string; model: string }, ctx: 
   if (args.negativePrompt.length > 2000) issue('The dev backend accepts a negativePrompt of at most 2000 characters');
 }
 const exactFrames = z.number().int().min(25).max(361).refine(n => (n - 1) % 8 === 0, 'Use 8k+1 frames');
-// V2 describes these cuts in the backend prompt. The contract has no frame index.
-export const genaiShotsSchema = z.array(z.object({
-  description: z.string().trim().min(1).max(2000),
-  audio: z.string().trim().min(1).max(2000).optional(),
-  transition: z.literal('hard_cut').optional(),
-}).strict()).min(2).max(4).refine(shots => !shots[0].transition, 'Omit transition on the opening shot');
 const temporalImages = z.array(z.object({
   imageUri: genaiImageUriSchema.optional(), imagePath: z.string().min(1).optional(),
   frameIdx: z.number().int().min(0).max(360),
@@ -115,7 +109,6 @@ const textVideoFields = z.object({
   resolution: localResolution,
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   generateAudio: z.boolean().default(true),
-  shots: genaiShotsSchema.optional(),
   reserveUsd: z.number().finite().nonnegative(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
@@ -135,15 +128,6 @@ function localVideoTiming(args: z.infer<typeof textVideoFields> & { openingPosit
     ctx.addIssue({ code: 'custom', path: ['numFrames'], message: 'Omit duration when using numFrames' });
   if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: 'custom', path: ['duration'], message: 'Duration and fps exceed the local 361-frame limit' });
-  if (args.shots) {
-    if (args.shots[0].transition) ctx.addIssue({ code: 'custom', path: ['shots', 0, 'transition'], message: 'Omit transition on the opening shot' });
-    const parts = [openingPrompt(args.prompt, args.openingPositions)];
-    args.shots.forEach((shot, i) => {
-      parts.push((i === 0 ? 'The opening shot shows ' : 'A hard cut moves to ') + shot.description);
-      if (shot.audio) parts.push('Audio: ' + shot.audio);
-    });
-    if ([...parts.join('\n\n')].length > promptLimit) ctx.addIssue({ code: 'custom', path: ['shots'], message: 'Composed shot prompt exceeds ' + promptLimit + ' characters' });
-  }
 }
 export const genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => { localVideoTiming(args, ctx); devNegativeRule(args, ctx); });
 const msrReferences = z.array(z.object({
@@ -322,7 +306,7 @@ export function buildGenaiVideoBody(args: GenaiVideoRequest): Record<string, unk
   return {
     prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, ...(args.numFrames === undefined ? { duration: args.duration ?? null } : { num_frames: args.numFrames }), resolution: args.resolution,
     fps: args.fps, generate_audio: args.generateAudio,
-    ...(args.shots ? { shots: args.shots } : {}), ...samplingBody(args), ...temporalBody(args.keyframes),
+    ...samplingBody(args), ...temporalBody(args.keyframes),
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
     ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
     ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
@@ -534,12 +518,7 @@ export async function checkGenaiVideoOptions(tool: string, args: Record<string, 
       }
     }
     const prompt = openingPrompt(String(args.prompt), args.openingPositions as OpeningPosition[] | undefined);
-    const parts = [prompt];
-    for (const [i, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
-      parts.push((i === 0 ? 'The opening shot shows ' : 'A hard cut moves to ') + shot.description);
-      if (shot.audio) parts.push('Audio: ' + shot.audio);
-    }
-    const chars = Math.max([...parts.join('\n\n')].length, [...String(args.negativePrompt ?? '')].length);
+    const chars = Math.max([...prompt].length, [...String(args.negativePrompt ?? '')].length);
     if (chars > 2000) {
       const caps = z.object({ prompt_max_chars: z.number().int().optional() }).parse(
         await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
@@ -548,7 +527,7 @@ export async function checkGenaiVideoOptions(tool: string, args: Record<string, 
   }
   const wireFields: Record<string, string> = {
     seed: 'seed', numInferenceSteps: 'num_inference_steps', guidance: 'guidance', lora: 'lora', numGeneratedKeyframes: 'num_generated_keyframes',
-    numFrames: 'num_frames', shots: 'shots', negativePrompt: 'negative_prompt', guidanceScale: 'guidance_scale',
+    numFrames: 'num_frames', negativePrompt: 'negative_prompt', guidanceScale: 'guidance_scale',
     referenceStrength: 'reference_strength', referenceFrames: 'reference_frames',
     nagScale: 'nag_scale', nagAlpha: 'nag_alpha', nagTau: 'nag_tau', skipStage2: 'skip_stage_2',
   };
