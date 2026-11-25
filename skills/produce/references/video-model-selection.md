@@ -224,7 +224,7 @@ What the route means in the plan:
   resolution and scale onto the 1080p canvas, and the approval page shows the ceiling beside
   the slot. A cut that needs 1080p pixels, 4K, a local-file extension or a Seedance
   asset-library character writes that reason and takes the API engine.
-- One clip is one call, the same source PNG and the same stored prompt as any other engine.
+- A scene request uses the current shot attributes, the selected model’s prompt format and its accepted source media.
   The prompt reads as plain English with no timecodes and no negative directives; exclusions go in as positive description,
   the way the Seedance lock does it. A speech clip on `reference_to_video` names a preset
   voice; the channel's fixed voice still comes from TTS.

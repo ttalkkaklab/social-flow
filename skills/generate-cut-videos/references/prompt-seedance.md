@@ -58,7 +58,7 @@ Two recommendations are not counted by the planner.
   picture. Two speakers with their voices are therefore seven files, so a two-speaker scene
   on 2.0 reads `reference_assets_over_recommended`. The reference contract is unchanged; the
   report says the count.
-- In an authored prompt (`video_plan {prompt}` or a saved draft) the `Shot N:` label may be
+- In an authored prompt (an explicit `video_plan {prompt}` generation edit) the `Shot N:` label may be
   kept, dropped or renumbered. A draft written before shots were numbered, with
   "Then cut directly." between them, still plans.
 

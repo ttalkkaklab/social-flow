@@ -37,7 +37,7 @@
  *       # clip mode — the full generated-video prompt, assembled from the shot's
  *       # visual.camera four slots (framing, then speed movement, then ending on end —
  *       # the produce §3 recipe) + subject motion + positive locks + the visual.audio
- *       # sentence. storyboard §4 stores the stdout whole (scenes-schema §clip prompt);
+ *       # sentence. Use this helper for a production request (scenes-schema §Video prompts);
  *       # produce sends it verbatim. --engine picks the machine checks: seedance blocks
  *       # timecodes (2.0 responds to shot numbers only) and digit seconds;
  *       # seedance-2.5 takes integer-second forms ("0-3 seconds", "[1s-4s]").
@@ -313,6 +313,17 @@ function spaceSentence(opts) {
   return bits.length ? "From the camera: " + bits.join(". ") + "." : "";
 }
 
+function frameSizeWords(size, camera, noPerson, cutRole) {
+  const view = camera?.view;
+  const kind = require('./shot-view.js').subjectKind(view, size, noPerson, cutRole);
+  if (kind === 'person' && (view ? view.mode === 'rear' : camera?.rear)) {
+    if (size === 'cu') return 'close-up, the back of the head and the top of the shoulders, crown lightly cropped';
+    if (size === 'choker') return 'big close-up, the back of the head fills the frame';
+  }
+  const ladder = kind === 'person' ? SIZE_WORDS : SIZE_WORDS_OBJECT;
+  return ladder[size] || SIZE_WORDS[size] || size || '';
+}
+
 // Keep the MCP frame path and the CLI on the same camera/composition inputs.
 function frameOptions(scene, frame = 'start') {
   const sh = scene.shot || {}, visual = scene.visual || {}, camera = visual.camera || {}, sp = sh.space || {};
@@ -323,7 +334,9 @@ function frameOptions(scene, frame = 'start') {
   const depth = rack && (end ? rack.to : rack.from)
     ? { mode: 'shallow', reads: 1, focus: end ? rack.to : rack.from }
     : sh.depth;
-  return { frame, omitFraming: endpoint, size: endpoint ? undefined : sh.size, angle: endpoint ? undefined : sh.angle,
+  const scope = require('./scene-direction.js');
+  const framing = scope.framing(scene);
+  return { frame, noPerson:require('./shot-view.js').withoutPeople(scene), cutRole:framing.cutRole, framingTerms:endpoint ? [] : scope.framingTerms(scene), omitFraming: endpoint, size: endpoint ? undefined : framing.size, angle: endpoint ? undefined : framing.angle,
     techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
     ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
       composition: sh.composition, eyeline: sh.eyeline }),
@@ -393,14 +406,7 @@ function assemble(opts) {
   const tail = (opts.tail === undefined ? "the picture fills the frame from the top edge to the bottom edge" : opts.tail).trim();
 
   const view = require('./shot-view.js').checked(opts.camera?.view);
-  const subjectType = view?.subjectType || (opts.noPerson ? 'object' : view?.target || ['insert','ecu'].includes(size) ? 'detail' : 'person');
-  const ladder = subjectType === 'person' ? SIZE_WORDS : SIZE_WORDS_OBJECT;
-  let sizeWords = ladder[size] || SIZE_WORDS[size] || (size ? size : "");
-  const rear = view ? view.mode === 'rear' : opts.camera?.rear;
-  if (subjectType === 'person' && rear) {
-    if (size === 'cu') sizeWords = 'close-up, the back of the head and the top of the shoulders, crown lightly cropped';
-    if (size === 'choker') sizeWords = 'big close-up, the back of the head fills the frame';
-  }
+  const sizeWords = frameSizeWords(size, opts.camera, opts.noPerson, opts.cutRole);
   const angleWords = ANGLE_WORDS[angle] || angle || ANGLE_WORDS.eye;
   const unknown = [];
   if (!opts.omitFraming) {
@@ -419,8 +425,11 @@ function assemble(opts) {
   const techniques = require('./film-techniques.js');
   const selected = (opts.techniques || []).filter(t => {
     const e = techniques.byId[t.id];
-    return !(size && e?.category === 'framing') && !(view && e?.fields.viewpoint);
+    return !((size || view) && e?.category === 'framing') && !(view && e?.fields.viewpoint);
   });
+  parts.push(...(opts.framingTerms || []).map(term => term + '.'));
+  const optics = require('./scene-direction.js').opticsWords(opts.camera);
+  if (optics) parts.push(optics + '.');
   const sourceTechnique = techniques.sourceInstructions({shot:{techniques:selected}}, opts.frame, opts.omitFraming);
   if (sourceTechnique) parts.push(sourceTechnique);
   if (space) parts.push(space);
@@ -832,4 +841,4 @@ function main(argv) {
 
 if (require.main === module) main(process.argv.slice(2));
 
-module.exports = { assemble, frameOptions, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };
+module.exports = { assemble, frameSizeWords, frameOptions, clipAssemble, styleSentences, bannedHits, negDirectiveHits, timingHits, hangulHits, lockMissing, spaceSentence, SIZE_WORDS, SIZE_WORDS_OBJECT, ANGLE_WORDS, BANNED, NEG_RE, NEG_OK };

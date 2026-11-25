@@ -146,9 +146,9 @@ generated: <YYYY-MM-DD>
 **화면**: an empty terminal window — close any tab showing account names or tokens beforehand
 **행동**: type the install command slowly and wait until the whole result is out
 **느낌**: relief — it really is that short          ← `shot.feel`, written before the dials
-**사이즈·앵글**: 바스트(미디엄 클로즈업) · 아이레벨 — 카메라를 상대 눈높이에   ← `shot.size` + distance · `shot.angle` + baseline
+**사이즈·앵글**: 바스트(미디엄 클로즈업) · 아이레벨 — 카메라를 상대 눈높이에   ← `shot.size` and `shot.angle`
 **자리**: 카메라 기준 — person on the left third · faces camera-right · 선: A left, B right  ← `shot.space` when written
-**소리**: 목소리 깨끗하게, 공간음은 뒤로            ← follows the size (directing-grammar §2)
+**소리**: 목소리 깨끗하게, 공간음은 뒤로            ← the authored shot or scene sound perspective
 **이 샷이 전하는 것**: that one command line finishes the install
 **대사**:
 1. <the sentence to say — in the order of the scenes.js narration segments>
@@ -159,15 +159,13 @@ generated: <YYYY-MM-DD>
 ### 샷 5 — ...
 ```
 
-- **Every shot block carries 느낌 · 사이즈·앵글 · 소리** rendered from `shot.feel`, `shot.size`
-  and `shot.angle` — the feel first, then the size with its phone distance, the angle with its
-  eye-height baseline, and the sound balance that follows the size. When `shot.space` is
+- Each shot shows its intent, crop, viewpoint, arrangement and editorial role as recorded. Lens, aperture and focus distance come from the shot optics. The listening perspective comes from the shot or its scene. When `shot.space` is
   written it also prints **자리** (camera-frame layout, facing, the 180° line), and when
   `visual.camera` is written it prints **카메라** — the move as the instruction for a phone
   (pan: torso not wrist, 3 s held on each end, a five count for 90°; dolly: walk, pre-focus at
   the arrival; tilt up: the time it takes is the size; dolly zoom: walk and zoom the other way,
   the person's size fixed) — and **시작 → 끝** from `framing` and `end`. The standing notes at the top
-  ("카메라를 들기 전에") carry the rules the person filming has to hold: walk to change size, don't
+  ("카메라를 들기 전에") carry the rules the person filming has to hold: check the crop and lens, don't
   cut at a joint, eye level means the subject's eyes, the 180° line when two people are on
   screen, 30°/two sizes/cut on action when re-filming the same subject, one mic position per
   sitting, 3 s of stillness before and after any camera move, pan from the waist, pre-focus

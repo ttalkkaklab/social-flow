@@ -202,7 +202,9 @@ plane window, `ls` is recognising someone across the street, `fs` is sharing a l
 `ms` is across a meeting table, `mcu` is across a coffee table, `cu` is the moment before they
 cry when nothing else is visible, and `ecu` is when only the eyes are remembered.
 
-| `shot.size` | Name (on set) | Frame bottom / what's in | What it tells or makes the audience feel | Default use | Phone distance (standing adult) | Sound that matches |
+Use the phone examples when scouting. Set the actual lens, camera position and listening perspective for each setup. A frame size can work with many distances and sound perspectives.
+
+| `shot.size` | Name (on set) | Frame bottom / what's in | What it tells or makes the audience feel | Default use | Example phone distance (standing adult) | Example sound perspective |
 |---|---|---|---|---|---|---|
 | `els` | extreme long shot (완전 풀) | person under 1/10 of the height (a dot) — the place is the subject | alone · powerless · the world is big · **or** scale when the frame holds many people | openings, endings, "nobody here" | 20 m or more | space (wind, traffic, echo) loud; no human voice needed |
 | `ls` | long shot · wide (와이드) | full body with room above and below, 40–60 % of the height | where we are, how many, how far apart — the **establishing** job | the first shot of a scene; situation explanation | 5–6 m — walk, don't zoom | space forward; lines may be faint |
@@ -254,10 +256,7 @@ Rules that come with the dial `[course]`:
 - **Length follows the event.** Allow time to read the relevant geography or detail and to
   complete the action, speech and reaction. No wide-to-close duration ratio or minimum insert
   hold applies. Do not pad speech or add a silent wide solely to satisfy a ratio.
-- **Sound follows the size.** Wide → space loud and lines distant; close → lines and breath
-  forward. A wide shot with studio-clean dialogue reads as fake without the viewer knowing why;
-  a close-up with distant sound reads as "something's off". Write it into `visual.audio` on
-  generated shots and let the builder's mix follow on filmed ones.
+- **Sound perspective has its own point of view.** A wide view can stay close to a speaker and a close-up can keep a whole room audible. Choose the listening distance for the scene, then adjust it locally when the story calls attention to a sound.
 - **Don't fake a wide by zooming out in a small room** — the frame size is right and the space
   goes flat. If you can't step back, stop at `fs`.
 
@@ -419,8 +418,7 @@ the mood, the exclusions (`--exclude` — the image tools have no exclusion argu
 noun list rides in the body) and the fill-the-frame tail (owner 2026-08-25 — no
 letterbox or lower-third fade). On a still with nobody in it,
 `--no-person` swaps the size ladder's body words ("full body", "chest up") for the subject's.
-The storyboard runs it when the shot plan is written (SKILL.md §4, cut and stage the scenes) and stores the full stdout as `bgPrompt`;
-produce sends that string to the engine unchanged.
+The board stores the composition and any mood or exclusions. On an image request, the image planner assembles these fields for the selected engine.
 Hand-written prefixes that fight the fields are a camera-mode finding.
 
 Rules:
@@ -762,7 +760,7 @@ below are what the script's standing notes carry `[course]`.
 | `shot.space` | generated stills (filmed shots when two people, or a person and what they look at, share the scene) | `assemble-bg-prompt.js` (the spatial prefix of `bgPrompt`) · storyboard.html (the space line · missing-layout warning) · script.md (the `자리` line) · reviewer camera mode (banned language, missing layout/facing) · image mode (does the PNG match layout and facing) |
 | `visual.camera` | generated shots | produce (assembles the prompt, adds nothing) · reviewer camera mode (slots, vendor words, one move, `end`) |
 | `duration` | generated clips · filmed shots | measured speech, action, reaction and edit handles; the cut-length table is a starting guide |
-| `visual.audio` | generated shots | produce · reviewer sound mode (sound follows size) |
+| `visual.audio` | generated shots | produce · reviewer sound mode (chosen listening perspective) |
 
 The check strip in `storyboard.html` warns on: a shot with no `shot.feel` or no `shot.size`, a
 `shot.size` or `shot.angle` outside the vocabulary, contradictory technique selections, a scene opening close
@@ -789,10 +787,8 @@ Warnings, not blocks — the reviewer and the person at the approval step weigh 
   180° rule (the line, four legal crossings, "A left, B right"); L06 the 30° rule (jump cuts,
   axial cut, cutting on action, the vlog contract); L07 eyeline match (reciprocal gaze,
   target eye height and distance, POV and reaction, offscreen markers).
-- Film-directing daily course, L11 deep focus and shallow depth of field (2026-08-26): count
-  what must be read (one → shallow, two or more → deep); eyes as the focus plane; *Citizen
-  Kane* three-plane simultaneity; sound perspective follows depth; the blurred background is
-  a choice, not a default; phone portrait mode and mask edges.
+- Film-directing daily course, L11 deep focus and shallow depth of field (2026-08-26): subjects and
+  focus planes, *Citizen Kane* three-plane simultaneity, phone portrait mode and mask edges.
 - Film-directing daily course, L13 pan and tilt · L14 dolly, truck and tracking · L15 dolly
   zoom (2026-08-28 ~ 08-30): a move has a hold on each end and a named A and B; pan proves a
   shared space where a cut cannot; tilt up is scale by time; tilt vs pedestal; 24 fps strobing
@@ -867,16 +863,7 @@ universal 5% inset. Check the actual final crop and moving-shot endpoints.
 
 ## L11 — Deep focus and shallow depth of field
 
-Use `shot.depth` (scenes-schema §Depth of field). Decide by counting: how many things must
-the viewer read in this frame at once? One → shallow depth of field with the sharp plane
-named, and on a person that plane is the eyes. Two or more → deep focus with every plane
-listed front to back, the way *Citizen Kane* keeps the boy in the window, the mother at the
-table and the banker in one sharp frame. A departure needs a reason on the record; a
-blurred background is never the default, and a still whose key subject is soft has failed.
-Depth and sound perspective move together: shallow brings the voice forward and dims the
-room, deep lets every source be heard. The still lane fakes focus with a mask, so a
-focus-in or rack-focus cut is always shallow, and objects at one distance that blur
-differently expose the mask. Check depth on the actual image and clip, not on the record.
+Choose the subject or planes the audience should see sharply. Two faces on one plane can both be sharp in a shallow shot. Record any focus handoff with its subjects and an action or sound cue. Set listening perspective separately. Review both the focus change and the sound against the finished take. The still-camera focus effect uses a mask and can show edge artifacts.
 
 ## L13–L15 — Camera moves: pan and tilt, dolly and truck, dolly zoom
 

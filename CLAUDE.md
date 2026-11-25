@@ -465,11 +465,9 @@ size and angle set, aimed at its cast's blocking, and the sheet image only gives
 (2026-11-01); without a set the sheet image leads, with a warning. It runs
 `image_plan` → `image_execute` with the saved model. An end image follows only for a
 `first_last` shot (`frame:"end"`, edited from the start image). A model that takes one
-picture refuses (`image_references_unsupported`); the user chooses the replacement. The fifth
-writes each `generated_video` shot's English video prompt with `shot_prompt` from its icon
-attributes, on-screen lines and an English action; `video_plan` sends it when its args name no
-prompt. `shot_image` waits for every shot's icon attributes and `shot_prompt` for every
-picture shot's images. On MSR the start image rides in the background slot and the plain
+picture refuses (`image_references_unsupported`); the user chooses the replacement. The storyboard stores shot action, closing state and diegetic sound as attributes before or after shot images. A video request runs `video_plan` on the current scene and its ordered shots.
+
+On MSR the start image rides in the background slot and the plain
 place picture stays out. Each shot's video then waits for the user's yes to its plan
 (`video_approve {planIds}`), or their approval of every shot (`video_approve {auto:true}`);
 `video_execute` refuses otherwise (`video_approval_required`). The session never records an
@@ -518,9 +516,7 @@ its wording for a model. Every scene plan returns
 `video_plan` takes an edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
 `{castId.image}` for a single picture, `{castId.voice}`, `{referenceId.image}`,
 `{shotId.image}` and the other names the plan lists in `promptSlots`. The planner fills in the
-numbers of the request it submits. An edit kept for later is saved per engine, model and
-operation in the scene's `videoDirection.promptDrafts` through `story_scene`; `prompt`
-overrides it for one plan.
+numbers of the request it submits. As of 2026-11-26, storyboard authoring records attributes only. One request-time `prompt` edit belongs to its production plan. Reusable direction belongs on the scene, shot or performance beat. Archived prompt drafts remain readable.
 
 The edit is bounded where a scene has a cast or natively voiced dialogue. The planner's own
 sentences may be removed or reordered, and a new sentence must be one of the supported camera,
@@ -667,7 +663,7 @@ Who speaks does not decide who is seen. `shot_characters` takes
 described in English. `visual.character` still lists those the video call references. A shot
 shows at most four of the cast. `shot_image` draws a bystander from their face and front
 panels and extras from the words; the video call references neither, since the start image
-carries them, and `shot_prompt` keeps them in the prompt. A bystander with an on-screen line is
+carries them, and the video planner carries them into the requested scene. A bystander with an on-screen line is
 refused (`shot_bystander_speaks`). Whether a clip holds a bystander's look from the start image
 alone is not measured yet.
 

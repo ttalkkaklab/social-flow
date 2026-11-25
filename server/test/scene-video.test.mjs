@@ -365,8 +365,8 @@ test('scene camera returns to its default after the insert and every shot cue re
   assert.match(providerPrompt,/window side/);
   for (const i of [0,2]) {
     assert.match(shotText(request,i),/static frame/);
-    assert.match(shotText(request,i),/Dusk light/);
-    assert.match(shotText(request,i),/Watch the lamp/);
+    assert.match(providerPrompt,/Dusk light/);
+    assert.match(providerPrompt,/Watch the lamp/);
   }
   for (const phrase of ['slowly pushes','broken seal','Settle on the seal','right profile','Close-up','eye level','Tap the brass bell twice','Rack focus from the seal to the lamp','lower eyelid','folds the letter','passing shadow']) {
     assert.ok(shotText(request,1).includes(phrase),phrase);
@@ -417,21 +417,39 @@ test('scene camera returns to its default after the insert and every shot cue re
   delete cards[1].visual.video.promptSource.end;
   cards[1].visual.frames = {mode:'first_last', endState:'The raven closes its claw around the sapphire.'};
   cards[1].shot.depth = {mode:'shallow',reads:1,focus:'the brass bell',sound:'near'};
-  for (const attention of ['From the seal to the lamp', 'the brass bell']) {
+  for (const subject of ['Rack focus from the seal to the lamp', 'the brass bell']) {
     const checked = build(cards).request;
-    assert.doesNotMatch(shotText(checked,1),/Watch the lamp/);
-    assert.ok(shotText(checked,1).includes('Attention: ' + attention));
+    assert.match(checked.sceneDirection.staging, /Attention: Watch the lamp/);
+    assert.ok(shotText(checked,1).includes(subject));
     assert.match(shotText(checked,1) + ' ' + (checked.shots[1].closingState ?? ''),/claw around the sapphire/);
-    assert.match(shotText(checked,2),/Watch the lamp/);
     cards[1].shot.techniques = [];
   }
   delete board.STRUCTURE.scenes[0].directionDefaults;
   scene.camera='Keep the camera locked throughout.';
   const legacy = build(cards).request;
-  assert.ok(!legacy.sceneDirection.camera && !legacy.shots[1].framing.includes('locked'));
-  assert.match(legacy.shots[2].framing,/locked/);
+  assert.equal(legacy.sceneDirection.camera,undefined);
+  assert.match(legacy.shots[0].framing,/camera locked/);
+  assert.match(legacy.shots[2].framing,/camera locked/);
+  assert.doesNotMatch(legacy.shots[1].framing,/camera locked/);
+  assert.match(legacy.shots[1].framing,/slowly pushes/);
 });
 
+
+test('an inherited move keeps its shot-specific target, cue and speed and new blocking carries forward', () => {
+  const defaults = {camera:'camera.dolly-in', continuity:'The witness stands beside the window.'};
+  const board = {STRUCTURE:{scenes:[{no:1,directionDefaults:defaults}]}};
+  const cards = ['Open the door.','Show the mark.','Step away.'].map((action,i) => ({
+    id:'s'+i,scene:1,duration:1,timeline:{startFrame:i*24,endFrame:(i+1)*24,transition:i ? 'hard_cut':'open',framing:'Eye level.',action}
+  }));
+  cards[1].visual = {camera:{target:'the red latch',cue:'the desk bell rings',speed:'fast',end:'The red latch fills the frame.'}};
+  cards[1].shot = {space:{continuity:'The witness now stands behind the door.'}};
+  const {request} = prepareSceneRequest(1,cards,{emotion:'Surprise.',openingPositions:[],fps:24},'/unused',[],
+    {bindDialogue:false,bindOpening:false,suffix:''},()=>null,board);
+  assert.match(request.shots[1].framing,/desk bell rings.*quickly pushes in toward the red latch/);
+  assert.match(request.shots[2].framing,/behind the door/);
+  assert.match(request.shots[0].framing,/beside the window/);
+  assert.doesNotMatch(request.shots[2].framing,/bell rings|red latch|beside the window/);
+});
 
 test('private words stay out of speech instructions while a visual object can share a short thought', async t => {
   const f = busking(t), card = f.members[0];
@@ -507,4 +525,29 @@ test('keeps simultaneous actions with the correct spoken turn in provider prose'
   assert.deepEqual(notes.beats, ['As Mochi speaks: Bo: Hold the door.', 'As Mochi speaks: Bo: Lower the crate.']);
   card.performance[1].to = 'Bo';
   assert.equal(sceneDirectionNotes(card, Boolean, true, true, true).beats[0], 'While Bo listens, Mochi speaks: Bo: Hold the door.');
+});
+
+test('object inserts and rear close-ups use the same crop in opening images and every scene writer', async () => {
+  const {scenePromptProfile} = await import('../dist/scene-prompt-profile.js');
+  const {assemble,frameOptions} = (await import('../../skills/storyboard/references/assemble-bg-prompt.js')).default;
+  const owner = {emotion:'Anticipation.',openingPositions:[],fps:24};
+  const cases = [
+    {shot:{size:'cu',cutRole:'insert'},visual:{character:[]},framing:'Only the watch is visible.',crop:/close-up of the subject/i},
+    {shot:{size:'cu'},visual:{character:['mina'],camera:{view:{mode:'rear',subject:'Mina',crop:'Crown and nape',reason:'Withhold her identity.'}}},
+      framing:'Crown and nape.',crop:/back of the head/i},
+    {shot:{size:'choker'},visual:{character:['mina'],camera:{rear:true}},framing:'The nape.',crop:/back of the head/i}
+  ];
+  for (const {shot,visual,framing,crop} of cases) {
+    const card = {id:'s0001',scene:1,type:'points',duration:4,shot:{...shot,render:{mode:'generated_video'}},visual,
+      timeline:{startFrame:0,endFrame:96,transition:'open',framing,action:'A reflection crosses the wall.'}};
+    const prompts = [assemble(frameOptions(card)).prompt];
+    for (const tool of ['seedance_img2video','astra_genai_scene','veo_img2video','fasth3_omni_reference']) {
+      const plan = prepareSceneRequest(1,[card],owner,'/unused',[],{profile:scenePromptProfile(tool),bindOpening:false,bindDialogue:false,suffix:''},()=>null,{});
+      prompts.push(plan.providerPrompt);
+    }
+    for (const prompt of prompts) {
+      assert.match(prompt,crop);
+      assert.doesNotMatch(prompt,/the face and the top of the shoulders|forehead to chin/i);
+    }
+  }
 });

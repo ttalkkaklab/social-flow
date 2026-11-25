@@ -16,6 +16,7 @@ export interface PromptOptions {
   measureAudio?: (line: Record<string, unknown>) => number | null;
   validateLanguage?: boolean;
   bindDialogueSeparately?: boolean;
+  sceneAttributes?: ResolvedRows;
   /** The adapter's prompt limit. Past it the prompt drops its least needed sentences first; the camera, action, lines and text policy stay. */
   maxCharacters?: number;
 }
@@ -46,6 +47,8 @@ const heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))
 export function cameraMoveWords(camera: Record<string, unknown>): string {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return '';
+  const cue = text(camera.cue);
+  if (cue) return sentence('On ' + cue.replace(/[.!?]+$/, '') + ', ' + cameraMoveWords({...camera, cue:undefined}).replace(/^The camera/, 'the camera'));
   if (heldMove.test(movement)) return 'The camera holds a static frame.';
   const catalogue = load('../../skills/storyboard/references/film-techniques.js') as {
     entries: { fields: { movement?: string }; prompt?: string }[];
@@ -174,27 +177,30 @@ export function cameraDrift(prompt: string, movement: string): 'missing' | 'cont
 
 export function shotVisualDirection(shot: Record<string, unknown>, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
-  const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { SIZE_WORDS: Record<string, string>; SIZE_WORDS_OBJECT: Record<string, string>; ANGLE_WORDS: Record<string, string> };
-  const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string };
+  const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { frameSizeWords(size:string, camera:unknown, noPerson:boolean, cutRole:string):string; ANGLE_WORDS: Record<string, string> };
+  const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string; withoutPeople(card:unknown):boolean };
   const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
-  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
   const catalogue = load('../../skills/storyboard/references/film-techniques.js') as { byId: Record<string, { category: string; fields: Record<string, string>; prompt?: string; instruction: string; label: { en: string } }> };
-  const contract = load('../../skills/storyboard/references/structure-contract.js') as { depthText(value: unknown): string };
+  const contract = load('../../skills/storyboard/references/structure-contract.js');
+  const frame = directions().framing(shot);
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
     id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
   }));
   const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
   const rack = picked.find(t => t.entry?.fields.focus);
-  const focusWords = !rack ? '' : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(sizes[text(plan.size)] || ''), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || '');
-  const size = sizes[text(plan.size)];
-  const framing = sentence([concise ? size?.split(',')[0] : size, words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(', '));
+  const focusWords = !rack ? '' : sentence((rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : rack.entry.label.en) +
+    (rack.on ? ', cued by ' + rack.on : ''));
+  const size = words.frameSizeWords(frame.size, camera, views.withoutPeople(shot), frame.cutRole) || (!viewWords && frame.crop) || '', angle = words.ANGLE_WORDS[frame.angle];
+  const sizeWords = sentence(size || ''), angleWords = sentence(angle || '');
+  const framing = sentence([concise ? size?.split(',')[0] : size, angle, ...directions().framingTerms(shot)].filter(Boolean).join(', '));
   const depthWords = plan.depth ? sentence(contract.depthText(plan.depth)) : '';
   // Viewpoint and framing techniques were previously displayed as icons but omitted from shot_prompt.
   const other = picked.filter(t => t.entry && ['camera', 'framing'].includes(t.entry.category) &&
     !t.entry.fields.movement && !t.entry.fields.focus && !t.entry.fields.size && !t.entry.fields.angle && !(viewWords && t.entry.fields.viewpoint));
   const accentWords = other.map(t => sentence(t.entry.fields.accent && t.entry.prompt ? t.entry.prompt.replace('{cue}', t.on || t.entry.fields.cue) : t.entry.instruction));
   const openingView = [viewWords || (text(camera.framing) ? sentence(concise ? text(camera.framing) : `Opening composition: ${text(camera.framing)}`) : ''),
+    directions().opticsWords(camera), text(object(plan.space).layout), text(object(plan.space).facing),
+    contract.compositionText(plan.composition), contract.eyelineText(plan.eyeline),
     !viewWords && camera.rear && !other.some(t => t.entry.fields.viewpoint === 'rear') ? 'View the subject from behind.' : '',
     !viewWords && camera.pov && !other.some(t => t.entry.fields.viewpoint === 'pov') ? sentence(`Point of view: ${text(camera.pov) || 'the named character'}`) : '',
   ].filter(Boolean);
@@ -204,6 +210,7 @@ export function shotVisualDirection(shot: Record<string, unknown>, concise = fal
 type ResolvedAttribute = { value: string; source: 'scene' | 'shot' | 'carry'; id?: string; speed?:string };
 type ResolvedRows = Record<string, ResolvedAttribute>;
 const directions = () => load('../../skills/storyboard/references/scene-direction.js') as {
+  framing(card:unknown): {size:string;angle:string;crop:string;cutRole:string}; framingTerms(card:unknown): string[]; opticsWords(camera:unknown): string;
   resolve(scene: unknown, cards: unknown[]): { defaults:ResolvedRows; common:ResolvedRows; shots:ResolvedRows[] };
   notes(card: unknown, accept:(cue:string)=>boolean, visualOnly:boolean, concise?:boolean, scenePrompt?:boolean): {actions:string[]; fallback:string[]; motion:string[]; blocking:string; sound:string; end:string; beats:string[]};
   withCameraDefaults(cards:Record<string,unknown>[], scenes:unknown): Record<string,unknown>[];
@@ -214,9 +221,14 @@ export function withSceneCamera(shot:Record<string,unknown>, scenes:unknown) {
   return load('../../skills/_shared/scene-acting.js').withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
 }
 export function attributeWords(key: string, row: ResolvedAttribute, camera: Record<string,unknown> = {}) {
+  if (key === 'soundPerspective') return row.value === 'near' ? 'Sound perspective: close to the subject.' : 'Sound perspective: hear the whole room.';
+  if (key === 'cameraPolicy') return sentence(row.value);
   if (key === 'camera') return row.id || row.source === 'shot'
     ? cameraMoveWords({...(row.source === 'shot' ? camera : {}), speed:row.speed, movement:row.source === 'shot' ? row.value : directions().movement(row.id!)}) : row.value;
   return nonEnglishOutsideQuotes(row.value) ? '' : sentence(directions().labels[key][1] + ': ' + row.value);
+}
+export function commonCameraWords(rows: ResolvedRows) {
+  return [rows.cameraPolicy?.value, rows.camera && attributeWords('camera',rows.camera)].filter(Boolean).join(' ');
 }
 export function sceneShotNotes(card: Record<string,unknown>, concise = false) {
   const english = (s: string) => s && !nonEnglishOutsideQuotes(s) ? s : '';
@@ -231,11 +243,11 @@ export function shotVisualParts(shot: Record<string,unknown>, rows:ResolvedRows,
   const dir = shotVisualDirection(shot, concise), visual = object(shot.visual), camera = object(visual.camera);
   const expression = expressionWords(shot);
   // Lighting and attention are design notes; the screen axis and continuity keep the space.
-  const rowKind = (key: string): VisualPartKind => key === 'camera' ? 'camera' : ['lighting', 'attention'].includes(key) ? 'design' : 'space';
+  const rowKind = (key: string): VisualPartKind => key === 'camera' ? 'camera' : ['lighting', 'shotLight', 'attention'].includes(key) ? 'design' : 'space';
   const parts: {kind: VisualPartKind; text: unknown}[] = [{kind:'framing', text:framing}, {kind:'framing', text:dir.framing},
     ...dir.openingView.map(text => ({kind:'view' as const, text})), {kind:'focus', text:dir.focusWords}, {kind:'depth', text:dir.depthWords},
     ...dir.accentWords.map(text => ({kind:'accent' as const, text})),
-    ...Object.entries(rows).filter(([key]) => !common[key]).map(([key,row]) => ({kind:rowKind(key), text:attributeWords(key,row,camera)})),
+    ...Object.entries(rows).filter(([key]) => key !== 'soundPerspective' && !common[key]).map(([key,row]) => ({kind:rowKind(key), text:attributeWords(key,row,camera)})),
     {kind:'settle', text:dir.settle && sentence('Closing frame: ' + dir.settle)}, {kind:'expression', text:expression && sentence('Expressions: ' + expression)},
     {kind:'end', text:end && sentence('End on ' + end)}];
   const seen = new Set<string>();
@@ -246,7 +258,7 @@ export function shotVisualWords(shot: Record<string,unknown>, rows:ResolvedRows,
   return shotVisualParts(shot, rows, common, end, framing, concise).map(part => part.text).join(' ');
 }
 
-/** Compile the current storyboard values at authoring and request time. Never writes the board. */
+/** Compile a legacy single-card request from current values. Never writes the board. */
 export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoPromptSource, names: Record<string, string> = {}, options: PromptOptions = {}) {
   const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
   const msr = frames.mode === 'reference';
@@ -269,7 +281,11 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
   // Each sentence carries the step at which a prompt over the adapter's limit lets it go: 1 the design notes and
   // visible states, 2 the beats' acting fields (brief beats), 3 the expressions. 0 never goes — the camera move
   // and its closing frame stay, since a prompt rewritten by hand to fit lost exactly those (mochi_bo, 2026-11-20).
+  const attributes = options.sceneAttributes ?? resolvedDirection({}, [shot]).shots[0];
+  const shared = Object.entries(attributes).filter(([key]) => !['camera', 'soundPerspective', 'continuityChange'].includes(key)).map(([key, row]) => attributeWords(key, row));
+  const listening = attributes.soundPerspective && attributeWords('soundPerspective', attributes.soundPerspective);
   const parts = (step: number): string[] => [
+    ...shared,
     msr ? framing : 'Start from the given first frame.',
     msr ? depthWords : '', moveWords, settle ? sentence(`Closing frame: ${settle}`) : '', focusWords,
     // A beat accent (speed ramp, impact shake) names the moment it fires on.
@@ -284,6 +300,7 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn && step < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : '',
     frames.mode === 'first_last' ? sentence(`End on the given last frame${source.end ? ': ' + source.end : ''}`) : source.end ? sentence(`End on ${source.end}`) : '',
+    listening,
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? '' : ', no music') : 'no music'}`),
     acting.VIDEO_TEXT_POLICY,
   ].filter(Boolean);
@@ -303,9 +320,13 @@ export function compileVideoPrompt(shot: Record<string, unknown>, source: VideoP
     { attribute: 'render', value: object(plan.render).mode, via: 'adapter' },
     { attribute: 'size', value: plan.size, via: !sizeWords ? 'unmapped' : msr ? 'prompt' : 'image', instruction: sizeWords },
     { attribute: 'angle', value: plan.angle, via: !angleWords ? 'unmapped' : msr ? 'prompt' : 'image', instruction: angleWords },
+    { attribute: 'arrangement', value: plan.arrangement, via: msr ? 'prompt' : 'image' },
+    { attribute: 'cutRole', value: plan.cutRole, via: msr ? 'prompt' : 'image' },
+    { attribute: 'optics', value: directions().opticsWords(camera) || undefined, via: 'prompt' },
+    { attribute: 'soundPerspective', value: attributes.soundPerspective?.value, via: 'prompt', instruction: listening },
     { attribute: 'view', value: camera.view, via: 'prompt', instruction: viewWords },
     { attribute: 'move', value: camera, via: movement ? 'prompt' : 'unmapped', instruction: moveWords },
-    { attribute: 'focus', value: rack ? { id: rack.id, from: rack.from, to: rack.to } : undefined, via: 'prompt', instruction: focusWords },
+    { attribute: 'focus', value: rack ? { id: rack.id, from: rack.from, to: rack.to, ...(rack.on ? {on:rack.on} : {}) } : undefined, via: 'prompt', instruction: focusWords },
     { attribute: 'depth', value: plan.depth, via: msr ? 'prompt' : 'image', instruction: depthWords },
     { attribute: 'framePlan', value: frames.mode, via: 'adapter' },
     ...picked.map((t): DirectionBinding => ({ attribute: 'technique', value: t.id,

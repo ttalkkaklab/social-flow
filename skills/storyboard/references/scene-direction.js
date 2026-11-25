@@ -4,10 +4,37 @@
   const catalogue = () => typeof module === 'object' && module.exports ? require('./film-techniques.js') : root.FILM_TECHNIQUES;
   const labels = {
     camera: ['카메라', 'Camera'], axis: ['촬영 축', 'Screen axis'], continuity: ['공간 연속성', 'Continuity'],
-    lighting: ['조명', 'Lighting'], attention: ['시선 흐름', 'Attention']
+    lighting: ['기본 조명', 'Lighting'], attention: ['관객에게 보여줄 순서', 'Attention'],
+    cameraPolicy: ['카메라 연출 원칙', 'Camera policy'], depthPolicy: ['심도 원칙', 'Depth policy'],
+    lensPolicy: ['렌즈 원칙', 'Lens policy'], continuityChange: ['이 샷의 상태 변화', 'Continuity change'],
+    shotLight: ['이 샷의 조명', 'Shot lighting'], soundPerspective: ['소리의 원근', 'Sound perspective']
   };
   const movement = id => catalogue().byId[id]?.fields?.movement;
   const text = value => typeof value === 'string' ? value.trim() : '';
+  const scales = ['els','ls','ws','fs','mfs','ms','mcu','cu','choker','ecu'];
+  const arrangements = ['single','two','three','group'];
+  const cutRoles = ['insert','reaction','cutaway'];
+  const legacyViews = {ots:'ots', pov:'pov', back:'rear'};
+  // Old boards used a single choice for several independent decisions. Keep the authored
+  // crop when the card gives no scale; an over-the-shoulder view implies no specific distance.
+  function framing(card) {
+    const plan = card.shot || {}, view = card.visual?.camera?.view || {}, size = plan.size;
+    return {size:scales.includes(size) ? size : '', crop:text(view.crop) || (size && ![...scales, ...arrangements, ...cutRoles, ...Object.keys(legacyViews)].includes(size) ? text(size) : ''),
+      angle:plan.angle === 'over' ? '' : plan.angle || '',
+      viewpoint:view.mode || legacyViews[size] || (plan.angle === 'over' ? 'ots' : ''),
+      arrangement:plan.arrangement || (arrangements.includes(size) ? size : ''),
+      cutRole:plan.cutRole || (cutRoles.includes(size) ? size : '')};
+  }
+  function framingTerms(card) {
+    const frame = framing(card);
+    const view = !card.visual?.camera?.view && {ots:'over the shoulder',pov:'subjective point of view',rear:'seen from behind'}[frame.viewpoint];
+    const arrangement = {single:'single subject',two:'two-shot',three:'three-shot',group:'group shot'}[frame.arrangement];
+    return [view, arrangement, frame.cutRole && frame.cutRole + ' shot'].filter(Boolean);
+  }
+  function opticsWords(camera = {}) {
+    return [camera.lensMm && camera.lensMm + ' mm lens', camera.fStop && 'f/' + camera.fStop,
+      camera.focusDistanceM && 'focus distance ' + camera.focusDistanceM + ' m'].filter(Boolean).join(', ');
+  }
   function actingFields(acting, includeVocal, seen, redact, accept = Boolean) {
     const words = [];
     for (const key of ['direction', 'context', 'intent', 'emotion', 'vocal', 'visual']) {
@@ -89,18 +116,20 @@
     });
     lines.forEach((line,i) => { if (!groups.has(i+1)) addLine(line, i+1, 'With '); });
     const seen = new Set();
-    const actions = [card.timeline?.action, source.action, design.action, visual.action, design.motion?.visibleChange].map(text).filter(cue => {
+    const actions = [card.timeline?.action, design.action, visual.action, design.motion?.visibleChange].map(text).filter(cue => {
       const key = cue.toLowerCase().replace(/[.!?\s]+$/, '');
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
-    const fallback = [card.summary, video.prompt].map(text).filter(Boolean);
+    // Historical sources fill missing attributes; a complete cached prompt never competes with current direction.
+    if (!actions.length && text(source.action)) actions.push(text(source.action));
+    const fallback = [card.summary].map(text).filter(Boolean);
     const motion = (design.motion?.beats || []).filter(beat => text(beat?.state))
       .map(beat => (Number.isFinite(beat.at) ? 'At ' + beat.at + ' s into this shot: ' : '') + text(beat.state));
     return {actions:actions.length ? actions : fallback.slice(0,1), fallback, motion,
-      blocking:text(design.before), sound:text(source.sound) || text(design.sound),
-      end:text(source.end) || text(design.after) || text(visual.frames?.endState), beats};
+      blocking:text(design.before), sound:text(card.sound?.diegetic) || text(design.sound) || text(visual.audio) || text(source.sound),
+      end:text(design.after) || text(visual.frames?.endState) || text(source.end), beats};
   }
   function base(scene = {}) {
     const defaults = scene.directionDefaults || {};
@@ -128,36 +157,35 @@
   }
   function resolve(scene, cards) {
     const defaults = base(scene);
-    let crossed;
+    let crossed, layout;
     const shots = cards.map(card => {
       const plan = card.shot || {}, camera = card.visual?.camera || {}, space = plan.space || {};
       const rows = {...defaults};
       if (text(plan.lineCrossing?.to)) crossed = text(plan.lineCrossing.to);
       const selected = catalogue().selected(card);
       const technique = selected.find(t => t.entry?.fields.movement);
-      const move = camera.movement || technique?.entry.fields.movement;
+      const inherited = defaults.camera;
+      const qualified = text(camera.target) || text(camera.cue) || text(camera.speed);
+      const move = camera.movement || technique?.entry.fields.movement || (qualified && inherited?.id && movement(inherited.id));
       if (move) {
         const entry = technique?.entry.fields.movement === move ? technique.entry : catalogue().entries.find(e => e.fields.movement === move);
-        const speed = camera.speed || technique?.entry.fields.speed;
+        const speed = camera.speed || technique?.entry.fields.speed || (!camera.movement && !technique ? inherited?.speed : undefined);
         rows.camera = {value:move, id:entry?.id, source:'shot', ...(speed ? {speed} : {})};
       }
       if (plan.lineNeutral) rows.axis = {value:'Camera on the axis.', source:'shot'};
       else if (text(space.line) || crossed) rows.axis = {value:text(space.line) || crossed, source:space.line || plan.lineCrossing ? 'shot' : 'carry'};
-      if (text(space.light)) rows.lighting = {value:space.light, source:'shot'};
-      if (text(plan.videoDesign?.continuity)) rows.continuity = {value:plan.videoDesign.continuity, source:'shot'};
-      if (defaults.attention) {
-        const focus = selected.find(t => t.entry?.fields.focus);
-        const from = text(focus?.from), to = text(focus?.to);
-        const shift = from && to ? 'From ' + from + ' to ' + to : to || from;
-        const subject = shift || (plan.depth?.mode === 'shallow' && text(plan.depth.focus)) || text(camera.view?.subject);
-        if (subject) rows.attention = {value:subject, source:'shot'};
-      }
+      if (text(space.continuity)) layout = text(space.continuity);
+      if (layout) rows.continuity = {value:layout, source:text(space.continuity) ? 'shot' : 'carry'};
+      if (text(space.light)) rows.shotLight = {value:space.light, source:'shot'};
+      if (text(plan.videoDesign?.continuity)) rows.continuityChange = {value:plan.videoDesign.continuity, source:'shot'};
+      const perspective = card.sound?.perspective || plan.depth?.sound;
+      if (perspective) rows.soundPerspective = {value:perspective, source:'shot'};
       return rows;
     });
     const common = Object.fromEntries(Object.entries(defaults).filter(([key]) => shots.every(rows => rows[key]?.source === 'scene')));
     return {defaults, common, shots};
   }
-  const api = {labels, movement, notes, base, resolve, withCameraDefaults, actingFields, actingPauses, orderedSpeech};
+  const api = {labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, notes, base, resolve, withCameraDefaults, actingFields, actingPauses, orderedSpeech};
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SCENE_DIRECTION = api;
 })(typeof window === 'object' ? window : globalThis);

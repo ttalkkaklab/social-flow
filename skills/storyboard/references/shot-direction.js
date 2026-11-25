@@ -49,6 +49,8 @@
   const JOINS = { cut: ['하드컷', 'Hard cut'], jcut: ['J컷', 'J-cut'], dip: ['암전 전환', 'Dip'],
     dissolve: ['디졸브', 'Dissolve'], whip: ['휩 전환', 'Whip'], zoom: ['줌 전환', 'Zoom'],
     push: ['밀기', 'Push'], iris: ['아이리스', 'Iris'], blur: ['블러', 'Blur'] };
+  const directions = () => typeof module === 'object' && module.exports ? require('./scene-direction.js') : root.SCENE_DIRECTION;
+  const crop = shot => { const f = directions().framing(shot); return f.size || f.crop || '-'; };
   function catalogue() { return typeof module === 'object' && module.exports ? require('./film-techniques.js') : root.FILM_TECHNIQUES; }
   function cameraOf(scene, lang) {
     const still = scene.shot?.render?.mode === 'still_camera';
@@ -87,7 +89,7 @@
   function changedAxes(previous, scene, lang) {
     if (!previous) return [];
     const pairs = [
-      [previous.shot?.size, scene.shot?.size, '크기', 'Size'],
+      [crop(previous), crop(scene), '크기', 'Size'],
       [previous.shot?.angle, scene.shot?.angle, '앵글', 'Angle'],
       [cameraOf(previous, lang).raw, cameraOf(scene, lang).raw, '이동', 'Move']
     ];
@@ -175,7 +177,7 @@
     const sizes = {}, wideWithoutReason = [];
     (scenes || []).forEach((s, i) => {
       if (['broll', 'outro'].includes(s.type) || !['static', 'still-hold'].includes(String(cameraOf(s, 'en').key).replace(/^camera\./, ''))) return;
-      const size = s.shot?.size || '-';
+      const size = crop(s);
       sizes[size] = (sizes[size] || 0) + 1;
       const reasons = [...(s.shot?.techniques || []).filter(t => t?.id === 'camera.static').map(t => t.reason), s.shot?.render?.camera?.reason, s.visual?.camera?.purpose];
       if (WIDE.includes(size) && !reasons.some(text)) wideWithoutReason.push(s.id || String(i + 1));
@@ -187,7 +189,7 @@
     const scenes = resolver ? resolver.withCameraDefaults(win.SCENES || [], win.STRUCTURE?.scenes) : win.SCENES || [];
     const shots = playbackEntries(scenes).filter(({ s }) => !['broll', 'outro'].includes(s.type)).map(({ s, i }) => {
       const camera = cameraOf(s, 'en');
-      return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: s.shot?.size || '-', angle: s.shot?.angle || '-',
+      return { id: s.id || String(i + 1), scene: s.scene === undefined ? null : s.scene, size: crop(s), ...Object.fromEntries(Object.entries(directions().framing(s)).filter(([key,value]) => !['size','angle'].includes(key) && value)), angle: directions().framing(s).angle || '-',
         // A card or HTML cut has no camera to leave unchosen; a cut with no route yet still counts.
         move: !camera.raw ? (!s.shot?.render?.mode || s.shot.render.mode === 'generated_video' ? 'unset' : '-') : camera.key === 'other' ? camera.raw : String(camera.key).replace(/^camera\./, ''),
         seconds: secondsOf(s), lines: (s.narration || []).length,

@@ -49992,11 +49992,15 @@ var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEn
 var load2 = createRequire2(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
   camera: sceneText.refine((id2) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id2), "Choose a movement ID from the camera catalogue").optional(),
+  cameraPolicy: sceneText.optional(),
+  depthPolicy: sceneText.optional(),
+  lensPolicy: sceneText.optional(),
+  soundPerspective: external_exports.enum(["near", "full"]).optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
   attention: sceneText.optional()
-}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
+}).strict().describe("Scene rules for camera, lenses, depth, lighting, geography and narrative disclosure. Set camera for an inherited movement ID, axis for the initial screen side and soundPerspective for the default listening perspective. Local focus, framing and state changes coexist with scene rules.");
 var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
@@ -50043,7 +50047,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 );
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
-  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
+  promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -50061,7 +50065,7 @@ var sceneVideoDirectionSchema = external_exports.object({
   emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
   action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
-  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
+  camera: sceneText.optional().describe("Scene camera rule on older boards. Use directionDefaults.cameraPolicy for new work.")
 }).strict();
 function openingPrompt(prompt, positions = [], imageLabel = (index) => "Image " + index) {
   if (!positions.length) return prompt;
@@ -50316,6 +50320,8 @@ var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[
 function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
+  const cue = text(camera.cue);
+  if (cue) return sentence("On " + cue.replace(/[.!?]+$/, "") + ", " + cameraMoveWords({ ...camera, cue: void 0 }).replace(/^The camera/, "the camera"));
   if (heldMove.test(movement)) return "The camera holds a static frame.";
   const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
@@ -50369,9 +50375,9 @@ function shotVisualDirection(shot, concise = false) {
   const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
   const views = load3("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
-  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
   const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
+  const frame2 = directions().framing(shot);
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -50381,19 +50387,46 @@ function shotVisualDirection(shot, concise = false) {
   }));
   const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
   const rack = picked.find((t2) => t2.entry?.fields.focus);
-  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(sizes[text(plan.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text(plan.angle)] || "");
-  const size = sizes[text(plan.size)];
-  const framing = sentence([concise ? size?.split(",")[0] : size, words.ANGLE_WORDS[text(plan.angle)]].filter(Boolean).join(", "));
+  const focusWords = !rack ? "" : sentence((rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : rack.entry.label.en) + (rack.on ? ", cued by " + rack.on : ""));
+  const size = words.frameSizeWords(frame2.size, camera, views.withoutPeople(shot), frame2.cutRole) || !viewWords && frame2.crop || "", angle = words.ANGLE_WORDS[frame2.angle];
+  const sizeWords = sentence(size || ""), angleWords = sentence(angle || "");
+  const framing = sentence([concise ? size?.split(",")[0] : size, angle, ...directions().framingTerms(shot)].filter(Boolean).join(", "));
   const depthWords = plan.depth ? sentence(contract2.depthText(plan.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
   const accentWords = other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction));
   const openingView = [
     viewWords || (text(camera.framing) ? sentence(concise ? text(camera.framing) : `Opening composition: ${text(camera.framing)}`) : ""),
+    directions().opticsWords(camera),
+    text(object(plan.space).layout),
+    text(object(plan.space).facing),
+    contract2.compositionText(plan.composition),
+    contract2.eyelineText(plan.eyeline),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : ""
   ].filter(Boolean);
   return { viewWords, picked, movement, settle, moveWords, rack, focusWords, sizeWords, angleWords, framing, depthWords, other, accentWords, openingView };
+}
+var directions = () => load3("../../skills/storyboard/references/scene-direction.js");
+function resolvedDirection(scene, cards) {
+  return directions().resolve(scene, cards);
+}
+function attributeWords(key, row, camera = {}) {
+  if (key === "soundPerspective") return row.value === "near" ? "Sound perspective: close to the subject." : "Sound perspective: hear the whole room.";
+  if (key === "cameraPolicy") return sentence(row.value);
+  if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
+  return nonEnglishOutsideQuotes(row.value) ? "" : sentence(directions().labels[key][1] + ": " + row.value);
+}
+function sceneShotNotes(card, concise = false) {
+  const english = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
+  const notes = directions().notes(card, (cue) => Boolean(english(cue)), true, concise, true);
+  const actions = notes.actions.map(english).filter(Boolean);
+  return {
+    action: actions.join(" ") || notes.fallback.map(english).find(Boolean) || "",
+    sound: english(notes.sound),
+    blocking: english(notes.blocking),
+    end: english(notes.end),
+    beats: [...notes.beats, ...notes.motion].map(english).filter(Boolean)
+  };
 }
 function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const plan = object(shot.shot), visual = object(shot.visual), frames = object(visual.frames), camera = object(visual.camera);
@@ -50412,7 +50445,11 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
   const plain = (value) => text(value).replace(/[.\s]+$/, "").toLowerCase();
   const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
+  const attributes = options.sceneAttributes ?? resolvedDirection({}, [shot]).shots[0];
+  const shared3 = Object.entries(attributes).filter(([key]) => !["camera", "soundPerspective", "continuityChange"].includes(key)).map(([key, row]) => attributeWords(key, row));
+  const listening = attributes.soundPerspective && attributeWords("soundPerspective", attributes.soundPerspective);
   const parts = (step2) => [
+    ...shared3,
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -50431,6 +50468,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source.end ? ": " + source.end : ""}`) : source.end ? sentence(`End on ${source.end}`) : "",
+    listening,
     sentence(`Audio: ${source.sound ? source.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
   ].filter(Boolean);
@@ -50446,9 +50484,13 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
     { attribute: "render", value: object(plan.render).mode, via: "adapter" },
     { attribute: "size", value: plan.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
     { attribute: "angle", value: plan.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "arrangement", value: plan.arrangement, via: msr ? "prompt" : "image" },
+    { attribute: "cutRole", value: plan.cutRole, via: msr ? "prompt" : "image" },
+    { attribute: "optics", value: directions().opticsWords(camera) || void 0, via: "prompt" },
+    { attribute: "soundPerspective", value: attributes.soundPerspective?.value, via: "prompt", instruction: listening },
     { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
     { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
-    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to, ...rack.on ? { on: rack.on } : {} } : void 0, via: "prompt", instruction: focusWords },
     { attribute: "depth", value: plan.depth, via: msr ? "prompt" : "image", instruction: depthWords },
     { attribute: "framePlan", value: frames.mode, via: "adapter" },
     ...picked.map((t2) => ({
@@ -52118,7 +52160,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.130.0",
+  version: "0.131.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -54638,7 +54680,7 @@ var techniqueSelectionSchema = external_exports.array(external_exports.object({
   reason: external_exports.string().trim().min(1).optional().describe("Why this technique serves this shot\u2019s information or action; camera.static may go without one"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
   to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
-  on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
+  on: external_exports.string().trim().min(1).optional().describe("Action, line or sound that cues a focus change or beat accent, in English")
 }).strict()).superRefine((value, ctx) => {
   for (const message of techniqueContract().validate(value))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -54664,6 +54706,7 @@ function vocabAtLoad() {
     return contract().VOCAB;
   } catch {
     return {
+      SCALES: MISSING,
       SIZES: MISSING,
       ANGLES: MISSING,
       BEATS: MISSING,
@@ -54694,6 +54737,9 @@ var primaryHookTypeIds = (() => {
 var primaryHookTypeSchema = tuple(primaryHookTypeIds);
 var V = vocabAtLoad();
 var nonEmpty = external_exports.string().trim().min(1);
+var arrangementSchema = external_exports.enum(["single", "two", "three", "group"]);
+var cutRoleSchema = external_exports.enum(["insert", "reaction", "cutaway"]);
+var perspectiveSchema = external_exports.enum(["near", "full"]);
 var STRUCTURE_VERSION = (() => {
   try {
     return contract().VERSION;
@@ -54800,6 +54846,8 @@ var shotSchema = external_exports.object({
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
+    arrangement: arrangementSchema.optional(),
+    cutRole: cutRoleSchema.optional(),
     why: external_exports.string().optional(),
     info: external_exports.string().optional(),
     infoType: external_exports.string().optional(),
@@ -54833,6 +54881,10 @@ var shotSchema = external_exports.object({
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).transform((sound, ctx) => {
+    if (sound.perspective !== void 0 && !perspectiveSchema.safeParse(sound.perspective).success)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["perspective"], message: "choose near or full" });
+    if (sound.diegetic !== void 0 && !nonEmpty.safeParse(sound.diegetic).success)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["diegetic"], message: "name the audible room sound" });
     if (!Array.isArray(sound.effects) || !sound.effects.some((e2) => e2?.audience)) return sound;
     return { ...sound, effects: sound.effects.map((e2, i2) => {
       if (!e2?.audience) return e2;
@@ -55056,7 +55108,7 @@ var storySceneSchema = external_exports.object({
     speakerReferences: sceneSpeakerReferencesSchema.optional(),
     frames: sceneFramesSchema.optional(),
     directionDefaults: sceneDefaultsSchema.optional(),
-    videoDirection: sceneVideoDirectionSchema.optional(),
+    videoDirection: sceneVideoDirectionSchema.omit({ promptDrafts: true }).optional(),
     audienceSound: audienceDecisionSchema.optional(),
     // The same signs structure-contract.js reads: the value at the open and at the close.
     charge: external_exports.object({ open: external_exports.enum(["+", "-"]), close: external_exports.enum(["+", "-", "++", "--"]) }).strict().optional()
@@ -55079,10 +55131,11 @@ var storyMusicSchema = external_exports.object({
   path: outlinePath,
   cues: external_exports.array(external_exports.object({
     name: external_exports.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "a cue name starts with a letter and uses letters, digits, _ and -"),
-    prompt: nonEmpty.optional().describe("What to generate for this episode, in English"),
+    direction: external_exports.object({ mood: nonEmpty.optional(), instruments: nonEmpty.optional(), tempo: nonEmpty.optional(), shape: nonEmpty.optional(), dialogueSpace: nonEmpty.optional() }).strict().refine((value) => Object.keys(value).length > 0, "name at least one musical choice").optional(),
+    prompt: nonEmpty.optional().describe("Historical cue text for earlier clients"),
     asset: nonEmpty.optional().describe("A channel bed id (assets/audio/bgm/<id>.wav) used as it is"),
     reason: nonEmpty.describe("What this cue does for the story, in one sentence")
-  }).strict().refine((cue) => cue.prompt === void 0 !== (cue.asset === void 0), { message: "give a prompt (generated for this episode) or an asset (a channel bed), not both" })).optional(),
+  }).strict().refine((cue) => [cue.direction, cue.prompt, cue.asset].filter((item) => item !== void 0).length === 1, { message: "choose one cue source: musical direction, an existing asset or a legacy prompt" })).optional(),
   spots: external_exports.array(external_exports.object({
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("One scene, or scenes that follow each other and share one unbroken span"),
     decision: external_exports.enum(["score", "none"]),
@@ -55147,13 +55200,17 @@ var shotIconsSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty.optional() }).strict().optional().describe("Render route: shot.render"),
-    size: tuple(V.SIZES).optional(),
+    size: tuple(V.SCALES).optional().describe("Optical scale of the opening crop"),
+    arrangement: arrangementSchema.nullable().optional(),
+    cutRole: cutRoleSchema.nullable().optional(),
     why: nonEmpty.optional().describe("Why this size for this shot"),
-    angle: tuple(V.ANGLES).optional(),
+    angle: tuple(V.ANGLES.filter((angle) => angle !== "over")).optional().describe("Camera angle. An over-the-shoulder viewpoint belongs in view.mode."),
+    optics: external_exports.object({ lensMm: external_exports.number().positive().optional(), fStop: external_exports.number().positive().optional(), focusDistanceM: external_exports.number().positive().optional() }).strict().nullable().optional().describe("Measured or intended shot optics, only when specified"),
+    soundPerspective: perspectiveSchema.nullable().optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
-    focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), on: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional(), on: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between. Set on for the action, line or sound that cues the shift. null removes it"),
     accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
     frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty.optional(), endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
@@ -55406,14 +55463,9 @@ function speechVideoPlan(input, capabilities, sceneNo) {
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const saved = object3(object3(object3(scene.visual).video).promptSource);
-  const design = object3(object3(scene.shot).videoDesign);
+  const notes = sceneShotNotes(scene);
   const astra = capabilities.provider.trim().toLowerCase() === "astra";
-  const compiled = compileVideoPrompt(scene, {
-    action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
-    ...typeof saved.end === "string" ? { end: saved.end } : {},
-    ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, {
+  const compiled = compileVideoPrompt(scene, { action: notes.action, end: notes.end, sound: notes.sound }, {}, {
     mode,
     measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
     validateLanguage: false,

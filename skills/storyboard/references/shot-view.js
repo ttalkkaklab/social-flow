@@ -90,4 +90,12 @@ function framingConflicts(size,view,scene='',noPerson=false) {
   }
   return out;
 }
-module.exports={BEARINGS,MODES,SCHEMA,validate,checked,instructions,framingConflicts};
+function withoutPeople(card) {
+  const v = card.visual || {}, cast = v.character ?? v.characters;
+  if ((Array.isArray(cast) ? cast.length : cast) || v.bystanders?.length || String(v.extras || '').trim()) return false;
+  return cast !== undefined || Boolean(v.camera?.view);
+}
+function subjectKind(view, size, noPerson, cutRole) {
+  return view?.subjectType || (noPerson ? 'object' : view?.target || cutRole === 'insert' || ['insert','ecu'].includes(size) ? 'detail' : 'person');
+}
+module.exports={withoutPeople,subjectKind,BEARINGS,MODES,SCHEMA,validate,checked,instructions,framingConflicts};

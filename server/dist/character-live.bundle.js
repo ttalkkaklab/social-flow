@@ -34603,11 +34603,15 @@ var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEn
 var load2 = createRequire2(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
   camera: sceneText.refine((id2) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id2), "Choose a movement ID from the camera catalogue").optional(),
+  cameraPolicy: sceneText.optional(),
+  depthPolicy: sceneText.optional(),
+  lensPolicy: sceneText.optional(),
+  soundPerspective: external_exports.enum(["near", "full"]).optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
   attention: sceneText.optional()
-}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
+}).strict().describe("Scene rules for camera, lenses, depth, lighting, geography and narrative disclosure. Set camera for an inherited movement ID, axis for the initial screen side and soundPerspective for the default listening perspective. Local focus, framing and state changes coexist with scene rules.");
 var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
@@ -34654,7 +34658,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 );
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
-  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
+  promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -34672,7 +34676,7 @@ var sceneVideoDirectionSchema = external_exports.object({
   emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
   action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
-  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
+  camera: sceneText.optional().describe("Scene camera rule on older boards. Use directionDefaults.cameraPolicy for new work.")
 }).strict();
 function openingPrompt(prompt, positions = [], imageLabel = (index) => "Image " + index) {
   if (!positions.length) return prompt;
@@ -34721,7 +34725,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.130.0",
+  version: "0.131.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
