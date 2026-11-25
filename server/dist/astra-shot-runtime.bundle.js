@@ -52165,7 +52165,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.0",
+  version: "0.131.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -53309,6 +53309,12 @@ var sessionSchema = external_exports.object({
 var fileSchema = external_exports.object({ file_id: external_exports.string().min(1), uri: external_exports.string().startsWith(GENAI_FILE_SCHEME), expires_at: external_exports.string().optional() }).passthrough();
 var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
 
+// ../skills/_shared/genai-scene-limits.json
+var genai_scene_limits_default = {
+  maxReferencedCharacters: 2,
+  maxCharacterImages: 2
+};
+
 // src/genai-scene.ts
 var GENAI_SCENE_MODELS = ["ltx-2.5-22b-distilled"];
 var GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 };
@@ -53328,7 +53334,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(9),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(9).default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -53349,7 +53355,9 @@ var genaiSceneSchema = external_exports.object({
   if (new Set(ids).size !== ids.length) issue("Cast, reference and shot IDs share one namespace and must be distinct");
   for (const member of args.cast) if (new Set(member.images.map((i2) => i2.role)).size !== member.images.length)
     issue(member.id + ": picture roles must be distinct");
-  const subjects = args.cast.reduce((n, m2) => n + m2.images.length, 0) + args.references.filter((r2) => r2.role === "object").length;
+  const pictures = args.cast.reduce((n, m2) => n + m2.images.length, 0);
+  if (pictures > genai_scene_limits_default.maxCharacterImages) issue("scene_character_image_limit: select at most two character pictures across the scene; use one per person for a pair");
+  const subjects = pictures + args.references.filter((r2) => r2.role === "object").length;
   if (subjects < 1 || subjects > LIMITS.subjects) issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
   if (args.references.filter((r2) => r2.role === "background").length > LIMITS.backgrounds) issue("LTX scene mode takes one background");
   if (args.cast.filter((m2) => m2.voicePath).length > LIMITS.voices) issue(`LTX scene mode takes ${LIMITS.voices} voices`);
@@ -53843,7 +53851,7 @@ var VIDEO_ADAPTERS = Object.freeze({
   // A storyboard scene on the GenAI engine: one scene-mode request through the common API (user directive 2026-11-25).
   astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: 2, voiceOnSubjects: true, modelConstraints: {
     models: GENAI_SCENE_MODELS,
-    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. LTX: 1..4 cast pictures and object references, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames.'
+    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames.'
   } }),
   astra_genai_msr: reference("astra-genai", "genai-generations", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
     note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
@@ -54768,6 +54776,7 @@ var sceneSpeakerReferencesSchema = external_exports.array(external_exports.objec
 var sceneSpeakersSchema = external_exports.array(nonEmpty).refine((ids) => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
+  referenceSplitFrom: external_exports.number().int().positive().optional().describe("Original scene number of a GenAI character-reference split"),
   place: external_exports.string().optional().describe("One place \u2014 the slugline location"),
   time: external_exports.string().optional().describe("One continuous stretch of time \u2014 \uB0AE \xB7 \uBC24 \xB7 \uC0C8\uBCBD \xB7 10\uB144 \uB4A4"),
   event: external_exports.string().optional().describe("The one thing that happens in this scene"),
@@ -55000,6 +55009,7 @@ var transitionPatchSchema = external_exports.object({
 }).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var storyboardApplySchema = external_exports.object({
+  splitReferenceScenes: external_exports.boolean().optional().describe("Apply GenAI reference splits to an existing storyboard"),
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
   set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),

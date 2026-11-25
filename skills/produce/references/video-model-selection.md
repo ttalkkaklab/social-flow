@@ -488,7 +488,7 @@ data/<channel>/assets/characters/<id>/
 
 **Reference set: the registered face, front and back panels, in that order.** One character
 sends all three; two characters send each face, then each front (`character-panels.js`
-`canonicalReferences`, the same set on the image and video lanes). The face supplies the complete
+`canonicalReferences`, the still-image layout). The face supplies the complete
 head. The headless panels supply the build. Match the wardrobe in the opening
 picture, especially when the sheet uses fitting clothes. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
 picture.
@@ -520,7 +520,7 @@ trousers sew themselves back up a beat later). Generate a second sheet for the c
 the other way for a flashback: age the character, the location and the props together, or the
 flashback reads as a costume instead of a memory.
 
-**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. With ASTRA GenAI MSR, the single-character layout can use its face close-up and headless front and back panels. For three or four characters the layout uses one face per subject. The image adapter's edit tool takes the same authored panel order.
+**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. Production GenAI scenes use a face and body for one character or one face per person for a pair. Split before a third identity enters. Still-image composition keeps the sheet layout above.
 
 ---
 

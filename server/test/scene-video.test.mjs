@@ -155,7 +155,7 @@ function pinnedActor(dir, id, face, frequency) {
   return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
 }
 
-test('a GenAI scene binds the pinned voices of its whole scene in one render', async t => {
+test('a GenAI scene counts a scene-wide silent face alongside pinned speakers', async t => {
   const f = busking(t);
   delete f.scene.audio;
   const cast = ['seorin','mai-an','tu-vi'].map((id,i)=>pinnedActor(f.dir,id,'images/'+['solo','duo','trio'][i]+'.png',400+i*150));
@@ -177,13 +177,13 @@ test('a GenAI scene binds the pinned voices of its whole scene in one render', a
       '; window.STRUCTURE.scenes[0].speakerReferences='+JSON.stringify([{character:listener.id,path:listener.panels.face}])+';');
   };
   save();
-  // A GenAI scene is one render, so its three speakers need three pinned voices where scene mode takes two.
-  assert.throws(()=>planVideo(f.input,false),/scene_render_voice_limit: scene 1 needs 3 pinned voices/);
+  // The silent witness also uses one of the two referenced identities.
+  assert.throws(()=>planVideo(f.input,false),e=>e.report?.code==='scene_cast_exceeded' && e.report.characters.includes('listener'));
   f.members.splice(1);
   f.scene.oneTake = true;
   f.members[0].narration.push(line('tu-vi','third'));
   save();
-  assert.throws(()=>planVideo(f.input,false),/scene_render_voice_limit: s0001.*one-take/);
+  assert.throws(()=>planVideo(f.input,false),e=>e.report?.shotId==='s0001' && !e.report.splitBefore.length);
 });
 
 test('a refused GenAI scene reads what scene mode takes from the common catalog without submitting media',async t=>{
@@ -261,7 +261,7 @@ test('a distilled GenAI scene keeps a prop separate from the opening image and s
  assert.throws(()=>planVideo(f.input,false), /scene_inputs_unsupported/);
 });
 
-test('a 25-frame silent scene retains its length and all three authored face references', t => {
+test('a 25-frame silent one-take retains two authored faces and refuses a third', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.scene.oneTake = true;
@@ -274,10 +274,14 @@ test('a 25-frame silent scene retains its length and all three authored face ref
     shot.timeline.images.push({role:'face',character:owner.character,frame:0,path:'images/'+['solo','duo','trio'][i]+'.png'});
   }
   f.save();
+  assert.throws(()=>planVideo(f.input,false), e=>e.report?.code==='scene_cast_exceeded' && e.report.characters.length===3);
+  shot.timeline.images.pop();
+  f.scene.openingPositions[2].images = [];
+  f.save();
   const image = planVideo({...f.input,operation:'image'});
   assert.equal(image.tool,'astra_genai_scene');
   assert.deepEqual(image.args.shots.map(shot=>shot.frames),[25]);
-  assert.deepEqual(image.args.cast.flatMap(member=>member.images.map(picture=>path.basename(picture.imagePath))),['solo.png','duo.png','trio.png']);
+  assert.deepEqual(image.args.cast.flatMap(member=>member.images.map(picture=>path.basename(picture.imagePath))),['solo.png','duo.png']);
   assert.ok(image.args.cast.every(member=>!member.voicePath));
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];

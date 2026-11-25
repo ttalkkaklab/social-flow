@@ -858,12 +858,21 @@ function buildVideoPlan(input, { context, tool, sceneTool }, persist, fitStep = 
     const sentImages = new Set(sceneRequest?.images.map(image => image.path));
     const boardCards = sceneTool && sceneRequest ? (context.board.SCENES ?? [])
         .filter(card => card.scene === context.sceneNo) : [];
-    for (const card of boardCards)
-        for (const ref of card.visual?.references ?? []) {
-            const file = ref.role === 'character' && ref.use !== 'image' && ref.path ? path.resolve(context.episode, 'storyboard', ref.path) : undefined;
-            if (file && fs.existsSync(file) && !sentImages.has(fs.realpathSync(file)))
-                cutWarnings.push(`scene_reference_omitted: ${String(card.id)} ${ref.path} is not sent; the scene sends one cast for everyone in it, by the panel rule for that many people`);
+    for (const card of boardCards) {
+        const member = members.find(shot => shot.id === card.id);
+        const files = new Set([
+            ...(card.visual?.references ?? []).filter(ref => ['character', 'bystander', 'face', 'outfit'].includes(ref.role ?? '') && ref.use !== 'image').map(ref => ref.path),
+            ...(card.timeline?.images ?? []).filter(pin => ['face', 'outfit'].includes(pin.role)).map(pin => pin.path),
+            ...(member ? requiredCharacters(member).flatMap(person => [person.face?.path, person.bodyPath]) : []),
+        ]);
+        for (const file of files) {
+            if (!file)
+                continue;
+            const local = path.resolve(context.episode, 'storyboard', file);
+            if (fs.existsSync(local) && !sentImages.has(fs.realpathSync(local)))
+                cutWarnings.push(`scene_reference_omitted: ${card.id} ${file} is not sent; the scene has two character image slots`);
         }
+    }
     let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
         ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
     if (selection.engine === 'host') {
