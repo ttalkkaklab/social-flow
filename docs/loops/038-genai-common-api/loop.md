@@ -53,3 +53,18 @@ Out of scope: the LTX Desktop engine (`/v1/ltx/desktop/*`), GenAI images and spe
 | 7 | Proportionate diff: tests follow one file per module, no unrelated edits, repository prose in English | 5 | All or nothing | `git diff --stat` and file review | no |
 
 The weights sum to 100.
+
+## Result
+
+Achieved in round 2 of 5: total 98, zero P0, green gate.
+
+| Round | Score | P0 | Gate | Verdict |
+|---|---|---|---|---|
+| 1 | 90 | 0 | build 0, 1413/1413 | below the user's 95 |
+| 2 | 98 | 0 | build 0, 1413/1413 | met |
+
+The two missing points are the one retained label of the retired per-shot route's receipts
+(`skills/_shared/scene-speech-receipt.js`), kept because clips that route made are still in use
+and are verified from it. Production evidence covers `POST /v1/generations/validate` only; no
+render was submitted on the new path. Reviews: `verify-1.md`, `verify-2.md`; round summary:
+`iter-1-summary.md`.
