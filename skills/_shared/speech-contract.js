@@ -82,8 +82,10 @@ function verifyReceiptOperation(receipt,suffix,plan,hashBound) {
   if (!operation) return;
   const provider = suffix === '.astra-job.json' ? 'astra' :
     receipt.protocol === 'gateway-desktop-v1' ? 'astra-genai-desktop' : 'astra-genai';
-  const conditioned = ['audio-to-video','audio2video','scene-to-video'].includes(operation);
-  const native = provider === 'astra-genai' && ['image-to-video','scene-to-video','msr'].includes(operation);
+  const perShot = require('./scene-speech-receipt.js').perShotSceneOperation(operation);
+  const conditioned = perShot || ['audio-to-video','audio2video'].includes(operation);
+  // 'scene' is a scene-mode job. A per-shot receipt is a clip of the retired route and stays readable.
+  const native = provider === 'astra-genai' && (perShot || ['image-to-video','scene','msr'].includes(operation));
   if (provider !== plan.provider || (plan.mode === 'native' ? !native : !conditioned) ||
       typeof receipt.model === 'string' && receipt.model !== plan.model)
     throw new Error('speech_video_source_mismatch: the recorded generation operation or model disagrees with the speech attachment');
@@ -184,16 +186,17 @@ function assertVideoSpeechProvenance(videoPath, sha256, plan = {}, index) {
     verifyReceiptOperation(receipt,suffix,plan,hashBound);
     if (hashBound && thought && ['msr','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode))
       throw new Error('speech_video_source_mismatch: the private thought requires a non-speaking picture');
-    if (hashBound && thought && (receipt.operation ?? receipt.mode) !== 'scene-to-video' &&
+    const perShotClip = require('./scene-speech-receipt.js').perShotSceneOperation(receipt.operation ?? receipt.mode);
+    if (hashBound && thought && !perShotClip &&
         (receipt.submittedRequest?.prompt || receipt.prompt))
       require('./voiceover-direction.js').checkRecordedThoughtPicture(undefined,receipt.submittedRequest?.prompt
         ? receipt.submittedRequest : {prompt:receipt.prompt},plan.sourceShot.narration);
     let original = hashBound && require('./character-speech.js').recordedConditioningDriver(receipt,suffix);
     const performance = ['native','audio_conditioned'].includes(plan.mode);
-    if (hashBound && thought && receipt.operation === 'scene-to-video' && !receipt.sceneRequestSha256)
+    if (hashBound && thought && perShotClip && !receipt.sceneRequestSha256)
       throw new Error('speech_video_source_mismatch: restore the recorded scene request to verify the thought interval');
     const scenePicture = (plan.mode === 'voiceover' || thought) && receipt.sceneRequestSha256 && plan.sourceShot;
-    if (hashBound && receipt.operation === 'scene-to-video' && (performance || scenePicture)) {
+    if (hashBound && perShotClip && (performance || scenePicture)) {
       const contract = require('./scene-speech-receipt.js');
       const file = [originalFile,...(index?.hashes.get(receipt.sha256) ?? [])
         .filter(item => item.receipt.fingerprint === receipt.fingerprint).map(item => item.file)]
@@ -333,7 +336,8 @@ function assertVideoPerformanceOwnership(shots, boardDir, candidate, receipts) {
       // an overdub. If those bytes are gone, require an identified completed render.
       const fresh = receipts?.hashes.get(right.binding.videoSha256)?.some(({receipt}) =>
         receipt.status === 'completed' && receipt.jobId &&
-        ['msr','image-to-video','scene-to-video','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode));
+        (['msr','image-to-video','scene','audio-to-video','audio2video'].includes(receipt.operation ?? receipt.mode) ||
+          require('./scene-speech-receipt.js').perShotSceneOperation(receipt.operation ?? receipt.mode)));
       if (!fresh) throw new Error('speech_video_performance_conflict: restore the original legacy clip or supply a completed render receipt for its replacement');
     }
     const privateTransition = left.binding.mode !== right.binding.mode && (left.privatePicture || right.privatePicture);

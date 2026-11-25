@@ -123,7 +123,7 @@ function speechRenderSelection(board, shot, episode, fallback) {
   return {saved, selection, route, owner, cards};
 }
 
-function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rendering) {
+function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   const { resolveShotCharacterInputs } = require('../channel/references/character-panels.js');
   const root = fs.realpathSync(episode);
   const boardFile = path.join(root, 'storyboard/scenes.js');
@@ -141,7 +141,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rende
   const { selection: savedSelection, source } = choice(storedMembers[0]);
   const owner = scene ?? (selectionOnly && board.STRUCTURE?.scenes?.find(s => s.no === storedMembers[0].scene));
   const speechRoute = owner && sceneSpeechRoute(owner, scene ? storedMembers : scenes.filter(card => card.scene === owner.no),
-    savedSelection, rendering);
+    savedSelection);
   if (scene && speechRoute?.external) {
     // Keep the original off-screen ownership on the board. The picture has no speaking mouth.
     for (let i = 0; i < storedMembers.length; i++)
@@ -149,7 +149,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rende
         line.delivery === 'off_screen' ? {...line,delivery:'voiceover'} : line)};
   }
   const sourceCards = storedMembers.map(raw => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', Boolean(rendering ?? speechRoute?.rendering));
+  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned');
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
     const raw = shotWithRefs;

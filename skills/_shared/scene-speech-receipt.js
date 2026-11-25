@@ -5,6 +5,9 @@ const {createHash} = require('node:crypto');
 const sha = value => createHash('sha256').update(value).digest('hex');
 const shaPattern = /^[a-f0-9]{64}$/;
 function mismatch(message) { throw new Error('speech_video_source_mismatch: ' + message); }
+// The operation the gateway's retired per-shot scene route wrote on its receipts (before 2026-11-25). Clips it made are
+// still verified and assembled from their archived requests; nothing plans or submits that route any more.
+const perShotSceneOperation = operation => operation === 'scene-to-video';
 
 function readSceneRequest(file,receipt) {
   if (receipt.version !== 1 || receipt.status !== 'completed' || !receipt.jobId || !shaPattern.test(receipt.fingerprint) ||
@@ -193,4 +196,4 @@ function verifySceneSpeech(wire,plan) {
   return driver;
 }
 
-module.exports = {readSceneRequest,sceneDriver,verifySceneSpeech,performanceWav};
+module.exports = {readSceneRequest,sceneDriver,verifySceneSpeech,performanceWav,perShotSceneOperation};

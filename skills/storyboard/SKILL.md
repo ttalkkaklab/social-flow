@@ -40,7 +40,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. Distilled LTX can combine the opening, an optional ending, up to four subject images and one background. Its first two subjects can carry voice samples in each native render. With authored cuts, the per-shot renderer can change that pair inside one scene job. A one-take exceeding the selected model's capacity needs an authoring decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 **Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story

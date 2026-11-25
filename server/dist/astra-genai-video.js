@@ -1,4 +1,7 @@
-/** LTX v2 provider request contract published by the unified GenAI gateway. */
+/** The GenAI gateway's video adapters. Every request goes through the gateway's common generation API:
+ * `POST /v1/generations` (one body per mode: text2video, image2video, audio2video, msr and scene),
+ * `POST /v1/generations/validate` for a scene, `GET /v1/generations/{id}` for status and `GET /v1/models`
+ * for what the deployment offers. The tools keep their own argument schemas; only this module knows the wire. */
 import { openingPositionsSchema, openingPrompt, validateOpening } from './msr-opening.js';
 import { z } from 'zod';
 import { guidanceSchema, guidanceWireKey } from './astra-video-client.js';
@@ -12,7 +15,12 @@ import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
-import { SCENE_ROUTE, sceneRequestId } from './genai-scene.js';
+import { checkSceneValidation, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, sceneFrames } from './genai-scene.js';
+/** The common generation API's routes. */
+export const GENERATIONS_ROUTE = '/v1/generations';
+const GENERATION_MODES = { 'text-to-video': 'text2video', 'image-to-video': 'image2video', 'audio-to-video': 'audio2video', msr: 'msr', scene: 'scene' };
+const sides = (resolution) => { const [width, height] = resolution.split('x').map(Number); return { width, height }; };
+const asset = (url) => ({ url });
 export const GENAI_VIDEO_MODELS = ['ltx-2.5-22b-distilled', 'ltx-2.5-22b-dev'];
 /** Preserve selected geometry; the live gateway validates its current backend's supported sizes. */
 export function genaiV2Resolution(saved) {
@@ -64,10 +72,10 @@ const temporalImages = z.array(z.object({
     frameIdx: z.number().int().min(0).max(360),
     strength: z.number().min(0).max(1).optional(), crf: z.number().int().min(0).max(51).optional(),
 }).strict().refine(pin => !!pin.imageUri !== !!pin.imagePath, 'Supply exactly one imageUri or imagePath')).min(1).max(8);
-function temporalBody(pins) {
+function temporalInput(pins) {
     if (!pins)
         return {};
-    return { keyframes: pins.map(pin => ({ image_uri: genaiSourceUri(pin.imageUri, pin.imagePath), frame_idx: pin.frameIdx,
+    return { keyframes: pins.map(pin => ({ url: genaiSourceUri(pin.imageUri, pin.imagePath), frame_idx: pin.frameIdx,
             ...(pin.strength === undefined ? {} : { strength: pin.strength }), ...(pin.crf === undefined ? {} : { crf: pin.crf }) })) };
 }
 function validatePins(pins, start, end, length, ctx) {
@@ -224,12 +232,15 @@ export const genaiAudioToVideoSchema = z.object({
     if (oneOf(args.lastFramePath, args.lastFrameUri) && !oneOf(args.imagePath, args.imageUri))
         issue('A last frame requires a first image');
 });
+/** Common `audio2video`: the track sets the length, so neither a duration nor generate_audio is sent. */
 export function buildGenaiAudioBody(args) {
     const image = oneOf(args.imagePath, args.imageUri) ? genaiSourceUri(args.imageUri, args.imagePath) : undefined;
     const last = oneOf(args.lastFramePath, args.lastFrameUri) ? genaiSourceUri(args.lastFrameUri, args.lastFramePath) : undefined;
-    return { audio_uri: genaiAudioUri(args.audioUri, args.audioPath), prompt: args.prompt, model: args.model, resolution: args.resolution, fps: args.fps,
-        ...(image === undefined ? {} : { image_uri: image }), ...(last === undefined ? {} : { last_frame_uri: last }),
-        ...samplingBody(args), ...temporalBody(args.keyframes), ...negativeBody({ negativePrompt: args.negativePrompt }) };
+    return { kind: 'video', model: args.model, mode: GENERATION_MODES['audio-to-video'],
+        input: { text: args.prompt, audio: asset(genaiAudioUri(args.audioUri, args.audioPath)),
+            ...(image === undefined ? {} : { images: [asset(image)] }), ...(last === undefined ? {} : { last_frame: asset(last) }),
+            ...temporalInput(args.keyframes) },
+        parameters: { ...sides(args.resolution), fps: args.fps, ...samplingBody(args), ...negativeBody({ negativePrompt: args.negativePrompt }) } };
 }
 export const GENAI_MSR_FRAMES = { min: 25, max: 361, step: 8, frameRate: 24 };
 export const genaiMsrSchema = z.object({
@@ -267,88 +278,110 @@ export const genaiMsrSchema = z.object({
             issue('MSR duration must round to 25..361 frames');
     }
 });
-function referenceBody(ref) {
+/** A reference as the common schema writes it: `{url, background, audio:{url}}`. */
+function referenceInput(ref) {
     return {
-        image_uri: genaiSourceUri(ref.imageUri, ref.imagePath),
+        url: genaiSourceUri(ref.imageUri, ref.imagePath),
         background: ref.background,
-        ...(ref.audioUri || ref.audioPath ? { audio_uri: genaiAudioUri(ref.audioUri, ref.audioPath) } : {}),
+        ...(ref.audioUri || ref.audioPath ? { audio: asset(genaiAudioUri(ref.audioUri, ref.audioPath)) } : {}),
     };
 }
+/** Common `msr` on the gateway's `ltx-msr` model: the references are `input.images`. */
 export function buildGenaiMsrBody(args) {
-    return { prompt: openingPrompt(args.prompt, args.openingPositions), ...negativeBody(args),
-        references: args.references.map(referenceBody),
-        ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }),
-        reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
-        width: args.width, height: args.height, frame_rate: args.frameRate, seed: args.seed,
-        ...(args.duration === undefined ? { num_frames: args.numFrames ?? 121 } : { duration: args.duration }) };
+    return { kind: 'video', model: 'ltx-msr', mode: GENERATION_MODES.msr,
+        input: { text: openingPrompt(args.prompt, args.openingPositions), images: args.references.map(referenceInput) },
+        parameters: { width: args.width, height: args.height, fps: args.frameRate, seed: args.seed,
+            ...(args.duration === undefined ? { num_frames: args.numFrames ?? 121 } : { duration_seconds: args.duration }),
+            reference_strength: args.referenceStrength, reference_frames: args.referenceFrames,
+            ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }), ...negativeBody(args) } };
 }
-let msrVoiceCache;
+/** One video row of `GET /v1/models`: modes, fields by mode, limits and, where scene mode runs, its numbers. */
+const deployedModel = z.object({
+    id: z.string(), kind: z.string().optional(), modes: z.array(z.string()).default([]),
+    parameters_by_mode: z.record(z.array(z.string())).optional(), limits: z.record(z.unknown()).optional(),
+    scene: z.object({ prompt: z.object({ max_chars: z.number().int().positive() }).passthrough(),
+        voices: z.object({ max: z.number().int().nonnegative() }).passthrough() }).passthrough().optional(),
+}).passthrough();
+let catalogCache;
 /**
- * Ask the gateway whether its MSR backend takes voice samples. An older gateway
- * (404), a missing key or an unreachable gateway counts as no. Cached so the plan
- * and the execute-time replan see the same answer.
+ * Read the deployment's video models from `GET /v1/models`. Cached, so a plan and its execute-time rebuild
+ * read the same numbers. An unreachable gateway counts as offering nothing for a minute.
  */
-export async function refreshGenaiMsrVoice(force = false) {
+export async function refreshGenaiVideoCatalog(force = false) {
     const origin = astraGenaiBaseUrl();
-    if (!force && msrVoiceCache?.origin === origin && Date.now() - msrVoiceCache.at < msrVoiceCache.ttl)
-        return msrVoiceCache.value;
-    let value = false, ttl = 60_000, promptLimit = 2000;
+    if (!force && catalogCache?.origin === origin && Date.now() - catalogCache.at < catalogCache.ttl)
+        return catalogCache.models;
+    let models = [], ttl = 60_000;
     try {
-        const body = z.object({ voice_references: z.boolean(), prompt_max_chars: z.number().int().positive().optional() }).passthrough()
-            .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-        value = body.voice_references;
+        // Image and speech rows have other shapes; each video row is read on its own.
+        const rows = z.object({ data: z.array(z.unknown()) }).parse(await requestGenai('GET', '/v1/models', undefined, 15_000)).data;
+        models = rows.flatMap(row => { const read = deployedModel.safeParse(row); return read.success && read.data.kind !== 'image' && read.data.kind !== 'speech' ? [read.data] : []; });
         ttl = 600_000;
-        promptLimit = Math.min(5000, body.prompt_max_chars ?? 2000);
     }
-    catch { /* Unknown support is treated as unsupported; the plan says so. */ }
-    msrVoiceCache = { origin, value, promptLimit, at: Date.now(), ttl };
-    return value;
+    catch { /* Nothing is known; the plan says so and the gateway's own validation still decides. */ }
+    catalogCache = { origin, models, at: Date.now(), ttl };
+    return models;
 }
-export function genaiMsrVoiceReferences() { return msrVoiceCache?.origin === astraGenaiBaseUrl() && msrVoiceCache.value; }
-export function genaiMsrPromptLimit() { return msrVoiceCache?.origin === astraGenaiBaseUrl() ? msrVoiceCache.promptLimit : 2000; }
-/** Only provider fields cross the wire; local output/budget controls never do. */
-export function buildGenaiVideoBody(args) {
+const cachedModel = (id) => catalogCache?.origin === astraGenaiBaseUrl() ? catalogCache.models.find(model => model.id === id) : undefined;
+/** Does scene mode take voice samples on this model? Unknown counts as no. */
+export function genaiSceneVoices(model) { return (cachedModel(model)?.scene?.voices.max ?? 0) > 0; }
+/** The scene prompt's cap after substitution; a backend with its own cap is enforced by validation. */
+export function genaiScenePromptLimit(model) { return cachedModel(model)?.scene?.prompt.max_chars ?? 2000; }
+/** Common `text2video` or `image2video`. Only provider fields cross the wire; local output/budget controls never do. */
+export function buildGenaiVideoBody(args, operation = 'image-to-video') {
+    // Local frames travel as checked data URIs until the upload step swaps them for genai-file URIs.
+    const start = args.imageUri === undefined && args.imagePath === undefined ? undefined : genaiSourceUri(args.imageUri, args.imagePath);
+    const last = args.lastFramePath !== undefined ? genaiSourceUri(undefined, args.lastFramePath)
+        : args.lastFrameUri == null ? undefined : genaiSourceUri(args.lastFrameUri);
     return {
-        prompt: openingPrompt(args.prompt, args.openingPositions), model: args.model, ...(args.numFrames === undefined ? { duration: args.duration ?? null } : { num_frames: args.numFrames }), resolution: args.resolution,
-        fps: args.fps, generate_audio: args.generateAudio,
-        ...samplingBody(args), ...temporalBody(args.keyframes),
-        // Local frames travel as checked data URIs, like MSR and audio-to-video.
-        ...(args.imageUri === undefined && args.imagePath === undefined ? {} : { image_uri: genaiSourceUri(args.imageUri, args.imagePath) }),
-        ...(args.lastFramePath !== undefined ? { last_frame_uri: genaiSourceUri(undefined, args.lastFramePath) }
-            : args.lastFrameUri === undefined ? {} : { last_frame_uri: args.lastFrameUri === null ? null : genaiSourceUri(args.lastFrameUri) }),
-        ...(args.references === undefined ? {} : { references: args.references.map(referenceBody) }),
-        ...(args.referenceStrength === undefined ? {} : { reference_strength: args.referenceStrength }),
-        ...(args.referenceFrames === undefined ? {} : { reference_frames: args.referenceFrames }),
-        ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }),
-        ...negativeBody(args),
+        kind: 'video', model: args.model, mode: GENERATION_MODES[operation],
+        input: { text: openingPrompt(args.prompt, args.openingPositions),
+            ...(start === undefined ? {} : { images: [asset(start)] }), ...(last === undefined ? {} : { last_frame: asset(last) }),
+            ...temporalInput(args.keyframes), ...(args.references === undefined ? {} : { references: args.references.map(referenceInput) }) },
+        parameters: { ...sides(args.resolution), fps: args.fps, generate_audio: args.generateAudio,
+            // Without either the gateway picks the length (automatic duration).
+            ...(args.numFrames !== undefined ? { num_frames: args.numFrames } : args.duration != null ? { duration_seconds: args.duration } : {}),
+            ...samplingBody(args),
+            ...(args.referenceStrength === undefined ? {} : { reference_strength: args.referenceStrength }),
+            ...(args.referenceFrames === undefined ? {} : { reference_frames: args.referenceFrames }),
+            ...(args.skipStage2 === undefined ? {} : { skip_stage_2: args.skipStage2 }),
+            ...negativeBody(args) },
     };
 }
-const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr']);
+const operationSchema = z.enum(['text-to-video', 'image-to-video', 'audio-to-video', 'msr', 'scene']);
 const mediaContract = z.object({
     width: z.number().positive(), height: z.number().positive(), fps: z.number().positive(),
     frames: z.number().int().positive().optional(), audio: z.boolean(),
 });
+/** The clip a request delivers. A scene's clip has the storyboard's frames, cut back from what the gateway renders. */
 export function msrOutputContract(operation, args) {
+    if (operation === 'scene') {
+        const scene = args;
+        return mediaContract.parse({ ...sides(scene.resolution), fps: Number(scene.fps ?? 24), frames: sceneFrames(scene), audio: scene.generateAudio !== false });
+    }
     const direct = operation === 'msr';
-    const scene = operation === 'scene-to-video';
-    if (!direct && !scene && !(operation === 'image-to-video' && Array.isArray(args.references) && args.references.length))
+    if (!direct && !(operation === 'image-to-video' && Array.isArray(args.references) && args.references.length))
         return;
-    const sides = direct ? [Number(args.width ?? 1536), Number(args.height ?? 1024)] : String(args.resolution).split('x').map(Number);
+    const size = direct ? [Number(args.width ?? 1536), Number(args.height ?? 1024)] : String(args.resolution).split('x').map(Number);
     const scale = args.skipStage2 ? 2 : 1;
     const fps = Number((direct ? args.frameRate : args.fps) ?? 24);
     const duration = Number(args.duration);
     const frames = args.numFrames != null ? Number(args.numFrames) : direct
         ? (duration ? 1 + 8 * Math.ceil((duration * fps - 1) / 8 - 0.5 - 1e-9) : 121)
         : duration ? Math.ceil(duration * fps - 1e-9) : undefined;
-    return mediaContract.parse({ width: sides[0] / scale, height: sides[1] / scale, fps, frames, audio: args.generateAudio !== false });
+    return mediaContract.parse({ width: size[0] / scale, height: size[1] / scale, fps, frames, audio: args.generateAudio !== false });
 }
-function checkOutput(file, expected, legacyMsr = false) {
-    const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', ...(expected || legacyMsr ? ['-count_frames'] : []),
+/** What scene mode renders: the next 8k+1 frames with a soundtrack, at the requested size. */
+function sceneNativeContract(args) {
+    return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args)), audio: true });
+}
+function checkOutput(file, expected, counted = false) {
+    const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', ...(expected || counted ? ['-count_frames'] : []),
         '-show_entries', 'stream=codec_type,width,height,avg_frame_rate,nb_read_frames,duration:format=duration', '-of', 'json', file], { encoding: 'utf8', timeout: 120_000 }));
     const video = probe.streams?.find((s) => s.codec_type === 'video');
     if (!video?.width || !(Number(probe.format?.duration) > 0))
         throw new Error('GenAI result has no usable video stream');
-    if (!expected && !legacyMsr)
+    if (!expected && !counted)
         return;
     const audio = probe.streams.filter((s) => s.codec_type === 'audio');
     const frames = Number(video.nb_read_frames);
@@ -361,103 +394,146 @@ function checkOutput(file, expected, legacyMsr = false) {
         audio.length && !(Math.abs(Number(audio[0].duration) - frames / fps) <= Math.max(0.1, 1 / fps)))
         throw new Error('GenAI result does not match the requested video frames, rate, geometry or audio');
 }
+// Receipts written before 2026-11-25 name provider routes and carry other fields; they stay readable.
 const receiptSchema = z.object({
-    version: z.literal(1), baseUrl: z.string(), operation: z.union([operationSchema, z.literal('scene-to-video')]), fingerprint: z.string(),
-    expected: mediaContract.optional(), requestId: z.string().optional(), sceneShots: z.array(z.unknown()).optional(),
-    sceneRequestSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    version: z.literal(1), baseUrl: z.string(), operation: z.string(), fingerprint: z.string(),
+    expected: mediaContract.optional(), native: mediaContract.optional(),
+    requestId: z.string().optional(), requestPath: z.string().optional(), submittedAt: z.string().optional(),
     videoPath: z.string(), jobId: z.string().min(1).optional(),
-    status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(),
+    status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(), nativeSha256: z.string().optional(),
     conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-}).strict();
-// The gateway advertises LTX provider compatibility; response fields come from LTX v2 docs.
-const statusSchema = z.object({ id: z.string().min(1), status: z.enum(['pending', 'processing', 'completed', 'failed', 'cancelled']),
-    result: z.object({ video_url: z.string().min(1).optional() }).passthrough().nullish(), error: z.unknown().optional(),
 }).passthrough();
+/** The common job envelope. `GET /v1/generations/{id}` also reads jobs a provider route created. */
+const generationSchema = z.object({
+    id: z.string().min(1), status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
+    outputs: z.array(z.object({ url: z.string().min(1), authentication: z.string().optional() }).passthrough()).default([]),
+    error: z.object({ code: z.string().optional(), message: z.string().optional() }).passthrough().nullish(),
+    result_expired: z.boolean().optional(),
+}).passthrough();
+const STATUS = { queued: 'pending', running: 'processing', succeeded: 'completed', failed: 'failed', cancelled: 'cancelled' };
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
+// A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
+const SUBMIT_TIMEOUT_MS = 15 * 60_000;
+/** The gateway binds a scene's X-Request-Id to its job until 24 hours after that job ends; a later replay could render again. */
+const REPLAY_WINDOW_MS = 23 * 3600_000;
+const accepted = (response) => z.object({ id: z.string().min(1) }).passthrough().parse(response).id;
+/** Find the job of a scene whose response was lost: the same X-Request-Id with the same body returns the job the first
+ * request made, or makes it if that request never arrived. Either way one render exists. */
+async function replayScene(receipt, receiptPath) {
+    if (!receipt.requestId || !receipt.requestPath || !fs.existsSync(receipt.requestPath))
+        throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
+    if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+        throw new Error('genai_replay_window_passed: the gateway may no longer tie request ' + receipt.requestId + ' to its job; check GET /v1/jobs before planning again');
+    const body = JSON.parse(fs.readFileSync(receipt.requestPath, 'utf8'));
+    const jobId = accepted(await requestGenai('POST', GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS, undefined, undefined, receipt.requestId));
+    const linked = { ...receipt, jobId, status: 'submitted' };
+    atomicJson(receiptPath, linked);
+    recordVideoSubmission(jobId);
+    return linked;
+}
+/** Cut a scene's rendered clip back to the storyboard's frames, and drop its soundtrack when the plan asks. */
+function deliverScene(native, expected, cut) {
+    const seconds = expected.frames / expected.fps;
+    execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-n', '-i', native, '-map', '0:v:0', ...(expected.audio ? ['-map', '0:a:0'] : []),
+        '-frames:v', String(expected.frames), '-t', String(seconds), '-c:v', 'libx264', '-crf', '16', '-preset', 'fast',
+        ...(expected.audio ? ['-c:a', 'aac', '-b:a', '192k'] : ['-an']), '-movflags', '+faststart', cut], { timeout: 120_000 });
+}
 export async function getGenaiVideoStatus(input, planned, binding) {
-    const receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
+    let receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
     if (binding && (path.resolve(receipt.videoPath) !== path.resolve(binding.target) ||
-        binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId ||
-        binding.fingerprint && receipt.fingerprint !== binding.fingerprint))
+        binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId))
         throw new Error('GenAI receipt does not belong to the approved output or job');
     if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
         throw new Error('GenAI receipt conflicts with the approved media contract');
     if (receipt.baseUrl !== astraGenaiBaseUrl())
         throw new Error('GenAI receipt belongs to a different server; restore ASTRA_GENAI_URL before recovery.');
-    if (!receipt.jobId && receipt.operation === 'scene-to-video' && receipt.requestId) {
-        if (receipt.requestId !== sceneRequestId(receipt.fingerprint))
-            throw new Error('Legacy scene receipt has no verified job ID. Reconcile its original submission before linking an output.');
-        const found = statusSchema.extend({ request_id: z.literal(receipt.requestId) }).parse(await requestGenai('GET', SCENE_ROUTE + '/requests/' + encodeURIComponent(receipt.requestId)));
-        if (binding?.jobId && binding.jobId !== found.id)
+    if (!receipt.jobId) {
+        if (receipt.operation !== 'scene')
+            throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
+        receipt = await replayScene(receipt, input.receiptPath);
+        if (binding?.jobId && binding.jobId !== receipt.jobId)
             throw new Error('GenAI recovery job ID mismatch');
-        receipt.jobId = found.id;
-        receipt.status = 'submitted';
-        atomicJson(input.receiptPath, receipt);
-        recordVideoSubmission(found.id);
     }
-    if (!receipt.jobId)
-        throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
+    const jobId = receipt.jobId;
+    const counted = Boolean(receipt.native) || receipt.operation === 'msr';
     if (receipt.status === 'completed') {
         input.onJobCompleted?.();
         const bytes = fs.readFileSync(receipt.videoPath);
         if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256)
             throw new Error('GenAI cached output changed');
-        if (receipt.expected || planned || receipt.operation === 'msr' || receipt.operation === 'scene-to-video')
+        if (receipt.expected || planned || counted)
             checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
-        return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
+        return { jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
     }
-    const route = `${receipt.operation === 'scene-to-video' ? SCENE_ROUTE : genaiVideoRoute(receipt.operation)}/${encodeURIComponent(receipt.jobId)}`;
-    const job = statusSchema.parse(await requestGenai('GET', route));
-    if (job.id !== receipt.jobId)
+    const job = generationSchema.parse(await requestGenai('GET', GENERATIONS_ROUTE + '/' + encodeURIComponent(jobId)));
+    if (job.id !== jobId)
         throw new Error('GenAI status job ID mismatch');
-    if (receipt.operation === 'scene-to-video' && Array.isArray(job.shots)) {
-        receipt.sceneShots = job.shots;
-    }
+    const status = STATUS[job.status];
     // The gateway's own failed status is terminal job evidence (managed routing frees the slot).
-    if (job.status === 'failed' || job.status === 'cancelled')
-        throw new GenaiRequestError(`GenAI video ${receipt.jobId} ${job.status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
-    if (job.status === 'completed')
+    if (status === 'failed' || status === 'cancelled')
+        throw new GenaiRequestError(`GenAI video ${jobId} ${status}: ${JSON.stringify(job.error ?? 'No details').slice(0, 1000)}`, true, 200);
+    if (status === 'completed')
         input.onJobCompleted?.();
-    if (job.status !== 'completed' || !input.download)
-        return { jobId: receipt.jobId, status: job.status, downloaded: false, review: 'not_reviewed' };
-    if (!job.result?.video_url)
-        throw new Error('GenAI completed without result.video_url; retain the receipt, do not resubmit.');
+    if (status !== 'completed' || !input.download)
+        return { jobId, status, downloaded: false, review: 'not_reviewed' };
+    const output = job.outputs[0];
+    if (!output)
+        throw new Error(job.result_expired ? 'GenAI result expired after 24 hours; the gateway no longer holds the clip. Retain the receipt, do not resubmit.'
+            : 'GenAI completed without an output URL; retain the receipt, do not resubmit.');
     let bytes;
-    if (job.result.authentication === 'same GatewayToken required') {
-        const url = new URL(job.result.video_url, astraGenaiBaseUrl() + '/');
+    if (output.authentication === 'gateway_token') {
+        const url = new URL(output.url, astraGenaiBaseUrl() + '/');
         if (url.origin !== new URL(astraGenaiBaseUrl()).origin || url.username || url.password || url.search || url.hash ||
             !/^\/v1\/ltx\/desktop\/assets\/[A-Za-z0-9_-]+\/bytes$/.test(url.pathname))
             throw new Error('Invalid private GenAI video URL; retain receipt');
-        bytes = await requestGenaiMedia(url.pathname, undefined, route);
+        bytes = await requestGenaiMedia(url.pathname, undefined, GENERATIONS_ROUTE);
     }
     else
-        bytes = await downloadGenaiResult(job.result.video_url);
+        bytes = await downloadGenaiResult(output.url);
     // Reject HTML/JSON and probe the actual container before recording completion.
     if (bytes.length < 12 || bytes.toString('ascii', 4, 8) !== 'ftyp')
         throw new Error('GenAI result is not MP4');
-    const temp = `${receipt.videoPath}.${randomUUID()}.download.mp4`;
+    const temp = `${receipt.videoPath}.${randomUUID()}.download.mp4`, cut = `${receipt.videoPath}.${randomUUID()}.delivery.mp4`;
+    const expected = receipt.expected ?? planned;
     try {
         fs.writeFileSync(temp, bytes, { flag: 'wx', mode: 0o600 });
-        checkOutput(temp, receipt.expected ?? planned, receipt.operation === 'msr' || receipt.operation === 'scene-to-video');
+        let delivered = temp;
+        if (receipt.native) {
+            checkOutput(temp, receipt.native, true);
+            if (!expected)
+                throw new Error('GenAI scene receipt has no delivery contract; retain the receipt');
+            if (expected.frames !== receipt.native.frames || expected.audio !== receipt.native.audio) {
+                deliverScene(temp, expected, cut);
+                checkOutput(cut, expected, true);
+                delivered = cut;
+            }
+        }
+        else
+            checkOutput(temp, expected, counted);
+        const final = fs.readFileSync(delivered), sha256 = createHash('sha256').update(final).digest('hex');
         try {
-            fs.linkSync(temp, receipt.videoPath);
+            fs.linkSync(delivered, receipt.videoPath);
         }
         catch (error) {
             if (error.code !== 'EEXIST')
                 throw error;
-            if (createHash('sha256').update(fs.readFileSync(receipt.videoPath)).digest('hex') !== createHash('sha256').update(bytes).digest('hex'))
+            if (createHash('sha256').update(fs.readFileSync(receipt.videoPath)).digest('hex') !== sha256)
                 throw new Error('GenAI video output conflicts with download');
         }
-        atomicJson(input.receiptPath, { ...receipt, status: 'completed', sha256: createHash('sha256').update(bytes).digest('hex') });
+        atomicJson(input.receiptPath, { ...receipt, status: 'completed', sha256,
+            ...(receipt.native ? { nativeSha256: createHash('sha256').update(bytes).digest('hex') } : {}) });
     }
     finally {
         fs.rmSync(temp, { force: true });
+        fs.rmSync(cut, { force: true });
     }
-    return { jobId: receipt.jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
+    return { jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
 }
 /** A fallback body above this is not sent: voice cannot be shrunk, and so large a body on a slow link meets the edge's 524 again. */
 export { GENAI_MSR_INLINE_MAX_BYTES } from './astra-genai-upload.js';
-export async function prepareGenaiMsrSources(body) {
+/** Swap each local file a common body carries (`url` or `uri`, as data URIs) for an uploaded genai-file, unchanged.
+ * A supplied A2V track stays inline as before. */
+export async function prepareGenaiSources(body) {
     let supported = true;
     const send = async (uri) => {
         const match = /^data:([^;,]+);base64,(.*)$/s.exec(uri);
@@ -471,89 +547,54 @@ export async function prepareGenaiMsrSources(body) {
             supported = false;
         return id ?? `data:${match[1]};base64,${bytes.toString('base64')}`;
     };
-    const references = [];
-    for (const ref of body.references ?? [])
-        references.push({ ...ref, image_uri: await send(ref.image_uri),
-            ...('audio_uri' in ref && typeof ref.audio_uri === 'string' ? { audio_uri: await send(ref.audio_uri) } : {}) });
-    const keyframes = [];
-    for (const pin of body.keyframes ?? [])
-        keyframes.push({ ...pin, image_uri: await send(pin.image_uri) });
-    const prepared = { ...body, ...(body.references ? { references } : {}), ...(body.keyframes ? { keyframes } : {}),
-        ...(body.image_uri === undefined ? {} : { image_uri: await send(body.image_uri) }),
-        ...(body.last_frame_uri == null ? {} : { last_frame_uri: await send(body.last_frame_uri) }),
+    const walk = async (value, at) => {
+        if (Array.isArray(value)) {
+            const out = [];
+            for (const item of value)
+                out.push(await walk(item, at));
+            return out;
+        }
+        if (!value || typeof value !== 'object')
+            return value;
+        const out = {};
+        for (const [key, item] of Object.entries(value))
+            out[key] = (key === 'url' || key === 'uri') && typeof item === 'string' && at !== 'input.audio'
+                ? await send(item) : await walk(item, at ? at + '.' + key : key);
+        return out;
     };
+    const prepared = await walk(body, '');
+    const track = body.input?.audio?.url?.length ?? 0;
     const bytes = Buffer.byteLength(JSON.stringify(prepared));
-    if (bytes - (body.audio_uri?.length ?? 0) > GENAI_MSR_INLINE_MAX_BYTES)
+    if (bytes - track > GENAI_MSR_INLINE_MAX_BYTES)
         throw new Error(`msr_body_too_large: the gateway did not take the chunked upload and the inline request is ${(bytes / 1e6).toFixed(1)} MB (limit 8 MB); nothing was submitted. Try again later, or use a shorter voice sample.`);
     return prepared;
-}
-// A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
-const SUBMIT_TIMEOUT_MS = 15 * 60_000;
-function genaiVideoRoute(operation) {
-    return operation === 'msr' ? '/v1/ltx/msr' : `/v1/ltx/v2/${operation}`;
 }
 const genaiModes = {
     astra_genai_text2video: 'text2video', astra_genai_img2video: 'image2video',
     astra_genai_audio2video: 'audio2video', astra_genai_msr: 'msr',
 };
-const deployedModel = z.object({
-    id: z.string(), parameters_by_mode: z.record(z.array(z.string())).optional(),
-    limits: z.record(z.unknown()).optional(),
-});
-/** Both planning and submission use the selected gateway's contract for version-dependent inputs. */
+/** Both planning and submission check version-dependent inputs against what `GET /v1/models` lists for the mode. A scene is
+ * checked whole by `/v1/generations/validate` instead. */
 export async function checkGenaiVideoOptions(tool, args) {
     const mode = genaiModes[tool];
     if (!mode)
         return;
-    if (mode === 'msr' || (mode === 'image2video' && args.references)) {
-        const controls = [
-            ['referenceStrength', 'reference_strength', 1], ['referenceFrames', 'reference_frames', 33],
-            ['guidanceScale', 'guidance_scale', 1], ['nagScale', 'nag_scale', 0],
-            ['nagAlpha', 'nag_alpha', 0.25], ['nagTau', 'nag_tau', 2.5],
-        ];
-        const custom = controls.filter(([field, , fallback]) => args[field] !== undefined && args[field] !== fallback);
-        if (custom.length) {
-            const response = await requestGenai('GET', '/v1/ltx/v2/capabilities', undefined, 15_000);
-            const spec = z.object({ min: z.number().optional(), max: z.number().optional(), enum: z.array(z.number()).optional() });
-            const catalog = z.object({ pipelines: z.array(z.object({ pipeline: z.string(), sampling_fields: z.array(z.string()),
-                    settings: z.record(z.unknown()).optional() })) }).safeParse(response);
-            const msr = catalog.success && catalog.data.pipelines.find(row => row.pipeline === 'msr');
-            for (const [field, wire] of custom) {
-                const constraint = msr && spec.safeParse(msr.settings?.[wire]);
-                const range = constraint && constraint.success ? constraint.data : undefined;
-                const value = Number(args[field]);
-                if (!msr || !msr.sampling_fields.includes(wire) || wire === 'reference_strength' && (!range || range.min === undefined || range.max === undefined) ||
-                    range && (value < (range.min ?? -Infinity) || value > (range.max ?? Infinity) || range.enum && !range.enum.includes(value)))
-                    throw new GenaiRequestError('ltx_fields_unsupported: ' + wire + ' outside verified MSR settings', true, 422);
-            }
-        }
-        const prompt = openingPrompt(String(args.prompt), args.openingPositions);
-        const chars = Math.max([...prompt].length, [...String(args.negativePrompt ?? '')].length);
-        if (chars > 2000) {
-            const caps = z.object({ prompt_max_chars: z.number().int().optional() }).parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-            if (chars > (caps.prompt_max_chars ?? 2000))
-                throw new GenaiRequestError('msr_prompt_limit: prompt exceeds the deployed backend limit', true, 422);
-        }
-    }
     const wireFields = {
         seed: 'seed', numInferenceSteps: 'num_inference_steps', guidance: 'guidance', lora: 'lora', numGeneratedKeyframes: 'num_generated_keyframes',
         numFrames: 'num_frames', negativePrompt: 'negative_prompt', guidanceScale: 'guidance_scale',
         referenceStrength: 'reference_strength', referenceFrames: 'reference_frames',
         nagScale: 'nag_scale', nagAlpha: 'nag_alpha', nagTau: 'nag_tau', skipStage2: 'skip_stage_2',
     };
+    // MSR's own defaults are written on every request, so only a changed value needs the deployment to list its field.
+    const msrDefaults = { referenceStrength: 1, referenceFrames: 33, seed: 42 };
     const requested = Object.entries(wireFields).filter(([key]) => args[key] !== undefined &&
-        (mode !== 'msr' || key === 'skipStage2'));
+        !(mode === 'msr' && (key === 'numFrames' || args[key] === msrDefaults[key])));
     const needsAudioModel = mode === 'audio2video' && args.model === 'ltx-2.5-22b-distilled';
     if (!requested.length && !args.keyframes && !needsAudioModel)
         return;
-    let models;
-    try {
-        const response = await requestGenai('GET', '/v1/models', undefined, 15_000);
-        models = z.object({ data: z.array(deployedModel) }).parse(response).data;
-    }
-    catch {
+    const models = await refreshGenaiVideoCatalog(true);
+    if (!models.length)
         throw new GenaiRequestError('ltx_capabilities_unavailable: cannot verify the requested gateway fields before submission', true, 503);
-    }
     const model = models.find(entry => entry.id === (mode === 'msr' ? 'ltx-msr' : args.model));
     const fields = model?.parameters_by_mode?.[mode] ?? [];
     if (needsAudioModel && !model?.parameters_by_mode?.audio2video)
@@ -568,14 +609,32 @@ export async function checkGenaiVideoOptions(tool, args) {
     if (missing.length)
         throw new GenaiRequestError(`ltx_fields_unsupported: ${mode} on ${model?.id ?? args.model} does not advertise ${missing.join(', ')}`, true, 422);
 }
+/** Publish a receipt atomically so another live session can follow it immediately. Returns false when one exists. */
+function claimReceipt(receiptPath, receipt) {
+    const claim = receiptPath + '.' + randomUUID() + '.tmp';
+    try {
+        fs.writeFileSync(claim, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
+        fs.linkSync(claim, receiptPath);
+        return true;
+    }
+    catch (error) {
+        if (error.code !== 'EEXIST')
+            throw error;
+        return false;
+    }
+    finally {
+        fs.rmSync(claim, { force: true });
+    }
+}
 export async function generateGenaiVideo(operation, input, signal, polling = {}) {
     signal?.throwIfAborted();
+    if (operation === 'scene')
+        return generateGenaiScene(genaiSceneSchema.parse(input), signal, polling);
     const args = (operation === 'msr' ? genaiMsrSchema : operation === 'audio-to-video' ? genaiAudioToVideoSchema
         : operation === 'text-to-video' ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
     requireAstraGenaiKey();
     const body = operation === 'msr' ? buildGenaiMsrBody(args) : operation === 'audio-to-video'
-        ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args);
-    const usesReferences = 'references' in body && Array.isArray(body.references) && body.references.length > 0;
+        ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args, operation);
     const fingerprint = createHash('sha256').update(JSON.stringify(body)).digest('hex');
     const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
     const receiptPath = videoPath + '.astra-genai.json';
@@ -601,90 +660,106 @@ export async function generateGenaiVideo(operation, input, signal, polling = {})
     }
     if (fs.existsSync(receiptPath))
         return followSubmission();
-    else {
-        if (fs.existsSync(videoPath))
-            throw new Error('GenAI output already exists');
-        const tools = { 'text-to-video': 'astra_genai_text2video', 'image-to-video': 'astra_genai_img2video', 'audio-to-video': 'astra_genai_audio2video', msr: 'astra_genai_msr' };
-        await checkGenaiVideoOptions(tools[operation], args);
-        if (operation === 'image-to-video' && usesReferences) {
-            let capabilities;
-            try {
-                capabilities = z.object({ image_conditioning: z.boolean().optional(), voice_references: z.boolean().optional() }).passthrough()
-                    .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-            }
-            catch {
-                // No generation or upload was attempted; release the managed reservation.
-                throw new GenaiRequestError('image_references_capability_unavailable: cannot verify combined image conditioning before submission; no generation was requested', true, 503);
-            }
-            if (capabilities.image_conditioning !== true)
-                throw new GenaiRequestError('image_references_unsupported: the GenAI backend does not advertise combined start/end frames and subject references; no request was submitted', true, 422);
-            if (body.references?.some(ref => ref.audio_uri) && capabilities.voice_references !== true)
-                throw new GenaiRequestError('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples', true, 422);
-        }
-        // References on image-to-video run on the same MSR backend, so its negatives need the same advertisement.
-        const msrArgs = operation === 'msr' || usesReferences ? args : undefined;
-        if (msrArgs && (msrArgs.negativePrompt !== undefined || (msrArgs.guidanceScale ?? 1) > 1)) {
-            const capabilities = z.object({ negative_prompt: z.boolean().optional(), nag: z.boolean().optional() }).passthrough()
-                .parse(await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15_000));
-            if ((msrArgs.nagScale ?? 0) > 0 && capabilities.nag !== true)
-                throw new GenaiRequestError('msr_nag_unsupported: the GenAI MSR backend does not advertise NAG', true, 422);
-            if (capabilities.negative_prompt !== true)
-                throw new GenaiRequestError('msr_negative_unsupported: the GenAI MSR backend does not advertise negative conditioning', true, 422);
-        }
-        if (operation === 'msr' && args.references.some(ref => oneOf(ref.audioUri, ref.audioPath)) && !await refreshGenaiMsrVoice(true))
-            throw new Error('msr_voice_unsupported: the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)');
-        // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
-        // The fingerprint stays on the request as written, so a resumed receipt still matches.
-        const submitted = usesReferences || 'keyframes' in body ? await prepareGenaiMsrSources(body) : body;
-        const wav = operation === 'audio-to-video' && 'audio_uri' in body && typeof body.audio_uri === 'string' && body.audio_uri.startsWith('data:audio/wav;base64,')
-            ? Buffer.from(body.audio_uri.slice('data:audio/wav;base64,'.length), 'base64') : undefined;
-        const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting',
-            ...(wav ? { conditioningAudioSha256: createHash('sha256').update(wav).digest('hex') } : {}) };
-        signal?.throwIfAborted();
-        // Publish the complete claim atomically so another live session can follow it immediately.
-        const claim = receiptPath + '.' + randomUUID() + '.tmp';
+    if (fs.existsSync(videoPath))
+        throw new Error('GenAI output already exists');
+    const tools = { 'text-to-video': 'astra_genai_text2video', 'image-to-video': 'astra_genai_img2video', 'audio-to-video': 'astra_genai_audio2video', msr: 'astra_genai_msr' };
+    await checkGenaiVideoOptions(tools[operation], args);
+    // Upload before the receipt exists: a failed upload leaves nothing to recover and the call can simply run again.
+    // The fingerprint stays on the request as written, so a resumed receipt still matches.
+    const submitted = await prepareGenaiSources(body);
+    const track = body.input?.audio?.url;
+    const wav = track?.startsWith('data:audio/wav;base64,') ? Buffer.from(track.slice('data:audio/wav;base64,'.length), 'base64') : undefined;
+    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation, fingerprint, videoPath, expected: msrOutputContract(operation, args), status: 'submitting',
+        ...(wav ? { conditioningAudioSha256: createHash('sha256').update(wav).digest('hex') } : {}) };
+    signal?.throwIfAborted();
+    if (!claimReceipt(receiptPath, receipt))
+        return followSubmission();
+    let response;
+    try {
         try {
-            fs.writeFileSync(claim, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-            fs.linkSync(claim, receiptPath);
+            response = await requestGenai('POST', GENERATIONS_ROUTE, submitted, SUBMIT_TIMEOUT_MS);
         }
         catch (error) {
-            if (error.code !== 'EEXIST')
+            // The gateway no longer knows an uploaded id (expired, restarted). That refusal created no job: upload again and resubmit once.
+            if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error instanceof GenaiRequestError && [400, 422].includes(error.httpStatus) && GENAI_FILE_GONE.test(error.message)))
                 throw error;
-            return followSubmission();
-        }
-        finally {
-            fs.rmSync(claim, { force: true });
-        }
-        let response;
-        try {
+            forgetGenaiUploads();
+            let again;
             try {
-                response = await requestGenai('POST', genaiVideoRoute(operation), submitted, SUBMIT_TIMEOUT_MS);
+                again = await prepareGenaiSources(body);
             }
-            catch (error) {
-                // The gateway no longer knows an uploaded id (expired, restarted). That 400 created no job: upload again and resubmit once.
-                if (!JSON.stringify(submitted).includes(GENAI_FILE_SCHEME) || !(error instanceof GenaiRequestError && error.httpStatus === 400 && GENAI_FILE_GONE.test(error.message)))
-                    throw error;
-                forgetGenaiUploads();
-                let again;
-                try {
-                    again = await prepareGenaiMsrSources(body);
-                }
-                catch (uploadError) {
-                    fs.rmSync(receiptPath, { force: true });
-                    throw uploadError;
-                }
-                response = await requestGenai('POST', genaiVideoRoute(operation), again, SUBMIT_TIMEOUT_MS);
-            }
-        }
-        catch (error) {
-            // An explicit rejection created no job; free the output name so a corrected request can retry it.
-            if (error instanceof GenaiRequestError && error.terminal)
+            catch (uploadError) {
                 fs.rmSync(receiptPath, { force: true });
-            throw error;
+                throw uploadError;
+            }
+            response = await requestGenai('POST', GENERATIONS_ROUTE, again, SUBMIT_TIMEOUT_MS);
         }
-        const accepted = z.object({ id: z.string().min(1) }).passthrough().parse(response);
-        atomicJson(receiptPath, { ...receipt, jobId: accepted.id, status: 'submitted' });
-        recordVideoSubmission(accepted.id);
     }
+    catch (error) {
+        // An explicit rejection created no job; free the output name so a corrected request can retry it.
+        if (error instanceof GenaiRequestError && error.terminal)
+            fs.rmSync(receiptPath, { force: true });
+        throw error;
+    }
+    const jobId = accepted(response);
+    atomicJson(receiptPath, { ...receipt, jobId, status: 'submitted' });
+    recordVideoSubmission(jobId);
+    return finish();
+}
+/** One storyboard scene as one scene-mode job. The exact body is kept beside the receipt and travels with an X-Request-Id
+ * derived from it, so a lost response is recovered by replaying it (see `replayScene`). */
+async function generateGenaiScene(args, signal, polling = {}) {
+    requireAstraGenaiKey();
+    const local = genaiSceneBody(args, (file, kind) => kind === 'image' ? genaiSourceUri(undefined, file) : genaiAudioUri(undefined, file));
+    const fingerprint = createHash('sha256').update(JSON.stringify(local)).digest('hex');
+    const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');
+    const receiptPath = videoPath + '.astra-genai.json';
+    const expected = msrOutputContract('scene', args);
+    const finish = async () => {
+        const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath, download: true, onJobCompleted: polling.onJobCompleted }, expected), `GenAI scene is still pending; recover using receiptPath ${receiptPath}, never resubmit.`, signal, polling.statusRetries);
+        return { ...result, receiptPath };
+    };
+    if (fs.existsSync(receiptPath)) {
+        const previous = receiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
+        if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== 'scene' || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
+            throw new Error('GenAI output receipt conflicts with this request; use a distinct output path.');
+        return finish();
+    }
+    if (fs.existsSync(videoPath))
+        throw new Error('GenAI output already exists');
+    // The gateway compiles the scene once more; a scene whose labels, length or cuts moved since planning is not submitted.
+    // Nothing exists yet, so any failure here closes the request without a job.
+    let submitted;
+    try {
+        submitted = await prepareGenaiSources(local);
+        checkSceneValidation(args, await requestGenai('POST', GENERATIONS_ROUTE + '/validate', submitted, 120_000));
+    }
+    catch (error) {
+        throw new GenaiRequestError((error instanceof Error ? error.message : String(error)) + '; no generation was requested', true, error instanceof GenaiRequestError ? error.httpStatus : 422);
+    }
+    const requestPath = `${videoPath}.${randomUUID()}.generation.json`;
+    fs.writeFileSync(requestPath, JSON.stringify(submitted), { flag: 'wx', mode: 0o600 });
+    const requestId = 'scene-' + fingerprint;
+    const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation: 'scene', fingerprint, videoPath, expected,
+        native: sceneNativeContract(args), requestId, requestPath, submittedAt: new Date().toISOString(), status: 'submitting' };
+    signal?.throwIfAborted();
+    if (!claimReceipt(receiptPath, receipt)) {
+        fs.rmSync(requestPath, { force: true });
+        return finish();
+    }
+    let jobId;
+    try {
+        jobId = accepted(await requestGenai('POST', GENERATIONS_ROUTE, submitted, SUBMIT_TIMEOUT_MS, undefined, undefined, requestId));
+    }
+    catch (error) {
+        // An explicit refusal made no job. Anything else leaves the receipt, and video_status replays the same request.
+        if (error instanceof GenaiRequestError && error.terminal) {
+            fs.rmSync(receiptPath, { force: true });
+            fs.rmSync(requestPath, { force: true });
+        }
+        throw error;
+    }
+    atomicJson(receiptPath, { ...receipt, jobId, status: 'submitted' });
+    recordVideoSubmission(jobId);
     return finish();
 }

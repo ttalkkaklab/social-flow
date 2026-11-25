@@ -58,7 +58,7 @@ function sceneCast(scene, cards) {
   return sceneSpeech(scene, cards).physical;
 }
 
-function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
+function sceneSpeechRoute(scene, cards, selection) {
   const {physical, visible} = sceneSpeech(scene, cards, true);
   const speakers = visible ? physical : [];
   const direction = scene.videoDirection || {};
@@ -73,38 +73,17 @@ function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
   if (mode === 'conditioned') operation = 'audio';
   else if (mode === 'reference') operation = distilled && selection.operation !== 'reference' ? 'image' : 'reference';
   else if (mode === 'generated' && selection.engine === 'veo' && selection.operation === 'reference') operation = 'reference';
-  // Explicit temporal openings and hard cuts describe separate native renders.
-  const anchoredCuts = cards.every((card, index) => card.timeline &&
-    card.timeline.transition === (index ? 'hard_cut' : 'open') &&
-    card.timeline.images?.some(pin => pin.role === 'start' && pin.frame === card.timeline.startFrame) &&
-    !card.timeline.dialogueCues?.length);
   const cutVoiceover = cards.some(card => {
     const lines = orderedSpeech(card).filter(line => line.tts?.trim());
     return lines.length && lines.every(line => line.delivery === 'voiceover');
   });
   const mixedCuts = distilled && mode === 'reference' && !direction.oneTake && cutVoiceover;
   if (mixedCuts) operation = 'image';
-  let rendering;
-  const cutScene = distilled && cards.length > 1 && !direction.oneTake;
-  const structured = cards.every((card, i) => (i === 0 && scene.frames?.start) ||
-    card.referenceImage || card.timeline?.images?.some(pin => pin.role === 'start') || card.visual?.frames?.start);
-  const visualReferences = scene.speakerReferences?.length || cards.some(card =>
-    card.timeline?.images?.some(pin => pin.role === 'face') || card.visual?.references?.some(ref => ref.use !== 'image' && ref.role === 'character'));
-  if (requestedRendering && cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
-    operation = 'image';
-    const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
-    // 'auto' marks a cut scene that would also fit one render. Only per_shot can be requested; approved plans hash this value.
-    rendering = cards.some(card => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 ||
-      frames > 361 || cards.length > 4
-      ? 'per_shot' : 'auto';
-  } else if (cutScene && operation === 'image' && (mixedCuts || speakers.length > 2 || anchoredCuts)) {
-    rendering = 'per_shot';
-  }
-  return {speakers, operation, mode, ...(rendering ? {rendering} : {}), external:!visible && physical.length > 0};
+  return {speakers, operation, mode, external:!visible && physical.length > 0};
 }
 
 // Each native render binds its own speakers. A finished soundtrack uses one audio input.
-function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering = route.rendering, generateAudio, limit}) {
+function assertRenderVoiceCapacity({tool, model, scene, cards, route, generateAudio, limit, perCard = false}) {
   if (['reference','generated'].includes(route.mode) && (generateAudio === false || cards.some(card =>
       orderedSpeech(card).some(line => line.delivery !== 'voiceover' && line.tts?.trim()) &&
       require('../storyboard/references/production-mode.js').videoSlot(card)?.generateAudio === false)))
@@ -115,11 +94,10 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering 
     const capacity = entry?.voice.maxPinnedVoicesPerRender;
     limit = typeof capacity === 'number' ? capacity : capacity?.[model];
   }
-  if (!limit || ['astra_genai_img2video','astra_genai_msr'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
+  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-  const perShot = !!rendering && !scene?.videoDirection?.oneTake;
-  const groups = perShot ? cards.map(card => [card]) : [cards];
-  for (const group of groups) {
+  // One render binds the whole scene's voices. A clip the retired per-shot route made rendered each card apart (perCard).
+  for (const group of perCard ? cards.map(card => [card]) : [cards]) {
     const voices = new Set(group.flatMap(orderedSpeech).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker));
     if (voices.size <= limit) continue;
     const label = group.length === 1 || scene?.no === undefined ? group[0].id : 'scene ' + scene.no;
@@ -133,6 +111,7 @@ const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
+// `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
 function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
@@ -294,7 +273,9 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
         delete updated.video.lastImagePath;
         delete updated.video.referenceImagePaths;
       }
-      if (!perShot && timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
+      // GenAI scene mode opens each shot on its own picture, so a shot's start image is kept there.
+      const timed = perShot ? [] : engine === 'astra-genai' ? ['end','keyframe'] : ['start','end','keyframe'];
+      if (timeline?.images?.some(pin => timed.includes(pin.role)))
         throw new Error('scene_image_scope: use a scene anchor or an authored shot composition image on ' + card.id);
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};

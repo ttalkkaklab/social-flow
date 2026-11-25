@@ -367,7 +367,9 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
     if (context && (context.selection.operation || context.route || physical || !args.capabilities || args.action === 'attach_video')) {
       const { selection, route } = context;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error('model_selection_mismatch: tool does not match selected engine');
-      const tool = selectedVideoTool(selection);
+      // Another adapter of the selected engine and operation names the same render, as a GenAI MSR clip does beside a scene-mode one.
+      const sameRender = adapter && adapter.engine === selection.engine && adapter.operation === selection.operation;
+      const tool = sameRender ? args.tool : selectedVideoTool(selection);
       if ((route || args.tool) && (!tool || args.tool && args.tool !== tool))
         throw new Error('scene_speech_route: the complete scene requires ' + selection.operation);
       const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);

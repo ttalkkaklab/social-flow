@@ -27,7 +27,7 @@ test('a catalog call names an engine for its parameter schemas and nothing for t
     assert.deepEqual(await read(name, {}), JSON.parse(JSON.stringify(list)), name);
   // A model family with a reference page names it on each of its rows, in the list and in an engine's answer.
   const paged = videoCatalog().adapters.filter(row => row.promptReference);
-  assert.deepEqual(paged.map(row => row.tool).sort(), ['astra_genai_img2video','astra_genai_msr','fasth3_omni_reference','minimax_img2video','minimax_reference','seedance_img2video','seedance_reference','seedance_text2video']);
+  assert.deepEqual(paged.map(row => row.tool).sort(), ['astra_genai_img2video','astra_genai_msr','astra_genai_scene','fasth3_omni_reference','minimax_img2video','minimax_reference','seedance_img2video','seedance_reference','seedance_text2video']);
   for (const row of paged) assert.ok(fs.existsSync(new URL('../../' + row.promptReference, import.meta.url)), row.tool);
   assert.equal((await read('video_catalog', { engine: 'seedance', operation: 'reference' })).adapters[0].promptReference, 'skills/generate-cut-videos/references/prompt-seedance.md');
   const image = await read('video_catalog', { engine: 'astra-genai', operation: 'image' });
@@ -35,7 +35,8 @@ test('a catalog call names an engine for its parameter schemas and nothing for t
   assert.equal(image.adapters[0].parameters.common.properties.prompt.type, 'string');
   assert.ok(image.adapters[0].parameters.options.properties.references);
   assert.deepEqual(image.adapters[0].fields, videoCatalog().adapters.find(adapter => adapter.tool === 'astra_genai_img2video').fields);
-  assert.deepEqual((await read('video_catalog', { engine: 'astra-genai' })).adapters.map(adapter => adapter.operation), ['text', 'image', 'audio', 'reference']);
+  assert.deepEqual((await read('video_catalog', { engine: 'astra-genai' })).adapters.map(adapter => adapter.tool),
+    ['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_scene', 'astra_genai_msr']);
   assert.deepEqual((await read('image_catalog', { engine: 'gpt-image', operation: 'edit' })).adapters.map(adapter => adapter.tool), ['gpt_image_img2img']);
   assert.deepEqual((await read('music_catalog', { engine: 'lyria', model: 'lyria-3.5' })).adapters.map(adapter => adapter.tool), ['music_generate_song']);
   await assert.rejects(ROUTES.video_catalog({ operation: 'image' }), /catalog_engine_required/);

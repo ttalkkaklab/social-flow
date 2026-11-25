@@ -178,6 +178,12 @@ function retainedSoundtrack(scene, board, cast, media) {
   media[video]=repair.videoSha256;
   return true; // Provenance only: neither adapter capability nor listening/lip-sync approval.
 }
+// A clip the gateway's retired per-shot scene route made (receipts before 2026-11-25) rendered each shot apart.
+function perShotClip(videoPath) {
+  const receipt=videoPath && path.resolve(videoPath)+'.astra-genai.json';
+  if(!receipt || !fs.existsSync(receipt))return false;
+  try { return require('../../_shared/scene-speech-receipt.js').perShotSceneOperation(JSON.parse(fs.readFileSync(receipt,'utf8')).operation); } catch { return false; }
+}
 function checkNativeVoiceCapacity(win, shot, binding, board) {
   const {speechRenderSelection}=require('../../_shared/video-selection.js');
   const {sceneSpeechRoute,assertRenderVoiceCapacity}=require('../../_shared/scene-cast.js');
@@ -211,7 +217,7 @@ function checkNativeVoiceCapacity(win, shot, binding, board) {
     }
     if(route.mode!=='reference' || !['reference','conditional_reference'].includes(adapter?.voice.lane))
       throw new Error('scene_speech_route: this model and operation cannot supply the bound native dialogue');
-    assertRenderVoiceCapacity({tool:adapter.tool,model:choice.model,scene,cards,route});
+    assertRenderVoiceCapacity({tool:adapter.tool,model:choice.model,scene,cards,route,perCard:perShotClip(binding.videoPath)});
   }
 }
 function check(work, board) {

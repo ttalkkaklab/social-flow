@@ -48,7 +48,7 @@ limits here, so `promptGuidance.advice` stays empty.
 
 | What the take shows | Change on the board | Basis |
 |---|---|---|
-| A scene needs a third pinned voice | Cut so that each render has two speakers, or name `sceneRendering:"per_shot"`, which changes the voiced pair shot by shot | the planner's `scene_render_voice_limit` and the maintainer's suggestion |
+| A scene needs a third pinned voice | Split it into scenes of two speakers each: one GenAI scene-mode request binds two voices across all its cuts | the planner's `scene_render_voice_limit` |
 | Two characters blend into one look | Give them clearly different clothes or hair on their sheets, then plan again | the paper names similar looks as a cause; the remedy is ours and is not measured |
 | A character looks different after turning away or returning | Keep the character in view, or end the shot before the turn and start the next on a face | the paper names the drift; the remedy is ours and is not measured |
 

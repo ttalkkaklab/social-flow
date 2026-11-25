@@ -13,7 +13,6 @@ import {ASTRA_VIDEO_MAX_PROMPT_CHARS} from '../dist/astra-video-client.js';
 import {TOOLS} from '../dist/tools.js';
 import {ROUTES} from '../dist/handlers.js';
 import {setupProject,png} from './workflow-fixture.mjs';
-import {buildSceneWire} from '../dist/scene-video.js';
 import {config} from '../dist/config.js';
 const require=createRequire(import.meta.url);
 const voice={engine:'gemini',voiceId:'Kore',language:'ko',speed:1};
@@ -207,8 +206,8 @@ test('public speech planning and attachment share the model voice limit for each
  board.PRODUCTION.videoModel={...ltx,operation:'image'};
  board.STRUCTURE.scenes[0].videoDirection.oneTake=false;
  save();
- assert.equal((await call('plan_video')).plan.mode,'native');
- assert.equal((await call('attach_video')).changed,true);
+ // A GenAI scene is one render, so three speakers across its cuts still need three voices.
+ await rejectOverflow(target);
  board.SCENES=[card('shot1',lines)];
  board.PRODUCTION.videoModel={engine:'seedance',model:'dreamina-seedance-2-0-fast-260128',operation:'reference'};
  save();
@@ -662,20 +661,33 @@ for(const operation of ['image-to-video','audio-to-video'])test('the known '+ope
    assert.equal(source.sourceSha256,sha(remux));
  }
 });
+// The request the gateway's retired per-shot route recorded beside a clip it made (receipts before 2026-11-25).
+// Clips of that route are still bound and assembled, so their recorded speech is still verified.
 async function captureSceneRequest(scene,model) {
- const oldKey=config.astraGenaiApiKey,oldFetch=globalThis.fetch;
- config.astraGenaiApiKey='fixture';
- globalThis.fetch=async(url,options)=>{
-   const route=new URL(url).pathname;
-   if(route==='/v1/uploads')return Response.json({upload_id:JSON.parse(options.body).sha256,chunk_size:1048576,chunks:1});
-   if(options.method==='PUT' && /^\/v1\/uploads\/[a-f0-9]{64}\/chunks\/0$/.test(route))return Response.json({});
-   const complete=/^\/v1\/uploads\/([a-f0-9]{64})\/complete$/.exec(route);
-   assert.ok(complete,'Unexpected fixture request '+route);
-   const fileId=complete[1].slice(0,32);
-   return Response.json({file_id:fileId,uri:'genai-file://'+fileId});
+ const attachments=[];
+ const file=(path,role,frame,shotId)=>{
+   const bytes=readFileSync(path),sha256=createHash('sha256').update(bytes).digest('hex');
+   attachments.push({...(shotId?{shotId}:{}),role,frame,sha256,bytes:bytes.length});
+   return 'genai-file://'+sha256.slice(0,32);
  };
- try{return await buildSceneWire(scene,model,'576x1024',true);}
- finally{globalThis.fetch=oldFetch;config.astraGenaiApiKey=oldKey;}
+ const conditioned=model==='ltx-2.5-22b-dev' && scene.audio && scene.audio.mode!=='mix';
+ const delivery=shot=>scene.silentPicture || !shot.dialogue?.length && !conditioned ? 'All visible mouths stay closed. No speech or vocalization.'
+   : shot.dialogue?.length && shot.dialogue.every(line=>line.delivery==='off_screen') ? 'All visible mouths stay closed while the off-screen speaker talks.' : undefined;
+ const shots=scene.shots.map(shot=>({shot_id:shot.shotId,start_frame:shot.startFrame,end_frame:shot.endFrame,
+   ...(shot.transition!=='open' && {transition:shot.transition}),opening_positions:shot.openingPositions,blocking:shot.blocking,
+   description:[shot.framing,shot.action,delivery(shot)].filter(Boolean).join(' '),
+   images:scene.images.filter(image=>image.shotId===shot.shotId).map(image=>({frame:image.frame,role:image.role,character:image.character,cue:image.cue,strength:image.strength,
+     ...(image.reference && {reference_id:image.reference.id,purpose:image.reference.purpose}),image_uri:file(image.path,image.role,image.frame,shot.shotId)})),
+   ...(shot.dialogue && {dialogue:shot.dialogue.map(line=>({id:line.lineId,speaker:line.speaker,text:line.text,delivery:line.delivery,
+     ...(!conditioned && line.frame!==undefined && {frame:line.frame}),
+     ...(line.voice && {voice_uri:file(line.voice.path,'voice_reference',line.frame ?? shot.startFrame,shot.shotId)})}))})}));
+ const direction=scene.sceneDirection;
+ const prompt=direction?[direction.emotion,direction.action,direction.camera,direction.staging,direction.sound].filter(Boolean).join(' '):'';
+ const body={model,resolution:'576x1024',fps:scene.fps,num_frames:scene.frameCount,generate_audio:true,prompt:prompt || 'Follow the ordered storyboard shots.',
+   image_uri:shots[0].images.find(image=>image.role==='start')?.image_uri,shots,
+   ...(scene.audio && {scene_audio:{mode:scene.audio.mode,audio_uri:file(scene.audio.path,'scene_audio',0),start_frame:0,end_frame:scene.audio.endFrame,cues:scene.audio.cues}})};
+ const wire=JSON.stringify(body);
+ return {body,attachments,bodySha256:createHash('sha256').update(wire).digest('hex'),bytes:Buffer.byteLength(wire)};
 }
 for(const render of ['conditioning','native','mix','silent','off-screen'])test('a managed '+render+' scene keeps its recorded speech route on import',async t=>{
  const {dir,target,file,line,first,retake,original,remux,record,bind}=a2vFixture(t);
@@ -1597,73 +1609,3 @@ test('a silent multi-shot A2V render keeps each dialogue at its original frame i
  assert.throws(()=>compose(work,target),/post_lipsync_forbidden/);
 });
 
-test('a managed scene archives its selected takes and timing beside a finished stereo master',async t=>{
- const {dir,target,file,line,first,retake,record}=a2vFixture(t);
- const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
- const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
- const sha=file=>createHash('sha256').update(readFileSync(file)).digest('hex');
- const model='ltx-2.5-22b-dev',driver=join(target,'master.wav'),win=read(),shot=win.SCENES[0];
- writeFileSync(join(target,'opening.png'),png);
- // The right channel contains an independent room tone. Its samples cannot be
- // reconstructed by applying gain or a stereo layout to the dry line alone.
- execFileSync('ffmpeg',['-v','error','-i',first,'-f','lavfi','-i','sine=frequency=140:sample_rate=48000:duration=0.25',
-   '-filter_complex','[0:a]asplit[l][r];[r]volume=0.7[quiet];[quiet][1:a]amix=duration=first[m];[l][m]amerge=inputs=2,aformat=channel_layouts=stereo',
-   '-c:a','pcm_s16le',driver]);
- win.PRODUCTION={videoModel:{engine:'astra-genai',model,operation:'audio',resolution:'576x1024'},
-   videoAuthorization:{reference:'Local scene test',maxUsd:0,maxConcurrent:1,maxAttempts:1}};
- win.SB_DOC.speechPlanVersion=1;win.MUSIC={$timeline:[]};
- win.STRUCTURE={version:'structure-v1',sequences:[{id:'q1',title:'A conversation',scenes:[1]}],scenes:[{no:1,speakers:['hero'],videoDirection:{fps:24,emotion:'She hesitates.',
-   openingPositions:[{character:'hero',images:[],position:'At the door.'}],audio:{mode:'conditioning',path:'master.wav',cues:[]}}}]};
- shot.scene=1;shot.duration=0.25;
- shot.timeline={startFrame:0,endFrame:6,transition:'open',framing:'Medium shot.',action:'She turns toward the door.',
-   images:[{role:'start',frame:0,path:'opening.png'}]};
- save(win);await record(first);
- const {planManagedVideo,approveVideo,executeVideo}=await import('../dist/video-routing.js');
- const previousFetch=globalThis.fetch,previousKey=config.astraGenaiApiKey;config.astraGenaiApiKey='test';
- t.after(()=>{globalThis.fetch=previousFetch;config.astraGenaiApiKey=previousKey});
- const endpoint='/v1/ltx/v2/scene-to-video';
- globalThis.fetch=async(url,options)=>{
-   const route=new URL(url).pathname;
-   if (route===endpoint+'/capabilities')return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],scene_audio_modes:{conditioning:model}});
-   if (route==='/v1/uploads')return Response.json({upload_id:JSON.parse(options.body).sha256,chunk_size:1048576,chunks:1});
-   if (options.method==='PUT')return Response.json({});
-   if (route.endsWith('/complete'))return Response.json({file_id:route.split('/')[3],uri:'genai-file://'+route.split('/')[3]});
-   const body=JSON.parse(options.body);
-   assert.equal(body.conditioningInputs,undefined);
-   if(route===endpoint+'/validate')return Response.json({schema_valid:true,model,shots:1});
-   assert.equal(route,endpoint);
-   throw new Error('Captured finished stereo master');
- };
- const plan=await planManagedVideo({episode:dir,sceneNo:1,requestId:'stereo-master',sceneRendering:'per_shot',maxCostUsd:0,args:{}});
- const before=read().SCENES[0].narration[0].audio;
- assert.equal(plan.conditioningInputs.driverSha256,sha(driver));
- assert.deepEqual(plan.conditioningInputs.shots[0].lines,[{id:line.id,speaker:'hero',text:line.tts,delivery:'on_screen',revision:before.revision,sha256:before.sha256}]);
- approveVideo({episode:dir,planIds:[plan.id],request:'Submit the offline scene test'});
- await assert.rejects(executeVideo({episode:dir,planId:plan.id},()=>assert.fail('Expected scene renderer')),/Captured finished stereo master/);
- const clip=join(plan.args.outputPath,plan.args.filename),sidecar=clip+'.astra-genai.json';
- const wire=JSON.parse(readFileSync(clip+'.scene-request.json')),receipt=JSON.parse(readFileSync(sidecar));
- assert.deepEqual(wire.conditioningInputs,plan.conditioningInputs);
- assert.equal(receipt.sceneRequestSha256,createHash('sha256').update(JSON.stringify(wire)).digest('hex'));
- execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc2=s=32x48:r=24:d=0.25','-c:v','libx264',clip]);
- writeFileSync(sidecar,JSON.stringify({...receipt,jobId:'fixture-render',status:'completed',sha256:sha(clip)}));
- const attach=audioPath=>ROUTES.speech_manage({action:'attach_video',path:target,shotId:shot.id,videoPath:clip,audioPath,
-   expectedRevision:manageSpeech({path:target,action:'list'}).revision});
- await assert.rejects(attach(first),/conditioning_audio_unverified/);
- await attach(driver);
- assert.equal(read().SCENES[0].visual.video.speechBinding.conditioningAudioSha256,sha(driver));
- const work=join(dir,'.work');
- writeFileSync(join(work,'cards.tsv'),[0,driver,0,'none'].join('\t')+'\n');
- writeFileSync(join(work,'segs.tsv'),[0,0,clip,line.tts,line.tts].join('\t')+'\n');
- const rendered=spawnSync('bash',[require.resolve('../../skills/produce/references/build-reel.sh'),work,target],
-   {encoding:'utf8',timeout:30000,env:{...process.env,W:'128',H:'224',FPS:'24',OUTRO:'0',COVER_TS:'0.04',SUB:'0'}});
- assert.equal(rendered.status,0,rendered.stderr);
- assert.equal(require('../../skills/produce/references/compose-speech.js').duration(join(work,'reel.mp4')),0.25);
- assert.equal(readFileSync(join(work,'cards.tsv'),'utf8').split('\t')[1],driver);
- const original=read();
- await record(retake);
- await assert.rejects(attach(driver),/conditioning_audio_unverified/);
- save(original);
- const retimed=read();retimed.SCENES[0].performance=[{kind:'action',character:'hero',text:'Pauses.',durationSeconds:0.1},
-   {kind:'dialogue',character:'hero',group:1}];retimed.SB_DOC.performanceTimingVersion=1;save(retimed);
- await assert.rejects(attach(driver),/conditioning_audio_unverified/);
-});
