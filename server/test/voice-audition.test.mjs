@@ -167,3 +167,11 @@ test('auditions honor underlying provider disable switches before spending', asy
  try { await assert.rejects(create(),/generator is disabled/); assert.equal(calls.length,0); }
  finally { if(before===undefined)delete process.env.SOCIAL_FLOW_DISABLE_TOOLS;else process.env.SOCIAL_FLOW_DISABLE_TOOLS=before; }
 }));
+
+test('three local voice designs can audition on the same VoxCPM2 weights', async () => fixture(async ({ identityPath }) => {
+  const voices = candidates.map((candidate, i) => ({...candidate, tts: {engine:'mlx-audio', model:'voxcpm2',
+    voiceId:'default', language:'ko', speed:1, voiceDirection:['Soft tenor','Deep bass','Bright alto'][i]}}));
+  const plan = await call({action:'plan', identityPath, sampleText:'Hello', candidates:voices});
+  assert.deepEqual(plan.candidates.map(c => c.compiled.generation.instructions), voices.map(c => c.tts.voiceDirection));
+  assert.throws(() => voiceAuditionSchema.parse({action:'plan', identityPath, candidates:[voices[0], voices[1], voices[0]]}), /distinct/);
+}));

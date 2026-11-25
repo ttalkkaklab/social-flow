@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { scenePromptProfile, referenceLabel } from '../dist/scene-prompt-profile.js';
-import { sceneTimelineWords } from '../dist/scene-prompt.js';
+import { scenePromptProfile, sceneWritingGuide, referenceLabel } from '../dist/scene-prompt-profile.js';
+import { SceneEditGrammar } from '../dist/scene-edit-grammar.js';
+import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
   const timeline = {fps:24, images:[], shots:[
@@ -19,4 +20,39 @@ test('provider syntax preserves the shot, speaker and closing action with each q
   }
   assert.equal(referenceLabel('seedance_reference','image',2,'dreamina-seedance-2-5-flash-261115'),'@Image 2');
   assert.equal(referenceLabel('seedance_reference','audio',1,'dreamina-seedance-2-0-mini-260615'),'Audio 1');
+});
+
+test('model writers use the scene clock, reference dialect and supplied performance', async () => {
+  const {scenePromptText} = await import('../dist/video-prompt.js');
+  const scene = {emotion:'Relief.', action:'Mina releases the key.', sound:'The fan hums.'};
+  const text = tool => scenePromptText(scene,'Medium on Mina.','Jun takes it.',[],false,scenePromptProfile(tool));
+  assert.match(text('minimax_reference'), /Medium on Mina\.[\s\S]+Jun takes it\.[\s\S]+Environmental sound: The fan hums/);
+  assert.match(text('fasth3_omni_reference'), /^Mina releases the key/);
+  assert.match(text('veo_img2video'), /^Medium on Mina\.[\s\S]+Sound: The fan hums/);
+  assert.match(sceneWritingGuide(scenePromptProfile('astra_genai_msr')), /face and voice/);
+  assert.match(sceneWritingGuide(scenePromptProfile('heygen_reference')), /contained location/);
+  const timeline = {fps:24,images:[],shots:[],audio:{cues:[{frame:24,action:'Jun looks up.'}]}};
+  const profile = scenePromptProfile('ltx_api_audio2video');
+  assert.match(sceneTimelineWords(timeline,scene,{modelFacing:true,writer:profile.writer}), /supplied recording[\s\S]+At 1 seconds: Jun looks up/);
+});
+
+test('two panels of the same role bind by asset identity across reorderings', () => {
+  const bind = ids => scenePromptSlots('indexed',ids.map((id,i) => ({owner:'mina',id,role:'face',number:i+1})));
+  const first = bind(['profile','frontal']), reversed = bind(['frontal','profile']);
+  const draft = 'Use {mina.face-profile}.';
+  assert.equal(resolveScenePrompt(draft,first).prompt,'Use Image 1.');
+  assert.equal(resolveScenePrompt(draft,reversed).prompt,'Use Image 2.');
+  assert.ok(resolveScenePrompt('Use {mina.face}.',reversed).issues.some(issue => issue.level === 'error'));
+  assert.ok(resolveScenePrompt(draft,bind(['profile','profile'])).issues.some(issue => issue.code === 'placeholder_ambiguous'));
+});
+
+test('named clip ownership is independent of cast IDs and normalized cue whitespace', () => {
+  const grammar = new SceneEditGrammar([{speaker:'hero',name:'Hero'}]);
+  for (const cue of ['Track {hero.motion} AND  ITS {hero.soundtrack}', 'Track {hero.soundtrack} and its {hero.motion}', 'Follow the camera movement in {hero.motion}', 'Match the rhythm in {hero.soundtrack}', 'Hold on the latch'])
+    assert.doesNotThrow(() => grammar.checkStageDirection(cue,true));
+  for (const cue of ['Track {hero.motion} AND  ITS {wide.soundtrack}', 'Track {wide.soundtrack} and its {hero.motion}'])
+    assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_owner/);
+  for (const cue of ['Use {hero.soundtrack} for camera movement and motion timing','Track the camera move in {wide.soundtrack}',
+    'Match the motion in {hero.soundtrack}','Follow the soundtrack in {hero.motion}','Hold on {hero.soundtrack}'])
+    assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_type/);
 });

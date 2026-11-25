@@ -12,7 +12,7 @@ export function normalizeCharacterLanguage(value: string): string {
 }
 const ttsFields = {
   voiceLock: voiceLockConfigSchema.optional(),
-  engine: z.enum(['gemini', 'elevenlabs', 'astra-genai']),
+  engine: z.enum(['gemini', 'elevenlabs', 'astra-genai', 'mlx-audio']),
   voiceId: z.string().trim().min(1).max(300),
   model: z.string().trim().min(1).max(128).optional(),
   speed: z.number().min(0.7).max(1.2),
@@ -23,15 +23,16 @@ const ttsFields = {
   voiceDirection: z.string().trim().min(1).max(400).optional(),
 };
 export const ttsSchema = z.object(ttsFields).superRefine((tts, ctx) => {
+  if (tts.engine === 'mlx-audio' && (tts.model !== 'voxcpm2' || tts.voiceId !== 'default')) ctx.addIssue({code:'custom',message:'Choose voxcpm2 and voiceId default for local speech'});
   if (tts.engine === 'astra-genai' && !tts.model) ctx.addIssue({code:'custom',path:['model'],message:'Gateway speech requires a model alias'});
   if (tts.engine === 'gemini' && !Object.hasOwn(TTS_VOICES, tts.voiceId) && !(tts.model?.startsWith('gemini-3.8-') && /^[A-Za-z][A-Za-z0-9_-]*$/.test(tts.voiceId))) ctx.addIssue({ code: 'custom', path: ['voiceId'], message: 'Unknown Gemini voiceId' });
   const issue=(field: string, message: string) => ctx.addIssue({code:'custom',path:[field],message});
-  if (['gemini','elevenlabs'].includes(tts.engine) && tts.speed !== 1) issue('speed','This engine supports character speed 1 only');
+  if (['gemini','elevenlabs','mlx-audio'].includes(tts.engine) && tts.speed !== 1) issue('speed','This engine supports character speed 1 only');
   if (tts.engine === 'gemini' && tts.model !== undefined && !getTtsModels().some(m => m.provider === 'gemini' && m.model === tts.model)) issue('model','Unsupported Gemini model');
   if (tts.engine === 'elevenlabs' && tts.model !== undefined && !getTtsModels().some(m => m.provider === 'elevenlabs' && m.model === tts.model)) issue('model','Unsupported ElevenLabs model');
   if (tts.engine === 'elevenlabs' && !/^[A-Za-z0-9_-]{1,64}$/.test(tts.voiceId)) issue('voiceId','Invalid ElevenLabs voiceId');
   if (tts.engine !== 'elevenlabs') for (const key of ['stability', 'similarity'] as const) if (tts[key] !== undefined) issue(key, 'This setting is only supported by ElevenLabs');
   if (tts.stylePrompt !== undefined && (tts.engine !== 'gemini' || tts.model?.startsWith('gemini-3.8-'))) issue('stylePrompt','This engine does not accept stylePrompt');
-  if (tts.voiceDirection !== undefined && !['gemini', 'astra-genai'].includes(tts.engine)) issue('voiceDirection','Stable free-text voice direction is supported by Gemini only; match other engines by voice ID');
+  if (tts.voiceDirection !== undefined && !['gemini', 'astra-genai', 'mlx-audio'].includes(tts.engine)) issue('voiceDirection','Stable free-text voice direction is supported by Gemini only; match other engines by voice ID');
 
 });

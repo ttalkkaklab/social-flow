@@ -41,7 +41,7 @@ export const voiceAuditionSchema = z.object({
     if (args.candidates) {
         if (args.candidates.length === 2)
             ctx.addIssue({ code: 'custom', message: 'Pass one candidate for a sample or three for an audition' });
-        if (args.candidates.length === 3 && new Set(args.candidates.map(c => c.tts.voiceId)).size !== 3)
+        if (args.candidates.length === 3 && new Set(args.candidates.map(c => c.tts.engine === 'mlx-audio' ? c.tts.voiceDirection : c.tts.voiceId)).size !== 3)
             ctx.addIssue({ code: 'custom', message: 'Use three distinct voices' });
         if (new Set(args.candidates.map(c => `${c.tts.engine}/${c.tts.model}/${c.tts.language}`)).size !== 1)
             ctx.addIssue({ code: 'custom', message: 'Compare voices with the same engine, model and language' });
@@ -107,9 +107,9 @@ export async function manageVoiceAudition(args) {
             throw new Error('Create the character identity JSON before auditioning; tts may be absent until selection');
         const target = characterVoiceTarget(source, args.voiceProfile);
         // Gemini and the gateway both take a stable voice direction (style prompt or instructions).
-        const directed = (engine) => engine === 'gemini' || engine === 'astra-genai';
+        const directed = (engine) => ['gemini', 'astra-genai', 'mlx-audio'].includes(engine);
         // The gateway's default voice is shaped only by its instructions, so it also needs who speaks and how they come across.
-        const derived = (tts) => tts.engine === 'astra-genai' && tts.voiceId === 'default' ? target.designDirection : target.baselineDirection;
+        const derived = (tts) => ['astra-genai', 'mlx-audio'].includes(tts.engine) && tts.voiceId === 'default' ? target.designDirection : target.baselineDirection;
         const planned = (args.candidates || []).map(choice => {
             if (directed(choice.tts.engine) && !choice.tts.voiceDirection && derived(choice.tts).length > 400) {
                 const generationError = 'Derived voice direction exceeds 400 characters; pass a compact voiceDirection or voiceProfile.baselineDirection before synthesis';

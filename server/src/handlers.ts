@@ -53,6 +53,7 @@ import * as astraVideo from './astra-video-client.js';
 import { generateGenaiVideo, getGenaiVideoStatus, genaiVideoStatusSchema } from './astra-genai-video.js';
 import { generateNativeImage } from './astra-genai-native-image.js';
 import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.js';
+import { localVoxSchema } from './local-voxcpm2.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
 import { randomUUID } from 'node:crypto';
 import { genaiCatalog, genaiJobs } from './astra-genai-client.js';
@@ -970,6 +971,11 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    message — never the request headers, which is where the key lives.
   astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','ltx_video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
   astra_genai_jobs: async args => text(JSON.stringify(await genaiJobs(args))),
+  tts_local_voxcpm2: async args => {
+    const generation = localVoxSchema.parse(args);
+    const result = await routeSpeech({action: 'execute', generator: 'tts_local_voxcpm2', generation: {...generation, outputPath: generation.outputPath || process.cwd()}, requestId: randomUUID()});
+    return text(JSON.stringify(result), 'success' in result && result.success === false);
+  },
   tts_astra_genai: async args => {
     const generation = genaiSpeechSchema.parse(args);
     const result = await routeSpeech({ action: 'execute', generator: 'tts_astra_genai', requestId: generation.requestId || randomUUID(),

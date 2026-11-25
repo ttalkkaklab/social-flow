@@ -81,7 +81,7 @@ function plannedGenerationErrors(voice, proof, line) {
   const errors = generationVoiceErrors(voice, proof, line);
   if (errors.length) return errors;
   const expected = require('./speech-contract.js').compileActing(line?.tts ?? proof.text, line?.acting, voice);
-  const fields = proof.generator === 'tts_astra_genai' ? ['model','text','voice','speed','instructions']
+  const fields = proof.generator === 'tts_local_voxcpm2' ? ['model','text','voice','instructions'] : proof.generator === 'tts_astra_genai' ? ['model','text','voice','speed','instructions']
     : proof.generator === 'tts_gemini_38' ? ['turns'] : ['text'];
   for (const key of fields) {
     if (!isDeepStrictEqual(proof.voiceSettings[key], expected.generation[key]))
@@ -93,7 +93,7 @@ function plannedGenerationErrors(voice, proof, line) {
 /** Pure local preflight used by both the gateway raw tool and tts_route. */
 function validateSpeechContext(generator, args) {
   const context = args.speechContext;
-  const outputBoard = generator === 'tts_astra_genai' ? episodeBoardForOutput(args.outputPath) : undefined;
+  const outputBoard = ['tts_astra_genai','tts_local_voxcpm2'].includes(generator) ? episodeBoardForOutput(args.outputPath) : undefined;
   if (!context) {
     if (outputBoard) throw new Error('speech_context_required: use speech_manage plan_audio for episode TTS');
     return;
@@ -111,11 +111,24 @@ function validateSpeechContext(generator, args) {
   if (cast.length !== 1) throw new Error('speech_context_invalid: speaker needs one character entry');
   const character = characterSpeech(cast[0], {boardDir: path.dirname(file), board});
   const errors = plannedGenerationErrors(character.tts, {generator, voiceSettings: args, text: line.tts, language: character.tts.language}, line);
+  if (generator === 'tts_local_voxcpm2' && (args.referenceAudio !== character.voiceReference?.path ||
+      args.referenceSha256 !== character.voiceReference?.sha256 || args.continuationAudio || args.continuationText))
+    errors.push('Local voice conditioning differs from the pinned sample');
   if (errors.length) throw new Error('speech_context_mismatch: ' + errors.join('; '));
 }
 
+function localSpeechProofOptions(character, boardDir, board) {
+  if (character?.tts?.engine !== 'mlx-audio') return {};
+  if (!board) {
+    const file = path.join(boardDir, 'scenes.js');
+    board = require('./scenes-vm.js').evaluateWindowScript(fs.readFileSync(file, 'utf8'), {filename: file});
+  }
+  const actor = characterSpeech(character, {boardDir, board});
+  return {required: true, referenceSha256: actor.voiceReference?.sha256};
+}
+
 /** Verify actual generation and bytes; caller-written voiceSettings alone are not evidence. */
-function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = false} = {}) {
+function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = false, referenceSha256} = {}) {
   if (!proof?.receiptPath) {
     if (required) throw new Error('speech_receipt_required: attach the completed TTS receiptPath');
     return proof;
@@ -126,6 +139,9 @@ function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = fal
       fs.realpathSync(receipt.result.audioPath) !== fs.realpathSync(audioPath) ||
       receipt.audioSha256 !== hash(fs.readFileSync(audioPath)))
     throw new Error('speech_receipt_mismatch: receipt must cover this completed generator and these exact audio bytes');
+  if (voice?.engine === 'mlx-audio' && required && (receipt.generation.referenceSha256 !== referenceSha256 ||
+      receipt.generation.continuationAudio || receipt.generation.continuationText))
+    throw new Error('speech_receipt_voice_mismatch: local conditioning differs from the selected character sample');
   const actual = {...proof, voiceSettings: receipt.generation};
   const errors = plannedGenerationErrors(voice, actual, line);
   if (errors.length) throw new Error('speech_receipt_voice_mismatch: ' + errors.join('; '));
@@ -144,7 +160,7 @@ function verifyShotPerformance(file, card, board, boardDir) {
   const character = characterSpeech({...actor, id:line.speaker}, {board, boardDir});
   if (audio.revision !== require('./speech-contract.js').speechRevision(line, character) || audio.generation?.text !== line.tts)
     throw new Error('scene_speech_performance: the recorded line has changed');
-  verifiedSpeechGeneration(file, audio.generation, character.tts, line, {required:true});
+  verifiedSpeechGeneration(file, audio.generation, character.tts, line, {required:true, referenceSha256: character.voiceReference?.sha256});
 }
 
 // Only the adapter that uploaded the driver can attest which bytes generated this picture.
@@ -173,4 +189,4 @@ function recordedConditioningDriver(receipt,sidecar) {
   if (astra || gateway) return receipt.conditioningAudioSha256;
 }
 
-module.exports = {characterSpeech, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver};
+module.exports = {characterSpeech, localSpeechProofOptions, validateSpeechContext, verifiedSpeechGeneration, verifyShotPerformance, conditioningAudioSha256, recordedConditioningDriver};

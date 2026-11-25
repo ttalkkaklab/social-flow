@@ -7,7 +7,7 @@ import { tmpdir } from 'node:os';
 import { extname, join, resolve } from 'node:path';
 import { disabledToolPatterns, disabledToolsFile, requireElevenLabsKey, requireGeminiKey } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
-import { resolveTtsModel } from './tts-models.js';
+import { resolveTtsModel, speechProvider } from './tts-models.js';
 import { validateFilePath } from './media-utils.js';
 import { validateSpeechAudio } from './tts-audio.js';
 import { createRequire } from 'node:module';
@@ -80,12 +80,12 @@ export async function executeSpeech<T extends SpeechResult>(
   run: (output: { outputPath: string; filename: string }) => Promise<T>,
 ): Promise<T & SpeechResult> {
   validateEpisodeSpeech(generator, args);
-  const provider = generator === 'tts_astra_genai' ? 'astra-genai' : generator.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini';
+  const provider = speechProvider(generator);
   const contract = resolveTtsModel(provider, String(args.model));
   if (![contract.single, contract.dialogue].includes(generator)) throw new Error('Generator does not implement selected TTS model');
   const gate = resolveToolGate(generator, { jsonPatterns: disabledToolPatterns(), jsonFile: disabledToolsFile });
   if (!gate.enabled) throw new Error(`Selected speech generator is disabled: ${gate.reason}`);
-  const key = provider === 'astra-genai' ? requireAstraGenaiKey('/v1/audio/') : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
+  const key = provider === 'mlx-audio' ? 'local' : provider === 'astra-genai' ? requireAstraGenaiKey('/v1/audio/') : provider === 'gemini' ? requireGeminiKey() : requireElevenLabsKey();
   const id = executionId.getStore() || randomUUID();
   const outputPath = resolve(String(args.outputPath || process.cwd()));
   const extension = String(args.outputFormat || 'wav').startsWith('mp3') ? 'mp3' : 'wav';
@@ -119,8 +119,8 @@ export async function executeSpeech<T extends SpeechResult>(
       return { ...prior.result, receiptPath, review: 'not_reviewed', replayed: true };
     }
     releaseOutput = lock(stem + '.speech-lock');
-    if (provider === 'astra-genai' && existsSync(audioPath)) throw new Error('Speech output already exists; recover its original requestId before new generation');
-    const limit = Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
+    if (['astra-genai', 'mlx-audio'].includes(provider) && existsSync(audioPath)) throw new Error('Speech output already exists; recover its original requestId before new generation');
+    const limit = provider === 'mlx-audio' ? 1 : Number(process.env.SOCIAL_FLOW_TTS_MAX_CONCURRENCY || 2);
     if (!Number.isInteger(limit) || limit < 1 || limit > 32) throw new Error('SOCIAL_FLOW_TTS_MAX_CONCURRENCY must be an integer from 1 to 32');
     const slots = speechSlotsDir(provider, key);
     mkdirSync(slots, { recursive: true });

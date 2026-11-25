@@ -423,7 +423,7 @@ Per-line `acting: {direction?: string, tags?: string[]}` is separate from the pi
 identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](acting-prompts.md).
-ElevenLabs permits `eleven_v4` only; Gemini remains supported. Local TTS is removed.
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_route`.
 Read the [v4 API contract](../../_shared/elevenlabs-v4.md) for request limits,
 language codes, IPA, continuity and provenance before calling ElevenLabs tools.
 An explicitly requested review/improvement loop is permitted within its scope;

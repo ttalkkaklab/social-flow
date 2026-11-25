@@ -105,7 +105,8 @@ function currentLineSources(lines, board, cast) {
       throw new Error('Attach current audio for '+line.id);
     const source=path.resolve(board,line.audio.path);
     if(hash(fs.readFileSync(source))!==line.audio.sha256)throw new Error('Audio changed for '+line.id);
-    require('../../_shared/character-speech.js').verifiedSpeechGeneration(source,line.audio.generation,voice,line);
+    const speechProof = require('../../_shared/character-speech.js');
+    speechProof.verifiedSpeechGeneration(source,line.audio.generation,voice,line, speechProof.localSpeechProofOptions(character, board));
     return source;
   });
 }

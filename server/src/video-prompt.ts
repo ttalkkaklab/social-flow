@@ -1,3 +1,4 @@
+import type { ScenePromptProfile } from './scene-prompt-profile.js';
 import type { SceneVideoDirection } from './msr-opening.js';
 import { createRequire } from 'node:module';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
@@ -116,11 +117,32 @@ export function sceneVoiceDirection(acting?: {vocal?: string; direction?: string
     }).join(' ');
 }
 export function scenePromptText(scene: SceneVideoDirection, camera: string | undefined, timeline: string | undefined,
-  lines: { speaker?: string; delivery?: string; tts?: string; acting?: {vocal?:string;direction?:string;tags?:string[]} }[], bindTurns: boolean) {
+  lines: { speaker?: string; delivery?: string; tts?: string; acting?: {vocal?:string;direction?:string;tags?:string[]} }[], bindTurns: boolean, profile?: Readonly<ScenePromptProfile>) {
   const dialogue = bindTurns ? [] : lines.filter(l => l.delivery !== 'voiceover')
     .map(l => [sceneVoiceDirection(l.acting, l.tts), l.speaker + ' (' + l.delivery + '): "' + l.tts + '"'].filter(Boolean).join(' '));
-  return [scene.emotion, scene.action, scene.sound, camera, scene.oneTake && 'One continuous take. No cuts.', timeline, ...dialogue, videoTextPolicy()]
-    .filter(Boolean).join('\n');
+  const oneTake = scene.oneTake && 'One continuous take. No cuts.';
+  const beats = [timeline, ...dialogue];
+  const ordered = () => {
+    switch (profile?.writer) {
+      case 'recorded':
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound];
+      case 'msr':
+        return [scene.action, camera, scene.emotion, oneTake, ...beats, scene.sound];
+      case 'hostedH3':
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && 'Environmental sound: ' + scene.sound];
+      case 'fastH3':
+      case 'seedance':
+        return [scene.action, scene.emotion, camera, oneTake, ...beats, scene.sound];
+      case 'veo':
+      case 'heygen':
+        return [camera, scene.action, scene.emotion, oneTake, ...beats, scene.sound && 'Sound: ' + scene.sound];
+      case 'ltx':
+        return [camera, scene.emotion, scene.action, oneTake, ...beats, scene.sound];
+      default:
+        return [scene.emotion, scene.action, scene.sound, camera, oneTake, ...beats];
+    }
+  };
+  return [...ordered(), videoTextPolicy()].filter(Boolean).join('\n');
 }
 
 /** Report clear omissions, holds and reversals in uncompiled prompt text. */

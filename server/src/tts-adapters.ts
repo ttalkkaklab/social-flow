@@ -1,12 +1,13 @@
 /** One registry of executable adapters. Planning never invokes a provider. */
+import { localVoxSchema, generateLocalVox } from './local-voxcpm2.js';
 import { genaiSpeechSchema, generateGenaiSpeech } from './astra-genai-speech.js';
 import { z } from 'zod';
 import * as gemini from './tts-client.js';
 import * as eleven from './elevenlabs-client.js';
-import { resolveTtsModel } from './tts-models.js';
+import { resolveTtsModel, speechProvider } from './tts-models.js';
 import { validateEpisodeSpeech, type SpeechResult } from './tts-execution.js';
 
-export const SPEECH_GENERATORS = ['tts_astra_genai', 'tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'] as const;
+export const SPEECH_GENERATORS = ['tts_local_voxcpm2', 'tts_astra_genai', 'tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'] as const;
 export type SpeechGenerator = typeof SPEECH_GENERATORS[number];
 export interface PreparedSpeech {
   generator: SpeechGenerator;
@@ -26,6 +27,7 @@ function adapter<S extends z.AnyZodObject | z.ZodEffects<z.AnyZodObject>>(
 }
 const withoutTags = (text: string) => text.replace(/\[[^\]]*\]/g, '');
 const adapters = {
+  tts_local_voxcpm2: adapter(localVoxSchema, generateLocalVox, p => ({ spokenText: p.text, singleSpeaker: true })),
   tts_astra_genai: adapter(genaiSpeechSchema, generateGenaiSpeech, p => ({ spokenText: p.text, singleSpeaker: true })),
   tts_generate: adapter(gemini.ttsGenerateSchema, gemini.generateSpeech,
     p => ({ spokenText: p.text, singleSpeaker: true })),
@@ -46,7 +48,7 @@ export function prepareSpeech(generator: string, generation: unknown): PreparedS
   const selected = z.enum(SPEECH_GENERATORS).parse(generator);
   const prepared = adapters[selected](generation);
   validateEpisodeSpeech(selected, prepared.args);
-  const contract = resolveTtsModel(selected === 'tts_astra_genai' ? 'astra-genai' : selected.startsWith('tts_elevenlabs_') ? 'elevenlabs' : 'gemini', prepared.args.model);
+  const contract = resolveTtsModel(speechProvider(selected), prepared.args.model);
   if (![contract.single, contract.dialogue].includes(selected)) throw new Error('TTS adapter/model mismatch');
   return { ...prepared, generator: selected };
 }
