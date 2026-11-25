@@ -136,7 +136,8 @@ export function sceneInputCapabilities(tool) {
         shotScopedReferences: false, frameAddressedNativeDialogue: false,
         ...(['astra_genai_img2video', 'astra_genai_audio2video'].includes(tool) ? { sceneRenderer: {
                 model: tool === 'astra_genai_img2video' ? 'ltx-2.5-22b-distilled' : 'ltx-2.5-22b-dev',
-                sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot', requiresUserChoice: tool !== 'astra_genai_img2video',
+                sceneAudioModes: tool === 'astra_genai_img2video' ? ['native', 'mix'] : ['conditioning'], sceneRendering: 'per_shot',
+                executionModes: tool === 'astra_genai_img2video' ? ['auto', 'single_msr', 'per_shot'] : ['per_shot'], requiresUserChoice: tool !== 'astra_genai_img2video',
                 capabilities: SCENE_ROUTE + '/capabilities', validation: SCENE_ROUTE + '/validate',
             } } : {}),
         openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),

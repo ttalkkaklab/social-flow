@@ -35476,6 +35476,7 @@ var capabilitiesSchema = external_exports.object({
   version: external_exports.literal(1),
   execution: external_exports.literal("per_shot"),
   transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
+  execution_modes: external_exports.array(external_exports.string()).optional(),
   motion_prefix: external_exports.boolean().optional(),
   timed_dialogue: external_exports.string().nullish(),
   scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
