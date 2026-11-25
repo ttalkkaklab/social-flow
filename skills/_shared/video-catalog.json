@@ -1032,7 +1032,7 @@
     {
       "tool": "astra_genai_text2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "text",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1085,7 +1085,7 @@
     {
       "tool": "astra_genai_img2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "image",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1093,17 +1093,6 @@
         "timedImages": true,
         "shotScopedReferences": false,
         "frameAddressedNativeDialogue": false,
-        "sceneRenderer": {
-          "model": "ltx-2.5-22b-distilled",
-          "sceneAudioModes": [
-            "native",
-            "mix"
-          ],
-          "sceneRendering": "per_shot",
-          "promptWriter": "gateway",
-          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
-          "validation": "/v1/ltx/v2/scene-to-video/validate"
-        },
         "openingImage": true,
         "endingImage": true,
         "sceneAudio": false
@@ -1166,8 +1155,7 @@
             1,
             2
           ],
-          "capability": "/v1/ltx/msr/capabilities:image_conditioning",
-          "voiceCapability": "voice_references"
+          "capability": "the gateway refuses at submission references its backend does not take"
         },
         "note": "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
       }
@@ -1175,7 +1163,7 @@
     {
       "tool": "astra_genai_audio2video",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-v2",
+      "deployment": "genai-generations",
       "operation": "audio",
       "sceneInputs": {
         "fpsField": "fps",
@@ -1183,16 +1171,6 @@
         "timedImages": true,
         "shotScopedReferences": false,
         "frameAddressedNativeDialogue": false,
-        "sceneRenderer": {
-          "model": "ltx-2.5-22b-dev",
-          "sceneAudioModes": [
-            "conditioning"
-          ],
-          "sceneRendering": "per_shot",
-          "promptWriter": "gateway",
-          "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
-          "validation": "/v1/ltx/v2/scene-to-video/validate"
-        },
         "openingImage": true,
         "endingImage": true,
         "sceneAudio": true
@@ -1238,9 +1216,58 @@
       }
     },
     {
+      "tool": "astra_genai_scene",
+      "engine": "astra-genai",
+      "deployment": "genai-generations",
+      "operation": "reference",
+      "sceneInputs": {
+        "fpsField": "fps",
+        "frameAccurateCuts": false,
+        "timedImages": false,
+        "shotScopedReferences": false,
+        "frameAddressedNativeDialogue": false,
+        "openingImage": false,
+        "endingImage": false,
+        "sceneAudio": false
+      },
+      "sceneCutTiming": "approximate_holds",
+      "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
+      "voice": {
+        "maxPinnedVoicesPerRender": 2,
+        "postLipSync": false,
+        "lane": "conditional_reference",
+        "dialogue": "requires_subject_references",
+        "voiceReference": "backend_dependent_with_subject_references",
+        "suppliedSpeech": "unsupported",
+        "exactAudioPreservation": false,
+        "review": "not_reviewed"
+      },
+      "fields": [
+        "model",
+        "prompt",
+        "cast",
+        "references",
+        "shots",
+        "resolution",
+        "fps",
+        "seed",
+        "generateAudio",
+        "reserveUsd",
+        "outputPath",
+        "filename"
+      ],
+      "modelConstraints": {
+        "models": [
+          "ltx-2.5-22b-distilled"
+        ],
+        "note": "One POST /v1/generations mode:\"scene\" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. LTX: 1..4 cast pictures and object references, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames."
+      }
+    },
+    {
       "tool": "astra_genai_msr",
       "engine": "astra-genai",
-      "deployment": "genai-ltx-msr",
+      "deployment": "genai-generations",
       "operation": "reference",
       "sceneInputs": {
         "fpsField": "frameRate",

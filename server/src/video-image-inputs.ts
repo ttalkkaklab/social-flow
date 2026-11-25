@@ -47,7 +47,7 @@ const PANEL_VIEWS: Record<string, string> = { face: 'face', front: 'headless fro
  * (panels.json) that show one character: the face close-up carries the head, the headless panels
  * the physique. Fitting panels leave scene clothing to the opening image.
  */
-function msrPanelBinding(paths: string[], refs: ImageReference[], compact = false): string {
+function msrPanelBinding(paths: string[], refs: ImageReference[], compact = false, brief = false): string {
   const groups = new Map<string, string[]>();
   const fitting = new Set<string>();
   paths.forEach((file, i) => {
@@ -60,6 +60,10 @@ function msrPanelBinding(paths: string[], refs: ImageReference[], compact = fals
     groups.set(folder, [...(groups.get(folder) ?? []), `Image ${i + 1} (${PANEL_VIEWS[view]})`]);
     if (panels[view].wardrobe === 'fitting') fitting.add(folder);
   });
+  // The brief form keeps every "Image N" whole, so a scene's placeholder pass still names each panel. What each panel
+  // gives is already on its own Image line.
+  if (brief) return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) =>
+    `${items.join(', ')}: one person, ${path.basename(folder)}.`).join('\n');
   return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact
     ? `Images ${items.map(item => item.replace(/Image (\d+) \(([^)]+)\)/, '$1($2)')).join(', ')}: ONE ${path.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? 'physique from body, wardrobe from the scene' : 'physique/clothes only from body'}; ignore face-panel clothing.`
     : `${items.join(', ')} show one character, ${path.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? 'physique from the body panels, dressed for the scene' : 'the body and outfit from the headless panels'}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join('\n');
@@ -169,7 +173,7 @@ function sceneTimedImages(members: Record<string, unknown>[], fps: number, genai
   return timeline;
 }
 /** Compile authored image roles into adapter arguments; never downgrade a temporal constraint to a reference. */
-export function prepareVideoImages(tool: string, input: Record<string, unknown>, shot: Record<string, unknown>, episode: string, members?: Record<string, unknown>[]) {
+export function prepareVideoImages(tool: string, input: Record<string, unknown>, shot: Record<string, unknown>, episode: string, members?: Record<string, unknown>[], briefPanels = false) {
   const visual = (shot.visual ?? {}) as ShotVisual;
   const routing = imageRouting();
   const frames = routing.framePlan(shot);
@@ -380,7 +384,7 @@ export function prepareVideoImages(tool: string, input: Record<string, unknown>,
         throw new Error('msr_subject_limit: at most four subject images plus one background');
       put('references', paths.map((file, i) => msrReference(file, ordered[i].role)));
       args.prompt = [...ordered.map((ref, i) => `Image ${i + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
-        msrPanelBinding(paths, ordered), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
+        msrPanelBinding(paths, ordered, false, briefPanels), '', String(args.prompt ?? '')].filter(Boolean).join('\n');
     }
   }
   if (tool === 'astra_genai_msr' || (tool === 'astra_genai_img2video' && videoRefs.length)) {

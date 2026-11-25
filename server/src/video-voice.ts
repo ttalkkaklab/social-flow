@@ -28,6 +28,8 @@ const fileHash = (file: string) => createHash('sha256').update(readFileSync(file
 
 interface VoiceContext {
   bindSceneTurns?: (prompt:string, turns:string[]) => string;
+  /** A scene fitted to its model's prompt cap leaves each line's delivery cue out. */
+  briefDelivery?: boolean;
   timed?: boolean;
   modelVoice?: boolean;
   sceneDirection?: { openingPositions: { character: string; position: string; images: number[] }[] };
@@ -233,7 +235,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       speaker.reference = voiceReference(character, context, warnings);
       const current = index < 0 ? '' : text(msrRefs[index].audioPath);
       const problem = !speaker.reference ? 'no pinned voice sample'
-        : context.msrVoice !== true ? 'the GenAI MSR backend does not accept voice samples (GET /v1/ltx/msr/capabilities)'
+        : context.msrVoice !== true ? 'the GenAI scene mode lists no voice samples for this model (GET /v1/models)'
         : index < 0 ? 'no MSR subject image matches voiceReference.imagePaths'
         : slot > 2 ? `MSR subject ${slot} takes no sample; only subjects 1 and 2 do`
         : current && current !== speaker.reference.path ? `Image ${slot} already carries another speaker's sample` : '';
@@ -318,7 +320,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       if (context.sceneDirection) {
         const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
         const imageSlot = image ?? owner?.images[0];
-        const deliveryCue = sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
+        const deliveryCue = context.briefDelivery ? '' : sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
         const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
         return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
       }

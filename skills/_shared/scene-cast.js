@@ -58,7 +58,7 @@ function sceneCast(scene, cards) {
   return sceneSpeech(scene, cards).physical;
 }
 
-function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
+function sceneSpeechRoute(scene, cards, selection) {
   const {physical, visible} = sceneSpeech(scene, cards, true);
   const speakers = visible ? physical : [];
   const direction = scene.videoDirection || {};
@@ -73,38 +73,17 @@ function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
   if (mode === 'conditioned') operation = 'audio';
   else if (mode === 'reference') operation = distilled && selection.operation !== 'reference' ? 'image' : 'reference';
   else if (mode === 'generated' && selection.engine === 'veo' && selection.operation === 'reference') operation = 'reference';
-  // Explicit temporal openings and hard cuts describe separate native renders.
-  const anchoredCuts = cards.every((card, index) => card.timeline &&
-    card.timeline.transition === (index ? 'hard_cut' : 'open') &&
-    card.timeline.images?.some(pin => pin.role === 'start' && pin.frame === card.timeline.startFrame) &&
-    !card.timeline.dialogueCues?.length);
   const cutVoiceover = cards.some(card => {
     const lines = orderedSpeech(card).filter(line => line.tts?.trim());
     return lines.length && lines.every(line => line.delivery === 'voiceover');
   });
   const mixedCuts = distilled && mode === 'reference' && !direction.oneTake && cutVoiceover;
   if (mixedCuts) operation = 'image';
-  let rendering;
-  const cutScene = distilled && cards.length > 1 && !direction.oneTake;
-  const structured = cards.every((card, i) => (i === 0 && scene.frames?.start) ||
-    card.referenceImage || card.timeline?.images?.some(pin => pin.role === 'start') || card.visual?.frames?.start);
-  const visualReferences = scene.speakerReferences?.length || cards.some(card =>
-    card.timeline?.images?.some(pin => pin.role === 'face') || card.visual?.references?.some(ref => ref.use !== 'image' && ref.role === 'character'));
-  if (requestedRendering && cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
-    operation = 'image';
-    const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
-    // 'auto' marks a cut scene that would also fit one render. Only per_shot can be requested; approved plans hash this value.
-    rendering = cards.some(card => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 ||
-      frames > 361 || cards.length > 4
-      ? 'per_shot' : 'auto';
-  } else if (cutScene && operation === 'image' && (mixedCuts || speakers.length > 2 || anchoredCuts)) {
-    rendering = 'per_shot';
-  }
-  return {speakers, operation, mode, ...(rendering ? {rendering} : {}), external:!visible && physical.length > 0};
+  return {speakers, operation, mode, external:!visible && physical.length > 0};
 }
 
 // Each native render binds its own speakers. A finished soundtrack uses one audio input.
-function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering = route.rendering, generateAudio, limit}) {
+function assertRenderVoiceCapacity({tool, model, scene, cards, route, generateAudio, limit, perCard = false}) {
   if (['reference','generated'].includes(route.mode) && (generateAudio === false || cards.some(card =>
       orderedSpeech(card).some(line => line.delivery !== 'voiceover' && line.tts?.trim()) &&
       require('../storyboard/references/production-mode.js').videoSlot(card)?.generateAudio === false)))
@@ -115,11 +94,10 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering 
     const capacity = entry?.voice.maxPinnedVoicesPerRender;
     limit = typeof capacity === 'number' ? capacity : capacity?.[model];
   }
-  if (!limit || ['astra_genai_img2video','astra_genai_msr'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
+  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-  const perShot = !!rendering && !scene?.videoDirection?.oneTake;
-  const groups = perShot ? cards.map(card => [card]) : [cards];
-  for (const group of groups) {
+  // One render binds the whole scene's voices. A clip the retired per-shot route made rendered each card apart (perCard).
+  for (const group of perCard ? cards.map(card => [card]) : [cards]) {
     const voices = new Set(group.flatMap(orderedSpeech).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker));
     if (voices.size <= limit) continue;
     const label = group.length === 1 || scene?.no === undefined ? group[0].id : 'scene ' + scene.no;
@@ -133,6 +111,7 @@ const personRoles = new Set(['character','face','outfit','bystander']);
 const castIds = value => [].concat(value || []).map(person => typeof person === 'string' ? person : person.id);
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
+// `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
 function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
   const registry = board.SB_DOC?.characters ?? [];
   const actors = Array.isArray(registry) ? registry : Object.entries(registry).map(([id, actor]) => ({...actor, id}));
@@ -213,6 +192,23 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     } else if (ltx && scene.speakers && !conditioning)
       throw new Error('character_panel_missing: scene ' + scene.no + ' speaker ' + character + ' needs a registered face');
   }
+  // GenAI scene mode takes one cast for the whole scene: everyone its shots reference, with the panels the sheet rule
+  // gives that many people (one: face, front, back; two: faces, then fronts; three or four: faces). User's choice 2026-11-25.
+  const sceneCastIds = ltx && !perShot && !conditioning ? [...new Set([...cards.flatMap(card => [
+    ...castIds(card.visual?.character ?? card.visual?.characters),
+    ...(card.visual?.references ?? []).filter(ref => personRoles.has(ref.role) && ref.role !== 'bystander' && ref.use !== 'image').map(ref => ownerOf(ref, card)),
+  ]), ...identities])].filter(id => id && !voiceOnly.has(id)) : [];
+  if (sceneCastIds.length > 4)
+    throw new Error('scene_cast_exceeded: scene ' + scene.no + ' references ' + sceneCastIds.join(', ') + '; GenAI scene mode takes at most four people. Split the scene or show someone as a bystander');
+  let panels;
+  // A board without shared panel sheets keeps each shot's own references, as before.
+  try { if (sceneCastIds.length && !declaredRefs.length) panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no, sceneCastIds, 'video'); }
+  catch { sceneCastIds.length = 0; }
+  if (panels) references.splice(0, references.length, ...panels.map(ref => ({...ref, scope:'scene',
+    character:sceneCastIds.find(id => ref.id === 'scene-' + scene.no + '-' + id + '-' + ref.id.split('-').at(-1))})));
+  else sceneCastIds.length = 0;
+  const entering = rows => !sceneCastIds.length || !rows ? rows : [...rows, ...sceneCastIds.filter(id => !rows.some(row => row.character === id))
+    .map(character => ({character, images:[], position:'Not in the opening view; appears in a later shot.'}))];
   const positions = (rows, refs) => rows?.map(row => ({...row, images:ltx
     ? refs.flatMap((ref,i) => ref.character === row.character ? [i+1] : []) : row.images}));
   let openingRefs = [];
@@ -244,6 +240,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       if (scene.frames !== undefined && ref.legacy) return false;
       if (ref.use === 'image') return true;
       if (localRefs.some(item => canonical(item.path) === canonical(ref.path))) return false;
+      if (sceneCastIds.length && personRoles.has(ref.role) && sceneCastIds.includes(ownerOf(ref, card))) return false;
       if (!ref.legacy && personRoles.has(ref.role)) return true;
       const identity = ownerOf(ref,card);
       if (identity && !speakers.includes(identity) && !declaredRefs.some(item => item.character === identity)) return !ref.legacy;
@@ -263,7 +260,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     const shotPositions = rows => {
       const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter(row =>
         declaredRefs.some(ref => ref.character === row.character) && !rows.some(local => local.character === row.character)) : [];
-      return positions([...rows,...inherited], slots);
+      return positions(index === 0 ? entering([...rows,...inherited]) : [...rows,...inherited], slots);
     };
     const timeline = card.timeline && {...card.timeline,
       ...(card.timeline.images ? {images:pins} : {}),
@@ -294,7 +291,9 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
         delete updated.video.lastImagePath;
         delete updated.video.referenceImagePaths;
       }
-      if (!perShot && timeline?.images?.some(pin=>['start','end','keyframe'].includes(pin.role)))
+      // GenAI scene mode opens each shot on its start picture and names any other picture it leaves out.
+      const timed = perShot || engine === 'astra-genai' ? [] : ['start','end','keyframe'];
+      if (timeline?.images?.some(pin => timed.includes(pin.role)))
         throw new Error('scene_image_scope: use a scene anchor or an authored shot composition image on ' + card.id);
     }
     return {...card, visual:updated, ...(timeline ? {timeline} : {})};
@@ -304,7 +303,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       item.character === ref.character && canonical(item.path) === canonical(ref.path)));
     if (!used) throw new Error('scene_reference_owner: no render binds the requested visual reference for ' + ref.character);
   }
-  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(scene.videoDirection.openingPositions, openingRefs)};
+  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(entering(scene.videoDirection.openingPositions), openingRefs)};
   return {members, direction, speakers, identities};
 }
 

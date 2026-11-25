@@ -148,7 +148,7 @@ function verifiedSpeechGeneration(audioPath, proof, voice, line, {required = fal
   return actual;
 }
 
-// The per-shot renderer plays this recording directly, in place of a generated turn.
+// The retired per-shot renderer played this recording directly, in place of a generated turn; its clips are still verified.
 function verifyShotPerformance(file, card, board, boardDir) {
   const lines = (card.narration || []).filter(line => line.tts?.trim());
   const line = lines[0], audio = line?.audio;
@@ -173,8 +173,8 @@ function conditioningAudioSha256(videoPath) {
   try { receipt = JSON.parse(fs.readFileSync(receipts[0], 'utf8')); } catch { return; }
   if (!receipt || receipt.status !== 'completed' || !receipt.jobId || receipt.videoPath !== video ||
       hash(fs.readFileSync(video)) !== receipt.sha256) return;
-  if (receipt.operation === 'scene-to-video') {
-    const contract = require('./scene-speech-receipt.js');
+  const contract = require('./scene-speech-receipt.js');
+  if (contract.perShotSceneOperation(receipt.operation)) {
     return contract.sceneDriver(contract.readSceneRequest(video,receipt));
   }
   return recordedConditioningDriver(receipt,receipts[0]);

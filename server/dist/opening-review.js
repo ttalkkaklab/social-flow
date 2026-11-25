@@ -359,12 +359,12 @@ function openingSoundReader(board, directory) {
     }
     function sceneTrackMixed(clip, clipHash, driver, shotId) {
         const file = assetPath(directory, clip);
-        const { readSceneRequest } = load('../../skills/_shared/scene-speech-receipt.js');
+        const { readSceneRequest, perShotSceneOperation } = load('../../skills/_shared/scene-speech-receipt.js');
         for (const suffix of ['.astra-genai.json', '.astra-job.json']) {
             if (!existsSync(file + suffix))
                 continue;
             const receipt = JSON.parse(readFileSync(file + suffix, 'utf8'));
-            if (receipt.sha256 !== clipHash || receipt.operation !== 'scene-to-video')
+            if (receipt.sha256 !== clipHash || !perShotSceneOperation(receipt.operation))
                 continue;
             const wire = readSceneRequest(file, receipt), body = obj(wire.body), track = obj(body.scene_audio);
             if (body.generate_audio === false || track.mode !== 'mix' || !rows(body.shots).some(s => s.shot_id === shotId) ||

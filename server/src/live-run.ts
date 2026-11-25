@@ -166,10 +166,13 @@ async function main() {
     return;
   }
   if (action === 'check') {
-    const caps = await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15000) as {
-      image_conditioning?: boolean; voice_references?: boolean
-    };
-    if (!caps?.image_conditioning || !caps.voice_references) throw Error('GenAI needs image conditioning and subject voice references for live dialogue');
+    // Live dialogue is image-to-video with subject references and voice samples. The common catalog says whether the model lists them;
+    // the gateway refuses at submission what its backend does not take.
+    const models = await requestGenai('GET', '/v1/models', undefined, 15000) as { data?: { id?: string; modes?: string[]; limits?: Record<string, unknown> }[] };
+    const distilled = models?.data?.find(model => model.id === 'ltx-2.5-22b-distilled');
+    const subjects = Number((distilled?.limits?.image2video as { subject_references?: unknown } | undefined)?.subject_references ?? 0);
+    const voices = models?.data?.find(model => model.id === 'ltx-msr')?.limits?.voice_references;
+    if (!distilled?.modes?.includes('image2video') || subjects < 1 || !voices) throw Error('GenAI needs distilled image-to-video with subject references and voice samples for live dialogue');
     console.log(
       JSON.stringify({
         localAssetsReady: true,

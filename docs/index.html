@@ -431,7 +431,7 @@ operation and the plugin does not expose it; "—" means the vendor does not off
 <td><code>astra_genai_img2video</code></td>
 <td><code>astra_genai_audio2video</code> (dev)</td>
 <td><code>astra_genai_msr</code>; <code>astra_genai_img2video</code> with <code>references</code></td>
-<td>per-shot scene (<code>sceneRendering:"per_shot"</code>); retake, extend, HDR, reframe, upscale vendor only</td>
+<td>scene (<code>astra_genai_scene</code>, one <code>/v1/generations</code> request per storyboard scene); retake, extend, HDR, reframe, upscale vendor only</td>
 </tr>
 <tr>
 <td><a href="#video-models-ltx-desktop"><code>astra-genai-desktop</code></a></td>
@@ -695,8 +695,10 @@ field that ties a picture or a voice to a person; the prompt text does it.</p>
 <p>Each engine section lists the differences that remain open.</p>
 <h2 id="video-models-astra-genai-gateway-ltx-25-and-licon-msr">ASTRA GenAI gateway (LTX-2.5 and Licon MSR)</h2>
 <p>The in-house GenAI gateway runs the open LTX-2.5 22B weights (distilled and dev) and the Licon
-MSR IC-LoRA on its own GPUs. Its <code>/v1/ltx/v2/*</code> routes copy the names of Lightricks' hosted API
-[12]. The saved selection for LTX is <code>{engine:"astra-genai", model:"ltx-2.5-22b-distilled",
+MSR IC-LoRA on its own GPUs. Its per-model <code>/v1/ltx/v2/*</code> routes copy the names of Lightricks'
+hosted API [12]; the plugin calls none of them. Every GenAI video request goes through the
+gateway's common generation API: <code>POST /v1/generations</code>, <code>POST /v1/generations/validate</code>,
+<code>GET /v1/generations/{id}</code> and <code>GET /v1/models</code> (user directive, 2026-11-25). The saved selection for LTX is <code>{engine:"astra-genai", model:"ltx-2.5-22b-distilled",
 operation:"reference", resolution:"1792x1024"}</code> (<code>1024x1792</code> for 9:16)
 (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/skills/_shared/model-settings.md">model-settings.md</a>). Status: current. Credentials:
 <code>ASTRA_GENAI_API_KEY</code>, with the base URL in <code>ASTRA_GENAI_URL</code>
@@ -715,7 +717,7 @@ operation:"reference", resolution:"1792x1024"}</code> (<code>1024x1792</code> fo
 <tr>
 <td><code>ltx-2.5-22b-distilled</code></td>
 <td>yes</td>
-<td>T2V, I2V, I2V with MSR references, per-shot scenes. Render records seen on 2026-11-25 [13]. The 8-step distilled schedule runs with CFG 1 [6].</td>
+<td>T2V, I2V, I2V with MSR references, scene mode. Render records seen on 2026-11-25 [13]. The 8-step distilled schedule runs with CFG 1 [6].</td>
 </tr>
 <tr>
 <td><code>ltx-2.5-22b-dev</code></td>
@@ -744,24 +746,26 @@ nothing about output quality. The job status does not show whether an I2V job ca
 references.</p>
 <h3 id="video-models-calling-it">Calling it</h3>
 <ul>
-<li><strong>Submit:</strong> <code>POST /v1/ltx/v2/{text-to-video|image-to-video|audio-to-video}</code> or <code>POST /v1/ltx/msr</code>.
-  The gateway answers 202 with <code>{id}</code>.</li>
-<li><strong>Poll:</strong> <code>GET &lt;route&gt;/{id}</code>. Status is <code>pending|processing|completed|failed|cancelled</code>, and the
-  file URL is <code>result.video_url</code> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>
-  370-415).</li>
-<li><strong>Timing:</strong> the plugin polls every 5 s for up to 30 min and waits up to 15 min for the submit
-  acknowledgement (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-client.ts">astra-genai-client.ts</a> 83-100;
-  <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a> 480). POSTs are never retried.</li>
-<li><strong>Receipt:</strong> a receipt beside the output records the job id. Recovery reads the receipt and
-  never resubmits.</li>
-<li><strong>Uploads:</strong> local pictures and voices for references and keyframes go up first through the
-  chunked <code>POST /v1/uploads</code> and travel as <code>genai-file://</code> ids
-  (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-upload.ts">astra-genai-upload.ts</a>). Each file may be at most
-  32 MiB. If the gateway has no upload API, the inline body is capped at 8 MB.</li>
-<li><strong>Result URL lifetime:</strong> <code>unverified</code> for the <code>/v1/ltx/v2</code> routes.</li>
+<li><strong>Submit:</strong> <code>POST /v1/generations {kind:"video", model, mode, input, parameters}</code> with <code>mode</code>
+  <code>text2video</code>, <code>image2video</code>, <code>audio2video</code>, <code>msr</code> or <code>scene</code>. The gateway answers 202 with <code>{id}</code>.
+  A scene is first sent to <code>POST /v1/generations/validate</code>, which reserves nothing.</li>
+<li><strong>Poll:</strong> <code>GET /v1/generations/{id}</code>. Status is <code>queued|running|succeeded|failed|cancelled</code>, and
+  the file URL is <code>outputs[0].url</code> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>).</li>
+<li><strong>Timing:</strong> the plugin polls for up to 30 min and waits up to 15 min for the submit
+  acknowledgement (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-client.ts">astra-genai-client.ts</a>). POSTs are never
+  retried.</li>
+<li><strong>Receipt:</strong> a receipt beside the output records the job id. Recovery reads the receipt and never
+  resubmits. A scene is posted under an <code>X-Request-Id</code> derived from its exact body and output path,
+  and the body is kept beside the receipt; within 23 hours <code>video_status</code> recovers a lost response by
+  posting that body again, which returns the first job [12].</li>
+<li><strong>Uploads:</strong> local pictures and voices go up first through the chunked <code>POST /v1/uploads</code> and
+  travel as <code>genai-file://</code> ids (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-upload.ts">astra-genai-upload.ts</a>). Each
+  file may be at most 32 MiB. If the gateway has no upload API, the inline body is capped at 8 MB.</li>
+<li><strong>Result URL lifetime:</strong> <code>unverified</code> for <code>/v1/generations</code> outputs.</li>
 </ul>
-<pre><code class="language-json">{&quot;prompt&quot;: &quot;…&quot;, &quot;model&quot;: &quot;ltx-2.5-22b-distilled&quot;, &quot;num_frames&quot;: 121, &quot;resolution&quot;: &quot;1280x720&quot;,
- &quot;fps&quot;: 24, &quot;generate_audio&quot;: true, &quot;image_uri&quot;: &quot;genai-file://…&quot;}
+<pre><code class="language-json">{&quot;kind&quot;: &quot;video&quot;, &quot;model&quot;: &quot;ltx-2.5-22b-distilled&quot;, &quot;mode&quot;: &quot;image2video&quot;,
+ &quot;input&quot;: {&quot;text&quot;: &quot;…&quot;, &quot;images&quot;: [{&quot;url&quot;: &quot;genai-file://…&quot;}]},
+ &quot;parameters&quot;: {&quot;width&quot;: 1280, &quot;height&quot;: 720, &quot;fps&quot;: 24, &quot;generate_audio&quot;: true, &quot;num_frames&quot;: 121}}
 </code></pre>
 <h3 id="video-models-operations">Operations</h3>
 <div class="table-scroll"><table>
@@ -794,14 +798,9 @@ references.</p>
 <td><code>astra_genai_msr</code>; <code>astra_genai_img2video</code> with <code>references</code></td>
 </tr>
 <tr>
-<td>Per-shot scene</td>
-<td>yes (gateway extension)</td>
-<td><code>video_plan</code> with <code>sceneRendering:"per_shot"</code></td>
-</tr>
-<tr>
-<td>Common scene API <code>/v1/generations</code> <code>mode:"scene"</code></td>
+<td>Scene (<code>/v1/generations</code> <code>mode:"scene"</code>)</td>
 <td>yes</td>
-<td>not exposed</td>
+<td><code>video_plan</code> on a storyboard scene (<code>astra_genai_scene</code>)</td>
 </tr>
 <tr>
 <td>MiniMax H3 (<code>/v1/ltx/h3</code>, scene <code>minimax-h3</code>)</td>
@@ -817,7 +816,7 @@ references.</p>
 </table></div>
 <h4 id="video-models-text-to-video">Text-to-video</h4>
 <ul>
-<li><strong>Plugin input</strong> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a> 102-132):</li>
+<li><strong>Plugin input</strong> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>):</li>
 <li><code>prompt</code>: 1–2000 characters.</li>
 <li><code>model</code>: distilled or dev.</li>
 <li><code>resolution</code>: <code>WxH</code> with even sides of at least 64. The sides, rounded up to multiples of 64,
@@ -830,8 +829,10 @@ references.</p>
     <code>slow-motion</code> [13].</li>
 <li>Dev only: <code>negativePrompt</code> (≤2000), <code>numInferenceSteps</code> (1–50) and <code>guidance</code>.</li>
 <li><strong>Wire request:</strong>
-  <code>POST /v1/ltx/v2/text-to-video {prompt, model, duration|num_frames, resolution, fps, generate_audio, seed?, lora?, num_generated_keyframes?, guidance?, num_inference_steps?, negative_prompt?}</code>.
-  Optional fields are first checked against <code>/v1/models</code> <code>parameters_by_mode</code>.</li>
+  <code>POST /v1/generations {kind:"video", model, mode:"text2video", input:{text}, parameters:{width, height, fps, generate_audio, duration_seconds|num_frames, seed?, lora?, num_generated_keyframes?, guidance?, num_inference_steps?, negative_prompt?}}</code>.
+  Optional fields are first checked against <code>/v1/models</code> <code>parameters_by_mode</code>. The plugin's
+  bodies for every direct mode pass the gateway's own <code>VideoGeneration</code> model and adapter
+  (<code>docs/loops/038-genai-common-api/gateway-validate.md</code>).</li>
 <li><strong>Limits:</strong></li>
 <li>Frames: 25–361, <code>8k+1</code>. The gateway rounds a duration up to <code>8k+1</code> and trims back [12]. The
     <code>8k+1</code> rule comes from the model [5].</li>
@@ -852,9 +853,9 @@ references.</p>
     <strong>8</strong> slots, and every index must be distinct and inside the clip.</li>
 <li>An end image or keyframes need <code>duration</code> or <code>numFrames</code>.</li>
 <li>Without references the prompt is capped at 2000
-    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a> 152-190).</li>
+    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>).</li>
 <li><strong>Wire request:</strong>
-  <code>POST /v1/ltx/v2/image-to-video {…, image_uri, last_frame_uri?, keyframes?:[{image_uri, frame_idx, strength?, crf?}]}</code>.</li>
+  <code>POST /v1/generations {…, mode:"image2video", input:{text, images:[{url}], last_frame?:{url}, keyframes?:[{url, frame_idx, strength?}], references?}}</code>.</li>
 <li><strong>Limits:</strong> frames and resolution as in Text-to-video. The live <code>/v1/models</code> I2V limits are
   <code>first_frame:1</code>, <code>last_frame:1</code> and <code>temporal_images_including_endpoints:8</code> [13]. An end image
   cannot be combined with automatic length [12].</li>
@@ -865,7 +866,7 @@ references.</p>
 </ul>
 <h4 id="video-models-audio-to-video">Audio-to-video</h4>
 <ul>
-<li><strong>Plugin input</strong> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a> 194-224):</li>
+<li><strong>Plugin input</strong> (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>):</li>
 <li>Audio: exactly one of <code>audioPath</code> or <code>audioUri</code>. Formats <code>.wav .mp3 .m4a .ogg .opus</code>. A data
     URI may hold at most 15,000,000 base64 characters.</li>
 <li><code>prompt</code>: 1–2000 characters.</li>
@@ -875,7 +876,7 @@ references.</p>
 <li>Dev only: <code>negativePrompt</code>, <code>guidance</code> and <code>numInferenceSteps</code>.</li>
 <li>There is no duration field; the audio sets the length.</li>
 <li><strong>Wire request:</strong>
-  <code>POST /v1/ltx/v2/audio-to-video {audio_uri, prompt, model, resolution, fps, image_uri?, last_frame_uri?, keyframes?, seed?, guidance?, negative_prompt?}</code>.</li>
+  <code>POST /v1/generations {…, mode:"audio2video", input:{text, audio:{url}, images?:[{url}], last_frame?, keyframes?}, parameters:{width, height, fps, seed?, guidance?, negative_prompt?}}</code>.</li>
 <li><strong>Limits</strong> [12]:</li>
 <li>Frames: the shortest <code>8k+1</code> count (at least 25) that covers the audio, up to 361. That is
     15.04 s at 24 fps.</li>
@@ -892,7 +893,7 @@ references.</p>
 <h4 id="video-models-reference">Reference</h4>
 <ul>
 <li><strong>Plugin input</strong> (<code>astra_genai_msr</code>,
-  <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a> 133-150 and 228-273;
+  <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/astra-genai-video.ts">astra-genai-video.ts</a>;
   <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/msr-opening.ts">msr-opening.ts</a>):</li>
 <li><code>references[]</code>: 1–5 entries <code>{imageUri|imagePath, background, nonCharacter?, audioUri|audioPath?}</code>.</li>
 <li><code>openingPositions[]</code>: required, <code>{character, images:[subject numbers], position}</code>.</li>
@@ -907,14 +908,12 @@ references.</p>
 <li><code>astra_genai_img2video</code> with <code>references</code> follows the same rules and adds the start and end
     images and keyframes. That form is distilled only and needs an explicit length.</li>
 <li><strong>Wire request:</strong>
-  <code>POST /v1/ltx/msr {prompt, references:[{image_uri, background, audio_uri?}], reference_strength, reference_frames, width, height, frame_rate, seed, num_frames|duration, skip_stage_2?, negative_prompt?, guidance_scale?, nag_*?}</code>.
+  <code>POST /v1/generations {kind:"video", model:"ltx-msr", mode:"msr", input:{text, images:[{url, background, audio?:{url}}]}, parameters:{width, height, fps, seed, num_frames, reference_strength, reference_frames, skip_stage_2?, negative_prompt?, guidance_scale?, nag_*?}}</code>.
   The plugin prefixes the prompt with <code>Opening frame, from the viewer’s perspective:</code> followed by
   one line per character, <code>&lt;character&gt; (Image 1, Image 2): &lt;position&gt;</code>. That header counts toward
   the prompt limit.</li>
-<li><strong>Checks before submission:</strong></li>
-<li><code>GET /v1/ltx/msr/capabilities</code> must report <code>image_conditioning:true</code> (I2V with references) and
-    <code>voice_references:true</code> (when a sample is attached).</li>
-<li>A prompt over 2000 characters must fit that route's <code>prompt_max_chars</code>.</li>
+<li><strong>Checks before submission:</strong> optional fields and the prompt cap are read from the model's
+  <code>GET /v1/models</code> row; the gateway refuses at submission what its backend does not take.</li>
 <li><strong>References per request:</strong></li>
 <li>Images: 4 subjects plus 1 background, 5 in all [1][3][12][13].</li>
 <li>Videos: none.</li>
@@ -936,7 +935,8 @@ references.</p>
     = 5.0</code>, read from the weights' header). The tail is cut and a short clip is not padded
     [2][3]. The gateway accepts up to 10 s [12].</li>
 <li>Plugin checks: refuses a sample over 10 s and warns over 5 s
-    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/video-voice.ts">video-voice.ts</a> 248-249).</li>
+    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/video-voice.ts">video-voice.ts</a>); the scene path refuses one over 10 s before
+    anything is reserved (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/genai-scene.ts">genai-scene.ts</a> <code>checkSceneVoices</code>).</li>
 <li>Audio output: MSR always renders speech and effects natively. On I2V with references,
     <code>generateAudio:false</code> mutes the output after the render [12].</li>
 <li><strong>First frame with references:</strong></li>
@@ -949,50 +949,61 @@ references.</p>
 <li>Reference line: <code>Audio N: &lt;name&gt;'s voice, belongs only to Image N.</code></li>
 <li>On-screen turn: <code>Turn K: Image N (&lt;name&gt;) speaks using Audio N. … Audio N (Image N): "&lt;line&gt;"</code>.</li>
 <li>Scene-direction boards: <code>&lt;id&gt; (Image N, Audio N): "&lt;line&gt;"</code>
-    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/video-voice.ts">video-voice.ts</a> 246, 318-334).</li>
+    (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/video-voice.ts">video-voice.ts</a>).</li>
 <li>The model card advises labels such as <code>Image 1</code> and <code>Image 2</code> and matching each audio to its
     subject [3].</li>
 <li><strong>Plugin vs vendor:</strong></li>
 <li>Licon's Guide still accepts a hidden <code>audio_ref3</code> [1]. The card, the gateway and the plugin
     all use 2 voices.</li>
-<li>Prompt limit: the schemas advertise 5000. The deployed MSR backend reports 2000 [13], and the
-    plugin refuses anything longer at execution.</li>
+<li>Prompt limit: the schemas advertise 5000. The deployed MSR backend reports 2000 [13]; the
+    gateway refuses a longer prompt at submission.</li>
 <li><code>referenceStrength</code> is advertised as 0–1 but live is fixed at 1.0. The plugin refuses other
     values before submission.</li>
 <li>Known model issue: environmental sound needs background music in the voice sample [3].</li>
 </ul>
-<h4 id="video-models-per-shot-scene">Per-shot scene</h4>
+<h4 id="video-models-scene">Scene</h4>
 <ul>
-<li><strong>Plugin input:</strong> a storyboard scene planned with <code>video_plan {…, sceneRendering:"per_shot"}</code>
-  (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/genai-scene.ts">genai-scene.ts</a>). Distilled renders <code>native</code> and <code>mix</code> scene
-  audio; dev renders <code>conditioning</code>.</li>
+<li><strong>Plugin input:</strong> a storyboard scene planned with <code>video_plan {episode, sceneNo, requestId}</code> on a
+  distilled selection; the plan's tool is <code>astra_genai_scene</code>
+  (<a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/genai-scene.ts">genai-scene.ts</a>, <a href="https://github.com/ttalkkaklab/social-flow/blob/main/server/src/video-routing.ts">video-routing.ts</a>).
+  The planner composes the scene as one LTX MSR render and names each input after the cast member
+  and picture it shows (<code>{hero.face}</code>, <code>{hero.voice}</code>, <code>{opening.image}</code>).</li>
 <li><strong>Wire request:</strong></li>
 </ul>
 <p>```
-  POST /v1/ltx/v2/scene-to-video/validate
-  POST /v1/ltx/v2/scene-to-video      (X-Request-ID: scene-<planId>)</p>
-<p>{model, resolution, fps, num_frames, generate_audio:true, prompt, image_uri,
-   shots:[{shot_id, start_frame, end_frame, transition?, description, opening_positions, images:[{frame, role, character, image_uri}],
-           dialogue:[{id, speaker, text, delivery, frame?, voice_uri?}], seed?}],
-   scene_audio?}
+  POST /v1/generations/validate      (free; no job)
+  POST /v1/generations               (X-Request-Id: scene-<sha256 of body and output path>)</p>
+<p>{kind:"video", model, mode:"scene",
+   input:{prompt, cast:[{id, images:[{role, uri}], voice?:{uri}}], references:[{id, role, uri}],
+          shots:[{id, seconds, image?:{uri, strength?}}]},
+   parameters:{width, height, fps, seed?}}
   ```</p>
-<p>Recovery reads <code>GET …/requests/{request_id}</code>.
+<p>The gateway numbers the names (voiced cast first, then cast order, objects, background last) and
+  adds no sentence. Planning refuses a compilation whose numbering, frame count or cut frames differ
+  from the plan and shows it as <code>sceneValidation</code>; execution validates once more.
 - <strong>Limits</strong> [12][13]:
-  - Shots: 2–32 per scene, each at most 361 frames.
-  - Per shot: 8 timed pins, 8 lines, 4 subjects and 1 background, and 2 voiced speakers with
-    samples up to 10 s.
-  - Transitions: <code>hard_cut</code> only.
-  - The plugin refuses a scene track over 32 MiB.
-- <strong>Plugin vs vendor:</strong> the gateway writes each shot's prompt from these fields, and the plugin
-  cannot supply one. This is the only route where the gateway writes the prompt.</p>
+  - Shots 1–8; frames rendered on the next <code>8k+1</code> count from 25 to 361 and cut back to the
+    storyboard's frames. Nothing is trimmed by the gateway.
+  - At most 4 subject pictures and 1 background across the scene; 2 voices of up to 10 s.
+  - Prompt: 2000 characters after the names are numbered on <code>ltx-2.5-22b-distilled</code>.
+  - The opening picture is reproduced; a later shot's picture only guides, and the model paces
+    the cuts.
+- <strong>How the plugin fits a board to it</strong> (user's choices, 2026-11-25):
+  - The people the scene's shots reference become one cast with the sheet panel rule for that
+    many (one: face, front, back; two: each face, then each front; three or four: one face each).
+    More than four is refused (<code>scene_cast_exceeded</code>).
+  - An ending or timed picture inside a shot, and a panel the cast leaves out, are not sent; the
+    plan names them (<code>scene_picture_omitted</code>, <code>scene_reference_omitted</code>).
+  - A prompt over the cap is composed again with fewer optional words, step by step; the plan
+    names what went (<code>scene_prompt_fitted</code>) and one still over is refused before upload
+    (<code>scene_prompt_too_long</code>).
+  - A scene on <code>ltx-2.5-22b-dev</code>, one driven by a supplied soundtrack and a line pinned to a frame
+    are refused at planning.</p>
 <h4 id="video-models-gateway-offers-plugin-does-not-expose">Gateway offers, plugin does not expose</h4>
 <ul>
-<li><strong><code>POST /v1/generations</code> <code>mode:"scene"</code></strong> (status <code>GET /v1/generations/{id}</code>) [12]:</li>
-<li>Body: <code>{kind:"video", model, mode:"scene", input:{prompt ≤16000 with {id.role} placeholders, cast[≤9], references[≤9], shots[1–8]}, parameters:{width, height, fps, seed?, negative_prompt?, model_options}}</code>.</li>
-<li>LTX profile: <code>Image N</code> / <code>Audio N</code>, a 2000-character compiled prompt, 2 voices of up to
-    10 s, and model-paced cuts.</li>
-<li>H3 profile: <code>&lt;Picture N&gt;</code> / <code>&lt;Audio N&gt;</code>, an 8000-character prompt, 24 fps, frames <code>17k+5</code>
-    from 124 to 345, 3 voices of up to 15 s at 32 kHz, and 9 images.</li>
+<li><strong>H3 scene profile</strong> of <code>/v1/generations</code> <code>mode:"scene"</code> [12]: <code>&lt;Picture N&gt;</code> / <code>&lt;Audio N&gt;</code>, an
+  8000-character prompt, 24 fps, frames <code>17k+5</code> from 124 to 345, 3 voices of up to 15 s at 32 kHz,
+  and 9 images.</li>
 <li><strong><code>minimax-h3</code>, <code>POST /v1/ltx/h3</code></strong> [12]:</li>
 <li>Tasks: <code>t2va</code>, <code>fl2va</code> and <code>ref2va</code>.</li>
 <li><code>ref2va</code> references: up to 9 images, 3 videos and 3 audio, 12 in all, and never audio
@@ -1010,24 +1021,23 @@ references.</p>
 <h3 id="video-models-gaps-and-differences">Gaps and differences</h3>
 <ul>
 <li>Vendor offers, plugin does not expose:</li>
-<li><code>/v1/generations</code> scene mode</li>
 <li><code>minimax-h3</code> (both routes)</li>
 <li>retake, extend, HDR, reframe and upscale on this gateway</li>
 <li>Mismatches still open:</li>
 <li>The MSR prompt cap reads 5000 in the plugin schemas and in the live <code>/v1/models</code> <code>ltx-msr</code>
-    row, but 2000 on <code>/v1/ltx/msr/capabilities</code> [13]. The plugin refuses longer prompts only at
-    execution.</li>
+    row, but 2000 on the deployed backend [13]. On the direct tools the gateway refuses a longer
+    prompt at submission; the scene path fits or refuses it at planning.</li>
 <li><code>ltx-2.5-22b-distilled</code> is in the <code>astra_genai_audio2video</code> enum, but production serves A2V
     on dev only.</li>
 <li><code>referenceStrength</code> is advertised as 0–1; the live value is fixed at 1.0.</li>
 <li>Combined start/end pins plus MSR references have no upstream example. The gateway's own scene
     profile notes that later shot images were not reproduced in production runs [12].</li>
-<li>The gateway job list reports <code>succeeded</code>, while the per-route status reports <code>completed</code>
-    [13].</li>
 <li>Unverified:</li>
-<li>The result URL lifetime on the <code>/v1/ltx/v2</code> routes.</li>
+<li>The result URL lifetime of <code>/v1/generations</code> outputs.</li>
+<li>Any render on the common API: the plugin's scene bodies pass the production <code>/validate</code>, but no
+    job was submitted on the new path as of 2026-11-25.</li>
 <li>Whether any completed I2V job used MSR references.</li>
-<li>Renders on dev, <code>/v1/ltx/msr</code> and A2V: none in the job window.</li>
+<li>Renders on dev, MSR and A2V: none in the job window.</li>
 <li>The MSR paper's training-share figures.</li>
 <li>Hosted input formats and sizes (<code>/input-formats</code> not fetched).</li>
 </ul>

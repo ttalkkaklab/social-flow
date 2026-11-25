@@ -168,8 +168,8 @@ export async function requestGenaiMedia(route: string, body?: FormData | Record<
 }
 
 /** Read deployment configuration without performing inference. */
-export async function genaiCatalog(kind: 'image' | 'speech' | 'video' | 'ltx_video' | 'desktop_video' | 'loras' | 'contracts') {
-  const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/models', ltx_video: '/v1/ltx/v2/capabilities',
+export async function genaiCatalog(kind: 'image' | 'speech' | 'video' | 'desktop_video' | 'loras' | 'contracts') {
+  const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/models',
     desktop_video: '/v1/ltx/desktop/models',
     loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
   return requestGenai('GET', routes[kind]);

@@ -365,7 +365,7 @@ footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
 One speaker per shot was a plugin rule; the models bind several pinned voices in one render.
 A shot keeps every line spoken in its view, replies included, and `shot_dialogue` no longer
 refuses a second speaker. The limit is the selected model's pinned voices per render (the
-scene, or one shot under `sceneRendering:"per_shot"`), counted over natively voiced lines;
+scene), counted over natively voiced lines;
 `video_plan` reports a render over it (`scene_render_voice_limit`). Cut where the staging,
 the visible evidence or that capacity calls for another view. A visible listener without a
 line stays silent.
@@ -513,7 +513,7 @@ is outside it. See `skills/storyboard/SKILL.md` §3.
 ## Authored scene prompts (user directive, 2026-11-24; bounded edits 2026-11-25)
 
 The planner composed every scene prompt from the shot cards, so the session could not adjust
-its wording for a model. Every scene plan made without a `sceneRendering` mode returns
+its wording for a model. Every scene plan returns
 `promptTemplate`, the submitted prompt with each reference number turned into a name, and
 `video_plan` takes an edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
 `{castId.image}` for a single picture, `{castId.voice}`, `{referenceId.image}`,
@@ -531,7 +531,7 @@ speaker (`scene_dialogue_mismatch`, `scene_dialogue_speaker`). A scene with neit
 wording. Also refused: a name with no submitted reference or another brace
 (`placeholder_unresolved`), a shot image sent as a timed frame (`placeholder_unlabeled`), a
 typed number that names no input (`reference_unknown`), a prompt over the model's limit, an
-empty prompt, a call that also names a `sceneRendering` mode (`scene_prompt_unsupported`) and an
+empty prompt and an
 adapter's own rule for its prompt (`prompt_refused`). `promptIssues` reports a typed number
 that names an input (`label_literal`, refused under `wholeScene` and in a saved draft), a
 submitted reference the prompt never names, the text-free or silent-picture sentence the
@@ -546,25 +546,16 @@ limits and attachment. See
 A video model takes one prompt for each call, so the prompt belongs to the scene, where the
 session can read and adjust it, and no request this plugin builds asks the GenAI gateway to
 write one for a single call. The gateway wrote it on two paths: `shots[]` text on the GenAI
-text and image adapters, and the `single_msr` and `auto` rendering modes. The adapters now
-refuse `shots` and `video_plan` refuses those modes (`scene_render_selection`). A scene that
-fits one model call is planned without `sceneRendering`: the planner writes its one prompt,
-the plan returns it as `promptTemplate`, an edited copy comes back as `prompt` under the
-bounded-edit rules above, and the GenAI gateway receives the approved text as the request's
-prompt (captured on the distilled LTX image route, for the planner's own prompt and for an
-edited one). Other engines' adapters keep their own wire dialect. On the
-distilled LTX route the model paces the cuts (`scene_cut_timing_model_paced`), and the plan
-names each later shot whose composition image the operation cannot send
-(`shot_reference_omitted`).
-
-`sceneRendering:"per_shot"` is the one exception and says so. The gateway's scene route
-renders each shot apart and writes each shot's prompt from the manifest; it has no field for
-a caller's prompt. Only a call naming `per_shot` reaches that route. Its plan carries
-`gateway_composed_prompt` and returns no `promptTemplate`, a wording change goes on the shot
-card, and a validation answer for any other execution is refused. A plan saved under a
-retired mode reads `video_plan_stale` at approval and execution, before any upload;
-`video_status` still collects a job it had submitted. `validateScenePayload` is removed: it
-posted the shot manifest to the image route's validation endpoint with no mode named.
+text and image adapters, and the gateway's per-shot scene route with its rendering modes. The
+adapters refuse `shots`, and the per-shot route is gone (see the next section). A scene is
+planned for one model call: the planner writes its one prompt, the plan returns it as
+`promptTemplate`, and an edited copy comes back as `prompt` under the bounded-edit rules above.
+On the GenAI engine the request carries those names and the gateway numbers them; other
+engines' adapters keep their own wire dialect. The model paces the cuts on the GenAI scene
+mode (`scene_cut_timing_model_paced`), and on the other routes the plan names each later shot
+whose composition image the operation cannot send (`shot_reference_omitted`). A plan saved
+under a retired rendering mode reads `video_plan_stale` at approval and execution, before any
+upload; `video_status` still collects a job it had submitted.
 
 Desktop's default provenance, `typed`, lets the app's enhancement settings rewrite a prompt.
 The gateway Desktop adapters send `promptProvenance:"enhanced"` for a written prompt unless
@@ -578,12 +569,55 @@ schema: `parameters.common` holds the names that mean the same across that media
 the prompt, model, seed and output path, and `parameters.options` the adapter's own. `video_plan`, `image_plan` and `music_plan` take
 `engine` and `model` as a check on the saved selection. A mismatch is refused
 (`model_selection_mismatch`, `image_selection_mismatch`, `music_selection_mismatch`) and a
-plan never switches the selection. The video catalog reads timed images, the scene renderer
-and pinned voices from each registry entry.
+plan never switches the selection. The video catalog reads timed images and pinned voices
+from each registry entry.
 
 That the kept routes add no words is read from the gateway's source, and no render compared
 a plugin-written prompt with a gateway-written one. Record and evidence:
 [loop 036](docs/loops/036-prompt-ownership/loop.md).
+
+## GenAI through the common generation API (user directive, 2026-11-25)
+
+Every GenAI video request goes through the gateway's common generation API: `POST
+/v1/generations`, `POST /v1/generations/validate` for a scene, `GET /v1/generations/{id}` and
+`GET /v1/models`. No plugin code calls the gateway's per-model LTX and MSR routes or their
+capability routes any more, and the per-shot rendering mode and its shot bindings are gone
+with the per-shot route. The GenAI engine has the shape of the others: the planner's scene
+request, a registry adapter with its own schema, and one wire module (`astra-genai-video.ts`).
+
+A storyboard scene on the GenAI engine is one `mode:"scene"` request (`astra_genai_scene`). The
+planner composes the scene as one LTX MSR render and names each reference after the cast member
+and picture it shows (`{hero.face}`, `{hero.voice}`, `{opening.image}`); the gateway numbers the
+names, voiced cast first, and adds no sentence. Each shot carries its frame count and the
+picture it opens on. The opening is reproduced, a later picture only guides, and the model
+paces the cuts. `video_plan` uploads the files and runs `/v1/generations/validate`: a scene the
+gateway numbers, times or cuts differently from the plan is refused, and the compilation is
+shown beside the plan as `sceneValidation`. Execution validates once more, keeps the exact body
+beside the receipt and posts it under an `X-Request-Id` derived from it, so `video_status`
+recovers a lost response by replaying that body within 23 hours, which returns the first job.
+The clip renders on the next 8k+1 frame count and is cut back to the storyboard's frames.
+
+Scene mode only (the user's choice). A scene without a cast picture also sends its opening as
+an `object` reference. A scene saved on `ltx-2.5-22b-dev`, a scene with a supplied soundtrack
+and a line pinned to a frame are refused at planning (`scene_mode_model_unsupported`,
+`scene_mode_audio_unsupported`, `scene_inputs_unsupported`), and one GenAI scene binds at most
+two pinned voices across all its cuts. The people the scene's shots reference become one scene
+cast with the panels the sheet rule gives that many (one: face, front, back; two: each face, then
+each front; three or four: one face each), and a person who enters later gets an opening row that
+says so; more than four is refused (`scene_cast_exceeded`). An ending or timed picture inside a
+shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
+each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The gateway
+caps the numbered scene prompt (2,000 characters on `ltx-2.5-22b-distilled`); a longer one is
+composed again with fewer optional words, in order: repeated sentences and the long panel sentence,
+design notes, timed acting beats and delivery cues, expressions, then per-shot sound, blocking,
+closing states, axis and continuity. Size, angle, camera move, action and lines stay, the plan
+names what went (`scene_prompt_fitted`), and a scene still over at the last step is refused before
+any upload (`scene_prompt_too_long`) (user's choice, 2026-11-25). The direct tools and
+the live character use the common modes `text2video`, `image2video`, `audio2video` and `msr`;
+the gateway refuses at submission what its backend does not take. Clips the retired per-shot
+route made keep their receipts and are still verified and assembled, each card counted as its
+own render. The LTX Desktop engine (`/v1/ltx/desktop/*`) is outside this change. Record and
+evidence: [loop 038](docs/loops/038-genai-common-api/loop.md).
 
 ## Per-model guidance at planning (user directive, 2026-11-25)
 
@@ -620,8 +654,8 @@ with a non-Latin name by character id and report a non-English voice description
 
 A shot can reference up to four principal characters on MSR and reference-conditioned distilled I2V. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
-with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), so `video_plan` plans
-MSR when a call names no operation. GenAI submissions wait up to 15 minutes for the
+with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), and `video_plan` plans each
+scene as one GenAI scene-mode request. GenAI submissions wait up to 15 minutes for the
 gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
 
 ## People in the frame (user directive, 2026-11-17)
@@ -997,11 +1031,9 @@ Declare everyone who speaks in the story scene. Submit one scene with `video_pla
 
 Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 
-For a per-shot render, list the visible cast on each card and give each opening position its image slots. Use an empty list for a silent person outside the frame or a silent figure whose appearance comes solely from the shot image. A speaking phone caller still receives the identity reference needed for the pinned voice. Cards without shot-level blocking retain their scene references.
-
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
-- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. Distilled LTX can combine the opening, an optional ending, up to four subject images and one background. Its first two subjects can carry voice samples in each native render. With authored cuts, the per-shot renderer can change that pair inside one scene job. A one-take exceeding the selected model's capacity needs an authoring decision.
+- Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it; GenAI scene mode renders its own soundtrack and refuses such a scene. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Before generating images, save the scene's seats or standing marks, fixed landmarks, facing and camera axis in `story_scene.directionDefaults`. Compose and inspect the first shot before the other shots. `shot_image` uses the first available scene image for the physical layout of later shots in the same space. The authored shot still defines the current viewpoint, crop, expression, action phase and prop state. A built set with actor blocking takes precedence. See [scene image generation](skills/generate-cut-images/SKILL.md).

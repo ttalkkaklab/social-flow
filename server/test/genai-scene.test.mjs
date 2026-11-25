@@ -3,90 +3,77 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildSceneWire, parseSceneCapabilities, sceneRequestIssues, validateSceneBody, SCENE_LIMITS } from '../dist/genai-scene.js';
-import { config } from '../dist/config.js';
-import { png } from './workflow-fixture.mjs';
+import { execFileSync } from 'node:child_process';
+import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt, sceneArgsFromComposed, sceneLabels } from '../dist/genai-scene.js';
 
-// The keys every gateway returns. One deployed before 2026-11-24 reports no limits and no seed.
-const deployed = {version:1, execution:'per_shot', transitions:['hard_cut']};
+const sceneArgs = (overrides = {}) => genaiSceneSchema.parse({ model:'ltx-2.5-22b-distilled', resolution:'576x1024', reserveUsd:0,
+  prompt:'{hero.face} waves.', cast:[{id:'hero', images:[{role:'face', imagePath:'/tmp/hero.png'}]}],
+  shots:[{id:'s1', frames:57, imagePath:'/tmp/open.png'}, {id:'s2', frames:56}], ...overrides });
 
-function scene(t, shots) {
-  const dir = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'genai-scene-')));
-  t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
-  const file = name => { const target = path.join(dir,name); fs.writeFileSync(target,png); return target; };
-  let cursor = 0;
-  const cards = shots.map(({frames,references=[],voiced=[]},i) => {
-    const card = {shotId:'s'+i, startFrame:cursor, endFrame:cursor+frames, transition:i ? 'hard_cut' : 'open', framing:'Eye level.', action:'Hold.',
-      references, dialogue:voiced.map(speaker => ({lineId:speaker+i, speaker, delivery:'on_screen', text:'Hello.', voice:{path:file(speaker+'.wav')}}))};
-    cursor += frames;
-    return card;
-  });
-  return {sceneNo:1, prompt:'Hold.', fps:24, frameCount:cursor, shotIds:cards.map(card => card.shotId), cuts:[],
-    shots:cards.map(({references:_references,...card}) => card),
-    images:cards.flatMap(card => [{shotId:card.shotId, role:'start', frame:card.startFrame, path:file(card.shotId+'.png')},
-      ...card.references.map((role,i) => ({shotId:card.shotId, role, frame:card.startFrame, character:'c'+i, path:file(card.shotId+'-'+i+'.png')}))])};
-}
-
-test('a gateway that reports no limits keeps the reference slots planning already checks', () => {
-  const old = parseSceneCapabilities(deployed);
-  assert.deepEqual(old.limits, SCENE_LIMITS);
-  assert.deepEqual([old.motionPrefix, old.timedDialogue, old.audioModes, old.seedModes], [false, null, {}, []]);
-  const current = parseSceneCapabilities({...deployed, motion_prefix:true, timed_dialogue:'supplied_performance',
-    scene_audio_modes:{mix:'ltx-2.5-22b-distilled'}, seed:['msr'], voice_binding:'speaker',
-    limits:{shots:{min:2,max:48}, shot_frames:{max:241}, references:{subjects:3,backgrounds:1}, voice:{speakers_per_shot:1,max_seconds:10}}});
-  assert.deepEqual(current.limits, {subjects:3, backgrounds:1, voiceSpeakers:1, shots:{min:2,max:48}, shotFrames:241});
-  assert.deepEqual([current.motionPrefix, current.timedDialogue, current.seedModes], [true, 'supplied_performance', ['msr']]);
-  // A key this client cannot read counts as absent; the three keys of version 1 stay required.
-  assert.deepEqual(parseSceneCapabilities({...deployed, limits:'many', seed:true}).limits, SCENE_LIMITS);
-  assert.throws(() => parseSceneCapabilities({...deployed, version:2}));
-  assert.throws(() => parseSceneCapabilities({...deployed, execution:null}));
+test('a composed request becomes named placeholders that the gateway numbers voiced cast first', () => {
+  // The planner numbered a silent guest first and the speaking hero second; the gateway puts the voice in slot 1.
+  const composed = {
+    prompt:'Image 1: guest. Image 2: hero. Audio 2: hero\'s voice. hero (Image 2, Audio 2): "Look at Image 1 {here}."',
+    references:[{imagePath:'/tmp/guest.png'}, {imagePath:'/tmp/hero.png', audioPath:'/tmp/hero.wav'}, {imagePath:'/tmp/room.png', background:true}],
+    slots:[{key:'guest.face', label:'Image 1'}, {key:'guest.image', label:'Image 1'}, {key:'hero.face', label:'Image 2'}, {key:'hero.voice', label:'Audio 2'}, {key:'s1.image', label:'Image 3'}],
+    script:['Look at Image 1 {here}.'], shots:[{id:'s1', frames:24, imagePath:'/tmp/open.png'}],
+  };
+  const {keys, ...projected} = sceneArgsFromComposed(composed);
+  // Each planner number maps to the name the scene request uses for it.
+  assert.deepEqual(keys.map(item => [item.label, item.key]), [['Image 1','guest.face'], ['Audio 2','hero.voice'], ['Image 2','hero.face'], ['Image 3','s1-ref1.image']]);
+  // The background guide is named after its shot, which scene mode reserves for the shot itself.
+  assert.deepEqual(projected.references, [{id:'s1-ref1', role:'background', imagePath:'/tmp/room.png'}]);
+  assert.deepEqual(projected.cast, [{id:'guest', images:[{role:'face', imagePath:'/tmp/guest.png'}]},
+    {id:'hero', images:[{role:'face', imagePath:'/tmp/hero.png'}], voicePath:'/tmp/hero.wav'}]);
+  assert.equal(projected.prompt, '{guest.face}: guest. {hero.face}: hero. {hero.voice}: hero\'s voice. hero ({hero.face}, {hero.voice}): "Look at Image 1 {{here}}."');
+  const args = sceneArgs({...projected, prompt:projected.prompt});
+  assert.deepEqual(sceneLabels(args), {'hero.face':'Image 1', 'hero.voice':'Audio 1', 'guest.face':'Image 2', 's1-ref1.image':'Image 3',
+    'guest.image':'Image 2', 'hero.image':'Image 1'});
+  // The spoken line keeps its words and its literal braces.
+  assert.equal(resolveScenePrompt(args.prompt, sceneLabels(args)),
+    'Image 2: guest. Image 1: hero. Audio 1: hero\'s voice. hero (Image 1, Audio 1): "Look at Image 1 {here}."');
+  assert.throws(() => resolveScenePrompt('{nobody.face} waits.', sceneLabels(args)), /placeholder_unresolved/);
 });
 
-test('a scene outside the advertised limits is named by shot before anything is uploaded', t => {
-  const fits = scene(t, [{frames:240, references:['face','outfit','location'], voiced:['anna','ben']}, {frames:361}]);
-  assert.deepEqual(sceneRequestIssues(fits, parseSceneCapabilities(deployed)), []);
-  const tight = parseSceneCapabilities({...deployed, limits:{shot_frames:{max:241}, references:{subjects:1,backgrounds:0}, voice:{speakers_per_shot:1}}});
-  assert.deepEqual(sceneRequestIssues(fits, tight).map(issue => issue.split(':')[0]),
-    ['s0@0 references', 's0@0 voice', 's1@240 length']);
-  // The shot count is the gateway's to refuse until it reports the range.
-  const single = scene(t, [{frames:48}]);
-  assert.deepEqual(sceneRequestIssues(single, parseSceneCapabilities(deployed)), []);
-  assert.match(sceneRequestIssues(single, parseSceneCapabilities({...deployed, limits:{shots:{min:2,max:32}}}))[0], /^scene 1: 1 shots/);
+test('a scene without a cast picture gives its opening as an object reference', () => {
+  const projected = sceneArgsFromComposed({prompt:'A quiet harbor.', references:[], slots:[], script:[],
+    shots:[{id:'opening', frames:48, imagePath:'/tmp/harbor.png'}]});
+  assert.deepEqual(projected.references, [{id:'opening-ref1', role:'object', imagePath:'/tmp/harbor.png'}]);
+  assert.match(projected.prompt, /^\{opening-ref1\.image\}: /);
+  assert.throws(() => sceneArgsFromComposed({prompt:'Dark.', references:[], slots:[], script:[], shots:[{id:'s1', frames:24}]}), /genai_scene_subject/);
 });
 
-test('a shot seed reaches the body only where the gateway takes one for that render mode', async t => {
-  const request = scene(t, [{frames:48, references:['face']}, {frames:48}]);
-  const bindings = [{shotId:'s0', seed:7}, {shotId:'s1', seed:9}];
-  const model = 'ltx-2.5-22b-distilled';
-  const plain = await buildSceneWire(request, model, '720p');
-  assert.ok(plain.body.shots.every(shot => !('seed' in shot)));
-  const seeded = await buildSceneWire(request, model, '720p', false, bindings);
-  assert.deepEqual(seeded.body.shots.map(shot => shot.seed), [7, 9]);
-  const {seed:_first, ...first} = seeded.body.shots[0];
-  assert.equal(JSON.stringify(first), JSON.stringify(plain.body.shots[0]));
-
-  const seedIssues = caps => sceneRequestIssues(request, parseSceneCapabilities({...deployed, ...caps}), {bindings}).map(issue => issue.split(':')[0]);
-  assert.deepEqual(seedIssues({}), ['s0@0 seed', 's1@48 seed']);
-  assert.deepEqual(seedIssues({seed:['msr']}), ['s1@48 seed']);
-  assert.deepEqual(seedIssues({seed:['generate','msr']}), []);
-  // A dev scene whose track drives the picture renders every shot as audio2video.
-  const driven = {...request, audio:{path:'/unused.wav', startFrame:0, endFrame:96, cues:[]}};
-  assert.equal(sceneRequestIssues(driven, parseSceneCapabilities({...deployed, seed:['msr','generate']}), {bindings, model:'ltx-2.5-22b-dev'}).length, 2);
+test('scene arguments keep LTX scene limits and the 8k+1 render grid', () => {
+  assert.deepEqual([24, 25, 26, 169, 170].map(genaiSceneFrames), [25, 25, 33, 169, 177]);
+  const refused = [
+    {shots:[{id:'hero', frames:24}]},
+    {cast:[{id:'a', images:[1,2,3].map(n => ({role:'p'+n, imagePath:'/x.png'}))}, {id:'b', images:[{role:'face', imagePath:'/x.png'}, {role:'back', imagePath:'/x.png'}]}]},
+    {cast:['a','b','c'].map(id => ({id, images:[{role:'face', imagePath:'/x.png'}], voicePath:'/x.wav'}))},
+    {cast:[{id:'hero', images:[{role:'image', imagePath:'/x.png'}]}]},
+    {shots:[{id:'s1', frames:300}, {id:'s2', frames:62}]},
+  ];
+  for (const overrides of refused) assert.equal(genaiSceneSchema.safeParse({...sceneArgs(), ...overrides}).success, false, JSON.stringify(overrides));
+  const body = genaiSceneBody(sceneArgs({seed:7, shots:[{id:'s1', frames:57, imagePath:'/tmp/open.png'}, {id:'s2', frames:56, imagePath:'/tmp/two.png', strength:0.5}]}),
+    (file, kind) => kind + ':' + file);
+  assert.deepEqual(body.input.shots, [{id:'s1', seconds:57/24, image:{uri:'image:/tmp/open.png'}}, {id:'s2', seconds:56/24, image:{uri:'image:/tmp/two.png', strength:0.5}}]);
+  assert.deepEqual(body.parameters, {width:576, height:1024, fps:24, seed:7});
 });
 
-// This route writes each shot's prompt. One render per shot is the only execution a plan may reach (user directive 2026-11-25).
-test('the scene body names no execution and a validate answer for another one is refused', async t => {
-  const model = 'ltx-2.5-22b-distilled', expected = {model, shots:2};
-  const {body} = await buildSceneWire(scene(t, [{frames:48}, {frames:48}]), model, '720p');
-  assert.equal(Object.hasOwn(body, 'execution'), false);
-  const key = config.astraGenaiApiKey;
-  config.astraGenaiApiKey = 'fixture';
-  t.after(() => { config.astraGenaiApiKey = key; });
-  let answer = {schema_valid:true, model, shots:2};
-  t.mock.method(globalThis, 'fetch', async () => Response.json(answer));
-  await validateSceneBody(body, 'scene-fixture', expected);
-  answer = {...answer, execution:'per_shot'};
-  await validateSceneBody(body, 'scene-fixture', expected);
-  answer = {...answer, execution:'single_msr'};
-  await assert.rejects(validateSceneBody(body, 'scene-fixture', expected), /scene_render_selection/);
+test('a compilation that moves labels, length or cuts is refused before approval and before submission', () => {
+  const args = sceneArgs();
+  const resolved = {num_frames:113, prompt:'Image 1 waves.', labels:{'hero.face':'Image 1'}, shots:[{id:'s1', start_frame:0}, {id:'s2', start_frame:57}]};
+  assert.equal(checkSceneValidation(args, {resolved, warnings:[]}).numFrames, 113);
+  assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, prompt:'Image 2 waves.'}}), /genai_scene_labels/);
+  assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, num_frames:121}}), /genai_scene_frames/);
+  assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, shots:[{id:'s1', start_frame:0}, {id:'s2', start_frame:56}]}}), /genai_scene_cuts/);
+});
+
+test('a voice sample longer than scene mode takes is refused before anything is reserved', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-voice-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sample = seconds => { const file = path.join(dir, seconds + '.wav'); execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=duration=' + seconds, file]); return file; };
+  const cast = voicePath => [{ id: 'hero', images: [{ role: 'face', imagePath: '/x.png' }], voicePath }];
+  checkSceneVoices({ cast: cast(sample(9)) });
+  assert.throws(() => checkSceneVoices({ cast: cast(sample(12)) }), /scene_voice_too_long: hero's voice sample runs 12\.0 s/);
+  assert.throws(() => checkSceneVoices({ cast: cast(path.join(dir, 'missing.wav')) }), /scene_voice_unreadable/);
 });

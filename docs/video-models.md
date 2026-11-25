@@ -24,7 +24,7 @@ operation and the plugin does not expose it; "—" means the vendor does not off
 
 | Engine | Text-to-video | Image-to-video | Audio-to-video | Reference (characters) | Other operations |
 | --- | --- | --- | --- | --- | --- |
-| [`astra-genai`](#astra-genai-gateway-ltx-25-and-licon-msr) LTX-2.5 and MSR | `astra_genai_text2video` | `astra_genai_img2video` | `astra_genai_audio2video` (dev) | `astra_genai_msr`; `astra_genai_img2video` with `references` | per-shot scene (`sceneRendering:"per_shot"`); retake, extend, HDR, reframe, upscale vendor only |
+| [`astra-genai`](#astra-genai-gateway-ltx-25-and-licon-msr) LTX-2.5 and MSR | `astra_genai_text2video` | `astra_genai_img2video` | `astra_genai_audio2video` (dev) | `astra_genai_msr`; `astra_genai_img2video` with `references` | scene (`astra_genai_scene`, one `/v1/generations` request per storyboard scene); retake, extend, HDR, reframe, upscale vendor only |
 | [`astra-genai-desktop`](#ltx-desktop) | `astra_genai_desktop_text2video` | `astra_genai_desktop_img2video` | `astra_genai_desktop_audio2video` | vendor only (Ingredients IC-LoRA) | `astra_genai_desktop_keyframes`, `_extend`, `_retake` |
 | [`ltx-desktop-local`](#ltx-desktop) | `ltx_desktop_text2video` | `ltx_desktop_img2video` | `ltx_desktop_audio2video` | vendor only (Ingredients IC-LoRA) | — |
 | [`ltx-api`](#hosted-ltx-api) | vendor only | `ltx_api_img2video` | `ltx_api_audio2video` | — | retake, extend, HDR, reframe, upscale vendor only |
@@ -87,8 +87,10 @@ Each engine section lists the differences that remain open.
 ## ASTRA GenAI gateway (LTX-2.5 and Licon MSR)
 
 The in-house GenAI gateway runs the open LTX-2.5 22B weights (distilled and dev) and the Licon
-MSR IC-LoRA on its own GPUs. Its `/v1/ltx/v2/*` routes copy the names of Lightricks' hosted API
-[12]. The saved selection for LTX is `{engine:"astra-genai", model:"ltx-2.5-22b-distilled",
+MSR IC-LoRA on its own GPUs. Its per-model `/v1/ltx/v2/*` routes copy the names of Lightricks'
+hosted API [12]; the plugin calls none of them. Every GenAI video request goes through the
+gateway's common generation API: `POST /v1/generations`, `POST /v1/generations/validate`,
+`GET /v1/generations/{id}` and `GET /v1/models` (user directive, 2026-11-25). The saved selection for LTX is `{engine:"astra-genai", model:"ltx-2.5-22b-distilled",
 operation:"reference", resolution:"1792x1024"}` (`1024x1792` for 9:16)
 ([model-settings.md](../skills/_shared/model-settings.md)). Status: current. Credentials:
 `ASTRA_GENAI_API_KEY`, with the base URL in `ASTRA_GENAI_URL`
@@ -99,7 +101,7 @@ operation:"reference", resolution:"1792x1024"}` (`1024x1792` for 9:16)
 
 | Model ID | In plugin | Notes |
 |---|---|---|
-| `ltx-2.5-22b-distilled` | yes | T2V, I2V, I2V with MSR references, per-shot scenes. Render records seen on 2026-11-25 [13]. The 8-step distilled schedule runs with CFG 1 [6]. |
+| `ltx-2.5-22b-distilled` | yes | T2V, I2V, I2V with MSR references, scene mode. Render records seen on 2026-11-25 [13]. The 8-step distilled schedule runs with CFG 1 [6]. |
 | `ltx-2.5-22b-dev` | yes | T2V, I2V and A2V, run guided. Listed only [13]. |
 | `ltx-msr` | yes, no model field (`astra_genai_msr`) | Server-selected MSR deployment. Listed only [13]. |
 | `minimax-h3` | no | Gateway scene mode and `/v1/ltx/h3` [12]. Render records seen on 2026-11-25: 2 succeeded, 3 failed [13]. |
@@ -111,25 +113,27 @@ references.
 
 ### Calling it
 
-- **Submit:** `POST /v1/ltx/v2/{text-to-video|image-to-video|audio-to-video}` or `POST /v1/ltx/msr`.
-  The gateway answers 202 with `{id}`.
-- **Poll:** `GET <route>/{id}`. Status is `pending|processing|completed|failed|cancelled`, and the
-  file URL is `result.video_url` ([astra-genai-video.ts](../server/src/astra-genai-video.ts)
-  370-415).
-- **Timing:** the plugin polls every 5 s for up to 30 min and waits up to 15 min for the submit
-  acknowledgement ([astra-genai-client.ts](../server/src/astra-genai-client.ts) 83-100;
-  [astra-genai-video.ts](../server/src/astra-genai-video.ts) 480). POSTs are never retried.
-- **Receipt:** a receipt beside the output records the job id. Recovery reads the receipt and
-  never resubmits.
-- **Uploads:** local pictures and voices for references and keyframes go up first through the
-  chunked `POST /v1/uploads` and travel as `genai-file://` ids
-  ([astra-genai-upload.ts](../server/src/astra-genai-upload.ts)). Each file may be at most
-  32 MiB. If the gateway has no upload API, the inline body is capped at 8 MB.
-- **Result URL lifetime:** `unverified` for the `/v1/ltx/v2` routes.
+- **Submit:** `POST /v1/generations {kind:"video", model, mode, input, parameters}` with `mode`
+  `text2video`, `image2video`, `audio2video`, `msr` or `scene`. The gateway answers 202 with `{id}`.
+  A scene is first sent to `POST /v1/generations/validate`, which reserves nothing.
+- **Poll:** `GET /v1/generations/{id}`. Status is `queued|running|succeeded|failed|cancelled`, and
+  the file URL is `outputs[0].url` ([astra-genai-video.ts](../server/src/astra-genai-video.ts)).
+- **Timing:** the plugin polls for up to 30 min and waits up to 15 min for the submit
+  acknowledgement ([astra-genai-client.ts](../server/src/astra-genai-client.ts)). POSTs are never
+  retried.
+- **Receipt:** a receipt beside the output records the job id. Recovery reads the receipt and never
+  resubmits. A scene is posted under an `X-Request-Id` derived from its exact body and output path,
+  and the body is kept beside the receipt; within 23 hours `video_status` recovers a lost response by
+  posting that body again, which returns the first job [12].
+- **Uploads:** local pictures and voices go up first through the chunked `POST /v1/uploads` and
+  travel as `genai-file://` ids ([astra-genai-upload.ts](../server/src/astra-genai-upload.ts)). Each
+  file may be at most 32 MiB. If the gateway has no upload API, the inline body is capped at 8 MB.
+- **Result URL lifetime:** `unverified` for `/v1/generations` outputs.
 
 ```json
-{"prompt": "…", "model": "ltx-2.5-22b-distilled", "num_frames": 121, "resolution": "1280x720",
- "fps": 24, "generate_audio": true, "image_uri": "genai-file://…"}
+{"kind": "video", "model": "ltx-2.5-22b-distilled", "mode": "image2video",
+ "input": {"text": "…", "images": [{"url": "genai-file://…"}]},
+ "parameters": {"width": 1280, "height": 720, "fps": 24, "generate_audio": true, "num_frames": 121}}
 ```
 
 ### Operations
@@ -140,14 +144,13 @@ references.
 | Image-to-video (first, first+last, timed keyframes) | yes | `astra_genai_img2video` |
 | Audio-to-video (supplied track) | yes, dev only on this backend | `astra_genai_audio2video` |
 | Reference (MSR) | yes | `astra_genai_msr`; `astra_genai_img2video` with `references` |
-| Per-shot scene | yes (gateway extension) | `video_plan` with `sceneRendering:"per_shot"` |
-| Common scene API `/v1/generations` `mode:"scene"` | yes | not exposed |
+| Scene (`/v1/generations` `mode:"scene"`) | yes | `video_plan` on a storyboard scene (`astra_genai_scene`) |
 | MiniMax H3 (`/v1/ltx/h3`, scene `minimax-h3`) | yes | not exposed |
 | Retake, extend, HDR, reframe, upscale | yes | not exposed |
 
 #### Text-to-video
 
-- **Plugin input** ([astra-genai-video.ts](../server/src/astra-genai-video.ts) 102-132):
+- **Plugin input** ([astra-genai-video.ts](../server/src/astra-genai-video.ts)):
   - `prompt`: 1–2000 characters.
   - `model`: distilled or dev.
   - `resolution`: `WxH` with even sides of at least 64. The sides, rounded up to multiples of 64,
@@ -160,8 +163,10 @@ references.
     `slow-motion` [13].
   - Dev only: `negativePrompt` (≤2000), `numInferenceSteps` (1–50) and `guidance`.
 - **Wire request:**
-  `POST /v1/ltx/v2/text-to-video {prompt, model, duration|num_frames, resolution, fps, generate_audio, seed?, lora?, num_generated_keyframes?, guidance?, num_inference_steps?, negative_prompt?}`.
-  Optional fields are first checked against `/v1/models` `parameters_by_mode`.
+  `POST /v1/generations {kind:"video", model, mode:"text2video", input:{text}, parameters:{width, height, fps, generate_audio, duration_seconds|num_frames, seed?, lora?, num_generated_keyframes?, guidance?, num_inference_steps?, negative_prompt?}}`.
+  Optional fields are first checked against `/v1/models` `parameters_by_mode`. The plugin's
+  bodies for every direct mode pass the gateway's own `VideoGeneration` model and adapter
+  (`docs/loops/038-genai-common-api/gateway-validate.md`).
 - **Limits:**
   - Frames: 25–361, `8k+1`. The gateway rounds a duration up to `8k+1` and trims back [12]. The
     `8k+1` rule comes from the model [5].
@@ -182,9 +187,9 @@ references.
     **8** slots, and every index must be distinct and inside the clip.
   - An end image or keyframes need `duration` or `numFrames`.
   - Without references the prompt is capped at 2000
-    ([astra-genai-video.ts](../server/src/astra-genai-video.ts) 152-190).
+    ([astra-genai-video.ts](../server/src/astra-genai-video.ts)).
 - **Wire request:**
-  `POST /v1/ltx/v2/image-to-video {…, image_uri, last_frame_uri?, keyframes?:[{image_uri, frame_idx, strength?, crf?}]}`.
+  `POST /v1/generations {…, mode:"image2video", input:{text, images:[{url}], last_frame?:{url}, keyframes?:[{url, frame_idx, strength?}], references?}}`.
 - **Limits:** frames and resolution as in Text-to-video. The live `/v1/models` I2V limits are
   `first_frame:1`, `last_frame:1` and `temporal_images_including_endpoints:8` [13]. An end image
   cannot be combined with automatic length [12].
@@ -195,7 +200,7 @@ references.
 
 #### Audio-to-video
 
-- **Plugin input** ([astra-genai-video.ts](../server/src/astra-genai-video.ts) 194-224):
+- **Plugin input** ([astra-genai-video.ts](../server/src/astra-genai-video.ts)):
   - Audio: exactly one of `audioPath` or `audioUri`. Formats `.wav .mp3 .m4a .ogg .opus`. A data
     URI may hold at most 15,000,000 base64 characters.
   - `prompt`: 1–2000 characters.
@@ -205,7 +210,7 @@ references.
   - Dev only: `negativePrompt`, `guidance` and `numInferenceSteps`.
   - There is no duration field; the audio sets the length.
 - **Wire request:**
-  `POST /v1/ltx/v2/audio-to-video {audio_uri, prompt, model, resolution, fps, image_uri?, last_frame_uri?, keyframes?, seed?, guidance?, negative_prompt?}`.
+  `POST /v1/generations {…, mode:"audio2video", input:{text, audio:{url}, images?:[{url}], last_frame?, keyframes?}, parameters:{width, height, fps, seed?, guidance?, negative_prompt?}}`.
 - **Limits** [12]:
   - Frames: the shortest `8k+1` count (at least 25) that covers the audio, up to 361. That is
     15.04 s at 24 fps.
@@ -222,7 +227,7 @@ references.
 #### Reference
 
 - **Plugin input** (`astra_genai_msr`,
-  [astra-genai-video.ts](../server/src/astra-genai-video.ts) 133-150 and 228-273;
+  [astra-genai-video.ts](../server/src/astra-genai-video.ts);
   [msr-opening.ts](../server/src/msr-opening.ts)):
   - `references[]`: 1–5 entries `{imageUri|imagePath, background, nonCharacter?, audioUri|audioPath?}`.
   - `openingPositions[]`: required, `{character, images:[subject numbers], position}`.
@@ -237,14 +242,12 @@ references.
   - `astra_genai_img2video` with `references` follows the same rules and adds the start and end
     images and keyframes. That form is distilled only and needs an explicit length.
 - **Wire request:**
-  `POST /v1/ltx/msr {prompt, references:[{image_uri, background, audio_uri?}], reference_strength, reference_frames, width, height, frame_rate, seed, num_frames|duration, skip_stage_2?, negative_prompt?, guidance_scale?, nag_*?}`.
+  `POST /v1/generations {kind:"video", model:"ltx-msr", mode:"msr", input:{text, images:[{url, background, audio?:{url}}]}, parameters:{width, height, fps, seed, num_frames, reference_strength, reference_frames, skip_stage_2?, negative_prompt?, guidance_scale?, nag_*?}}`.
   The plugin prefixes the prompt with `Opening frame, from the viewer’s perspective:` followed by
   one line per character, `<character> (Image 1, Image 2): <position>`. That header counts toward
   the prompt limit.
-- **Checks before submission:**
-  - `GET /v1/ltx/msr/capabilities` must report `image_conditioning:true` (I2V with references) and
-    `voice_references:true` (when a sample is attached).
-  - A prompt over 2000 characters must fit that route's `prompt_max_chars`.
+- **Checks before submission:** optional fields and the prompt cap are read from the model's
+  `GET /v1/models` row; the gateway refuses at submission what its backend does not take.
 - **References per request:**
   - Images: 4 subjects plus 1 background, 5 in all [1][3][12][13].
   - Videos: none.
@@ -266,7 +269,8 @@ references.
     = 5.0`, read from the weights' header). The tail is cut and a short clip is not padded
     [2][3]. The gateway accepts up to 10 s [12].
   - Plugin checks: refuses a sample over 10 s and warns over 5 s
-    ([video-voice.ts](../server/src/video-voice.ts) 248-249).
+    ([video-voice.ts](../server/src/video-voice.ts)); the scene path refuses one over 10 s before
+    anything is reserved ([genai-scene.ts](../server/src/genai-scene.ts) `checkSceneVoices`).
   - Audio output: MSR always renders speech and effects natively. On I2V with references,
     `generateAudio:false` mutes the output after the render [12].
 - **First frame with references:**
@@ -279,53 +283,64 @@ references.
   - Reference line: `Audio N: <name>'s voice, belongs only to Image N.`
   - On-screen turn: `Turn K: Image N (<name>) speaks using Audio N. … Audio N (Image N): "<line>"`.
   - Scene-direction boards: `<id> (Image N, Audio N): "<line>"`
-    ([video-voice.ts](../server/src/video-voice.ts) 246, 318-334).
+    ([video-voice.ts](../server/src/video-voice.ts)).
   - The model card advises labels such as `Image 1` and `Image 2` and matching each audio to its
     subject [3].
 - **Plugin vs vendor:**
   - Licon's Guide still accepts a hidden `audio_ref3` [1]. The card, the gateway and the plugin
     all use 2 voices.
-  - Prompt limit: the schemas advertise 5000. The deployed MSR backend reports 2000 [13], and the
-    plugin refuses anything longer at execution.
+  - Prompt limit: the schemas advertise 5000. The deployed MSR backend reports 2000 [13]; the
+    gateway refuses a longer prompt at submission.
   - `referenceStrength` is advertised as 0–1 but live is fixed at 1.0. The plugin refuses other
     values before submission.
   - Known model issue: environmental sound needs background music in the voice sample [3].
 
-#### Per-shot scene
+#### Scene
 
-- **Plugin input:** a storyboard scene planned with `video_plan {…, sceneRendering:"per_shot"}`
-  ([genai-scene.ts](../server/src/genai-scene.ts)). Distilled renders `native` and `mix` scene
-  audio; dev renders `conditioning`.
+- **Plugin input:** a storyboard scene planned with `video_plan {episode, sceneNo, requestId}` on a
+  distilled selection; the plan's tool is `astra_genai_scene`
+  ([genai-scene.ts](../server/src/genai-scene.ts), [video-routing.ts](../server/src/video-routing.ts)).
+  The planner composes the scene as one LTX MSR render and names each input after the cast member
+  and picture it shows (`{hero.face}`, `{hero.voice}`, `{opening.image}`).
 - **Wire request:**
 
   ```
-  POST /v1/ltx/v2/scene-to-video/validate
-  POST /v1/ltx/v2/scene-to-video      (X-Request-ID: scene-<planId>)
+  POST /v1/generations/validate      (free; no job)
+  POST /v1/generations               (X-Request-Id: scene-<sha256 of body and output path>)
 
-  {model, resolution, fps, num_frames, generate_audio:true, prompt, image_uri,
-   shots:[{shot_id, start_frame, end_frame, transition?, description, opening_positions, images:[{frame, role, character, image_uri}],
-           dialogue:[{id, speaker, text, delivery, frame?, voice_uri?}], seed?}],
-   scene_audio?}
+  {kind:"video", model, mode:"scene",
+   input:{prompt, cast:[{id, images:[{role, uri}], voice?:{uri}}], references:[{id, role, uri}],
+          shots:[{id, seconds, image?:{uri, strength?}}]},
+   parameters:{width, height, fps, seed?}}
   ```
 
-  Recovery reads `GET …/requests/{request_id}`.
+  The gateway numbers the names (voiced cast first, then cast order, objects, background last) and
+  adds no sentence. Planning refuses a compilation whose numbering, frame count or cut frames differ
+  from the plan and shows it as `sceneValidation`; execution validates once more.
 - **Limits** [12][13]:
-  - Shots: 2–32 per scene, each at most 361 frames.
-  - Per shot: 8 timed pins, 8 lines, 4 subjects and 1 background, and 2 voiced speakers with
-    samples up to 10 s.
-  - Transitions: `hard_cut` only.
-  - The plugin refuses a scene track over 32 MiB.
-- **Plugin vs vendor:** the gateway writes each shot's prompt from these fields, and the plugin
-  cannot supply one. This is the only route where the gateway writes the prompt.
+  - Shots 1–8; frames rendered on the next `8k+1` count from 25 to 361 and cut back to the
+    storyboard's frames. Nothing is trimmed by the gateway.
+  - At most 4 subject pictures and 1 background across the scene; 2 voices of up to 10 s.
+  - Prompt: 2000 characters after the names are numbered on `ltx-2.5-22b-distilled`.
+  - The opening picture is reproduced; a later shot's picture only guides, and the model paces
+    the cuts.
+- **How the plugin fits a board to it** (user's choices, 2026-11-25):
+  - The people the scene's shots reference become one cast with the sheet panel rule for that
+    many (one: face, front, back; two: each face, then each front; three or four: one face each).
+    More than four is refused (`scene_cast_exceeded`).
+  - An ending or timed picture inside a shot, and a panel the cast leaves out, are not sent; the
+    plan names them (`scene_picture_omitted`, `scene_reference_omitted`).
+  - A prompt over the cap is composed again with fewer optional words, step by step; the plan
+    names what went (`scene_prompt_fitted`) and one still over is refused before upload
+    (`scene_prompt_too_long`).
+  - A scene on `ltx-2.5-22b-dev`, one driven by a supplied soundtrack and a line pinned to a frame
+    are refused at planning.
 
 #### Gateway offers, plugin does not expose
 
-- **`POST /v1/generations` `mode:"scene"`** (status `GET /v1/generations/{id}`) [12]:
-  - Body: `{kind:"video", model, mode:"scene", input:{prompt ≤16000 with {id.role} placeholders, cast[≤9], references[≤9], shots[1–8]}, parameters:{width, height, fps, seed?, negative_prompt?, model_options}}`.
-  - LTX profile: `Image N` / `Audio N`, a 2000-character compiled prompt, 2 voices of up to
-    10 s, and model-paced cuts.
-  - H3 profile: `<Picture N>` / `<Audio N>`, an 8000-character prompt, 24 fps, frames `17k+5`
-    from 124 to 345, 3 voices of up to 15 s at 32 kHz, and 9 images.
+- **H3 scene profile** of `/v1/generations` `mode:"scene"` [12]: `<Picture N>` / `<Audio N>`, an
+  8000-character prompt, 24 fps, frames `17k+5` from 124 to 345, 3 voices of up to 15 s at 32 kHz,
+  and 9 images.
 - **`minimax-h3`, `POST /v1/ltx/h3`** [12]:
   - Tasks: `t2va`, `fl2va` and `ref2va`.
   - `ref2va` references: up to 9 images, 3 videos and 3 audio, 12 in all, and never audio
@@ -343,24 +358,23 @@ references.
 ### Gaps and differences
 
 - Vendor offers, plugin does not expose:
-  - `/v1/generations` scene mode
   - `minimax-h3` (both routes)
   - retake, extend, HDR, reframe and upscale on this gateway
 - Mismatches still open:
   - The MSR prompt cap reads 5000 in the plugin schemas and in the live `/v1/models` `ltx-msr`
-    row, but 2000 on `/v1/ltx/msr/capabilities` [13]. The plugin refuses longer prompts only at
-    execution.
+    row, but 2000 on the deployed backend [13]. On the direct tools the gateway refuses a longer
+    prompt at submission; the scene path fits or refuses it at planning.
   - `ltx-2.5-22b-distilled` is in the `astra_genai_audio2video` enum, but production serves A2V
     on dev only.
   - `referenceStrength` is advertised as 0–1; the live value is fixed at 1.0.
   - Combined start/end pins plus MSR references have no upstream example. The gateway's own scene
     profile notes that later shot images were not reproduced in production runs [12].
-  - The gateway job list reports `succeeded`, while the per-route status reports `completed`
-    [13].
 - Unverified:
-  - The result URL lifetime on the `/v1/ltx/v2` routes.
+  - The result URL lifetime of `/v1/generations` outputs.
+  - Any render on the common API: the plugin's scene bodies pass the production `/validate`, but no
+    job was submitted on the new path as of 2026-11-25.
   - Whether any completed I2V job used MSR references.
-  - Renders on dev, `/v1/ltx/msr` and A2V: none in the job window.
+  - Renders on dev, MSR and A2V: none in the job window.
   - The MSR paper's training-share figures.
   - Hosted input formats and sizes (`/input-formats` not fetched).
 

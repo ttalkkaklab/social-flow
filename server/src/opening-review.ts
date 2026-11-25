@@ -366,11 +366,11 @@ function openingSoundReader(board:Obj,directory:string) {
   }
   function sceneTrackMixed(clip:string,clipHash:string,driver:string,shotId:unknown) {
     const file = assetPath(directory,clip);
-    const {readSceneRequest} = load('../../skills/_shared/scene-speech-receipt.js') as {readSceneRequest(file:string,receipt:Obj):Obj};
+    const {readSceneRequest,perShotSceneOperation} = load('../../skills/_shared/scene-speech-receipt.js') as {readSceneRequest(file:string,receipt:Obj):Obj; perShotSceneOperation(operation:unknown):boolean};
     for (const suffix of ['.astra-genai.json','.astra-job.json']) {
       if (!existsSync(file+suffix)) continue;
       const receipt = JSON.parse(readFileSync(file+suffix,'utf8'));
-      if (receipt.sha256 !== clipHash || receipt.operation !== 'scene-to-video') continue;
+      if (receipt.sha256 !== clipHash || !perShotSceneOperation(receipt.operation)) continue;
       const wire = readSceneRequest(file,receipt), body = obj(wire.body), track = obj(body.scene_audio);
       if (body.generate_audio === false || track.mode !== 'mix' || !rows(body.shots).some(s => s.shot_id === shotId) ||
           track.start_frame !== 0 || track.end_frame !== body.num_frames) continue;

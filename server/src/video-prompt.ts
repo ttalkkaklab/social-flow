@@ -225,13 +225,25 @@ export function sceneShotNotes(card: Record<string,unknown>, concise = false) {
   return { action:actions.join(' ') || notes.fallback.map(english).find(Boolean) || '', sound:english(notes.sound), blocking:english(notes.blocking),
     end:english(notes.end), beats:[...notes.beats, ...notes.motion].map(english).filter(Boolean) };
 }
-export function shotVisualWords(shot: Record<string,unknown>, rows:ResolvedRows, common:ResolvedRows, end:string, framing?:string, concise = false) {
+/** What a sentence of a shot's picture direction is, so a scene over its model's prompt cap can let the optional ones go. */
+export type VisualPartKind = 'framing' | 'view' | 'focus' | 'depth' | 'accent' | 'camera' | 'design' | 'space' | 'settle' | 'expression' | 'end';
+export function shotVisualParts(shot: Record<string,unknown>, rows:ResolvedRows, common:ResolvedRows, end:string, framing?:string, concise = false) {
   const dir = shotVisualDirection(shot, concise), visual = object(shot.visual), camera = object(visual.camera);
   const expression = expressionWords(shot);
-  return [...new Set([framing, dir.framing, ...dir.openingView, dir.focusWords, dir.depthWords, ...dir.accentWords,
-    ...Object.entries(rows).filter(([key]) => !common[key]).map(([key,row]) => attributeWords(key,row,camera)),
-    dir.settle && sentence('Closing frame: ' + dir.settle), expression && sentence('Expressions: ' + expression),
-    end && sentence('End on ' + end)].filter((v):v is string => !!v && !nonEnglishOutsideQuotes(v)))].join(' ');
+  // Lighting and attention are design notes; the screen axis and continuity keep the space.
+  const rowKind = (key: string): VisualPartKind => key === 'camera' ? 'camera' : ['lighting', 'attention'].includes(key) ? 'design' : 'space';
+  const parts: {kind: VisualPartKind; text: unknown}[] = [{kind:'framing', text:framing}, {kind:'framing', text:dir.framing},
+    ...dir.openingView.map(text => ({kind:'view' as const, text})), {kind:'focus', text:dir.focusWords}, {kind:'depth', text:dir.depthWords},
+    ...dir.accentWords.map(text => ({kind:'accent' as const, text})),
+    ...Object.entries(rows).filter(([key]) => !common[key]).map(([key,row]) => ({kind:rowKind(key), text:attributeWords(key,row,camera)})),
+    {kind:'settle', text:dir.settle && sentence('Closing frame: ' + dir.settle)}, {kind:'expression', text:expression && sentence('Expressions: ' + expression)},
+    {kind:'end', text:end && sentence('End on ' + end)}];
+  const seen = new Set<string>();
+  return parts.filter((part): part is {kind: VisualPartKind; text: string} => typeof part.text === 'string' && Boolean(part.text) &&
+    !nonEnglishOutsideQuotes(part.text) && !seen.has(part.text) && Boolean(seen.add(part.text)));
+}
+export function shotVisualWords(shot: Record<string,unknown>, rows:ResolvedRows, common:ResolvedRows, end:string, framing?:string, concise = false) {
+  return shotVisualParts(shot, rows, common, end, framing, concise).map(part => part.text).join(' ');
 }
 
 /** Compile the current storyboard values at authoring and request time. Never writes the board. */

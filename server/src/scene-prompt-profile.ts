@@ -57,8 +57,8 @@ function seedanceSeries(model: unknown): '2.0' | '2.5' | undefined {
 /** The writing sentence, reference page and recommended ranges for one adapter and, where the guides differ, one model. */
 export function promptGuidance(tool?: string, model?: unknown): PromptGuidance {
   const profile = scenePromptProfile(tool, model);
-  // Distilled LTX takes MSR's subject references on its image route.
-  const page = tool === 'astra_genai_img2video' ? pages.msr : profile.writer && pages[profile.writer];
+  // Distilled LTX takes MSR's subject references on its image route and in scene mode.
+  const page = tool === 'astra_genai_img2video' || tool === 'astra_genai_scene' ? pages.msr : profile.writer && pages[profile.writer];
   const series = profile.writer === 'seedance' ? seedanceSeries(model) : undefined;
   const note = series === '2.0' ? ' This series follows shot numbers and does not follow timestamps, so leave each shot\'s length to the model.'
     : series === '2.5' ? ' This series reads shot numbers and whole-second ranges.' : '';
@@ -105,6 +105,8 @@ const operations: Readonly<Partial<Record<string, ScenePromptProfile>>> = {
   seedance_img2video: {...seedance, allowsGeneratedVoice: true},
   seedance_reference: seedance,
   astra_genai_img2video: {...holds, writer: 'ltx'},
+  // A GenAI scene is composed as one LTX MSR render with an opening frame, as on the image lane.
+  astra_genai_scene: {...holds, writer: 'ltx'},
   astra_genai_text2video: {...ordered, writer: 'ltx'},
   astra_genai_audio2video: {...ordered, writer: 'recorded'},
   astra_genai_desktop_audio2video: {...ordered, writer: 'recorded'},

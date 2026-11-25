@@ -971,7 +971,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','ltx_video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
   astra_genai_jobs: async args => text(JSON.stringify(await genaiJobs(args))),
   tts_local_voxcpm2: async args => {
     const generation = localVoxSchema.parse(args);
@@ -997,6 +997,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   astra_genai_img2video: async args => text(JSON.stringify(await generateGenaiVideo('image-to-video', args))),
   astra_genai_audio2video: async args => text(JSON.stringify(await generateGenaiVideo('audio-to-video', args))),
   astra_genai_msr: async args => text(JSON.stringify(await generateGenaiVideo('msr', args))),
+  astra_genai_scene: async args => text(JSON.stringify(await generateGenaiVideo('scene', args))),
   astra_genai_edit: async args => {
     const result = await generateGenaiImage(args, 'edit');
     return { ...text(JSON.stringify(result)), imageReceipt: result };

@@ -7,14 +7,14 @@ test('gateway authentication is separate, POST errors are redacted and never ret
   const original = globalThis.fetch, key = config.astraGenaiApiKey, legacy = config.astraVideoApiKey;
   t.after(() => { globalThis.fetch = original; config.astraGenaiApiKey = key; config.astraVideoApiKey = legacy; });
   config.astraGenaiApiKey = ''; config.astraVideoApiKey = 'legacy-only';
-  await assert.rejects(requestGenai('POST', '/v1/ltx/v2/text-to-video', {}), /ASTRA_GENAI_API_KEY/);
+  await assert.rejects(requestGenai('POST', '/v1/generations', {}), /ASTRA_GENAI_API_KEY/);
   config.astraGenaiApiKey = 'fixture-gateway-key'; let calls = 0;
   globalThis.fetch = async (url, options) => {
     calls++; assert.equal(options.headers.Authorization, 'Bearer fixture-gateway-key');
     assert.equal(options.redirect, 'error');
     return new Response(JSON.stringify({ error: { type: 'unsupported_parameter', message: 'fixture-gateway-key' } }), { status: 422 });
   };
-  await assert.rejects(requestGenai('POST', '/v1/ltx/v2/text-to-video', {}), error => /422.*unsupported_parameter/.test(error.message) && !error.message.includes('fixture-gateway-key'));
+  await assert.rejects(requestGenai('POST', '/v1/generations', {}), error => /422.*unsupported_parameter/.test(error.message) && !error.message.includes('fixture-gateway-key'));
   assert.equal(calls, 1);
   globalThis.fetch = async (_url, options) => { assert.equal(options.headers, undefined); return new Response('media'); };
   assert.equal((await downloadGenaiResult('https://results.example/video.mp4?sig=signed')).toString(), 'media');
@@ -38,12 +38,12 @@ test('chat and media routes keep their gateway credentials separate', async t =>
   await assert.rejects(requestGenai('POST', '/v1/chat/completions', {}), /ASTRA_GENAI_CHAT_API_KEY/);
   process.env.ASTRA_GENAI_CHAT_API_KEY = 'chat-key';
   await requestGenai('POST', '/v1/chat/completions', {});
-  await requestGenai('GET', '/v1/ltx/msr/capabilities');
+  await requestGenai('GET', '/v1/models');
   await requestGenai('GET', '/v1/audio/models');
   await requestGenai('GET', '/v1/images/models');
   await requestGenai('GET', '/v1/ltx/desktop/models');
   assert.deepEqual(seen, [['http://127.0.0.1:18185/v1/chat/completions', 'Bearer chat-key'],
-    ['https://remote.example/v1/ltx/msr/capabilities', 'Bearer remote-key'], ['http://127.0.0.1:18081/v1/audio/models', 'Bearer local-key'],
+    ['https://remote.example/v1/models', 'Bearer remote-key'], ['http://127.0.0.1:18081/v1/audio/models', 'Bearer local-key'],
     ['https://remote.example/v1/images/models', 'Bearer remote-key'], ['https://remote.example/v1/ltx/desktop/models', 'Bearer remote-key']]);
 });
 
@@ -95,7 +95,7 @@ test('Desktop discovery and downloads use the configured Desktop origin, v2 down
   process.env.ASTRA_GENAI_DESKTOP_API_KEY = 'desktop-key';
   const media = '/v1/ltx/desktop/assets/id/bytes';
   await requestGenaiMedia(media);
-  await requestGenaiMedia(media, undefined, '/v1/ltx/v2/audio-to-video');
+  await requestGenaiMedia(media, undefined, '/v1/generations');
   assert.deepEqual(seen, [
     ['http://127.0.0.1:18081', 'Bearer local-image-key'],
     ['http://127.0.0.1:18081', 'Bearer desktop-key'],

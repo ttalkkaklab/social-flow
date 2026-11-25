@@ -6,7 +6,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
-import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
+import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualParts, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
@@ -16,46 +16,14 @@ import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { currentSceneVoice } from './video-voice.js';
-export { buildSceneWire } from './genai-scene.js';
 const load = createRequire(import.meta.url);
 const temporal = (image) => ['start', 'keyframe', 'end'].includes(image.role) && !image.reference;
 const english = (value) => value && !nonEnglishOutsideQuotes(value) ? value : '';
-/** Apply an approved plan's reference and casting choices to copied shot cards. */
-export function bindSceneCards(members, bindings) {
-    if (!bindings)
-        return members;
-    const cards = structuredClone(members), seen = new Set();
-    for (const binding of bindings) {
-        const raw = cards.find(card => card.id === binding.shotId);
-        if (!raw || seen.has(binding.shotId))
-            throw new Error('scene_render_bindings: duplicate or unknown shot ' + binding.shotId);
-        seen.add(binding.shotId);
-        const timeline = shotTimelineSchema.parse(raw.timeline);
-        if (binding.framing)
-            timeline.framing = binding.framing;
-        if (binding.action)
-            timeline.action = binding.action;
-        if (binding.keyframes)
-            timeline.images = [...(timeline.images ?? []), ...binding.keyframes.map(pin => ({ ...pin, role: 'keyframe' }))];
-        if (binding.openingPositions)
-            timeline.openingPositions = binding.openingPositions;
-        if (binding.dialogueCues) {
-            for (const cue of binding.dialogueCues) {
-                const line = raw.narration?.find(line => line.id === cue.lineId);
-                if (line?.voiceoverKind === 'inner_thought' && !timeline.dialogueCues?.some(saved => saved.lineId === cue.lineId && saved.frame === cue.frame))
-                    throw new Error('thought_timing: save ' + cue.lineId + ' at frame ' + cue.frame + ' in ' + binding.shotId + '.timeline.dialogueCues so external speech assembly uses the same onset');
-            }
-            timeline.dialogueCues = [...(timeline.dialogueCues ?? []).filter(c => !binding.dialogueCues.some(b => b.lineId === c.lineId)), ...binding.dialogueCues];
-        }
-        raw.timeline = timeline;
-    }
-    return cards;
-}
 export function sceneCoverage(members, scene, board, sceneNo = members[0]?.scene) {
     const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
     return resolvedDirection({ directionDefaults: owner?.directionDefaults, videoDirection: scene }, members);
 }
-export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), shotScoped = false, namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
+export function compileSceneTimeline(raw, scene, episode, board, coverage = sceneCoverage(raw, scene, board), namedReferencesOnly = false, guideMode, guideLimit, concise = false) {
     const render = load('../../skills/storyboard/references/render-routing.js');
     const members = raw;
     const fps = scene.fps ?? 24;
@@ -118,8 +86,6 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             pins.push({ path: frames.start, frame: startFrame, role: 'start' });
         if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1)))
             pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
-        if (shotScoped && member.referenceImage && !pins.some(pin => pin.role === 'start'))
-            pins.push({ path: member.referenceImage, frame: startFrame, role: 'start' });
         const occupied = new Set();
         const references = render.imageReferences(member).filter((r) => ['video', 'both'].includes(r.use));
         const add = (pin) => {
@@ -168,7 +134,7 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
         }
         // Older approved single-shot plans already bind their narration and voices in
         // the adapter. Preserve their manifest and hash unless a timeline adds a binding.
-        const scoped = shotScoped || members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
+        const scoped = members.length > 1 || timeline?.openingPositions || timeline?.dialogueCues?.length;
         if (members.length === 1 && timeline?.openingPositions && scene.openingPositions &&
             JSON.stringify(timeline.openingPositions) !== JSON.stringify(scene.openingPositions))
             throw new Error('scene_opening_positions: a single shot and its scene must have the same opening positions');
@@ -192,19 +158,6 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
                 ...(frame !== undefined ? { frame } : {}), ...(voice ? { voice } : {}),
                 ...(warnings.length ? { warnings } : {}) };
         });
-        if (shotScoped && dialogue.some(line => line.voice)) {
-            const owners = [...new Set(dialogue.filter(line => line.voice).map(line => line.speaker))];
-            const indices = images.flatMap((image, i) => image.shotId === shotId && !temporal(image) ? [i] : []);
-            const references = indices.map(i => images[i]);
-            // The gateway binds a voice to the first picture owned by that speaker.
-            const voices = owners.map(id => references.find(ref => ref.character === id && !['location', 'background'].includes(ref.role))).filter((ref) => !!ref);
-            const slots = references.filter(ref => !['location', 'background'].includes(ref.role));
-            const ordered = voices.every(ref => slots.indexOf(ref) < 2) ? references : [...voices, ...references.filter(ref => !voices.includes(ref))];
-            for (const [i, slot] of indices.entries())
-                images[slot] = ordered[i];
-            const subjects = ordered.filter(ref => !['location', 'background'].includes(ref.role));
-            positions = positions?.map(row => ({ ...row, images: subjects.flatMap((ref, i) => ref.character === row.character ? [i + 1] : []) }));
-        }
         return { shotId, startFrame, endFrame, transition, framing, action,
             ...(concise && notes.end ? { closingState: notes.end } : {}),
             ...(positions?.length ? { openingPositions: positions } : {}), ...(blocking ? { blocking } : {}),
@@ -249,11 +202,15 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const owner = board?.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
     load('../../skills/_shared/scene-cast.js').sceneCast(owner ?? { no: sceneNo }, members);
     const ownsFrames = owner?.frames !== undefined || owner?.speakers !== undefined;
-    const modelPacedCuts = ownsFrames && !options.shotScoped && members.length > 1 &&
-        !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut'));
+    // GenAI scene mode paces every cut itself, so a frame-addressed timeline becomes ordered shots with their lengths.
+    const modelPacedCuts = members.length > 1 && (options.sceneMode || ownsFrames &&
+        !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut')));
     const cutTiming = options.profile?.cutTiming;
     const directedCuts = cutTiming === 'time_ranges' || cutTiming === 'action_beats';
-    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.shotScoped, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && (options.bindDialogue || directedCuts));
+    const concise = modelPacedCuts && (options.bindDialogue || directedCuts);
+    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.namedReferencesOnly, options.guideMode, options.guideLimit, concise);
+    const fitStep = options.fitStep ?? 0;
+    const fitted = fitStep ? fitSceneTimeline(timeline, members, scene, coverage, concise, fitStep) : timeline;
     const common = coverage.common;
     const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
     const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(' ');
@@ -264,13 +221,13 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
     const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
-    const providerTimeline = sceneTimelineWords(timeline, scene, {
+    const providerTimeline = sceneTimelineWords(fitted, scene, {
         ...providerTiming, includeDialogue: !options.bindDialogue,
-        describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue,
+        describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3,
     });
     const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
-    const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
+    const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? { modelPacedCuts: true } : {}), ...(options.sceneMode ? { sceneMode: true } : {}), sceneDirection: { emotion: scene.emotion, ...(scene.action ? { action: scene.action } : {}),
             ...(camera.instruction ? { camera: camera.instruction } : {}), ...(staging ? { staging } : {}), ...(scene.oneTake ? { oneTake: true } : {}), ...(scene.sound ? { sound: scene.sound } : {}) } };
     const cards = members;
     const authored = cards.flatMap(card => card.narration ?? []);
@@ -293,9 +250,37 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const bindSceneTurns = (prompt, turns, describeDelivery = true) => {
         if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
             throw new Error('scene_dialogue_binding: the dialogue no longer matches the planned shot sequence');
-        return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { ...providerTiming, boundTurns: turns, describeDelivery }));
+        return prompt.replace(providerTimeline, () => sceneTimelineWords(fitted, scene, { ...providerTiming, boundTurns: turns, describeDelivery: describeDelivery && fitStep < 3 }));
     };
     return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
+}
+/**
+ * A GenAI scene over its model's prompt cap is composed again with fewer optional words (user's choice 2026-11-25). Step 1
+ * says each sentence once and shortens the panel sentence; 2 leaves out design notes (opening attention, crop and
+ * viewpoint, depth, accents, lighting); 3 the timed acting beats and delivery direction; 4 expressions; 5 per-shot sound,
+ * blocking, closing states, screen axis and continuity. Size, angle, camera move, focus, action and lines always stay.
+ */
+export const SCENE_FIT_STEPS = ['repeated sentences and the long panel sentence', 'design notes', 'timed acting beats and delivery direction',
+    'expressions', 'per-shot sound, blocking, closing states, axis and continuity'];
+function fitSceneTimeline(timeline, members, scene, coverage, concise, step) {
+    // A sentence whose words, after any short label, were already said adds nothing.
+    const body = (text) => text.replace(/^[^.:"]{1,40}:\s*/, '').replace(/[.\s]+$/, '').toLowerCase();
+    const drop = new Set([...(step >= 2 ? ['view', 'depth', 'accent', 'design'] : []),
+        ...(step >= 4 ? ['expression'] : []), ...(step >= 5 ? ['end', 'space'] : [])]);
+    return { ...timeline, shots: timeline.shots.map((shot, index) => {
+            const card = members[index], notes = sceneShotNotes(card, concise), said = [];
+            const keep = (text) => text && !said.some(earlier => earlier.toLowerCase().includes(body(text))) ? (said.push(text), text) : '';
+            const framing = shotVisualParts(card, coverage.shots[index], coverage.common, concise ? '' : notes.end, card.timeline?.framing, concise).filter(part => !drop.has(part.kind))
+                .flatMap(part => part.kind === 'view' ? part.text.split(/(?=Opening (?:attention|crop|viewpoint): )/).map(text => text.trim()) : [part.text])
+                .map(keep).filter(Boolean).join(' ');
+            const blocking = step >= 5 ? '' : keep(notes.blocking);
+            const action = [keep(notes.action || (members.length === 1 ? scene.action || scene.emotion : '')),
+                ...(step >= 3 ? [] : notes.beats.map(keep))].filter(Boolean).join(' ');
+            const { blocking: _blocking, sound, closingState, ...rest } = shot;
+            const dialogue = step >= 3 ? shot.dialogue?.map(({ direction: _direction, ...line }) => line) : shot.dialogue;
+            return { ...rest, framing: framing || shot.framing, action, ...(dialogue ? { dialogue } : {}), ...(blocking ? { blocking } : {}),
+                ...(step < 5 && sound ? { sound } : {}), ...(step < 5 && closingState ? { closingState } : {}) };
+        }) };
 }
 export class SceneInputError extends Error {
     tool;
@@ -312,52 +297,19 @@ export class SceneInputError extends Error {
         this.resolution = resolution;
     }
 }
-/** Read the deployed I2V request grammar for a refused scene. Discovery never enables a mapper. */
-/** What the deployed image-to-video route takes, read from its published schema and capabilities. Nothing of the scene is sent. */
+/** What the deployment's scene mode takes, read from `GET /v1/models`. Nothing of the refused scene is sent. */
 export async function inspectSceneInputContract(error) {
-    if (error.tool !== 'astra_genai_img2video')
+    if (error.tool !== 'astra_genai_scene')
         return undefined;
-    const endpoint = '/v1/ltx/v2/image-to-video';
-    const address = { baseUrl: astraGenaiBaseUrl(), endpoint };
-    const pipeline = error.sceneRequest.images.some(p => !temporal(p)) ? 'msr'
-        : error.model === 'ltx-2.5-22b-dev' ? 'guided_hq' : 'generate';
-    const [grammar, capabilities] = await Promise.allSettled([
-        requestGenai('GET', '/openapi.json', undefined, 10000),
-        requestGenai('GET', '/v1/ltx/v2/capabilities', undefined, 10000),
-    ]);
-    const catalog = z.object({ pipelines: z.array(z.object({
-            pipeline: z.string(), shot_control: z.object({ descriptions: z.string().nullable(),
-                frame_accurate_cuts: z.boolean(), shot_scoped_references: z.boolean(), frame_addressed_native_dialogue: z.boolean() }).optional(),
-        })) }).safeParse(capabilities.status === 'fulfilled' ? capabilities.value : undefined);
-    const control = catalog.success ? catalog.data.pipelines.find(p => p.pipeline === pipeline)?.shot_control : undefined;
-    const deployment = { ...address, pipeline, ...(control ? { shotControl: control } : {}) };
+    const address = { baseUrl: astraGenaiBaseUrl(), endpoint: '/v1/generations', mode: 'scene' };
     try {
-        if (grammar.status !== 'fulfilled')
-            return { ...deployment, status: 'unverified' };
-        const document = grammar.value;
-        const fields = (ref) => {
-            if (!ref.startsWith('#/components/schemas/'))
-                throw new Error('Unknown schema reference');
-            return Object.keys(document.components.schemas[ref.slice('#/components/schemas/'.length)].properties);
-        };
-        const schemaRef = (route) => document.paths[route]?.post?.requestBody?.content?.['application/json']?.schema?.$ref;
-        const ref = schemaRef(endpoint);
-        const array = z.object({ items: z.object({ $ref: z.string() }) });
-        const arrayFields = (name) => {
-            const property = document.components.schemas[ref.split('/').pop()].properties[name];
-            const variants = z.object({ anyOf: z.array(z.unknown()) }).safeParse(property);
-            for (const variant of variants.success ? variants.data.anyOf : [property]) {
-                const parsed = array.safeParse(variant);
-                if (parsed.success)
-                    return fields(parsed.data.items.$ref);
-            }
-            throw new Error('Unknown array schema');
-        };
-        return { ...deployment, status: 'verified', requestFields: fields(ref),
-            temporalImageFields: arrayFields('keyframes'), referenceFields: arrayFields('references') };
+        const listed = z.object({ data: z.array(z.object({ id: z.string(), scene: z.record(z.unknown()).optional() }).passthrough()) })
+            .parse(await requestGenai('GET', '/v1/models', undefined, 10000)).data;
+        const scene = listed.find(model => model.id === error.model)?.scene;
+        return scene ? { ...address, status: 'verified', scene } : { ...address, status: 'unverified' };
     }
     catch {
-        return { ...deployment, status: 'unverified' };
+        return { ...address, status: 'unverified' };
     }
 }
 /** Decide using ALL scene inputs before building any provider fields or saving an executable plan. */
@@ -390,14 +342,22 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
                 reason: 'No timed native sound cue for this shot on a single scene soundtrack' });
     }
     const pins = request.images.filter(temporal);
-    const refs = request.images.filter(p => !temporal(p) && (p.reference?.scope !== 'scene' || p.shotId === request.shotIds[0]));
+    let refs = request.images.filter(p => !temporal(p) && (p.reference?.scope !== 'scene' || p.shotId === request.shotIds[0]));
+    // Scene mode spans every reference over the whole scene, so a shot's own reference joins the scene cast once (user's choice 2026-11-25).
+    if (request.sceneMode) {
+        const seen = new Set();
+        refs = refs.filter(p => !seen.has(p.path) && Boolean(seen.add(p.path)));
+    }
     for (const ref of refs)
         if (ref.strength !== undefined && ref.strength !== 1)
             missing.push({ input: 'reference', role: ref.role, shotId: ref.shotId, frame: ref.frame, path: ref.path, reason: 'Individual subject strength is unsupported' });
     const opening = pins.some(p => p.role === 'start' && p.frame === 0);
     const timedLimit = tool === 'astra_genai_desktop_keyframes' ? 10 : 8;
     for (const [index, p] of pins.entries()) {
-        if (tool === 'astra_genai_img2video' && !caps.frameAccurateCuts && request.cuts.some(cut => cut.transition === 'hard_cut' &&
+        // Scene mode opens each shot on its start picture. An ending or a timed picture inside a shot is left out, and the plan names it.
+        if (request.sceneMode)
+            continue;
+        if (tool === 'astra_genai_img2video' && !request.sceneMode && !caps.frameAccurateCuts && request.cuts.some(cut => cut.transition === 'hard_cut' &&
             ((p.role === 'start' && p.shotId === cut.to && p.frame === cut.frame) || (p.role === 'end' && p.shotId === cut.from && p.frame === cut.frame - 1))))
             missing.push({ input: 'image', shotId: p.shotId, frame: p.frame, path: p.path, role: p.role,
                 reason: 'A temporal pin conditions a frame but cannot enforce this image at a shot boundary' });
@@ -434,6 +394,8 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
             })));
     }
     for (const p of refs) {
+        if (request.sceneMode)
+            continue;
         if (p.reference?.scope === 'shot_guide' && VIDEO_ADAPTERS[tool]?.voice === 'reference' && tool !== 'astra_genai_msr' && (request.shots.length === 1 || request.modelPacedCuts))
             continue;
         if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== 'scene') {
@@ -448,7 +410,8 @@ export function mapSceneInputs(request, tool, model, missing = [], resolution) {
     }
     if (request.audio && !caps.sceneAudio)
         missing.push({ input: 'audio', frame: 0, path: request.audio.path, reason: 'No continuous supplied soundtrack with these inputs' });
-    if (tool === 'astra_genai_img2video' && request.shots.length > 1) {
+    // Scene mode renders the next 8k+1 frames and cuts the clip back, so only the image route needs the exact grid.
+    if (tool === 'astra_genai_img2video' && request.shots.length > 1 && !request.sceneMode) {
         const wholeSeconds = request.frameCount % request.fps === 0;
         const onGrid = request.frameCount >= 25 && (request.frameCount - 1) % 8 === 0;
         if (request.frameCount > 361 || !wholeSeconds && !onGrid)
@@ -540,8 +503,9 @@ export function bindSceneAdapter(request, tool, model, shot, input, episode, res
     }
     const gateway = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
     const start = gateway ? pins.find(p => p.frame === 0 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'start');
-    const end = gateway ? start && pins.find(p => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'end');
-    const intermediate = gateway ? pins.filter(p => p !== start && p !== end) : [];
+    // A GenAI scene sends each shot's own start picture with the scene request; the composition takes only the opening.
+    const end = request.sceneMode ? undefined : gateway ? start && pins.find(p => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'end');
+    const intermediate = gateway && !request.sceneMode ? pins.filter(p => p !== start && p !== end) : [];
     const gatewayKeyframes = intermediate.length ? {
         args: { keyframes: intermediate.map(p => ({ imagePath: p.path, frameIdx: p.frame, strength: p.strength ?? 1 })) },
         imageBindings: intermediate.map((p, i) => ({ ...verifyImageFile(p.path), ...p, id: p.shotId + '-keyframe-' + i,
@@ -597,12 +561,7 @@ export async function checkSceneDeployment(request, tool, args) {
             missing.push({ input: 'audio', frame: 0, path: request.audio.path, reason });
         throw new SceneInputError(tool, request, missing);
     };
-    if (tool === 'astra_genai_img2video' && Array.isArray(args.references)) {
-        const capabilities = await requestGenai('GET', '/v1/ltx/msr/capabilities', undefined, 15000)
-            .catch(() => fail('Cannot verify combined image and reference support'));
-        if (z.object({ image_conditioning: z.literal(true) }).safeParse(capabilities).success === false)
-            fail('Gateway does not advertise combined start frame and subject conditioning');
-    }
+    // A GenAI scene is checked whole by POST /v1/generations/validate when it is planned and again before it is submitted.
     if (!tool.startsWith('astra_genai_desktop_'))
         return;
     const cell = z.object({ fps_to_durations: z.record(z.array(z.number())), aspect_ratios: z.array(z.string()) });

@@ -915,7 +915,7 @@ var require_browser = __commonJS({
   "node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load12;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.storage = localstorage();
     exports.destroy = /* @__PURE__ */ (() => {
@@ -1051,7 +1051,7 @@ var require_browser = __commonJS({
       } catch (error) {
       }
     }
-    function load12() {
+    function load11() {
       let r2;
       try {
         r2 = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
@@ -1089,7 +1089,7 @@ var require_node = __commonJS({
     exports.log = log;
     exports.formatArgs = formatArgs;
     exports.save = save;
-    exports.load = load12;
+    exports.load = load11;
     exports.useColors = useColors;
     exports.destroy = util2.deprecate(
       () => {
@@ -1231,7 +1231,7 @@ var require_node = __commonJS({
         delete process.env.DEBUG;
       }
     }
-    function load12() {
+    function load11() {
       return process.env.DEBUG;
     }
     function init(debug) {
@@ -6637,8 +6637,8 @@ async function toFormData(Body2, ct) {
     entryChunks.push(ui8a);
   };
   const appendFileToFormData = () => {
-    const file = new file_default(entryChunks, filename, { type: contentType });
-    formData.append(entryName, file);
+    const file2 = new file_default(entryChunks, filename, { type: contentType });
+    formData.append(entryName, file2);
   };
   const appendEntryToFormData = () => {
     formData.append(entryName, entryValue);
@@ -9300,7 +9300,7 @@ var require_bignumber = __commonJS({
             return q;
           };
         })();
-        function format(n, i2, rm, id) {
+        function format(n, i2, rm, id2) {
           var c0, e2, ne, len, str2;
           if (rm == null) rm = ROUNDING_MODE;
           else intCheck(rm, 0, 8);
@@ -9309,17 +9309,17 @@ var require_bignumber = __commonJS({
           ne = n.e;
           if (i2 == null) {
             str2 = coeffToString(n.c);
-            str2 = id == 1 || id == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str2, ne) : toFixedPoint(str2, ne, "0");
+            str2 = id2 == 1 || id2 == 2 && (ne <= TO_EXP_NEG || ne >= TO_EXP_POS) ? toExponential(str2, ne) : toFixedPoint(str2, ne, "0");
           } else {
             n = round2(new BigNumber2(n), i2, rm);
             e2 = n.e;
             str2 = coeffToString(n.c);
             len = str2.length;
-            if (id == 1 || id == 2 && (i2 <= e2 || e2 <= TO_EXP_NEG)) {
+            if (id2 == 1 || id2 == 2 && (i2 <= e2 || e2 <= TO_EXP_NEG)) {
               for (; len < i2; str2 += "0", len++) ;
               str2 = toExponential(str2, e2);
             } else {
-              i2 -= ne + (id === 2 && e2 > ne);
+              i2 -= ne + (id2 === 2 && e2 > ne);
               str2 = toFixedPoint(str2, e2, "0");
               if (e2 + 1 > len) {
                 if (--i2 > 0) for (str2 += "."; i2--; str2 += "0") ;
@@ -11318,8 +11318,8 @@ var require_crypto = __commonJS({
         const outputBuffer = await window.crypto.subtle.digest("SHA-256", inputBuffer);
         return base64js.fromByteArray(new Uint8Array(outputBuffer));
       }
-      randomBytesBase64(count2) {
-        const array = new Uint8Array(count2);
+      randomBytesBase64(count) {
+        const array = new Uint8Array(count);
         window.crypto.getRandomValues(array);
         return base64js.fromByteArray(array);
       }
@@ -11406,8 +11406,8 @@ var require_crypto2 = __commonJS({
       async sha256DigestBase64(str2) {
         return crypto2.createHash("sha256").update(str2).digest("base64");
       }
-      randomBytesBase64(count2) {
-        return crypto2.randomBytes(count2).toString("base64");
+      randomBytesBase64(count) {
+        return crypto2.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
         const verifier = crypto2.createVerify("RSA-SHA256");
@@ -15808,16 +15808,16 @@ var require_identitypoolclient = __commonJS({
           if (formatType === "json" && !formatSubjectTokenFieldName) {
             throw new Error("Missing subject_token_field_name for JSON credential_source format");
           }
-          const file = credentialSourceOpts.get("file");
+          const file2 = credentialSourceOpts.get("file");
           const url = credentialSourceOpts.get("url");
           const certificate = credentialSourceOpts.get("certificate");
           const headers2 = credentialSourceOpts.get("headers");
-          if (file && url || url && certificate || file && certificate) {
+          if (file2 && url || url && certificate || file2 && certificate) {
             throw new Error('No valid Identity Pool "credential_source" provided, must be either file, url, or certificate.');
-          } else if (file) {
+          } else if (file2) {
             this.credentialSourceType = "file";
             this.subjectTokenSupplier = new filesubjecttokensupplier_1.FileSubjectTokenSupplier({
-              filePath: file,
+              filePath: file2,
               formatType,
               subjectTokenFieldName: formatSubjectTokenFieldName
             });
@@ -26452,8 +26452,8 @@ var require_client_h2 = __commonJS({
       this[kSocket][kError] = err;
       this[kClient][kOnError](err);
     }
-    function onHttp2FrameError(type, code, id) {
-      if (id === 0) {
+    function onHttp2FrameError(type, code, id2) {
+      if (id2 === 0) {
         const err = new InformationalError(`HTTP/2: "frameError" received - type ${type}, code ${code}`);
         this[kSocket][kError] = err;
         this[kClient][kOnError](err);
@@ -43710,15 +43710,15 @@ ${value}`;
           pos = 0;
         }
       }
-      discardLeadingBytes(count2) {
-        while (count2 > 0 && this.lineChunkIndex < this.chunks.length) {
+      discardLeadingBytes(count) {
+        while (count > 0 && this.lineChunkIndex < this.chunks.length) {
           const chunk = this.chunks[this.lineChunkIndex];
           const remaining = chunk.length - this.linePos;
-          if (count2 < remaining) {
-            this.linePos += count2;
-            count2 = 0;
+          if (count < remaining) {
+            this.linePos += count;
+            count = 0;
           } else {
-            count2 -= remaining;
+            count -= remaining;
             this.lineChunkIndex++;
             this.linePos = 0;
           }
@@ -45166,11 +45166,11 @@ var require_retry_operation = __commonJS({
       for (var i2 = 0; i2 < this._errors.length; i2++) {
         var error = this._errors[i2];
         var message = error.message;
-        var count2 = (counts[message] || 0) + 1;
-        counts[message] = count2;
-        if (count2 >= mainErrorCount) {
+        var count = (counts[message] || 0) + 1;
+        counts[message] = count;
+        if (count >= mainErrorCount) {
           mainError = error;
-          mainErrorCount = count2;
+          mainErrorCount = count;
         }
       }
       return mainError;
@@ -45346,7 +45346,7 @@ var require_signal_exit = __commonJS({
         }
         assert.equal(typeof cb, "function", "a callback must be provided for exit handler");
         if (loaded === false) {
-          load12();
+          load11();
         }
         var ev = "exit";
         if (opts && opts.alwaysLast) {
@@ -45406,7 +45406,7 @@ var require_signal_exit = __commonJS({
         return signals;
       };
       loaded = false;
-      load12 = function load13() {
+      load11 = function load12() {
         if (loaded || !processOk(global.process)) {
           return;
         }
@@ -45423,7 +45423,7 @@ var require_signal_exit = __commonJS({
         process2.emit = processEmit;
         process2.reallyExit = processReallyExit;
       };
-      module.exports.load = load12;
+      module.exports.load = load11;
       originalProcessReallyExit = process2.reallyExit;
       processReallyExit = function processReallyExit2(code) {
         if (!processOk(global.process)) {
@@ -45459,7 +45459,7 @@ var require_signal_exit = __commonJS({
     var emit;
     var sigListeners;
     var loaded;
-    var load12;
+    var load11;
     var originalProcessReallyExit;
     var processReallyExit;
     var originalProcessEmit;
@@ -45472,10 +45472,10 @@ var require_mtime_precision = __commonJS({
   "node_modules/proper-lockfile/lib/mtime-precision.js"(exports, module) {
     "use strict";
     var cacheSymbol = /* @__PURE__ */ Symbol();
-    function probe3(file, fs6, callback) {
+    function probe3(file2, fs6, callback) {
       const cachedPrecision = fs6[cacheSymbol];
       if (cachedPrecision) {
-        return fs6.stat(file, (err, stat2) => {
+        return fs6.stat(file2, (err, stat2) => {
           if (err) {
             return callback(err);
           }
@@ -45483,11 +45483,11 @@ var require_mtime_precision = __commonJS({
         });
       }
       const mtime = new Date(Math.ceil(Date.now() / 1e3) * 1e3 + 5);
-      fs6.utimes(file, mtime, mtime, (err) => {
+      fs6.utimes(file2, mtime, mtime, (err) => {
         if (err) {
           return callback(err);
         }
-        fs6.stat(file, (err2, stat2) => {
+        fs6.stat(file2, (err2, stat2) => {
           if (err2) {
             return callback(err2);
           }
@@ -45519,17 +45519,17 @@ var require_lockfile = __commonJS({
     var onExit = require_signal_exit();
     var mtimePrecision = require_mtime_precision();
     var locks = {};
-    function getLockFile(file, options) {
-      return options.lockfilePath || `${file}.lock`;
+    function getLockFile(file2, options) {
+      return options.lockfilePath || `${file2}.lock`;
     }
-    function resolveCanonicalPath(file, options, callback) {
+    function resolveCanonicalPath(file2, options, callback) {
       if (!options.realpath) {
-        return callback(null, path9.resolve(file));
+        return callback(null, path9.resolve(file2));
       }
-      options.fs.realpath(file, callback);
+      options.fs.realpath(file2, callback);
     }
-    function acquireLock(file, options, callback) {
-      const lockfilePath = getLockFile(file, options);
+    function acquireLock(file2, options, callback) {
+      const lockfilePath = getLockFile(file2, options);
       options.fs.mkdir(lockfilePath, (err) => {
         if (!err) {
           return mtimePrecision.probe(lockfilePath, options.fs, (err2, mtime, mtimePrecision2) => {
@@ -45545,23 +45545,23 @@ var require_lockfile = __commonJS({
           return callback(err);
         }
         if (options.stale <= 0) {
-          return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
+          return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file: file2 }));
         }
         options.fs.stat(lockfilePath, (err2, stat2) => {
           if (err2) {
             if (err2.code === "ENOENT") {
-              return acquireLock(file, { ...options, stale: 0 }, callback);
+              return acquireLock(file2, { ...options, stale: 0 }, callback);
             }
             return callback(err2);
           }
           if (!isLockStale(stat2, options)) {
-            return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file }));
+            return callback(Object.assign(new Error("Lock file is already being held"), { code: "ELOCKED", file: file2 }));
           }
-          removeLock(file, options, (err3) => {
+          removeLock(file2, options, (err3) => {
             if (err3) {
               return callback(err3);
             }
-            acquireLock(file, { ...options, stale: 0 }, callback);
+            acquireLock(file2, { ...options, stale: 0 }, callback);
           });
         });
       });
@@ -45569,16 +45569,16 @@ var require_lockfile = __commonJS({
     function isLockStale(stat2, options) {
       return stat2.mtime.getTime() < Date.now() - options.stale;
     }
-    function removeLock(file, options, callback) {
-      options.fs.rmdir(getLockFile(file, options), (err) => {
+    function removeLock(file2, options, callback) {
+      options.fs.rmdir(getLockFile(file2, options), (err) => {
         if (err && err.code !== "ENOENT") {
           return callback(err);
         }
         callback();
       });
     }
-    function updateLock(file, options) {
-      const lock2 = locks[file];
+    function updateLock(file2, options) {
+      const lock2 = locks[file2];
       if (lock2.updateTimeout) {
         return;
       }
@@ -45589,15 +45589,15 @@ var require_lockfile = __commonJS({
           const isOverThreshold = lock2.lastUpdate + options.stale < Date.now();
           if (err) {
             if (err.code === "ENOENT" || isOverThreshold) {
-              return setLockAsCompromised(file, lock2, Object.assign(err, { code: "ECOMPROMISED" }));
+              return setLockAsCompromised(file2, lock2, Object.assign(err, { code: "ECOMPROMISED" }));
             }
             lock2.updateDelay = 1e3;
-            return updateLock(file, options);
+            return updateLock(file2, options);
           }
           const isMtimeOurs = lock2.mtime.getTime() === stat2.mtime.getTime();
           if (!isMtimeOurs) {
             return setLockAsCompromised(
-              file,
+              file2,
               lock2,
               Object.assign(
                 new Error("Unable to update lock within the stale threshold"),
@@ -45613,15 +45613,15 @@ var require_lockfile = __commonJS({
             }
             if (err2) {
               if (err2.code === "ENOENT" || isOverThreshold2) {
-                return setLockAsCompromised(file, lock2, Object.assign(err2, { code: "ECOMPROMISED" }));
+                return setLockAsCompromised(file2, lock2, Object.assign(err2, { code: "ECOMPROMISED" }));
               }
               lock2.updateDelay = 1e3;
-              return updateLock(file, options);
+              return updateLock(file2, options);
             }
             lock2.mtime = mtime;
             lock2.lastUpdate = Date.now();
             lock2.updateDelay = null;
-            updateLock(file, options);
+            updateLock(file2, options);
           });
         });
       }, lock2.updateDelay);
@@ -45629,17 +45629,17 @@ var require_lockfile = __commonJS({
         lock2.updateTimeout.unref();
       }
     }
-    function setLockAsCompromised(file, lock2, err) {
+    function setLockAsCompromised(file2, lock2, err) {
       lock2.released = true;
       if (lock2.updateTimeout) {
         clearTimeout(lock2.updateTimeout);
       }
-      if (locks[file] === lock2) {
-        delete locks[file];
+      if (locks[file2] === lock2) {
+        delete locks[file2];
       }
       lock2.options.onCompromised(err);
     }
-    function lock(file, options, callback) {
+    function lock(file2, options, callback) {
       options = {
         stale: 1e4,
         update: null,
@@ -45656,58 +45656,58 @@ var require_lockfile = __commonJS({
       options.stale = Math.max(options.stale || 0, 2e3);
       options.update = options.update == null ? options.stale / 2 : options.update || 0;
       options.update = Math.max(Math.min(options.update, options.stale / 2), 1e3);
-      resolveCanonicalPath(file, options, (err, file2) => {
+      resolveCanonicalPath(file2, options, (err, file3) => {
         if (err) {
           return callback(err);
         }
         const operation = retry.operation(options.retries);
         operation.attempt(() => {
-          acquireLock(file2, options, (err2, mtime, mtimePrecision2) => {
+          acquireLock(file3, options, (err2, mtime, mtimePrecision2) => {
             if (operation.retry(err2)) {
               return;
             }
             if (err2) {
               return callback(operation.mainError());
             }
-            const lock2 = locks[file2] = {
-              lockfilePath: getLockFile(file2, options),
+            const lock2 = locks[file3] = {
+              lockfilePath: getLockFile(file3, options),
               mtime,
               mtimePrecision: mtimePrecision2,
               options,
               lastUpdate: Date.now()
             };
-            updateLock(file2, options);
+            updateLock(file3, options);
             callback(null, (releasedCallback) => {
               if (lock2.released) {
                 return releasedCallback && releasedCallback(Object.assign(new Error("Lock is already released"), { code: "ERELEASED" }));
               }
-              unlock(file2, { ...options, realpath: false }, releasedCallback);
+              unlock(file3, { ...options, realpath: false }, releasedCallback);
             });
           });
         });
       });
     }
-    function unlock(file, options, callback) {
+    function unlock(file2, options, callback) {
       options = {
         fs: fs6,
         realpath: true,
         ...options
       };
-      resolveCanonicalPath(file, options, (err, file2) => {
+      resolveCanonicalPath(file2, options, (err, file3) => {
         if (err) {
           return callback(err);
         }
-        const lock2 = locks[file2];
+        const lock2 = locks[file3];
         if (!lock2) {
           return callback(Object.assign(new Error("Lock is not acquired/owned by you"), { code: "ENOTACQUIRED" }));
         }
         lock2.updateTimeout && clearTimeout(lock2.updateTimeout);
         lock2.released = true;
-        delete locks[file2];
-        removeLock(file2, options, callback);
+        delete locks[file3];
+        removeLock(file3, options, callback);
       });
     }
-    function check(file, options, callback) {
+    function check(file2, options, callback) {
       options = {
         stale: 1e4,
         realpath: true,
@@ -45715,11 +45715,11 @@ var require_lockfile = __commonJS({
         ...options
       };
       options.stale = Math.max(options.stale || 0, 2e3);
-      resolveCanonicalPath(file, options, (err, file2) => {
+      resolveCanonicalPath(file2, options, (err, file3) => {
         if (err) {
           return callback(err);
         }
-        options.fs.stat(getLockFile(file2, options), (err2, stat2) => {
+        options.fs.stat(getLockFile(file3, options), (err2, stat2) => {
           if (err2) {
             return err2.code === "ENOENT" ? callback(null, false) : callback(err2);
           }
@@ -45731,10 +45731,10 @@ var require_lockfile = __commonJS({
       return locks;
     }
     onExit(() => {
-      for (const file in locks) {
-        const options = locks[file].options;
+      for (const file2 in locks) {
+        const options = locks[file2].options;
         try {
-          options.fs.rmdirSync(getLockFile(file, options));
+          options.fs.rmdirSync(getLockFile(file2, options));
         } catch (e2) {
         }
       }
@@ -45817,25 +45817,25 @@ var require_proper_lockfile = __commonJS({
     "use strict";
     var lockfile3 = require_lockfile();
     var { toPromise, toSync, toSyncOptions } = require_adapter();
-    async function lock(file, options) {
-      const release = await toPromise(lockfile3.lock)(file, options);
+    async function lock(file2, options) {
+      const release = await toPromise(lockfile3.lock)(file2, options);
       return toPromise(release);
     }
-    function lockSync(file, options) {
-      const release = toSync(lockfile3.lock)(file, toSyncOptions(options));
+    function lockSync(file2, options) {
+      const release = toSync(lockfile3.lock)(file2, toSyncOptions(options));
       return toSync(release);
     }
-    function unlock(file, options) {
-      return toPromise(lockfile3.unlock)(file, options);
+    function unlock(file2, options) {
+      return toPromise(lockfile3.unlock)(file2, options);
     }
-    function unlockSync(file, options) {
-      return toSync(lockfile3.unlock)(file, toSyncOptions(options));
+    function unlockSync(file2, options) {
+      return toSync(lockfile3.unlock)(file2, toSyncOptions(options));
     }
-    function check(file, options) {
-      return toPromise(lockfile3.check)(file, options);
+    function check(file2, options) {
+      return toPromise(lockfile3.check)(file2, options);
     }
-    function checkSync(file, options) {
-      return toSync(lockfile3.check)(file, toSyncOptions(options));
+    function checkSync(file2, options) {
+      return toSync(lockfile3.check)(file2, toSyncOptions(options));
     }
     module.exports = lock;
     module.exports.lock = lock;
@@ -49991,7 +49991,7 @@ var openingPositionsSchema = external_exports.array(external_exports.object({
 var sceneText = external_exports.string().trim().min(1).refine((value) => !nonEnglishOutsideQuotes(value), "Write scene direction in English");
 var load2 = createRequire2(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
-  camera: sceneText.refine((id) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id), "Choose a movement ID from the camera catalogue").optional(),
+  camera: sceneText.refine((id2) => !!load2("../../skills/storyboard/references/scene-direction.js").movement(id2), "Choose a movement ID from the camera catalogue").optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
@@ -50032,18 +50032,6 @@ var shotTimelineSchema = external_exports.object({
     if (["face", "outfit"].includes(image2.role) && !image2.character) issue("Identify the owner of a face or outfit reference");
   }
 });
-var sceneShotBindingsSchema = external_exports.array(external_exports.object({
-  shotId: external_exports.string().min(1),
-  openingPositions: openingPositionsSchema.optional(),
-  framing: sceneText.optional(),
-  action: sceneText.optional(),
-  keyframes: external_exports.array(external_exports.object({ path: external_exports.string().trim().min(1), frame, strength: external_exports.number().min(0).max(1).optional() }).strict()).min(1).max(7).optional(),
-  guidance: external_exports.object({ negativePrompt: sceneText, guidanceScale: external_exports.number().gt(1).max(10) }).strict().optional(),
-  motionPrefix: external_exports.string().trim().min(1).optional().describe("Absolute path to a reviewed 8k+1-frame MP4 prefix which fixes the opening camera motion."),
-  performanceAudio: external_exports.string().trim().min(1).optional().describe("Absolute path to the timed stereo 48 kHz PCM performance and room sound, starting at the shot opening."),
-  dialogueCues: external_exports.array(external_exports.object({ lineId: external_exports.string().min(1), frame: external_exports.number().int().nonnegative() }).strict()).optional(),
-  seed: external_exports.number().int().min(0).max(2147483647).optional().describe("Seed of this shot. Without one, a shot with reference images renders with the fixed seed of the gateway and any other shot with the backend default. A changed seed is a new plan whose scene job renders every shot again. Needs a gateway that lists a seed for the render mode of the shot.")
-}).strict()).min(1);
 var scenePromptDrafts = external_exports.array(external_exports.object({
   engine: external_exports.string().trim().min(1),
   model: external_exports.string().trim().min(1).optional(),
@@ -50205,8 +50193,8 @@ function imageMetadata(bytes) {
   if (!width || !height) throw new Error("image_invalid: expected a readable PNG, JPEG or WebP header");
   return { width, height, mimeType, bytes: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
-function readImageMetadata(file) {
-  return imageMetadata(readFileSync(file));
+function readImageMetadata(file2) {
+  return imageMetadata(readFileSync(file2));
 }
 
 // src/fasth3-omni.ts
@@ -50238,10 +50226,10 @@ var fasth3OmniSchema = external_exports.object({
   if ((v.numFrames - 5) % 17) issue("FastH3 frame counts must be 17k+5");
   if (v.width * v.height * v.numFrames * 3 > FASTH3_MAX_RGB_BYTES) issue("Decoded RGB exceeds the adapter 256 MiB compatibility limit; reduce dimensions or frames");
 });
-function probe(file) {
-  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file], { encoding: "utf8", timeout: 15e3 }));
+function probe(file2) {
+  const data = JSON.parse(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", file2], { encoding: "utf8", timeout: 15e3 }));
   const duration3 = Number(data.format?.duration);
-  if (!Number.isFinite(duration3) || duration3 < 2 || duration3 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file);
+  if (!Number.isFinite(duration3) || duration3 < 2 || duration3 > 15) throw new Error("Reference media must be 2\u201315 seconds: " + file2);
   return { duration: duration3, hasAudio: data.streams?.some((s2) => s2.codec_type === "audio") === true };
 }
 function ffmpeg(args) {
@@ -50251,40 +50239,40 @@ function buildFasth3Body(raw) {
   const r2 = fasth3OmniSchema.parse(raw);
   const temp = mkdtempSync(join2(tmpdir(), "fasth3-refs-"));
   let encodedBytes = 0;
-  const encode = (file) => {
-    encodedBytes += 4 * Math.ceil(statSync(file).size / 3);
+  const encode = (file2) => {
+    encodedBytes += 4 * Math.ceil(statSync(file2).size / 3);
     if (encodedBytes > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference payload exceeds the 60 MiB upload limit");
-    return readFileSync2(file).toString("base64");
+    return readFileSync2(file2).toString("base64");
   };
-  const audio = (file, name2, seconds2) => {
+  const audio = (file2, name2, seconds2) => {
     const target = join2(temp, name2 + ".wav");
-    ffmpeg(["-i", file, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
+    ffmpeg(["-i", file2, "-vn", "-ar", "32000", "-ac", "2", "-c:a", "pcm_s16le", ...seconds2 === void 0 ? [] : ["-t", String(seconds2)], target]);
     return encode(target);
   };
   try {
-    const images = r2.referenceImagePaths.map((file) => {
-      if (statSync(file).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
-      const meta = readImageMetadata(file);
+    const images = r2.referenceImagePaths.map((file2) => {
+      if (statSync(file2).size * 4 / 3 > MAX_REQUEST_BYTES - 64e3) throw new Error("Reference image exceeds upload limit");
+      const meta = readImageMetadata(file2);
       if (!["image/png", "image/jpeg"].includes(meta.mimeType)) throw new Error("FastH3 reference images must be PNG or JPEG");
-      return encode(file);
+      return encode(file2);
     });
     let videoSeconds2 = 0;
-    const videos = r2.referenceVideoPaths.map((file, i2) => {
-      const meta = probe(file);
+    const videos = r2.referenceVideoPaths.map((file2, i2) => {
+      const meta = probe(file2);
       videoSeconds2 += meta.duration;
       if (videoSeconds2 > 15) throw new Error("Reference videos exceed fifteen seconds total");
       const prefix = `video-${i2}-`;
-      ffmpeg(["-i", file, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
+      ffmpeg(["-i", file2, "-an", "-vf", "fps=24,scale=768:768:force_original_aspect_ratio=decrease", "-frames:v", "362", join2(temp, prefix + "%04d.jpg")]);
       const files = readdirSync(temp).filter((f3) => f3.startsWith(prefix)).sort();
-      const count2 = Math.min(files.length, r2.numFrames);
-      const accepted = count2 - (count2 - 5) % 17;
+      const count = Math.min(files.length, r2.numFrames);
+      const accepted = count - (count - 5) % 17;
       if (accepted < 5) throw new Error("Reference video has too few decoded frames");
       if (accepted < files.length && !r2.trimReferenceVideos) throw new Error("Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting");
-      return { frames: files.slice(0, accepted).map((f3) => encode(join2(temp, f3))), ...meta.hasAudio ? { audio: audio(file, `video-audio-${i2}`, accepted / 24) } : {} };
+      return { frames: files.slice(0, accepted).map((f3) => encode(join2(temp, f3))), ...meta.hasAudio ? { audio: audio(file2, `video-audio-${i2}`, accepted / 24) } : {} };
     });
-    const audioSeconds = r2.referenceAudioPaths.reduce((sum, file) => sum + probe(file).duration, 0);
+    const audioSeconds = r2.referenceAudioPaths.reduce((sum, file2) => sum + probe(file2).duration, 0);
     if (audioSeconds > 15) throw new Error("Reference audio clips exceed fifteen seconds total");
-    const audios = r2.referenceAudioPaths.map((file, i2) => audio(file, `audio-${i2}`));
+    const audios = r2.referenceAudioPaths.map((file2, i2) => audio(file2, `audio-${i2}`));
     return {
       stream: true,
       model: r2.model,
@@ -50305,7 +50293,7 @@ function buildFasth3Body(raw) {
 }
 
 // src/scene-video.ts
-import { createRequire as createRequire8 } from "node:module";
+import { createRequire as createRequire7 } from "node:module";
 
 // src/video-prompt.ts
 import { createRequire as createRequire3 } from "node:module";
@@ -50322,7 +50310,7 @@ var sentence = (value) => {
   return !s2 ? "" : /[.!?]["'”’)]+$/.test(capped2) ? capped2 : capped2.replace(/[.!?]*$/, "") + ".";
 };
 function expressionWords(shot, names = {}) {
-  return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue)).map(([id, cue]) => `${names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id}: ${text(cue).replace(/[.\s]+$/, "")}`).join("; ");
+  return Object.entries(object(object(shot.visual).expression)).filter(([, cue]) => text(cue)).map(([id2, cue]) => `${names[id2] && !nonEnglishOutsideQuotes(names[id2]) ? names[id2] : id2}: ${text(cue).replace(/[.\s]+$/, "")}`).join("; ");
 }
 var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[.!]?$/i;
 function cameraMoveWords(camera) {
@@ -50420,7 +50408,7 @@ function compileVideoPrompt(shot, source, names = {}, options = {}) {
   const acting = load3("../../skills/_shared/scene-acting.js");
   const beats = acting.performanceBeats(performance2.performance, mode, !msr && !options.bindDialogueSeparately);
   const worn = expressionWords(shot, names);
-  const called = (id) => names[id] && !nonEnglishOutsideQuotes(names[id]) ? names[id] : id;
+  const called = (id2) => names[id2] && !nonEnglishOutsideQuotes(names[id2]) ? names[id2] : id2;
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
   const plain = (value) => text(value).replace(/[.\s]+$/, "").toLowerCase();
   const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source.action));
@@ -50513,6 +50501,8 @@ var operations = {
   seedance_img2video: { ...seedance, allowsGeneratedVoice: true },
   seedance_reference: seedance,
   astra_genai_img2video: { ...holds, writer: "ltx" },
+  // A GenAI scene is composed as one LTX MSR render with an opening frame, as on the image lane.
+  astra_genai_scene: { ...holds, writer: "ltx" },
   astra_genai_text2video: { ...ordered, writer: "ltx" },
   astra_genai_audio2video: { ...ordered, writer: "recorded" },
   astra_genai_desktop_audio2video: { ...ordered, writer: "recorded" },
@@ -50550,13 +50540,13 @@ function formatReferenceLabel(style, kind, index) {
 import { accessSync, constants, existsSync, readFileSync as readFileSync3, readdirSync as readdirSync2, statSync as statSync2 } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join as join3 } from "node:path";
-function loadEnvFile(file = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
+function loadEnvFile(file2 = join3(process.env.SNS_TOKEN_DIR || join3(homedir(), ".config", "social-flow"), ".env")) {
   for (const [key, value] of Object.entries(process.env)) {
     if (value && /^\$\{[A-Za-z_][A-Za-z0-9_]*(:-[^}]*)?\}$/.test(value)) delete process.env[key];
   }
   let text2;
   try {
-    text2 = readFileSync3(file, "utf8");
+    text2 = readFileSync3(file2, "utf8");
   } catch {
     return [];
   }
@@ -50667,8 +50657,8 @@ import { randomUUID } from "node:crypto";
 // src/video-events.ts
 import { AsyncLocalStorage } from "node:async_hooks";
 var videoEvents = new AsyncLocalStorage();
-function recordVideoSubmission(id) {
-  if (id) videoEvents.getStore()?.submitted(id);
+function recordVideoSubmission(id2) {
+  if (id2) videoEvents.getStore()?.submitted(id2);
 }
 
 // src/vendor-video.ts
@@ -50704,16 +50694,16 @@ var MIME = {
   ".m4a": "audio/mp4",
   ".ogg": "audio/ogg"
 };
-function mediaType(file, allowed) {
-  const ext = path2.extname(file).toLowerCase();
-  if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path2.basename(file)}; use ${allowed.join(", ")}`);
+function mediaType(file2, allowed) {
+  const ext = path2.extname(file2).toLowerCase();
+  if (!allowed.includes(ext) || !MIME[ext]) throw new Error(`Unsupported input ${path2.basename(file2)}; use ${allowed.join(", ")}`);
   return MIME[ext];
 }
-function dataUri(file, allowed, maxBytes, measure = "file") {
-  const type = mediaType(file, allowed);
-  const raw = fs2.statSync(file).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
-  if (size > maxBytes) throw new Error(`${path2.basename(file)} is ${(size / 1048576).toFixed(1)} MB${measure === "encoded" ? " once base64-encoded" : ""}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
-  return `data:${type};base64,${fs2.readFileSync(file).toString("base64")}`;
+function dataUri(file2, allowed, maxBytes, measure = "file") {
+  const type = mediaType(file2, allowed);
+  const raw = fs2.statSync(file2).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
+  if (size > maxBytes) throw new Error(`${path2.basename(file2)} is ${(size / 1048576).toFixed(1)} MB${measure === "encoded" ? " once base64-encoded" : ""}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
+  return `data:${type};base64,${fs2.readFileSync(file2).toString("base64")}`;
 }
 var sleep = (ms) => new Promise((resolve6) => setTimeout(resolve6, ms));
 async function runVendorJob(job) {
@@ -50723,9 +50713,9 @@ async function runVendorJob(job) {
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : String(error), terminal: true };
   }
-  let id;
+  let id2;
   try {
-    id = await job.submit();
+    id2 = await job.submit();
   } catch (error) {
     return {
       success: false,
@@ -50733,27 +50723,27 @@ async function runVendorJob(job) {
       terminal: error instanceof VendorHttpError && error.terminal
     };
   }
-  recordVideoSubmission(id);
+  recordVideoSubmission(id2);
   const maxPolls = job.maxPolls ?? 180, interval = job.intervalMs ?? 1e4;
   let retried = false;
   for (let poll = 1; poll <= maxPolls; poll += 1) {
     await sleep(interval);
     let status;
     try {
-      status = await job.poll(id);
+      status = await job.poll(id2);
       retried = false;
     } catch (error) {
-      if (retried) return { success: false, error: `${job.vendor} status check failed: ${error instanceof Error ? error.message : String(error)}`, terminal: false, providerId: id };
+      if (retried) return { success: false, error: `${job.vendor} status check failed: ${error instanceof Error ? error.message : String(error)}`, terminal: false, providerId: id2 };
       retried = true;
       continue;
     }
     if (status.state === "running") continue;
-    if (status.state === "failed") return { success: false, error: `${job.vendor} job ${id} failed: ${status.error}`, terminal: true, providerId: id };
-    return saveVendorOutput(status, target, id);
+    if (status.state === "failed") return { success: false, error: `${job.vendor} job ${id2} failed: ${status.error}`, terminal: true, providerId: id2 };
+    return saveVendorOutput(status, target, id2);
   }
-  return { success: false, error: `${job.vendor} job ${id} still running after ${maxPolls * interval / 6e4} minutes; check it at the vendor and settle the request with video_status action:reconcile \u2014 do not resubmit`, terminal: false, providerId: id };
+  return { success: false, error: `${job.vendor} job ${id2} still running after ${maxPolls * interval / 6e4} minutes; check it at the vendor and settle the request with video_status action:reconcile \u2014 do not resubmit`, terminal: false, providerId: id2 };
 }
-async function saveVendorOutput(status, target, id, verify) {
+async function saveVendorOutput(status, target, id2, verify) {
   const temporary = target + "." + randomUUID() + ".tmp";
   try {
     let bytes;
@@ -50767,9 +50757,9 @@ async function saveVendorOutput(status, target, id, verify) {
     fs2.writeFileSync(temporary, bytes, { flag: "wx" });
     if (verify) await verify(temporary);
     fs2.renameSync(temporary, target);
-    return { success: true, videoPath: target, providerId: id, meta: status.meta ?? {} };
+    return { success: true, videoPath: target, providerId: id2, meta: status.meta ?? {} };
   } catch (error) {
-    return { success: false, terminal: false, providerId: id, error: "Output download or save failed: " + String(error) + "; recover the existing job, do not resubmit" };
+    return { success: false, terminal: false, providerId: id2, error: "Output download or save failed: " + String(error) + "; recover the existing job, do not resubmit" };
   } finally {
     fs2.rmSync(temporary, { force: true });
   }
@@ -50784,14 +50774,14 @@ var LTX_API_RESOLUTIONS = {
   "1440p": ["2560x1440", "1440x2560", "1440x1440", "2160x1440", "1440x2160"],
   "4k": ["3840x2160", "2160x3840", "2160x2160", "3240x2160", "2160x3240"]
 };
-var ltxApiTier = (resolution2) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution2))?.[0];
+var ltxApiTier = (resolution3) => Object.entries(LTX_API_RESOLUTIONS).find(([, sizes]) => sizes.includes(resolution3))?.[0];
 var IMAGE_EXT = [".png", ".jpg", ".jpeg", ".webp"];
 var AUDIO_EXT = [".wav", ".mp3", ".m4a", ".ogg"];
-function ltxApiSeconds(model2, resolution2, fps = 24) {
-  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") && fps <= 25;
+function ltxApiSeconds(model2, resolution3, fps = 24) {
+  const long = model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution3) ?? "") && fps <= 25;
   return long ? [6, 8, 10, 12, 14, 16, 18, 20] : [6, 8, 10];
 }
-var ltxApiAudioMax = (model2, resolution2) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution2) ?? "") ? 20 : 10;
+var ltxApiAudioMax = (model2, resolution3) => model2 === "ltx-2-5-fast" && ["720p", "1080p"].includes(ltxApiTier(resolution3) ?? "") ? 20 : 10;
 var common = {
   prompt: external_exports.string().max(5e3).describe("English action, camera and sound."),
   model: external_exports.enum(LTX_API_MODELS).default("ltx-2-5-pro").describe("LTX API model id."),
@@ -50821,13 +50811,13 @@ var ltxApiAudio2VideoSchema = external_exports.object({
   if (!args.sourceImagePath && (!args.prompt.trim() || args.lastImagePath))
     ctx.addIssue({ code: "custom", path: ["sourceImagePath"], message: "A first image is required with a last image or an empty prompt" });
 });
-function ltxApiAudioSeconds(file) {
-  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], { encoding: "utf8", timeout: 15e3 }));
-  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file);
+function ltxApiAudioSeconds(file2) {
+  const seconds2 = Number(execFileSync2("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file2], { encoding: "utf8", timeout: 15e3 }));
+  if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Cannot read the length of " + file2);
   return seconds2;
 }
 function buildLtxApiBody(request) {
-  const image2 = (file) => dataUri(file, IMAGE_EXT, 7 * 1048576, "encoded");
+  const image2 = (file2) => dataUri(file2, IMAGE_EXT, 7 * 1048576, "encoded");
   const body = {
     model: request.model,
     resolution: request.resolution,
@@ -50851,9 +50841,9 @@ function ltxApiStatus(json) {
   if (status === "failed") return { state: "failed", error: json.error?.message ?? "failed" };
   return { state: "running" };
 }
-async function pollLtxApi(endpoint2, id) {
+async function pollLtxApi(endpoint2, id2) {
   return ltxApiStatus(await vendorJson(
-    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id),
+    LTX_API_BASE_URL + "/v2/" + endpoint2 + "/" + encodeURIComponent(id2),
     { headers: { Authorization: "Bearer " + config.ltxApiKey, "Content-Type": "application/json" } }
   ));
 }
@@ -50877,7 +50867,7 @@ async function generateLtxApiVideo(request) {
       if (typeof json.id !== "string" || !json.id) throw new Error("No job id in LTX response");
       return json.id;
     },
-    poll: (id) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id)
+    poll: (id2) => pollLtxApi("audioPath" in request ? "audio-to-video" : "image-to-video", id2)
   });
 }
 
@@ -50905,16 +50895,16 @@ function veoSubjectIssue(assets, model2 = standard, owners = [], registered) {
   const limit = VEO_CONSTRAINTS[model2]?.maxAssetImages ?? 0;
   if (!limit || !assets.length || assets.length > limit)
     return model2 + " accepts " + (limit ? "1 to " + limit : "no") + " subject images";
-  const subjects = new Set(owners.map((id) => "character:" + id));
+  const subjects = new Set(owners.map((id2) => "character:" + id2));
   const folders = /* @__PURE__ */ new Set();
   const roles = /* @__PURE__ */ new Set();
   for (const asset of assets) {
-    const role = ["face", "outfit", "bystander"].includes(asset.role) ? "character" : asset.role;
-    if (!["character", "prop", "continuity"].includes(role)) return "Unsupported Veo subject role: " + asset.role;
-    if (role !== "continuity") roles.add(role);
+    const role2 = ["face", "outfit", "bystander"].includes(asset.role) ? "character" : asset.role;
+    if (!["character", "prop", "continuity"].includes(role2)) return "Unsupported Veo subject role: " + asset.role;
+    if (role2 !== "continuity") roles.add(role2);
     if (asset.character) subjects.add("character:" + asset.character);
     const identities = registered?.get(asset.path);
-    for (const id of identities ?? []) subjects.add(id);
+    for (const id2 of identities ?? []) subjects.add(id2);
     const dir = path3.dirname(asset.path);
     if (path3.basename(path3.dirname(dir)) === "characters") subjects.add("character:" + path3.basename(dir));
     else if (!identities?.size && fs4.existsSync(path3.join(dir, "panels.json"))) folders.add(dir);
@@ -50951,10 +50941,10 @@ var veoReferenceSchema = external_exports.object({
   if (v.model === lite) ctx.addIssue({ code: "custom", path: ["model"], message: "Veo Lite does not accept asset reference images" });
 });
 var veoExtendSchema = external_exports.object({ ...common2, aspectRatio: common2.aspectRatio.removeDefault().optional(), sourceVideoPath: external_exports.string().min(1) }).strict().superRefine(checkResolution);
-function image(file) {
-  const mimeType = mediaType(file, [".png", ".jpg", ".jpeg"]);
-  if (fs4.statSync(file).size > 20 * 1024 * 1024) throw new Error("Veo input image exceeds 20 MB");
-  return { mimeType, bytesBase64Encoded: fs4.readFileSync(file).toString("base64") };
+function image(file2) {
+  const mimeType = mediaType(file2, [".png", ".jpg", ".jpeg"]);
+  if (fs4.statSync(file2).size > 20 * 1024 * 1024) throw new Error("Veo input image exceeds 20 MB");
+  return { mimeType, bytesBase64Encoded: fs4.readFileSync(file2).toString("base64") };
 }
 function buildVeoBody(request) {
   let aspectRatio = request.aspectRatio;
@@ -50963,9 +50953,9 @@ function buildVeoBody(request) {
     instance.image = image(request.sourceImagePath);
     if (request.lastImagePath) instance.lastFrame = image(request.lastImagePath);
   } else if ("referenceImagePaths" in request) {
-    instance.referenceImages = request.referenceImagePaths.map((file) => ({ referenceType: "asset", image: image(file) }));
+    instance.referenceImages = request.referenceImagePaths.map((file2) => ({ referenceType: "asset", image: image(file2) }));
   } else if ("sourceVideoPath" in request) {
-    const file = request.sourceVideoPath;
+    const file2 = request.sourceVideoPath;
     const probe3 = JSON.parse(execFileSync3("ffprobe", [
       "-v",
       "error",
@@ -50975,22 +50965,22 @@ function buildVeoBody(request) {
       "format=duration,format_name:stream=width,height,avg_frame_rate",
       "-of",
       "json",
-      file
+      file2
     ], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe3.streams?.[0];
     const [n, d] = String(stream?.avg_frame_rate).split("/").map(Number);
-    if (!/\.mp4$/i.test(file) || !probe3.format?.format_name?.split(",").includes("mp4") || !(Number(probe3.format.duration) >= 1 && Number(probe3.format.duration) <= 30) || n / d !== 24 || !["1280x720", "1920x1080", "3840x2160", "720x1280", "1080x1920", "2160x3840"].includes(stream?.width + "x" + stream?.height))
+    if (!/\.mp4$/i.test(file2) || !probe3.format?.format_name?.split(",").includes("mp4") || !(Number(probe3.format.duration) >= 1 && Number(probe3.format.duration) <= 30) || n / d !== 24 || !["1280x720", "1920x1080", "3840x2160", "720x1280", "1080x1920", "2160x3840"].includes(stream?.width + "x" + stream?.height))
       throw new Error("Veo extension requires a 1\u201330 second 24 fps landscape or portrait MP4 at 720p, 1080p or 4K");
     const sourceAspect = stream.width > stream.height ? "16:9" : "9:16";
     if (aspectRatio && aspectRatio !== sourceAspect) throw new Error("Veo extension aspect ratio must match the input video");
     aspectRatio = sourceAspect;
-    instance.video = { mimeType: "video/mp4", bytesBase64Encoded: fs4.readFileSync(file).toString("base64") };
+    instance.video = { mimeType: "video/mp4", bytesBase64Encoded: fs4.readFileSync(file2).toString("base64") };
   }
-  const { resolution: resolution2, generateAudio, enhancePrompt, negativePrompt, seed } = request;
+  const { resolution: resolution3, generateAudio, enhancePrompt, negativePrompt, seed } = request;
   return { instances: [instance], parameters: {
     sampleCount: 1,
     aspectRatio,
-    resolution: resolution2,
+    resolution: resolution3,
     generateAudio,
     enhancePrompt,
     negativePrompt,
@@ -51021,11 +51011,11 @@ function veoStatus(response) {
   if (bytes.length < 12 || bytes.toString("ascii", 4, 8) !== "ftyp") return { state: "failed", error: "Invalid inline MP4 in completed Veo response" };
   return { state: "done", bytes };
 }
-async function pollVeo(model2, id) {
+async function pollVeo(model2, id2) {
   const resource = modelResource(model2);
-  if (!id.startsWith(resource + "/operations/") || !/^[a-zA-Z0-9_-]+$/.test(id.slice((resource + "/operations/").length)))
+  if (!id2.startsWith(resource + "/operations/") || !/^[a-zA-Z0-9_-]+$/.test(id2.slice((resource + "/operations/").length)))
     throw new Error("Operation does not belong to the selected Google Cloud project and model");
-  return veoStatus(await vendorJson(endpoint(resource) + ":fetchPredictOperation", { method: "POST", headers: await headers(), body: JSON.stringify({ operationName: id }) }));
+  return veoStatus(await vendorJson(endpoint(resource) + ":fetchPredictOperation", { method: "POST", headers: await headers(), body: JSON.stringify({ operationName: id2 }) }));
 }
 async function generateVeo(request) {
   let body, resource, submitHeaders;
@@ -51045,12 +51035,12 @@ async function generateVeo(request) {
       if (typeof op.name !== "string" || !op.name.startsWith(resource + "/operations/")) throw new Error("Missing Google Cloud operation name");
       return op.name;
     },
-    poll: (id) => pollVeo(request.model, id)
+    poll: (id2) => pollVeo(request.model, id2)
   });
 }
-function veoPriceKey(model2, resolution2, audio) {
+function veoPriceKey(model2, resolution3, audio) {
   const tier = VEO_CONSTRAINTS[model2]?.priceFamily;
-  return tier ? ["veo.vertex", tier, resolution2, audio ? "audio" : "silent"].join(".") : null;
+  return tier ? ["veo.vertex", tier, resolution3, audio ? "audio" : "silent"].join(".") : null;
 }
 
 // src/ltx-desktop-local.ts
@@ -51301,21 +51291,21 @@ async function localDesktopCatalog() {
 }
 function validateDesktopFiles(args) {
   for (const [field] of assetFields) {
-    const file = args[field];
-    if (typeof file !== "string") continue;
+    const file2 = args[field];
+    if (typeof file2 !== "string") continue;
     mediaType(
-      file,
+      file2,
       // LTX Desktop's asset ingest refuses .ogg.
       field === "audioPath" ? [".mp3", ".wav", ".m4a"] : [".jpg", ".jpeg", ".png", ".webp"]
     );
-    const stat2 = statSync4(file);
-    if (!stat2.isFile() || stat2.size === 0) throw new Error("Expected a nonempty local media file: " + file);
+    const stat2 = statSync4(file2);
+    if (!stat2.isFile() || stat2.size === 0) throw new Error("Expected a nonempty local media file: " + file2);
   }
   if ("audioPath" in args) desktopAudioWindow(args, ltxApiAudioSeconds(args.audioPath));
 }
 var identifier = external_exports.string().regex(/^[a-zA-Z0-9_-]+$/);
-async function pollLocalDesktop(id) {
-  const raw = await (await callDesktop("/api/generations/" + identifier.parse(id))).json();
+async function pollLocalDesktop(id2) {
+  const raw = await (await callDesktop("/api/generations/" + identifier.parse(id2))).json();
   const job = external_exports.object({
     id: identifier,
     lane: external_exports.literal("local"),
@@ -51323,7 +51313,7 @@ async function pollLocalDesktop(id) {
     error_code: external_exports.string().nullable().optional(),
     outputs: external_exports.array(external_exports.object({ id: identifier, media_kind: external_exports.string() }))
   }).parse(raw);
-  if (job.id !== id) throw new Error("Desktop returned a different generation ID.");
+  if (job.id !== id2) throw new Error("Desktop returned a different generation ID.");
   if (["failed", "canceled", "cancelled"].includes(job.status))
     return { state: "failed", error: job.error_code || job.status };
   if (["queued", "running", "cancelling"].includes(job.status)) return { state: "running" };
@@ -51381,17 +51371,17 @@ async function generateLocalDesktop(args) {
     validateDesktopFiles(args);
     await checkDesktopOffering(args);
     const registered = /* @__PURE__ */ new Map();
-    for (const [field, role] of assetFields) {
-      const file = args[field];
-      if (typeof file === "string") {
-        const absolute = path4.resolve(file);
+    for (const [field, role2] of assetFields) {
+      const file2 = args[field];
+      if (typeof file2 === "string") {
+        const absolute = path4.resolve(file2);
         let assetId = registered.get(absolute);
         if (!assetId) {
           const asset = await (await callDesktop("/api/assets", { path: absolute })).json();
           assetId = identifier.parse(asset.id);
           registered.set(absolute, assetId);
         }
-        inputs2[role] = { assetId };
+        inputs2[role2] = { assetId };
       }
     }
   } catch (error) {
@@ -51450,14 +51440,14 @@ var veo2 = {
   configured: () => Boolean(config.googleCloudProject),
   modelConstraints: VEO_CONSTRAINTS,
   soundtrack: true,
-  poll: (args, id) => pollVeo(String(args.model), id)
+  poll: (args, id2) => pollVeo(String(args.model), id2)
 };
 var desktop = {
   engine: LOCAL_DESKTOP_ENGINE,
   deployment: "native-desktop-loopback",
   configured: localDesktopConfigured,
   modelConstraints: { discovery: "video_catalog with engine ltx-desktop-local", note: "Use a downloaded offering on this machine." },
-  poll: (_, id) => pollLocalDesktop(id)
+  poll: (_, id2) => pollLocalDesktop(id2)
 };
 var HOSTED_VIDEO_ROUTES = {
   ltx_desktop_text2video: {
@@ -51497,7 +51487,7 @@ var HOSTED_VIDEO_ROUTES = {
     title: "Generate an LTX API video from a start frame",
     description: "Generate from a first and optional last frame using LTX_API_KEY. Use audio-to-video for supplied speech.",
     seconds: (a) => ltxApiSeconds(String(a.model ?? "ltx-2-5-pro"), String(a.resolution ?? "1920x1080"), Number(a.fps ?? 24)),
-    poll: (_, id) => pollLtxApi("image-to-video", id)
+    poll: (_, id2) => pollLtxApi("image-to-video", id2)
   },
   ltx_api_audio2video: {
     ...ltx,
@@ -51506,7 +51496,7 @@ var HOSTED_VIDEO_ROUTES = {
     voice: "supplied",
     title: "Generate an LTX API video from a voice track",
     description: "The supplied audio controls the clip length and speech. Supply a prompt or a first image, or both. Requires LTX_API_KEY.",
-    poll: (_, id) => pollLtxApi("audio-to-video", id)
+    poll: (_, id2) => pollLtxApi("audio-to-video", id2)
   },
   veo_text2video: {
     ...veo2,
@@ -51544,7 +51534,7 @@ var HOSTED_VIDEO_ROUTES = {
 };
 
 // src/video-registry.ts
-import { createRequire as createRequire5 } from "node:module";
+import { createRequire as createRequire4 } from "node:module";
 
 // src/mlx-serve-client.ts
 import { existsSync as existsSync2, mkdtempSync as mkdtempSync2, readFileSync as readFileSync4, rmSync as rmSync2, writeFileSync as writeFileSync2 } from "node:fs";
@@ -51821,7 +51811,7 @@ var LOCAL_VIDEO_MODELS = {
     schema: mlxVideoGenerateSchema,
     defaultFrames: DEFAULT_MLX_VIDEO_FRAMES,
     frames: { min: MIN_MLX_VIDEO_FRAMES, max: MAX_MLX_VIDEO_FRAMES, step: MLX_VIDEO_FRAME_STEP, frameRate: MLX_VIDEO_FPS },
-    acceptsModel: (id) => /ltx/i.test(id),
+    acceptsModel: (id2) => /ltx/i.test(id2),
     prepare: (raw) => buildLtxVideoBody(mlxVideoGenerateSchema.parse(raw))
   },
   fasth3_omni_reference: {
@@ -51829,7 +51819,7 @@ var LOCAL_VIDEO_MODELS = {
     schema: fasth3OmniSchema,
     frames: FASTH3_FRAME_LIMITS,
     defaultFrames: 124,
-    acceptsModel: (id) => id === FASTH3_OMNI_MODEL,
+    acceptsModel: (id2) => id2 === FASTH3_OMNI_MODEL,
     prepare: (raw) => buildFasth3Body(fasth3OmniSchema.parse(raw))
   }
 };
@@ -53131,11 +53121,11 @@ async function awaitResult(jobId, signal) {
     await sleep2(POLL_INTERVAL_MS);
   }
 }
-function atomicVideoFile(file, contents) {
-  const temp = file + "." + randomUUID2() + ".tmp";
+function atomicVideoFile(file2, contents) {
+  const temp = file2 + "." + randomUUID2() + ".tmp";
   try {
     fs5.writeFileSync(temp, contents, { mode: 384 });
-    fs5.renameSync(temp, file);
+    fs5.renameSync(temp, file2);
   } finally {
     fs5.rmSync(temp, { force: true });
   }
@@ -53260,23 +53250,60 @@ var fileSchema = external_exports.object({ file_id: external_exports.string().mi
 var statusSchema = external_exports.object({ missing: external_exports.array(external_exports.number().int().nonnegative()) }).passthrough();
 
 // src/genai-scene.ts
-import { createRequire as createRequire4 } from "node:module";
-var load4 = createRequire4(import.meta.url);
-var count = external_exports.number().int().positive();
-var capabilitiesSchema = external_exports.object({
-  version: external_exports.literal(1),
-  execution: external_exports.literal("per_shot"),
-  transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
-  motion_prefix: external_exports.boolean().optional(),
-  timed_dialogue: external_exports.string().nullish(),
-  scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
-  limits: external_exports.object({
-    shots: external_exports.object({ min: count, max: count }),
-    shot_frames: external_exports.object({ max: count }),
-    references: external_exports.object({ subjects: count, backgrounds: external_exports.number().int().nonnegative() }),
-    voice: external_exports.object({ speakers_per_shot: external_exports.number().int().nonnegative() })
-  }).partial().optional().catch(void 0),
-  seed: external_exports.array(external_exports.string()).optional().catch(void 0)
+var GENAI_SCENE_MODELS = ["ltx-2.5-22b-distilled"];
+var GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 };
+var genaiSceneFrames = (frames) => Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
+var LIMITS = { subjects: 4, backgrounds: 1, voices: 2 };
+var id = external_exports.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "Use 1-64 characters of A-Z, a-z, 0-9, _ and -");
+var role = id.refine((value) => !["voice", "image"].includes(value), "voice and image name other inputs");
+var file = external_exports.string().min(1);
+var resolution2 = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine((value) => {
+  const [w, h2] = value.split("x").map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h2 / 64) * 64;
+  return Math.min(w, h2) >= 64 && w % 2 === 0 && h2 % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, "Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels");
+var genaiSceneSchema = external_exports.object({
+  model: external_exports.enum(GENAI_SCENE_MODELS),
+  prompt: external_exports.string().min(1).max(16e3).describe("The whole scene in one prompt. Name inputs with placeholders: {cast.role}, {cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them."),
+  cast: external_exports.array(external_exports.object({
+    id,
+    images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(9),
+    voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
+  }).strict()).max(9).default([]),
+  references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
+  shots: external_exports.array(external_exports.object({
+    id,
+    frames: external_exports.number().int().positive(),
+    imagePath: file.optional().describe("The picture the shot opens on. The first is the opening frame; a later one guides the model."),
+    strength: external_exports.number().min(0).max(1).optional()
+  }).strict()).min(1).max(8),
+  resolution: resolution2,
+  fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
+  seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  generateAudio: external_exports.boolean().default(true).describe("false removes the generated soundtrack from the delivered clip."),
+  reserveUsd: external_exports.number().finite().nonnegative(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("video").refine((name2) => name2.endsWith(".mp4"), "Use an .mp4 filename").optional()
+}).strict().superRefine((args, ctx) => {
+  const issue = (message) => ctx.addIssue({ code: "custom", message });
+  const ids = [...args.cast.map((m2) => m2.id), ...args.references.map((r2) => r2.id), ...args.shots.map((s2) => s2.id)];
+  if (new Set(ids).size !== ids.length) issue("Cast, reference and shot IDs share one namespace and must be distinct");
+  for (const member of args.cast) if (new Set(member.images.map((i2) => i2.role)).size !== member.images.length)
+    issue(member.id + ": picture roles must be distinct");
+  const subjects = args.cast.reduce((n, m2) => n + m2.images.length, 0) + args.references.filter((r2) => r2.role === "object").length;
+  if (subjects < 1 || subjects > LIMITS.subjects) issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
+  if (args.references.filter((r2) => r2.role === "background").length > LIMITS.backgrounds) issue("LTX scene mode takes one background");
+  if (args.cast.filter((m2) => m2.voicePath).length > LIMITS.voices) issue(`LTX scene mode takes ${LIMITS.voices} voices`);
+  if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
+});
+var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+var sceneValidationSchema = external_exports.object({
+  resolved: external_exports.object({
+    num_frames: external_exports.number().int(),
+    prompt: external_exports.string(),
+    labels: external_exports.record(external_exports.string()),
+    shots: external_exports.array(external_exports.object({ id: external_exports.string(), start_frame: external_exports.number().int() }).passthrough())
+  }).passthrough(),
+  warnings: external_exports.array(external_exports.object({ code: external_exports.string() }).passthrough()).default([])
 });
 
 // src/astra-genai-video.ts
@@ -53488,7 +53515,18 @@ var genaiMsrSchema = external_exports.object({
     if (frames < GENAI_MSR_FRAMES.min || frames > GENAI_MSR_FRAMES.max) issue("MSR duration must round to 25..361 frames");
   }
 });
-var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr"]);
+var deployedModel = external_exports.object({
+  id: external_exports.string(),
+  kind: external_exports.string().optional(),
+  modes: external_exports.array(external_exports.string()).default([]),
+  parameters_by_mode: external_exports.record(external_exports.array(external_exports.string())).optional(),
+  limits: external_exports.record(external_exports.unknown()).optional(),
+  scene: external_exports.object({
+    prompt: external_exports.object({ max_chars: external_exports.number().int().positive() }).passthrough(),
+    voices: external_exports.object({ max: external_exports.number().int().nonnegative() }).passthrough()
+  }).passthrough().optional()
+}).passthrough();
+var operationSchema = external_exports.enum(["text-to-video", "image-to-video", "audio-to-video", "msr", "scene"]);
 var mediaContract = external_exports.object({
   width: external_exports.number().positive(),
   height: external_exports.number().positive(),
@@ -53499,31 +53537,30 @@ var mediaContract = external_exports.object({
 var receiptSchema2 = external_exports.object({
   version: external_exports.literal(1),
   baseUrl: external_exports.string(),
-  operation: external_exports.union([operationSchema, external_exports.literal("scene-to-video")]),
+  operation: external_exports.string(),
   fingerprint: external_exports.string(),
   expected: mediaContract.optional(),
+  native: mediaContract.optional(),
   requestId: external_exports.string().optional(),
-  sceneShots: external_exports.array(external_exports.unknown()).optional(),
-  sceneRequestSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional(),
+  requestPath: external_exports.string().optional(),
+  submittedAt: external_exports.string().optional(),
   videoPath: external_exports.string(),
   jobId: external_exports.string().min(1).optional(),
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   sha256: external_exports.string().optional(),
+  nativeSha256: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
-}).strict();
-var statusSchema2 = external_exports.object({
+}).passthrough();
+var generationSchema = external_exports.object({
   id: external_exports.string().min(1),
-  status: external_exports.enum(["pending", "processing", "completed", "failed", "cancelled"]),
-  result: external_exports.object({ video_url: external_exports.string().min(1).optional() }).passthrough().nullish(),
-  error: external_exports.unknown().optional()
+  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
+  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
+  result_expired: external_exports.boolean().optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-var deployedModel = external_exports.object({
-  id: external_exports.string(),
-  parameters_by_mode: external_exports.record(external_exports.array(external_exports.string())).optional(),
-  limits: external_exports.record(external_exports.unknown()).optional()
-});
+var REPLAY_WINDOW_MS = 23 * 36e5;
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
@@ -53630,6 +53667,8 @@ function videoDurationLimits(tool, input = {}) {
     limits = { ...HEYGEN_SECONDS };
   } else if (tool === "astra_genai_msr") {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
+  } else if (tool === "astra_genai_scene") {
+    limits = { ...GENAI_MSR_FRAMES, frameRate: input.fps ?? GENAI_MSR_FRAMES.frameRate };
   } else if (DURATION_TOOLS.includes(tool) && tool.startsWith("astra_")) {
     const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;
@@ -53669,7 +53708,7 @@ function resolveVideoDuration(tool, input) {
 var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
 
 // src/video-registry.ts
-var load5 = createRequire5(import.meta.url);
+var load4 = createRequire4(import.meta.url);
 var entry = (engine, deployment, operation, schema, facts = {}) => ({ engine, deployment, operation, schema, voice: operation === "audio" ? "supplied" : "none", ...facts });
 var reference = (engine, deployment, schema, facts = {}) => ({ ...entry(engine, deployment, "reference", schema, facts), voice: "reference" });
 var SEEDANCE = { modelConstraints: SEEDANCE_MODEL_SPECS };
@@ -53690,17 +53729,17 @@ var VIDEO_ADAPTERS = Object.freeze({
     bindCharacterSources(args, cast) {
       const originals = /* @__PURE__ */ new Map();
       for (const person of cast) {
-        const id = person.face?.taskId;
-        if (!id) continue;
-        if (originals.has(id) && originals.get(id) !== person.character)
+        const id2 = person.face?.taskId;
+        if (!id2) continue;
+        if (originals.has(id2) && originals.get(id2) !== person.character)
           throw new Error("character_face_source_ambiguous: each facial reference needs one identifiable character");
-        originals.set(id, person.character);
+        originals.set(id2, person.character);
       }
       const taskIds = [...originals.keys()];
       if (args.realFaceInput === false && taskIds.length || taskIds.length && args.referenceVideoTaskIds !== void 0 && JSON.stringify(args.referenceVideoTaskIds) !== JSON.stringify(taskIds))
         throw new Error("character_inputs_mismatch: use the face sources declared on the storyboard");
       const videos = [args.referenceVideoPaths, args.referenceVideoUrls];
-      const offset = videos.reduce((count2, files) => count2 + (Array.isArray(files) ? files.length : 0), 0);
+      const offset = videos.reduce((count, files) => count + (Array.isArray(files) ? files.length : 0), 0);
       const label = (index) => formatReferenceLabel(scenePromptProfile("seedance_reference", args.model).referenceLabels, "video", index);
       const notes = [...originals.values()].map((character, index) => `Use ${label(offset + index + 1)} only for ${character} facial identity, hair and headwear. Follow the new shot framing, action and dialogue.`);
       return {
@@ -53720,30 +53759,33 @@ var VIDEO_ADAPTERS = Object.freeze({
       feature === "keyframes" ? { ...DESKTOP, timedImages: true } : DESKTOP
     )
   ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema, { modelConstraints: {
+  astra_genai_text2video: entry("astra-genai", "genai-generations", "text", genaiTextToVideoSchema, { modelConstraints: {
     models: GENAI_VIDEO_MODELS,
     note: "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
   } }),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema, {
+  astra_genai_img2video: entry("astra-genai", "genai-generations", "image", genaiImageToVideoSchema, {
     timedImages: true,
     pinnedVoices: 2,
     voiceOnSubjects: true,
-    sceneRenderer: { model: "ltx-2.5-22b-distilled", sceneAudioModes: ["native", "mix"] },
     modelConstraints: {
       models: GENAI_VIDEO_MODELS,
-      references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" },
+      references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "the gateway refuses at submission references its backend does not take" },
       note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
     }
   }),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema, {
+  astra_genai_audio2video: entry("astra-genai", "genai-generations", "audio", genaiAudioToVideoSchema, {
     timedImages: true,
-    sceneRenderer: { model: "ltx-2.5-22b-dev", sceneAudioModes: ["conditioning"] },
     modelConstraints: {
       models: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"],
       note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
     }
   }),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
+  // A storyboard scene on the GenAI engine: one scene-mode request through the common API (user directive 2026-11-25).
+  astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: 2, voiceOnSubjects: true, modelConstraints: {
+    models: GENAI_SCENE_MODELS,
+    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. LTX: 1..4 cast pictures and object references, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames.'
+  } }),
+  astra_genai_msr: reference("astra-genai", "genai-generations", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
     note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
   } }),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
@@ -53805,7 +53847,7 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
   const localReference = provider === "mlx" && LOCAL_VIDEO_MODELS.fasth3_omni_reference.acceptsModel(model2);
   if (operation === "reference" && (localReference || ["minimax", "heygen"].includes(provider))) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Native speech from the prompt dialogue with an optional voice sample; voice identity is imitation, not preserved audio" };
   if (provider === "astra-genai" && (operation === "reference" || operation === "image" && model2 === "ltx-2.5-22b-distilled" && subjectReferences)) return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "MSR speaks the prompt dialogue with lip movement into its own soundtrack; it takes no line audio" };
-  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id) => id === model2)))
+  if (operation === "audio" && (provider === "astra" || provider === "astra-genai-desktop" || provider === "ltx-api" || provider === "ltx-desktop-local" || provider === "astra-genai" && GENAI_VIDEO_MODELS.some((id2) => id2 === model2)))
     return { provider, model: model2, audioConditioning: true, lipSync: false, postLipSync: false, evidence: "The supplied track conditions video generation. Mouth movement and phoneme alignment require output review." };
   if (provider === "seedance" && operation === "reference")
     return { provider, model: model2, audioConditioning: false, lipSync: false, postLipSync: false, nativeSpeech: true, evidence: "Seedance speaks the authored dialogue with an optional voice reference. The sample guides timbre and does not fix phoneme timing." };
@@ -53817,32 +53859,32 @@ function speechVideoCapabilities(provider, model2, operation, subjectReferences 
 }
 
 // src/video-image-inputs.ts
-import { createRequire as createRequire6 } from "node:module";
+import { createRequire as createRequire5 } from "node:module";
 import { fileURLToPath } from "node:url";
-var load6 = createRequire6(import.meta.url);
-var imageRouting = () => load6(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
+var load5 = createRequire5(import.meta.url);
+var imageRouting = () => load5(fileURLToPath(new URL("../../skills/storyboard/references/render-routing.js", import.meta.url)));
 function hasVideoSubjectReferences(shot) {
   return imageRouting().imageReferences(shot).some((ref) => ref.role !== "background" && ["video", "both"].includes(ref.use));
 }
 
 // src/video-voice.ts
 import path7 from "node:path";
-import { createRequire as createRequire7 } from "node:module";
+import { createRequire as createRequire6 } from "node:module";
 var speakerBindingSchema = external_exports.object({
   speaker: external_exports.string().trim().min(1),
   screenPosition: external_exports.enum(["left", "center", "right"]),
   description: external_exports.string().trim().min(1)
 }).strict();
-var load7 = createRequire7(import.meta.url);
+var load6 = createRequire6(import.meta.url);
 function resolveCharacterVoice(character, context, warnings) {
-  return load7("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
+  return load6("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path7.join(context.episode, "storyboard"), context.shot, warnings);
 }
 
 // src/scene-video.ts
-var load8 = createRequire8(import.meta.url);
+var load7 = createRequire7(import.meta.url);
 
 // src/video-routing.ts
-import { createRequire as createRequire11 } from "node:module";
+import { createRequire as createRequire10 } from "node:module";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // src/video-pricing.ts
@@ -53858,9 +53900,9 @@ var PRICED_VIDEO_KEYS = new Set(Object.entries(SEEDANCE_MODEL_SPECS).flatMap(([m
 }));
 var ELEVENLABS_KEY = { eleven_v4: "tts.elevenlabs" };
 var GEMINI_UNPRICED = "unit price unconfirmed (? in prices.tsv) \u2014 cost-report.sh flags the line instead of counting it as $0";
-function probeSeconds(file) {
+function probeSeconds(file2) {
   try {
-    const out = execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file], {
+    const out = execFileSync4("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file2], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -53917,7 +53959,7 @@ function priceOf(tool, args = {}) {
     return { key: `heygen.${tool === "heygen_reference" ? "reference" : "image"}.${str(args.resolution, "768p")}`, quantity: num(args.durationSeconds, 5) };
   if (tool.startsWith("seedance_")) {
     const model2 = str(args.model, "dreamina-seedance-2-0-260128");
-    const resolution2 = str(args.resolution, "720p");
+    const resolution3 = str(args.resolution, "720p");
     const seconds2 = num(args.durationSeconds, 5);
     const base = model2.replace("dreamina-seedance-", "").replace(/-\d{6}$/, "");
     if (!Object.hasOwn(SEEDANCE_MODEL_SPECS, model2)) return { key: null, quantity: seconds2, note: `unmapped seedance model: ${model2}` };
@@ -53927,7 +53969,7 @@ function priceOf(tool, args = {}) {
       ...Array.isArray(args.referenceVideoUrls) ? args.referenceVideoUrls : []
     ].filter((v) => typeof v === "string");
     const family = videos.length ? `${base}-video` : base;
-    const key = `seedance.${family}.${resolution2}`;
+    const key = `seedance.${family}.${resolution3}`;
     if (!PRICED_VIDEO_KEYS.has(key)) return { key: null, quantity: seconds2, note: `no price row for ${key}` };
     if (seconds2 === -1) return { key, quantity: null, note: "Adaptive output duration; settle using ModelArk completion tokens." };
     if (!videos.length) return { key, quantity: seconds2 };
@@ -54035,8 +54077,8 @@ function charUnits(args) {
 var PRICE_FILE = fileURLToPath2(new URL("../../skills/autoproduce/references/prices.tsv", import.meta.url));
 
 // src/video-review.ts
-import { createRequire as createRequire9 } from "node:module";
-var review = () => createRequire9(import.meta.url)("../../skills/storyboard/references/video-production.js");
+import { createRequire as createRequire8 } from "node:module";
+var review = () => createRequire8(import.meta.url)("../../skills/storyboard/references/video-production.js");
 function refreshVideoReview(episode) {
   try {
     review().write(episode);
@@ -54053,11 +54095,10 @@ var loadFromHere = nodeModule.createRequire(import.meta.url);
 var helper = resolve3(dirname4(fileURLToPath3(import.meta.url)), "../../skills/_shared/project-settings.js");
 
 // src/video-routing.ts
-var load9 = createRequire11(import.meta.url);
+var load8 = createRequire10(import.meta.url);
 var shared = fileURLToPath4(new URL("../../skills/_shared/video-selection.js", import.meta.url));
 var modelSettings = fileURLToPath4(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath4(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
-var RENDERING_REFUSAL = "scene_render_selection: per_shot is the only rendering mode. Leave sceneRendering out to plan the scene as one render: the plan returns promptTemplate and takes an authored prompt. single_msr and auto had the gateway write that prompt and are retired";
 function selectedVideoTool(selection, operation = selection.operation) {
   if (operation === "image" && selection.engine === "mlx" && selection.model && localVideoStrategy("ltx_video_generate")?.acceptsModel(selection.model))
     return "ltx_video_generate";
@@ -54068,8 +54109,6 @@ var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   sceneNo: external_exports.number().int().positive(),
   requestId: idSchema,
-  sceneRendering: external_exports.enum(["per_shot"], { errorMap: () => ({ message: RENDERING_REFUSAL }) }).optional(),
-  shotBindings: sceneShotBindingsSchema.optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
   changeNote: external_exports.string().min(1).max(1e3).optional(),
@@ -54083,14 +54122,13 @@ var videoPlanSchema = external_exports.object({
   args: external_exports.record(external_exports.unknown()).default({})
 }).strict();
 var videoExecuteSchema = external_exports.object({ episode: external_exports.string().min(1), planId: external_exports.string().regex(/^[a-f0-9]{64}$/) }).strict();
-function assertSpeechRenderCapacity(tool, model2, scene, cards, route, rendering = route.rendering, generateAudio) {
-  load9("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
+function assertSpeechRenderCapacity(tool, model2, scene, cards, route, generateAudio) {
+  load8("../../skills/_shared/scene-cast.js").assertRenderVoiceCapacity({
     tool,
     model: model2,
     scene,
     cards,
     route,
-    rendering,
     generateAudio,
     limit: voiceReferenceLimit(tool, model2)
   });
@@ -54156,7 +54194,7 @@ function evaluateWindowScript(source, options = {}) {
 }
 
 // src/opening-review.ts
-var load10 = nodeModule2.createRequire(import.meta.url);
+var load9 = nodeModule2.createRequire(import.meta.url);
 var name = external_exports.string().trim().min(1);
 var percent = external_exports.number().finite().min(0).max(100);
 var digest = external_exports.string().regex(/^[\da-f]{64}$/);
@@ -54327,7 +54365,7 @@ var nativeImageEditSchema = nativeImageSchema.extend({
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
 
 // src/image-routing.ts
-import { createRequire as createRequire13 } from "node:module";
+import { createRequire as createRequire12 } from "node:module";
 import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/astra-genai-image.ts
@@ -54533,7 +54571,7 @@ var imageJobSchema = external_exports.object({
 var stateSchema2 = external_exports.object({ version: external_exports.literal(1), openingSpendUsd: money, jobs: external_exports.record(imageJobSchema) }).strict();
 
 // src/image-routing.ts
-var load11 = createRequire13(import.meta.url);
+var load10 = createRequire12(import.meta.url);
 var selectionHelper = fileURLToPath5(new URL("../../skills/_shared/image-selection.js", import.meta.url));
 var idSchema2 = external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 var imagePlanSchema = external_exports.object({
@@ -54926,10 +54964,10 @@ function scenesPath(target) {
   return join5(abs, "scenes.js");
 }
 function readBoard(target, source) {
-  const file = scenesPath(target);
-  if (!existsSync4(file)) throw new Error(`no scenes.js at ${file}`);
-  if (!statSync6(file).isFile()) throw new Error(`${file} is not a file`);
-  const src = source ?? readFileSync6(file, "utf8");
+  const file2 = scenesPath(target);
+  if (!existsSync4(file2)) throw new Error(`no scenes.js at ${file2}`);
+  if (!statSync6(file2).isFile()) throw new Error(`${file2} is not a file`);
+  const src = source ?? readFileSync6(file2, "utf8");
   const header = [];
   for (const line of src.split("\n")) {
     if (/^\s*\/\//.test(line)) header.push(line.trim());
@@ -54937,12 +54975,12 @@ function readBoard(target, source) {
   }
   let win;
   try {
-    win = evaluateWindowScript(src, { filename: file });
+    win = evaluateWindowScript(src, { filename: file2 });
   } catch (e2) {
-    throw new Error(`failed to evaluate ${file}: ${e2.message}`);
+    throw new Error(`failed to evaluate ${file2}: ${e2.message}`);
   }
-  if (!Array.isArray(win.SCENES)) throw new Error(`${file} has no window.SCENES array`);
-  return { file, header, win, sha256: createHash3("sha256").update(src).digest("hex") };
+  if (!Array.isArray(win.SCENES)) throw new Error(`${file2} has no window.SCENES array`);
+  return { file: file2, header, win, sha256: createHash3("sha256").update(src).digest("hex") };
 }
 var GLOBAL_ORDER = ["FORMAT", "VOICE", "THEME", "COMPREHENSION", "STORY", "PRODUCTION", "MOTION_POLICY", "MUSIC", "SFX", "STRUCTURE", "SCENES"];
 function serializeBoard(win, header = []) {
@@ -55175,8 +55213,8 @@ function compileActing(text2, acting, voice) {
 }
 
 // src/tts-models.ts
-import { createRequire as createRequire16 } from "node:module";
-var shared2 = () => createRequire16(import.meta.url)("../../skills/_shared/tts-models.js");
+import { createRequire as createRequire15 } from "node:module";
+var shared2 = () => createRequire15(import.meta.url)("../../skills/_shared/tts-models.js");
 function resolveTtsModel(provider, model2) {
   return shared2().resolveTtsModel(provider, model2);
 }
@@ -55186,7 +55224,7 @@ var voiceContract = () => nodeModule5.createRequire(import.meta.url)("../../skil
 var characterSpeechContract = () => nodeModule5.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var speechSpanContract = () => nodeModule5.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
 var audioSignalContract = () => nodeModule5.createRequire(import.meta.url)("../../skills/_shared/audio-signal.js");
-function requireNativeVideo(file) {
+function requireNativeVideo(file2) {
   let signal;
   try {
     const frame2 = execFileSync5("ffmpeg", [
@@ -55195,7 +55233,7 @@ function requireNativeVideo(file) {
       "-nostdin",
       "-xerror",
       "-i",
-      file,
+      file2,
       "-map",
       "0:V:0",
       "-frames:v",
@@ -55209,7 +55247,7 @@ function requireNativeVideo(file) {
       "-"
     ], { timeout: 3e4, stdio: ["ignore", "pipe", "pipe"] });
     if (frame2.length !== 1) throw new Error("No decoded frame");
-    signal = audioSignalContract().inspect(file).status;
+    signal = audioSignalContract().inspect(file2).status;
   } catch {
     throw new Error("native_speech_media_invalid: supply a decodable video with its original audible soundtrack");
   }
@@ -55238,9 +55276,9 @@ var speechManageSchema = external_exports.object({
 var hash = (s2) => createHash4("sha256").update(s2).digest("hex");
 var object3 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var speechContract = () => nodeModule5.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-var videoSeconds = (file) => Number(execFileSync5(
+var videoSeconds = (file2) => Number(execFileSync5(
   "ffprobe",
-  ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file],
+  ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file2],
   { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
 ).trim());
 function syncProductionClip(scene, boardDir, videoPath, oldClip, warnings) {
@@ -55399,17 +55437,17 @@ function speechVideoPlan(input, capabilities, sceneNo) {
 }
 function manageSpeech(args, options = {}) {
   args = speechManageSchema.parse(args);
-  const { file, win, header } = readBoard(args.path);
-  const before = readFileSync7(file, "utf8");
+  const { file: file2, win, header } = readBoard(args.path);
+  const before = readFileSync7(file2, "utf8");
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
   const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
-  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id, c]) => ({ ...object3(c), id }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname6(dirname6(file)), board: win, shot: {} }, voiceWarnings));
-  const character = (id) => characters.find((c) => c.id === id);
-  const audioCharacter = (id) => characterSpeechContract().characterSpeech(character(id), { boardDir: dirname6(file), board: win });
+  const characters = (Array.isArray(rawCharacters) ? rawCharacters : Object.entries(object3(rawCharacters)).map(([id2, c]) => ({ ...object3(c), id: id2 }))).map((c) => resolveCharacterVoice(object3(c), { episode: dirname6(dirname6(file2)), board: win, shot: {} }, voiceWarnings));
+  const character = (id2) => characters.find((c) => c.id === id2);
+  const audioCharacter = (id2) => characterSpeechContract().characterSpeech(character(id2), { boardDir: dirname6(file2), board: win });
   const scenes = win.SCENES;
   const timedShot = (scene) => actingContract().withThoughtClock(scene, object3(win.STRUCTURE).scenes);
   let changed = false;
@@ -55476,7 +55514,7 @@ function manageSpeech(args, options = {}) {
       }
     } else {
       if (!args.audioPath) throw new Error("audioPath is required");
-      const audioPath = resolve5(dirname6(file), args.audioPath);
+      const audioPath = resolve5(dirname6(file2), args.audioPath);
       if (!args.generation || args.generation.text !== line.tts) throw new Error("Attach the actual generation arguments and exact line text");
       const actor = audioCharacter(line.speaker);
       const voice = actor?.tts;
@@ -55546,7 +55584,7 @@ function manageSpeech(args, options = {}) {
     if (selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)) throw new Error("Prepare explicit speech before planning video");
     if (args.lineId || args.speaker || args.query) throw new Error("Video planning uses all lines in the shot; remove line filters");
     for (const { line } of selected) actingSchema.nullable().optional().parse(line.acting);
-    const episode = dirname6(dirname6(file));
+    const episode = dirname6(dirname6(file2));
     const owner = win.STRUCTURE?.scenes?.find((item) => item.no === scene.scene);
     const selectedVideo = object3(scene.visual?.video);
     speechContract().assertNoPostLipSync({
@@ -55560,7 +55598,7 @@ function manageSpeech(args, options = {}) {
       postLipSync: selectedVideo.postLipSync,
       post_lipsync: selectedVideo.post_lipsync
     });
-    const episodeBoard = basename5(dirname6(file)) === "storyboard" && basename5(file) === "scenes.js";
+    const episodeBoard = basename5(dirname6(file2)) === "storyboard" && basename5(file2) === "scenes.js";
     const adapter = args.tool ? VIDEO_ADAPTERS[args.tool] : void 0;
     const requested = adapter && {
       engine: adapter.engine,
@@ -55573,7 +55611,8 @@ function manageSpeech(args, options = {}) {
     if (context && (context.selection.operation || context.route || physical || !args.capabilities || args.action === "attach_video")) {
       const { selection, route } = context;
       if (args.tool && adapter?.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-      const tool = selectedVideoTool(selection);
+      const sameRender = adapter && adapter.engine === selection.engine && adapter.operation === selection.operation;
+      const tool = sameRender ? args.tool : selectedVideoTool(selection);
       if ((route || args.tool) && (!tool || args.tool && args.tool !== tool))
         throw new Error("scene_speech_route: the complete scene requires " + selection.operation);
       const generatedVoice = usesGeneratedVoice(tool, owner?.videoDirection?.dialogueVoice);
@@ -55597,22 +55636,22 @@ function manageSpeech(args, options = {}) {
     }
     plan = speechVideoPlan({ ...timedShot(scene), narration: selected.map(({ line }) => ({ ...line, audio: currentAudio(line, character(line.speaker)) ? line.audio : void 0 })) }, args.capabilities, owner?.videoDirection ? owner.no : void 0);
     const continuityContract = nodeModule5.createRequire(import.meta.url)("../../skills/storyboard/references/shot-continuity.js");
-    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname6(file)) };
+    plan = { ...plan, continuity: continuityContract.plan(win, scenes.indexOf(scene), dirname6(file2)) };
     if (args.action === "attach_video") {
       if (!args.videoPath) throw new Error("videoPath is required");
-      const videoPath = resolve5(dirname6(file), args.videoPath);
+      const videoPath = resolve5(dirname6(file2), args.videoPath);
       const bytes = readFileSync7(videoPath);
       if (!bytes.length) throw new Error("Video file is empty");
       const videoSha256 = hash(bytes);
-      const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file), videoPath);
-      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname6(file), board: win }, receipts);
+      const receipts = speechContract().episodeVideoReceipts(scenes, dirname6(file2), videoPath);
+      const recordedDriver = speechContract().assertVideoSpeechProvenance(videoPath, videoSha256, { ...plan, sourceShot: scene, boardDir: dirname6(file2), board: win }, receipts);
       const renderedScene = receipts.sceneRenders.get(videoPath);
       const renderedShot = renderedScene && renderedScene.shots.length > 1 && renderedScene.shots.find((shot) => shot.shot_id === scene.id);
       for (const card of scenes) {
         const video2 = object3(card.visual?.video), binding = object3(video2.speechBinding);
         if (!binding.videoSha256 && !speechContract().hasPostLipSync(binding)) continue;
         const source = binding.videoPath ?? video2.clip ?? video2.src;
-        const original = typeof source === "string" ? resolve5(dirname6(file), source) : void 0;
+        const original = typeof source === "string" ? resolve5(dirname6(file2), source) : void 0;
         const matches = binding.videoSha256 ? binding.videoSha256 === videoSha256 : original && (original === videoPath || existsSync5(original) && hash(readFileSync7(original)) === videoSha256);
         if (!matches) continue;
         speechContract().assertNoPostLipSync(binding);
@@ -55643,7 +55682,7 @@ function manageSpeech(args, options = {}) {
         return { lineId: line.id, sha256: line.audio.sha256, revision: line.audio.revision };
       });
       const generationDriver = plan.mode === "audio_conditioned" ? recordedDriver ?? driverSha256 : void 0;
-      const driverPath = generationDriver && nodeModule5.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname6(file), {
+      const driverPath = generationDriver && nodeModule5.createRequire(import.meta.url)("../../skills/produce/references/compose-speech.js").currentConditioningAudio(scene, dirname6(file2), {
         index: scenes.indexOf(scene),
         timingVersion: doc.performanceTimingVersion,
         driverSha256: generationDriver,
@@ -55677,7 +55716,7 @@ function manageSpeech(args, options = {}) {
           edit: sourceEdit,
           visual: { video: { speechBinding: { mode: plan.mode, videoPath, videoSha256, audio, performanceSource, conditioningAudioSha256: driverSha256 } } }
         };
-        speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file), candidate, receipts);
+        speechContract().assertVideoPerformanceOwnership(scenes, dirname6(file2), candidate, receipts);
       }
       const performanceChanged = priorBinding.performanceRevision && priorBinding.performanceRevision !== plan.performanceRevision;
       const audioChanged = Array.isArray(priorBinding.audio) && JSON.stringify(priorBinding.audio) !== JSON.stringify(audio);
@@ -55698,7 +55737,7 @@ function manageSpeech(args, options = {}) {
         video.speechStatus = "stale";
         invalidated = { video, edit: true };
       } else {
-        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file), videoPath, video.clip, plan.warnings);
+        if (!tailTrim) boundSeconds = syncProductionClip(scene, dirname6(file2), videoPath, video.clip, plan.warnings);
         const trim2 = object3(scene.edit);
         if (native && replacement && (trim2.in !== void 0 || trim2.out !== void 0)) {
           const { in: sourceIn, out: sourceOut, ...kept } = trim2;
@@ -55795,25 +55834,25 @@ function manageSpeech(args, options = {}) {
       if (!actor || !["on_screen", "off_screen"].includes(line.delivery ?? "") || owner?.videoDirection?.dialogueVoice !== "model_generated")
         throw new Error(`Missing pinned voice for ${line.speaker}`);
     }
-    const work = resolve5(dirname6(file), "../.work/speech-history");
+    const work = resolve5(dirname6(file2), "../.work/speech-history");
     mkdirSync3(work, { recursive: true });
     const backup = join6(work, revision + ".js");
     if (!existsSync5(backup)) writeFileSync5(backup, before);
     const nextSource = serializeBoard(win, header);
-    if (hash(readFileSync7(file)) !== revision) throw new Error("Storyboard changed during speech edit");
-    const tmp = file + "." + randomUUID4() + ".tmp";
+    if (hash(readFileSync7(file2)) !== revision) throw new Error("Storyboard changed during speech edit");
+    const tmp = file2 + "." + randomUUID4() + ".tmp";
     writeFileSync5(tmp, nextSource);
-    renameSync3(tmp, file);
-    refreshVideoReview(dirname6(dirname6(file)));
+    renameSync3(tmp, file2);
+    refreshVideoReview(dirname6(dirname6(file2)));
   }
   const audioPlans = args.action === "plan_audio" ? selected.map(({ scene, line }) => {
-    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win });
+    const result = speechAudioPlan(line, character(line.speaker), { boardDir: dirname6(file2), board: win });
     const generation = { ...result.generation, ...["tts_astra_genai", "tts_local_voxcpm2"].includes(result.generator) ? {
-      speechContext: { path: file, lineId: line.id, expectedRevision: revision }
+      speechContext: { path: file2, lineId: line.id, expectedRevision: revision }
     } : {} };
     return { shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation };
   }) : void 0;
-  return { revision: hash(readFileSync7(file)), changed, invalidated, plan, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object3(object3(scene.visual).video).speechStatus !== "stale" && object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
+  return { revision: hash(readFileSync7(file2)), changed, invalidated, plan, timing: timing2, ...soundtrack ? { soundtrack } : {}, ...clearedTrim ? { clearedTrim } : {}, ...voiceWarnings.length ? { voiceWarnings } : {}, ...audioPlans ? { audioPlans } : {}, lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line, character(line.speaker), { boardDir: dirname6(file2), board: win }), audioProvenanceStatus: line.delivery !== "voiceover" && object3(object3(scene.visual).video).speechStatus !== "stale" && object3(object3(object3(scene.visual).video).speechBinding).mode === "native" ? "native_speech" : audioProvenanceStatus(line, character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line, character(line.speaker)) })) };
 }
 
 // src/video-sound.ts

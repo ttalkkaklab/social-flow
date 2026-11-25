@@ -1,5 +1,27 @@
 # Unified ASTRA GenAI adapters
 
+## Common generation API for video (user directive, 2026-11-25)
+
+Every GenAI video request goes through the gateway's common generation API. The adapters keep
+their own argument schemas and `astra-genai-video.ts` writes the common body:
+
+| Tool | Request |
+|---|---|
+| `astra_genai_text2video` | `POST /v1/generations` `{kind:"video", mode:"text2video", input:{text}, parameters:{width, height, fps, duration_seconds or num_frames, generate_audio, …}}` |
+| `astra_genai_img2video` | `mode:"image2video"`: `input.images:[{url}]` opens the clip, `input.last_frame`, `input.keyframes:[{url, frame_idx}]` and `input.references:[{url, background, audio:{url}}]` |
+| `astra_genai_audio2video` | `mode:"audio2video"`: `input.audio:{url}` sets the length; no duration and no `generate_audio` |
+| `astra_genai_msr` | `model:"ltx-msr"`, `mode:"msr"`: the references are `input.images` |
+| `astra_genai_scene` | `mode:"scene"`: one storyboard scene, `input.prompt` with `{cast.role}`, `{cast.voice}` and `{reference.image}` names, `input.cast`, `input.references`, `input.shots:[{id, seconds, image}]` |
+
+Status is `GET /v1/generations/{id}` (`queued`, `running`, `succeeded`, `failed`, `cancelled`,
+with `outputs[0].url`); it also reads jobs that older provider routes created, so older
+receipts stay recoverable. `GET /v1/models` lists each model's modes, fields by mode, limits and
+scene-mode numbers. A scene is compiled with `POST /v1/generations/validate` when it is planned
+and again before it is submitted; it travels with an `X-Request-Id` derived from its body, and
+a lost response is recovered by replaying the saved body within 23 hours, which returns the
+first job. The scene renders on the next 8k+1 frame count and is cut back to the storyboard's
+frames. See [video routing](video-routing.md) for what scene mode takes and refuses.
+
 Use the saved `engine: "astra-genai"` selection. Legacy `astra` keeps its original
 server and local `zimage` keeps mflux. Do not switch engines after an error.
 Images that display or preserve readable text use **GPT Image 2**, including edits
@@ -28,9 +50,9 @@ source images into one still. Never hide that limit by dropping references.
 reference has exactly one `imagePath` or `imageUri` plus optional `background`.
 The limit is four subjects and one background in addition to the two temporal
 frames. With references, select `ltx-2.5-22b-distilled` and an explicit duration or `numFrames`;
-the gateway must advertise `image_conditioning:true` at
-`/v1/ltx/msr/capabilities`. This runs the distilled MSR IC-LoRA path; dev accepts temporal images. Direct Desktop I2V takes start/end only. Unsupported inputs are rejected, never
-dropped. When the gateway also reports `voice_references:true`, subject 1 and
+a backend without combined image conditioning is refused by the gateway at
+submission, before a job is reserved. This runs the distilled MSR IC-LoRA path; dev accepts temporal images. Direct Desktop I2V takes start/end only. Unsupported inputs are rejected, never
+dropped. When the backend takes voice samples, subject 1 and
 subject 2 can each carry an `audioPath` or `audioUri`. Put the spoken words in
 the prompt. Each sample conditions the voice for its own subject. The opening
 image stays in the top-level `imagePath` or `imageUri`. Thoughts and voiceover
@@ -165,22 +187,19 @@ silently truncate dialogue. Inspect the output before claiming that it contains 
 
 `negativePrompt` maps to `negative_prompt`; `guidanceScale` maps to `guidance_scale`
 (1–10). Separate negatives require `guidanceScale > 1` or `nagScale > 0`: ordinary
-CFG=1 without NAG ignores them. Before a new submission using negatives or CFG above 1, the
-adapter checks `/v1/ltx/msr/capabilities` and refuses absent or false
-`negative_prompt` support without uploading or submitting. It never silently drops
+CFG=1 without NAG ignores them. A backend without negative conditioning is refused by the
+gateway at submission, before a job is reserved. The plugin never silently drops
 the requested conditioning or raises CFG. Ordinary requests retain distilled CFG=1.
 On 2026-11-08 at 00:38 KST, the live remote gateway returned
 `{"msr":true,"voice_references":true,"negative_prompt":true,"prompt_max_chars":2000}`.
-Its [OpenAPI contract](https://genai.astravision.co.kr/openapi.json) exposes these
-fields. Check capabilities on each new conditioned submission because deployment
-support can change. The always-included prompt instruction also applies when
+Deployment support can change, and the gateway checks it on each submission. The always-included prompt instruction also applies when
 negatives are supplied; inspect generated footage before claiming subtitle absence.
 
 Optional video-only NAG uses `nagScale` (0–100), `nagAlpha` (0–1) and `nagTau`
 (0–10), mapped to `nag_scale`, `nag_alpha` and `nag_tau`. Omitted or zero scale
 keeps NAG off and omits all three wire fields for older gateways. A positive scale
-requires a nonempty `negativePrompt` and live `nag:true` capability; unknown support
-is refused before uploads or submission. Alpha and tau default to 0.25 and 2.5 on
+requires a nonempty `negativePrompt`, and a backend without NAG is refused by the gateway
+at submission. Alpha and tau default to 0.25 and 2.5 on
 the gateway. For an explicit trial, pass `negativePrompt:"subtitles, captions, text
 overlays", guidanceScale:1, nagScale:11, nagAlpha:0.25, nagTau:2.5` in `video_plan.args`.
 Plans and request fingerprints preserve these controls for execution and recovery.
@@ -252,9 +271,10 @@ limit here is the gateway's 2,000-character MSR prompt. The official two-speaker
 splits about 3,700 characters through a PromptRelay node into a reference-description block
 (about 940) and an action script (about 2,700); the gateway bridge encodes one string.
 
-`video_plan` and the tool ask `GET /v1/ltx/msr/capabilities` for sample support; a
-direct request that carries a sample to a gateway without the route or a backend that
-cannot take samples fails with `msr_voice_unsupported` before anything is submitted.
+`video_plan` reads scene-mode voice support from `GET /v1/models` (`scene.voices`), and
+`POST /v1/generations/validate` refuses a scene whose backend cannot take samples before
+approval. A direct request that carries a sample to such a backend is refused by the gateway
+at submission, before a job is reserved.
 `visual.video.voice` is retired and `sound.audioSource:"speech"` is refused on MSR.
 `prepare-video-sound.js` sets `sound.audioSource:"video"` and routes `auto` effects
 into the MSR soundtrack. MSR lines get no per-line TTS: `speech_manage plan_video` plans
@@ -317,7 +337,7 @@ automatically, and it is sent only when set.
 |---|---|
 | `astra_genai_audio2video` (dev only) | Forwarded. The pipeline already runs guided, so it costs no extra GPU time. |
 | `astra_genai_text2video` / `astra_genai_img2video` on `ltx-2.5-22b-dev` | Forwarded, same as above. |
-| `astra_genai_img2video` on distilled with `references` | Forwarded on the MSR path. Needs `guidanceScale > 1` or `nagScale > 0` (optional `nagAlpha`, `nagTau`), and the adapter checks `negative_prompt`/`nag` at `/v1/ltx/msr/capabilities` before uploading. |
+| `astra_genai_img2video` on distilled with `references` | Forwarded on the MSR path. Needs `guidanceScale > 1` or `nagScale > 0` (optional `nagAlpha`, `nagTau`), and the gateway refuses it at submission when the backend lists no negative conditioning or NAG. |
 | distilled without `references` | Refused before submission: distilled sampling has no negative pass. Switch the cut to dev, or add a reference. |
 
 On the dev pipelines an omitted `negativePrompt` keeps the engine default, which
@@ -373,10 +393,10 @@ receipts and reservations still close only through those tools.
 Result downloads carry no gateway token. Keep receipts private; they can contain
 signed result URLs. Existing outputs are not overwritten and cached hashes must match.
 
-Contract: [gateway docs](https://genai.astravision.co.kr/docs) and
-[OpenAPI](https://genai.astravision.co.kr/openapi.json), pinned in
-`server/test/fixtures/astra-genai-openapi-20261020.json`. Response parsing follows
-LTX `id/status/result.video_url` and DashScope `request_id/output.choices/usage`.
+Contract: [gateway docs](https://genai.astravision.co.kr/docs) and the gateway's
+[common generation API](https://github.com/ASTRA-TECHNOLOGY-COMPANY-LIMITED/genai-gateway/blob/main/docs/COMMON_GENERATION_API.md).
+Video responses follow the common job envelope `id/status/outputs[].url`; images keep
+DashScope `request_id/output.choices/usage`.
 Contract tests use synthetic media and mocked transport, not live GPU generation.
 
 ## Model-bound gateway (2026-10-25)

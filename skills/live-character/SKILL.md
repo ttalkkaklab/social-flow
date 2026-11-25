@@ -68,8 +68,10 @@ The renderer keeps completed clips and job receipts in the project’s `.social-
 If interrupted, use the same inputs to recover the same job. A receipt with an uncertain
 submission needs reconciliation before another submission. Superseded host jobs occupy their slot until their request settles. The gateway may queue requests even when the client submits several.
 When chat uses a different GenAI gateway from video, set `ASTRA_GENAI_CHAT_URL` and
-`ASTRA_GENAI_CHAT_API_KEY` for chat alone. The video gateway must advertise
-`image_conditioning` and `voice_references` on `/v1/ltx/msr/capabilities`.
+`ASTRA_GENAI_CHAT_API_KEY` for chat alone. Live clips go through the video gateway's common
+API (`POST /v1/generations`, mode `image2video`); its `GET /v1/models` must list distilled
+image-to-video with subject references and MSR voice samples, and the gateway refuses at
+submission what its backend does not take.
 
 1. Read the channel profile and confirm the external destination. Make a session configuration
    outside the plugin, for example in the project's logs. Use the channel ID from its profile.
@@ -174,4 +176,4 @@ use `cancel-unstarted` only when the operator wants to remove that room. The com
 the session marker, channel, visibility, stream binding and start state before cancellation.
 Check Studio for an uncertain create
 before any new run. API liveStreamingNotEnabled means YouTube has not granted the channel access.
-Never send an ingest key in chat or put it in a config file. Chat uses /v1/chat/completions. Speaking clips use the GenAI LTX image-to-video route.
+Never send an ingest key in chat or put it in a config file. Chat uses /v1/chat/completions. Speaking clips use the GenAI common API's image-to-video mode (`POST /v1/generations`).

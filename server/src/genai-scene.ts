@@ -1,204 +1,212 @@
-/** The GenAI gateway's per-shot scene route (`/v1/ltx/v2/scene-to-video`).
+/** A storyboard scene as one request of the GenAI gateway's common scene mode
+ * (`POST /v1/generations` with `kind:"video"`, `mode:"scene"`).
  *
- * scene-video.ts compiles a storyboard scene into a `SceneRequest`. This module is the
- * only place that knows what the gateway does with one: the route's addresses, what a
- * deployment advertises, the request body's field names, and the validate and submit
- * calls. Frame numbers are relative to the scene and shot ends are exclusive.
- *
- * The route renders each shot apart and writes each shot's prompt from the manifest
- * fields below. It has no field for a caller's own prompt, so the planner comes here
- * only when a call names `per_shot` and says so in the plan (user directive 2026-11-25). */
-import path from 'node:path';
-import { createHash } from 'node:crypto';
-import { readFileSync, statSync } from 'node:fs';
-import { createRequire } from 'node:module';
+ * The planner composes a scene's one prompt with numbered references, the way LTX MSR reads them. This module
+ * holds the scene adapter's arguments, turns a composed request into them and builds the common body: the cast
+ * and references the numbers point at, the shots in order, and the prompt with every number written as a
+ * placeholder. The gateway numbers the placeholders itself and adds no sentence. `resolveScenePrompt` predicts
+ * its numbering, and `/v1/generations/validate` confirms it before approval and again before submission
+ * (user directive 2026-11-25). */
 import { z } from 'zod';
-import type { sceneShotBindingsSchema } from './msr-opening.js';
-import type { SceneRequest } from './scene-video.js';
-import { videoTextPolicy } from './video-prompt.js';
-import { GENAI_AUDIO_TYPES, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
-import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
+import { execFileSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import path from 'node:path';
+import { bareFilenameSchema } from './media-utils.js';
+import { scenePromptTemplate } from './scene-prompt.js';
 
-const load = createRequire(import.meta.url);
+/** Models the gateway runs in scene mode that this plugin plans for. */
+export const GENAI_SCENE_MODELS = ['ltx-2.5-22b-distilled'] as const;
+/** LTX renders 8k+1 frames in 25..361. A scene renders the next count up and the extra frames belong to its last shot. */
+export const GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 } as const;
+export const genaiSceneFrames = (frames: number) =>
+  Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
+/** LTX MSR slots: four subjects, one background, and a voice on subjects 1 and 2. */
+const LIMITS = { subjects: 4, backgrounds: 1, voices: 2 } as const;
 
-type ShotBindings = z.infer<typeof sceneShotBindingsSchema>;
+const id = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Use 1-64 characters of A-Z, a-z, 0-9, _ and -');
+const role = id.refine(value => !['voice', 'image'].includes(value), 'voice and image name other inputs');
+const file = z.string().min(1);
+const resolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine(value => {
+  const [w, h] = value.split('x').map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
+  return Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
+}, 'Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels');
 
-export const SCENE_ROUTE = '/v1/ltx/v2/scene-to-video';
-/** The idempotency key of a plan's scene job. The receipt and the status lookup use the same one. */
-export const sceneRequestId = (planId: string) => 'scene-' + planId;
-
-/** The reference slots of one shot, which planning checks before a gateway is asked. An advertised number replaces its default. */
-export const SCENE_LIMITS = { subjects: 4, backgrounds: 1, voiceSpeakers: 2 } as const;
-export interface SceneLimits {
-  subjects: number; backgrounds: number; voiceSpeakers: number;
-  /** Known only from a gateway that reports them. Otherwise its validation decides. */
-  shots?: { min: number; max: number }; shotFrames?: number;
-}
-const BACKGROUND_ROLES = ['background', 'location'];
-const TEMPORAL_ROLES = ['start', 'keyframe', 'end'];
-
-const count = z.number().int().positive();
-// The first three keys are required. Every other key is optional, because a gateway deployed
-// before 2026-11-24 reports no limits or seed, and a malformed one reads as absent.
-// The gateway adds keys under version 1 and never renames.
-const capabilitiesSchema = z.object({
-  version: z.literal(1), execution: z.literal('per_shot'),
-  transitions: z.array(z.string()).refine(values => values.includes('hard_cut')),
-  motion_prefix: z.boolean().optional(), timed_dialogue: z.string().nullish(),
-  scene_audio_modes: z.record(z.string()).optional().catch(undefined),
-  limits: z.object({
-    shots: z.object({ min: count, max: count }),
-    shot_frames: z.object({ max: count }),
-    references: z.object({ subjects: count, backgrounds: z.number().int().nonnegative() }),
-    voice: z.object({ speakers_per_shot: z.number().int().nonnegative() }),
-  }).partial().optional().catch(undefined),
-  seed: z.array(z.string()).optional().catch(undefined),
+export const genaiSceneSchema = z.object({
+  model: z.enum(GENAI_SCENE_MODELS),
+  prompt: z.string().min(1).max(16000).describe('The whole scene in one prompt. Name inputs with placeholders: {cast.role}, ' +
+    '{cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them.'),
+  cast: z.array(z.object({
+    id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(9),
+    voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
+  }).strict()).max(9).default([]),
+  references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
+  shots: z.array(z.object({
+    id, frames: z.number().int().positive(),
+    imagePath: file.optional().describe('The picture the shot opens on. The first is the opening frame; a later one guides the model.'),
+    strength: z.number().min(0).max(1).optional(),
+  }).strict()).min(1).max(8),
+  resolution, fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
+  seed: z.number().int().min(0).max(2147483647).optional(),
+  generateAudio: z.boolean().default(true).describe('false removes the generated soundtrack from the delivered clip.'),
+  reserveUsd: z.number().finite().nonnegative(),
+  outputPath: z.string().optional(),
+  filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
+}).strict().superRefine((args, ctx) => {
+  const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
+  const ids = [...args.cast.map(m => m.id), ...args.references.map(r => r.id), ...args.shots.map(s => s.id)];
+  if (new Set(ids).size !== ids.length) issue('Cast, reference and shot IDs share one namespace and must be distinct');
+  for (const member of args.cast) if (new Set(member.images.map(i => i.role)).size !== member.images.length)
+    issue(member.id + ': picture roles must be distinct');
+  const subjects = args.cast.reduce((n, m) => n + m.images.length, 0) + args.references.filter(r => r.role === 'object').length;
+  if (subjects < 1 || subjects > LIMITS.subjects) issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
+  if (args.references.filter(r => r.role === 'background').length > LIMITS.backgrounds) issue('LTX scene mode takes one background');
+  if (args.cast.filter(m => m.voicePath).length > LIMITS.voices) issue(`LTX scene mode takes ${LIMITS.voices} voices`);
+  if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
+export type GenaiSceneArgs = z.infer<typeof genaiSceneSchema>;
 
-export interface SceneCapabilities {
-  motionPrefix: boolean;
-  timedDialogue: string | null;
-  /** Scene audio mode → the model that renders it. */
-  audioModes: Record<string, string>;
-  limits: SceneLimits;
-  /** Render modes that accept a seed. Empty on a gateway without the field. */
-  seedModes: string[];
+/** LTX scene mode reads a voice sample after it reserves the job, so a sample it would refuse fails a reserved job. Check first. */
+export const GENAI_SCENE_VOICE_SECONDS = 10;
+export function checkSceneVoices(args: Pick<GenaiSceneArgs, 'cast'>) {
+  for (const member of args.cast) {
+    if (!member.voicePath) continue;
+    let seconds = NaN;
+    // Only a local regular file is probed, named with the file: protocol so ffprobe reads no other scheme.
+    const local = path.resolve(member.voicePath);
+    try {
+      if (statSync(local).isFile())
+        seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', 'file:' + local], { encoding: 'utf8', timeout: 15_000 }));
+    } catch { /* An unreadable sample is refused below. */ }
+    if (!(seconds > 0)) throw new Error('scene_voice_unreadable: ' + member.id + '\'s voice sample cannot be read');
+    if (seconds > GENAI_SCENE_VOICE_SECONDS)
+      throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds.toFixed(1)} s; GenAI scene mode takes at most ${GENAI_SCENE_VOICE_SECONDS} s and conditions on the first 5`);
+  }
 }
 
-export function parseSceneCapabilities(response: unknown): SceneCapabilities {
-  const body = capabilitiesSchema.parse(response);
-  const limits = body.limits ?? {};
+/** The frames the storyboard asks for; the clip is cut back to this after rendering. */
+export const sceneFrames = (args: Pick<GenaiSceneArgs, 'shots'>) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+
+/** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */
+export function sceneLabels(args: Pick<GenaiSceneArgs, 'cast' | 'references'>) {
+  const subjects: { key: string; voice?: string }[] = [];
+  for (const member of args.cast) member.images.forEach((image, index) =>
+    subjects.push({ key: member.id + '.' + image.role, ...(index === 0 && member.voicePath ? { voice: member.id + '.voice' } : {}) }));
+  for (const ref of args.references) if (ref.role === 'object') subjects.push({ key: ref.id + '.image' });
+  const ordered: { key: string; voice?: string }[] = [...subjects.filter(s => s.voice), ...subjects.filter(s => !s.voice),
+    ...args.references.filter(r => r.role === 'background').map(r => ({ key: r.id + '.image' }))];
+  const labels: Record<string, string> = {};
+  ordered.forEach((slot, index) => {
+    labels[slot.key] = 'Image ' + (index + 1);
+    if (slot.voice) labels[slot.voice] = 'Audio ' + (index + 1);
+  });
+  for (const member of args.cast) if (member.images.length === 1) labels[member.id + '.image'] = labels[member.id + '.' + member.images[0].role];
+  return labels;
+}
+
+/** The prompt as the model reads it: each placeholder replaced with the gateway's label, `{{`/`}}` read as braces. */
+export function resolveScenePrompt(prompt: string, labels: Record<string, string>) {
+  return prompt.replace(/\{\{|\}\}|\{([A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)\}|[{}]/g, (token, key?: string) => {
+    if (token === '{{' || token === '}}') return token[0];
+    if (key && labels[key]) return labels[key];
+    throw new Error('placeholder_unresolved: ' + token + ' names no input of this scene');
+  });
+}
+
+/** The common body. `uri` turns a local file into the URI the request carries. */
+export function genaiSceneBody(args: GenaiSceneArgs, uri: (file: string, kind: 'image' | 'audio') => string) {
+  const [width, height] = args.resolution.split('x').map(Number);
   return {
-    motionPrefix: body.motion_prefix === true, timedDialogue: body.timed_dialogue ?? null,
-    audioModes: body.scene_audio_modes ?? {},
-    limits: {
-      subjects: limits.references?.subjects ?? SCENE_LIMITS.subjects, backgrounds: limits.references?.backgrounds ?? SCENE_LIMITS.backgrounds,
-      voiceSpeakers: limits.voice?.speakers_per_shot ?? SCENE_LIMITS.voiceSpeakers,
-      ...(limits.shots ? { shots: limits.shots } : {}), ...(limits.shot_frames ? { shotFrames: limits.shot_frames.max } : {}),
+    kind: 'video', model: args.model, mode: 'scene',
+    input: {
+      prompt: args.prompt,
+      cast: args.cast.map(member => ({ id: member.id, images: member.images.map(image => ({ role: image.role, uri: uri(image.imagePath, 'image') })),
+        ...(member.voicePath ? { voice: { uri: uri(member.voicePath, 'audio') } } : {}) })),
+      references: args.references.map(ref => ({ id: ref.id, role: ref.role, uri: uri(ref.imagePath, 'image') })),
+      shots: args.shots.map(shot => ({ id: shot.id, seconds: shot.frames / args.fps,
+        ...(shot.imagePath ? { image: { uri: uri(shot.imagePath, 'image'), ...(shot.strength === undefined ? {} : { strength: shot.strength }) } } : {}) })),
     },
-    seedModes: body.seed ?? [],
+    parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }) },
   };
 }
-export async function readSceneCapabilities(): Promise<SceneCapabilities> {
-  return parseSceneCapabilities(await requestGenai('GET', SCENE_ROUTE + '/capabilities', undefined, 15_000));
+
+/** `POST /v1/generations/validate`: what the gateway compiles the scene to. */
+export const sceneValidationSchema = z.object({
+  resolved: z.object({ num_frames: z.number().int(), prompt: z.string(), labels: z.record(z.string()),
+    shots: z.array(z.object({ id: z.string(), start_frame: z.number().int() }).passthrough()) }).passthrough(),
+  warnings: z.array(z.object({ code: z.string() }).passthrough()).default([]),
+});
+/** Refuse a compilation that differs from the plan: other labels, another clip length or other cut frames. */
+export function checkSceneValidation(args: GenaiSceneArgs, result: unknown) {
+  const { resolved, warnings } = sceneValidationSchema.parse(result);
+  const expected = resolveScenePrompt(args.prompt, sceneLabels(args));
+  let start = 0;
+  const starts = args.shots.map(shot => { const at = start; start += shot.frames; return { id: shot.id, start_frame: at }; });
+  if (resolved.prompt !== expected) throw new Error('genai_scene_labels: the gateway numbers this scene differently from the plan');
+  if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args)))
+    throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args)));
+  if (JSON.stringify(resolved.shots.map(s => ({ id: s.id, start_frame: s.start_frame }))) !== JSON.stringify(starts))
+    throw new Error('genai_scene_cuts: the gateway places the shots at other frames than the plan');
+  return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings };
 }
 
-/** A dev-model scene whose supplied track drives the picture, instead of being mixed under native sound. */
-const conditionedBy = (scene: SceneRequest, model?: string) => Boolean(model === 'ltx-2.5-22b-dev' && scene.audio && scene.audio.mode !== 'mix');
-
-/** The gateway mode that renders one shot. Its name is what `seedModes` lists. */
-function renderMode(scene: SceneRequest, shotId: string, conditioned: boolean) {
-  if (conditioned) return 'audio2video';
-  return scene.images.some(image => image.shotId === shotId && !TEMPORAL_ROLES.includes(image.role)) ? 'msr' : 'generate';
+/** A composed one-render request (numbered prompt, references in slot order, opening image) and the scene's shots. */
+export interface ComposedScene {
+  prompt: string;
+  references: { imagePath?: string; background?: boolean; nonCharacter?: boolean; audioPath?: string }[];
+  slots: readonly { key: string; label: string }[];
+  script: readonly string[];
+  shots: readonly { id: string; frames: number; imagePath?: string }[];
 }
 
-/** Compare a compiled scene with what this deployment accepts, before any file is uploaded.
- * The gateway's validation stays the authority; this names the shot and the limit in our terms. */
-export function sceneRequestIssues(scene: SceneRequest, capabilities: SceneCapabilities, options: { bindings?: ShotBindings; model?: string } = {}): string[] {
-  const { limits } = capabilities, issues: string[] = [];
-  if (limits.shots && (scene.shots.length < limits.shots.min || scene.shots.length > limits.shots.max))
-    issues.push(`scene ${scene.sceneNo}: ${scene.shots.length} shots; one scene job renders ${limits.shots.min}–${limits.shots.max}`);
-  for (const shot of scene.shots) {
-    const at = shot.shotId + '@' + shot.startFrame;
-    const frames = shot.endFrame - shot.startFrame;
-    if (limits.shotFrames !== undefined && frames > limits.shotFrames) issues.push(`${at} length: ${frames} frames; a shot renders at most ${limits.shotFrames}`);
-    const references = scene.images.filter(image => image.shotId === shot.shotId && !TEMPORAL_ROLES.includes(image.role));
-    const backgrounds = references.filter(image => BACKGROUND_ROLES.includes(image.role)).length;
-    if (references.length - backgrounds > limits.subjects || backgrounds > limits.backgrounds)
-      issues.push(`${at} references: ${references.length - backgrounds} subjects and ${backgrounds} backgrounds; a shot takes ${limits.subjects} and ${limits.backgrounds}`);
-    const voiced = new Set((shot.dialogue ?? []).filter(line => line.voice).map(line => line.speaker));
-    if (voiced.size > limits.voiceSpeakers) issues.push(`${at} voice: ${voiced.size} voiced speakers; a shot takes ${limits.voiceSpeakers}`);
-    const binding = options.bindings?.find(item => item.shotId === shot.shotId);
-    const mode = renderMode(scene, shot.shotId, conditionedBy(scene, options.model));
-    if (binding?.seed !== undefined && !capabilities.seedModes.includes(mode))
-      issues.push(`${at} seed: this gateway does not take a seed for ${mode} rendering`);
-  }
-  return issues;
-}
-
-/** Build the request body. Files ride inline until the body is too large, a guide file is bound or `stageFiles` asks; then each is uploaded once. */
-export async function buildSceneWire(scene: SceneRequest, model: string, resolution: string, stageFiles = false, bindings?: ShotBindings) {
-  const attachments: {shotId?:string; role:string; frame:number; sha256:string; bytes:number}[] = [];
-  const conditioned = conditionedBy(scene, model);
-  const shots = scene.shots.map(shot => {
-    const binding = bindings?.find(item=>item.shotId === shot.shotId);
-    const guidance = binding?.guidance;
-    const images = scene.images.filter(image => image.shotId === shot.shotId).map(image => ({
-      frame:image.frame, role:image.role, character:image.character, cue:image.cue, strength:image.strength,
-      ...(image.reference ? {reference_id:image.reference.id, purpose:image.reference.purpose} : {}),
-      image_uri:genaiSourceUri(undefined, image.path),
-    }));
-    let delivery: string | undefined;
-    if (scene.silentPicture || !shot.dialogue?.length && !conditioned)
-      delivery = 'All visible mouths stay closed. No speech or vocalization.';
-    else if (shot.dialogue?.length && shot.dialogue.every(line => line.delivery === 'off_screen'))
-      delivery = 'All visible mouths stay closed while the off-screen speaker talks.';
-    return { ...(binding?.motionPrefix ? {motion_uri:''} : {}),
-      ...(binding?.performanceAudio ? {performance_uri:''} : {}),shot_id:shot.shotId, start_frame:shot.startFrame, end_frame:shot.endFrame,
-      ...(guidance ? {negative_prompt:guidance.negativePrompt, guidance_scale:guidance.guidanceScale} : {}),
-      ...(shot.transition === 'open' ? {} : {transition:shot.transition}),
-      description:[shot.framing,shot.action,delivery,videoTextPolicy()].filter(Boolean).join(' '), opening_positions:shot.openingPositions,
-      blocking:shot.blocking, audio:shot.sound === scene.sceneDirection?.sound ? undefined : shot.sound, images,
-      dialogue:shot.dialogue?.map(line => ({id:line.lineId, speaker:line.speaker, text:line.text, delivery:line.delivery,
-        direction:line.direction, frame:conditioned ? undefined : line.frame, ...(line.voice ? {voice_uri:genaiAudioUri(undefined,line.voice.path)} : {})})),
-      ...(binding?.seed !== undefined ? {seed:binding.seed} : {}),
-    };
+/** Turn the planner's numbered request into scene arguments. The numbers become placeholders named after the
+ * cast member and picture role they point at, so the request no longer depends on the order it was composed in. */
+export function sceneArgsFromComposed(composed: ComposedScene) {
+  const keyOf = (label: string) => composed.slots.find(slot => slot.label === label)?.key;
+  const shotIds = new Set(composed.shots.map(shot => shot.id));
+  const cast = new Map<string, { id: string; images: { role: string; imagePath: string; voiced: boolean }[]; voicePath?: string }>();
+  const references: { id: string; role: 'background' | 'object'; imagePath: string }[] = [];
+  const rename: { label: string; key: string }[] = [];
+  // Cast, reference and shot IDs share one namespace, and a shot's composition guide is named after its shot.
+  const taken = (name: string) => shotIds.has(name) || cast.has(name) || references.some(ref => ref.id === name);
+  const free = (name: string) => {
+    if (!taken(name)) return name;
+    for (let n = 1; ; n++) if (!taken(name + '-ref' + n)) return name + '-ref' + n;
+  };
+  composed.references.forEach((ref, index) => {
+    const label = 'Image ' + (index + 1), key = keyOf(label);
+    if (!ref.imagePath) throw new Error('genai_scene_reference: reference ' + (index + 1) + ' has no local picture');
+    const [owner, part] = key ? key.split('.') : ['reference' + (index + 1), 'image'];
+    if (ref.background || ref.nonCharacter || !key) {
+      const refId = free(owner);
+      references.push({ id: refId, role: ref.background ? 'background' : 'object', imagePath: ref.imagePath });
+      rename.push({ label, key: refId + '.image' });
+      return;
+    }
+    const member = cast.get(owner) ?? { id: owner, images: [] };
+    // `image` names a single picture in scene mode, so a legacy picture without a role is called `picture`.
+    const pictureRole = part === 'image' ? 'picture' : part;
+    member.images.push({ role: pictureRole, imagePath: ref.imagePath, voiced: Boolean(ref.audioPath) });
+    if (ref.audioPath) {
+      if (member.voicePath && member.voicePath !== ref.audioPath) throw new Error('genai_scene_voice: ' + owner + ' carries two voice samples');
+      member.voicePath = ref.audioPath;
+      rename.push({ label: 'Audio ' + (index + 1), key: owner + '.voice' });
+    }
+    cast.set(owner, member);
+    rename.push({ label, key: owner + '.' + pictureRole });
   });
-  const direction = scene.sceneDirection;
-  const prompt = direction ? [direction.emotion,direction.action,direction.camera,direction.staging,direction.sound, direction.oneTake && 'One continuous take. No cuts.'].filter(Boolean).join(' ') : '';
-  const trackBytes = scene.audio ? statSync(scene.audio.path).size : 0;
-  if (trackBytes > 32 * 1024 * 1024) throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
-  const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
-  const body = {model, resolution, fps:scene.fps, num_frames:scene.frameCount, generate_audio:true, prompt:prompt || 'Follow the ordered storyboard shots.',
-    image_uri:shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
-    ...(scene.audio ? {scene_audio:{...(scene.audio.mode ? {mode:scene.audio.mode} : {}),audio_uri:stageTrack ? '' : genaiAudioUri(undefined,scene.audio.path),start_frame:scene.audio.startFrame,
-      end_frame:scene.audio.endFrame,cues:scene.audio.cues}} : {})};
-  let wire = JSON.stringify(body);
-  if (stageFiles || stageTrack || bindings?.some(b=>b.motionPrefix || b.performanceAudio) || Buffer.byteLength(wire) > GENAI_MSR_INLINE_MAX_BYTES) {
-    const staged = new Map<string,string>();
-    const stageBytes = async (bytes:Buffer, mime:string, role:string, frame:number, shotId?:string) => {
-      const sha256 = createHash('sha256').update(bytes).digest('hex');
-      const id = staged.get(sha256) ?? await uploadGenaiFile(bytes, mime);
-      if (!id) throw new Error('Gateway could not stage the original ' + role + ' file for validation');
-      staged.set(sha256, id);
-      attachments.push({shotId, role, frame, sha256, bytes:bytes.length});
-      return id;
-    };
-    const stage = (uri:string, role:string, frame:number, shotId?:string) =>
-      stageBytes(Buffer.from(uri.slice(uri.indexOf(',')+1),'base64'),uri.slice(5,uri.indexOf(';')),role,frame,shotId);
-    for (const shot of shots) {
-      const binding = bindings?.find(b=>b.shotId === shot.shot_id);
-      if (binding?.performanceAudio) {
-        const wav = load('../../skills/_shared/scene-speech-receipt.js').performanceWav(binding.performanceAudio, shot.end_frame - shot.start_frame, scene.fps);
-        shot.performance_uri = await stageBytes(wav, 'audio/wav', 'performance_audio', shot.start_frame, shot.shot_id);
-      }
-      if (binding?.motionPrefix) shot.motion_uri = await stageBytes(readFileSync(binding.motionPrefix),'video/mp4','motion_prefix',shot.start_frame,shot.shot_id);
-      for (const image of shot.images) image.image_uri = await stage(image.image_uri, image.role, image.frame, shot.shot_id);
-      for (const line of shot.dialogue ?? []) if (line.voice_uri)
-        line.voice_uri = await stage(line.voice_uri, 'voice_reference', line.frame ?? shot.start_frame, shot.shot_id);
-    }
-    body.image_uri = shots[0]?.images.find(image => image.role === 'start')?.image_uri;
-    if (body.scene_audio && scene.audio) {
-      const mime = GENAI_AUDIO_TYPES[path.extname(scene.audio.path).toLowerCase()];
-      if (!mime) throw new Error('scene_audio@0: unsupported audio format');
-      body.scene_audio.audio_uri = await stageBytes(readFileSync(scene.audio.path),mime,'scene_audio',0);
-    }
-    wire = JSON.stringify(body);
+  // The voice rides on a member's first picture.
+  const members = [...cast.values()].map(member => ({ id: member.id,
+    images: [...member.images.filter(i => i.voiced), ...member.images.filter(i => !i.voiced)].map(({ role, imagePath }) => ({ role, imagePath })),
+    ...(member.voicePath ? { voicePath: member.voicePath } : {}) }));
+  const escaped = composed.prompt.replace(/[{}]/g, brace => brace + brace);
+  let prompt = scenePromptTemplate(escaped, { slots: rename }, '', composed.script).promptTemplate;
+  const opening = composed.shots[0]?.imagePath;
+  if (!members.length && !references.some(ref => ref.role === 'object')) {
+    // LTX scene mode needs a subject. A scene without a cast gives its opening picture as one (user's choice, 2026-11-25).
+    if (!opening) throw new Error('genai_scene_subject: a scene without a cast picture needs an opening image');
+    const refId = free('opening');
+    references.push({ id: refId, role: 'object', imagePath: opening });
+    prompt = '{' + refId + '.image}: the place and objects of the opening view.\n' + prompt;
   }
-  return {body, attachments, bodySha256:createHash('sha256').update(wire).digest('hex'), bytes:Buffer.byteLength(wire)};
-}
-
-/** Run every gateway check on the staged body. Nothing is reserved or rendered. */
-export async function validateSceneBody(body: unknown, requestId: string, expected: { model: string; shots: number }) {
-  const result = await requestGenai('POST', SCENE_ROUTE + '/validate', body, 120000, undefined, undefined, requestId);
-  const checked = z.object({schema_valid:z.literal(true), model:z.literal(expected.model), shots:z.literal(expected.shots),
-    execution:z.string().optional()}).parse(result);
-  // The body names no execution, which this route reads as one render per shot. Any other answer would put the whole scene in one gateway-written prompt.
-  if ((checked.execution ?? 'per_shot') !== 'per_shot')
-    throw new Error('scene_render_selection: the gateway answered ' + checked.execution + ' for a per_shot scene');
-}
-/** Submit the scene job. The gateway returns the same job for a repeated `requestId` with the same body. */
-export async function submitSceneBody(body: unknown, requestId: string) {
-  const response = await requestGenai('POST', SCENE_ROUTE, body, 120000, undefined, undefined, requestId);
-  return z.object({id:z.string().min(1), request_id:z.literal(requestId)}).parse(response);
+  return { prompt, cast: members, references, shots: composed.shots.map(shot => ({ ...shot })), keys: rename };
 }

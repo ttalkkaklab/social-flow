@@ -1,7 +1,7 @@
-import { bindRegisteredPanels, bindSceneCards, buildSceneWire, prepareSceneRequest, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
-import { readSceneCapabilities, sceneRequestId, sceneRequestIssues, SCENE_LIMITS, submitSceneBody, validateSceneBody } from './genai-scene.js';
+import { bindRegisteredPanels, prepareSceneRequest, SCENE_FIT_STEPS, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
+import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
-import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneShotBindingsSchema, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
+import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, checkFasth3VoiceReplay, fasth3RenderFrames, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
 import { localVideoStrategy } from './local-video-models.js';
 import { desktopAudioWindow, desktopVideoStatus } from './astra-genai-desktop.js';
@@ -29,8 +29,8 @@ import { atomicJson, videoTransaction } from './video-state.js';
 import { checkRegisteredBindings, seedanceBindings, type SeedanceBinding } from './seedance-bindings.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { recordVideoSubmission, videoEvents } from './video-events.js';
-import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiMsrVoiceReferences, refreshGenaiMsrVoice, genaiV2Resolution } from './astra-genai-video.js';
-import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob } from './astra-genai-client.js';
+import { msrOutputContract, genaiScenePromptLimit, checkGenaiVideoOptions, getGenaiVideoStatus, genaiMsrSchema, buildGenaiMsrBody, buildGenaiAudioBody, genaiAudioToVideoSchema, genaiSceneVoices, refreshGenaiVideoCatalog, genaiV2Resolution, prepareGenaiSources, GENERATIONS_ROUTE } from './astra-genai-video.js';
+import { astraGenaiBaseUrl, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects, type ImageBinding } from './video-image-inputs.js';
 import { readImageMetadata } from './image-media.js';
 import { formatReferenceLabel, promptGuidance, referenceAdvice, scenePromptProfile, usesGeneratedVoice, type PromptGuidance, type ScenePromptProfile } from './scene-prompt-profile.js';
@@ -54,12 +54,7 @@ const structurePath = fileURLToPath(new URL('../../skills/storyboard/references/
 /** Channel assets (intro clips, logo motion, growth images) live here; they have no episode or shot. */
 const CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
 interface Selection { engine: string; model?: string; resolution?: string; host?: string; operation?: string }
-/** The one rendering mode a call can name: each shot rendered apart by the gateway's scene route, which writes each shot's prompt. */
-type SceneRendering = 'per_shot';
-const RENDERING_REFUSAL = 'scene_render_selection: per_shot is the only rendering mode. Leave sceneRendering out to plan the scene as one render: ' +
-  'the plan returns promptTemplate and takes an authored prompt. single_msr and auto had the gateway write that prompt and are retired';
-/** `rendering` is what the scene's cards ask for. 'auto' marks a cut scene that would also fit one render; approved plans hash it. */
-interface SpeechRoute {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; rendering?:'auto'|'per_shot'; external:boolean; opening?:string}
+interface SpeechRoute {speakers:string[]; operation:string; mode:'conditioned'|'reference'|'generated'|'picture'; external:boolean; opening?:string}
 interface Context {
   speechRoute?: SpeechRoute;
   sceneNo?: number; sceneOwnsFrames?: boolean; timed?: boolean; shotIds?: string[]; sceneDirection?: SceneVideoDirection; sceneMembers?: Record<string, unknown>[];
@@ -67,22 +62,26 @@ interface Context {
   snapshotRevision: string | null;
   lines: string[][]; production: Record<string, unknown>; board: Record<string, unknown>; shot: Record<string, unknown>;
 }
-export function routingContext(episode: string, shotId?: string, sceneNo?: number, selectionOnly?: boolean, rendering?: SceneRendering): Context {
+export function routingContext(episode: string, shotId?: string, sceneNo?: number, selectionOnly?: boolean): Context {
   const reader = load(shared) as {
-    readVideoContext(episode: string, shotId?: string, sceneNo?: number, selectionOnly?: boolean, rendering?: SceneRendering): Context;
+    readVideoContext(episode: string, shotId?: string, sceneNo?: number, selectionOnly?: boolean): Context;
     MissingSceneDirection: new (...args: never[]) => Error & {members: Record<string,unknown>[]; selection: Selection; board: Record<string,unknown>};
   };
-  try { return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly, rendering); }
+  try { return reader.readVideoContext(episode, shotId, sceneNo, selectionOnly); }
   catch (error) {
     if (sceneNo === undefined || !(error instanceof reader.MissingSceneDirection)) throw error;
     // Older storyboards still have ordered cards. Show their inputs in the refusal
     // without inventing scene direction, approving a plan or rewriting the board.
     const timeline = compileSceneTimeline(error.members, {}, episode, error.board);
     const request = {...timeline, sceneNo, prompt:sceneTimelineWords(timeline, {})};
-    mapSceneInputs(request, selectedVideoTool(error.selection) ?? error.selection.engine, error.selection.model,
+    mapSceneInputs(request, sceneVideoTool(error.selection) ?? error.selection.engine, error.selection.model,
       [{input:'direction', role:'scene_direction', shotId:timeline.shotIds[0], frame:0, reason:error.message}]);
     throw error;
   }
+}
+/** The adapter a storyboard scene is planned for. On the GenAI engine every scene is one scene-mode request (user directive 2026-11-25). */
+export function sceneVideoTool(selection: Selection, operation = selection.operation): string | undefined {
+  return selection.engine === 'astra-genai' ? 'astra_genai_scene' : selectedVideoTool(selection, operation);
 }
 export function selectedVideoTool(selection: Selection, operation = selection.operation): string | undefined {
   if (operation === 'image' && selection.engine === 'mlx' && selection.model && localVideoStrategy('ltx_video_generate')?.acceptsModel(selection.model))
@@ -169,7 +168,8 @@ export function readShotVideoTiming(episode: string, shotId: string) {
   const context = routingContext(episode, shotId, undefined, true);
   requireSupportedSelection(context.selection);
   const video = (context.shot.visual as { video?: Record<string, unknown> } | undefined)?.video ?? {};
-  const tool = selectedVideoTool(context.selection);
+  // Timing reads the adapter the scene will be planned for, so a GenAI shot is measured on the scene-mode grid.
+  const tool = sceneVideoTool(context.selection);
   const args = tool ? bindSelection(tool, video, context.selection) : video;
   return { shotId, selection: context.selection, source: context.source,
     ...shotVideoTiming(context, tool ?? 'unresolved', args) };
@@ -183,7 +183,6 @@ function stable(value: unknown): unknown {
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z.number().int().positive(), requestId: idSchema,
-  sceneRendering:z.enum(['per_shot'], {errorMap:() => ({message:RENDERING_REFUSAL})}).optional(), shotBindings:sceneShotBindingsSchema.optional(),
   purpose: z.enum(['draft', 'final', 'revision']).optional(),
   basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
   maxCostUsd: z.number().nonnegative().finite().optional(),
@@ -205,7 +204,9 @@ export interface VideoPlan {
   promptHeader?: string; authoredPrompt?: string; promptIssues?: PromptIssue[];
   conditioningInputs?: {version:1; driverSha256:string; shots:unknown[]};
   speechRoute?: Context['speechRoute'];
-  sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number; sceneRendering?: SceneRendering; shotBindings?: z.infer<typeof sceneShotBindingsSchema>;
+  sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number;
+  /** What `POST /v1/generations/validate` compiled a GenAI scene to when it was planned. Said with the plan, outside the manifest an approval covers. */
+  sceneValidation?: {prompt: string; numFrames: number; labels: Record<string, string>; warnings: {code: string}[]};
   purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   characterInputs?: CharacterVideoInput[];
   characterBindings?: SeedanceBinding[];
@@ -308,9 +309,7 @@ function saveVideoPlan(plan: VideoPlan) {
   const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
   if (!fs.existsSync(file)) {
     // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
-    const {promptProfile: _profile, promptGuidance: _guidance, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest} = plan;
-    // A per_shot plan's gateway warning is said with the plan, outside the manifest an approval covers.
-    if (manifest.sceneRendering) delete manifest.promptIssues;
+    const {promptProfile: _profile, promptGuidance: _guidance, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, sceneValidation: _validation, ...manifest} = plan;
     atomicJson(file, manifest);
   }
   fs.rmSync(blockedPlanFile(plan.episode, plan.requestId), {force:true});
@@ -318,10 +317,7 @@ function saveVideoPlan(plan: VideoPlan) {
   return plan;
 }
 function planOutputContract(plan:VideoPlan) {
-  if (plan.sceneRendering && plan.sceneRequest) return msrOutputContract('scene-to-video', {
-    resolution:plan.selection.resolution, fps:plan.sceneRequest.fps, numFrames:plan.sceneRequest.frameCount,
-  });
-  const operation = plan.tool === 'astra_genai_msr' ? 'msr' : plan.tool === 'astra_genai_img2video' ? 'image-to-video' : '';
+  const operation = plan.tool === 'astra_genai_scene' ? 'scene' : plan.tool === 'astra_genai_msr' ? 'msr' : plan.tool === 'astra_genai_img2video' ? 'image-to-video' : '';
   return msrOutputContract(operation, plan.args);
 }
 function fasth3Files(plan: VideoPlan) {
@@ -404,52 +400,18 @@ async function checkCompletedMedia(plan:VideoPlan, jobId?:string) {
   const expected = planOutputContract(plan);
   if (!expected) return;
   const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
-  const result = await getGenaiVideoStatus({receiptPath:target + '.astra-genai.json',download:true}, expected, {target, jobId, fingerprint:plan.sceneRendering ? plan.id : undefined});
+  const result = await getGenaiVideoStatus({receiptPath:target + '.astra-genai.json',download:true}, expected, {target, jobId});
   if (!result.downloaded) throw new Error('Completed video has no verified local output');
 }
-async function validateShotRenderPlan(plan: VideoPlan) {
-  const scene = plan.sceneRequest!, model = String(plan.selection.model);
-  const capabilities = await readSceneCapabilities();
-  for (const binding of plan.shotBindings ?? []) {
-    if (binding.motionPrefix && !capabilities.motionPrefix || binding.performanceAudio && capabilities.timedDialogue !== 'supplied_performance')
-      throw new Error('scene_render_guide: ' + binding.shotId + ' requests an unavailable performance or motion guide');
-  }
-  if (scene.audio) {
-    const mode = scene.audio.mode ?? 'conditioning';
-    if (capabilities.audioModes[mode] !== plan.selection.model)
-      throw new Error('scene_audio@0: gateway does not advertise ' + mode + ' for the selected model');
-  }
-  // Nothing is uploaded for a scene this deployment would refuse.
-  const refused = sceneRequestIssues(scene, capabilities, {bindings:plan.shotBindings, model});
-  if (refused.length) throw new Error('scene_render_inputs_unsupported:\n' + refused.join('\n'));
-  const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings);
-  if (plan.conditioningInputs && prepared.attachments.find(file => file.role === 'scene_audio')?.sha256 !== plan.conditioningInputs.driverSha256)
-    throw new Error('video_plan_stale: the staged conditioning master differs from the approved scene');
-  await validateSceneBody(prepared.body, sceneRequestId(plan.id), {model, shots:plan.shotIds!.length});
-  return {...prepared, execution:'per_shot' as const, ...(plan.conditioningInputs ? {conditioningInputs:plan.conditioningInputs} : {})};
-}
-
-async function executeShotRenderPlan(plan: VideoPlan, prepared:Awaited<ReturnType<typeof validateShotRenderPlan>>): Promise<ToolResult> {
-  const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
-  const receiptPath = target + '.astra-genai.json';
-  fs.mkdirSync(path.dirname(target), {recursive:true});
-  const receipt = {version:1, operation:'scene-to-video', baseUrl:astraGenaiBaseUrl(),
-    sceneRequestSha256:createHash('sha256').update(JSON.stringify(prepared)).digest('hex'),
-    fingerprint:plan.id, expected:planOutputContract(plan), videoPath:target, requestId:sceneRequestId(plan.id), status:'submitting'};
-  fs.writeFileSync(receiptPath, JSON.stringify(receipt), {flag:'wx', mode:0o600});
-  atomicJson(target + '.scene-request.json', prepared);
-  const accepted = await submitSceneBody(prepared.body, receipt.requestId);
-  atomicJson(receiptPath, {...receipt,jobId:accepted.id,status:'submitted'});
-  recordVideoSubmission(accepted.id);
-  const result = await pollGenaiJob(() => getGenaiVideoStatus({receiptPath, download:true}), 'Poll this scene request with video_status.');
-  return {content:[{type:'text',text:JSON.stringify({...result,receiptPath})}]};
+/** Compile a planned GenAI scene with `POST /v1/generations/validate`. Its files are uploaded for the check; nothing renders
+ * and nothing is metered. A scene the gateway numbers, times or cuts differently from the plan is refused here. */
+async function validateGenaiScenePlan(plan: VideoPlan) {
+  const args = genaiSceneSchema.parse(plan.args);
+  const body = await prepareGenaiSources(genaiSceneBody(args, (file, kind) => kind === 'image' ? genaiSourceUri(undefined, file) : genaiAudioUri(undefined, file)));
+  return checkSceneValidation(args, await requestGenai('POST', GENERATIONS_ROUTE + '/validate', body, 120_000));
 }
 
 type PlanInput = z.infer<typeof videoPlanSchema>;
-/** What a per_shot plan says about its prompts. The scene route has no field for a caller's own. */
-const GATEWAY_WRITES_PROMPTS: PromptIssue = {level:'warning', code:'gateway_composed_prompt',
-  detail:'The gateway renders each shot apart and writes each shot\'s prompt from this manifest. No promptTemplate is returned and no authored prompt is taken. ' +
-    'Revise a shot through its card, or plan without sceneRendering when the scene fits one render.'};
 
 function requireSpeechSignal(file: string, code: string): number {
   const signal = load('../../skills/_shared/audio-signal.js').inspect(file);
@@ -475,15 +437,15 @@ function verifyDistinctSamples(samples: {speaker:string;path:string}[]) {
 }
 
 export function assertSpeechRenderCapacity(tool: string, model: string | undefined, scene: {no?:number; videoDirection?:SceneVideoDirection} | undefined,
-  cards: Record<string, unknown>[], route: Pick<SpeechRoute, 'mode'|'rendering'>, rendering = route.rendering, generateAudio?: unknown) {
-  load('../../skills/_shared/scene-cast.js').assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering,
+  cards: Record<string, unknown>[], route: Pick<SpeechRoute, 'mode'>, generateAudio?: unknown) {
+  load('../../skills/_shared/scene-cast.js').assertRenderVoiceCapacity({tool, model, scene, cards, route,
     generateAudio, limit:voiceReferenceLimit(tool, model)});
 }
 
 function resolvePlanContext(input: PlanInput) {
   assertNoPostLipSync(input);
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
-  const context = routingContext(input.episode, undefined, input.sceneNo, false, input.sceneRendering);
+  const context = routingContext(input.episode, undefined, input.sceneNo, false);
   requireSupportedSelection(context.selection);
   assertSelection('video', context.selection, input);
   const structure = load(structurePath) as {
@@ -500,18 +462,29 @@ function resolvePlanContext(input: PlanInput) {
   if (gaps.length) throw new Error('shot_image_required: attach every shot image before video_plan — ' + gaps.join('; '));
   if (input.tool && VIDEO_ADAPTERS[input.tool]?.engine !== context.selection.engine)
     throw new Error('model_selection_mismatch: tool does not match selected engine');
-  if (input.tool && input.operation && input.tool !== selectedVideoTool(context.selection, input.operation))
+  if (input.tool && input.operation && input.tool !== sceneVideoTool(context.selection, input.operation))
     throw new Error('Tool and operation disagree');
   const route = context.speechRoute!;
-  const tool = selectedVideoTool(context.selection, route.operation);
-  if (!tool || input.tool && input.tool !== tool || input.operation && input.operation !== route.operation)
+  // A scene on the GenAI engine is one scene-mode request (user directive 2026-11-25). It is composed as one LTX MSR render,
+  // the prompt the gateway's scene mode compiles to, and handed to the scene adapter at the end of planning.
+  const sceneTool = context.selection.engine === 'astra-genai' ? 'astra_genai_scene' : undefined;
+  if (sceneTool) {
+    if (input.tool && input.tool !== sceneTool) throw new Error('scene_render_selection: GenAI scenes are planned for ' + sceneTool);
+    if (input.operation && !['image', 'reference'].includes(input.operation))
+      throw new Error('scene_speech_route: a GenAI scene is one scene-mode request from its opening image and cast; ' + input.operation + ' is not planned');
+    if (!(GENAI_SCENE_MODELS as readonly string[]).includes(String(context.selection.model)))
+      throw new Error('scene_mode_model_unsupported: GenAI scene mode runs ' + GENAI_SCENE_MODELS.join(', ') + '; ' + context.selection.model + ' scenes are not planned');
+    if (route.mode === 'conditioned' || context.sceneDirection?.audio)
+      throw new Error('scene_mode_audio_unsupported: GenAI scene mode renders its own soundtrack and takes no supplied track; keep the recording for assembly or choose another engine');
+  }
+  const tool = sceneTool ? 'astra_genai_img2video' : selectedVideoTool(context.selection, route.operation);
+  if (!tool || !sceneTool && (input.tool && input.tool !== tool || input.operation && input.operation !== route.operation))
     throw new Error('scene_speech_route: scene ' + input.sceneNo + ' requires ' + route.operation +
       ' for ' + route.speakers.length + ' speaking characters on ' + context.selection.engine);
   const adapter = VIDEO_ADAPTERS[tool];
   if (tool === 'astra_genai_msr' && context.selection.model !== 'ltx-2.5-22b-distilled')
     throw new Error('scene_speech_references: MSR requires the distilled LTX model');
   const track = context.sceneDirection?.audio;
-  const rendering = input.sceneRendering ?? route.rendering;
   if (route.mode === 'conditioned') {
     if (adapter.voice !== 'supplied' || !track || track.mode === 'mix')
       throw new Error('scene_speech_audio: author the finished dialogue track in videoDirection.audio with conditioning mode');
@@ -522,10 +495,8 @@ function resolvePlanContext(input: PlanInput) {
       throw new Error('scene_audio_timing: the dialogue track covers ' + seconds + 's of the ' + duration + 's scene');
   }
   assertSpeechRenderCapacity(tool, context.selection.model, {no:context.sceneNo, videoDirection:context.sceneDirection},
-    context.sceneMembers ?? [context.shot], route, rendering, input.args.generateAudio);
-  if (route.mode !== 'reference' && input.shotBindings?.some(binding => binding.performanceAudio))
-    throw new Error('scene_speech_route: a shot performance cannot override the scene soundtrack');
-  return { context, tool };
+    context.sceneMembers ?? [context.shot], route, input.args.generateAudio);
+  return { context, tool, sceneTool };
 }
 
 function blockedPlanFile(episode: string, requestId: string) {
@@ -548,14 +519,10 @@ export async function planManagedVideo(raw: unknown) {
 
 async function prepareManagedPlan(input: PlanInput) {
   const resolved = resolvePlanContext(input);
-  const { context, tool } = resolved;
-  if (context.selection.engine === 'astra-genai' && (tool === 'astra_genai_msr' || tool === 'astra_genai_img2video'))
-    await refreshGenaiMsrVoice();
-  let plan = buildVideoPlan(input, resolved, false);
-  if (plan.sceneRendering) {
-    await validateShotRenderPlan(plan);
-    return saveVideoPlan(plan);
-  }
+  const { context } = resolved;
+  if (context.selection.engine === 'astra-genai') await refreshGenaiVideoCatalog();
+  let plan = buildFittedPlan(input, resolved, false);
+  if (plan.tool === 'astra_genai_scene') return saveVideoPlan({...plan, sceneValidation:await validateGenaiScenePlan(plan)});
   if (plan.characterBindings) await checkRegisteredBindings(plan.characterBindings);
   if (plan.tool === 'seedance_reference' && plan.args.referenceVideoTaskIds)
     await checkSeedanceReferenceTasks(seedanceReferenceSchema.parse(plan.args));
@@ -566,7 +533,7 @@ async function prepareManagedPlan(input: PlanInput) {
     const duration = await checkDesktopOffering(plan.args, minimum);
     if (minimum !== undefined && duration !== plan.args.durationSeconds) {
       const { requiredSeconds: _required, ...args } = input.args;
-      plan = buildVideoPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
+      plan = buildFittedPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
     }
   }
   if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
@@ -575,9 +542,58 @@ async function prepareManagedPlan(input: PlanInput) {
 
 export function planVideo(raw: unknown, persist = true): VideoPlan {
   const input = videoPlanSchema.parse(raw);
-  return buildVideoPlan(input, resolvePlanContext(input), persist);
+  return buildFittedPlan(input, resolvePlanContext(input), persist);
+}
+/** A GenAI scene over its model's prompt cap is composed again with fewer optional words, one step at a time. An authored prompt is the author's to fit. */
+function buildFittedPlan(input: PlanInput, resolved: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
+  for (let step = 0; ; step++) {
+    try { return buildVideoPlan(input, resolved, persist, step); }
+    catch (error) {
+      if (!resolved.sceneTool || input.prompt !== undefined || step >= SCENE_FIT_STEPS.length ||
+          !(error instanceof Error) || !error.message.startsWith('scene_prompt_too_long')) throw error;
+    }
+  }
 }
 
+/** Hand a scene composed as one LTX MSR render to the GenAI scene adapter: the references become a cast and references
+ * named after what they show, each shot opens on its own picture, and the numbered prompt names its inputs. Anything the
+ * scene mode cannot carry is refused with its shot, role and frame. */
+function genaiSceneArgs(sceneTool: string, args: Record<string, unknown>, scene: SceneRequest | {shotId: string; frames: number}, openingPath: string,
+  storyboard: string, slots: readonly {key: string; label: string}[], script: readonly string[], selection: Selection) {
+  // A timed scene's pictures were mapped with the scene (ending and timed pictures are refused there). A single untimed shot
+  // reaches here with the image lane's own end-frame and keyframe fields, which scene mode cannot carry either.
+  const request = 'shots' in scene ? scene : undefined;
+  const options = ['referenceStrength', 'referenceFrames', 'skipStage2', 'negativePrompt', 'guidanceScale', 'nagScale', 'nagAlpha', 'nagTau',
+    'lora', 'numGeneratedKeyframes', 'numInferenceSteps', 'guidance', ...(request ? [] : ['lastFramePath', 'lastFrameUri', 'keyframes'])]
+    .filter(key => args[key] !== undefined && args[key] !== null);
+  if (options.length) throw new Error('scene_inputs_unsupported: ' + sceneTool + ' takes no ' + options.join(', '));
+  const shotImage = (shotId: string, index: number) => {
+    if (index === 0) return openingPath;
+    const start = request?.images.find(pin => pin.shotId === shotId && pin.role === 'start' && !pin.reference)?.path;
+    const guide = request?.shotReferenceImages?.find(item => item.shotId === shotId)?.path;
+    return start ?? (guide ? fs.realpathSync(path.resolve(storyboard, guide)) : undefined);
+  };
+  const shots = (request ? request.shots.map(shot => ({shotId:shot.shotId, frames:shot.endFrame - shot.startFrame})) : [scene as {shotId: string; frames: number}])
+    .map((shot, index) => {
+      const imagePath = shotImage(shot.shotId, index);
+      return {id:shot.shotId, frames:shot.frames, ...(imagePath ? {imagePath} : {})};
+    });
+  const composed = sceneArgsFromComposed({prompt:String(args.prompt), slots, script, shots,
+    references:(args.references as {imagePath?: string; background?: boolean; nonCharacter?: boolean; audioPath?: string}[] | undefined) ?? []});
+  const {keys, ...projected} = composed;
+  checkSceneVoices(projected);
+  const parsed = genaiSceneSchema.parse({model:selection.model, ...projected, resolution:args.resolution, fps:args.fps,
+    ...(args.seed === undefined ? {} : {seed:args.seed}), generateAudio:args.generateAudio, reserveUsd:args.reserveUsd,
+    outputPath:args.outputPath, filename:args.filename});
+  // The gateway measures the prompt after it numbers the names; refuse here before any file is uploaded.
+  const length = resolveScenePlaceholders(parsed.prompt, sceneLabels(parsed)).length, limit = genaiScenePromptLimit(String(selection.model));
+  if (length > limit) throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit}. Shorten the scene direction or split the scene at an authored cut`);
+  return {keys, args:parsed as Record<string, unknown>};
+}
+/** The planner's names with the numbers the gateway gives the references they point at. */
+function relabelSlots(slots: readonly {key: string; label: string}[], keys: readonly {label: string; key: string}[], labels: Record<string, string>) {
+  return slots.map(slot => ({key:slot.key, label:labels[keys.find(item => item.label === slot.label)?.key ?? ''] ?? slot.label}));
+}
 /** Where each submitted picture sits in the request's numbered reference list, and whose it is. */
 function numberedImages(args: Record<string, unknown>, bindings: readonly ImageBinding[] = [], speakers: readonly {speaker: string; imageIndices?: number[]}[] = [],
   cast: readonly CharacterVideoInput[], episode: string, firstShot: string): PromptImage[] {
@@ -602,10 +618,7 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
     return {number, owner: guide ? undefined : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === 'start' ? firstShot : undefined), guide};
   });
 }
-function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
-  if (!input.sceneRendering && context.speechRoute?.rendering)
-    throw new Error('scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request, ' +
-      'or name sceneRendering:"per_shot", where the gateway writes each shot\'s prompt.');
+function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType<typeof resolvePlanContext>, persist: boolean, fitStep = 0): VideoPlan {
   const sourceArgs = input.args;
   const speakers = context.speechRoute!.speakers;
   const opening = context.speechRoute!.opening;
@@ -630,8 +643,6 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   const scene = context.sceneDirection && sceneVideoDirectionSchema.parse(context.sceneDirection);
   if (context.sceneOwnsFrames) {
     const media = ['references','images','keyframes','imagePath','imageUri','lastFramePath','lastFrameUri','sourceImagePath','lastImagePath','firstFramePath','firstFrameImagePath','lastFrameImagePath','referenceImagePaths','referenceImageUrls','referenceVideoTaskIds','referenceVideoUrls','referenceVideoPaths','referenceAudioPaths'];
-    if (input.shotBindings?.some(binding => binding.keyframes || binding.openingPositions))
-      throw new Error('scene_image_scope: author scene endpoints and scene reference positions on the storyboard');
     const override = media.find(key => Object.hasOwn(input.args, key));
     if (override) throw new Error('scene_image_scope: author ' + override + ' on the storyboard before planning this scene');
   }
@@ -686,119 +697,19 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     throw new Error('voice_lane_required: Veo cannot condition dialogue on a character voice. If a generated voice is acceptable, set videoDirection.dialogueVoice to model_generated for this scene.');
   if (modelVoice && input.args.generateAudio === false)
     throw new Error('scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue');
-  if (input.shotBindings && !input.sceneRendering) throw new Error('scene_render_bindings: select per_shot rendering');
-  const savedDraft = scene?.promptDrafts?.find(draft => draft.engine === selection.engine &&
-    draft.model === selection.model && draft.operation === (tool && VIDEO_ADAPTERS[tool]?.operation || selection.operation));
+  // A GenAI scene's draft is kept under the scene adapter's operation; one saved before 2026-11-25 sits under the image lane's.
+  const draftOperations = sceneTool ? [VIDEO_ADAPTERS[sceneTool].operation, VIDEO_ADAPTERS[tool!].operation] : [tool && VIDEO_ADAPTERS[tool]?.operation || selection.operation];
+  const savedDraft = draftOperations.map(operation => scene?.promptDrafts?.find(draft => draft.engine === selection.engine &&
+    draft.model === selection.model && draft.operation === operation)).find(Boolean);
   if (input.prompt === undefined && savedDraft) input = {...input, prompt:savedDraft.prompt};
-  if ((input.wholeScene || scene?.promptDrafts) && input.sceneRendering)
-    throw new Error('scene_prompt_unsupported: this route needs separate renders. Choose an operation that accepts the complete scene.');
   if (input.prompt !== undefined) {
     if (!input.prompt.trim()) throw new Error('scene_prompt_empty: write the prompt, or leave it out for the composed one');
     if (input.prompt.length > 32_000) throw new Error('prompt_too_long: a prompt takes at most 32000 characters');
-    if (input.sceneRendering)
-      throw new Error('scene_prompt_unsupported: an authored prompt describes one render of the whole scene. Under per_shot the gateway writes each shot\'s prompt from its card');
-  }
-  if (input.sceneRendering) {
-    for (const card of context.sceneMembers ?? []) {
-      const turns = (card.narration as typeof lines | undefined)?.filter(line => line.tts?.trim()) ?? [];
-      if (turns.some(line => line.delivery === 'voiceover') && turns.some(line => line.delivery !== 'voiceover'))
-        throw new Error('scene_video_mixed_delivery: split physical dialogue and voiceover at an authored cut in ' + card.id);
-      if (turns.some(line => line.delivery === 'voiceover') && scene?.audio && scene.audio.mode !== 'mix')
-        throw new Error('scene_video_mixed_delivery: keep the voiceover outside the performance-conditioning track in ' + card.id);
-    }
-    const conditioned = scene?.audio && scene.audio.mode !== 'mix';
-    const tool = conditioned ? 'astra_genai_audio2video' : 'astra_genai_img2video';
-    if (!scene || !context.sceneMembers || !input.sceneNo || selection.engine !== 'astra-genai' ||
-        selection.model !== (conditioned ? 'ltx-2.5-22b-dev' : 'ltx-2.5-22b-distilled') || !selection.resolution || selectedVideoTool(selection) !== tool ||
-        input.tool && input.tool !== tool || input.operation && input.operation !== (conditioned ? 'audio' : 'image'))
-      throw new Error('scene_render_selection: use saved dev audio-to-video for conditioning or distilled I2V for native or mixed sound');
-    const settings = z.object({reserveUsd:z.number().nonnegative().finite(), outputPath:z.string().optional(),
-      filename:z.string().optional()}).strict().parse(input.args);
-    const {request} = prepareSceneRequest(input.sceneNo,bindSceneCards(context.sceneMembers,input.shotBindings),scene,context.episode,lines,
-      {bindDialogue:false,bindOpening:false,suffix:speakers.length ? '' : 'All visible mouths stay closed. No speech or vocalization.',shotScoped:true,guideMode:conditioned ? undefined : 'background'}, () => undefined, context.board);
-    checkVoiceoverDirection(input.shotBindings?.map(binding => binding.guidance?.negativePrompt), lines);
-    bindRegisteredPanels(request, context.episode, context.board);
-    const missing: string[] = [];
-    for (const member of context.sceneMembers) {
-      for (const person of requiredCharacters(member)) {
-        const required = [person.face?.path, person.bodyPath].filter((file): file is string => Boolean(file));
-        for (const file of required) if (!request.images.some(image => image.shotId === member.id &&
-            image.path === fs.realpathSync(path.resolve(context.episode,'storyboard',file))))
-          missing.push(member.id + ': missing character panel for ' + person.character);
-        if (person.voiceRequired && !request.shots.find(s => s.shotId === member.id)?.dialogue?.some(d => d.speaker === person.character && d.voice?.provenance === 'pinned_settings_and_bytes'))
-          missing.push(member.id + ': missing required voice sample for ' + person.character);
-      }
-    }
-
-    for (const shot of request.shots) {
-      const binding = input.shotBindings?.find(b=>b.shotId === shot.shotId);
-      const at = shot.shotId + '@' + shot.startFrame;
-      if (!request.images.some(p=>p.shotId===shot.shotId && p.role==='start'))
-        missing.push(at + ' opening: this per-shot renderer requires a temporal start for each interval; a composition guide cannot replace it');
-      if (!shot.framing || !shot.action) missing.push(at + ' direction: supply framing and action');
-      if (shot.transition !== 'open' && shot.transition !== 'hard_cut') missing.push(at + ' transition: ' + shot.transition);
-      const refs = request.images.filter(p => p.shotId === shot.shotId && (p.reference || ['face','outfit'].includes(p.role)));
-      const subjects = refs.filter(p => !['location','background'].includes(p.role));
-      if (subjects.length > SCENE_LIMITS.subjects || refs.length - subjects.length > SCENE_LIMITS.backgrounds || refs.length && !subjects.length)
-        missing.push(at + ' MSR accepts one to four subject references and at most one background');
-      for (const p of refs) if (conditioned || p.strength !== undefined && p.strength !== 1)
-        missing.push(at + ' ' + p.role + ': ' + (conditioned ? 'A2V cannot bind subject references' : 'individual reference strength is unsupported'));
-      for (const line of shot.dialogue ?? []) {
-        const label = shot.shotId + '@' + (line.frame ?? shot.startFrame) + ' ' + line.lineId + ' ' + line.speaker;
-        if (line.frame !== undefined && !conditioned && !binding?.performanceAudio)
-          missing.push(label + ' performance_audio: supply a timed WAV to lock speech to the opening frame');
-        if (line.warnings?.length) missing.push(label + ' voice: ' + line.warnings.join(' '));
-        if (line.voice && !subjects.slice(0,SCENE_LIMITS.voiceSpeakers).some(p => p.character === line.speaker))
-          missing.push(label + ' voice_reference: the speaker needs a matching panel in the first two reference slots');
-      }
-    }
-    if (context.speechRoute!.mode === 'reference') {
-      const performances = request.shots.flatMap(shot => shot.dialogue ?? []);
-      if (performances.some(line => !line.speaker || line.voice?.provenance !== 'pinned_settings_and_bytes') ||
-          speakers.some(id => !performances.some(line => line.speaker === id)))
-        missing.push('Bind distinct pinned character voices to the scene dialogue');
-      else verifyDistinctSamples(performances.map(line => ({speaker:line.speaker!, path:line.voice!.path})));
-    }
-    if (request.images.find(image => image.role === 'start' && image.frame === 0)?.path !== openingPath)
-      missing.push('Submit the authored scene opening at frame zero');
-    if (missing.length) throw new Error('scene_render_inputs_unsupported:\n' + missing.join('\n'));
-    const files = [...(request.audio ? [request.audio.path] : []),...request.images.map(p=>p.path),...request.shots.flatMap(s=>(s.dialogue ?? []).flatMap(d=>d.voice ? [d.voice.path] : []))];
-    for (const binding of input.shotBindings ?? []) {
-      for (const file of [binding.motionPrefix,binding.performanceAudio]) {
-        if (!file) continue;
-        if (!path.isAbsolute(file) || fs.statSync(file).size > 32 * 1024 * 1024)
-          throw new Error('scene_render_guide: supply an absolute path to a file of at most 32 MiB for ' + binding.shotId);
-        files.push(file);
-      }
-      if (binding.performanceAudio) {
-        requireSpeechSignal(binding.performanceAudio, 'scene_speech_performance');
-        const card = context.sceneMembers.find(member => member.id === binding.shotId);
-        load('../../skills/_shared/character-speech.js').verifyShotPerformance(binding.performanceAudio, card, context.board,
-          path.join(context.episode, 'storyboard'));
-      }
-    }
-    const inputs = Object.fromEntries(files.map(file=>[file,createHash('sha256').update(fs.readFileSync(file)).digest('hex')]));
-    const doc = context.board.SB_DOC as {characters?:unknown;performanceTimingVersion?:number} | undefined;
-    const conditioningInputs:VideoPlan['conditioningInputs'] = conditioned && request.audio
-      ? load('../../skills/produce/references/compose-speech.js').conditioningInputs(context.sceneMembers,
-        path.join(context.episode,'storyboard'),request.shots,doc?.characters,doc?.performanceTimingVersion,inputs[request.audio.path])
-      : undefined;
-    const outputPath = canonical(path.resolve(context.episode,settings.outputPath ?? '.work/video'));
-    if (!within(context.episode,outputPath)) throw new Error('video_output_outside_episode');
-    const filename = settings.filename ?? 'video-'+input.requestId+'.mp4';
-    resolveOutputFile(outputPath,filename,'video');
-    const args = {model:selection.model,resolution:selection.resolution, prompt:request.prompt, reserveUsd:settings.reserveUsd,outputPath,filename};
-    const body = {...take, version:1 as const, episode:context.episode, shotId:context.shotId, requestId:input.requestId,
-      ...(conditioningInputs ? {conditioningInputs} : {}),
-      sceneRendering:input.sceneRendering, ...(cast.length ? {characterInputs:cast} : {}), ...(input.shotBindings ? {shotBindings:input.shotBindings} : {}), sceneRequest:{...request,...(!speakers.length ? {silentPicture:true as const} : {})}, tool, args, sourceArgs:input.args, inputs, selection,
-      source:context.source, contextRevision:context.revision,quote:quoteFor(tool,args),execution:'server' as const};
-    const plan = {...body,id:hash(body),promptIssues:[GATEWAY_WRITES_PROMPTS]};
-    if (persist) throw new Error('scene_render_validation: use video_plan to validate deployed renderer inputs before approval');
-    return plan;
   }
   if (tool === 'astra_genai_msr' && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
     throw new Error('msr_speech_route: silent and voiceover/inner-thought shots use image2video with external timed TTS for voiceover; split mixed deliveries first');
-  if (scene && lines.some(l => l.delivery === 'voiceover') && lines.some(l => l.delivery !== 'voiceover'))
+  // One render carries either a native performance or an external voiceover track, so a cut that mixes them is split first.
+  if ((scene || sceneTool) && lines.some(l => l.delivery === 'voiceover') && lines.some(l => l.delivery !== 'voiceover'))
     throw new Error('scene_video_mixed_delivery: keep voiceover on its external track and separate it from native dialogue');
   // The hosted reference lanes take spoken shots only, as MSR does; silent and voiceover shots use the image lane.
   if (tool && VENDOR_REFERENCE_TOOLS.includes(tool) && (!lines.length || lines.some(line => line.delivery === 'voiceover')))
@@ -812,8 +723,9 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? '').trim());
   const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== 'speech' && !requestsSilence);
   const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
-  // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media.
-  let shot = tool === 'astra_genai_img2video' && silentPicture && visual?.frames?.mode === 'reference'
+  // Apply the standing MSR-to-I2V rule to old reference-frame boards without rewriting their media. A GenAI scene always
+  // opens on its opening picture, so a speaking reference-frame card is read the same way there.
+  let shot = tool === 'astra_genai_img2video' && (silentPicture || sceneTool) && visual?.frames?.mode === 'reference'
     ? { ...context.shot, visual: { ...visual, frames: { mode: 'first', start: visual.frames.start },
       references: visual.references ?? [] } } : context.shot;
   const video = visual?.video;
@@ -842,8 +754,8 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       : 'perform the planned silent action.'}` : '';
   // The board prompt is compiled to the adapter's own limit, so it can go out as written: hand-shortened
   // prompts can discard a planned move, as in mochi_bo EP05 s0015.
-  const promptLimit = tool === 'astra_genai_msr' || imageWithReferences ? genaiMsrPromptLimit()
-    : tool === 'astra_genai_img2video' ? 2000 : tool ? videoPromptLimit(tool) : undefined;
+  const promptLimit = sceneTool ? genaiScenePromptLimit(String(selection.model)) : tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' ? 2000
+    : tool ? videoPromptLimit(tool) : undefined;
   const compileFor = (budget: number | undefined) => compileVideoPrompt(withSceneCamera(shot, (context.board.STRUCTURE as {scenes?: unknown})?.scenes), video!.promptSource!, names, { mode, measureAudio, bindDialogueSeparately,
     ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
   let compiled = !scene && video?.promptSource ? compileFor(promptLimit) : undefined;
@@ -864,9 +776,16 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     ? SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL) as SeedanceModel]?.referenceImages[1]
     : guideMode === 'composition' ? 9 : undefined;
   const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo!, members, scene, context.episode, lines,
-    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit,
+    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit, sceneMode:Boolean(sceneTool), fitStep,
       profile:promptProfile,
-      namedReferencesOnly:tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution), context.board) : undefined;
+      namedReferencesOnly:tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => {
+      try { return bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution); }
+      catch (error) {
+        // The scene is composed as one LTX MSR render; a refusal names the adapter the plan is for.
+        if (sceneTool && error instanceof SceneInputError) throw new SceneInputError(sceneTool, error.sceneRequest, error.missing, error.model, error.resolution);
+        throw error;
+      }
+    }, context.board) : undefined;
   const sceneRequest = prepared?.request;
   const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
   const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
@@ -921,8 +840,22 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   const cutWarnings = sceneRequest?.modelPacedCuts
     ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
     : [];
-  for (const guide of sceneRequest?.shotReferenceImages ?? []) {
+  // Scene mode opens each later shot on its composition image; the first opens on the scene opening.
+  for (const guide of (sceneRequest?.shotReferenceImages ?? []).filter(item => !sceneTool || item.shotId === sceneRequest?.shotIds[0])) {
     if (!guide.submitted) cutWarnings.push('shot_reference_omitted: ' + guide.shotId + ' receives no composition image. ' + guide.reason);
+  }
+  // Scene mode takes one picture per shot: an ending or a timed picture inside a shot is not sent, and is named here.
+  for (const pin of sceneTool ? sceneRequest?.images.filter(image => !image.reference && ['end', 'keyframe'].includes(image.role)) ?? [] : [])
+    cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
+  if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join('; ')}`);
+  // The scene sends one cast by the sheet rule for its head count, so a panel a shot named on its own can drop out.
+  const sentImages = new Set(sceneRequest?.images.map(image => image.path));
+  const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: unknown; scene?: unknown; visual?: {references?: {role?: string; use?: string; path?: string}[]}}[])
+    .filter(card => card.scene === context.sceneNo) : [];
+  for (const card of boardCards) for (const ref of card.visual?.references ?? []) {
+    const file = ref.role === 'character' && ref.use !== 'image' && ref.path ? path.resolve(context.episode, 'storyboard', ref.path) : undefined;
+    if (file && fs.existsSync(file) && !sentImages.has(fs.realpathSync(file)))
+      cutWarnings.push(`scene_reference_omitted: ${String(card.id)} ${ref.path} is not sent; the scene sends one cast for everyone in it, by the panel rule for that many people`);
   }
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
     ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
@@ -966,6 +899,18 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
         throw new Error('video_duration_short: numFrames does not cover the shot at the selected fps');
     } else bound.duration ??= Math.ceil(durationPlan.requiredSeconds);
   }
+  // Scene mode renders the next 8k+1 frames and the delivered clip is cut back to the storyboard's frames.
+  // A timed scene has its frame count; a single untimed shot takes the length the duration plan just gave the request.
+  const sceneFrameCount = !sceneTool ? undefined : sceneRequest?.frameCount ?? (typeof bound.numFrames === 'number' ? bound.numFrames
+    : Math.round(Number(typeof bound.duration === 'number' ? bound.duration : context.shot.duration) * Number(bound.fps ?? 24)));
+  if (sceneFrameCount !== undefined) {
+    const render = genaiSceneFrames(sceneFrameCount);
+    if (!(sceneFrameCount > 0)) throw new Error('scene_duration_required: give scene ' + context.sceneNo + ' a duration before planning it in GenAI scene mode');
+    if (render > GENAI_SCENE_FRAMES.max)
+      throw new Error(`scene_frames_exceeded: scene ${context.sceneNo} runs ${sceneFrameCount} frames; GenAI scene mode renders at most ${GENAI_SCENE_FRAMES.max}. Split it at an authored cut.`);
+    delete bound.duration;
+    bound.numFrames = render;
+  }
   // Legacy boards without a duration keep their exact request. Timed new shots cannot fall back to a short adapter default.
   if (durationPlan.status === 'fits' && VIDEO_ADAPTERS[tool].voice !== 'supplied' && (DURATION_TOOLS as readonly string[]).includes(tool)) {
     const exact = ['duration', 'durationSeconds', 'numFrames', 'frames', 'autoDuration', 'audioMaxDuration'].some(key => bound[key] !== undefined);
@@ -975,30 +920,39 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     if (cast.length && sourceBinder) args = sourceBinder(args, cast);
     if (timedImages) return { args, imageBindings: timedImages.imageBindings };
     if (sceneRequest && !sceneRequest.images.length) return { args, imageBindings: undefined };
-    const images = prepareVideoImages(tool, args, shot, context.episode);
+    const images = prepareVideoImages(tool, args, shot, context.episode, undefined, Boolean(sceneTool) && fitStep > 0);
     const extra = prepared?.mapped.gatewayKeyframes;
     if (!extra) return images;
     return { args: { ...images.args, ...extra.args }, imageBindings: [...(images.imageBindings ?? []), ...extra.imageBindings] };
   };
   if (modelVoice) bound.generateAudio = true;
   let images = bindImages(bound);
-  const voiceContext = { ...context, shot, msrVoice: genaiMsrVoiceReferences(), modelVoice,
+  const voiceContext = { ...context, shot, msrVoice: genaiSceneVoices(String(selection.model)), modelVoice, briefDelivery: Boolean(sceneTool) && fitStep >= 3,
     bindSceneTurns: bindTurns && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : undefined };
-  let voice = prepareVideoVoice(tool, images.args, voiceContext);
+  // A GenAI scene voices a speaker through a picture of that speaker; the image lane it is composed on says so in its own terms.
+  const voiceFor = (callArgs: Record<string, unknown>, voiceContext: Parameters<typeof prepareVideoVoice>[2]) => {
+    try { return prepareVideoVoice(tool, callArgs, voiceContext); }
+    catch (error) {
+      if (!sceneTool || !(error instanceof Error) || !error.message.startsWith('voice_lane_required')) throw error;
+      throw new Error('scene_speech_references: a GenAI scene voices each speaking character through a picture of that character; ' +
+        'give every speaker a face panel (character_panel) or keep the lines as voiceover');
+    }
+  };
+  let voice = voiceFor(images.args, voiceContext);
   // Reference descriptions and Audio lines (MSR) come after the compile; when they push the prompt over the limit,
   // the board prompt is compiled once more into the room they leave.
   const submittedLength = typeof voice.args.prompt === 'string' ? openingPrompt(voice.args.prompt, voice.args.openingPositions as OpeningPosition[] | undefined).length : 0;
   // Keep all authored lines and reference bindings when optional delivery and pacing cues exceed the live prompt budget.
   if (voiceContext.bindSceneTurns && promptLimit && submittedLength > promptLimit) {
     const bindTurns = voiceContext.bindSceneTurns;
-    voice = prepareVideoVoice(tool, images.args, { ...voiceContext, bindSceneTurns:(prompt, turns) => bindTurns(prompt, turns, false) });
+    voice = voiceFor(images.args, { ...voiceContext, bindSceneTurns:(prompt, turns) => bindTurns(prompt, turns, false) });
   }
   if (compiled && promptLimit && typeof bound.prompt === 'string' && submittedLength > promptLimit) {
     compiled = compileFor(promptLimit - (submittedLength - bound.prompt.length));
     bound = { ...bound, prompt: withPrompt(compiled.prompt).prompt };
     direction = directionOf(compiled);
     images = bindImages(bound);
-    voice = prepareVideoVoice(tool, images.args, voiceContext);
+    voice = voiceFor(images.args, voiceContext);
   }
   for (const person of cast) {
     for (const panel of [person.face?.path, person.bodyPath]) {
@@ -1085,6 +1039,9 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   catch (error) {
     // An adapter's own rule for the author's text comes back as one coded line.
     const issue = authored && error instanceof z.ZodError ? error.issues.find(issue => issue.path[0] === 'prompt') : undefined;
+    // A scene is composed on the image lane first; its 5,000-character schema reads as the scene's own, lower limit.
+    if (sceneTool && !authored && error instanceof z.ZodError && error.issues.some(issue => issue.path[0] === 'prompt' || /exceeds \d+ characters/.test(issue.message)))
+      throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions as OpeningPosition[] | undefined).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the scene direction or split the scene at an authored cut`);
     if (!issue) throw error;
     throw new Error(/^[a-z_]+: /.test(issue.message) ? issue.message : 'prompt_refused: ' + issue.message);
   }
@@ -1095,7 +1052,8 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   if (sceneRequest && !sceneRequest.audio && !adaptiveDuration) {
     const frames = typeof args.numFrames === 'number' ? args.numFrames : typeof args.durationSeconds === 'number'
       ? Math.round(args.durationSeconds * sceneRequest.fps) : typeof args.duration === 'number' ? Math.round(args.duration * sceneRequest.fps) : undefined;
-    const renderFrames = tool === 'fasth3_omni_reference' ? fasth3RenderFrames(sceneRequest.frameCount) : sceneRequest.frameCount;
+    const renderFrames = tool === 'fasth3_omni_reference' ? fasth3RenderFrames(sceneRequest.frameCount)
+      : sceneTool ? genaiSceneFrames(sceneRequest.frameCount) : sceneRequest.frameCount;
     if (frames !== undefined && frames !== renderFrames)
       throw new Error('scene_video_timing: adapter ends at frame ' + (frames - 1) + ', storyboard ends at ' + (sceneRequest.frameCount - 1));
   }
@@ -1143,6 +1101,15 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
   if (!within(context.episode, output)) throw new Error('Video output must stay inside the selected episode');
   args.outputPath = output;
   args.filename ??= `video-${input.requestId}.mp4`;
+  let planTool = tool;
+  // The author edits the planner's names; the scene request carries its own, keyed by the same reference numbers.
+  const composed = {prompt:String(args.prompt), positions:args.openingPositions as OpeningPosition[] | undefined};
+  let sceneKeys: {label: string; key: string}[] | undefined;
+  if (sceneTool) {
+    ({args, keys:sceneKeys} = genaiSceneArgs(sceneTool, args, sceneRequest ?? {shotId:context.shotId, frames:sceneFrameCount!}, openingPath,
+      path.join(context.episode, 'storyboard'), promptSlots.slots, script, selection));
+    planTool = sceneTool;
+  }
   const inputs = { ...inputFiles(args, context.episode), ...performanceInputs };
   const assets = HOSTED_VIDEO_ROUTES[tool]?.subjectAssets;
   if (assets) {
@@ -1179,8 +1146,9 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     : undefined;
   if (!imageBindings?.some(binding => binding.submitted && binding.path === openingPath && binding.id === 'start'))
     throw new Error('scene_speech_opening: the selected operation must submit the authored opening image');
-  const submitted = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths :
-    (args.references as {audioPath?:string;audioUri?:string}[] | undefined)?.flatMap(ref => ref.audioPath || ref.audioUri || []) ?? [];
+  const submitted = Array.isArray(args.referenceAudioPaths) ? args.referenceAudioPaths
+    : Array.isArray(args.cast) ? (args.cast as {voicePath?:string}[]).flatMap(member => member.voicePath ?? [])
+    : (args.references as {audioPath?:string;audioUri?:string}[] | undefined)?.flatMap(ref => ref.audioPath || ref.audioUri || []) ?? [];
   if (context.speechRoute!.mode !== 'reference' && submitted.length)
     throw new Error('scene_speech_references: this route cannot carry reference voices');
   if (context.speechRoute!.mode === 'reference') {
@@ -1192,15 +1160,15 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
       throw new Error('scene_speech_references: bind distinct pinned character voice samples to their speakers in the submitted request');
     verifyDistinctSamples(voices.map(v => ({speaker:v!.speaker, path:v!.reference!.path})));
   }
-  const quote = quoteFor(tool, args);
-  const body = { ...take, ...(motionReferences ? {motionReferences} : {}), ...(input.wholeScene ? {wholeScene:true as const} : {}), ...(tool === 'fasth3_omni_reference' && sceneRequest ? {mlxDeployment:{endpoint:mlxServeUrl(), renderFrames:Number(args.numFrames), deliveryFrames:sceneRequest.frameCount}} : {}), ...(characterBindings ? {characterBindings} : {}), ...(cast.length ? {characterInputs:cast} : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt:String(args.prompt) } } : {}),
+  const quote = quoteFor(planTool, args);
+  const body = { ...take, ...(motionReferences ? {motionReferences} : {}), ...(input.wholeScene ? {wholeScene:true as const} : {}), ...(tool === 'fasth3_omni_reference' && sceneRequest ? {mlxDeployment:{endpoint:mlxServeUrl(), renderFrames:Number(args.numFrames), deliveryFrames:sceneRequest.frameCount}} : {}), ...(characterBindings ? {characterBindings} : {}), ...(cast.length ? {characterInputs:cast} : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt:sceneTool ? resolveScenePlaceholders(String(args.prompt), sceneLabels(genaiSceneSchema.parse(args))) : String(args.prompt) } } : {}),
     ...(authored ? {authoredPrompt:input.prompt, ...(promptIssues!.length ? {promptIssues} : {})} : {}),
-    version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
+    version: 1 as const, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool: planTool, args,
     ...(imageBindings ? {imageBindings} : {}),
     sourceArgs: selection.engine === 'seedance' || motionReferences ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
     selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' as const };
   // A recommended range is said beside the plan, outside the body an approval signs: it never refuses and never changes a plan id.
-  const guidance = promptGuidance(tool, selection.model);
+  const guidance = promptGuidance(planTool, selection.model);
   const sent = (field: string) => Array.isArray(args[field]) ? (args[field] as unknown[]).length : 0;
   const advice = referenceAdvice(guidance.recommended, {
     // A person is a cast member the request shows in a picture or a video; a voice alone is not counted as one.
@@ -1214,7 +1182,10 @@ function buildVideoPlan(input: PlanInput, {context, tool}: ReturnType<typeof res
     ...(typeof args.numFrames === 'number' ? {frames:args.numFrames} : {}),
   });
   const plan = { ...body, id: hash(body), promptGuidance:{...guidance, advice}, ...(prepared ? {promptProfile, promptSlots:promptSlots.slots} : {}),
-    ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions as OpeningPosition[] | undefined), script) : {}) };
+    // The author's template keeps the planner's names; `promptSlots` shows the numbers the gateway gives them.
+    ...(sceneTool && sceneKeys ? {...scenePromptTemplate(composed.prompt, promptSlots, openingPrompt('', composed.positions), script),
+      promptSlots:relabelSlots(promptSlots.slots, sceneKeys, sceneLabels(genaiSceneSchema.parse(args)))}
+      : typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions as OpeningPosition[] | undefined), script) : {}) };
   return persist ? saveVideoPlan(plan) : plan;
 }
 interface Authorization { maxUsd: number; maxConcurrent: number; maxAttempts: number; openingSpendUsd?: number }
@@ -1279,7 +1250,7 @@ export function approveVideo(raw: unknown): Approvals {
       throw new Error('video_plan_stale: the stored scene plan differs from its approved inputs');
     // A yes covers the plan the user saw; a plan whose shot changed since cannot run (video_execute), so it takes none.
     const context = approvedContext(plan);
-    if (!plan.speechRoute || hash(plan.speechRoute) !== hash(context.speechRoute) || plan.tool !== selectedVideoTool(context.selection, context.speechRoute!.operation))
+    if (!plan.speechRoute || hash(plan.speechRoute) !== hash(context.speechRoute) || plan.tool !== sceneVideoTool(context.selection, context.speechRoute!.operation))
       throw new Error('video_plan_stale: the stored operation conflicts with the scene speakers');
     const changedSceneInput = plan.sceneNo !== undefined && Object.entries(plan.inputs).some(([file, digest]) =>
       !fs.existsSync(file) || createHash('sha256').update(fs.readFileSync(file)).digest('hex') !== digest);
@@ -1317,10 +1288,10 @@ async function adaptiveSeedanceOutputError(plan: VideoPlan): Promise<string | un
 
 function approvedContext(plan: VideoPlan) {
   if (!plan.sceneNo) throw new Error('scene_video_scope: use video_status for a historical shot receipt; new generation requires a scene plan');
-  // A plan saved under single_msr or auto asked the gateway to write the scene prompt. Its job, if one was submitted, is still read by video_status.
-  if (plan.sceneRendering && (plan.sceneRendering as string) !== 'per_shot')
-    throw new Error('video_plan_stale: this plan used the retired ' + plan.sceneRendering + ' rendering. Plan the scene again without sceneRendering');
-  try { return routingContext(plan.episode, plan.shotId, plan.sceneNo, false, plan.sceneRendering); }
+  // A plan saved with a sceneRendering mode had the gateway's retired per-shot route render it. Its job, if one was submitted, is still read by video_status.
+  const retired = (plan as {sceneRendering?: string}).sceneRendering;
+  if (retired) throw new Error('video_plan_stale: this plan used the retired ' + retired + ' rendering. Plan the scene again; it is sent as one scene-mode request');
+  try { return routingContext(plan.episode, plan.shotId, plan.sceneNo, false); }
   catch (error) {
     const report = (error as {report?: Record<string, unknown>})?.report;
     if (!report) throw error;
@@ -1329,7 +1300,7 @@ function approvedContext(plan: VideoPlan) {
 }
 
 function rebuildPlan(plan: VideoPlan) {
-  return planVideo({ episode:plan.episode, wholeScene:plan.wholeScene, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, sceneRendering:plan.sceneRendering, shotBindings:plan.shotBindings, maxCostUsd:plan.maxCostUsd, ...(plan.authoredPrompt !== undefined ? {prompt:plan.authoredPrompt} : {}), tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
+  return planVideo({ episode:plan.episode, wholeScene:plan.wholeScene, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, maxCostUsd:plan.maxCostUsd, ...(plan.authoredPrompt !== undefined ? {prompt:plan.authoredPrompt} : {}), tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
 }
 
 export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
@@ -1354,18 +1325,12 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   }
   const context = approvedContext(plan);
   if (!plan.speechRoute || hash(plan.speechRoute) !== hash(context.speechRoute) || context.revision !== plan.contextRevision) throw new Error('video_plan_stale: the shot\'s frames, prompt, lines, selection or authorization changed');
-  if (plan.tool === 'astra_genai_msr' || (plan.tool === 'astra_genai_img2video' && plan.voiceContinuity?.strategy === 'reference_voice')) await refreshGenaiMsrVoice();
+  if (plan.selection.engine === 'astra-genai') await refreshGenaiVideoCatalog();
   const refreshed = rebuildPlan(plan);
   if (refreshed.id !== id) throw new Error('video_plan_stale: inputs, price or adapter contract changed');
-  if (plan.sceneRequest && !plan.sceneRendering) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
+  if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
-  let stagedScene;
-  if (plan.sceneRendering) {
-    const stateFile = path.join(episode,'.work/video-routing/state.json');
-    const existing = fs.existsSync(stateFile) && JSON.parse(fs.readFileSync(stateFile,'utf8')).jobs?.[plan.requestId];
-    if (!existing) stagedScene = await validateShotRenderPlan(plan);
-  }
   const cached = videoTransaction(episode, state => {
     const existing = state.jobs[plan.requestId];
     if (existing) {
@@ -1425,8 +1390,7 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
         if (!Number.isFinite(tokens) || tokens < 0) throw new Error('Invalid provider usage');
         update({ tokens, ...(plan.quote.tokenRate !== undefined ? {settledUsd: tokens * plan.quote.tokenRate / 1e6} : {}) });
       },
-    }, () => plan.sceneRendering ? executeShotRenderPlan(plan,stagedScene!) :
-      plan.mlxDeployment ? deliverFasth3(plan, dispatch) : dispatch(plan.tool, plan.args));
+    }, () => plan.mlxDeployment ? deliverFasth3(plan, dispatch) : dispatch(plan.tool, plan.args));
     if (result.isError) {
       if (plan.selection.engine==='seedance' && ['modelark_portrait','seedance_original_lookup','seedance_inputs'].includes(String(result.structuredContent?.stage)) && result.structuredContent?.videoSubmitted===false) {
         videoTransaction(episode,state=>{
@@ -1554,9 +1518,9 @@ export async function videoStatus(raw: unknown): Promise<Record<string, unknown>
     if (job.status === 'failed') throw new Error('video_request_failed: nothing to recover; plan a new requestId');
     const seedance = job.tool.startsWith('seedance_');
     const localH3 = job.tool === 'fasth3_omni_reference';
-    if (job.status === 'completed' && !seedance && !localH3 && !['astra_genai_msr','astra_genai_img2video','astra_genai_audio2video'].includes(job.tool)) return job;
+    if (job.status === 'completed' && !seedance && !localH3 && !['astra_genai_msr','astra_genai_img2video','astra_genai_audio2video','astra_genai_scene'].includes(job.tool)) return job;
     const hosted = HOSTED_VIDEO_ROUTES[job.tool];
-    if (!hosted && !seedance && !localH3 && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr'].includes(job.tool)) throw new Error('video_refresh_unsupported: use provider-specific recovery');
+    if (!hosted && !seedance && !localH3 && !job.tool.startsWith('astra_genai_desktop_') && !['astra_genai_text2video', 'astra_genai_img2video', 'astra_genai_audio2video', 'astra_genai_msr', 'astra_genai_scene'].includes(job.tool)) throw new Error('video_refresh_unsupported: use provider-specific recovery');
     const plan: VideoPlan = JSON.parse(fs.readFileSync(path.join(episode, '.work/video-routing/plans', job.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== job.planId || hash(body) !== id || plan.episode !== episode || plan.tool !== job.tool) throw new Error('Invalid recovery plan');
@@ -1617,9 +1581,10 @@ export async function videoStatus(raw: unknown): Promise<Record<string, unknown>
     const receiptPath = path.join(String(plan.args.outputPath), String(plan.args.filename)) + '.astra-genai.json';
     let result;
     try {
-      result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true }, planOutputContract(plan), {target:path.join(String(plan.args.outputPath),String(plan.args.filename)),jobId:job.providerId,fingerprint:plan.sceneRendering ? plan.id : undefined});
+      result = job.tool.startsWith('astra_genai_desktop_') ? await desktopVideoStatus(receiptPath, true) : await getGenaiVideoStatus({ receiptPath, download: true }, planOutputContract(plan), {target:path.join(String(plan.args.outputPath),String(plan.args.filename)),jobId:job.providerId});
     } catch (error) {
-      if (!plan.sceneRendering || !(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)) throw error;
+      // The gateway's own failed or cancelled status closes the request and frees its slot.
+      if (!(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)) throw error;
       const {jobId} = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
       if (!jobId || job.providerId && jobId !== job.providerId) throw new Error('GenAI recovery job ID mismatch');
       videoTransaction(episode, current => {

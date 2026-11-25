@@ -10,7 +10,7 @@ import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
 import { formatReferenceLabel, promptGuidance, scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
-import { SCENE_ROUTE } from './genai-scene.js';
+import { GENAI_SCENE_MODELS, genaiSceneSchema } from './genai-scene.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
 import { adapterContracts } from './adapter-parameters.js';
@@ -62,17 +62,20 @@ export const VIDEO_ADAPTERS = Object.freeze({
         'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),
         entry('astra-genai-desktop', 'gateway-desktop-v1', ({ 'text-to-video': 'text', 'image-to-video': 'image', 'audio-to-video': 'audio', keyframes: 'keyframe' }[feature] || feature), schema, feature === 'keyframes' ? { ...DESKTOP, timedImages: true } : DESKTOP),
     ])),
-    astra_genai_text2video: entry('astra-genai', 'genai-ltx-v2', 'text', genaiTextToVideoSchema, { modelConstraints: { models: GENAI_VIDEO_MODELS,
+    astra_genai_text2video: entry('astra-genai', 'genai-generations', 'text', genaiTextToVideoSchema, { modelConstraints: { models: GENAI_VIDEO_MODELS,
             note: 'Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends.' } }),
-    astra_genai_img2video: entry('astra-genai', 'genai-ltx-v2', 'image', genaiImageToVideoSchema, { timedImages: true, pinnedVoices: 2, voiceOnSubjects: true,
-        sceneRenderer: { model: 'ltx-2.5-22b-distilled', sceneAudioModes: ['native', 'mix'] },
-        modelConstraints: { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', voiceSubjects: [1, 2], capability: '/v1/ltx/msr/capabilities:image_conditioning', voiceCapability: 'voice_references' },
+    astra_genai_img2video: entry('astra-genai', 'genai-generations', 'image', genaiImageToVideoSchema, { timedImages: true, pinnedVoices: 2, voiceOnSubjects: true,
+        modelConstraints: { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: 'ltx-2.5-22b-distilled', voiceSubjects: [1, 2], capability: 'the gateway refuses at submission references its backend does not take' },
             note: 'Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support.' } }),
-    astra_genai_audio2video: entry('astra-genai', 'genai-ltx-v2', 'audio', genaiAudioToVideoSchema, { timedImages: true,
-        sceneRenderer: { model: 'ltx-2.5-22b-dev', sceneAudioModes: ['conditioning'] },
+    astra_genai_audio2video: entry('astra-genai', 'genai-generations', 'audio', genaiAudioToVideoSchema, { timedImages: true,
         modelConstraints: { models: ['ltx-2.5-22b-dev', 'ltx-2.5-22b-distilled'],
             note: 'Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters.' } }),
-    astra_genai_msr: reference('astra-genai', 'genai-ltx-msr', genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
+    // A storyboard scene on the GenAI engine: one scene-mode request through the common API (user directive 2026-11-25).
+    astra_genai_scene: reference('astra-genai', 'genai-generations', genaiSceneSchema, { pinnedVoices: 2, voiceOnSubjects: true, modelConstraints: {
+            models: GENAI_SCENE_MODELS,
+            note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. LTX: 1..4 cast pictures and object references, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames.'
+        } }),
+    astra_genai_msr: reference('astra-genai', 'genai-generations', genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
             note: 'Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt.'
         } }),
     astra_text2video: entry('astra', 'self-hosted-ltx', 'text', astra.astraText2VideoSchema),
@@ -159,9 +162,6 @@ export function sceneInputCapabilities(tool) {
         fpsField: schemaFields.includes('frameRate') ? 'frameRate' : schemaFields.includes('fps') ? 'fps' : null,
         frameAccurateCuts: false, timedImages: Boolean(adapter?.timedImages),
         shotScopedReferences: false, frameAddressedNativeDialogue: false,
-        // The scene route renders each shot apart and writes each shot's prompt from the manifest. Only a call naming per_shot reaches it.
-        ...(adapter?.sceneRenderer ? { sceneRenderer: { ...adapter.sceneRenderer, sceneRendering: 'per_shot', promptWriter: 'gateway',
-                capabilities: SCENE_ROUTE + '/capabilities', validation: SCENE_ROUTE + '/validate' } } : {}),
         openingImage: Boolean(fields), endingImage: Boolean(fields?.[1]),
         sceneAudio: adapter?.operation === 'audio',
     };
