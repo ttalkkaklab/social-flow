@@ -2206,7 +2206,14 @@ test('the same authored names take picture and audio tags on the H3 reference la
  const paired = planVideo({...options,prompt:edit + '\nTrack {motion-with-audio.soundtrack} and  its {motion-with-audio.motion}.'},false);
  assert.ok(paired.args.prompt.endsWith('Track <Audio 2> and  its <Video 2>.'));
  let submitted;
- await f.execute(reordered,async (_tool,args) => {submitted=args; return result;});
+ await f.execute(reordered,async (_tool,args) => {
+   submitted=args;
+   fs.mkdirSync(args.outputPath,{recursive:true});
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i',`color=s=${args.width}x${args.height}:r=24`,
+     '-f','lavfi','-i','anullsrc','-t',String(args.numFrames / 24),'-c:v','libx264','-preset','ultrafast',
+     '-c:a','aac',path.join(args.outputPath,args.filename)]);
+   return result;
+ });
  assert.equal(submitted.prompt, reordered.sceneRequest.prompt);
  assert.deepEqual(submitted.referenceVideoPaths,reordered.args.referenceVideoPaths);
  assert.ok(reordered.promptSlots.some(slot => slot.key === 'dolly.motion' && slot.label === '<Video 1>'));

@@ -261,16 +261,24 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
         if (imagePaths.length && !speaker.imageIndices.length) warnings.push(`${id}: no explicit image ownership matched the request; add voiceReference.imagePaths to bind this speaker to the correct Image N.`);
         const images = speaker.imageIndices.map(i => referenceLabel(tool, 'image', i, args.model)).join(', ');
         const audioLabel = referenceLabel(tool, 'audio', speaker.audioIndex, args.model);
-        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${audioLabel} for voice timbre and accent only. Speak the authored shot dialogue, not the sample's words.`);
+        prompt.push(`${label} (speaker ${id})${images ? `, shown in ${images},` : ''} uses ${audioLabel} for voice timbre${tool === 'fasth3_omni_reference' ? '' : ' and accent'} only. Speak the authored shot dialogue, not the sample's words.`);
       } else warnings.push(`${id}: no pinned voice sample available; reference-voice consistency is not established. Supply character.voiceReference before relying on this voice.`);
     }
     speakers.push(speaker);
-    if (native && speaker.description && !(msr && speaker.audioIndex)) {
+    if (native && speaker.description && !((msr || tool === 'fasth3_omni_reference') && speaker.audioIndex)) {
       if (nonEnglishOutsideQuotes(speaker.description)) warnings.push(`${id}: supply an English translation of the pinned acoustic description in the authored prompt; video prompts are English only. The original description stays in this plan.`);
       else prompt.push(`Stable voice for ${label} (speaker ${id}): ${speaker.description}`);
     }
     if (native && !context.modelVoice && !text(object(character.tts).voiceDirection) && !text(object(character.tts).stylePrompt) && !text(object(object(object(character.character).speech).timbre).value))
       warnings.push(`${id}: no authored acoustic description; the TTS voice ID is not a video-model voice selector.`);
+  }
+  if (reference && tool === 'fasth3_omni_reference' && !context.modelVoice) {
+    for (const line of nativeLines) {
+      const id = text(line.speaker) || text(doc.narratorCharacterId);
+      const speaker = speakers.find(row => row.speaker === id);
+      if (!speaker?.audioIndex || (line.delivery === 'on_screen' && !speaker.imageIndices?.length))
+        throw new Error('character_voice_required: FastH3 needs a pinned sample and an owned face for each visible speaker: ' + id);
+    }
   }
   /** Every turn with its speaker's picture and sample, in order; the prompt holds the only copy of each line. */
   const turnScript = () => {
@@ -290,11 +298,23 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     const owners = object(context.board.STRUCTURE).scenes;
     const owner = Array.isArray(owners) && owners.find(scene => scene.no === context.shot.scene);
     const legacyScene = !context.timed && !owner?.directionDefaults;
+    const h3 = tool === 'fasth3_omni_reference';
+    const storyLanguage = text(object(context.board.STORY).language);
+    const languages = h3 ? new Intl.DisplayNames(['en'], { type: 'language' }) : undefined;
     const script = nativeLines.map((line, turn) => {
       const id = text(line.speaker) || text(doc.narratorCharacterId), speaker = bySpeaker.get(id);
       const image = speaker?.imageIndices?.[0], audio = speaker?.audioIndex, direction = text(object(line.acting).direction);
       const label = nonEnglishOutsideQuotes(speaker?.name ?? '') ? id : speaker?.name ?? id;
       const who = image ? img(image) : label;
+      if (h3) {
+        const subject = ids.indexOf(id) + 1;
+        const language = storyLanguage || text(speaker?.tts.language);
+        const languageName = language && /^[a-z]{2,3}(?:-[a-z0-9]{2,8})*$/i.test(language) ? languages?.of(language) : undefined;
+        const words = text(line.tts);
+        if (/<\/?d>/i.test(words)) throw new Error('FastH3 dialogue contains a reserved speech delimiter');
+        const binding = [image && img(image), audio && aud(audio), line.delivery === 'off_screen' && 'off screen', direction].filter(Boolean).join(', ');
+        return `<Subject ${subject}> (${label}${binding ? ', ' + binding : ''}) (S${subject}) says <d>${languageName ? '[' + languageName + '] ' : ''}${words}</d>`;
+      }
       if (context.sceneDirection) {
         const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
         const imageSlot = image ?? owner?.images[0];
@@ -327,10 +347,14 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
     if (speakers.some(speaker => speaker.audioIndex)) warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
   } else if (reference) {
     args.referenceAudioPaths = audioPaths;
-    if (vendor || tool === 'seedance_reference' || context.bindSceneTurns) turnScript();
+    if (vendor || tool === 'seedance_reference' || tool === 'fasth3_omni_reference' || context.bindSceneTurns) turnScript();
     const mapped = new Set(speakers.map(speaker => speaker.audioIndex));
     if (audioPaths.some((_, i) => !mapped.has(i + 1 + audioOffset))) warnings.push('Some supplied audio references have no character mapping; retain their existing role (for example music) explicitly in the prompt.');
     if (speakers.some(speaker => speaker.reference)) {
+      if (tool === 'fasth3_omni_reference' && lines.length) {
+        prompt.push('Each speaker says each written line once. After the final syllable their lips settle. The rest of the shot contains only the planned action, ambience and effects.');
+        warnings.push('Listen past the last line for words copied from the voice sample. Check voiceReferenceCheck in the delivery receipt before comparing speaker identity.');
+      }
       prompt.push('Keep the authored visual roles of reference videos, but do not inherit their voices or dialogue. Use the mapped audio references for speaker identity; keep music and effects separate from speech. Keep each speaker assigned to their own voice reference.');
       warnings.push('Reference voice is imitation, not preservation of the original WAV or exact speech timing.');
     }
