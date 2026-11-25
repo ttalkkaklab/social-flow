@@ -434,7 +434,8 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
   mkdirSync(join(stage, 'previews'), { recursive: true });
   const previous = previousOutputs(dir);
   try {
-  const template = readFileSync(TEMPLATE_FILE, 'utf8');
+  const templateBytes = readFileSync(TEMPLATE_FILE);
+  const template = templateBytes.toString('utf8');
   const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
   const files: FileRecord[] = [], previews: string[] = [], warnings: Warning[] = [], measurements: Record<string, unknown> = {};
   const sources: Record<string, string> = {}, fonts: Record<string, string> = {};
@@ -536,7 +537,7 @@ export async function renderCover(path: string): Promise<{ dir: string; render: 
   // the preview of a crop no longer cut). Files nobody recorded are never touched.
   const made = new Set([...files.map(f => f.name), ...previews]);
   for (const name of previous) if (!made.has(name)) rmSync(join(dir, name), { force: true });
-  const render: Render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
+  const render: Render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: sha256(templateBytes), sources, fonts,
     format: ep.format, files, previews, measurements, warnings, copied };
   atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
   const episodesDir = dirname(ep.episode);
