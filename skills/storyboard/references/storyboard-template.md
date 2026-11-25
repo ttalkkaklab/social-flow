@@ -1,5 +1,36 @@
 # storyboard.md / research.md standard structure
 
+## Numbered episode titles
+
+For a numbered story series, use its assigned episode number and the episode language.
+Save `titlePlan` alongside `primaryHookType` on the first `story_sequence`. The primary hook describes how the video starts. The title type describes the response the headline invites. The writer stores it in `STORY.titlePlan`.
+The public heading is **EP09 · Headline**. Enter only the words after the separator in
+`headline`. Pick one type from what viewers can see, hear or decide.
+
+| Type | Title | Thumbnail cue |
+|---|---|---|
+| `scene` | Name an action or sound that makes the next beat matter. | Show the evidence or the listener turning toward it. |
+| `reason` | Give an unexpected action and leave its cause for the episode. | Show the clue and the recipient's reaction. Hold back the explanation. |
+| `choice` | Ask the viewer to choose between two plausible actions. | Show the decision point before the character acts. Trim the two options to readable copy. |
+| `empathy` | Describe an ordinary gesture someone might recognize or share. | Show the person doing it and the detail that makes it personal. |
+
+Example from a Vietnamese episode:
+
+```json
+{
+  "titlePlan": {
+    "episodeNumber": 11,
+    "type": "reason",
+    "headline": "Đi phỏng vấn, sao sếp lại hỏi thăm ba Mochi?",
+    "thumbnailCue": "The interviewer looks up and Mochi pauses. Copy idea: Ba vẫn khỏe?"
+  }
+}
+```
+
+Add `searchTerm` only when a natural phrase fits the actual story, such as `đi phỏng vấn`.
+Keep one plan for the whole episode. A sequence update that omits it keeps the saved plan.
+To revise it, submit the whole replacement and review the cover against the new cue.
+
 ## storyboard.md
 
 The document a human reviews and approves. With per-shot tables and generated images embedded,
@@ -14,7 +45,9 @@ status: draft            # draft | approved | produced | published
 created: <YYYY-MM-DD>
 ---
 
-# <topic display name> — Storyboard
+# <EP number · public headline for a numbered series, otherwise topic display name> — Storyboard
+
+- **Title type and thumbnail cue** (numbered episodes): <type and cue from STORY.titlePlan>
 
 - **Channel**: <display name> (`data/<slug>/profile.md`)
 - **Estimated length**: <NN>s, derived from the performance (main <N> shots + outro, or main alone when the channel's `shortform_outro` is off) — an estimate, not a target

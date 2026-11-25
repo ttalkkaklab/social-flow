@@ -5,6 +5,8 @@ import { appendFileSync, copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, w
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bundle = join(here, '..', 'dist', 'bundle.js');
@@ -47,6 +49,51 @@ test('dist/bundle.js boots without the skills tree; the storyboard routes name t
     assert.match(line, /structure-contract\.js/, 'call ' + id + ' did not name the missing file: ' + line.slice(0, 300));
     assert.doesNotMatch(line, /__contract-missing__/, 'call ' + id + ' leaked the placeholder vocabulary');
   }
+});
+
+test('the installed stdio surface validates inline candidates and prepares a blind synopsis without a board', async t => {
+  const client = new Client({ name: 'opening-review-contract', version: '1' });
+  const transport = new StdioClientTransport({ command: process.execPath, args: [bundle], stderr: 'pipe' });
+  t.after(() => client.close());
+  await client.connect(transport);
+  const { tools } = await client.listTools();
+  const publicHooks = tools.find(tool => tool.name === 'story_sequence').inputSchema.properties.primaryHookType.enum;
+  assert.equal(new Set(publicHooks).size, 18);
+  assert.ok(publicHooks.includes('cause_mystery'));
+  assert.ok(tools.find(tool => tool.name === 'story_opening_review'));
+
+  const option = { direction: 'D1', text: 'One row of dumplings is split. A drop runs down the lid.', primaryHookType: 'cause_mystery' };
+  const checked = await client.callTool({ name: 'scenario_check', arguments: { synopses: [option] } });
+  assert.ok(!checked.isError, checked.content[0].text);
+  assert.deepEqual(JSON.parse(checked.content[0].text).synopses, [option]);
+  const result = await client.callTool({ name: 'story_opening_review', arguments: {
+    action: 'prepare', stage: 'synopsis', surface: 'vertical feed', audience: 'home cooks',
+    synopses: [{ ...option, opening: [{ start: 0, end: 2, kind: 'visual', text: 'One row of dumplings is split.' }] }],
+  } });
+  assert.ok(!result.isError, result.content[0].text);
+  const prepared = JSON.parse(result.content[0].text);
+  assert.ok(prepared.receipt, 'a synopsis-only handoff carries the shared review budget');
+  const packet = prepared.packets[0];
+  assert.equal(packet.packet.cues[0].text, 'One row of dumplings is split.');
+  assert.doesNotMatch(JSON.stringify(packet.packet), /cause_mystery|A drop runs down the lid/);
+  const record = await client.callTool({ name: 'story_opening_review', arguments: {
+    action: 'record', stage: 'synopsis', direction: 'D1', receipt: prepared.receipt, runId: prepared.runId,
+    sourceRevision: packet.sourceRevision, packetDigest: packet.packetDigest, policyVersion: prepared.policyVersion,
+    verdicts: ['read-a', 'read-b', 'read-c'].map(reviewerId => ({
+      reviewerId, reasonToLeave: 'The first view gives no comparison with an intact row.',
+      ratings: [1, 1, 2, 0, 1].map(score => ({ score, evidence: 'The lone split row is visible for two seconds.' })),
+    })),
+  } });
+  assert.ok(!record.isError, record.content[0].text);
+  const reviewed = JSON.parse(record.content[0].text);
+  assert.deepEqual([reviewed.status, reviewed.metric.value, reviewed.metric.unit, reviewed.editsUsed], ['high', 50, 'points', 0]);
+  const reserved = await client.callTool({ name: 'story_opening_review', arguments: {
+    action: 'reserve_revision', stage: 'synopsis', runId: reviewed.runId, receipt: reviewed.receipt,
+    requestId: 'revise-dumpling-row', expectedReceiptRevision: reviewed.receiptRevision,
+    candidates: [{ direction: 'D1', sourceRevision: packet.sourceRevision }],
+  } });
+  assert.ok(!reserved.isError, reserved.content[0].text);
+  assert.equal(JSON.parse(reserved.content[0].text).editsRemaining, 4);
 });
 
 test('a running installed bundle reports disk replacement without claiming it reloaded', async () => {

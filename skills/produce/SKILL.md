@@ -1132,6 +1132,10 @@ relationship, then the surprising opening incident without its payoff. Adapt to 
 channel language and platform. Include any approved Facebook source/related link in
 that same comment. Respect opt-outs; production prepares this copy without posting it.
 
+For numbered stories with `STORY.titlePlan`, use the formatted title from `storyboard_read`
+as the platform title or the first line of the TikTok caption. Adapt the supporting copy
+to the platform. Read the same plan for the episode cover.
+
 Before drafting, jot down 3–4 entry points: an event, number, question or scene. Evidence for varying openings is limited (`korean-style.md` §Evidence grades).
 
 Read `../platform-guide/references/platform-playbook.md` and rewrite per platform — a short Threads

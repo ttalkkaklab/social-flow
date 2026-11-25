@@ -35,6 +35,10 @@ function checkScenarioV2(meta, body, research, opts = {}) {
   const warn = what => findings.push({ level: 'warn', where: opts.where || 'scenario', what: 'V2 ' + what });
   let data;
   try { data = readContract(body); } catch (e) { bad(e.message); return { meta, findings }; }
+  if (opts.authoring || Object.hasOwn(data, 'primaryHookType')) {
+    const issue = require('./opening-hook.js').selectionFinding(data.primaryHookType, (opts.where || 'scenario') + '.primaryHookType');
+    if (issue) findings.push(issue);
+  }
   if (!['evidence', 'fiction', 'adapted'].includes(data.kind)) bad('kind must be evidence, fiction or adapted');
   for (const key of ['premise', 'viewerExperience', 'message', 'endingReason'])
     if (!text(data[key])) bad(key + ' is required');

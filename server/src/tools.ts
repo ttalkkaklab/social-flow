@@ -15,10 +15,11 @@ import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
+import { titlePlanSchema, primaryHookTypeIds, audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
+import { openingReviewSchema } from './opening-review.js';
 
 /** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
 const AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter(model => { try { assertImageModelAvailable(model); return true; } catch { return false; } });
@@ -4857,7 +4858,7 @@ Returns JSON with matching patterns in catalog order (all 15 if no filter), each
     name: 'story_sequence',
     title: 'Write storyboard sequences (story step 1 of 3)',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. After the opening image exists, save videoDirection for one scene generation: openingPositions and emotion, plus any essential action, sound or camera. Dialogue stays on its ordered shot cards. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Each new board inherits the chosen scenario's primaryHookType or requires one of the catalog IDs on this call. Later sequence updates keep the saved type. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. After the opening image exists, save videoDirection for one scene generation: openingPositions and emotion, plus any essential action, sound or camera. Dialogue stays on its ordered shot cards. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4866,7 +4867,11 @@ Returns: the file written or not, counts, and findings (! violation · warning).
       type: 'object', additionalProperties: false,
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        primaryHookType: { type: 'string', enum: primaryHookTypeIds, description: 'One primary opening hook for the episode. Inherited from the selected scenario when present.' },
+        expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read for an intentional change to the saved hook.' },
+        previousPrimaryHookType: { anyOf: [{ type: 'string', enum: primaryHookTypeIds }, { type: 'null' }], description: 'Expected old selection for a deliberate change. Use null to enroll an existing unclassified board.' },
         language: { type: 'string', description: 'The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user\'s request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.' },
+        titlePlan: zodToJsonSchema(titlePlanSchema, { $refStrategy: 'none' }),
         sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
           id: { type: 'string', description: 'Stable id, e.g. "q1"' },
           title: { type: 'string', description: 'The heading the review page draws' },
@@ -5359,21 +5364,28 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
   },
   {
     name: 'scenario_check',
-    title: 'Check scenario candidates against their contract',
+    title: 'Check synopsis options or a selected scenario',
     annotations: HINT.local,
-    description: `Check local scenario candidates or a selected story plan.
-
-Use it after drafting the scenario or its candidates, before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1–S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
-Do NOT use for shot/camera validation — use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
-
-Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1–S12 or V2; violations block authoring, warnings do not.`,
+    description: `Use it to validate inline synopsis options before presenting them, or a local candidate directory or selected scenario.md. Each newly authored candidate chooses one catalog ID. Use authoring for new and rewritten files. Do NOT use it to score first-three-second exit risk; call story_opening_review with the checked prose. Archival reads keep older files readable. File checks also verify scenario structure and applicable cast and research references. Returns: checked options or local file findings and violation counts. Read violations before advancing.`,
     inputSchema: {
-      type: 'object',
+      type: 'object', additionalProperties: false,
       properties: {
-        path: { type: 'string', description: 'Local candidate directory or selected page, e.g. data/my-channel/episodes/my-topic/storyboard/candidates or data/my-channel/episodes/my-topic/storyboard/scenario.md' },
+        path: { type: 'string', minLength: 1, description: 'Local candidates directory or its selected scenario.md. Use exactly one of path and synopses.' },
+        authoring: { type: 'boolean', description: 'Require a primary hook on each newly authored or rewritten scenario file.' },
+        synopses: { type: 'array', minItems: 1, description: 'Synopsis-only options. Validation reads no files.', items: {
+          type: 'object', additionalProperties: false, required: ['direction', 'text', 'primaryHookType'], properties: {
+            direction: { type: 'string', pattern: '^D[1-9][0-9]*$' }, text: { type: 'string', minLength: 1 }, primaryHookType: { type: 'string', enum: primaryHookTypeIds },
+          },
+        } },
       },
-      required: ['path'],
     },
+  },
+  {
+    name: 'story_opening_review',
+    title: 'Review the first three seconds and reserve opening edits',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Use it to prepare blind packets from a completed synopsis or board, record independent reviewers' witnessed cues and scores, or reserve one edit for an above-ceiling batch. Do NOT pass writer intentions, results or receipts to a blind reader. Give each reviewer only the blind packet. Carry the returned receipt from synopsis to board. Five revision rounds are shared across stages. Use incomplete when the host cannot independently review the evidence. Returns: blind packets, the recorded verdict or a reserved edit slot, with shared budget and revision information.`,
+    inputSchema: zodToJsonSchema(openingReviewSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
   },
 ];
 

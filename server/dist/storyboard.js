@@ -9,6 +9,7 @@ import { readImageState } from './image-state.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { speakerBindingSchema } from './video-voice.js';
 import { attributeWords, resolvedDirection, withSceneCamera, compileVideoPrompt, expressionWords } from './video-prompt.js';
+import { readOpeningReviewSummary } from './opening-review.js';
 import { refreshAudienceReview, refreshVideoReview } from './video-review.js';
 import { characterPanels } from './video-image-inputs.js';
 /**
@@ -115,6 +116,16 @@ function vocabAtLoad() {
             TRANSITION_RE: /^$/ };
     }
 }
+function hookContract() {
+    return loadFromHere(join(REFERENCES_DIR, 'opening-hook.js'));
+}
+export const primaryHookTypeIds = (() => { try {
+    return hookContract().ids;
+}
+catch {
+    return MISSING;
+} })();
+const primaryHookTypeSchema = tuple(primaryHookTypeIds);
 const V = vocabAtLoad();
 const nonEmpty = z.string().trim().min(1);
 export const STRUCTURE_VERSION = (() => { try {
@@ -480,6 +491,12 @@ export function readStoryboard(args) {
     if (args.level === 'direction')
         return { file, sha256, format: String(win.FORMAT ?? 'shorts-9x16'), direction: shotDirection().facts(win) };
     const result = contract().outline(win, args.level);
+    const story = win.STORY;
+    const selected = hookContract().catalog.find(row => row.id === story?.primaryHookType);
+    result.primaryHookType = selected?.id ?? null;
+    result.primaryHookLabel = selected ? { en: selected.en, ko: selected.ko } : null;
+    if (story?.hookContractVersion !== undefined || existsSync(join(dirname(file), 'opening-review.json')))
+        result.openingReview = readOpeningReviewSummary(file);
     if (args.level === 'shots' || args.level === 'full' || args.audienceEndFor)
         result.audienceEffects = audienceSound().read(win, dirname(file), args.audienceEndFor, args.shotId);
     result.audienceSpotting = audienceSound().spotting(win, result.audienceEffects);
@@ -569,9 +586,11 @@ export const storyboardCheckSchema = z.object({
     path: z.string().min(1).describe('The storyboard directory, or its scenes.js'),
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — machine-layer absences are deferred, not violations'),
 });
-export const scenarioCheckSchema = z.object({
-    path: z.string().min(1).describe('The candidates directory, or its selected scenario.md'),
-});
+export const scenarioCheckSchema = z.union([
+    z.object({ path: z.string().min(1), authoring: z.boolean().optional() }).strict(),
+    // Return a located finding for each incomplete option, as with the file-backed checker.
+    z.object({ synopses: z.array(z.unknown()) }).strict(),
+]);
 export const productionSchema = z.object({ mode: tuple([...V.PRODUCTION_MODES, 'hook_only', 'stills_only', 'hybrid']).optional(), renderRatioVersion: z.literal(1).optional() }).passthrough();
 const globalsSchema = z.record(z.string().regex(/^[A-Z][A-Z0-9_]*$/, 'a window.* global is UPPER_CASE'), z.unknown()).superRefine((value, ctx) => {
     if (value.PRODUCTION === undefined)
@@ -773,7 +792,16 @@ export function applyPatch(win, patch, opts = {}) {
             // use is written. A patch that carries the block unchanged (a board written back whole) passes.
             if (k === 'CLICHES' && !opts.cliches && sameShape(v) !== sameShape(win.CLICHES))
                 throw new Error('cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user\'s pick — storyboard_apply globals cannot change it');
-            next[k] = v;
+            if (k === 'STORY' && v && typeof v === 'object' && 'titlePlan' in v) {
+                const plan = titlePlanSchema.parse(v.titlePlan);
+                const episodeSlug = basename(dirname(dirname(scenesPath(patch.path))));
+                const numbered = /^ep(\d+)(?:[-_]|$)/i.exec(episodeSlug);
+                if (numbered && Number(numbered[1]) !== plan.episodeNumber)
+                    throw new Error(`episode_number_mismatch: ${episodeSlug} cannot use EP${plan.episodeNumber}`);
+                next[k] = { ...v, titlePlan: plan };
+            }
+            else
+                next[k] = v;
         }
     // Carry the board's authoring version through a globals.STORY replacement. Earlier files remain opt-in.
     const previousStory = win.STORY;
@@ -1122,12 +1150,13 @@ export function openingReading(win, platforms = []) {
     const windows = platforms.filter((p) => typeof p === 'string' && Object.hasOwn(table, p)).map((p) => table[p]);
     const flat = (text) => String(text).replace(/\s+/g, ' ').trim();
     const head = `opening (${long ? 'long-form' : 'short-form'}${windows.length ? ` · ${windows.join(' · ')}` : ''})`;
-    const plan = win.STORY.opening;
+    const story = win.STORY;
+    const plan = story.opening;
     const lines = [!plan?.promise || !flat(plan.promise)
             ? `${head}: no plan — story_sequence opening records the promise and the first frame${long ? ', the title and thumbnail it confirms and the bigger question' : ''} (references/opening-by-format.md)`
             : `${head}: promise "${flat(plan.promise)}" · first frame: ${plan.firstFrame ? flat(plan.firstFrame) : 'not written'}`];
     if (long && plan?.promise && flat(plan.promise)) {
-        const missing = [!plan.title && 'title', !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
+        const missing = [!contract().episodeTitle(win) && !plan.title && 'title', !story.titlePlan?.thumbnailCue && !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
         if (missing.length)
             lines.push(`opening: no ${missing.join(', ')} — the first 30 s confirms the title and thumbnail, then opens a bigger question`);
     }
@@ -1179,6 +1208,8 @@ export function applyStoryboard(args, opts = {}) {
         throw new Error(`directory does not exist: ${dirname(file)}`);
     const audienceEdit = !!(args.audienceEffects || args.sfxEntries);
     const originalHash = createHash('sha256').update(original).digest('hex');
+    if (args.expectedSha256 !== undefined && args.expectedSha256 !== originalHash)
+        throw new Error('head_moved: reread storyboard');
     if (audienceEdit && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: audience edits require the current expectedSha256');
     const previousDoc = win.SB_DOC;
@@ -1188,6 +1219,11 @@ export function applyStoryboard(args, opts = {}) {
     if (changesProps && exists && args.expectedSha256 !== originalHash)
         throw new Error('head_moved: propSheet requires the current expectedSha256 from storyboard_read');
     const { win: next, findings, synced } = applyPatch(win, args, { ...opts, creating: !exists });
+    const hook = hookContract().resolveBoardHook(win, next, args, { directory: dirname(file), outline: opts.outline, ...opts.hookChange });
+    if (hook.issue)
+        findings.push(hook.issue);
+    if (hook.story)
+        next.STORY = hook.story;
     const previousShots = new Map((win.SCENES ?? []).map(card => [card.id, card]));
     const speech = loadFromHere('../../skills/_shared/speech-contract.js');
     for (const card of next.SCENES ?? []) {
@@ -1310,13 +1346,17 @@ export function applyStoryboard(args, opts = {}) {
         execFileSync('python3', ['-c', [
                 'import fcntl, hashlib, os, sys',
                 'from pathlib import Path',
-                'target, tmp, before = sys.argv[1:]',
+                'target, tmp, before, scenario, expected = sys.argv[1:]',
                 'lock = os.open(os.path.dirname(target), os.O_RDONLY)',
                 'fcntl.flock(lock, fcntl.LOCK_EX)',
                 'data = Path(target).read_bytes() if os.path.isfile(target) else b""',
                 'if hashlib.sha256(data).hexdigest() != before: sys.exit("head_moved: reread storyboard")',
+                'if expected != "unchecked":',
+                '    current = hashlib.sha256(Path(scenario).read_bytes()).hexdigest() if os.path.lexists(scenario) else "absent"',
+                '    if current != expected: sys.exit("head_moved: reread selected scenario")',
                 'os.replace(tmp, target)',
-            ].join('\n'), file, tmp, originalHash], { stdio: ['ignore', 'pipe', 'pipe'] });
+            ].join('\n'), file, tmp, originalHash, join(dirname(file), 'scenario.md'),
+            hook.selectedHash === undefined ? 'unchecked' : hook.selectedHash ?? 'absent'], { stdio: ['ignore', 'pipe', 'pipe'] });
     }
     catch (err) {
         try {
@@ -1334,8 +1374,19 @@ export function applyStoryboard(args, opts = {}) {
 // The first storyboard step writes only the story, one layer at a time, through three tools.
 // Each layer needs the one above it; dialogue, pictures and prompts come after.
 const outlinePath = z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing) or its scenes.js');
+export const titlePlanSchema = z.object({
+    episodeNumber: z.number().int().positive().safe(),
+    type: z.enum(['scene', 'reason', 'choice', 'empathy']),
+    headline: nonEmpty.regex(/^[^\r\n\u2028\u2029]+$/, 'Write a single-line headline').regex(/^(?!ep(?:isode)?\.?\s*\d)/i, 'Write the headline without the episode prefix').describe('Public headline in the episode language, without the EP number'),
+    thumbnailCue: nonEmpty.describe('Visible moment and complementary copy idea for this title type'),
+    searchTerm: nonEmpty.optional().describe('Optional search phrase that fits the story'),
+}).strict();
 export const storySequenceSchema = z.object({
     path: outlinePath,
+    titlePlan: titlePlanSchema.optional(),
+    primaryHookType: primaryHookTypeSchema.optional(),
+    previousPrimaryHookType: primaryHookTypeSchema.nullable().optional(),
+    expectedSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
     language: z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional()
         .describe('The language the story and its lines are written in'),
     sequences: z.array(z.object({
@@ -1387,16 +1438,18 @@ const emptyStructure = () => ({ version: STRUCTURE_VERSION, sequences: [], scene
 function readOutline(path) {
     const file = scenesPath(path);
     requireReadyProject(dirname(file));
-    const win = existsSync(file) ? readBoard(file).win : {};
-    return { win, st: win.STRUCTURE ?? emptyStructure() };
+    const { win, sha256 } = existsSync(file) ? readBoard(file) : { win: {}, sha256: createHash('sha256').digest('hex') };
+    return { win, st: win.STRUCTURE ?? emptyStructure(), sha256 };
 }
-function writeOutline(path, win, structure, shots, language, opening) {
+function writeOutline(path, sha256, win, structure, shots, language, opening, hookChange, titlePlan) {
     // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
     // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
     // project_manage gives a new board; without it the board reads as the 9:16 default.
     const savedStory = win.STORY;
     // A generic board can carry the scene-sound version before the story tools have started its story.
-    const story = savedStory?.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1 ? undefined : savedStory;
+    const generic = !savedStory || (savedStory.audienceSoundVersion === 1 && Object.keys(savedStory).length === 1);
+    const enrollingArchive = hookChange?.previous === null && !!win.SCENES?.length;
+    const story = generic && !enrollingArchive ? undefined : savedStory ?? {};
     const file = scenesPath(path);
     const episode = story ? undefined : workflowEpisode(dirname(file));
     if (episode && !existsSync(file) && basename(dirname(episode)) === 'episodes') {
@@ -1411,8 +1464,9 @@ function writeOutline(path, win, structure, shots, language, opening) {
     const speech = language ?? handoff?.LANGUAGES?.speech;
     const written = !!win.SCENES?.length;
     const takesLanguage = !!language && story?.language === undefined && !written;
-    const globals = story ? (takesLanguage || opening ? { STORY: { ...story, ...(takesLanguage ? { language } : {}), ...(opening ? { opening } : {}) } } : undefined) : {
-        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}), ...(opening ? { opening } : {}) },
+    const editorial = { ...(opening ? { opening } : {}), ...(titlePlan ? { titlePlan } : {}) };
+    const globals = story ? (takesLanguage || opening || titlePlan ? { STORY: { ...story, ...(takesLanguage ? { language } : {}), ...editorial } } : undefined) : {
+        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}), ...editorial },
         ...(handoff?.FORMAT && win.FORMAT === undefined ? { FORMAT: handoff.FORMAT } : {}),
         ...(handoff?.PRODUCTION && win.PRODUCTION === undefined ? { PRODUCTION: handoff.PRODUCTION } : {}),
         // A type that applies clichés by default starts with an open record, so each write says it is undecided
@@ -1420,10 +1474,10 @@ function writeOutline(path, win, structure, shots, language, opening) {
         ...(win.CLICHES === undefined && !written ? clicheStamp(win.PRODUCTION ?? handoff?.PRODUCTION) : {}),
     };
     const result = applyStoryboard({
-        path, draft: true, dryRun: false, structure,
+        path, expectedSha256: sha256, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
         ...(globals ? { globals } : {}),
-    }, { outline: true, cliches: true });
+    }, { outline: true, cliches: true, hookChange });
     const kept = !language || !story ? undefined
         : story.language !== undefined ? (story.language !== language ? `this board is written in "${String(story.language)}"` : undefined)
             : written ? 'this board has shots and no recorded language, so its language is the one they are written in' : undefined;
@@ -1432,17 +1486,21 @@ function writeOutline(path, win, structure, shots, language, opening) {
         : result;
 }
 export function writeStorySequences(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     requireEpisodeCast(args.path, win);
     const sequences = upsertBy(st.sequences, args.sequences.map((q) => ({ ...st.sequences.find((old) => old.id === q.id), ...q, scenes: st.sequences.find((old) => old.id === q.id)?.scenes ?? [] })), 'id');
     // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
     const notes = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
         .map((q) => ({ level: 'warn', where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence — fix it with story_sequence or story_scene` }));
-    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language, args.opening);
+    if (args.expectedSha256 !== undefined && args.expectedSha256 !== sha256)
+        throw new Error('head_moved: reread storyboard');
+    const hookChange = { requested: args.primaryHookType, expectedSha256: args.expectedSha256,
+        ...(args.previousPrimaryHookType !== undefined ? { previous: args.previousPrimaryHookType } : {}) };
+    const result = writeOutline(args.path, sha256, win, { ...st, sequences }, undefined, args.language, args.opening, hookChange, args.titlePlan);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 export function writeStoryScenes(args, requireSceneCast = false) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     requireEpisodeCast(args.path, win);
     if (!st.sequences.length)
         throw new Error('story_order: write the sequences first with story_sequence');
@@ -1470,10 +1528,10 @@ export function writeStoryScenes(args, requireSceneCast = false) {
             ? (q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] })
             : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
     }
-    return writeOutline(args.path, win, { ...st, sequences, scenes });
+    return writeOutline(args.path, sha256, win, { ...st, sequences, scenes });
 }
 export function writeStoryShots(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     requireEpisodeCast(args.path, win);
     if (!st.scenes.length)
         throw new Error('story_order: write the scenes first with story_scene');
@@ -1518,7 +1576,7 @@ export function writeStoryShots(args) {
         const at = target ? position.get(target) : undefined;
         return eyeline && at && at !== eyeline.matchShot ? { ...shot, shot: { ...shot.shot, eyeline: { ...eyeline, matchShot: at } } } : shot;
     });
-    return writeOutline(args.path, win, st, renumbered);
+    return writeOutline(args.path, sha256, win, st, renumbered);
 }
 const musicTimeline = () => loadFromHere(join(PLUGIN_ROOT, 'skills/produce/references/music-timeline.js'));
 const musicSeconds = z.number().finite().nonnegative();
@@ -1926,7 +1984,7 @@ function shotIndex(shots, id, tool) {
     return index;
 }
 export function writeShotCharacters(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     const gaps = contract().outlineGaps(win);
     if (gaps.length)
         throw new Error('story_order: finish the story first (story_sequence → story_scene → story_shot) — ' + gaps.join('; '));
@@ -1991,11 +2049,11 @@ export function writeShotCharacters(args) {
             notes.push({ level: 'warn', where: id, what: 'the start image shows the previous people — remake it with shot_image' });
         notes.push(...promptNotes(shots[index]));
     }
-    const result = writeOutline(args.path, win, st, shots);
+    const result = writeOutline(args.path, sha256, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 export function writeShotDialogue(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     const known = castRegistry(args.path, win);
     const shots = (win.SCENES ?? []).slice();
     const notes = [];
@@ -2037,7 +2095,7 @@ export function writeShotDialogue(args) {
         shots[index] = { ...shots[index], narration: next };
         notes.push(...promptNotes(shots[index]));
     }
-    const result = writeOutline(args.path, win, st, shots);
+    const result = writeOutline(args.path, sha256, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 // A video prompt shot_prompt wrote goes stale when what it was written from changes (structure-contract.js promptDrift).
@@ -2086,7 +2144,7 @@ export const shotIconsSchema = z.object({
     }).strict()).min(1),
 }).strict();
 export function writeShotIcons(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     const gaps = [...contract().outlineGaps(win), ...contract().castGaps(win)];
     if (gaps.length)
         throw new Error('story_order: write the story and every shot\'s characters first (story_shot → shot_characters) — ' + gaps.join('; '));
@@ -2299,7 +2357,7 @@ export function writeShotIcons(args) {
     for (const copy of shotDirection().copiedReasons(shots))
         if (copy.shots.some((id) => touched.has(id)))
             notes.push({ level: 'warn', where: 'shot_icons', what: `the same ${copy.field} stands on ${copy.shots.length} shots (${copy.shots.join(', ')}): "${copy.text.slice(0, 80)}"` });
-    const result = writeOutline(args.path, win, st, shots);
+    const result = writeOutline(args.path, sha256, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 // Step 4: each shot's start image — and an end image when its frame plan is first_last — composed
@@ -2961,7 +3019,7 @@ export function recordShotImage(args, request) {
         if (!existsSync(file) || createHash('sha256').update(readFileSync(file)).digest('hex') !== hash)
             throw new Error('shot_image_input_changed: a reference changed after generation was requested');
     }
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     const shots = (win.SCENES ?? []).slice();
     const index = shotIndex(shots, args.id, 'shot_image');
     const visual = { ...(shots[index].visual ?? {}) };
@@ -2986,7 +3044,7 @@ export function recordShotImage(args, request) {
                 shots[index] = { ...shots[index], ...(sharedOpening ? { referenceImage: rel } : {}),
                     visual: { ...visual, ...staging, ...(request.bystanders ? { bystanders: request.bystanders } : {}) } };
         }
-        const result = writeOutline(args.path, win, st, shots);
+        const result = writeOutline(args.path, sha256, win, st, shots);
         return { ...result, findings: [...result.findings, ...notes] };
     }
     if (args.frame === 'start') {
@@ -3019,7 +3077,7 @@ export function recordShotImage(args, request) {
     }
     visual.frames = frames;
     shots[index] = { ...shots[index], visual };
-    const result = writeOutline(args.path, win, st, shots);
+    const result = writeOutline(args.path, sha256, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 // Step 5: the video prompt, written from the shot's icon attributes, lines and the author's English action.
@@ -3034,7 +3092,7 @@ export const shotPromptSchema = z.object({
         .describe('MSR speakers as seen in the start image, e.g. [{speaker:"hero",screenPosition:"left",description:"the man in black armor"}]; viewer coordinates, never reference order'),
 }).strict();
 export function writeShotPrompt(args) {
-    const { win, st } = readOutline(args.path);
+    const { win, st, sha256 } = readOutline(args.path);
     const gaps = contract().imageGaps(win);
     if (gaps.length)
         throw new Error('story_order: attach every shot image and any required closing image with shot_image before shot_prompt — ' + gaps.join('; '));
@@ -3085,7 +3143,7 @@ export function writeShotPrompt(args) {
     shots[index] = { ...shot, visual: { ...visual, video: { ...priorVideo,
                 ...(positions ? { openingPositions: positions, openingImageSha256: openingHash } : {}), prompt, promptSource: source, promptBasis: contract().promptBasis(shot, isFocus),
                 ...(speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash('sha256').update(readFileSync(resolve(dirname(scenesPath(args.path)), start))).digest('hex') } : {}) } } };
-    const result = writeOutline(args.path, win, st, shots);
+    const result = writeOutline(args.path, sha256, win, st, shots);
     // The clip is about to be made: say so while the scene's music can still shape its sound.
     const open = win.STORY?.authoring === 'story-first' && musicTimeline().spottingReport(win).undecided.includes(shot.scene)
         ? [{ level: 'warn', where: args.id, what: `scene ${shot.scene} has no music decision — record score or none with story_music` }] : [];
@@ -3099,6 +3157,7 @@ const scenarioCheckResultSchema = z.object({
     warnings: z.number().int().nonnegative(),
     findings: z.array(z.object({
         level: z.enum(['bad', 'warn']),
+        code: z.string().optional(),
         where: z.string(),
         what: z.string(),
     })),
@@ -3106,9 +3165,11 @@ const scenarioCheckResultSchema = z.object({
 /** scenario_check — run check-scenario.js and preserve its JSON contract. Exit 1 is a
  * valid result with P0 findings; exit 3 is an invalid target and becomes a tool error. */
 export function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
+    if ('synopses' in args)
+        return hookContract().checkSynopses(args.synopses);
     let raw = '';
     try {
-        raw = execFileSync(process.execPath, [checkFile, args.path, '--json'], {
+        raw = execFileSync(process.execPath, [checkFile, args.path, '--json', ...(args.authoring ? ['--authoring'] : [])], {
             encoding: 'utf8', timeout: 60_000, stdio: ['ignore', 'pipe', 'pipe'],
         });
     }
@@ -3132,7 +3193,7 @@ export function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
 export function checkStoryboard(args) {
     const { file, win } = readBoard(args.path);
     const seen = new Set();
-    const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? [])).filter(f => {
+    const structure = contract().guidedCheck(win, { draft: args.draft }).concat(validateShots(win.SCENES ?? []), hookContract().checkBoardHook(win, dirname(file))).filter(f => {
         const key = f.level + '\0' + f.where + '\0' + f.what;
         if (seen.has(key))
             return false;

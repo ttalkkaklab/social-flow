@@ -74,6 +74,14 @@ test('candidate CLI accepts one readable candidate despite creative metadata gap
     const result=cli(); assert.equal(result.status,0,result.stdout);
     assert.equal(JSON.parse(result.stdout).files.length,1);
     assert.ok(JSON.parse(result.stdout).warnings > 0);
+    const authoring = () => spawnSync(process.execPath, [path.join(root,'check-scenario.js'), path.dirname(file), '--json','--authoring'], {encoding:'utf8'});
+    assert.ok(JSON.parse(authoring().stdout).findings.some(f => f.code === 'hook_type_required' && f.level === 'bad'));
+    c.primaryHookType = 'everyday_frustration';
+    writeFileSync(file,'---\nversion: scenario-v2\nchannel: test\ntopic: bowl\ndirection: D1\n---\n'+body(c));
+    assert.equal(authoring().status, 0);
+    c.primaryHookType = 'empathy';
+    writeFileSync(file,'---\nversion: scenario-v2\nchannel: test\ntopic: bowl\ndirection: D1\n---\n'+body(c));
+    assert.ok(JSON.parse(authoring().stdout).findings.some(f => f.code === 'hook_type_invalid' && f.level === 'bad'));
     writeFileSync(file,'---\nversion: scenario-v2\n---\n```scenario-json\n{broken\n```');
     assert.equal(cli().status,1);
   } finally {rmSync(dir,{recursive:true,force:true});}
