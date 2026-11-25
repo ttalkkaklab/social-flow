@@ -37,6 +37,7 @@ import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGE
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_V6_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
+import { speechCatalogSchema, speechPlanSchema, speechExecuteSchema, speechStatusSchema } from './tts-routing.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -54,10 +55,9 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * review gate, so a call is an immediately public post, and the descriptions
  * say never to call without user approval.
  *
- * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
- * music (music_*) on GEMINI_API_KEY. Sung full songs are suno_generate
- * (sunoapi.org third-party REST, SUNO_API_KEY). New music runs music_plan →
- * music_execute with the saved models.music; sound effects are
+ * Generation tools use provider-specific credentials. New music runs through
+ * music_plan → music_execute with the saved models.music. The catalog identifies
+ * the Lyria, ElevenLabs, sunoapi.org and local MLX adapters. Sound effects use
  * sfx_elevenlabs_generate. Descriptions carry the short-form pipeline context
  * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
@@ -920,9 +920,9 @@ Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the u
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
-Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` → \`music_plan\` → \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
 TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
@@ -934,12 +934,32 @@ Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, �
 export const TOOLS = [
     {
         name: 'tts_local_voxcpm2', title: 'Local VoxCPM2 speech', annotations: HINT.generate,
-        description: 'Generate one 48 kHz WAV on the configured Mac with mlx-audio VoxCPM2. Pass text and an output directory. Supply referenceAudio for timbre or continuationAudio and its transcript for continuation. Use instructions for voice design or acting. For episode lines copy speech_manage plan_audio arguments. Returns the audio path and receipt. Use tts_route execute with a stable requestId for replay.',
+        description: 'Generate one 48 kHz WAV on the configured Mac with mlx-audio VoxCPM2. Pass text and an output directory. Supply referenceAudio for timbre or continuationAudio and its transcript for continuation. Use instructions for voice design or acting. For episode lines copy speech_manage plan_audio arguments. Returns the audio path and receipt. Use tts_plan and tts_execute for restart-safe synthesis.',
         inputSchema: zodToJsonSchema(localVoxSchema, { $refStrategy: 'none' }),
     },
     {
+        name: 'tts_catalog', title: 'Inspect speech models', annotations: HINT.local,
+        description: 'List installed speech models, generators and voice controls. Use for TTS model discovery. Returns model contracts and the gateway catalog lookup. Supply engine and optional model for the adapter parameter schemas. Use tts_plan to save a synthesis request.',
+        inputSchema: zodToJsonSchema(speechCatalogSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_plan', title: 'Save a speech plan', annotations: HINT.generateLocal,
+        description: 'Create a local plan for a speech take. Pass a generator and its arguments or the ttsPlan fields from speech_manage plan_audio, plus directory and requestId. Returns planId, normalized generation and warnings. Use tts_execute to synthesize the saved take.',
+        inputSchema: zodToJsonSchema(speechPlanSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_execute', title: 'Generate a planned speech take', annotations: HINT.generate,
+        description: 'Generate speech from a saved tts_plan. Rechecks character bindings and reference audio. Hosted synthesis can incur charges. Returns audioPath and receiptPath on success. Repeated execution reuses a matching completed take. Use tts_status to inspect an interrupted request.',
+        inputSchema: zodToJsonSchema(speechExecuteSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_status', title: 'Read a speech receipt', annotations: HINT.local,
+        description: 'Read the local synthesis status by output directory and take ID, including historical tts_route receipts. Returns status, output path or recorded error. A missing receipt returns not_found. Use tts_execute to generate audio.',
+        inputSchema: zodToJsonSchema(speechStatusSchema, { $refStrategy: 'none' }),
+    },
+    {
         name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
-        description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Local mlx-audio VoxCPM2, Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+        description: 'Compatibility interface. New calls use tts_catalog, tts_plan, tts_execute and tts_status. Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Local mlx-audio VoxCPM2, Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
                 generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
@@ -3371,7 +3391,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     // ── Music generation (Google Lyria) ────────────
     {
         name: 'music_generate_clip',
-        title: 'Music generation (30s clip)',
+        title: 'Generate a 30-second Google Lyria clip',
         annotations: HINT.generate,
         description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
@@ -3401,12 +3421,12 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     },
     {
         name: 'music_generate',
-        title: 'Music generation (set duration)',
+        title: 'Generate a single-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Lyria RealTime generates instrumentals. For a sung track, check vocal support in music_catalog. For weighted musical ideas or density, brightness and seed controls on this model, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -3451,12 +3471,12 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     },
     {
         name: 'music_generate_advanced',
-        title: 'Music generation (weighted prompts · fine control)',
+        title: 'Generate a weighted-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only — sung songs go to suno_generate).
+For one prompt and a duration on this model, music_generate takes both directly. For a sung track, check vocal support in music_catalog.
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
         inputSchema: {
@@ -3576,7 +3596,7 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
 Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use in place of the saved music model — new music runs music_plan → music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
+Use music_plan → music_execute with the saved music model for production. Keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -3741,7 +3761,7 @@ Returns: a capability menu — video_generation, image_generation, tts, music_ge
     },
     {
         name: 'music_list_options',
-        title: 'Music option list',
+        title: 'List suggested genres, moods and instruments',
         annotations: HINT.local,
         description: `List suggested genres, moods, and instruments for music generation.
 
@@ -3842,7 +3862,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
     },
     {
         name: 'suno_generate_sound',
-        title: 'Suno loopable BGM',
+        title: 'Suno sound generation (unavailable)',
         annotations: HINT.generate,
         description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
@@ -4517,9 +4537,9 @@ Returns: integer credit balance.`,
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
         description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets and stale revisions fail. Generate visible dialogue in a fresh native or audio-conditioned video. Applying TTS lip sync to existing footage is prohibited, including historical plans. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio returns ttsPlan fields for tts_plan. It resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets and stale revisions fail. Generate visible dialogue in a fresh native or audio-conditioned video. Applying TTS lip sync to existing footage is prohibited, including historical plans. Keeps source backups.
 
-Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
+Do NOT use to generate media: use tts_plan and tts_execute or the selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
 Returns revision, ordered matching lines with generationPlan and voice/audio hashes, invalidated dependencies, audioPlans for plan_audio (generator, generation/arguments aliases, clean expectedText, language and speechRevision), or a video plan with videoPrompt and textPolicy:no_visible_text; performance.text preserves exact speech for verification, never copy it into the visual prompt. Direction warnings disclose unsupported engine controls; generated audio remains not_reviewed. Acting lead-in/tail-out use seconds. Plans and metadata cannot establish audible or visible quality.`,
         inputSchema: {
@@ -5313,9 +5333,10 @@ const musicContextSchema = { type: 'object', description: 'Managed music context
         reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap.' },
     }, required: ['directory', 'assetId', 'requestId'] };
 for (const tool of TOOLS) {
-    if (!MUSIC_ADAPTERS[tool.name])
+    const adapter = MUSIC_ADAPTERS[tool.name];
+    if (!adapter)
         continue;
-    tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
+    tool.description = adapter.purpose + ' For configured production, use music_plan → music_execute. Direct calls in that context require musicContext. ' + tool.description;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
     if (tool.name === 'suno_generate_sound')
         tool.description = 'Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';

@@ -1,10 +1,11 @@
 /** One registry of executable adapters. Planning never invokes a provider. */
+import { adapterContracts } from './adapter-parameters.js';
 import { localVoxSchema, generateLocalVox } from './local-voxcpm2.js';
 import { genaiSpeechSchema, generateGenaiSpeech } from './astra-genai-speech.js';
 import { z } from 'zod';
 import * as gemini from './tts-client.js';
 import * as eleven from './elevenlabs-client.js';
-import { resolveTtsModel, speechProvider } from './tts-models.js';
+import { getTtsModels, resolveTtsModel, speechProvider } from './tts-models.js';
 import { validateEpisodeSpeech, type SpeechResult } from './tts-execution.js';
 
 export const SPEECH_GENERATORS = ['tts_local_voxcpm2', 'tts_astra_genai', 'tts_generate', 'tts_multi_speaker', 'tts_gemini_38', 'tts_elevenlabs_generate', 'tts_elevenlabs_dialogue'] as const;
@@ -20,9 +21,12 @@ function adapter<S extends z.AnyZodObject | z.ZodEffects<z.AnyZodObject>>(
   schema: S, run: (args: z.output<S>) => Promise<SpeechResult>,
   describe: (args: z.output<S>) => { spokenText: string; singleSpeaker: boolean },
 ) {
-  return (input: unknown) => {
-    const args = schema.parse(input);
-    return { args, ...describe(args), run: () => run(args) };
+  return {
+    schema,
+    prepare(input: unknown) {
+      const args = schema.parse(input);
+      return { args, ...describe(args), run: () => run(args) };
+    },
   };
 }
 const withoutTags = (text: string) => text.replace(/\[[^\]]*\]/g, '');
@@ -46,9 +50,17 @@ const adapters = {
 
 export function prepareSpeech(generator: string, generation: unknown): PreparedSpeech {
   const selected = z.enum(SPEECH_GENERATORS).parse(generator);
-  const prepared = adapters[selected](generation);
+  const prepared = adapters[selected].prepare(generation);
   validateEpisodeSpeech(selected, prepared.args);
   const contract = resolveTtsModel(speechProvider(selected), prepared.args.model);
   if (![contract.single, contract.dialogue].includes(selected)) throw new Error('TTS adapter/model mismatch');
   return { ...prepared, generator: selected };
+}
+
+export function speechAdapterContracts(engine: string, model?: string) {
+  const models = getTtsModels().filter(row => row.provider === engine && (!model || row.model === model));
+  const rows = SPEECH_GENERATORS.filter(tool => speechProvider(tool) === engine &&
+    (engine === 'astra-genai' || models.some(row => row.single === tool || row.dialogue === tool))
+  ).map(tool => ({tool, engine}));
+  return adapterContracts('tts', rows, adapters, {engine, model});
 }

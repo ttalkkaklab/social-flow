@@ -2438,8 +2438,9 @@ window.MUSIC = {
 };
 ```
 
-Each key is a cue name. `prompt` goes to `music_generate`; `bpm`, `scale` and `seed` are optional
-and passed through (`seed` is the only way to get the same cue twice). `asset` skips generation and
+Each key names a cue. For new music, produce looks up the saved model in `music_catalog`,
+translates the cue's musical direction into its supported fields and calls `music_plan`
+and `music_execute`. Use `bpm`, `scale` and `seed` where the selected adapter supports them. `asset` skips generation and
 uses a channel bed instead — the id `resolve-asset.py <channel dir> bgm <id>` resolves, which is
 `assets/audio/bgm/<id>.wav`. produce works out how long each cue has to run from the shots that use
 it; don't write a length.
@@ -2453,8 +2454,8 @@ tense: { prompts: [{ text: "warm low strings, leaves space for a spoken voiceove
 ```
 
 Each entry is `{ text, weight }`; weight is any non-zero number, 1.0 is the vendor's starting point
-and only the ratios matter. `density` and `brightness` (0–1) pass through too. produce sends a cue
-with `prompts` to `music_generate_advanced`. Two cues that share their text and differ only in
+and only the ratios matter. With a saved Lyria RealTime model, pass `prompts` in the plan's
+`args` and `density` and `brightness` (0–1) in `args.config`. Two cues that share their text and differ only in
 weights and density move less at the crossfade than two written from scratch — that is how a body
 cue and its tenser variant come from one material. A cue carries `prompt` or `prompts`, not both;
 a cue with neither and no `asset` is an error (`check-scenes.js`).

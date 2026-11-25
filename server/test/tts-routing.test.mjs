@@ -5,10 +5,12 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { manageSpeech } from '../dist/speech.js';
+import { setupProject } from './workflow-fixture.mjs';
 import { config } from '../dist/config.js';
 import { pcmToWav } from '../dist/media-utils.js';
 import { executeSpeech, speechSlotsDir, withSpeechRequestId } from '../dist/tts-execution.js';
-import { routeSpeech } from '../dist/tts-routing.js';
+import { executeSpeechPlan, planSpeech, routeSpeech, speechCatalog, speechStatus } from '../dist/tts-routing.js';
 import { prepareSpeech } from '../dist/tts-adapters.js';
 import { generateSpeech, generateDialogue, generateGemini38Speech } from '../dist/tts-client.js';
 import { decodeSpeechBase64, validateSpeechAudio, validateSpeechAlignment, validateSpeechSegments } from '../dist/tts-audio.js';
@@ -171,4 +173,87 @@ test('local VoxCPM2 plans accept separate conditioning roles and reject incomple
   await assert.rejects(route({...base, continuationText:'orphaned transcript'}), /transcript/);
   await assert.rejects(route({...base, speed:1.2}));
   await assert.rejects(route({...base, voice:'gateway-voice-id'}));
+});
+
+test('saved speech plans share receipts and billing with legacy requests', async t => {
+  const originalFetch = globalThis.fetch, originalKey = config.elevenLabsApiKey;
+  config.elevenLabsApiKey = 'fixture';
+  t.after(() => { globalThis.fetch = originalFetch; config.elevenLabsApiKey = originalKey; });
+  let submits = 0;
+  globalThis.fetch = async () => {
+    submits++;
+    return new Response(bytes, {headers: {'content-type':'audio/wav', 'character-cost':'2'}});
+  };
+  const directory = join(root, 'saved', '.work', 'speech');
+  mkdirSync(join(root, 'saved', 'storyboard'), {recursive: true});
+  writeFileSync(join(root, 'saved', 'storyboard', 'scenes.js'), 'window.SCENES=[]');
+  const key = {directory, requestId: 'narration-r1'};
+  const input = {...key, generator: 'tts_elevenlabs_generate', generation: {text: 'Welcome.', voiceId: 'voice123'}};
+  assert.equal(speechStatus(key).status, 'not_found');
+  assert.equal(existsSync(directory), false);
+  const {adapters} = speechCatalog({engine: 'elevenlabs', model: 'eleven_v4'});
+  assert.ok(adapters.find(row => row.tool === input.generator).parameters.options.properties.voiceId);
+  assert.throws(() => planSpeech({...input, model:'voxcpm2'}), /tts_selection_mismatch/);
+  const {planId} = planSpeech(input);
+  assert.equal(planSpeech(input).planId, planId);
+  assert.throws(() => planSpeech({...input, generation: {...input.generation, outputPath: root}}));
+  const result = await executeSpeechPlan({directory, planId});
+  assert.equal(result.success, true, result.error);
+  assert.equal(speechStatus(key).audioPath, result.audioPath);
+  const legacy = {action: 'execute', requestId: key.requestId, generator: input.generator,
+    generation: {...input.generation, outputPath: directory}};
+  assert.equal((await routeSpeech(legacy)).replayed, true);
+  assert.equal((await executeSpeechPlan({directory, planId})).replayed, true);
+  assert.equal(submits, 1);
+  assert.equal(readFileSync(join(directory, '../events.jsonl'), 'utf8').trim().split('\n').length, 1);
+
+  const failed = planSpeech({...input, requestId: 'unknown'});
+  globalThis.fetch = async () => { submits++; throw new Error('connection lost'); };
+  assert.equal((await executeSpeechPlan({directory, planId: failed.planId})).success, false);
+  assert.equal(speechStatus({directory, requestId: 'unknown'}).status, 'uncertain');
+  assert.equal((await executeSpeechPlan({directory, planId: failed.planId})).success, false);
+  assert.equal(submits, 2);
+  const file = join(directory, '.speech-plans', planId + '.json');
+  const stored = JSON.parse(readFileSync(file, 'utf8'));
+  stored.generation.text = 'unexpected';
+  writeFileSync(file, JSON.stringify(stored));
+  await assert.rejects(executeSpeechPlan({directory, planId}), /plan content/);
+});
+
+test('planned local speech checks the bytes of both conditioning files before starting the worker', async () => {
+  const directory = join(root, 'conditioning');
+  mkdirSync(directory);
+  const referenceAudio = join(directory, 'voice.wav'), continuationAudio = join(directory, 'prior.wav');
+  writeFileSync(referenceAudio, bytes);
+  writeFileSync(continuationAudio, bytes);
+  const {planId} = planSpeech({directory, requestId: 'line2', generator: 'tts_local_voxcpm2',
+    generation: {model: 'voxcpm2', text: 'Second line.', referenceAudio, continuationAudio, continuationText: 'First line.'}});
+  for (const [file, error] of [[referenceAudio, /Reference voice bytes changed/], [continuationAudio, /Continuation voice bytes changed/]]) {
+    writeFileSync(file, 'changed');
+    await assert.rejects(executeSpeechPlan({directory, planId}), error);
+    writeFileSync(file, bytes);
+  }
+  assert.equal(speechStatus({directory, requestId: 'line2'}).status, 'not_found');
+});
+
+test('a saved episode line rechecks the cast and the board even on a provider without a speechContext field', async () => {
+  const episode = join(root, 'episode-pin'), directory = join(episode, '.work', 'speech');
+  setupProject(episode);
+  const board = join(episode, 'storyboard', 'scenes.js');
+  mkdirSync(join(episode, 'storyboard'), {recursive: true});
+  const tts = {engine:'gemini', model:'gemini-2.5-flash-preview-tts', language:'en', voiceId:'Kore', speed:1};
+  const cast = {characters:[{id:'hero', tts}]};
+  const shots = [{id:'s1', narration:[{id:'l1', speaker:'hero', delivery:'voiceover', tts:'Hello.'}]}];
+  writeFileSync(board, 'window.SB_DOC=' + JSON.stringify(cast) + ';\nwindow.SCENES=' + JSON.stringify(shots) + ';');
+  const {ttsPlan} = manageSpeech({path: board, action:'plan_audio', lineId:'l1'}).audioPlans[0];
+  const input = {...ttsPlan, directory, requestId:'line-r1'};
+  const {planId} = planSpeech(input);
+  assert.throws(() => planSpeech({...input, generation:{...input.generation, voiceName:'Puck'}}), /speech_context_mismatch/);
+  const other = join(root, 'other-episode');
+  mkdirSync(join(other, 'storyboard'), {recursive: true});
+  writeFileSync(join(other, 'storyboard', 'scenes.js'), 'window.SCENES=[]');
+  assert.throws(() => planSpeech({...input, directory: join(other, 'speech')}), /speech_context_mismatch/);
+  writeFileSync(board, readFileSync(board,'utf8').replace('Kore', 'Puck'));
+  await assert.rejects(executeSpeechPlan({directory, planId}), /speech_context_stale/);
+  assert.equal(speechStatus({directory, requestId:'line-r1'}).status, 'not_found');
 });

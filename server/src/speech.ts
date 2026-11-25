@@ -583,10 +583,12 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
   }
   const audioPlans = args.action === 'plan_audio' ? selected.map(({scene,line}) => {
     const result = speechAudioPlan(line, character(line.speaker), {boardDir: dirname(file), board: win});
+    const speechContext = {path: file, lineId: line.id, expectedRevision: revision};
     const generation = {...result.generation, ...(['tts_astra_genai','tts_local_voxcpm2'].includes(result.generator) ? {
-      speechContext: {path: file, lineId: line.id, expectedRevision: revision},
+      speechContext,
     } : {})};
-    return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation};
+    return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation,
+      ttsPlan: {generator: result.generator, generation: result.generation, speechContext}};
   }) : undefined;
   return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(soundtrack ? {soundtrack} : {}), ...(clearedTrim ? {clearedTrim} : {}), ...(voiceWarnings.length ? {voiceWarnings} : {}), ...(audioPlans ? {audioPlans} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker),{boardDir: dirname(file), board: win}), audioProvenanceStatus:line.delivery !== 'voiceover' && object(object(scene.visual).video).speechStatus !== 'stale' && object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
 }

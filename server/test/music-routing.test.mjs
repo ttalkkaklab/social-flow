@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { planMusic, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from '../dist/music-routing.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from '../dist/music-routing.js';
 import { musicTransaction } from '../dist/music-state.js';
 import { config } from '../dist/config.js';
 // Suno polls every 15 s; run that clock forward instead of waiting (astra-video-client.test.mjs).
@@ -42,7 +42,9 @@ function output(args) {
 test('managed output is decoded to stereo WAV and reused without a second dispatch', async t => {
   const f = fixture(t), p = f.plan(); let calls = 0;
   const dispatch = async (_tool, args) => { calls++; assert.equal(args.modelId, 'music_v2_5'); return output(args); };
-  const result = await f.run(p, dispatch);
+  const { directory, planId, id } = musicPlanSummary(p);
+  assert.equal(planId, id);
+  const result = await executeMusic({ directory, planId }, dispatch);
   assert.equal(result.musicReceipt.output.sampleRate, 48000); assert.equal(result.musicReceipt.output.channels, 2);
   assert.equal(result.musicReceipt.review, 'not_reviewed'); assert.ok(result.musicReceipt.output.durationSeconds > 0);
   assert.deepEqual(await f.run(p, dispatch), result); assert.equal(calls, 1);

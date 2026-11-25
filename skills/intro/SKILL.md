@@ -6,12 +6,12 @@ description: >
   video", "create a logo sting", or right after /social-flow:branding installs the profile
   image. Designs 4 concepts (character action × mood × sonic logo) for a human pick,
   generates the character acting with the saved video model, reveals the channel name on a
-  deterministic text plate, aligns a Lyria sonic logo to the landing frame, runs
+  deterministic text plate, aligns the sonic logo to the landing frame, runs
   brand-reviewer's intro mode on request, and installs master, stinger, lockup and sonic assets
   under data/[slug]/assets/intro/. Boundary — branding makes the still profile image, this
   makes the moving opening.
 argument-hint: "<channel> [extra instructions]"
-allowed-tools: ["mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_route", "mcp__plugin_social-flow_social-flow__tts_route", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
+allowed-tools: ["mcp__social-flow__image_catalog", "mcp__plugin_social-flow_social-flow__image_catalog", "mcp__social-flow__image_plan", "mcp__plugin_social-flow_social-flow__image_plan", "mcp__social-flow__image_execute", "mcp__plugin_social-flow_social-flow__image_execute", "mcp__social-flow__image_status", "mcp__plugin_social-flow_social-flow__image_status", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "Read", "Write", "Edit", "Glob", "Bash", "AskUserQuestion", "Agent", "mcp__social-flow__gpt_image_text2img", "mcp__plugin_social-flow_social-flow__gpt_image_text2img", "mcp__social-flow__gpt_image_img2img", "mcp__plugin_social-flow_social-flow__gpt_image_img2img", "mcp__social-flow__astra_genai_img2video", "mcp__plugin_social-flow_social-flow__astra_genai_img2video", "mcp__social-flow__astra_img2video", "mcp__plugin_social-flow_social-flow__astra_img2video", "mcp__social-flow__seedance_img2video", "mcp__plugin_social-flow_social-flow__seedance_img2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_genai_msr", "mcp__plugin_social-flow_social-flow__astra_genai_msr", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__music_plan", "mcp__plugin_social-flow_social-flow__music_plan", "mcp__social-flow__music_execute", "mcp__plugin_social-flow_social-flow__music_execute", "mcp__social-flow__music_status", "mcp__plugin_social-flow_social-flow__music_status", "mcp__social-flow__music_generate_clip", "mcp__plugin_social-flow_social-flow__music_generate_clip", "mcp__social-flow__mlx_music_generate", "mcp__plugin_social-flow_social-flow__mlx_music_generate", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dialogue", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dialogue", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_route", "mcp__social-flow__tts_catalog", "mcp__social-flow__tts_plan", "mcp__social-flow__tts_execute", "mcp__social-flow__tts_status", "mcp__plugin_social-flow_social-flow__tts_route", "mcp__plugin_social-flow_social-flow__tts_catalog", "mcp__plugin_social-flow_social-flow__tts_plan", "mcp__plugin_social-flow_social-flow__tts_execute", "mcp__plugin_social-flow_social-flow__tts_status", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -68,10 +68,9 @@ data/<slug>/assets/intro/
   brand tone out of step with existing posts. An existing
   `<slug>-sonic-logo.wav` is **reused by default** (replace only on explicit
   request).
-- Check whether `GEMINI_API_KEY` is set. Without it `music_generate_clip`
-  fails; if MLX Core is up, `mlx_music_generate` can still write the sonic
-  logo (2–3s instrumental). If both are down, announce in §2 that the run
-  will proceed with the clip's native sound only, no sonic logo.
+- If a new sonic logo is needed, use the saved music choice and the
+  [music routing guide](../_shared/music-routing.md). With `engine:"none"` or an
+  unavailable provider, tell the user the intro will use the clip's native sound.
 
 ### 2. Design 4 concepts → HITL pick
 
@@ -179,16 +178,17 @@ server binds the call to the saved video model and resolution (a different engin
 
 ### 6. Sonic logo
 
-If `<slug>-sonic-logo.wav` exists, just copy it to `.work/sonic.wav` (sonic
-branding = repetition). Otherwise generate the concept's sonic-logo
-description (playbook §7 — rise→impact→tail, 2–3s, no vocals) with
-`music_generate_clip` (Lyria) and save as `.work/sonic.wav`. If
-`GEMINI_API_KEY` is unset, try `mlx_music_generate` (instrumental, ~3s).
-If that fails too, skip this step (the clip's native sound only).
+Reuse the approved `<slug>-sonic-logo.wav` by copying it to `.work/sonic.wav`.
+If no logo is available and §1 selected native sound only, continue to §7.
+For a new logo, read the saved model's inputs with `music_catalog` and describe
+the rise, impact and decay as a 2–3s instrumental. Call `music_plan` with the
+absolute intro asset directory, `assetId:"sonic-logo"` and a stable `requestId`.
+Within the authorized budget, pass the returned `directory` and `planId` to
+`music_execute`. Prepare `.work/sonic.wav` from the generated WAV for the mix.
+After an interruption, check that request with `music_status`.
 
 **Voice tag (optional — when the user wants one)**: premix a TTS reading of
-the channel name, delivered with impact, into the sting. Generate with
-`tts_generate`, but fix a **tag-specific voice and delivery** in the brief (it
+the channel name, delivered with impact, into the sting. Use `tts_plan` and `tts_execute` with the selected speech model. Fix a **tag-specific voice and delivery** in the brief (it
 may differ from the channel narration voice — e.g., a male voice with a
 signature delivery like "딸~~깍. 랩↗", the channel name stretched with a
 rising tone. Direct stretch and intonation via the text spelling ("따알~~깍")

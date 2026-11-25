@@ -10,13 +10,13 @@ const context = {
 };
 export const MUSIC_TOOLS = [
     { name: 'music_catalog', title: 'Inspect music models',
-        description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call. Name an engine, and a model to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across music adapters and parameters.options the adapter\'s own.',
+        description: 'List music models and the purpose of each provider adapter. Use this to select BGM or song models, inspect duration controls, or choose engine:none to reuse existing music or leave scenes unscored. Returns exact model IDs, adapter fields and sources without a provider call. Filter by engine and optionally model to get parameters.common and parameters.options as JSON Schema. For a new track, pass the selected adapter fields to music_plan.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 engine: { type: 'string', enum: ['lyria', 'suno-api', 'elevenlabs', 'mlx'], description: 'Music engine as saved in models.music.engine, e.g. lyria.' },
                 model: { type: 'string', description: 'One exact model of that engine, e.g. lyria-3.5. Needs engine.' }
             } }, annotations: { readOnlyHint: true, openWorldHint: false } },
     { name: 'music_plan', title: 'Plan music from saved settings',
-        description: 'Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute — use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.',
+        description: 'Create a local music plan from the saved model and any episode or shot override. Use music_catalog to find the adapter fields for args. Checks the inputs and records reference hashes, the cost estimate and the final WAV path without a provider call. Pass the returned directory and planId to music_execute to generate the track. The id field is an alias for planId.',
         inputSchema: { type: 'object', additionalProperties: false, properties: { ...context,
                 engine: { type: 'string', description: 'Optional assertion of the saved music engine. A different saved engine refuses the plan (music_selection_mismatch); a plan never switches the selection.' },
                 model: { type: 'string', description: 'Optional assertion of the saved music model, checked the same way.' },

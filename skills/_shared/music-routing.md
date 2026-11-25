@@ -3,8 +3,9 @@
 New generated music follows `music_catalog → music_plan → music_execute`. Read
 `music_status` after interruptions. A channel bed is reused by naming it as a cue's `asset`; a file made for another episode's cue is never a substitute (user directive 2026-11-14). No provider
 fallback or quality score changes the saved choice. `music_catalog {engine, model}` returns
-that engine's adapters with their parameters as JSON Schema (`parameters.common`,
-`parameters.options`). `music_plan` takes `engine` and `model` as a check on the saved
+each matching adapter's engine and purpose, with JSON Schema for its shared inputs
+(`parameters.common`) and adapter-specific inputs (`parameters.options`).
+`music_plan` takes `engine` and `model` as a check on the saved
 selection and never switches it (`music_selection_mismatch`).
 
 ## Settings and layers
@@ -67,8 +68,8 @@ state starts. No hidden zero-cost assumption.
  "outputPath":".work","filename":"bgm.wav"}}
 ```
 
-Call `music_plan` with this object and pass its `id` to `music_execute` as
-`planId` with the same directory. Omit the provider model in args to inherit it.
+Call `music_plan` with this object. Pass the returned `directory` and `planId` to
+`music_execute`. The response also carries the same value in `id` for existing callers. Omit the provider model in args to inherit it.
 For Lyria song use `prompt`, optional Korean `lyrics` and `instrumental:false` for
 singing. For Lyria RealTime use `prompts:[{text,weight}]`, `durationSeconds` and
 optional `config`. For Suno V6 use `customMode:true`, `style`, `instrumental:true`

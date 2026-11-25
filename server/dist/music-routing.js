@@ -118,7 +118,7 @@ export function planMusic(raw) {
 /** Report the plan without copying the full lyrics into every response. */
 export function musicPlanSummary(plan) {
     const { args, sourceArgs: _source, ...summary } = plan;
-    return { ...summary, fields: Object.keys(args), review: 'not_reviewed' };
+    return { ...summary, planId: plan.id, fields: Object.keys(args), review: 'not_reviewed' };
 }
 export async function executeMusic(raw, dispatch) {
     gate('music_execute');

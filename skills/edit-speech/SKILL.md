@@ -7,7 +7,7 @@ description: >
   Finds stable shot and line ids, preserves other characters and reports affected outputs.
   Storyboard plans a new episode; produce builds it; this skill repairs an existing one.
 argument-hint: "<channel> <episode> <shot, character or quoted line> <change>"
-allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_route", "mcp__plugin_social-flow_social-flow__tts_route", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
+allowed-tools: ["mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__tts_voice_design", "mcp__plugin_social-flow_social-flow__tts_voice_design", "mcp__social-flow__tts_list_voices", "mcp__plugin_social-flow_social-flow__tts_list_voices", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "mcp__social-flow__acting_review", "mcp__plugin_social-flow_social-flow__acting_review", "mcp__social-flow__tts_review_acting", "mcp__plugin_social-flow_social-flow__tts_review_acting", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__tts_generate", "mcp__plugin_social-flow_social-flow__tts_generate", "mcp__social-flow__tts_gemini_38", "mcp__plugin_social-flow_social-flow__tts_gemini_38", "mcp__social-flow__tts_elevenlabs_generate", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_generate", "mcp__social-flow__tts_elevenlabs_dictionary", "mcp__plugin_social-flow_social-flow__tts_elevenlabs_dictionary", "mcp__social-flow__astra_audio2video", "mcp__plugin_social-flow_social-flow__astra_audio2video", "mcp__social-flow__seedance_reference", "mcp__plugin_social-flow_social-flow__seedance_reference", "mcp__social-flow__astra_genai_catalog", "mcp__plugin_social-flow_social-flow__astra_genai_catalog", "mcp__social-flow__astra_genai_jobs", "mcp__plugin_social-flow_social-flow__astra_genai_jobs", "mcp__social-flow__tts_route", "mcp__social-flow__tts_catalog", "mcp__social-flow__tts_plan", "mcp__social-flow__tts_execute", "mcp__social-flow__tts_status", "mcp__plugin_social-flow_social-flow__tts_route", "mcp__plugin_social-flow_social-flow__tts_catalog", "mcp__plugin_social-flow_social-flow__tts_plan", "mcp__plugin_social-flow_social-flow__tts_execute", "mcp__plugin_social-flow_social-flow__tts_status", "mcp__social-flow__tts_astra_genai", "mcp__plugin_social-flow_social-flow__tts_astra_genai"]
 ---
 Follow [host evaluation](../_shared/host-review.md) for every requested review.
 
@@ -54,9 +54,8 @@ new character dialogue or voices. Do not silently turn a user's dialogue into na
    when the user asked for that voice change.
    A line in a shot bound as `native` (MSR) has no take: the edit marks the clip stale.
    Regenerate the clip through `video_plan` and bind it again with `attach_video`; skip step 3.
-3. Call `speech_manage action:plan_audio` for the affected line. Generate a new take
-   with its returned generator and provider-ready generation arguments, preserving
-   the character’s pinned settings. Attach with clean `generation.text` from
+3. Call `speech_manage action:plan_audio` for the affected line. Pass its `ttsPlan` fields with `directory` and `requestId` to `tts_plan`.
+   Give `tts_execute` the returned directory and plan ID. Attach with clean `generation.text` from
    `expectedText` and the actual tagged request in `generation.voiceSettings`.
    Use the resolved line direction; do not overwrite it with a generic character's
    stylePrompt. For ElevenLabs v4, write a compact acting.direction/tags cue for
@@ -103,7 +102,7 @@ Per-line `acting` supports `direction`/`tags` alongside the richer scene fields 
 It is separate from the pinned identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](../produce/references/acting-prompts.md).
-ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_route`.
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_plan` and `tts_execute`.
 An explicitly requested review/improvement loop is permitted within its scope;
 normal production continues without scoring or listening approval.
 
