@@ -29,6 +29,8 @@ const LIMITS = { subjects: 4, backgrounds: 1, voices: 2 } as const;
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Use 1-64 characters of A-Z, a-z, 0-9, _ and -');
 const role = id.refine(value => !['voice', 'image'].includes(value), 'voice and image name other inputs');
 const file = z.string().min(1);
+export const h3InferenceSteps = z.number().int().min(8).max(50).describe('Number of MiniMax H3 sampling steps for this render. The gateway defaults to 50.');
+export const h3ReferenceImageShortEdge = z.number().int().min(256).max(2048).describe('Shorter side in pixels of each H3 reference picture before encoding. Omitting it keeps the model default of 2048.');
 const resolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/);
 export const genaiSceneSchema = z.object({
   model: z.enum(GENAI_SCENE_MODELS),
@@ -46,12 +48,15 @@ export const genaiSceneSchema = z.object({
   }).strict()).min(1).max(8),
   resolution, fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   seed: z.number().int().min(0).max(2147483647).optional(),
+  referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
+  numInferenceSteps: h3InferenceSteps.optional(),
   generateAudio: z.boolean().default(true).describe('false removes the generated soundtrack from the delivered clip.'),
   reserveUsd: z.number().finite().nonnegative(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
+  if ((args.referenceImageShortEdge !== undefined || args.numInferenceSteps !== undefined) && args.model !== 'minimax-h3') issue('H3 reference image and sampling settings require MiniMax H3');
   const ids = [...args.cast.map(m => m.id), ...args.references.map(r => r.id), ...args.shots.map(s => s.id)];
   if (new Set(ids).size !== ids.length) issue('Cast, reference and shot IDs share one namespace and must be distinct');
   for (const member of args.cast) if (new Set(member.images.map(i => i.role)).size !== member.images.length)
@@ -142,6 +147,10 @@ export function resolveScenePrompt(prompt: string, labels: Record<string, string
 /** The common body. `uri` turns a local file into the URI the request carries. */
 export function genaiSceneBody(args: GenaiSceneArgs, uri: (file: string, kind: 'image' | 'audio') => string) {
   const [width, height] = args.resolution.split('x').map(Number);
+  const h3 = {
+    ...(args.referenceImageShortEdge === undefined ? {} : {reference_image_short_edge:args.referenceImageShortEdge}),
+    ...(args.numInferenceSteps === undefined ? {} : {num_inference_steps:args.numInferenceSteps}),
+  };
   return {
     kind: 'video', model: args.model, mode: 'scene',
     input: {
@@ -152,13 +161,15 @@ export function genaiSceneBody(args: GenaiSceneArgs, uri: (file: string, kind: '
       shots: args.shots.map(shot => ({ id: shot.id, seconds: shot.frames / args.fps,
         ...(shot.imagePath ? { image: { uri: uri(shot.imagePath, 'image'), ...(shot.strength === undefined ? {} : { strength: shot.strength }) } } : {}) })),
     },
-    parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }) },
+    parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }),
+      ...(Object.keys(h3).length ? {model_options:{h3}} : {}) },
   };
 }
 
 /** `POST /v1/generations/validate`: what the gateway compiles the scene to. */
 export const sceneValidationSchema = z.object({
   resolved: z.object({ num_frames: z.number().int(), prompt: z.string(), labels: z.record(z.string()),
+    reference_image_short_edge: z.number().int().optional(),
     shots: z.array(z.object({ id: z.string(), start_frame: z.number().int() }).passthrough()) }).passthrough(),
   warnings: z.array(z.object({ code: z.string() }).passthrough()).default([]),
 });
@@ -173,7 +184,10 @@ export function checkSceneValidation(args: GenaiSceneArgs, result: unknown) {
     throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args), args.model));
   if (JSON.stringify(resolved.shots.map(s => ({ id: s.id, start_frame: s.start_frame }))) !== JSON.stringify(starts))
     throw new Error('genai_scene_cuts: the gateway places the shots at other frames than the plan');
-  return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings };
+  if (args.referenceImageShortEdge !== undefined && resolved.reference_image_short_edge !== args.referenceImageShortEdge)
+    throw new Error('genai_scene_reference_size: the gateway did not confirm the requested H3 reference image size');
+  return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings,
+    ...(args.referenceImageShortEdge === undefined ? {} : {referenceImageShortEdge:args.referenceImageShortEdge}) };
 }
 
 /** A composed one-render request (numbered prompt, references in slot order, opening image) and the scene's shots. */

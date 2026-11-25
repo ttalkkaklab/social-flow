@@ -85,6 +85,16 @@ test('H3 validates its own frame grid and numbers all shot pictures separately f
   const labels=sceneLabels(input),prompt='<Picture 4> then <Picture 5>. <Picture 2> with <Audio 2>.';
   assert.equal(resolveScenePrompt(input.prompt,labels),prompt);
   assert.equal(checkSceneValidation(input,{resolved:{labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]}}).numFrames,175);
+  const sized = {...input,referenceImageShortEdge:1536};
+  const wire = args => genaiSceneBody(args, file=>file);
+  assert.deepEqual(wire(sized).input, wire(input).input);
+  assert.deepEqual(wire(sized).parameters.model_options, {h3:{reference_image_short_edge:1536}});
+  assert.equal(wire(input).parameters.model_options, undefined);
+  assert.deepEqual(wire({...input,numInferenceSteps:24}).parameters.model_options,{h3:{num_inference_steps:24}});
+  const resolved={labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]};
+  assert.throws(()=>checkSceneValidation(sized,{resolved}),/genai_scene_reference_size/);
+  assert.equal(checkSceneValidation(sized,{resolved:{...resolved,reference_image_short_edge:1536}}).referenceImageShortEdge,1536);
+  assert.equal(genaiSceneSchema.safeParse({...sized,referenceImageShortEdge:2049}).success,false);
   assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:346}]}).success,false);
   assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:60}]}).success,false);
   assert.equal(genaiSceneSchema.safeParse({...input,cast:[...cast,{...cast[0],id:'d'}]}).success,false);

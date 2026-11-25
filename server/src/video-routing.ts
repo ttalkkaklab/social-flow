@@ -1,6 +1,6 @@
 import { composeH3Scene } from './h3-scene.js';
 import { bindRegisteredPanels, prepareSceneRequest, SCENE_FIT_STEPS, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
-import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, h3InferenceSteps, h3ReferenceImageShortEdge, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, checkFasth3VoiceReplay, fasth3RenderFrames, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
@@ -210,7 +210,7 @@ export interface VideoPlan {
   speechRoute?: Context['speechRoute'];
   sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number;
   /** What `POST /v1/generations/validate` compiled a GenAI scene to when it was planned. Said with the plan, outside the manifest an approval covers. */
-  sceneValidation?: {prompt: string; numFrames: number; labels: Record<string, string>; warnings: {code: string}[]};
+  sceneValidation?: {prompt: string; numFrames: number; referenceImageShortEdge?: number; labels: Record<string, string>; warnings: {code: string}[]};
   purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   characterInputs?: CharacterVideoInput[];
   characterBindings?: SeedanceBinding[];
@@ -661,7 +661,8 @@ function buildH3Plan(input: PlanInput, context: Context, persist: boolean): Vide
   if (!context.sceneMembers?.length || !context.sceneDirection) throw new Error('scene_direction_required: author the storyboard scene before planning H3');
   const selection = context.selection;
   const options = z.object({seed:z.number().int().optional(), generateAudio:z.boolean().optional(), reserveUsd:z.number().nonnegative().optional(),
-    model:z.literal('minimax-h3').optional(), resolution:z.string().optional(), outputPath:z.string().optional(), filename:z.string().optional()}).strict().parse(input.args);
+    model:z.literal('minimax-h3').optional(), resolution:z.string().optional(), referenceImageShortEdge:h3ReferenceImageShortEdge.optional(),
+    numInferenceSteps:h3InferenceSteps.optional(), outputPath:z.string().optional(), filename:z.string().optional()}).strict().parse(input.args);
   if (options.resolution && selection.resolution && options.resolution !== selection.resolution) throw new Error('model_selection_mismatch: resolution');
   const direction = sceneVideoDirectionSchema.parse(context.sceneDirection);
   const saved = sceneProductionPrompt(direction,selection);

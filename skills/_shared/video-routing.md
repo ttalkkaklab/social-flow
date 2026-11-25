@@ -70,6 +70,8 @@ succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
 
+For remote GenAI MiniMax H3, `video_plan.args.referenceImageShortEdge` sets the shorter side of the reference pictures for one scene request (256–2048 pixels, default 2048). The gateway echoes an explicit value in validation before the plan can run. `args.numInferenceSteps` sets the sampling steps for that request (8–50, default 50). Both settings travel with the stored request and leave the scene prompt, pictures, voices and output dimensions intact.
+
 Set scene identity images in `story_scene.speakerReferences` and positions in `story_scene.videoDirection`. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
 
 **LTX contracts checked 2026-11-22; GenAI requests go through the common API since 2026-11-25**

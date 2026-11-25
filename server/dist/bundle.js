@@ -93096,6 +93096,8 @@ var require_video_catalog = __commonJS({
             "resolution",
             "fps",
             "seed",
+            "referenceImageShortEdge",
+            "numInferenceSteps",
             "generateAudio",
             "reserveUsd",
             "outputPath",
@@ -127834,6 +127836,8 @@ var LIMITS = { subjects: 4, backgrounds: 1, voices: 2 };
 var id = external_exports.string().regex(/^[A-Za-z0-9_-]{1,64}$/, "Use 1-64 characters of A-Z, a-z, 0-9, _ and -");
 var role = id.refine((value2) => !["voice", "image"].includes(value2), "voice and image name other inputs");
 var file2 = external_exports.string().min(1);
+var h3InferenceSteps = external_exports.number().int().min(8).max(50).describe("Number of MiniMax H3 sampling steps for this render. The gateway defaults to 50.");
+var h3ReferenceImageShortEdge = external_exports.number().int().min(256).max(2048).describe("Shorter side in pixels of each H3 reference picture before encoding. Omitting it keeps the model default of 2048.");
 var resolution2 = external_exports.string().regex(/^[1-9]\d*x[1-9]\d*$/);
 var genaiSceneSchema = external_exports.object({
   model: external_exports.enum(GENAI_SCENE_MODELS),
@@ -127853,12 +127857,15 @@ var genaiSceneSchema = external_exports.object({
   resolution: resolution2,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   seed: external_exports.number().int().min(0).max(2147483647).optional(),
+  referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
+  numInferenceSteps: h3InferenceSteps.optional(),
   generateAudio: external_exports.boolean().default(true).describe("false removes the generated soundtrack from the delivered clip."),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name2) => name2.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: "custom", message });
+  if ((args.referenceImageShortEdge !== void 0 || args.numInferenceSteps !== void 0) && args.model !== "minimax-h3") issue2("H3 reference image and sampling settings require MiniMax H3");
   const ids = [...args.cast.map((m2) => m2.id), ...args.references.map((r2) => r2.id), ...args.shots.map((s2) => s2.id)];
   if (new Set(ids).size !== ids.length) issue2("Cast, reference and shot IDs share one namespace and must be distinct");
   for (const member of args.cast) if (new Set(member.images.map((i2) => i2.role)).size !== member.images.length)
@@ -127940,6 +127947,10 @@ function resolveScenePrompt2(prompt, labels) {
 }
 function genaiSceneBody(args, uri) {
   const [width, height] = args.resolution.split("x").map(Number);
+  const h3 = {
+    ...args.referenceImageShortEdge === void 0 ? {} : { reference_image_short_edge: args.referenceImageShortEdge },
+    ...args.numInferenceSteps === void 0 ? {} : { num_inference_steps: args.numInferenceSteps }
+  };
   return {
     kind: "video",
     model: args.model,
@@ -127958,7 +127969,13 @@ function genaiSceneBody(args, uri) {
         ...shot.imagePath ? { image: { uri: uri(shot.imagePath, "image"), ...shot.strength === void 0 ? {} : { strength: shot.strength } } } : {}
       }))
     },
-    parameters: { width, height, fps: args.fps, ...args.seed === void 0 ? {} : { seed: args.seed } }
+    parameters: {
+      width,
+      height,
+      fps: args.fps,
+      ...args.seed === void 0 ? {} : { seed: args.seed },
+      ...Object.keys(h3).length ? { model_options: { h3 } } : {}
+    }
   };
 }
 var sceneValidationSchema = external_exports.object({
@@ -127966,6 +127983,7 @@ var sceneValidationSchema = external_exports.object({
     num_frames: external_exports.number().int(),
     prompt: external_exports.string(),
     labels: external_exports.record(external_exports.string()),
+    reference_image_short_edge: external_exports.number().int().optional(),
     shots: external_exports.array(external_exports.object({ id: external_exports.string(), start_frame: external_exports.number().int() }).passthrough())
   }).passthrough(),
   warnings: external_exports.array(external_exports.object({ code: external_exports.string() }).passthrough()).default([])
@@ -127984,7 +128002,15 @@ function checkSceneValidation(args, result) {
     throw new Error("genai_scene_frames: the gateway renders " + resolved.num_frames + " frames; the plan expects " + genaiSceneFrames(sceneFrames(args), args.model));
   if (JSON.stringify(resolved.shots.map((s2) => ({ id: s2.id, start_frame: s2.start_frame }))) !== JSON.stringify(starts))
     throw new Error("genai_scene_cuts: the gateway places the shots at other frames than the plan");
-  return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings };
+  if (args.referenceImageShortEdge !== void 0 && resolved.reference_image_short_edge !== args.referenceImageShortEdge)
+    throw new Error("genai_scene_reference_size: the gateway did not confirm the requested H3 reference image size");
+  return {
+    prompt: resolved.prompt,
+    numFrames: resolved.num_frames,
+    labels: resolved.labels,
+    warnings,
+    ...args.referenceImageShortEdge === void 0 ? {} : { referenceImageShortEdge: args.referenceImageShortEdge }
+  };
 }
 function sceneArgsFromComposed(composed) {
   const keyOf = (label) => composed.slots.find((slot2) => slot2.label === label)?.key;
@@ -135077,6 +135103,8 @@ function buildH3Plan(input, context2, persist) {
     reserveUsd: external_exports.number().nonnegative().optional(),
     model: external_exports.literal("minimax-h3").optional(),
     resolution: external_exports.string().optional(),
+    referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
+    numInferenceSteps: h3InferenceSteps.optional(),
     outputPath: external_exports.string().optional(),
     filename: external_exports.string().optional()
   }).strict().parse(input.args);

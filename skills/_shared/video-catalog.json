@@ -1255,6 +1255,8 @@
         "resolution",
         "fps",
         "seed",
+        "referenceImageShortEdge",
+        "numInferenceSteps",
         "generateAudio",
         "reserveUsd",
         "outputPath",
