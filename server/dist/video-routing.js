@@ -1068,14 +1068,18 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const refused = resolved.issues.filter(issue => issue.level === 'error');
         if (refused.length)
             throw new Error(refused.map(issue => issue.code + ': ' + issue.detail).join('; '));
-        const foreignEdit = nonEnglishOutsideQuotes(resolved.body, script);
+        // FastH3 marks spoken text with a tagged language cue on the wire.
+        // Use the same ordered-quote validator for both dialects without editing the submitted prompt.
+        const validationText = (prompt) => tool === 'fasth3_omni_reference'
+            ? prompt.replace(/<d>(?:\[[^\]<>\n]+\] )?([\s\S]*?)<\/d>/g, '“$1”') : prompt;
+        const foreignEdit = nonEnglishOutsideQuotes(validationText(resolved.body), script);
         if (foreignEdit)
             throw new Error('video_prompt_language: write directions in English and keep spoken words in quotes');
         const sceneCast = new Map((voice.voiceContinuity?.speakers ?? []).map(person => [person.speaker, person.name]));
         for (const id of [...(scene?.openingPositions ?? []).map(row => row.character), ...cast.map(person => person.character)])
             if (!sceneCast.has(id))
                 sceneCast.set(id, names[id] || id);
-        assertSceneDialogue(scenePromptTemplate(resolved.body, promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), Array.from(sceneCast, ([speaker, name]) => ({ speaker, name })), scenePromptTemplate(composed, promptSlots, '', script).promptTemplate, ['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy ?? ''));
+        assertSceneDialogue(scenePromptTemplate(validationText(resolved.body), promptSlots, '', script).promptTemplate, lines.filter(line => line.delivery !== 'voiceover'), Array.from(sceneCast, ([speaker, name]) => ({ speaker, name })), scenePromptTemplate(validationText(composed), promptSlots, '', script).promptTemplate, ['reference_voice', 'model_generated'].includes(voice.voiceContinuity?.strategy ?? ''));
         promptIssues = resolved.issues;
         // The adapter validates the author's text as it would its own, then the header is put ahead of it below.
         voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...(positions ? { openingPositions: positions } : {}) } };
@@ -1210,7 +1214,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         verifyDistinctSamples(voices.map(v => ({ speaker: v.speaker, path: v.reference.path })));
     }
     const quote = quoteFor(tool, args);
-    const body = { ...take, ...(motionReferences ? { motionReferences } : {}), ...(tool === 'fasth3_omni_reference' && sceneRequest ? { mlxDeployment: { endpoint: mlxServeUrl(), renderFrames: Number(args.numFrames), deliveryFrames: sceneRequest.frameCount } } : {}), ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
+    const body = { ...take, ...(motionReferences ? { motionReferences } : {}), ...(input.wholeScene ? { wholeScene: true } : {}), ...(tool === 'fasth3_omni_reference' && sceneRequest ? { mlxDeployment: { endpoint: mlxServeUrl(), renderFrames: Number(args.numFrames), deliveryFrames: sceneRequest.frameCount } } : {}), ...(characterBindings ? { characterBindings } : {}), ...(cast.length ? { characterInputs: cast } : {}), ...(sceneRequest ? { sceneRequest: { ...sceneRequest, prompt: String(args.prompt) } } : {}),
         ...(authored ? { authoredPrompt: input.prompt, ...(promptIssues.length ? { promptIssues } : {}) } : {}),
         version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId, tool, args,
         ...(imageBindings ? { imageBindings } : {}),

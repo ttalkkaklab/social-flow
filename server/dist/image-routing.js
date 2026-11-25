@@ -9,12 +9,13 @@ import os from 'node:os';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
+import { mlxImageFamily } from './image-models.js';
 import { IMAGE_ADAPTERS, parseImageArgs } from './image-registry.js';
 import { imageQuote, imageUsageUsd } from './image-pricing.js';
 import { imageTransaction, readImageState } from './image-state.js';
 import { atomicJson, canonicalPath, routingHash, withinDirectory } from './routing-files.js';
 import { readImageMetadata, verifyImageFile } from './image-media.js';
-import { config, mfluxZImageBin, mlxServeConfigured, disabledToolPatterns, disabledToolsFile } from './config.js';
+import { config, mfluxZImageBin, mlxServeConfigured, mlxServeUrl, disabledToolPatterns, disabledToolsFile } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
 import { priceOf, recordUsage } from './usage-ledger.js';
 import { GenaiImageOutputError, recoverGenaiImage, buildGenaiImageBody, genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
@@ -66,6 +67,17 @@ function inputFiles(args, directory) {
     if (Array.isArray(args.refImagePaths))
         args.refImagePaths = args.refImagePaths.map(v => resolve(String(v)));
     return inputs;
+}
+/** The H3 worker retains edit source size unless the longer side exceeds its 6272-pixel cap. */
+function h3ImageSize(args) {
+    if (typeof args.imagePath !== 'string')
+        return { width: Number(args.width), height: Number(args.height) };
+    const { width, height } = readImageMetadata(args.imagePath);
+    const scale = 6272 / Math.max(width, height);
+    if (scale >= 1)
+        return { width, height };
+    const fit = (side) => Math.max(16, Math.floor(Math.round(side * scale) / 16) * 16);
+    return { width: fit(width), height: fit(height) };
 }
 function bindSelection(tool, input, selection) {
     if (IMAGE_ADAPTERS[tool]?.engine !== selection.engine)
@@ -139,7 +151,7 @@ export function planImage(raw) {
     const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
     const body = { version: 1, directory: context.directory, assetId: input.assetId, requestId: input.requestId,
         tool: tool, args, sourceArgs: input.args, selection, source: context.source, contextRevision: context.revision,
-        inputs, ...(selection.engine === 'astra-genai-native' && selection.model === 'h3-image' ? { gateway: astraGenaiBaseUrl('/v1/images/') } : {}), ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' : 'server' };
+        inputs, ...(selection.engine === 'mlx' && mlxImageFamily(selection.model) === 'h3-image' ? { mlxEndpoint: mlxServeUrl(), mlxSize: h3ImageSize(args) } : {}), ...(selection.engine === 'astra-genai-native' && selection.model === 'h3-image' ? { gateway: astraGenaiBaseUrl('/v1/images/') } : {}), ...(outputFile ? { outputFile } : {}), quote, execution: selection.engine === 'host' ? 'host_handoff' : 'server' };
     const plan = { ...body, id: routingHash(body) };
     atomicJson(path.join(context.directory, '.work/image-routing/plans', plan.id + '.json'), plan);
     return plan;
@@ -154,6 +166,40 @@ function imageExecutionResult(plan, status, receipt, output) {
         providerId: receipt?.requestId ?? null, usage: receipt?.usage ?? null, output: output ?? null,
         readiness: { file: output ? 'verified' : 'not_verified', decoding: output ? 'verified' : 'not_verified',
             configuration: 'selection_validated', references: 'not_checked', visualReview: 'not_reviewed' } };
+}
+/** The private path identifies the exact approved request even if the MCP process loses its reply. */
+function mlxRenderFile(plan) {
+    return path.join(plan.directory, '.work/image-routing/renders', plan.id, 'native.png');
+}
+function deliverMlxImage(plan) {
+    const native = mlxRenderFile(plan);
+    const output = verifyImageFile(native);
+    const target = plan.outputFile;
+    if (output.mimeType !== 'image/png')
+        throw new Error('image_recovery_format_mismatch');
+    if (plan.mlxSize && (output.width !== plan.mlxSize.width || output.height !== plan.mlxSize.height))
+        throw new Error(`image_output_size_mismatch: expected ${plan.mlxSize.width}x${plan.mlxSize.height}, received ${output.width}x${output.height}`);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    try {
+        fs.linkSync(native, target);
+    }
+    catch (error) {
+        if (error.code !== 'EEXIST' || verifyImageFile(target).sha256 !== output.sha256)
+            throw error;
+    }
+    const receipt = { planId: plan.id, requestId: plan.requestId, model: plan.selection.model,
+        mlxEndpoint: plan.mlxEndpoint, imagePath: target, inputs: plan.inputs, output, review: 'not_reviewed' };
+    const result = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt,
+        structuredContent: imageExecutionResult(plan, 'completed', undefined, output) };
+    imageTransaction(plan.directory, undefined, state => {
+        const job = state.jobs[plan.requestId];
+        if (job?.planId !== plan.id)
+            throw new Error('image_recovery_plan_invalid');
+        if (job.output && job.output.sha256 !== output.sha256)
+            throw new Error('image_cached_output_changed');
+        Object.assign(job, { status: 'completed', result, output, spentUsd: 0, updatedAt: new Date().toISOString() });
+    });
+    return result;
 }
 export async function executeImage(raw, dispatch) {
     gate('image_execute');
@@ -210,7 +256,14 @@ export async function executeImage(raw, dispatch) {
     const started = Date.now();
     let ok = false, providerCompleted = false;
     try {
-        const result = await dispatch(plan.tool, plan.args);
+        const native = plan.mlxEndpoint ? mlxRenderFile(plan) : undefined;
+        const args = native ? { ...plan.args, outputPath: path.dirname(native), filename: path.basename(native) } : plan.args;
+        const result = await dispatch(plan.tool, args);
+        if (native && !result.isError) {
+            const delivered = deliverMlxImage(plan);
+            ok = true;
+            return delivered;
+        }
         const receipt = result.imageReceipt;
         // Persist provider evidence even if file verification fails after a billed response.
         imageTransaction(directory, undefined, state => {
@@ -242,10 +295,17 @@ export async function executeImage(raw, dispatch) {
     catch (error) {
         const status = providerCompleted || error instanceof GenaiImageOutputError || (error instanceof GenaiRequestError && error.terminal) ? 'failed' : 'submission_unknown';
         const message = error instanceof Error ? error.message : String(error);
-        imageTransaction(directory, undefined, state => Object.assign(state.jobs[plan.requestId], {
-            status, evidence: message, updatedAt: new Date().toISOString(),
-            ...(error instanceof GenaiImageOutputError ? { providerId: error.requestId, usage: error.usage } : {}),
-        }));
+        const recovered = imageTransaction(directory, undefined, state => {
+            const job = state.jobs[plan.requestId];
+            if (job.status === 'completed')
+                return job.result;
+            Object.assign(job, {
+                status, evidence: message, updatedAt: new Date().toISOString(),
+                ...(error instanceof GenaiImageOutputError ? { providerId: error.requestId, usage: error.usage } : {}),
+            });
+        });
+        if (recovered)
+            return recovered;
         const job = readImageState(directory)?.jobs[plan.requestId];
         return { isError: true, content: [{ type: 'text', text: message }],
             structuredContent: { ...imageExecutionResult(plan, status, { usage: job?.usage, requestId: job?.providerId }), error: message } };
@@ -325,13 +385,26 @@ export function imageStatus(raw) {
 async function refreshGenaiImage(directory, requestId) {
     const state = readImageState(directory);
     const job = state?.jobs[requestId];
-    if (!job || !['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit'].includes(job.tool))
+    if (!job || !['astra_genai_text2img', 'astra_genai_edit', 'astra_genai_image_generate', 'astra_genai_image_edit', 'mlx_image_generate', 'mlx_image_edit'].includes(job.tool))
         throw new Error('image_refresh_unsupported: requires an existing GenAI image request');
     const plan = JSON.parse(fs.readFileSync(path.join(directory, '.work/image-routing/plans', job.planId + '.json'), 'utf8'));
     const { id, ...body } = plan;
     if (id !== job.planId || routingHash(body) !== id || plan.directory !== directory || plan.outputFile !== job.outputFile || plan.tool !== job.tool)
         throw new Error('image_recovery_plan_invalid');
     gate(plan.tool);
+    if (job.tool.startsWith('mlx_image_')) {
+        if (!plan.mlxEndpoint)
+            throw new Error('image_refresh_unsupported: this plan has no bound MLX render');
+        if (job.status === 'completed') {
+            if (verifyImageFile(job.outputFile).sha256 !== job.output?.sha256)
+                throw new Error('image_cached_output_changed');
+            return job;
+        }
+        if (!fs.existsSync(mlxRenderFile(plan)))
+            return job;
+        deliverMlxImage(plan);
+        return readImageState(directory).jobs[requestId];
+    }
     const receipt = await (job.tool.startsWith('astra_genai_image_') ? recoverNativeImage : recoverGenaiImage)(job.outputFile + '.astra-genai.json');
     if (receipt.imagePath !== job.outputFile)
         throw new Error('image_recovery_output_mismatch');

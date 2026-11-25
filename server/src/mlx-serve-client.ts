@@ -18,7 +18,7 @@ import { join } from 'node:path';
 import { z } from 'zod';
 import { Agent } from 'undici';
 import { FASTH3_OMNI_MODEL } from './fasth3-omni.js';
-import { validateMlxImageOperation } from './image-models.js';
+import { mlxImageFamily, validateMlxImageOperation } from './image-models.js';
 import { readImageMetadata } from './image-media.js';
 import { mlxServeApiKey, mlxServeUrl } from './config.js';
 import { requestBytes, requestRaw } from './http.js';
@@ -30,8 +30,8 @@ export const MLX_LOAD_TIMEOUT_MS = 10 * 60_000;
 export const MLX_IMAGE_TIMEOUT_MS = 15 * 60_000;
 export const MLX_MUSIC_TIMEOUT_MS = 10 * 60_000;
 export const MLX_VIDEO_TIMEOUT_MS = 20 * 60_000;
-const FASTH3_TIMEOUT_MS = 90 * 60_000;
-const fasth3Transport = new Agent({headersTimeout:FASTH3_TIMEOUT_MS, bodyTimeout:FASTH3_TIMEOUT_MS});
+const H3_RENDER_TIMEOUT_MS = 90 * 60_000;
+const h3RenderTransport = new Agent({headersTimeout:H3_RENDER_TIMEOUT_MS, bodyTimeout:H3_RENDER_TIMEOUT_MS});
 export const MLX_MESH_TIMEOUT_MS = 15 * 60_000;
 
 /** Node heap ceiling for decoded RGB — 1088×1920×8s at 24fps is ~1.2GB and is refused. */
@@ -71,6 +71,8 @@ export interface MlxModel {
 }
 
 export interface MlxFileResult {
+  /** A dispatched render may still be running after a lost response. */
+  submissionUnknown?: boolean;
   success: boolean;
   error?: string;
   path?: string;
@@ -525,10 +527,13 @@ async function muxRgbToMp4(opts: {
 async function postImage(body: Record<string, unknown>, outFile: string): Promise<MlxFileResult> {
   if (existsSync(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
   const startedAt = Date.now();
-  const res = await requestRaw('post', `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body, MLX_IMAGE_TIMEOUT_MS);
+  const h3 = typeof body.model === 'string' && mlxImageFamily(body.model) === 'h3-image';
+  const res = await requestRaw('post', `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body,
+    h3 ? H3_RENDER_TIMEOUT_MS : MLX_IMAGE_TIMEOUT_MS, h3 ? h3RenderTransport : undefined);
   if (!res.ok) {
-    if (isUnreachable(res.status, res.body)) return { success: false, error: mlxDownHint(res.body) };
-    return { success: false, error: translateUpstream(`HTTP ${res.status}: ${res.body}`) };
+    const submissionUnknown = h3 && (res.status >= 500 || res.status === 408);
+    const error = isUnreachable(res.status, res.body) ? mlxDownHint(res.body) : translateUpstream(`HTTP ${res.status}: ${res.body}`);
+    return { success: false, error, submissionUnknown };
   }
   const parsed = parseImageResponse(res.body);
   if ('error' in parsed) return { success: false, error: parsed.error };
@@ -721,8 +726,8 @@ export async function requestMlxVideo(body: Record<string, unknown>): Promise<{ 
   try {
     const fastH3 = body.model === FASTH3_OMNI_MODEL;
     const response = await fetch(url, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      ...(fastH3 ? {dispatcher:fasth3Transport} : {}), body: JSON.stringify(body),
-      signal: AbortSignal.timeout(fastH3 ? FASTH3_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS) });
+      ...(fastH3 ? {dispatcher:h3RenderTransport} : {}), body: JSON.stringify(body),
+      signal: AbortSignal.timeout(fastH3 ? H3_RENDER_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS) });
     if (!response.ok || !response.headers.get('content-type')?.includes('text/event-stream'))
       return { ok: response.ok, status: response.status, body: await response.text() };
     if (!response.body) throw new Error('Video progress stream has no body');

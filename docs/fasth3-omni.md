@@ -8,21 +8,22 @@ No existing settings or episode snapshots are migrated implicitly.
 
 ## Mac image and video settings
 
-Select `{"engine":"astra-genai-native","model":"h3-image"}` for images and
-`{"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","operation":"reference"}`
-for talking shots. Discover the image alias with `astra_genai_catalog` and
-`kind:"image"` on the configured local gateway. Its `minimax-h3-image` profile
-uses the six-step H3-Image checkpoint. Generate a PNG with `image_plan` and
-`image_execute`. For an edit, pass the source in `imagePath` and up to nine
-ordered `refImagePaths`. The result keeps the source dimensions. Use GPT Image 2
-when the image must display or preserve readable text.
+Select `{"engine":"mlx","model":"ddalcu/MiniMax-H3-Image-MLX-Serve-4bit"}` for
+images and `{"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","operation":"reference"}`
+for talking shots. The Mac image tools send requests directly to MLX-Serve.
+Check its model catalog for the installed image checkpoint. Use `image_plan`
+and `image_execute` for a managed generation or edit. For an edit, pass
+the source in `imagePath` and up to nine ordered `refImagePaths`. The result
+keeps the source dimensions. The worker owns the six sampling steps. Use
+GPT Image 2 when the image must display or preserve readable text.
 
-The Mac image test used a local gateway build with the H3 image binding
-(`411b8f8aa606`). Shared gateway builds that expose only the
-`openai-image-basic` profile accept text-to-image requests. Check the image
-catalog on the selected endpoint for both the H3 profile and the edit operation
-before sending a face reference. A Mac plugin can use its loopback image
-gateway independently of the video endpoint selected for an episode.
+Managed direct H3 image plans pin the MLX endpoint and reference hashes. After
+a disconnect, refresh the original image request with `image_status`. A saved
+native PNG under the plan ID can finish delivery without another inference.
+A request that has not returned any bytes stays unresolved.
+
+A separately selected legacy gateway binding uses its own image receipt and
+request lookup. Existing plans keep their approved destination.
 
 For an on-screen speaker, pin the character's voice sample and list the owned
 face under `voiceReference.imagePaths`. Give each shot its own composition

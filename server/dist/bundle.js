@@ -100106,8 +100106,19 @@ var require_image_catalog = __commonJS({
           "krea",
           "mage",
           "mage-edit",
-          "qwen-2.1"
+          "qwen-2.1",
+          "h3-image"
         ],
+        h3Image: {
+          model: "ddalcu/MiniMax-H3-Image-MLX-Serve-4bit",
+          operations: [
+            "text",
+            "edit"
+          ],
+          referenceImages: 10,
+          fixedSteps: 6,
+          editSize: "source"
+        },
         note: "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
       },
       host: {
@@ -112685,6 +112696,7 @@ function assertImageModelAvailable(model2, now = /* @__PURE__ */ new Date()) {
     throw new Error("image_model_retired: " + model2 + "; select a replacement explicitly");
 }
 function mlxImageFamily(model2 = "") {
+  if (/^(?:[^/]+\/)?MiniMax-H3-Image(?:-MLX-Serve-(?:4|8)bit)?$/i.test(model2)) return "h3-image";
   if (/qwen.*image.*2[.-]1/i.test(model2)) return "qwen-2.1";
   if (/mage[-_]?flow/i.test(model2)) return /edit/i.test(model2) ? "mage-edit" : "mage";
   if (/krea[-_]?2/i.test(model2)) return "krea";
@@ -112693,24 +112705,31 @@ function mlxImageFamily(model2 = "") {
 }
 function validateMlxImageOperation(model2, operation, args) {
   const family = mlxImageFamily(model2);
-  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1"].includes(family))
+  if (operation === "edit" && !["flux-klein", "mage-edit", "qwen-2.1", "h3-image"].includes(family))
     throw new Error("image_operation_unsupported: select an identified editing pack");
   if (operation === "variation" && !["flux-klein", "krea"].includes(family))
     throw new Error("image_operation_unsupported: this pack has no verified strength-based variation");
   if (args.transparent === true && family !== "qwen-2.1")
     throw new Error("image_transparency_unsupported: transparent requires Qwen-Image-2.1");
   const refs = Array.isArray(args.refImagePaths) ? args.refImagePaths.length : 0;
-  if (refs > (family === "qwen-2.1" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (refs > (family === "qwen-2.1" || family === "h3-image" ? 9 : 3)) throw new Error("image_reference_limit");
+  if (family === "h3-image") {
+    if (args.steps !== void 0 || args.transparent !== void 0 || args.strength !== void 0)
+      throw new Error("image_operation_unsupported: H3 Image uses its six-step schedule; omit steps, transparent and strength");
+    if (operation === "edit" && (args.width !== void 0 || args.height !== void 0))
+      throw new Error("image_edit_size: H3 Image takes the source dimensions; omit width and height");
+  }
   if (family === "qwen-2.1" && /turbo/i.test(model2 || "") && args.steps !== void 0 && args.steps !== 8)
     throw new Error("image_schedule_fixed: Qwen Turbo uses its saved 8-step schedule");
 }
 
 // src/http.ts
-async function requestRaw(method, url, headers2, body, timeoutMs) {
+async function requestRaw(method, url, headers2, body, timeoutMs, dispatcher) {
   const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
   try {
     const res2 = await fetch(url, {
       method: method.toUpperCase(),
+      ...dispatcher ? { dispatcher } : {},
       headers: {
         ...body !== void 0 ? { "Content-Type": "application/json" } : {},
         ...headers2
@@ -112781,8 +112800,8 @@ var MLX_LOAD_TIMEOUT_MS = 10 * 6e4;
 var MLX_IMAGE_TIMEOUT_MS = 15 * 6e4;
 var MLX_MUSIC_TIMEOUT_MS = 10 * 6e4;
 var MLX_VIDEO_TIMEOUT_MS = 20 * 6e4;
-var FASTH3_TIMEOUT_MS = 90 * 6e4;
-var fasth3Transport = new import_undici.Agent({ headersTimeout: FASTH3_TIMEOUT_MS, bodyTimeout: FASTH3_TIMEOUT_MS });
+var H3_RENDER_TIMEOUT_MS = 90 * 6e4;
+var h3RenderTransport = new import_undici.Agent({ headersTimeout: H3_RENDER_TIMEOUT_MS, bodyTimeout: H3_RENDER_TIMEOUT_MS });
 var MLX_MESH_TIMEOUT_MS = 15 * 6e4;
 var MAX_VIDEO_RGB_BYTES = 800 * 1024 * 1024;
 var MLX_IMAGE_DIMENSION_STEP = 16;
@@ -113164,10 +113183,19 @@ ${String(errOut).slice(-500)}` : ""}`));
 async function postImage(body, outFile) {
   if (existsSync5(outFile)) return { success: false, error: `Output already exists; choose a new filename: ${outFile}` };
   const startedAt = Date.now();
-  const res2 = await requestRaw("post", `${mlxServeUrl()}/v1/images/generations`, authHeaders(), body, MLX_IMAGE_TIMEOUT_MS);
+  const h3 = typeof body.model === "string" && mlxImageFamily(body.model) === "h3-image";
+  const res2 = await requestRaw(
+    "post",
+    `${mlxServeUrl()}/v1/images/generations`,
+    authHeaders(),
+    body,
+    h3 ? H3_RENDER_TIMEOUT_MS : MLX_IMAGE_TIMEOUT_MS,
+    h3 ? h3RenderTransport : void 0
+  );
   if (!res2.ok) {
-    if (isUnreachable(res2.status, res2.body)) return { success: false, error: mlxDownHint(res2.body) };
-    return { success: false, error: translateUpstream(`HTTP ${res2.status}: ${res2.body}`) };
+    const submissionUnknown = h3 && (res2.status >= 500 || res2.status === 408);
+    const error2 = isUnreachable(res2.status, res2.body) ? mlxDownHint(res2.body) : translateUpstream(`HTTP ${res2.status}: ${res2.body}`);
+    return { success: false, error: error2, submissionUnknown };
   }
   const parsed = parseImageResponse(res2.body);
   if ("error" in parsed) return { success: false, error: parsed.error };
@@ -113341,9 +113369,9 @@ async function requestMlxVideo(body) {
     const response = await fetch(url, {
       method: "POST",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
-      ...fastH3 ? { dispatcher: fasth3Transport } : {},
+      ...fastH3 ? { dispatcher: h3RenderTransport } : {},
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(fastH3 ? FASTH3_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS)
+      signal: AbortSignal.timeout(fastH3 ? H3_RENDER_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS)
     });
     if (!response.ok || !response.headers.get("content-type")?.includes("text/event-stream"))
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -127825,7 +127853,8 @@ function imageCatalog() {
     gptModels: GPT_IMAGE_MODELS,
     gptContracts: GPT_IMAGE_CONTRACTS,
     mlx: {
-      families: ["flux-klein", "krea", "mage", "mage-edit", "qwen-2.1"],
+      families: ["flux-klein", "krea", "mage", "mage-edit", "qwen-2.1", "h3-image"],
+      h3Image: { model: "ddalcu/MiniMax-H3-Image-MLX-Serve-4bit", operations: ["text", "edit"], referenceImages: 10, fixedSteps: 6, editSize: "source" },
       note: "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
     },
     host: { execution: "host_handoff", model: "host-managed", note: "External tools/allowance are not enforced by MCP. No API fallback." },
@@ -133747,16 +133776,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     });
     const refused = resolved.issues.filter((issue2) => issue2.level === "error");
     if (refused.length) throw new Error(refused.map((issue2) => issue2.code + ": " + issue2.detail).join("; "));
-    const foreignEdit = nonEnglishOutsideQuotes(resolved.body, script);
+    const validationText = (prompt) => tool2 === "fasth3_omni_reference" ? prompt.replace(/<d>(?:\[[^\]<>\n]+\] )?([\s\S]*?)<\/d>/g, "\u201C$1\u201D") : prompt;
+    const foreignEdit = nonEnglishOutsideQuotes(validationText(resolved.body), script);
     if (foreignEdit) throw new Error("video_prompt_language: write directions in English and keep spoken words in quotes");
     const sceneCast = new Map((voice.voiceContinuity?.speakers ?? []).map((person) => [person.speaker, person.name]));
     for (const id of [...(scene?.openingPositions ?? []).map((row) => row.character), ...cast.map((person) => person.character)])
       if (!sceneCast.has(id)) sceneCast.set(id, names[id] || id);
     assertSceneDialogue(
-      scenePromptTemplate(resolved.body, promptSlots, "", script).promptTemplate,
+      scenePromptTemplate(validationText(resolved.body), promptSlots, "", script).promptTemplate,
       lines.filter((line) => line.delivery !== "voiceover"),
       Array.from(sceneCast, ([speaker, name]) => ({ speaker, name })),
-      scenePromptTemplate(composed, promptSlots, "", script).promptTemplate,
+      scenePromptTemplate(validationText(composed), promptSlots, "", script).promptTemplate,
       ["reference_voice", "model_generated"].includes(voice.voiceContinuity?.strategy ?? "")
     );
     promptIssues = resolved.issues;
@@ -133873,6 +133903,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   const body = {
     ...take,
     ...motionReferences ? { motionReferences } : {},
+    ...input.wholeScene ? { wholeScene: true } : {},
     ...tool2 === "fasth3_omni_reference" && sceneRequest ? { mlxDeployment: { endpoint: mlxServeUrl(), renderFrames: Number(args.numFrames), deliveryFrames: sceneRequest.frameCount } } : {},
     ...characterBindings ? { characterBindings } : {},
     ...cast.length ? { characterInputs: cast } : {},
@@ -134489,6 +134520,14 @@ function inputFiles2(args, directory2) {
   if (Array.isArray(args.refImagePaths)) args.refImagePaths = args.refImagePaths.map((v) => resolve15(String(v)));
   return inputs2;
 }
+function h3ImageSize(args) {
+  if (typeof args.imagePath !== "string") return { width: Number(args.width), height: Number(args.height) };
+  const { width, height } = readImageMetadata(args.imagePath);
+  const scale = 6272 / Math.max(width, height);
+  if (scale >= 1) return { width, height };
+  const fit = (side) => Math.max(16, Math.floor(Math.round(side * scale) / 16) * 16);
+  return { width: fit(width), height: fit(height) };
+}
 function bindSelection2(tool2, input, selection) {
   if (IMAGE_ADAPTERS[tool2]?.engine !== selection.engine) throw new Error("image_selection_mismatch: engine");
   const args = { ...input };
@@ -134555,6 +134594,7 @@ function planImage(raw) {
     source: context2.source,
     contextRevision: context2.revision,
     inputs: inputs2,
+    ...selection.engine === "mlx" && mlxImageFamily(selection.model) === "h3-image" ? { mlxEndpoint: mlxServeUrl(), mlxSize: h3ImageSize(args) } : {},
     ...selection.engine === "astra-genai-native" && selection.model === "h3-image" ? { gateway: astraGenaiBaseUrl("/v1/images/") } : {},
     ...outputFile ? { outputFile } : {},
     quote,
@@ -134585,6 +134625,45 @@ function imageExecutionResult(plan2, status, receipt, output2) {
       visualReview: "not_reviewed"
     }
   };
+}
+function mlxRenderFile(plan2) {
+  return path29.join(plan2.directory, ".work/image-routing/renders", plan2.id, "native.png");
+}
+function deliverMlxImage(plan2) {
+  const native = mlxRenderFile(plan2);
+  const output2 = verifyImageFile(native);
+  const target = plan2.outputFile;
+  if (output2.mimeType !== "image/png") throw new Error("image_recovery_format_mismatch");
+  if (plan2.mlxSize && (output2.width !== plan2.mlxSize.width || output2.height !== plan2.mlxSize.height))
+    throw new Error(`image_output_size_mismatch: expected ${plan2.mlxSize.width}x${plan2.mlxSize.height}, received ${output2.width}x${output2.height}`);
+  fs21.mkdirSync(path29.dirname(target), { recursive: true });
+  try {
+    fs21.linkSync(native, target);
+  } catch (error2) {
+    if (error2.code !== "EEXIST" || verifyImageFile(target).sha256 !== output2.sha256) throw error2;
+  }
+  const receipt = {
+    planId: plan2.id,
+    requestId: plan2.requestId,
+    model: plan2.selection.model,
+    mlxEndpoint: plan2.mlxEndpoint,
+    imagePath: target,
+    inputs: plan2.inputs,
+    output: output2,
+    review: "not_reviewed"
+  };
+  const result = {
+    content: [{ type: "text", text: JSON.stringify(receipt) }],
+    imageReceipt: receipt,
+    structuredContent: imageExecutionResult(plan2, "completed", void 0, output2)
+  };
+  imageTransaction(plan2.directory, void 0, (state) => {
+    const job = state.jobs[plan2.requestId];
+    if (job?.planId !== plan2.id) throw new Error("image_recovery_plan_invalid");
+    if (job.output && job.output.sha256 !== output2.sha256) throw new Error("image_cached_output_changed");
+    Object.assign(job, { status: "completed", result, output: output2, spentUsd: 0, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  });
+  return result;
 }
 async function executeImage(raw, dispatch) {
   gate("image_execute");
@@ -134637,7 +134716,14 @@ async function executeImage(raw, dispatch) {
   const started = Date.now();
   let ok = false, providerCompleted = false;
   try {
-    const result = await dispatch(plan2.tool, plan2.args);
+    const native = plan2.mlxEndpoint ? mlxRenderFile(plan2) : void 0;
+    const args = native ? { ...plan2.args, outputPath: path29.dirname(native), filename: path29.basename(native) } : plan2.args;
+    const result = await dispatch(plan2.tool, args);
+    if (native && !result.isError) {
+      const delivered = deliverMlxImage(plan2);
+      ok = true;
+      return delivered;
+    }
     const receipt = result.imageReceipt;
     imageTransaction(directory2, void 0, (state) => {
       Object.assign(state.jobs[plan2.requestId], {
@@ -134668,12 +134754,17 @@ async function executeImage(raw, dispatch) {
   } catch (error2) {
     const status = providerCompleted || error2 instanceof GenaiImageOutputError || error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown";
     const message = error2 instanceof Error ? error2.message : String(error2);
-    imageTransaction(directory2, void 0, (state) => Object.assign(state.jobs[plan2.requestId], {
-      status,
-      evidence: message,
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      ...error2 instanceof GenaiImageOutputError ? { providerId: error2.requestId, usage: error2.usage } : {}
-    }));
+    const recovered = imageTransaction(directory2, void 0, (state) => {
+      const job2 = state.jobs[plan2.requestId];
+      if (job2.status === "completed") return job2.result;
+      Object.assign(job2, {
+        status,
+        evidence: message,
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        ...error2 instanceof GenaiImageOutputError ? { providerId: error2.requestId, usage: error2.usage } : {}
+      });
+    });
+    if (recovered) return recovered;
     const job = readImageState(directory2)?.jobs[plan2.requestId];
     return {
       isError: true,
@@ -134757,12 +134848,22 @@ function imageStatus(raw) {
 async function refreshGenaiImage(directory2, requestId) {
   const state = readImageState(directory2);
   const job = state?.jobs[requestId];
-  if (!job || !["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit"].includes(job.tool)) throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
+  if (!job || !["astra_genai_text2img", "astra_genai_edit", "astra_genai_image_generate", "astra_genai_image_edit", "mlx_image_generate", "mlx_image_edit"].includes(job.tool)) throw new Error("image_refresh_unsupported: requires an existing GenAI image request");
   const plan2 = JSON.parse(fs21.readFileSync(path29.join(directory2, ".work/image-routing/plans", job.planId + ".json"), "utf8"));
   const { id, ...body } = plan2;
   if (id !== job.planId || routingHash(body) !== id || plan2.directory !== directory2 || plan2.outputFile !== job.outputFile || plan2.tool !== job.tool)
     throw new Error("image_recovery_plan_invalid");
   gate(plan2.tool);
+  if (job.tool.startsWith("mlx_image_")) {
+    if (!plan2.mlxEndpoint) throw new Error("image_refresh_unsupported: this plan has no bound MLX render");
+    if (job.status === "completed") {
+      if (verifyImageFile(job.outputFile).sha256 !== job.output?.sha256) throw new Error("image_cached_output_changed");
+      return job;
+    }
+    if (!fs21.existsSync(mlxRenderFile(plan2))) return job;
+    deliverMlxImage(plan2);
+    return readImageState(directory2).jobs[requestId];
+  }
   const receipt = await (job.tool.startsWith("astra_genai_image_") ? recoverNativeImage : recoverGenaiImage)(job.outputFile + ".astra-genai.json");
   if (receipt.imagePath !== job.outputFile) throw new Error("image_recovery_output_mismatch");
   const result = {
@@ -143542,7 +143643,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend \u2014 use
     name: "mlx_image_edit",
     title: "Image edit (local \xB7 MLX Core)",
     annotations: HINT.generateLocal,
-    description: "Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack. Qwen accepts 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.",
+    description: "Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack, or select MiniMax-H3-Image. Qwen and H3 Image accept 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.",
     inputSchema: {
       type: "object",
       properties: {
@@ -156605,7 +156706,7 @@ Generation time: ${result.elapsedSeconds}s`
     const request = parseArgs(mlxImageGenerateSchema, args);
     const result = await generateMlxImage(request);
     if (!result.success) return { ...text3(`MLX Core image generation failed:
-${result.error}`, true), terminal: true };
+${result.error}`, true), terminal: !result.submissionUnknown };
     return text3(
       `Image generated via MLX Core.
 
@@ -156621,7 +156722,7 @@ Generation time: ${result.elapsedSeconds}s`
     const request = parseArgs(mlxImageEditSchema, args);
     const result = await editMlxImage(request);
     if (!result.success) return { ...text3(`MLX Core image edit failed:
-${result.error}`, true), terminal: true };
+${result.error}`, true), terminal: !result.submissionUnknown };
     return text3(
       `Image edited via MLX Core.
 

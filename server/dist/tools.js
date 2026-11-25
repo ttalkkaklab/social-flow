@@ -1734,7 +1734,7 @@ Do NOT use for independent body posing or to read an arbitrary .blend — use bl
         name: 'mlx_image_edit',
         title: 'Image edit (local · MLX Core)',
         annotations: HINT.generateLocal,
-        description: 'Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack. Qwen accepts 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.',
+        description: 'Edit a local source image through MLX Core / mlx-serve, using JSON mode:edit. Select an identified FLUX.2-klein, Mage-Flow Edit or Qwen-Image-2.1 pack, or select MiniMax-H3-Image. Qwen and H3 Image accept 9 additional references, other known packs 3. Krea supports variations through mlx_image_generate, not this editing contract. No vendor bill; no automatic app launch or gpt_image_img2img fallback. Returns saved PNG and actual output dimensions; requested size may be a pixel budget. Use imageContext for configured production.',
         inputSchema: {
             type: 'object',
             properties: {

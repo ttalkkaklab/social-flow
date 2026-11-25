@@ -260,8 +260,19 @@
       "krea",
       "mage",
       "mage-edit",
-      "qwen-2.1"
+      "qwen-2.1",
+      "h3-image"
     ],
+    "h3Image": {
+      "model": "ddalcu/MiniMax-H3-Image-MLX-Serve-4bit",
+      "operations": [
+        "text",
+        "edit"
+      ],
+      "referenceImages": 10,
+      "fixedSteps": 6,
+      "editSize": "source"
+    },
     "note": "Installed pack and backend determine availability. Unknown packs support basic text only until capabilities are registered; use image_plan."
   },
   "host": {
