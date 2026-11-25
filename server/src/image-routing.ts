@@ -264,8 +264,8 @@ export async function executeImage(raw: unknown, dispatch: ImageDispatch): Promi
       const job = state.jobs[plan.requestId];
       if (job.status === 'completed') return job.result as ToolResult;
       Object.assign(job, {
-      status, evidence: message, updatedAt: new Date().toISOString(),
-      ...(error instanceof GenaiImageOutputError ? { providerId: error.requestId, usage: error.usage } : {}),
+        status, evidence: message, updatedAt: new Date().toISOString(),
+        ...(error instanceof GenaiImageOutputError ? { providerId: error.requestId, usage: error.usage } : {}),
       });
     });
     if (recovered) return recovered;

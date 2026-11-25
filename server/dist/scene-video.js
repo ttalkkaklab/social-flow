@@ -119,6 +119,8 @@ export function compileSceneTimeline(raw, scene, episode, board, coverage = scen
             pins.push({ path: frames.start, frame: startFrame, role: 'start' });
         if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1)))
             pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
+        if (shotScoped && member.referenceImage && !pins.some(pin => pin.role === 'start'))
+            pins.push({ path: member.referenceImage, frame: startFrame, role: 'start' });
         const occupied = new Set();
         const references = render.imageReferences(member).filter((r) => ['video', 'both'].includes(r.use));
         const add = (pin) => {

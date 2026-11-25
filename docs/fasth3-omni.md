@@ -14,7 +14,8 @@ for talking shots. The Mac image tools send requests directly to MLX-Serve.
 Check its model catalog for the installed image checkpoint. Use `image_plan`
 and `image_execute` for a managed generation or edit. For an edit, pass
 the source in `imagePath` and up to nine ordered `refImagePaths`. The result
-keeps the source dimensions. The worker owns the six sampling steps. Use
+keeps the source dimensions up to the worker’s 6272-pixel long-side limit.
+The plan records the expected output size. The worker owns the six sampling steps. Use
 GPT Image 2 when the image must display or preserve readable text.
 
 Managed direct H3 image plans pin the MLX endpoint and reference hashes. After

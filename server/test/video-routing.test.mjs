@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { spawn, spawnSync, execFileSync } from 'node:child_process';
-import { planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming, videoStatus } from '../dist/video-routing.js';
+import { planManagedVideo, planVideo, executeVideo, routeLegacyVideo, routingContext, approveVideo, readShotVideoTiming, videoStatus } from '../dist/video-routing.js';
 import { buildLtxApiBody } from '../dist/ltx-api-video.js';
 import { generateWithReferences, seedanceReferenceSchema } from '../dist/seedance-client.js';
 import { buildVeoBody } from '../dist/veo-video.js';
@@ -368,6 +368,53 @@ test('distilled dialogue uses the two pinned voices and keeps each line in its o
  assert.match(first,/hero \(Image 1, Audio 1\): "You came\."/);
  assert.match(second,/guest \(Image 2, Audio 2\): "I stayed\."/);
  assert.ok(p.args.prompt.length<=2000);
+});
+
+test('a flexible three-shot exchange approves the resolved MSR mode and keeps the returning voice', async t => {
+ const f = await pinnedSpeakerScene(t);
+ const cards = f.board.SCENES;
+ cards.push({...structuredClone(cards[0]), id:'s3', narration:[{...cards[0].narration[0],id:'line-3',tts:'Found it.'}]});
+ cards[0].referenceImage = 'opening.png';
+ for (const card of cards.slice(1)) card.referenceImage = card.narration[0].speaker + '.png';
+ f.save();
+ const route='/v1/ltx/v2/scene-to-video', requests=[];
+ const previous=globalThis.fetch;
+ t.mock.method(globalThis,'fetch',async (url, opts) => {
+   const path=new URL(url).pathname;
+   if (path===route+'/capabilities') return Response.json({version:1,execution:'per_shot',transitions:['hard_cut'],execution_modes:['auto','single_msr','per_shot']});
+   if (path==='/v1/uploads') return Response.json({upload_id:JSON.parse(opts.body).sha256.slice(0,32),chunk_size:1048576,chunks:1});
+   if (opts.method==='PUT') return Response.json({});
+   if (path.endsWith('/complete')) {
+     const id=path.split('/').at(-2);
+     return Response.json({file_id:id,uri:'genai-file://'+id});
+   }
+   if (path===route+'/validate') {
+     const body=JSON.parse(opts.body);
+     requests.push(body);
+     return Response.json({schema_valid:true,model:body.model,shots:3,execution:'single_msr'});
+   }
+   return previous(url,opts);
+ });
+ const input={episode:f.episode,sceneNo:1,requestId:'three-turns',sceneRendering:'auto',maxCostUsd:0};
+ const selected=await planManagedVideo(input);
+ assert.equal(selected.sceneRendering,'single_msr');
+ assert.equal(requests[0].execution,'auto');
+ const lines=requests[0].shots.map(card=>card.dialogue[0]);
+ assert.deepEqual(lines.map(line=>line.speaker),['hero','guest','hero']);
+ assert.equal(lines[0].voice_uri,lines[2].voice_uri);
+ assert.notEqual(lines[0].voice_uri,lines[1].voice_uri);
+ for (const [i,card] of requests[0].shots.entries()) {
+   const face=card.images.find(img=>img.role==='face' && img.character===lines[i].speaker);
+   assert.ok(face?.image_uri.startsWith('genai-file://'));
+ }
+ const required=await planManagedVideo({...input,sceneRendering:'single_msr'});
+ assert.equal(required.id,selected.id);
+ assert.deepEqual(requests[1],{...requests[0],execution:'single_msr'});
+ cards.forEach(card=>card.duration=10);
+ f.save();
+ const long=planVideo({...input,requestId:'long-exchange'},false);
+ assert.equal(long.sceneRendering,'per_shot');
+ assert.equal(long.sceneRequest.frameCount,720);
 });
 
 test('I2V reference capability refusals release managed budget and concurrency before any submission',async t=>{
@@ -2159,7 +2206,14 @@ test('the same authored names take picture and audio tags on the H3 reference la
  const paired = planVideo({...options,prompt:edit + '\nTrack {motion-with-audio.soundtrack} and  its {motion-with-audio.motion}.'},false);
  assert.ok(paired.args.prompt.endsWith('Track <Audio 2> and  its <Video 2>.'));
  let submitted;
- await f.execute(reordered,async (_tool,args) => {submitted=args; return result;});
+ await f.execute(reordered,async (_tool,args) => {
+   submitted=args;
+   fs.mkdirSync(args.outputPath,{recursive:true});
+   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i',`color=s=${args.width}x${args.height}:r=24`,
+     '-f','lavfi','-i','anullsrc','-t',String(args.numFrames / 24),'-c:v','libx264','-preset','ultrafast',
+     '-c:a','aac',path.join(args.outputPath,args.filename)]);
+   return result;
+ });
  assert.equal(submitted.prompt, reordered.sceneRequest.prompt);
  assert.deepEqual(submitted.referenceVideoPaths,reordered.args.referenceVideoPaths);
  assert.ok(reordered.promptSlots.some(slot => slot.key === 'dolly.motion' && slot.label === '<Video 1>'));
