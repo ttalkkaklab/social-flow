@@ -66,4 +66,27 @@ stopped there and the fifth allowed run was not used. No paid generation was run
   names `Image 1` inside `@Image 1`; a prompt that fits only after an adapter trims its edge white space is
   refused as `prompt_too_long`.
 
+### After the merge with dev (2026-11-25)
+
+The scores above describe the tree before it met `dev`. While the loop ran, pull request #708 put a copy of this
+branch's `scene-prompt.ts` and `video-routing.ts` on `dev` and built on it, so the merge takes `dev`'s version of
+both files and of their tests. What this branch still adds is the model-rule speaker limit with its documents, the
+numeric `exclusiveMinimum` fix with its contract case, two assertions (the direction record of an authored prompt,
+a cast id equal to a shot id) and this record.
+
+`dev` changed what capabilities 1 and 3 describe, and the merged tree follows `dev`:
+
+- In a scene with a cast or natively voiced dialogue an edited prompt may remove or reorder the planner's
+  sentences and add a supported camera, blocking or media cue. A reworded sentence or free prose is refused
+  (`scene_direction_unverified`). A scene with neither still takes free wording.
+- The approved lines stay word for word, in order, each introduced by its speaker (`scene_dialogue_mismatch`,
+  `scene_dialogue_speaker`); the earlier `line_missing` report no longer decides this.
+- White space an adapter trims is reported (`prompt_whitespace_normalized`) and the preview shows the trimmed text.
+- A typed number that names no input is refused (`reference_unknown`); one that names an input is refused under
+  `wholeScene` and in a saved draft. A second picture of one role is named `role-<asset id>`, and two inputs that
+  would share a name are refused (`placeholder_ambiguous`).
+
+Each line above was run on the merged build. No verifier scored the merged tree. Its gate,
+`cd server && HOME=$(mktemp -d) npm test`, gives 1374 pass, 0 fail.
+
 Artifacts: `loop.md`, `verify-1.md` to `verify-4.md`, `iter-1-summary.md` to `iter-4-summary.md`.

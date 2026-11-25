@@ -21,7 +21,7 @@ const synth = async ({outputPath,filename}) => {calls++; const audioPath=join(ou
 before(() => {config.geminiApiKey='test-'+randomUUID();});
 after(() => {config.geminiApiKey=oldKey; rmSync(root,{recursive:true,force:true});});
 test('capabilities and plans are pure, exact-model, strict payload contracts',async () => {
- const cap=await routeSpeech({action:'capabilities'}); assert.equal(cap.models.length,6); assert.equal(cap.review,'not_reviewed');
+ const cap=await routeSpeech({action:'capabilities'}); assert.equal(cap.models.filter(model => model.provider !== 'mlx-audio').length,6); assert.equal(cap.models.find(model => model.provider === 'mlx-audio')?.single,'tts_local_voxcpm2'); assert.equal(cap.review,'not_reviewed');
  const plan=await routeSpeech({action:'plan',generator:'tts_generate',generation:{text:'hello',outputPath:join(root,'pure')}});
  assert.equal(plan.generation.model,'gemini-2.5-flash-preview-tts'); assert.equal(existsSync(join(root,'pure')),false); assert.equal(plan.cost.status,'not_quoted');
  for(const generation of [{text:'hi',model:'unknown'},{text:'hi',speed:1.2},{text:'hi',emotion:'happy'}]) await assert.rejects(routeSpeech({action:'plan',generator:'tts_generate',generation}));
@@ -157,4 +157,18 @@ test('uppercase WAV and MP3 names complete and replay without another submission
    assert.equal(first.success,true,first.error);assert.equal(JSON.parse(readFileSync(first.receiptPath)).status,'completed');assert.equal(second.replayed,true);assert.equal(calls,before+1);
   }
  }finally{globalThis.fetch=originalFetch;config.elevenLabsApiKey=originalKey;}
+});
+
+test('local VoxCPM2 plans accept separate conditioning roles and reject incomplete continuation', async () => {
+  const route = generation => routeSpeech({action:'plan', generator:'tts_local_voxcpm2', generation});
+  const base = {model:'voxcpm2', text:'Hello', outputPath:join(root,'local')};
+  const both = {...base, referenceAudio:'/cast/voice.wav', continuationAudio:'/takes/previous.wav', continuationText:'Good morning'};
+  const plan = await route(both);
+  assert.equal(plan.capabilities.provider, 'mlx-audio');
+  assert.equal(plan.generation.referenceAudio, both.referenceAudio);
+  assert.equal(existsSync(base.outputPath), false);
+  await assert.rejects(route({...base, continuationAudio:both.continuationAudio}), /transcript/);
+  await assert.rejects(route({...base, continuationText:'orphaned transcript'}), /transcript/);
+  await assert.rejects(route({...base, speed:1.2}));
+  await assert.rejects(route({...base, voice:'gateway-voice-id'}));
 });

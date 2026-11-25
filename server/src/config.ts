@@ -197,14 +197,14 @@ export function blenderBin(): string {
 }
 
 /**
- * Configuration only — does not probe /health. True when MLX Core.app is
+ * Configuration only — does not probe /health. True when MLX-Serve.app or MLX Core.app is
  * installed, mlx-serve is on PATH, or MLX_SERVE_URL is set away from the
  * default (a server on another port or host). A present app that is not
  * running still reads as configured here and fails at the call.
  */
 export function mlxServeConfigured(): boolean {
   if (mlxServeUrl() !== DEFAULT_MLX_SERVE_URL) return true;
-  if (existsSync('/Applications/MLX Core.app')) return true;
+  if (existsSync('/Applications/MLX-Serve.app') || existsSync('/Applications/MLX Core.app')) return true;
   return binOnPath('mlx-serve');
 }
 

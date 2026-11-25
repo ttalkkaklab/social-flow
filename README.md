@@ -417,7 +417,7 @@ The current shot supplies the next camera view, action and prop state.
 
 ## Scene video generation
 
-Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. A plan rendered in one request returns `promptTemplate`, the submitted prompt with named references such as `{hero.face}` and `{hero.voice}`; edit it and plan again with `prompt` to send your own wording, and the planner fills in the reference numbers of the request it submits. Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
+Author each camera setup as a shot. Plan one request for all shots in a scene with `video_plan {episode, sceneNo, requestId}`. A plan rendered in one request returns `promptTemplate`, the submitted prompt with named references such as `{hero.face}` and `{hero.voice}`; edit it and plan again with `prompt`, and the planner fills in the reference numbers of the request it submits. In a scene with a cast or native dialogue the approved lines stay as written and a new sentence must be a supported camera, blocking or media cue ([scene prompt design](docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md)). Each shot carries its incoming transition, frame interval, framing, action and image roles. The scene supplies opening positions, dialogue in playback order and one continuous soundtrack. A blocked plan identifies the exact shots and inputs that the selected adapter cannot transmit. [Scene generation workflow](skills/generate-cut-videos/SKILL.md) · [Adapter capabilities](skills/_shared/video-routing.md)
 
 ## Persistent 3D locations
 
@@ -516,13 +516,12 @@ the whole projection rather than a bill that has already partly arrived.
 |---|---|---|---|
 | **Images** | `image_local_generate` — Z-Image Turbo via mflux, $0. Optional: `mlx_image_*` when MLX Core is running. Initial image setup recommends ASTRA GenAI (`astra-genai` / `z-image-turbo`); local mflux is an explicit alternative | `gpt_image_*` — OpenAI, per image by quality | …you accept no text in the frame. Local generation breaks Korean glyphs apart, so covers and any text-bearing frame need GPT Image or a host tool. The saved image model in `.social-flow/models.json` decides; nothing reroutes a frame on its own |
 | **Video** | deterministic HTML motion slides rendered locally with headless Chrome. Optional: `ltx_video_generate` (24fps, RAM-capped). Under Grok the CLI's own `image_to_video` is the setup-time recommendation (1–15 s, 720p ceiling, subscription allowance) | Seedance 2.x (ModelArk) per second · ASTRA GenAI (LTX) | …you use the HTML motion lane or the Grok host lane. The saved video model decides the paid engine. A channel can prohibit stills and still spend zero on generated video; Ken Burns does not count as true motion. mlx_video is not the default and is not on the Seedance face-policy table |
-| **Speech (TTS)** | Your own recording | Gemini TTS or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. No automatic paid speech review; local TTS is removed. |
+| **Speech (TTS)** | Your own recording or local VoxCPM2 | Gemini TTS, gateway speech or ElevenLabs `eleven_v4` | Generate with the saved voice and record provenance. Local VoxCPM2 runs on Apple Silicon. |
 | **Transcription (STT)** | `stt_local_transcribe` — Qwen3-ASR via mlx, $0 (whisper.cpp fallback) | none | never — there is no paid STT path here |
 | **Music (BGM)** | Saved MLX music pack or reused channel bed | Saved Lyria / ElevenLabs / sunoapi.org model | …you reuse audio or choose an installed local pack |
 
 A near-zero run is possible: local images, local transcription, no generated video, no
-BGM. Speech is the one paid step left (local TTS is removed): raw TTS on the saved model,
-recorded `not_reviewed`, with no paid review. What you give up is a proper cover frame (it
+BGM. Local VoxCPM2 can synthesize the dialogue. Each take records the selected model and review status. What you give up is a proper cover frame (it
 needs rendered text) and background music.
 
 A realistic paid episode is small. The default economy tier spends about
@@ -814,10 +813,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 169 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 170 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 169 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 170 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -894,7 +893,7 @@ channel's tone, theme and pinned character voice IDs (the speech model itself is
 
 <a id="mcp-tools"></a>
 
-## MCP tool surface (169 tools)
+## MCP tool surface (170 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -929,6 +928,7 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | Local video upscale | `video_upscale_catalog` / `video_upscale_start` / `video_upscale_job` | Adapter-based local Real-ESRGAN restoration or Lanczos resize, including 4K batches. Detached jobs expose progress/cancel/resume, preserve source frames and encoded audio, verify hashes and write per-clip receipts. No character settings, API calls or automatic downloads. Does not change storyboards or assemble the master; continue with produce when requested. [Setup and workflow](skills/upscale-video/SKILL.md). |
 | Character portrait library | `modelark_portrait_register` (skill `register-seedance-portrait`) | Registers or reuses the selected sheet image, saves its reviewed asset ID in identity.md and supplies it to Seedance. Requires BytePlus OpenAPI management credentials and the corresponding library entitlement. |
 | Video generation | `seedance_text2video` / `seedance_img2video` / `seedance_reference` | Dreamina Seedance 2.x (ARK_API_KEY, BytePlus ModelArk — 2.5 and 2.5 Flash up to 30s, 2.0 up to 15s, minimum 4s; standard 2.5 and 2.0 reach 4K, Flash reaches 720p, 7 aspect ratios, up to 30 reference images plus reference audio — a character's fixed voice (`referenceAudioPaths`) — plus reference video (`referenceVideoPaths`): an optional 3D previz as `Video 1`, the vendor's clay-model reference — a generated cut may pre-render in Blender or three.js first (user directive 2026-09-11, optional since 2026-10-18), so the camera path and timing land as planned; a local clip is served through `MEDIA_UPLOAD_URL` or a cloudflared quick tunnel for the life of the task. On 2.5 and Flash the reference route also accepts edit or extend. Audio can be turned off. Seedance 2.x rejects real human faces, so photoreal real-person sources go to an LTX lane. Every generated cut uses the saved video model and resolution (`PRODUCTION.videoModel`, from `.social-flow/models.json`); a per-cut change is an explicit user exception in `PRODUCTION.modelSettings.overrides`. The storyboard forecasts that model's cost. Which engine when: [decision table](skills/produce/references/video-model-selection.md)) |
+| Local speech | `tts_local_voxcpm2` | Offline Apple Silicon VoxCPM2 speech, voice design, reference cloning and continuation. [Setup](skills/_shared/tts-routing.md#local-voxcpm2-on-apple-silicon) |
 | Video references | `fasth3_omni_reference` | FastH3 Omni via MLX-Serve: image/video/audio references, eight steps, video with sound. [Setup and adapter contract](docs/fasth3-omni.md) |
 | Google Cloud Veo | `veo_text2video` / `veo_img2video` / `veo_reference` / `veo_extend` | Veo 3.1 Standard, Fast and Lite in us-central1. Supports native scene sound and external narration. [Model setup and examples](skills/_shared/video-routing.md#ltx-and-google-cloud-veo). |
 | Local LTX Desktop | `ltx_desktop_text2video` / `ltx_desktop_img2video` / `ltx_desktop_audio2video` | Select `ltx-desktop-local` for the machine running the plugin. Query `video_catalog {engine:"ltx-desktop-local"}` for downloaded models, then use the normal episode video workflow. [Setup](skills/_shared/model-settings.md#first-setup-video-type-then-media-models) |
@@ -1012,9 +1012,9 @@ server after updating. A host application's own message limit still applies.
 Keys cover hosted models: OPENAI_API_KEY for images, GEMINI_API_KEY for Gemini
 voice/music, ARK_API_KEY for Seedance and ELEVENLABS_API_KEY for ElevenLabs.
 Local image, STT, music and video tools retain their own capability requirements.
-Local speech synthesis is removed, including Supertonic and MLX TTS.
+For offline speech on Apple Silicon, select mlx-audio with model VoxCPM2 and configure the local Python interpreter and model directory.
 
-- **Speech uses the saved Gemini model or ElevenLabs `eleven_v4`.** Every ElevenLabs
+- **Speech uses the saved local VoxCPM2, gateway, Gemini or ElevenLabs model.** Every ElevenLabs
   speech request rejects older model IDs. No failed call silently switches provider.
 - **Identity and acting are separate.** Pin each character's voice ID/model and store
   line-specific `acting.direction`/`acting.tags` beside spoken text and subtitles.

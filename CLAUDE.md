@@ -499,22 +499,36 @@ cue, scenes that do not follow each other, or an offset that leaves no cue to pl
 receipt check reads cues the board names, so a channel bed copied in as the legacy `bgm.wav`
 is outside it. See `skills/storyboard/SKILL.md` §3.
 
-## Authored scene prompts (user directive, 2026-11-24)
+## Authored scene prompts (user directive, 2026-11-24; bounded edits 2026-11-25)
 
 The planner composed every scene prompt from the shot cards, so the session could not adjust
-its wording for a model. `video_plan` takes `prompt`, the whole provider prompt, and every plan
-rendered in one request returns `promptTemplate` to edit. References are named, never
-numbered: `{castId.<role>}`, `{castId.image}` for a single picture, `{castId.voice}`,
-`{referenceId.image}`, `{shotId.image}`. The planner fills in the numbers of the request it
-submits and changes nothing else in the text. Braces are kept for names:
-a spoken line keeps the braces the board gave it, and any other brace that is neither a name
-nor in the board's own text is refused. It also refuses a name with no submitted reference, a
-shot image sent as a timed frame, a prompt over the model's limit, an empty prompt and per-shot
-rendering, and passes on an adapter's own rule for its prompt (`prompt_refused`). `promptIssues` reports a hand-typed number, an unnamed reference, and
-a line, text-free sentence or silent-picture sentence the planner's own prompt carries and the
-author's leaves out. Camera direction is not read from an authored prompt. Cast, shots and
-lines stay on the board as the evidence for lengths, limits and attachment. See
-`skills/generate-cut-videos/SKILL.md`.
+its wording for a model. Every plan rendered in one request returns `promptTemplate`, the
+submitted prompt with each reference number turned into a name, and `video_plan` takes an
+edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
+`{castId.image}` for a single picture, `{castId.voice}`, `{referenceId.image}`,
+`{shotId.image}` and the other names the plan lists in `promptSlots`. The planner fills in the
+numbers of the request it submits. An edit kept for later is saved per engine, model and
+operation in the scene's `videoDirection.promptDrafts` through `story_scene`; `prompt`
+overrides it for one plan.
+
+The edit is bounded where a scene has a cast or natively voiced dialogue. The planner's own
+sentences may be removed or reordered, and a new sentence must be one of the supported camera,
+blocking or media cues. A reworded sentence or free prose is refused
+(`scene_direction_unverified`); that wording goes on the scene or shot card and the prompt is
+composed again. The approved lines stay word for word, in order, each introduced by its
+speaker (`scene_dialogue_mismatch`, `scene_dialogue_speaker`). A scene with neither takes free
+wording. Also refused: a name with no submitted reference or another brace
+(`placeholder_unresolved`), a shot image sent as a timed frame (`placeholder_unlabeled`), a
+typed number that names no input (`reference_unknown`), a prompt over the model's limit, an
+empty prompt, per-shot rendering (`scene_prompt_unsupported`) and an adapter's own rule for its
+prompt (`prompt_refused`). `promptIssues` reports a typed number that names an input
+(`label_literal`, refused under `wholeScene` and in a saved draft), a submitted reference the
+prompt never names, the text-free or silent-picture sentence the planner's own prompt carries
+and the author's leaves out, and white space an adapter trims
+(`prompt_whitespace_normalized`). Camera direction is not read from an authored prompt for the
+plan's direction record. Cast, shots and lines stay on the board as the evidence for lengths,
+limits and attachment. See
+[scene prompt design](docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md).
 
 ## English video prompts (user directive, 2026-10-31)
 

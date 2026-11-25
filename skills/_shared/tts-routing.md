@@ -5,7 +5,7 @@ registry validates each raw payload, then invokes that provider's client. Saved
 character voice settings and `compileActing` share the same exact model registry.
 Unknown models fail; a provider failure never switches voices, models or providers.
 The character compiler selects the model's direction syntax: legacy Gemini prompt,
-Gemini 3.8 turn metadata, or ElevenLabs inline tags. Research candidates are not adapters.
+Gemini 3.8 turn metadata, ElevenLabs inline tags, or free-text gateway/local direction. Research candidates are not adapters.
 Character limits in this registry are local adapter limits, not vendor token limits.
 
 ## Common tool
@@ -105,3 +105,11 @@ Compressed payloads must decode without errors and produce audio samples.
 These checks detect broken containers and invalid timings, not pronunciation,
 emotional delivery, voice identity or transcript fidelity. Those remain `not_reviewed`
 unless the user requests actual listening review.
+
+### Local VoxCPM2 on Apple Silicon
+
+Select speech engine `mlx-audio` and model `voxcpm2` for an offline WAV. Set `python` (the interpreter with mlx-audio installed) and `model` (the downloaded VoxCPM2 directory) to absolute paths in `~/.config/social-flow/voxcpm2.json`. The MCP process can override them with `VOXCPM2_PYTHON` and `VOXCPM2_MODEL_PATH`. The MLX-Serve GUI can be closed.
+
+Use `tts_route` with generator `tts_local_voxcpm2`. Supply `text`, `model`, `outputPath` and a stable request ID for execution. For a new voice use `instructions`. For a recurring speaker pass the original `referenceAudio`. A continuation uses both `continuationAudio` and its verbatim `continuationText`. Both audio roles can be supplied together. Optional sampling controls are `steps`, `guidance` and `maxTokens`. Each plugin execution releases its local worker after the take.
+
+For a character choose `voiceId: default`, speed 1, and the local engine. Cast and pin the audition through the usual character workflow. For episode dialogue copy the result of `speech_manage plan_audio`; it includes the pinned audio path, digest and scene revision. Attach the completed receipt. Hosted VoxCPM2 continues to use engine `astra-genai` with its gateway-registered voice ID.

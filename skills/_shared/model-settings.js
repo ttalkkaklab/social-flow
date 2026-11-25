@@ -12,7 +12,7 @@ const VIDEO_ADAPTERS = require('./video-catalog.json').adapters;
 const VIDEO_ENGINES = ['host', ...new Set(VIDEO_ADAPTERS.map(adapter => adapter.engine))];
 const ENGINES = {
   video: VIDEO_ENGINES,
-  speech: ['none', 'gemini', 'elevenlabs', 'astra-genai'],
+  speech: ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'],
   image: ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'],
   music: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'],
 };
@@ -78,6 +78,7 @@ function validateModels(models, partial = false, allowRetired = false) {
     const choice = models[kind];
     const retired = allowRetired && retiredChoice(kind, choice);
     if (!object(choice) || (!engines.includes(choice.engine) && !retired)) throw new Error(`${kind}.engine must be one of ${engines.join(', ')}`);
+    if (kind === 'speech' && choice.engine === 'mlx-audio' && choice.model !== 'voxcpm2') throw new Error('Local mlx-audio speech requires model voxcpm2');
     if (kind === 'video' && choice.engine === 'ltx-desktop-local') {
       if (!/^ltx-[a-z0-9.-]+$/i.test(choice.model || '') || !/^(270|360|540|720|1080|1440|2160)p$/.test(choice.resolution || '') ||
           (choice.operation && !VIDEO_ADAPTERS.some(a => a.engine === choice.engine && a.operation === choice.operation)))

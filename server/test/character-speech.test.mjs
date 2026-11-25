@@ -93,3 +93,18 @@ test('a receipt is bound to the actual generator, voice and WAV; caller metadata
   assert.throws(()=>verifiedSpeechGeneration(audio,{...proof,receiptPath:undefined},voice,f.line,{required:true}),/speech_receipt_required/);
   assert.doesNotThrow(()=>verifiedSpeechGeneration(audio,{...proof,receiptPath:undefined},voice,f.line)); // Existing attachments stay reusable.
 });
+
+test('a local take with the previous sample digest cannot satisfy the new pin', t => {
+  const f = fixture(t);
+  const audio = join(f.dir, 'local-voice.wav');
+  const receiptPath = audio + '.json';
+  writeFileSync(audio, 'local recording');
+  const local = {...voice, engine:'mlx-audio', voiceId:'default'};
+  const {generator, generation} = compileActing(f.line.tts, f.line.acting, local);
+  const original = hash('first voice');
+  const proof = {generator, voiceSettings:generation, text:f.line.tts, language:'ko', receiptPath};
+  writeFileSync(receiptPath, JSON.stringify({status:'completed', generator, result:{success:true, audioPath:audio},
+    audioSha256:hash(readFileSync(audio)), generation:{...generation, referenceSha256:original}}));
+  assert.doesNotThrow(() => verifiedSpeechGeneration(audio, proof, local, f.line, {required:true, referenceSha256:original}));
+  assert.throws(() => verifiedSpeechGeneration(audio, proof, local, f.line, {required:true, referenceSha256:hash('second voice')}), /local conditioning/);
+});
