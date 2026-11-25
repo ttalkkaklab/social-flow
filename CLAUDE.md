@@ -585,6 +585,29 @@ That the kept routes add no words is read from the gateway's source, and no rend
 a plugin-written prompt with a gateway-written one. Record and evidence:
 [loop 036](docs/loops/036-prompt-ownership/loop.md).
 
+## Per-model guidance at planning (user directive, 2026-11-25)
+
+A vendor's guide recommends less than its API accepts, and the planner checked only the hard
+limits. Every plan now carries `promptGuidance`: the writing sentence for the selected model,
+the path of its model family's page under `skills/generate-cut-videos/references/` (MiniMax
+H3 and FastH3, LTX-2.5 with MSR, Seedance 2.0 and 2.5) and an `advice` entry for each count
+outside the range the vendor recommends. Seedance 2.0: more than four reference people or
+five reference files. Seedance 2.5: more than eight picture subjects, more than five voice
+subjects, or a voice sample outside 5 to 10 seconds. FastH3: more than 345 frames, where the
+adapter takes 362 and the model's reference pipeline ends at 15 seconds. Each of these
+reports; none refuses, and advice sits outside the manifest an approval signs, so it changes
+no plan id. `video_catalog` names the page on each row as `promptReference`.
+
+A Seedance scene of two or more shots introduces each as `Shot N:` on both series: the
+2.0 guide recommends shot identifiers and calls precise timing unstable. Those plans get new ids.
+An authored prompt may keep, drop or renumber the label, and a draft with the earlier
+"Then cut directly." between shots still plans. MiniMax's six-section H3 prompt format was
+compared with the planner's own on the local FastH3 build before any compiler change: on one
+scene with two seeds each, the six-section form spoke both lines exactly twice and the planner's
+once, short of the rule set before the takes, so the planner's form stays. The ranges are the vendors' statements and no Seedance or hosted H3
+render was made. Record and evidence:
+[loop 037](docs/loops/037-model-prompt-guidance/loop.md).
+
 ## English video prompts (user directive, 2026-10-31)
 
 Every video prompt is English on every adapter, Seedance 2.5 included. Only dialogue uses the

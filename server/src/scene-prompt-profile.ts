@@ -23,6 +23,69 @@ export function sceneWritingGuide(profile: Readonly<ScenePromptProfile>): string
   return profile.writer ? authoring[profile.writer] : 'Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.';
 }
 
+/** What a vendor's guide recommends inside the limits its API enforces. The adapters refuse past a limit; these numbers only report. */
+export interface RecommendedRanges {
+  /** Reference people in one request. */
+  people?: number;
+  /** Reference files of every kind in one request. */
+  assets?: number;
+  /** Speakers bound to a voice sample in one request. */
+  voices?: number;
+  /** Seconds of one voice sample. */
+  voiceSeconds?: readonly [number, number];
+  /** Frames of one render. */
+  frames?: number;
+  source: string;
+}
+export interface PromptGuidance { guide: string; reference?: string; recommended?: RecommendedRanges }
+export interface ReferenceCounts { people?: number; assets?: number; voices?: number; voiceSeconds?: readonly {speaker: string; seconds: number}[]; frames?: number }
+
+const PAGES = 'skills/generate-cut-videos/references/';
+const pages: Partial<Record<SceneWriter, string>> = {
+  hostedH3: 'prompt-h3.md', fastH3: 'prompt-h3.md', msr: 'prompt-ltx-msr.md', seedance: 'prompt-seedance.md',
+};
+// Figures and their sources: docs/research/2026-11-25-reference-limits.
+const seedance20: RecommendedRanges = {people: 4, assets: 5, source: 'Dreamina Seedance 2.0 series prompt guide'};
+const seedance25: RecommendedRanges = {people: 8, voices: 5, voiceSeconds: [5, 10], source: 'Seedance 2.5 prompt guide'};
+const fastH3: RecommendedRanges = {frames: 345, source: 'MiniMax-H3 reference pipeline, 5 to 15 seconds at 24 fps'};
+
+function seedanceSeries(model: unknown): '2.0' | '2.5' | undefined {
+  if (typeof model !== 'string') return undefined;
+  return model.startsWith('dreamina-seedance-2-5-') ? '2.5' : model.startsWith('dreamina-seedance-2-0-') ? '2.0' : undefined;
+}
+
+/** The writing sentence, reference page and recommended ranges for one adapter and, where the guides differ, one model. */
+export function promptGuidance(tool?: string, model?: unknown): PromptGuidance {
+  const profile = scenePromptProfile(tool, model);
+  // Distilled LTX takes MSR's subject references on its image route.
+  const page = tool === 'astra_genai_img2video' ? pages.msr : profile.writer && pages[profile.writer];
+  const series = profile.writer === 'seedance' ? seedanceSeries(model) : undefined;
+  const note = series === '2.0' ? ' This series follows shot numbers and does not follow timestamps, so leave each shot\'s length to the model.'
+    : series === '2.5' ? ' This series reads shot numbers and whole-second ranges.' : '';
+  const recommended = series === '2.0' ? seedance20 : series === '2.5' ? seedance25 : tool === 'fasth3_omni_reference' ? fastH3 : undefined;
+  return {guide: sceneWritingGuide(profile) + note, ...(page ? {reference: PAGES + page} : {}), ...(recommended ? {recommended} : {})};
+}
+
+/** One finding for each count outside the recommended range. An empty list says nothing about quality. */
+export function referenceAdvice(recommended: RecommendedRanges | undefined, counts: ReferenceCounts): {code: string; detail: string}[] {
+  if (!recommended) return [];
+  const {people, assets, voices, voiceSeconds, frames, source} = recommended;
+  const advice: {code: string; detail: string}[] = [];
+  const over = (code: string, count: number | undefined, limit: number | undefined, unit: string, consequence: string) => {
+    if (count !== undefined && limit !== undefined && count > limit)
+      advice.push({code, detail: `${count} ${unit}; the ${source} recommends at most ${limit}. ${consequence}`});
+  };
+  over('reference_people_over_recommended', counts.people, people, 'reference people', 'Past it the guide reports a wrong number of people or a duplicated character.');
+  over('reference_assets_over_recommended', counts.assets, assets, 'reference files', 'The guide advises against filling the limit: the model loses track of which reference matters.');
+  over('voice_subjects_over_recommended', counts.voices, voices, 'voice subjects', 'Past it the guide reports less stable output.');
+  over('frames_over_reference_pipeline', counts.frames, frames, 'frames', 'Whether the local build renders the longer take as asked is not verified.');
+  if (voiceSeconds) for (const sample of counts.voiceSeconds ?? []) {
+    if (sample.seconds >= voiceSeconds[0] && sample.seconds <= voiceSeconds[1]) continue;
+    advice.push({code: 'voice_sample_length', detail: `${sample.speaker}: the voice sample runs ${sample.seconds.toFixed(1)} s; the ${source} recommends ${voiceSeconds[0]} to ${voiceSeconds[1]} s.`});
+  }
+  return advice;
+}
+
 const ordered: ScenePromptProfile = {
   cutTiming: 'cut_order',
   referenceLabels: 'indexed',

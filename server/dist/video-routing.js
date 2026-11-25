@@ -33,8 +33,8 @@ import { msrOutputContract, genaiMsrPromptLimit, checkGenaiVideoOptions, getGena
 import { astraGenaiBaseUrl, GenaiRequestError, pollGenaiJob } from './astra-genai-client.js';
 import { hasSubjectInput, hasVideoSubjectReferences, prepareVideoImages, registeredVideoSubjects } from './video-image-inputs.js';
 import { readImageMetadata } from './image-media.js';
-import { formatReferenceLabel, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
-import { prepareVideoVoice } from './video-voice.js';
+import { formatReferenceLabel, promptGuidance, referenceAdvice, scenePromptProfile, usesGeneratedVoice } from './scene-prompt-profile.js';
+import { prepareVideoVoice, sampleSeconds } from './video-voice.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy } from './video-prompt.js';
 import { assertSelection } from './adapter-parameters.js';
@@ -289,7 +289,7 @@ function saveVideoPlan(plan) {
     const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
     if (!fs.existsSync(file)) {
         // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
-        const { promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest } = plan;
+        const { promptProfile: _profile, promptGuidance: _guidance, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest } = plan;
         // A per_shot plan's gateway warning is said with the plan, outside the manifest an approval covers.
         if (manifest.sceneRendering)
             delete manifest.promptIssues;
@@ -939,7 +939,7 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
             tool: 'host_external', args: callArgs, ...(sceneRequest ? { sceneRequest } : {}), ...direction, ...(images.imageBindings ? { imageBindings: images.imageBindings, imageHandoff: images.imageHandoff } : {}), selection, source: context.source, contextRevision: context.revision,
             inputs: { ...Object.fromEntries((images.imageBindings ?? []).map(binding => [binding.path, binding.sha256])), ...performanceInputs }, quote: { reserveUsd: 0, estimatedUsd: 0, revision: 'host-allowance-v1', basis: 'External host allowance; limits and actual tool schema must be checked by host; not API enforcement' }, execution: 'host_handoff' };
-        const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile } : {}) };
+        const plan = { ...body, id: hash(body), promptGuidance: { ...promptGuidance('host_external', selection.model), advice: [] }, ...(prepared ? { promptProfile } : {}) };
         return persist ? saveVideoPlan(plan) : plan;
     }
     if (!tool)
@@ -1233,7 +1233,21 @@ function buildVideoPlan(input, { context, tool }, persist) {
         ...(imageBindings ? { imageBindings } : {}),
         sourceArgs: selection.engine === 'seedance' || motionReferences ? sourceArgs : input.args, durationPlan, ...(selection.engine === 'veo' ? { providerProject: config.googleCloudProject } : {}), ...(speechFit ? { speechFit } : {}), ...direction, ...(voice.voiceContinuity ? { voiceContinuity: voice.voiceContinuity } : {}),
         selection, source: context.source, contextRevision: context.revision, inputs, quote, execution: 'server' };
-    const plan = { ...body, id: hash(body), ...(prepared ? { promptProfile, promptSlots: promptSlots.slots } : {}),
+    // A recommended range is said beside the plan, outside the body an approval signs: it never refuses and never changes a plan id.
+    const guidance = promptGuidance(tool, selection.model);
+    const sent = (field) => Array.isArray(args[field]) ? args[field].length : 0;
+    const advice = referenceAdvice(guidance.recommended, {
+        // A person is a cast member the request shows in a picture or a video; a voice alone is not counted as one.
+        ...(characterBindings ? { people: new Set(characterBindings.flatMap(binding => binding.media !== 'Audio' && binding.character ? [binding.character] : [])).size } : {}),
+        assets: ['referenceImagePaths', 'referenceAudioPaths', 'referenceVideoPaths', 'referenceVideoTaskIds', 'referenceVideoUrls'].reduce((count, field) => count + sent(field), 0),
+        voices: (voice.voiceContinuity?.speakers ?? []).filter(speaker => speaker.audioIndex).length,
+        voiceSeconds: guidance.recommended?.voiceSeconds ? (voice.voiceContinuity?.speakers ?? []).flatMap(speaker => {
+            const seconds = speaker.audioIndex && speaker.reference?.path ? sampleSeconds(speaker.reference.path) : undefined;
+            return seconds === undefined ? [] : [{ speaker: speaker.speaker, seconds }];
+        }) : [],
+        ...(typeof args.numFrames === 'number' ? { frames: args.numFrames } : {}),
+    });
+    const plan = { ...body, id: hash(body), promptGuidance: { ...guidance, advice }, ...(prepared ? { promptProfile, promptSlots: promptSlots.slots } : {}),
         ...(typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions), script) : {}) };
     return persist ? saveVideoPlan(plan) : plan;
 }
