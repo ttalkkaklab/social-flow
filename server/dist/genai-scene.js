@@ -9,6 +9,8 @@
  * (user directive 2026-11-25). */
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
+import { statSync } from 'node:fs';
+import path from 'node:path';
 import { bareFilenameSchema } from './media-utils.js';
 import { scenePromptTemplate } from './scene-prompt.js';
 /** Models the gateway runs in scene mode that this plugin plans for. */
@@ -70,8 +72,11 @@ export function checkSceneVoices(args) {
         if (!member.voicePath)
             continue;
         let seconds = NaN;
+        // Only a local regular file is probed, named with the file: protocol so ffprobe reads no other scheme.
+        const local = path.resolve(member.voicePath);
         try {
-            seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', member.voicePath], { encoding: 'utf8', timeout: 15_000 }));
+            if (statSync(local).isFile())
+                seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', 'file:' + local], { encoding: 'utf8', timeout: 15_000 }));
         }
         catch { /* An unreadable sample is refused below. */ }
         if (!(seconds > 0))

@@ -572,9 +572,13 @@ function genaiSceneArgs(sceneTool: string, args: Record<string, unknown>, scene:
     references:(args.references as {imagePath?: string; background?: boolean; nonCharacter?: boolean; audioPath?: string}[] | undefined) ?? []});
   const {keys, ...projected} = composed;
   checkSceneVoices(projected);
-  return {keys, args:genaiSceneSchema.parse({model:selection.model, ...projected, resolution:args.resolution, fps:args.fps,
+  const parsed = genaiSceneSchema.parse({model:selection.model, ...projected, resolution:args.resolution, fps:args.fps,
     ...(args.seed === undefined ? {} : {seed:args.seed}), generateAudio:args.generateAudio, reserveUsd:args.reserveUsd,
-    outputPath:args.outputPath, filename:args.filename}) as Record<string, unknown>};
+    outputPath:args.outputPath, filename:args.filename});
+  // The gateway measures the prompt after it numbers the names; refuse here before any file is uploaded.
+  const length = resolveScenePlaceholders(parsed.prompt, sceneLabels(parsed)).length, limit = genaiScenePromptLimit(String(selection.model));
+  if (length > limit) throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit}. Shorten the scene direction or split the scene at an authored cut`);
+  return {keys, args:parsed as Record<string, unknown>};
 }
 /** The planner's names with the numbers the gateway gives the references they point at. */
 function relabelSlots(slots: readonly {key: string; label: string}[], keys: readonly {label: string; key: string}[], labels: Record<string, string>) {
@@ -830,6 +834,18 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   for (const guide of (sceneRequest?.shotReferenceImages ?? []).filter(item => !sceneTool || item.shotId === sceneRequest?.shotIds[0])) {
     if (!guide.submitted) cutWarnings.push('shot_reference_omitted: ' + guide.shotId + ' receives no composition image. ' + guide.reason);
   }
+  // Scene mode takes one picture per shot: an ending or a timed picture inside a shot is not sent, and is named here.
+  for (const pin of sceneTool ? sceneRequest?.images.filter(image => !image.reference && ['end', 'keyframe'].includes(image.role)) ?? [] : [])
+    cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
+  // The scene sends one cast by the sheet rule for its head count, so a panel a shot named on its own can drop out.
+  const sentImages = new Set(sceneRequest?.images.map(image => image.path));
+  const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: unknown; scene?: unknown; visual?: {references?: {role?: string; use?: string; path?: string}[]}}[])
+    .filter(card => card.scene === context.sceneNo) : [];
+  for (const card of boardCards) for (const ref of card.visual?.references ?? []) {
+    const file = ref.role === 'character' && ref.use !== 'image' && ref.path ? path.resolve(context.episode, 'storyboard', ref.path) : undefined;
+    if (file && fs.existsSync(file) && !sentImages.has(fs.realpathSync(file)))
+      cutWarnings.push(`scene_reference_omitted: ${String(card.id)} ${ref.path} is not sent; the scene sends one cast for everyone in it, by the panel rule for that many people`);
+  }
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
     ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
   if (selection.engine === 'host') {
@@ -1012,6 +1028,9 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   catch (error) {
     // An adapter's own rule for the author's text comes back as one coded line.
     const issue = authored && error instanceof z.ZodError ? error.issues.find(issue => issue.path[0] === 'prompt') : undefined;
+    // A scene is composed on the image lane first; its 5,000-character schema reads as the scene's own, lower limit.
+    if (sceneTool && !authored && error instanceof z.ZodError && error.issues.some(issue => issue.path[0] === 'prompt' || /exceeds \d+ characters/.test(issue.message)))
+      throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions as OpeningPosition[] | undefined).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the scene direction or split the scene at an authored cut`);
     if (!issue) throw error;
     throw new Error(/^[a-z_]+: /.test(issue.message) ? issue.message : 'prompt_refused: ' + issue.message);
   }

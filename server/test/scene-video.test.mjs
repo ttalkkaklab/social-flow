@@ -119,15 +119,15 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.match(providerPrompt, /Keep the gaze steady/);
   assert.doesNotMatch(providerPrompt, /s000[12]|Frame 171/);
   assert.equal(wire.shots[1].dialogue[0].frame,171);
-  // Scene mode opens the second shot on its start picture and paces the cut itself; it cannot hold an ending picture
-  // or a line pinned to a frame, and says so for the scene adapter before anything is uploaded.
+  // Scene mode opens the second shot on its start picture and paces the cut itself. It leaves the ending picture out
+  // and names it in the plan, but a line pinned to a frame is refused for the scene adapter before anything is uploaded.
   assert.throws(()=>planVideo(f.input), error=>{
     assert.equal(error.tool,'astra_genai_scene');
     assert.deepEqual(error.sceneRequest.cuts,request.cuts);
     assert.deepEqual(error.sceneRequest.shotIds,request.shotIds);
     assert.deepEqual(error.sceneRequest.images.filter(i=>i.reference?.scope==='scene').map(i=>i.character), ['nephew','miran','nephew','miran']);
     assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
-    assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),[['s0002','end',170]]);
+    assert.deepEqual(error.missing.filter(m=>m.input==='image'),[]);
     assert.deepEqual(error.missing.filter(m=>m.input==='position'),[]);
     return true;
   });

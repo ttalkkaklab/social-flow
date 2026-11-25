@@ -48,13 +48,23 @@ No render was submitted on any direct mode either.
 ## Dry run on two boards rendered on the retired per-shot route
 
 Scratch copies of pundago ep02 and mochi_bo ep15 (boards, cast and channel assets, settings snapshot; no video) were planned
-scene by scene with `planVideo(..., false)`, which neither uploads nor submits. Base is the code at f4fb5359.
+scene by scene with `planVideo(..., false)`, which neither uploads nor submits. Base is the code at f4fb5359. The user then
+chose to pool shot-scoped references into one scene cast and to leave out, and name, pictures scene mode cannot take.
 
-| Board | Base, default call | Base, `sceneRendering:"per_shot"` | This branch |
+| Board | Base, `sceneRendering:"per_shot"` | This branch, first dry run | This branch after pooling |
 |---|---|---|---|
-| pundago ep02 (7 scenes, 26 cards) | 7 refused, `scene_inputs_unsupported` | 6 planned, 1 refused | 7 refused, `scene_inputs_unsupported`: shot ending pictures and shot-scoped character references |
-| mochi_bo ep15 (6 scenes, 24 cards) | 6 refused, `scene_prompt_unsupported` | 6 planned | 6 refused, `scene_image_scope`: 30 in-shot keyframes on the cards' timelines |
+| pundago ep02 (7 scenes, 26 cards) | 6 planned, 1 refused | 7 refused, `scene_inputs_unsupported` | 4 `scene_prompt_too_long` (4,191 to 7,234 characters), 3 `scene_frames_exceeded` (461 to 838 frames) |
+| mochi_bo ep15 (6 scenes, 24 cards) | 6 planned | 6 refused, `scene_image_scope` | 5 `scene_mode_audio_unsupported`, 1 `scene_frames_exceeded` (381 frames) |
 
-Scene mode takes one opening picture per shot and scene-wide references, so these boards need re-authoring, a plugin
-change that pools shot-scoped references into the scene cast, or a gateway change before they plan again. The decision
-is the user's and is open as of this record.
+Pundago scene 3 was also sent to the production `/v1/generations/validate` (free, no job) before the local length check
+existed. The gateway refused it: `prompt_too_long`, 4,225 characters after substitution, at most 2,000 for
+`ltx-2.5-22b-distilled`. `/v1/models` reports the same 2,000 for the scene prompt.
+
+On pundago scene 3 (two shots, two people) the fixed part of the numbered prompt is about 1,190 characters: the opening
+positions (242), four reference lines, two "show one character" sentences of about 280 each, the voice line and the
+text-free sentence. That leaves about 810 characters for the shots, whose words run about 3,040. Turning on the timeline's
+`concise` flag changed nothing, since the shot words come from another path.
+
+Planning now refuses a scene prompt over the model's limit before any file is uploaded (`scene_prompt_too_long`). How a
+scene should fit the cap (a shorter reference grammar, a scene compiler that drops lower-priority words, a gateway cap
+change or shorter scenes) is the user's decision and is open as of this record.

@@ -1147,14 +1147,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path6 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path7 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path6 && path6[0] !== "/") {
-          path6 = `/${path6}`;
+        if (path7 && path7[0] !== "/") {
+          path7 = `/${path7}`;
         }
-        return new URL(`${origin}${path6}`);
+        return new URL(`${origin}${path7}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -1975,9 +1975,9 @@ var require_diagnostics = __commonJS({
         "undici:client:sendHeaders",
         (evt) => {
           const {
-            request: { method, path: path6, origin }
+            request: { method, path: path7, origin }
           } = evt;
-          debugLog("sending request to %s %s%s", method, origin, path6);
+          debugLog("sending request to %s %s%s", method, origin, path7);
         }
       );
     }
@@ -1995,14 +1995,14 @@ var require_diagnostics = __commonJS({
         "undici:request:headers",
         (evt) => {
           const {
-            request: { method, path: path6, origin },
+            request: { method, path: path7, origin },
             response: { statusCode }
           } = evt;
           debugLog(
             "received response to %s %s%s - HTTP %d",
             method,
             origin,
-            path6,
+            path7,
             statusCode
           );
         }
@@ -2011,23 +2011,23 @@ var require_diagnostics = __commonJS({
         "undici:request:trailers",
         (evt) => {
           const {
-            request: { method, path: path6, origin }
+            request: { method, path: path7, origin }
           } = evt;
-          debugLog("trailers received from %s %s%s", method, origin, path6);
+          debugLog("trailers received from %s %s%s", method, origin, path7);
         }
       );
       diagnosticsChannel.subscribe(
         "undici:request:error",
         (evt) => {
           const {
-            request: { method, path: path6, origin },
+            request: { method, path: path7, origin },
             error
           } = evt;
           debugLog(
             "request to %s %s%s errored - %s",
             method,
             origin,
-            path6,
+            path7,
             error.message
           );
         }
@@ -2142,7 +2142,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path6,
+        path: path7,
         method,
         body,
         headers,
@@ -2159,11 +2159,11 @@ var require_request = __commonJS({
         maxRedirections,
         typeOfService
       }, handler) {
-        if (typeof path6 !== "string") {
+        if (typeof path7 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path6[0] !== "/" && !(path6.startsWith("http://") || path6.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path7[0] !== "/" && !(path7.startsWith("http://") || path7.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path6)) {
+        } else if (invalidPathRegex.test(path7)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -2238,7 +2238,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? serializePathWithQuery(path6, query) : path6;
+        this.path = query ? serializePathWithQuery(path7, query) : path7;
         this.origin = origin;
         this.protocol = getProtocolFromUrlString(origin);
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
@@ -7420,7 +7420,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request) {
-      const { method, path: path6, host, upgrade, blocking, reset } = request;
+      const { method, path: path7, host, upgrade, blocking, reset } = request;
       let { body, headers, contentLength } = request;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -7498,7 +7498,7 @@ var require_client_h1 = __commonJS({
       if (socket.setTypeOfService) {
         socket.setTypeOfService(request.typeOfService);
       }
-      let header = `${method} ${path6} HTTP/1.1\r
+      let header = `${method} ${path7} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -8177,7 +8177,7 @@ var require_client_h2 = __commonJS({
       const headersTimeout = request.headersTimeout ?? client[kHeadersTimeout];
       const bodyTimeout = request.bodyTimeout ?? client[kBodyTimeout];
       const session = client[kHTTP2Session];
-      const { method, path: path6, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
+      const { method, path: path7, host, upgrade, expectContinue, signal, protocol, headers: reqHeaders } = request;
       let { body } = request;
       if (upgrade != null && upgrade !== "websocket") {
         util2.errorRequest(client, request, new InvalidArgumentError(`Custom upgrade "${upgrade}" not supported over HTTP/2`));
@@ -8246,7 +8246,7 @@ var require_client_h2 = __commonJS({
           }
           headers[HTTP2_HEADER_METHOD] = "CONNECT";
           headers[HTTP2_HEADER_PROTOCOL] = "websocket";
-          headers[HTTP2_HEADER_PATH] = path6;
+          headers[HTTP2_HEADER_PATH] = path7;
           if (protocol === "ws:" || protocol === "wss:") {
             headers[HTTP2_HEADER_SCHEME] = protocol === "ws:" ? "http" : "https";
           } else {
@@ -8288,7 +8288,7 @@ var require_client_h2 = __commonJS({
         stream.setTimeout(headersTimeout);
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path6;
+      headers[HTTP2_HEADER_PATH] = path7;
       headers[HTTP2_HEADER_SCHEME] = protocol === "http:" ? "http" : "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -10640,10 +10640,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path6 = "/",
+          path: path7 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path6;
+        opts.path = origin + path7;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL(origin);
           headers.host = host;
@@ -12752,20 +12752,20 @@ var require_mock_utils = __commonJS({
       }
       return normalizedQp;
     }
-    function safeUrl(path6) {
-      if (typeof path6 !== "string") {
-        return path6;
+    function safeUrl(path7) {
+      if (typeof path7 !== "string") {
+        return path7;
       }
-      const pathSegments = path6.split("?", 3);
+      const pathSegments = path7.split("?", 3);
       if (pathSegments.length !== 2) {
-        return path6;
+        return path7;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path6, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path6);
+    function matchKey(mockDispatch2, { path: path7, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path7);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -12790,8 +12790,8 @@ var require_mock_utils = __commonJS({
       const basePath = key.query ? serializePathWithQuery(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
       const resolvedPathWithoutTrailingSlash = removeTrailingSlash(resolvedPath);
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path6, ignoreTrailingSlash }) => {
-        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path6)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path6), resolvedPath);
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path7, ignoreTrailingSlash }) => {
+        return ignoreTrailingSlash ? matchValue(removeTrailingSlash(safeUrl(path7)), resolvedPathWithoutTrailingSlash) : matchValue(safeUrl(path7), resolvedPath);
       });
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
@@ -12830,19 +12830,19 @@ var require_mock_utils = __commonJS({
         mockDispatches.splice(index, 1);
       }
     }
-    function removeTrailingSlash(path6) {
-      while (path6.endsWith("/")) {
-        path6 = path6.slice(0, -1);
+    function removeTrailingSlash(path7) {
+      while (path7.endsWith("/")) {
+        path7 = path7.slice(0, -1);
       }
-      if (path6.length === 0) {
-        path6 = "/";
+      if (path7.length === 0) {
+        path7 = "/";
       }
-      return path6;
+      return path7;
     }
     function buildKey(opts) {
-      const { path: path6, method, body, headers, query } = opts;
+      const { path: path7, method, body, headers, query } = opts;
       return {
-        path: path6,
+        path: path7,
         method,
         body,
         headers,
@@ -13532,10 +13532,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path6, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path7, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path6,
+            Path: path7,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -13617,9 +13617,9 @@ var require_mock_agent = __commonJS({
         const acceptNonStandardSearchParameters = this[kMockAgentAcceptsNonStandardSearchParameters];
         const dispatchOpts = { ...opts };
         if (acceptNonStandardSearchParameters && dispatchOpts.path) {
-          const [path6, searchParams] = dispatchOpts.path.split("?");
+          const [path7, searchParams] = dispatchOpts.path.split("?");
           const normalizedSearchParams = normalizeSearchParams(searchParams, acceptNonStandardSearchParameters);
-          dispatchOpts.path = `${path6}?${normalizedSearchParams}`;
+          dispatchOpts.path = `${path7}?${normalizedSearchParams}`;
         }
         return this[kAgent].dispatch(dispatchOpts, handler);
       }
@@ -14020,12 +14020,12 @@ var require_snapshot_recorder = __commonJS({
        * @return {Promise<void>} - Resolves when snapshots are loaded
        */
       async loadSnapshots(filePath) {
-        const path6 = filePath || this.#snapshotPath;
-        if (!path6) {
+        const path7 = filePath || this.#snapshotPath;
+        if (!path7) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
         try {
-          const data = await readFile2(resolve6(path6), "utf8");
+          const data = await readFile2(resolve6(path7), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -14039,7 +14039,7 @@ var require_snapshot_recorder = __commonJS({
           if (error.code === "ENOENT") {
             this.#snapshots.clear();
           } else {
-            throw new UndiciError(`Failed to load snapshots from ${path6}`, { cause: error });
+            throw new UndiciError(`Failed to load snapshots from ${path7}`, { cause: error });
           }
         }
       }
@@ -14050,11 +14050,11 @@ var require_snapshot_recorder = __commonJS({
        * @returns {Promise<void>} - Resolves when snapshots are saved
        */
       async saveSnapshots(filePath) {
-        const path6 = filePath || this.#snapshotPath;
-        if (!path6) {
+        const path7 = filePath || this.#snapshotPath;
+        if (!path7) {
           throw new InvalidArgumentError("Snapshot path is required");
         }
-        const resolvedPath = resolve6(path6);
+        const resolvedPath = resolve6(path7);
         await mkdir(dirname4(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash2, snapshot]) => ({
           hash: hash2,
@@ -14686,15 +14686,15 @@ var require_redirect_handler = __commonJS({
           return;
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path6 = search ? `${pathname}${search}` : pathname;
-        const redirectUrlString = `${origin}${path6}`;
+        const path7 = search ? `${pathname}${search}` : pathname;
+        const redirectUrlString = `${origin}${path7}`;
         for (const historyUrl of this.history) {
           if (historyUrl.toString() === redirectUrlString) {
             throw new InvalidArgumentError(`Redirect loop detected. Cannot redirect to ${origin}. This typically happens when using a Client or Pool with cross-origin redirects. Use an Agent for cross-origin redirects.`);
           }
         }
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path6;
+        this.opts.path = path7;
         this.opts.origin = origin;
         this.opts.query = null;
       }
@@ -16454,10 +16454,10 @@ var require_cache_handler = __commonJS({
       }
       return locationUrl.pathname + locationUrl.search;
     }
-    function deleteCachedUri(store, cacheKey, path6) {
+    function deleteCachedUri(store, cacheKey, path7) {
       deleteCachedValue(store, {
         ...cacheKey,
-        path: path6
+        path: path7
       });
       for (let i = 0; i < util2.safeHTTPMethods.length; i++) {
         const method = util2.safeHTTPMethods[i];
@@ -16465,7 +16465,7 @@ var require_cache_handler = __commonJS({
           deleteCachedValue(store, {
             ...cacheKey,
             method,
-            path: path6
+            path: path7
           });
         }
       }
@@ -16476,9 +16476,9 @@ var require_cache_handler = __commonJS({
       }
       const values = Array.isArray(headerValue) ? headerValue : [headerValue];
       for (let i = 0; i < values.length; i++) {
-        const path6 = getSameOriginPath(cacheKey, values[i]);
-        if (path6 !== void 0) {
-          deleteCachedUri(store, cacheKey, path6);
+        const path7 = getSameOriginPath(cacheKey, values[i]);
+        if (path7 !== void 0) {
+          deleteCachedUri(store, cacheKey, path7);
         }
       }
     }
@@ -21478,11 +21478,11 @@ var require_fetch = __commonJS({
       function dispatch({ body }) {
         const url = requestCurrentURL(request);
         const agent = fetchParams.controller.dispatcher;
-        const path6 = url.pathname + url.search;
+        const path7 = url.pathname + url.search;
         const hasTrailingQuestionMark = url.search.length === 0 && url.href[url.href.length - url.hash.length - 1] === "?";
         return new Promise((resolve6, reject) => agent.dispatch(
           {
-            path: hasTrailingQuestionMark ? `${path6}?` : path6,
+            path: hasTrailingQuestionMark ? `${path7}?` : path7,
             origin: url.origin,
             method: request.method,
             body: agent.isMockActive ? request.body && (request.body.source || request.body.stream) : body,
@@ -22429,9 +22429,9 @@ var require_util4 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path6) {
-      for (let i = 0; i < path6.length; ++i) {
-        const code = path6.charCodeAt(i);
+    function validateCookiePath(path7) {
+      for (let i = 0; i < path7.length; ++i) {
+        const code = path7.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code > 126 || // exclude DEL and non-ascii
         code === 59) {
@@ -25779,11 +25779,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path6 = opts.path;
+          let path7 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path6 = `/${path6}`;
+            path7 = `/${path7}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path6);
+          url = new URL(util2.parseOrigin(url).origin + path7);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -30052,8 +30052,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path6, errorMaps, issueData } = params;
-  const fullPath = [...path6, ...issueData.path || []];
+  const { data, path: path7, errorMaps, issueData } = params;
+  const fullPath = [...path7, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -30169,11 +30169,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path6, key) {
+  constructor(parent, value, path7, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path6;
+    this._path = path7;
     this._key = key;
   }
   get path() {
@@ -33966,10 +33966,10 @@ var genaiJobsSchema = external_exports.object({
 import { randomUUID } from "node:crypto";
 import { renameSync, writeFileSync } from "node:fs";
 var livePlatformIds = ["youtube", "tiktok"];
-function saveLiveReceipt(path6, receipt) {
-  const tmp = path6 + "." + randomUUID() + ".tmp";
+function saveLiveReceipt(path7, receipt) {
+  const tmp = path7 + "." + randomUUID() + ".tmp";
   writeFileSync(tmp, JSON.stringify(receipt, null, 2), { mode: 384, flag: "wx" });
-  renameSync(tmp, path6);
+  renameSync(tmp, path7);
 }
 
 // src/live-character.ts
@@ -35310,7 +35310,7 @@ function uploadContentType(filePath) {
 // src/astra-genai-video.ts
 import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import * as fs3 from "node:fs";
-import * as path5 from "node:path";
+import * as path6 from "node:path";
 import { execFileSync as execFileSync2 } from "node:child_process";
 import { setTimeout as sleep3 } from "node:timers/promises";
 
@@ -35450,6 +35450,8 @@ async function uploadOnce(bytes, contentType, sha256, cacheKey) {
 
 // src/genai-scene.ts
 import { execFileSync } from "node:child_process";
+import { statSync as statSync3 } from "node:fs";
+import path5 from "node:path";
 
 // src/scene-edit-grammar.ts
 var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
@@ -35552,8 +35554,10 @@ function checkSceneVoices(args) {
   for (const member of args.cast) {
     if (!member.voicePath) continue;
     let seconds = NaN;
+    const local = path5.resolve(member.voicePath);
     try {
-      seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", member.voicePath], { encoding: "utf8", timeout: 15e3 }));
+      if (statSync3(local).isFile())
+        seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", "file:" + local], { encoding: "utf8", timeout: 15e3 }));
     } catch {
     }
     if (!(seconds > 0)) throw new Error("scene_voice_unreadable: " + member.id + "'s voice sample cannot be read");
@@ -36100,7 +36104,7 @@ function deliverScene(native, expected, cut) {
 }
 async function getGenaiVideoStatus(input, planned, binding) {
   let receipt = receiptSchema.parse(JSON.parse(fs3.readFileSync(input.receiptPath, "utf8")));
-  if (binding && (path5.resolve(receipt.videoPath) !== path5.resolve(binding.target) || binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId))
+  if (binding && (path6.resolve(receipt.videoPath) !== path6.resolve(binding.target) || binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId))
     throw new Error("GenAI receipt does not belong to the approved output or job");
   if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
     throw new Error("GenAI receipt conflicts with the approved media contract");
@@ -36486,7 +36490,7 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
       )).digest("hex").slice(0, 12) : "";
       const filename = `listen-${index + 1}${variant}.mp4`;
       const source = await fetchIdle(candidate, directory, gatewayDir, returning ? "outward-" + filename : filename, signal);
-      const path6 = returning ? await returnToAnchor(source, join3(gatewayDir, filename), request.numFrames, signal) : source;
+      const path7 = returning ? await returnToAnchor(source, join3(gatewayDir, filename), request.numFrames, signal) : source;
       const { stdout } = await execute(
         "ffmpeg",
         [
@@ -36494,7 +36498,7 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
           "error",
           "-nostdin",
           "-i",
-          path6,
+          path7,
           "-an",
           "-vf",
           "crop=720:1280:8:0,scale=24:40:flags=area",
@@ -36513,8 +36517,8 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
         if (!(error instanceof StandbyQualityError) || attempt >= lastStandbyAttempt) throw error;
         continue;
       }
-      paths.push(path6);
-      progress(index + 1, path6);
+      paths.push(path7);
+      progress(index + 1, path7);
       break;
     }
   }
@@ -36524,11 +36528,11 @@ async function prepareIdleClips(image, project, concept, signal, progress) {
   renameSync4(tmp, marker);
   return paths;
 }
-async function returnToAnchor(source, path6, count, signal) {
-  if (existsSync4(path6)) return path6;
+async function returnToAnchor(source, path7, count, signal) {
+  if (existsSync4(path7)) return path7;
   const half = (count + 1) / 2;
   const filter = `[0:v]split[a][b];[a]trim=end_frame=${half},setpts=PTS-STARTPTS[f];[b]trim=end_frame=${half - 1},reverse,setpts=PTS-STARTPTS[r];[f][r]concat=n=2:v=1:a=0`;
-  const tmp = path6 + "." + randomUUID5() + ".mp4";
+  const tmp = path7 + "." + randomUUID5() + ".mp4";
   try {
     await execute("ffmpeg", [
       "-v",
@@ -36547,20 +36551,20 @@ async function returnToAnchor(source, path6, count, signal) {
       "yuv420p",
       tmp
     ], { signal });
-    renameSync4(tmp, path6);
-    return path6;
+    renameSync4(tmp, path7);
+    return path7;
   } finally {
     rmSync2(tmp, { force: true });
   }
 }
 async function fetchIdle(request, legacy, outputPath, filename, signal) {
-  const path6 = join3(legacy, filename);
-  const receipt = path6 + ".astra-job.json";
+  const path7 = join3(legacy, filename);
+  const receipt = path7 + ".astra-job.json";
   if (existsSync4(receipt)) {
     const previous = JSON.parse(readFileSync5(receipt, "utf8"));
-    if (previous.status === "completed" && existsSync4(path6) && createHash6("sha256").update(readFileSync5(path6)).digest("hex") === previous.sha256) return path6;
+    if (previous.status === "completed" && existsSync4(path7) && createHash6("sha256").update(readFileSync5(path7)).digest("hex") === previous.sha256) return path7;
     if (previous.status !== "failed") throw Error("Inspect the previous standby job before replacing it: " + receipt);
-  } else if (existsSync4(path6 + ".generating")) throw Error("Inspect the unconfirmed standby submission: " + path6);
+  } else if (existsSync4(path7 + ".generating")) throw Error("Inspect the unconfirmed standby submission: " + path7);
   const result = await generateGenaiVideo("image-to-video", {
     model: "ltx-2.5-22b-dev",
     imagePath: request.firstFramePath,
@@ -36662,19 +36666,19 @@ import {
   openSync as openSync2,
   closeSync as closeSync2,
   readSync,
-  statSync as statSync3,
+  statSync as statSync4,
   rmSync as rmSync3,
   realpathSync as realpathSync3
 } from "node:fs";
 var FRAME_BYTES = WIDTH * HEIGHT * 3;
 var MotionFrames = class {
-  constructor(path6, remove = false, frameBytes = FRAME_BYTES) {
-    this.path = path6;
+  constructor(path7, remove = false, frameBytes = FRAME_BYTES) {
+    this.path = path7;
     this.remove = remove;
     this.frameBytes = frameBytes;
-    this.count = statSync3(path6).size / this.frameBytes;
+    this.count = statSync4(path7).size / this.frameBytes;
     if (!Number.isInteger(this.count) || this.count < 1) throw Error("Incomplete motion frame data");
-    this.file = openSync2(path6, "r");
+    this.file = openSync2(path7, "r");
   }
   path;
   remove;
@@ -36984,8 +36988,8 @@ var NativeTalk = class {
       signal,
       (index) => log("idle_clip_prepared", { index, total: idleCount })
     );
-    for (const [i, path6] of paths.entries()) {
-      const frames = await this.decode(path6, signal);
+    for (const [i, path7] of paths.entries()) {
+      const frames = await this.decode(path7, signal);
       if (frames.count !== idleFrameCounts[i]) throw Error("Standby clip has an unexpected frame count");
       this.idle.push(frames);
     }
@@ -37579,7 +37583,7 @@ function bridgeAddress() {
   return address;
 }
 function createTikTokPlatform({ config: config2, out, log }) {
-  const path6 = join7(out, "tiktok.json");
+  const path7 = join7(out, "tiktok.json");
   const sessionId = randomUUID9();
   let prepared = false;
   let relayConnected = false, chatConnected = false;
@@ -37597,7 +37601,7 @@ function createTikTokPlatform({ config: config2, out, log }) {
     receivedComments: comments,
     ...config2.tiktokChat === "tikfinity" && { bridgeAvailableAtLastRead: chatConnected }
   });
-  const save = () => saveLiveReceipt(path6, status());
+  const save = () => saveLiveReceipt(path7, status());
   return {
     id: "tiktok",
     get ready() {
@@ -37606,7 +37610,7 @@ function createTikTokPlatform({ config: config2, out, log }) {
     acceptsStdin: config2.tiktokChat === "stdin",
     commands: {
       status() {
-        const receipt = JSON.parse(readFileSync9(path6, "utf8"));
+        const receipt = JSON.parse(readFileSync9(path7, "utf8"));
         if (receipt.platform !== "tiktok" || receipt.channel !== config2.channel)
           throw Error("TikTok session belongs to a different channel");
         return receipt;

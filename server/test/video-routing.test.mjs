@@ -1120,9 +1120,10 @@ test('the same managed call maps storyboard frames to the saved LTX or Veo deplo
       fs.writeFileSync(path.join(f.episode,'storyboard',file),bytes);
     f.save();
     if (tool === 'astra_genai_scene') {
-      // Scene mode opens each shot on one picture and has no slot for its ending: the pair is refused by shot, role and frame.
-      assert.throws(() => planVideo({episode:f.episode,sceneNo:1,requestId:'auto'},false), error =>
-        error.tool === tool && error.missing.some(issue => issue.shotId === 's1' && issue.role === 'end' && issue.frame === 191));
+      // Scene mode opens each shot on one picture and has no slot for its ending: the plan names it by shot, role and frame.
+      const paired = planVideo({episode:f.episode,sceneNo:1,requestId:'auto',args:{reserveUsd:0}},false);
+      assert.equal(paired.tool, tool);
+      assert.ok(paired.directionWarnings.some(warning => warning.startsWith('scene_picture_omitted: s1 end picture at frame 191')));
       delete f.board.STRUCTURE.scenes[0].videoDirection;
       shot.visual = {bg:'first.png',video:{prompt:'An envelope opens.'}};
       f.save();
@@ -1919,7 +1920,7 @@ test('a guide on the first shot of a silent GenAI scene leaves the request uncha
   assert.ok(plan.directionWarnings.some(message => message.startsWith('shot_reference_omitted: ' + guide.shotId)));
 });
 
-test('a GenAI scene sends four silent subjects and one background, and refuses its ending and a fifth subject', t => {
+test('a GenAI scene sends four silent subjects and one background, names the ending it leaves out and refuses a fifth person', t => {
   const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'});
   const directory=path.join(f.episode,'storyboard');
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc=size=64x64:rate=1',
@@ -1941,9 +1942,8 @@ test('a GenAI scene sends four silent subjects and one background, and refuses i
   f.board.SB_DOC={characters};
   f.save();
   const input={episode:f.episode,sceneNo:1,requestId:'crowd',args:{reserveUsd:0}};
-  // Scene mode opens the shot on one picture and has no slot for the scene's ending.
-  assert.throws(()=>planVideo(input,false),error=>error.tool==='astra_genai_scene' &&
-    error.missing.some(issue=>issue.shotId===shot.id && issue.role==='end' && issue.frame===120));
+  // Scene mode opens the shot on one picture and has no slot for the scene's ending, so the plan names the picture it leaves out.
+  assert.ok(planVideo(input,false).directionWarnings.includes('scene_picture_omitted: s1 end picture at frame 120 is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot'));
   delete frames.end;
   f.save();
   const plan=planVideo(input);
@@ -1960,9 +1960,42 @@ test('a GenAI scene sends four silent subjects and one background, and refuses i
   shot.visual.references.push(subject(eve));
   scene.videoDirection.openingPositions.push(position(eve));
   f.save();
-  assert.throws(()=>planVideo(input),error=>error.missing?.some(issue=>issue.input==='reference' &&
-    issue.path===path.join(directory,eve.panels.face) && issue.shotId===shot.id && issue.frame===0 && /4 subject/.test(issue.reason)));
+  assert.throws(()=>planVideo(input),/scene_cast_exceeded: scene 1 references ada, bo, cy, dan, eve/);
   assert.deepEqual(fs.readdirSync(path.join(f.episode,'.work/video-routing/plans')),[plan.id+'.json']);
+});
+
+test('a GenAI scene sends one cast for the people of all its shots, by the panel rule for that count', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
+  const directory = path.join(f.episode, 'storyboard');
+  fs.writeFileSync(path.join(directory, 'opening.png'), png);
+  const panel = (id, view) => path.join(f.root, 'assets/characters', id, view + '.png');
+  for (const id of ['hero', 'guest']) {
+    fs.mkdirSync(path.dirname(panel(id, 'face')), {recursive:true});
+    const panels = {};
+    for (const view of ['face', 'front', 'back']) { fs.writeFileSync(panel(id, view), png); panels[view] = {file:view + '.png'}; }
+    fs.writeFileSync(path.join(path.dirname(panel(id, 'face')), 'panels.json'), JSON.stringify({panels}));
+  }
+  f.board.STRUCTURE = {scenes:[{no:1, speakers:[], frames:{start:'opening.png'},
+    videoDirection:{openingPositions:[{character:'hero', images:[], position:'At the left by the door.'}], emotion:'The guest surprises the host.'}}]};
+  // Each shot named its own person with all three panels, as one-person shots do.
+  for (const [i, [card, id]] of f.board.SCENES.map((card, i) => [card, i ? 'guest' : 'hero']).entries()) {
+    Object.assign(card, {id:'s' + i, scene:1, duration:[56, 57][i] / 24, transition:'cut', narration:[], shot:{size:'ms', angle:'eye'},
+      visual:{action:i ? 'The guest steps in.' : 'The host waits.', character:[id],
+        references:['face', 'front', 'back'].map(view => ({id:'s' + i + '-' + id + '-' + view, role:'character', character:id, path:panel(id, view), use:'video', purpose:id + ' ' + view + '.'}))}});
+  }
+  f.save();
+  const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false);
+  // Two people take each face, then each front; the backs are left out and named.
+  assert.deepEqual(plan.args.cast.map(member => [member.id, member.images.map(image => path.basename(image.imagePath))]),
+    [['hero', ['face.png', 'front.png']], ['guest', ['face.png', 'front.png']]]);
+  assert.deepEqual(plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 3).join(' ')),
+    ['s0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'back')]);
+  // The person who enters later still has an opening row, so the gateway is told where they start.
+  assert.match(plan.args.prompt, /guest \(\{guest\.face\}, \{guest\.front\}\): Not in the opening view; appears in a later shot\./);
+  // The gateway caps the numbered prompt; a longer scene is refused before any file is uploaded.
+  f.board.SCENES[1].visual.action = 'The guest steps in. '.repeat(100).trim();
+  f.save();
+  assert.throws(() => planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false), /scene_prompt_too_long: scene prompt runs \d+ characters after numbering; ltx-2\.5-22b-distilled takes at most 2000/);
 });
 
 test('a scene dip and two fractional shot lengths still fit exactly 113 frames', t => {
@@ -1986,7 +2019,7 @@ test('a scene dip and two fractional shot lengths still fit exactly 113 frames',
   assert.deepEqual(plan.sceneRequest.shotIds, f.board.SCENES.map(card => card.id));
 });
 
-test('a GenAI scene refuses an ending or a timed picture inside a shot by shot, role and frame', t => {
+test('a GenAI scene names an ending or a timed picture inside a shot that it leaves out, by shot, role and frame', t => {
   const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
   const frames = {start:'opening.png', end:'ending.png'};
   const direction = {openingPositions:[], emotion:'The load slips.', keyframes:[{frame:63,path:'release.png',strength:0.8}]};
@@ -1999,12 +2032,8 @@ test('a GenAI scene refuses an ending or a timed picture inside a shot by shot, 
   }
   const plan = () => planVideo({episode:f.episode,sceneNo:1,requestId:'action-states',args:{reserveUsd:0}},false);
   f.save();
-  assert.throws(plan, error => {
-    assert.equal(error.tool,'astra_genai_scene');
-    assert.deepEqual(error.missing.map(issue => [issue.shotId,issue.role,issue.frame,path.basename(issue.path)]),
-      [['shot1','keyframe',63,'release.png'],['shot1','end',112,'ending.png']]);
-    return true;
-  });
+  assert.deepEqual(plan().directionWarnings.filter(warning => warning.startsWith('scene_picture_omitted')).map(warning => warning.split(' is ')[0]),
+    ['scene_picture_omitted: shot1 keyframe picture at frame 63', 'scene_picture_omitted: shot1 end picture at frame 112']);
   direction.keyframes[0].frame=113;
   f.save();
   assert.throws(plan,/scene_image_timing/);

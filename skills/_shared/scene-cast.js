@@ -192,6 +192,23 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     } else if (ltx && scene.speakers && !conditioning)
       throw new Error('character_panel_missing: scene ' + scene.no + ' speaker ' + character + ' needs a registered face');
   }
+  // GenAI scene mode takes one cast for the whole scene: everyone its shots reference, with the panels the sheet rule
+  // gives that many people (one: face, front, back; two: faces, then fronts; three or four: faces). User's choice 2026-11-25.
+  const sceneCastIds = ltx && !perShot && !conditioning ? [...new Set([...cards.flatMap(card => [
+    ...castIds(card.visual?.character ?? card.visual?.characters),
+    ...(card.visual?.references ?? []).filter(ref => personRoles.has(ref.role) && ref.role !== 'bystander' && ref.use !== 'image').map(ref => ownerOf(ref, card)),
+  ]), ...identities])].filter(id => id && !voiceOnly.has(id)) : [];
+  if (sceneCastIds.length > 4)
+    throw new Error('scene_cast_exceeded: scene ' + scene.no + ' references ' + sceneCastIds.join(', ') + '; GenAI scene mode takes at most four people. Split the scene or show someone as a bystander');
+  let panels;
+  // A board without shared panel sheets keeps each shot's own references, as before.
+  try { if (sceneCastIds.length && !declaredRefs.length) panels = require('../channel/references/character-panels.js').canonicalReferences(boardDir, 'scene-' + scene.no, sceneCastIds, 'video'); }
+  catch { sceneCastIds.length = 0; }
+  if (panels) references.splice(0, references.length, ...panels.map(ref => ({...ref, scope:'scene',
+    character:sceneCastIds.find(id => ref.id === 'scene-' + scene.no + '-' + id + '-' + ref.id.split('-').at(-1))})));
+  else sceneCastIds.length = 0;
+  const entering = rows => !sceneCastIds.length || !rows ? rows : [...rows, ...sceneCastIds.filter(id => !rows.some(row => row.character === id))
+    .map(character => ({character, images:[], position:'Not in the opening view; appears in a later shot.'}))];
   const positions = (rows, refs) => rows?.map(row => ({...row, images:ltx
     ? refs.flatMap((ref,i) => ref.character === row.character ? [i+1] : []) : row.images}));
   let openingRefs = [];
@@ -223,6 +240,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       if (scene.frames !== undefined && ref.legacy) return false;
       if (ref.use === 'image') return true;
       if (localRefs.some(item => canonical(item.path) === canonical(ref.path))) return false;
+      if (sceneCastIds.length && personRoles.has(ref.role) && sceneCastIds.includes(ownerOf(ref, card))) return false;
       if (!ref.legacy && personRoles.has(ref.role)) return true;
       const identity = ownerOf(ref,card);
       if (identity && !speakers.includes(identity) && !declaredRefs.some(item => item.character === identity)) return !ref.legacy;
@@ -242,7 +260,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     const shotPositions = rows => {
       const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter(row =>
         declaredRefs.some(ref => ref.character === row.character) && !rows.some(local => local.character === row.character)) : [];
-      return positions([...rows,...inherited], slots);
+      return positions(index === 0 ? entering([...rows,...inherited]) : [...rows,...inherited], slots);
     };
     const timeline = card.timeline && {...card.timeline,
       ...(card.timeline.images ? {images:pins} : {}),
@@ -273,8 +291,8 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
         delete updated.video.lastImagePath;
         delete updated.video.referenceImagePaths;
       }
-      // GenAI scene mode opens each shot on its own picture, so a shot's start image is kept there.
-      const timed = perShot ? [] : engine === 'astra-genai' ? ['end','keyframe'] : ['start','end','keyframe'];
+      // GenAI scene mode opens each shot on its start picture and names any other picture it leaves out.
+      const timed = perShot || engine === 'astra-genai' ? [] : ['start','end','keyframe'];
       if (timeline?.images?.some(pin => timed.includes(pin.role)))
         throw new Error('scene_image_scope: use a scene anchor or an authored shot composition image on ' + card.id);
     }
@@ -285,7 +303,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       item.character === ref.character && canonical(item.path) === canonical(ref.path)));
     if (!used) throw new Error('scene_reference_owner: no render binds the requested visual reference for ' + ref.character);
   }
-  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(scene.videoDirection.openingPositions, openingRefs)};
+  const direction = scene.videoDirection && {...scene.videoDirection,openingPositions:positions(entering(scene.videoDirection.openingPositions), openingRefs)};
   return {members, direction, speakers, identities};
 }
 

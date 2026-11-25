@@ -598,10 +598,15 @@ recovers a lost response by replaying that body within 23 hours, which returns t
 The clip renders on the next 8k+1 frame count and is cut back to the storyboard's frames.
 
 Scene mode only (the user's choice). A scene without a cast picture also sends its opening as
-an `object` reference. A scene saved on `ltx-2.5-22b-dev`, a scene with a supplied soundtrack,
-an ending or timed picture inside a shot and a line pinned to a frame are refused at planning
-(`scene_mode_model_unsupported`, `scene_mode_audio_unsupported`, `scene_inputs_unsupported`),
-and one GenAI scene binds at most two pinned voices across all its cuts. The direct tools and
+an `object` reference. A scene saved on `ltx-2.5-22b-dev`, a scene with a supplied soundtrack
+and a line pinned to a frame are refused at planning (`scene_mode_model_unsupported`,
+`scene_mode_audio_unsupported`, `scene_inputs_unsupported`), and one GenAI scene binds at most
+two pinned voices across all its cuts. The people the scene's shots reference become one scene
+cast with the panels the sheet rule gives that many (one: face, front, back; two: each face, then
+each front; three or four: one face each), and a person who enters later gets an opening row that
+says so; more than four is refused (`scene_cast_exceeded`). An ending or timed picture inside a
+shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
+each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The direct tools and
 the live character use the common modes `text2video`, `image2video`, `audio2video` and `msr`;
 the gateway refuses at submission what its backend does not take. Clips the retired per-shot
 route made keep their receipts and are still verified and assembled, each card counted as its

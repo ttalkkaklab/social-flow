@@ -302,18 +302,16 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
         reason:'No timed native sound cue for this shot on a single scene soundtrack'});
   }
   const pins = request.images.filter(temporal);
-  const refs = request.images.filter(p => !temporal(p) && (p.reference?.scope !== 'scene' || p.shotId === request.shotIds[0]));
+  let refs = request.images.filter(p => !temporal(p) && (p.reference?.scope !== 'scene' || p.shotId === request.shotIds[0]));
+  // Scene mode spans every reference over the whole scene, so a shot's own reference joins the scene cast once (user's choice 2026-11-25).
+  if (request.sceneMode) { const seen = new Set<string>(); refs = refs.filter(p => !seen.has(p.path) && Boolean(seen.add(p.path))); }
   for (const ref of refs) if (ref.strength !== undefined && ref.strength !== 1)
     missing.push({input:'reference',role:ref.role,shotId:ref.shotId,frame:ref.frame,path:ref.path,reason:'Individual subject strength is unsupported'});
   const opening = pins.some(p => p.role === 'start' && p.frame === 0);
   const timedLimit = tool === 'astra_genai_desktop_keyframes' ? 10 : 8;
   for (const [index,p] of pins.entries()) {
-    // Scene mode opens each shot on its start picture and has no slot for an ending or a timed picture inside a shot.
-    if (request.sceneMode && p.role !== 'start') {
-      missing.push({input:'image', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role,
-        reason:'Scene mode opens each shot on one picture and takes no ending or timed picture inside a shot'});
-      continue;
-    }
+    // Scene mode opens each shot on its start picture. An ending or a timed picture inside a shot is left out, and the plan names it.
+    if (request.sceneMode) continue;
     if (tool === 'astra_genai_img2video' && !request.sceneMode && !caps.frameAccurateCuts && request.cuts.some(cut => cut.transition === 'hard_cut' &&
         ((p.role === 'start' && p.shotId === cut.to && p.frame === cut.frame) || (p.role === 'end' && p.shotId === cut.from && p.frame === cut.frame - 1))))
       missing.push({input:'image', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role,
@@ -348,6 +346,7 @@ export function mapSceneInputs(request: SceneRequest, tool: string, model?: stri
     })));
   }
   for (const p of refs) {
+    if (request.sceneMode) continue;
     if (p.reference?.scope === 'shot_guide' && VIDEO_ADAPTERS[tool]?.voice === 'reference' && tool !== 'astra_genai_msr' && (request.shots.length === 1 || request.modelPacedCuts)) continue;
     if (request.shots.length > 1 && !caps.shotScopedReferences && p.reference?.scope !== 'scene') {
       missing.push({input:'reference', shotId:p.shotId, frame:p.frame, path:p.path, role:p.role, reason:'Subject/reference slots apply across the whole generation'});
@@ -450,8 +449,9 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
 
   const gateway = tool === 'astra_genai_img2video' || tool === 'astra_genai_audio2video';
   const start = gateway ? pins.find(p => p.frame === 0 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'start');
-  const end = gateway ? start && pins.find(p => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'end');
-  const intermediate = gateway ? pins.filter(p => p !== start && p !== end) : [];
+  // A GenAI scene sends each shot's own start picture with the scene request; the composition takes only the opening.
+  const end = request.sceneMode ? undefined : gateway ? start && pins.find(p => p.frame === request.frameCount - 1 && (p.strength ?? 1) === 1) : pins.find(p => p.role === 'end');
+  const intermediate = gateway && !request.sceneMode ? pins.filter(p => p !== start && p !== end) : [];
   const gatewayKeyframes = intermediate.length ? {
     args: { keyframes: intermediate.map(p => ({ imagePath:p.path, frameIdx:p.frame, strength:p.strength ?? 1 })) },
     imageBindings: intermediate.map((p,i) => ({ ...verifyImageFile(p.path), ...p, id:p.shotId + '-keyframe-' + i,
