@@ -1,5 +1,5 @@
 import { prepareSceneRequest, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords } from './scene-video.js';
-import { checkSceneValidation, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema } from './msr-opening.js';
 import { buildFasth3Body, checkFasth3VoiceReplay, fasth3RenderFrames, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
@@ -563,6 +563,7 @@ function genaiSceneArgs(sceneTool, args, scene, openingPath, storyboard, slots, 
     const composed = sceneArgsFromComposed({ prompt: String(args.prompt), slots, script, shots,
         references: args.references ?? [] });
     const { keys, ...projected } = composed;
+    checkSceneVoices(projected);
     return { keys, args: genaiSceneSchema.parse({ model: selection.model, ...projected, resolution: args.resolution, fps: args.fps,
             ...(args.seed === undefined ? {} : { seed: args.seed }), generateAudio: args.generateAudio, reserveUsd: args.reserveUsd,
             outputPath: args.outputPath, filename: args.filename }) };

@@ -815,10 +815,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 171 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 172 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 171 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 172 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -895,7 +895,7 @@ channel's tone, theme and pinned character voice IDs (the speech model itself is
 
 <a id="mcp-tools"></a>
 
-## MCP tool surface (171 tools)
+## MCP tool surface (172 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.

@@ -35311,7 +35311,7 @@ function uploadContentType(filePath) {
 import { createHash as createHash5, randomUUID as randomUUID4 } from "node:crypto";
 import * as fs3 from "node:fs";
 import * as path5 from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync as execFileSync2 } from "node:child_process";
 import { setTimeout as sleep3 } from "node:timers/promises";
 
 // src/routing-files.ts
@@ -35448,6 +35448,9 @@ async function uploadOnce(bytes, contentType, sha256, cacheKey) {
   return file2.uri;
 }
 
+// src/genai-scene.ts
+import { execFileSync } from "node:child_process";
+
 // src/scene-edit-grammar.ts
 var material = "(?:brass|metal|glass|wooden|paper|stone|silver|gold|red|blue|green|black|white|brown|small|large|open|closed|left|right|front|back|wet|empty)";
 var object = "(?:key|keys|door|doorway|window|lamp|light|desk|table|chair|counter|floor|wall|shelf|rail|hallway|corridor|street|alley|room|mirror|phone|letter|envelope|book|bag|cup|glass|bowl|box|clock|coat|peg|handle|latch|frame|foreground|background|hand|hands|face|eyes|shoulder|shoulders)";
@@ -35544,6 +35547,20 @@ var genaiSceneSchema = external_exports.object({
   if (args.cast.filter((m) => m.voicePath).length > LIMITS.voices) issue(`LTX scene mode takes ${LIMITS.voices} voices`);
   if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
+var GENAI_SCENE_VOICE_SECONDS = 10;
+function checkSceneVoices(args) {
+  for (const member of args.cast) {
+    if (!member.voicePath) continue;
+    let seconds = NaN;
+    try {
+      seconds = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", member.voicePath], { encoding: "utf8", timeout: 15e3 }));
+    } catch {
+    }
+    if (!(seconds > 0)) throw new Error("scene_voice_unreadable: " + member.id + "'s voice sample cannot be read");
+    if (seconds > GENAI_SCENE_VOICE_SECONDS)
+      throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds.toFixed(1)} s; GenAI scene mode takes at most ${GENAI_SCENE_VOICE_SECONDS} s and conditions on the first 5`);
+  }
+}
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
 function sceneLabels(args) {
   const subjects = [];
@@ -35988,7 +36005,7 @@ function sceneNativeContract(args) {
   return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args)), audio: true });
 }
 function checkOutput(file2, expected, counted = false) {
-  const probe = JSON.parse(execFileSync(
+  const probe = JSON.parse(execFileSync2(
     "ffprobe",
     [
       "-v",
@@ -36055,7 +36072,7 @@ async function replayScene(receipt, receiptPath) {
 }
 function deliverScene(native, expected, cut) {
   const seconds = expected.frames / expected.fps;
-  execFileSync("ffmpeg", [
+  execFileSync2("ffmpeg", [
     "-nostdin",
     "-v",
     "error",
@@ -36316,6 +36333,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
 }
 async function generateGenaiScene(args, signal, polling = {}) {
   requireAstraGenaiKey();
+  checkSceneVoices(args);
   const local = genaiSceneBody(args, (file2, kind) => kind === "image" ? genaiSourceUri(void 0, file2) : genaiAudioUri(void 0, file2));
   const fingerprint = createHash5("sha256").update(JSON.stringify(local)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
@@ -37172,7 +37190,7 @@ ${options}
 
 // src/live-knowledge.ts
 import { createHash as createHash8, randomUUID as randomUUID7 } from "node:crypto";
-import { execFileSync as execFileSync2 } from "node:child_process";
+import { execFileSync as execFileSync3 } from "node:child_process";
 import {
   existsSync as existsSync6,
   lstatSync,
@@ -37208,7 +37226,7 @@ function ocrLanguages(language, installed) {
 function extract(file2, language) {
   if (extname4(file2).toLowerCase() !== ".pdf") return readFileSync7(file2, "utf8");
   const options = { encoding: "utf8", timeout: 12e4, maxBuffer: 32 * 1024 * 1024 };
-  const pages = execFileSync2("pdftotext", ["-layout", file2, "-"], options).split("\f");
+  const pages = execFileSync3("pdftotext", ["-layout", file2, "-"], options).split("\f");
   if (!pages.at(-1)?.trim()) pages.pop();
   const temp = mkdtempSync3(join5(tmpdir2(), "live-knowledge-"));
   let ocr;
@@ -37216,13 +37234,13 @@ function extract(file2, language) {
     return pages.map((page, index) => {
       if (page.trim()) return page;
       const num = String(index + 1), prefix = join5(temp, "page");
-      execFileSync2(
+      execFileSync3(
         "pdftoppm",
         ["-f", num, "-l", num, "-singlefile", "-scale-to", "2200", "-png", file2, prefix],
         options
       );
-      ocr ??= ocrLanguages(language, execFileSync2("tesseract", ["--list-langs"], options).trim().split(/\r?\n/));
-      return execFileSync2(
+      ocr ??= ocrLanguages(language, execFileSync3("tesseract", ["--list-langs"], options).trim().split(/\r?\n/));
+      return execFileSync3(
         "tesseract",
         [prefix + ".png", "stdout", "-l", ocr],
         options

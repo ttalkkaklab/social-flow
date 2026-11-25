@@ -15,7 +15,7 @@ import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
-import { checkSceneValidation, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, sceneFrames } from './genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, sceneFrames } from './genai-scene.js';
 /** The common generation API's routes. */
 export const GENERATIONS_ROUTE = '/v1/generations';
 const GENERATION_MODES = { 'text-to-video': 'text2video', 'image-to-video': 'image2video', 'audio-to-video': 'audio2video', msr: 'msr', scene: 'scene' };
@@ -710,6 +710,7 @@ export async function generateGenaiVideo(operation, input, signal, polling = {})
  * derived from it, so a lost response is recovered by replaying it (see `replayScene`). */
 async function generateGenaiScene(args, signal, polling = {}) {
     requireAstraGenaiKey();
+    checkSceneVoices(args);
     const local = genaiSceneBody(args, (file, kind) => kind === 'image' ? genaiSourceUri(undefined, file) : genaiAudioUri(undefined, file));
     const fingerprint = createHash('sha256').update(JSON.stringify(local)).digest('hex');
     const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, 'video');

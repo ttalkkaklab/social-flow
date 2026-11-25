@@ -96866,7 +96866,7 @@ var require_character_panels = __commonJS({
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
     var { createHash: createHash35 } = __require("node:crypto");
-    var { execFileSync: execFileSync21 } = __require("node:child_process");
+    var { execFileSync: execFileSync22 } = __require("node:child_process");
     var { identityCharacter } = require_character_identity();
     var sha3 = (file3) => createHash35("sha256").update(fs26.readFileSync(file3)).digest("hex");
     var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
@@ -96882,7 +96882,7 @@ var require_character_panels = __commonJS({
       }
     }
     function dimensions(file3) {
-      const data = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file3], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
+      const data = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file3], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
       const { width, height } = data.streams?.[0] || {};
       if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
       return { width, height };
@@ -98328,10 +98328,10 @@ var require_render_routing = __commonJS({
 var require_audio_signal = __commonJS({
   "../skills/_shared/audio-signal.js"(exports, module) {
     "use strict";
-    var { execFileSync: execFileSync21, spawnSync: spawnSync4 } = __require("node:child_process");
+    var { execFileSync: execFileSync22, spawnSync: spawnSync4 } = __require("node:child_process");
     var SILENCE_DB = -60;
     function inspect(file3) {
-      const streams = JSON.parse(execFileSync21("ffprobe", [
+      const streams = JSON.parse(execFileSync22("ffprobe", [
         "-v",
         "error",
         "-select_streams",
@@ -98383,7 +98383,7 @@ var require_audio_signal = __commonJS({
       return spans2.some(([from, to]) => from <= start + tolerance && to >= start + seconds2 - tolerance);
     }
     function decodedAudioHash(file3) {
-      return execFileSync21("ffmpeg", [
+      return execFileSync22("ffmpeg", [
         "-nostdin",
         "-v",
         "error",
@@ -99196,9 +99196,9 @@ var require_speech_contract = __commonJS({
       return driver;
     }
     function videoPerformanceSource(file3, silentConditioned = false) {
-      const { execFileSync: execFileSync21 } = __require("node:child_process");
+      const { execFileSync: execFileSync22 } = __require("node:child_process");
       const input = ["-nostdin", "-v", "error", "-xerror", "-i", file3, "-map", "0:V:0"];
-      const hash8 = (options) => execFileSync21(
+      const hash8 = (options) => execFileSync22(
         "ffmpeg",
         [...input, ...options, "-f", "hash", "-hash", "sha256", "-"],
         { encoding: "utf8", timeout: 12e4, stdio: ["ignore", "pipe", "pipe"] }
@@ -103650,7 +103650,7 @@ var require_video_groups = __commonJS({
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
     var { createHash: createHash35 } = __require("node:crypto");
-    var { execFileSync: execFileSync21 } = __require("node:child_process");
+    var { execFileSync: execFileSync22 } = __require("node:child_process");
     var hash8 = (file3) => createHash35("sha256").update(fs26.readFileSync(file3)).digest("hex");
     var asset2 = (board, file3) => path39.resolve(file3.startsWith(".work/") ? path39.dirname(board) : board, file3);
     function declaration(scene, { mode } = {}) {
@@ -103687,7 +103687,7 @@ var require_video_groups = __commonJS({
       const groups = p.groups.map((g, j) => {
         const file3 = asset2(board, g.clip);
         if (!fs26.statSync(file3).isFile() || hash8(file3) !== g.sha256) throw new Error("video group plan: source SHA256 differs: " + file3);
-        const stream = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration,width,height,avg_frame_rate,r_frame_rate", "-of", "json", file3], { encoding: "utf8" })).streams?.[0];
+        const stream = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration,width,height,avg_frame_rate,r_frame_rate", "-of", "json", file3], { encoding: "utf8" })).streams?.[0];
         const seconds2 = Number(stream?.duration);
         const [num5, den] = String(stream?.avg_frame_rate).split("/").map(Number), sourceFps = num5 / den;
         if (stream?.avg_frame_rate !== stream?.r_frame_rate || !Number.isFinite(sourceFps) || sourceFps <= 0) throw new Error("video group plan: source frame rate is not measurable");
@@ -103733,13 +103733,13 @@ var require_video_groups = __commonJS({
         const record4 = path39.join(work, "work", `groups${card}.json`);
         if (JSON.stringify(JSON.parse(fs26.readFileSync(record4, "utf8"))) !== JSON.stringify(expected)) throw new Error("video group plan: runtime source/trim/clock differs from checked inputs");
         const output2 = path39.join(work, "work", `v${card}.mp4`);
-        const probe5 = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames,avg_frame_rate,width,height", "-of", "json", output2], { encoding: "utf8" })).streams[0];
+        const probe5 = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames,avg_frame_rate,width,height", "-of", "json", output2], { encoding: "utf8" })).streams[0];
         const [num5, den] = probe5.avg_frame_rate.split("/").map(Number);
         if (+probe5.nb_read_frames !== p.bodyFrames || num5 / den !== p.fps) throw new Error("video group plan: rendered body clock differs");
         const frame2 = (file3, index, group) => {
           const input = group ? ["-ss", String(group.sourceIn), "-t", (group.frames / p.fps).toFixed(9)] : [];
           const transform2 = group ? `scale=${probe5.width}:${probe5.height}:force_original_aspect_ratio=increase:flags=lanczos,crop=${probe5.width}:${probe5.height},setpts=PTS-STARTPTS,fps=${p.fps},trim=end_frame=${group.frames},setpts=PTS-STARTPTS,settb=AVTB,setsar=1,format=yuv420p,` : "";
-          return execFileSync21("ffmpeg", ["-v", "error", ...input, "-i", file3, "-frames:v", "1", "-vf", transform2 + `select=eq(n\\,${index}),scale=80:46,format=gray`, "-fps_mode", "passthrough", "-f", "rawvideo", "-"], { maxBuffer: 1024 * 1024 });
+          return execFileSync22("ffmpeg", ["-v", "error", ...input, "-i", file3, "-frames:v", "1", "-vf", transform2 + `select=eq(n\\,${index}),scale=80:46,format=gray`, "-fps_mode", "passthrough", "-f", "rawvideo", "-"], { maxBuffer: 1024 * 1024 });
         };
         const samples = [];
         for (const g of expected.groups) {
@@ -103764,7 +103764,7 @@ var require_video_groups = __commonJS({
         }
         if (expected.handleFrames) {
           const handle = path39.join(work, "work", `handle${card}.mp4`);
-          const h2 = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames,avg_frame_rate", "-of", "json", handle], { encoding: "utf8" })).streams[0];
+          const h2 = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-count_frames", "-select_streams", "v:0", "-show_entries", "stream=nb_read_frames,avg_frame_rate", "-of", "json", handle], { encoding: "utf8" })).streams[0];
           const [n, d] = h2.avg_frame_rate.split("/").map(Number);
           if (+h2.nb_read_frames !== expected.handleFrames || n / d !== p.fps) throw new Error("video group plan: rendered live handle clock differs");
           const g = expected.groups.at(-1);
@@ -104001,7 +104001,7 @@ var require_shot_continuity = __commonJS({
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
     var { createHash: createHash35 } = __require("node:crypto");
-    var { execFileSync: execFileSync21 } = __require("node:child_process");
+    var { execFileSync: execFileSync22 } = __require("node:child_process");
     var { outline } = require_structure_contract();
     var { framePlan } = require_render_routing();
     var text4 = (value2) => typeof value2 === "string" && value2.trim().length > 0;
@@ -104186,7 +104186,7 @@ var require_shot_continuity = __commonJS({
     function capture(win, index, dir) {
       const scene = win.SCENES[index], selected = segment(scene, dir);
       const clipSha256 = fileHash2(selected.clip), key = binding(scene, selected, clipSha256);
-      const stream = JSON.parse(execFileSync21(
+      const stream = JSON.parse(execFileSync22(
         "ffprobe",
         [
           "-v",
@@ -104214,7 +104214,7 @@ var require_shot_continuity = __commonJS({
       const image2 = path39.join(folder, "shot-" + (index + 1) + "-" + key.slice(0, 16) + ".png");
       const temp = image2 + "." + process.pid + ".tmp.png";
       try {
-        execFileSync21("ffmpeg", [
+        execFileSync22("ffmpeg", [
           "-nostdin",
           "-v",
           "error",
@@ -104464,7 +104464,7 @@ var require_location_assets = __commonJS({
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
     var crypto2 = __require("node:crypto");
-    var { execFileSync: execFileSync21 } = __require("node:child_process");
+    var { execFileSync: execFileSync22 } = __require("node:child_process");
     var C = require_location_contract();
     var digest6 = (v) => crypto2.createHash("sha256").update(typeof v === "string" || Buffer.isBuffer(v) ? v : JSON.stringify(v)).digest("hex");
     var fileHash2 = (p) => digest6(fs26.readFileSync(p));
@@ -104503,7 +104503,7 @@ var require_location_assets = __commonJS({
       write(jobFile, job);
       const bin = process.env.BLENDER || "/Applications/Blender.app/Contents/MacOS/Blender";
       try {
-        execFileSync21(bin, ["--background", "--python", path39.join(__dirname, "location-blender.py"), "--", jobFile], { stdio: ["ignore", "pipe", "pipe"], timeout: 6e5, maxBuffer: 16 * 1024 * 1024 });
+        execFileSync22(bin, ["--background", "--python", path39.join(__dirname, "location-blender.py"), "--", jobFile], { stdio: ["ignore", "pipe", "pipe"], timeout: 6e5, maxBuffer: 16 * 1024 * 1024 });
       } catch (e2) {
         throw new Error("Blender location job failed: " + String(e2.stderr || e2.message).slice(-2500));
       } finally {
@@ -105747,14 +105747,14 @@ var require_compose_speech = __commonJS({
     "use strict";
     var fs26 = __require("node:fs");
     var path39 = __require("node:path");
-    var { execFileSync: execFileSync21 } = __require("node:child_process");
+    var { execFileSync: execFileSync22 } = __require("node:child_process");
     var { createHash: createHash35 } = __require("node:crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { actingErrors, speechRevisionPayload, planScenePerformance, hasCuedThought, withThoughtClock } = require_scene_acting();
     var { generationVoiceErrors } = require_character_voice();
     var hash8 = (value2) => createHash35("sha256").update(value2).digest("hex");
     function duration5(file3) {
-      const seconds2 = Number(execFileSync21("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file3], { encoding: "utf8", timeout: 1e4 }).trim());
+      const seconds2 = Number(execFileSync22("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file3], { encoding: "utf8", timeout: 1e4 }).trim());
       if (!Number.isFinite(seconds2) || seconds2 <= 0) throw new Error("Unusable speech duration: " + file3);
       return seconds2;
     }
@@ -105802,7 +105802,7 @@ var require_compose_speech = __commonJS({
       const { intervals } = timing2;
       const total = Math.round(timing2.durationSeconds * 48e3), mix = new Int32Array(total);
       lines.forEach((line, i2) => {
-        const pcm = execFileSync21("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
+        const pcm = execFileSync22("ffmpeg", ["-v", "error", "-i", sources[i2], "-ac", "1", "-ar", "48000", "-f", "s16le", "-"], { timeout: 12e4, maxBuffer: 1 << 30 });
         const start = Math.round(intervals.find((item) => item.lineId === line.id).speechStartSeconds * 48e3);
         for (let k = 0; k < pcm.length >> 1 && start + k < total; k++) mix[start + k] += pcm.readInt16LE(k * 2);
       });
@@ -105811,15 +105811,15 @@ var require_compose_speech = __commonJS({
       return wav;
     }
     function samePerformanceWav(file3, mono) {
-      const probe5 = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,sample_rate,channels:format=format_name", "-of", "json", file3], { encoding: "utf8" }));
+      const probe5 = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,sample_rate,channels:format=format_name", "-of", "json", file3], { encoding: "utf8" }));
       const stream = probe5.streams[0];
       if (probe5.format?.format_name !== "wav" || probe5.streams.length !== 1 || stream.codec_name !== "pcm_s16le" || Number(stream.sample_rate) !== 48e3 || ![1, 2].includes(stream.channels)) return false;
       const options = { timeout: 12e4, maxBuffer: 1 << 30 };
-      const actual = execFileSync21("ffmpeg", ["-v", "error", "-i", file3, "-f", "s16le", "-"], options);
+      const actual = execFileSync22("ffmpeg", ["-v", "error", "-i", file3, "-f", "s16le", "-"], options);
       const matches = (expected) => expected.length > 0 && actual.length >= expected.length && actual.subarray(0, expected.length).equals(expected) && actual.subarray(expected.length).every((sample) => sample === 0);
       if (stream.channels === 1) return matches(mono.subarray(44));
       for (const layout of [["-ac", "2"], ["-af", "pan=stereo|FL=c0|FR=c0"]]) {
-        const stereo = execFileSync21("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
+        const stereo = execFileSync22("ffmpeg", ["-v", "error", "-f", "wav", "-i", "pipe:0", ...layout, "-f", "s16le", "-"], { ...options, input: mono });
         if (matches(stereo)) return true;
       }
       const speech = mono.subarray(44);
@@ -105917,7 +105917,7 @@ var require_compose_speech = __commonJS({
       return { wav: driverSamples(driver, start, end), start, end, offset: (startFrame - shot.start_frame) / fps };
     }
     function driverSamples(driver, start, end) {
-      const stream = JSON.parse(execFileSync21("ffprobe", [
+      const stream = JSON.parse(execFileSync22("ffprobe", [
         "-v",
         "error",
         "-select_streams",
@@ -105934,7 +105934,7 @@ var require_compose_speech = __commonJS({
       const from = Math.round(start * rate / 48e3), to = Math.round(end * rate / 48e3);
       const format = { pcm_u8: "u8", pcm_s24le: "s24le", pcm_s32le: "s32le", pcm_f32le: "f32le", pcm_f64le: "f64le" }[stream.codec_name] ?? "s16le";
       const bits = Number(format.match(/\d+/)[0]);
-      const pcm = execFileSync21("ffmpeg", [
+      const pcm = execFileSync22("ffmpeg", [
         "-nostdin",
         "-v",
         "error",
@@ -106136,7 +106136,7 @@ var require_prepare_source_audio = __commonJS({
     "use strict";
     var fs26 = __require("fs");
     var path39 = __require("path");
-    var { execFileSync: execFileSync21 } = __require("child_process");
+    var { execFileSync: execFileSync22 } = __require("child_process");
     var { createHash: createHash35 } = __require("crypto");
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var speechSpan = require_speech_span();
@@ -106225,7 +106225,7 @@ var require_prepare_source_audio = __commonJS({
         const options = (fields3[4] || "").split(",").filter(Boolean);
         if (Number(scene.edit?.pre || 0) || Number(scene.edit?.post || 0) || options.some((option) => /^(pre|post)=/.test(option) && Number(option.split("=")[1]) !== 0))
           throw new Error("audioSource=video requires pre/post=0; trim the card with edit.in and edit.out, which move picture and sound together");
-        const probe5 = JSON.parse(execFileSync21("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", video2], { encoding: "utf8" }));
+        const probe5 = JSON.parse(execFileSync22("ffprobe", ["-v", "error", "-show_streams", "-show_format", "-of", "json", video2], { encoding: "utf8" }));
         const picture2 = probe5.streams.find((stream) => stream.codec_type === "video");
         if (!picture2 || !probe5.streams.some((stream) => stream.codec_type === "audio"))
           throw new Error("audioSource=video requires both video and audio streams: " + video2);
@@ -106244,7 +106244,7 @@ var require_prepare_source_audio = __commonJS({
         fs26.mkdirSync(audioDir, { recursive: true });
         const trimmed = sourceIn > 0 || seconds2 < clipSeconds;
         const audio = path39.join(audioDir, sourceSha256 + (trimmed ? `-${sourceIn.toFixed(4)}-${seconds2.toFixed(4)}` : "") + ".wav");
-        execFileSync21("ffmpeg", ["-v", "error", "-y", "-i", video2, "-map", "0:a:0", "-af", trimmed ? `atrim=start=${sourceIn},asetpts=PTS-STARTPTS,apad` : "apad", "-t", String(seconds2), "-ar", "48000", "-ac", "2", "-c:a", "pcm_s16le", audio]);
+        execFileSync22("ffmpeg", ["-v", "error", "-y", "-i", video2, "-map", "0:a:0", "-af", trimmed ? `atrim=start=${sourceIn},asetpts=PTS-STARTPTS,apad` : "apad", "-t", String(seconds2), "-ar", "48000", "-ac", "2", "-c:a", "pcm_s16le", audio]);
         let speech = null;
         try {
           speech = speechSpan.measure(audio);
@@ -126892,7 +126892,7 @@ async function retakeVideo(args) {
 import { createHash as createHash14, randomUUID as randomUUID8 } from "node:crypto";
 import * as fs12 from "node:fs";
 import * as path11 from "node:path";
-import { execFileSync as execFileSync9 } from "node:child_process";
+import { execFileSync as execFileSync10 } from "node:child_process";
 import { setTimeout as sleep7 } from "node:timers/promises";
 
 // src/astra-genai-upload.ts
@@ -127007,6 +127007,9 @@ async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
   if (Number.isFinite(expiresAt)) uploaded.set(cacheKey, { uri: file3.uri, expiresAt });
   return file3.uri;
 }
+
+// src/genai-scene.ts
+import { execFileSync as execFileSync9 } from "node:child_process";
 
 // src/scene-edit-grammar.ts
 var actor = "\u24C8";
@@ -127502,6 +127505,20 @@ var genaiSceneSchema = external_exports.object({
   if (args.cast.filter((m2) => m2.voicePath).length > LIMITS.voices) issue2(`LTX scene mode takes ${LIMITS.voices} voices`);
   if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max) issue2(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
+var GENAI_SCENE_VOICE_SECONDS = 10;
+function checkSceneVoices(args) {
+  for (const member of args.cast) {
+    if (!member.voicePath) continue;
+    let seconds2 = NaN;
+    try {
+      seconds2 = Number(execFileSync9("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", member.voicePath], { encoding: "utf8", timeout: 15e3 }));
+    } catch {
+    }
+    if (!(seconds2 > 0)) throw new Error("scene_voice_unreadable: " + member.id + "'s voice sample cannot be read");
+    if (seconds2 > GENAI_SCENE_VOICE_SECONDS)
+      throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds2.toFixed(1)} s; GenAI scene mode takes at most ${GENAI_SCENE_VOICE_SECONDS} s and conditions on the first 5`);
+  }
+}
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
 function sceneLabels(args) {
   const subjects = [];
@@ -128004,7 +128021,7 @@ function sceneNativeContract(args) {
   return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args)), audio: true });
 }
 function checkOutput(file3, expected, counted = false) {
-  const probe5 = JSON.parse(execFileSync9(
+  const probe5 = JSON.parse(execFileSync10(
     "ffprobe",
     [
       "-v",
@@ -128071,7 +128088,7 @@ async function replayScene(receipt, receiptPath2) {
 }
 function deliverScene(native, expected, cut) {
   const seconds2 = expected.frames / expected.fps;
-  execFileSync9("ffmpeg", [
+  execFileSync10("ffmpeg", [
     "-nostdin",
     "-v",
     "error",
@@ -128332,6 +128349,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
 }
 async function generateGenaiScene(args, signal, polling = {}) {
   requireAstraGenaiKey();
+  checkSceneVoices(args);
   const local3 = genaiSceneBody(args, (file3, kind) => kind === "image" ? genaiSourceUri(void 0, file3) : genaiAudioUri(void 0, file3));
   const fingerprint = createHash14("sha256").update(JSON.stringify(local3)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
@@ -130620,7 +130638,7 @@ var import_video_duration = __toESM(require_video_duration(), 1);
 var import_google_auth_library2 = __toESM(require_src5(), 1);
 import fs16 from "node:fs";
 import path16 from "node:path";
-import { execFileSync as execFileSync10 } from "node:child_process";
+import { execFileSync as execFileSync11 } from "node:child_process";
 var VEO_MODELS = ["veo-3.1-generate-001", "veo-3.1-fast-generate-001", "veo-3.1-lite-generate-001"];
 var [standard, fast, lite] = VEO_MODELS;
 var VEO_CONSTRAINTS = Object.fromEntries(VEO_MODELS.map((model2) => [model2, {
@@ -130698,7 +130716,7 @@ function buildVeoBody(request) {
     instance.referenceImages = request.referenceImagePaths.map((file3) => ({ referenceType: "asset", image: image(file3) }));
   } else if ("sourceVideoPath" in request) {
     const file3 = request.sourceVideoPath;
-    const probe5 = JSON.parse(execFileSync10("ffprobe", [
+    const probe5 = JSON.parse(execFileSync11("ffprobe", [
       "-v",
       "error",
       "-select_streams",
@@ -131135,7 +131153,7 @@ var HOSTED_VIDEO_ROUTES = {
 };
 
 // src/minimax-video.ts
-import { execFileSync as execFileSync11 } from "node:child_process";
+import { execFileSync as execFileSync12 } from "node:child_process";
 var MINIMAX_BASE_URL = "https://api.minimax.io";
 var MINIMAX_MODELS = {
   "MiniMax-H3": { resolutions: ["768P", "2K"], minSeconds: 4, freeImages: 5 },
@@ -131175,7 +131193,7 @@ var minimaxReferenceSchema = external_exports.object({
   if (v.model === "MiniMax-H3-Lite" && v.ratio === "adaptive") ctx.addIssue({ code: "custom", path: ["ratio"], message: "MiniMax-H3-Lite needs a concrete ratio" });
 });
 function audioSeconds(file3) {
-  const seconds2 = Number(execFileSync11("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], { encoding: "utf8", timeout: 15e3 }));
+  const seconds2 = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], { encoding: "utf8", timeout: 15e3 }));
   if (!Number.isFinite(seconds2)) throw new Error("Cannot read the length of " + file3);
   return seconds2;
 }
@@ -131797,7 +131815,7 @@ function characterFieldsProperty() {
 
 // src/scene-video.ts
 import path21 from "node:path";
-import { execFileSync as execFileSync13 } from "node:child_process";
+import { execFileSync as execFileSync14 } from "node:child_process";
 import { existsSync as existsSync22, realpathSync as realpathSync7 } from "node:fs";
 import { createRequire as createRequire14 } from "node:module";
 
@@ -132467,7 +132485,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
 // src/video-voice.ts
 import { createHash as createHash19 } from "node:crypto";
 import { existsSync as existsSync21, readFileSync as readFileSync22, realpathSync as realpathSync6 } from "node:fs";
-import { execFileSync as execFileSync12 } from "node:child_process";
+import { execFileSync as execFileSync13 } from "node:child_process";
 import path20 from "node:path";
 import { createRequire as createRequire13 } from "node:module";
 var speakerBindingSchema = external_exports.object({
@@ -132534,7 +132552,7 @@ function msrSubject(character, refs, context2) {
 }
 function sampleSeconds(file3) {
   try {
-    const seconds2 = Number(execFileSync12("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], { encoding: "utf8", timeout: 15e3 }));
+    const seconds2 = Number(execFileSync13("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], { encoding: "utf8", timeout: 15e3 }));
     return Number.isFinite(seconds2) ? seconds2 : void 0;
   } catch {
     return void 0;
@@ -133190,7 +133208,7 @@ function bindSceneAdapter(request, tool2, model2, shot, input, episode, resoluti
     }
     if (input.audioUri || input.audioPath && realpathSync7(path21.resolve(episode, String(input.audioPath))) !== request.audio.path)
       throw new Error("scene_audio_mismatch: use the storyboard scene track");
-    const probe5 = JSON.parse(execFileSync13("ffprobe", [
+    const probe5 = JSON.parse(execFileSync14("ffprobe", [
       "-v",
       "error",
       "-select_streams",
@@ -133326,7 +133344,7 @@ async function checkSceneDeployment(request, tool2, args) {
 
 // src/video-routing.ts
 import * as fs19 from "node:fs";
-import { execFileSync as execFileSync15 } from "node:child_process";
+import { execFileSync as execFileSync16 } from "node:child_process";
 import path26 from "node:path";
 import { createRequire as createRequire16 } from "node:module";
 import { fileURLToPath as fileURLToPath8 } from "node:url";
@@ -133338,7 +133356,7 @@ import { fileURLToPath as fileURLToPath6 } from "node:url";
 import { createHash as createHash20 } from "node:crypto";
 
 // src/usage-ledger.ts
-import { execFileSync as execFileSync14 } from "node:child_process";
+import { execFileSync as execFileSync15 } from "node:child_process";
 import { appendFileSync, existsSync as existsSync23, mkdirSync as mkdirSync6 } from "node:fs";
 import path22 from "node:path";
 var EPISODE_MARKER = path22.join("storyboard", "scenes.js");
@@ -133398,7 +133416,7 @@ function meteredPrice(price, metered) {
 }
 function probeSeconds(file3) {
   try {
-    const out = execFileSync14("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], {
+    const out = execFileSync15("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", file3], {
       encoding: "utf8",
       timeout: 15e3,
       stdio: ["ignore", "pipe", "ignore"]
@@ -134142,7 +134160,7 @@ function finalizeFasth3(plan2) {
   const scene = plan2.sceneRequest;
   const duration5 = scene.frameCount / scene.fps;
   const inspect = (file3, frames) => {
-    const report = JSON.parse(execFileSync15("ffprobe", [
+    const report = JSON.parse(execFileSync16("ffprobe", [
       "-v",
       "error",
       "-show_entries",
@@ -134161,7 +134179,7 @@ function finalizeFasth3(plan2) {
   const temporary = path26.join(scratch, "delivery.mp4");
   try {
     if (scene.frameCount !== plan2.args.numFrames) {
-      execFileSync15("ffmpeg", [
+      execFileSync16("ffmpeg", [
         "-nostdin",
         "-v",
         "error",
@@ -134420,6 +134438,7 @@ function genaiSceneArgs(sceneTool, args, scene, openingPath, storyboard, slots, 
     references: args.references ?? []
   });
   const { keys: keys3, ...projected } = composed;
+  checkSceneVoices(projected);
   return { keys: keys3, args: genaiSceneSchema.parse({
     model: selection.model,
     ...projected,
@@ -134562,7 +134581,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     if (mode === "native" || !audio?.path || !audio.sha256) return null;
     const file3 = path26.resolve(context2.episode, "storyboard", audio.path);
     if (!fs19.existsSync(file3) || createHash22("sha256").update(fs19.readFileSync(file3)).digest("hex") !== audio.sha256) return null;
-    const seconds2 = Number(execFileSync15("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file3], { encoding: "utf8", timeout: 1e4 }));
+    const seconds2 = Number(execFileSync16("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", file3], { encoding: "utf8", timeout: 1e4 }));
     if (!Number.isFinite(seconds2) || seconds2 <= 0) return null;
     performanceInputs[file3] = audio.sha256;
     return seconds2;
@@ -134960,7 +134979,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   if (tool2 === "heygen_img2video") checkHeygenInputs(heygenImg2VideoSchema.parse(args));
   if (tool2 === "heygen_reference") checkHeygenInputs(heygenReferenceSchema.parse(args));
   if (tool2 === "astra_video_retake" && selection.resolution) {
-    const probe5 = JSON.parse(execFileSync15("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
+    const probe5 = JSON.parse(execFileSync16("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", String(args.sourceVideoPath)], { encoding: "utf8", timeout: 15e3 }));
     const stream = probe5.streams?.[0];
     if (!stream || `${stream.width}x${stream.height}` !== selection.resolution)
       throw new Error("model_selection_mismatch: retake inherits source dimensions; select the source resolution");
@@ -135987,7 +136006,7 @@ async function refreshGenaiImage(directory2, requestId) {
 
 // src/storyboard.ts
 import { createHash as createHash23, randomUUID as randomUUID10 } from "node:crypto";
-import { execFileSync as execFileSync16 } from "node:child_process";
+import { execFileSync as execFileSync17 } from "node:child_process";
 import { existsSync as existsSync28, mkdirSync as mkdirSync11, readFileSync as readFileSync28, renameSync as renameSync6, statSync as statSync17, unlinkSync as unlinkSync5, writeFileSync as writeFileSync17 } from "node:fs";
 import * as nodeModule4 from "node:module";
 import { basename as basename8, dirname as dirname8, join as join13, relative, resolve as resolve7 } from "node:path";
@@ -137201,7 +137220,7 @@ function applyStoryboard(args, opts = {}) {
       if (!existsSync28(backup)) writeFileSync17(backup, original, { flag: "wx" });
     }
     writeFileSync17(tmp, serializeBoard(next, header), "utf8");
-    execFileSync16("python3", [
+    execFileSync17("python3", [
       "-c",
       [
         "import fcntl, hashlib, os, sys",
@@ -138141,7 +138160,7 @@ function packImageReferences(boardDir, files3, columns) {
   const layout = files3.map((_, i2) => `${i2 % columns * size}_${Math.floor(i2 / columns) * size}`).join("|");
   const filter = [...tiles, `${stack}xstack=inputs=${files3.length}:layout=${layout}:fill=black`].join(";");
   try {
-    execFileSync16("ffmpeg", [
+    execFileSync17("ffmpeg", [
       "-v",
       "error",
       "-filter_complex_threads",
@@ -138424,7 +138443,7 @@ function buildShotImageRequest(args) {
       mkdirSync11(dirname8(prepared), { recursive: true });
       const temporary = prepared + "." + randomUUID10() + ".png";
       try {
-        execFileSync16("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
+        execFileSync17("ffmpeg", ["-v", "error", "-y", "-i", input, "-vf", `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y}:exact=1,scale=${editWidth}:${editHeight}:flags=lanczos`, "-frames:v", "1", temporary], { timeout: 3e4, stdio: "pipe" });
         renameSync6(temporary, prepared);
       } finally {
         if (existsSync28(temporary)) unlinkSync5(temporary);
@@ -138703,7 +138722,7 @@ function imageCall(o) {
     if (!existsSync28(out)) {
       mkdirSync11(dirname8(out), { recursive: true });
       try {
-        execFileSync16("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
+        execFileSync17("ffmpeg", ["-v", "error", "-y", "-i", f3, out], { timeout: 6e4 });
       } catch (error2) {
         throw new Error(`image_inputs_mixed_format: GPT Image takes one format per request and ffmpeg could not convert ${f3} to PNG (${error2.message.split("\n")[0]}) \u2014 save it as PNG`);
       }
@@ -138890,7 +138909,7 @@ function checkScenario(args, checkFile = CHECK_SCENARIO_FILE) {
   if ("synopses" in args) return hookContract().checkSynopses(args.synopses);
   let raw = "";
   try {
-    raw = execFileSync16(process.execPath, [checkFile, args.path, "--json", ...args.authoring ? ["--authoring"] : []], {
+    raw = execFileSync17(process.execPath, [checkFile, args.path, "--json", ...args.authoring ? ["--authoring"] : []], {
       encoding: "utf8",
       timeout: 6e4,
       stdio: ["ignore", "pipe", "pipe"]
@@ -138925,7 +138944,7 @@ function checkStoryboard(args) {
   if (args.draft) argv.push("--draft");
   let raw = "";
   try {
-    raw = execFileSync16(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
+    raw = execFileSync17(process.execPath, argv, { encoding: "utf8", timeout: 6e4, maxBuffer: 16 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] });
   } catch (e2) {
     const err4 = e2;
     raw = err4.stdout || "";
@@ -148543,7 +148562,7 @@ import { existsSync as existsSync45 } from "node:fs";
 import * as fs25 from "node:fs";
 import path33 from "node:path";
 import os4 from "node:os";
-import { execFileSync as execFileSync18 } from "node:child_process";
+import { execFileSync as execFileSync19 } from "node:child_process";
 import { createRequire as createRequire19 } from "node:module";
 import { fileURLToPath as fileURLToPath11 } from "node:url";
 
@@ -148625,9 +148644,9 @@ function musicTransaction(directory2, openingSpendUsd, update) {
 import * as fs24 from "node:fs";
 import path32 from "node:path";
 import { createHash as createHash26, randomUUID as randomUUID12 } from "node:crypto";
-import { execFileSync as execFileSync17 } from "node:child_process";
+import { execFileSync as execFileSync18 } from "node:child_process";
 function readMusicMetadata(file3) {
-  const result = JSON.parse(execFileSync17(
+  const result = JSON.parse(execFileSync18(
     "ffprobe",
     [
       "-v",
@@ -148655,7 +148674,7 @@ function normalizeMusicFile(source2, target) {
   fs24.mkdirSync(path32.dirname(target), { recursive: true });
   const temporary = target + "." + randomUUID12() + ".wav";
   try {
-    execFileSync17(
+    execFileSync18(
       "ffmpeg",
       [
         "-nostdin",
@@ -148720,7 +148739,7 @@ function gate2(tool2) {
 }
 function environment2(tool2) {
   gate2(tool2);
-  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync18(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
+  for (const binary of ["ffmpeg", "ffprobe"]) execFileSync19(binary, ["-version"], { timeout: 1e4, stdio: "ignore" });
   const engine = MUSIC_ADAPTERS[tool2].engine;
   if (engine === "lyria") requireGeminiKey();
   if (engine === "suno-api") requireSunoKey();
@@ -149730,7 +149749,7 @@ async function manageLocation(args) {
 
 // src/cover.ts
 import { createHash as createHash30 } from "node:crypto";
-import { execFileSync as execFileSync19, spawn as spawn3 } from "node:child_process";
+import { execFileSync as execFileSync20, spawn as spawn3 } from "node:child_process";
 import { copyFileSync as copyFileSync4, existsSync as existsSync37, mkdirSync as mkdirSync19, mkdtempSync as mkdtempSync9, readFileSync as readFileSync37, realpathSync as realpathSync12, renameSync as renameSync10, rmSync as rmSync21, statSync as statSync21, writeFileSync as writeFileSync25, openSync as openSync7, readSync, closeSync as closeSync7 } from "node:fs";
 import { tmpdir as tmpdir8 } from "node:os";
 import { basename as basename12, dirname as dirname11, isAbsolute as isAbsolute3, join as join19, relative as relative2, resolve as resolve12, sep as sep2 } from "node:path";
@@ -149800,7 +149819,7 @@ function sha256File(file3) {
 var sha2562 = (value2) => createHash30("sha256").update(value2).digest("hex");
 function probe4(file3) {
   try {
-    const out = JSON.parse(execFileSync19("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file3], { encoding: "utf8", timeout: 3e4 }));
+    const out = JSON.parse(execFileSync20("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height:format=duration", "-of", "json", file3], { encoding: "utf8", timeout: 3e4 }));
     const s2 = out.streams?.[0];
     if (!s2?.width || !s2?.height) throw new Error("no picture stream");
     const duration5 = Number(out.format?.duration);
@@ -150075,7 +150094,7 @@ function chrome(args, until) {
 }
 function ffmpeg3(args) {
   try {
-    execFileSync19("ffmpeg", ["-v", "error", "-y", ...args], { timeout: 12e4, stdio: ["ignore", "ignore", "pipe"] });
+    execFileSync20("ffmpeg", ["-v", "error", "-y", ...args], { timeout: 12e4, stdio: ["ignore", "ignore", "pipe"] });
   } catch (e2) {
     throw new Error(`cover_ffmpeg_failed: ${(e2.stderr?.toString() || e2.message).trim().split("\n").slice(-2).join(" ")}`);
   }
@@ -150099,7 +150118,7 @@ function luminance([r2, g, b]) {
 function contrastBehind(bg, box, width, height, fills) {
   const x2 = Math.max(0, Math.floor(box.x0 * width)), y = Math.max(0, Math.floor(box.y0 * height));
   const w = Math.max(2, Math.min(width - x2, Math.ceil((box.x1 - box.x0) * width))), h2 = Math.max(2, Math.min(height - y, Math.ceil((box.y1 - box.y0) * height)));
-  const raw = execFileSync19("ffmpeg", ["-v", "error", "-i", bg, "-vf", `crop=${w}:${h2}:${x2}:${y},scale=64:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { timeout: 3e4, maxBuffer: 1 << 24 });
+  const raw = execFileSync20("ffmpeg", ["-v", "error", "-i", bg, "-vf", `crop=${w}:${h2}:${x2}:${y},scale=64:-2:flags=area`, "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], { timeout: 3e4, maxBuffer: 1 << 24 });
   const lum = [];
   for (let i2 = 0; i2 + 2 < raw.length; i2 += 3) lum.push(luminance([raw[i2], raw[i2 + 1], raw[i2 + 2]]));
   lum.sort((a, b) => a - b);
@@ -150399,7 +150418,7 @@ import { createHash as createHash31, randomUUID as randomUUID15 } from "node:cry
 import { readFileSync as readFileSync38, writeFileSync as writeFileSync26, renameSync as renameSync11, mkdirSync as mkdirSync20, existsSync as existsSync38 } from "node:fs";
 import { basename as basename13, dirname as dirname12, resolve as resolve13, join as join20, relative as relative3 } from "node:path";
 import * as nodeModule8 from "node:module";
-import { execFileSync as execFileSync20 } from "node:child_process";
+import { execFileSync as execFileSync21 } from "node:child_process";
 var voiceContract = () => nodeModule8.createRequire(import.meta.url)("../../skills/_shared/character-voice.js");
 var characterSpeechContract = () => nodeModule8.createRequire(import.meta.url)("../../skills/_shared/character-speech.js");
 var speechSpanContract = () => nodeModule8.createRequire(import.meta.url)("../../skills/_shared/speech-span.js");
@@ -150407,7 +150426,7 @@ var audioSignalContract = () => nodeModule8.createRequire(import.meta.url)("../.
 function requireNativeVideo(file3) {
   let signal;
   try {
-    const frame2 = execFileSync20("ffmpeg", [
+    const frame2 = execFileSync21("ffmpeg", [
       "-v",
       "error",
       "-nostdin",
@@ -150456,7 +150475,7 @@ var speechManageSchema = external_exports.object({
 var hash5 = (s2) => createHash31("sha256").update(s2).digest("hex");
 var object6 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : {};
 var speechContract = () => nodeModule8.createRequire(import.meta.url)("../../skills/_shared/speech-contract.js");
-var videoSeconds2 = (file3) => Number(execFileSync20(
+var videoSeconds2 = (file3) => Number(execFileSync21(
   "ffprobe",
   ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=duration", "-of", "default=nw=1:nk=1", file3],
   { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }
@@ -150556,7 +150575,7 @@ function audioProvenanceStatus(line, character) {
 function measuredDuration(line) {
   if (!line.audio || !existsSync38(line.audio.path)) return null;
   try {
-    const value2 = Number(execFileSync20("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
+    const value2 = Number(execFileSync21("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", line.audio.path], { encoding: "utf8", timeout: 1e4, stdio: ["ignore", "pipe", "ignore"] }).trim());
     return Number.isFinite(value2) && value2 > 0 ? value2 : null;
   } catch {
     return null;

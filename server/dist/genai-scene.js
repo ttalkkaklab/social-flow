@@ -8,6 +8,7 @@
  * its numbering, and `/v1/generations/validate` confirms it before approval and again before submission
  * (user directive 2026-11-25). */
 import { z } from 'zod';
+import { execFileSync } from 'node:child_process';
 import { bareFilenameSchema } from './media-utils.js';
 import { scenePromptTemplate } from './scene-prompt.js';
 /** Models the gateway runs in scene mode that this plugin plans for. */
@@ -62,6 +63,23 @@ export const genaiSceneSchema = z.object({
     if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max)
         issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
+/** LTX scene mode reads a voice sample after it reserves the job, so a sample it would refuse fails a reserved job. Check first. */
+export const GENAI_SCENE_VOICE_SECONDS = 10;
+export function checkSceneVoices(args) {
+    for (const member of args.cast) {
+        if (!member.voicePath)
+            continue;
+        let seconds = NaN;
+        try {
+            seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', member.voicePath], { encoding: 'utf8', timeout: 15_000 }));
+        }
+        catch { /* An unreadable sample is refused below. */ }
+        if (!(seconds > 0))
+            throw new Error('scene_voice_unreadable: ' + member.id + '\'s voice sample cannot be read');
+        if (seconds > GENAI_SCENE_VOICE_SECONDS)
+            throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds.toFixed(1)} s; GenAI scene mode takes at most ${GENAI_SCENE_VOICE_SECONDS} s and conditions on the first 5`);
+    }
+}
 /** The frames the storyboard asks for; the clip is cut back to this after rendering. */
 export const sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
 /** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */

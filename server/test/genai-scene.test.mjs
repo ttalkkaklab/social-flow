@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { checkSceneValidation, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt, sceneArgsFromComposed, sceneLabels } from '../dist/genai-scene.js';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt, sceneArgsFromComposed, sceneLabels } from '../dist/genai-scene.js';
 
 const sceneArgs = (overrides = {}) => genaiSceneSchema.parse({ model:'ltx-2.5-22b-distilled', resolution:'576x1024', reserveUsd:0,
   prompt:'{hero.face} waves.', cast:[{id:'hero', images:[{role:'face', imagePath:'/tmp/hero.png'}]}],
@@ -62,4 +66,14 @@ test('a compilation that moves labels, length or cuts is refused before approval
   assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, prompt:'Image 2 waves.'}}), /genai_scene_labels/);
   assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, num_frames:121}}), /genai_scene_frames/);
   assert.throws(() => checkSceneValidation(args, {resolved:{...resolved, shots:[{id:'s1', start_frame:0}, {id:'s2', start_frame:56}]}}), /genai_scene_cuts/);
+});
+
+test('a voice sample longer than scene mode takes is refused before anything is reserved', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'genai-voice-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const sample = seconds => { const file = path.join(dir, seconds + '.wav'); execFileSync('ffmpeg', ['-v', 'error', '-f', 'lavfi', '-i', 'sine=duration=' + seconds, file]); return file; };
+  const cast = voicePath => [{ id: 'hero', images: [{ role: 'face', imagePath: '/x.png' }], voicePath }];
+  checkSceneVoices({ cast: cast(sample(9)) });
+  assert.throws(() => checkSceneVoices({ cast: cast(sample(12)) }), /scene_voice_too_long: hero's voice sample runs 12\.0 s/);
+  assert.throws(() => checkSceneVoices({ cast: cast(path.join(dir, 'missing.wav')) }), /scene_voice_unreadable/);
 });
