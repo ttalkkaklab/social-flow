@@ -207,7 +207,7 @@ test('an adapter failure marked terminal is failed and does not hold the concurr
 test('direct H3 refresh recovers the approved render after a lost reply without a second dispatch', async t => {
   const f = fixture(t, {engine:'mlx', model:'ddalcu/MiniMax-H3-Image-MLX-Serve-4bit'});
   const url = process.env.MLX_SERVE_URL;
-  process.env.MLX_SERVE_URL = 'http://127.0.0.1:11234';
+  process.env.MLX_SERVE_URL = 'http://127.0.0.1:1';
   t.after(() => { if (url === undefined) delete process.env.MLX_SERVE_URL; else process.env.MLX_SERVE_URL = url; });
   const p = f.plan('attempt-1',{width:256,height:256});
   assert.deepEqual(p.mlxSize,{width:256,height:256});
@@ -215,7 +215,7 @@ test('direct H3 refresh recovers the approved render after a lost reply without 
   const lost = await f.run(p, async (_tool,args) => {
     calls++;
     fs.mkdirSync(args.outputPath,{recursive:true});
-    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=256x256','-frames:v','1',path.join(args.outputPath,args.filename)]);
+    execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=256x256','-frames:v','1','-threads','1',path.join(args.outputPath,args.filename)]);
     throw new Error('lost response');
   });
   assert.equal(lost.structuredContent.status, 'submission_unknown');
