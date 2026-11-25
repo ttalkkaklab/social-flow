@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { scenePromptProfile, sceneWritingGuide, referenceLabel } from '../dist/scene-prompt-profile.js';
+import fs from 'node:fs';
+import { scenePromptProfile, sceneWritingGuide, referenceLabel, promptGuidance, referenceAdvice } from '../dist/scene-prompt-profile.js';
 import { SceneEditGrammar } from '../dist/scene-edit-grammar.js';
-import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt } from '../dist/scene-prompt.js';
+import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt, assertSceneDialogue } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
   const timeline = {fps:24, images:[], shots:[
@@ -58,4 +59,37 @@ test('named clip ownership is independent of cast IDs and normalized cue whitesp
   for (const cue of ['Use {hero.soundtrack} for camera movement and motion timing','Track the camera move in {wide.soundtrack}',
     'Match the motion in {hero.soundtrack}','Follow the soundtrack in {hero.motion}','Hold on {hero.soundtrack}'])
     assert.throws(() => grammar.checkStageDirection(cue,true),/scene_media_type/);
+});
+
+test('guidance follows the model and reports each count outside the range its vendor recommends', () => {
+  const [two, twoFive] = ['dreamina-seedance-2-0-fast-260128','dreamina-seedance-2-5-260628'].map(model => promptGuidance('seedance_reference', model));
+  assert.notEqual(two.guide, twoFive.guide);
+  assert.deepEqual([two.recommended.people, two.recommended.assets, twoFive.recommended.people, twoFive.recommended.voices, twoFive.recommended.voiceSeconds], [4, 5, 8, 5, [5, 10]]);
+  for (const tool of ['seedance_reference','minimax_reference','fasth3_omni_reference','astra_genai_msr','astra_genai_img2video'])
+    assert.ok(fs.existsSync(new URL('../../' + promptGuidance(tool).reference, import.meta.url)), tool);
+  assert.deepEqual([promptGuidance('veo_img2video').reference, promptGuidance('seedance_reference').recommended], [undefined, undefined]);
+  const codes = (ranges, counts) => referenceAdvice(ranges, counts).map(item => item.code);
+  assert.deepEqual(codes(two.recommended, {people:4, assets:5}), []);
+  assert.deepEqual(codes(two.recommended, {people:5, assets:6}), ['reference_people_over_recommended','reference_assets_over_recommended']);
+  assert.deepEqual(codes(twoFive.recommended, {people:9, voices:6, voiceSeconds:[{speaker:'a',seconds:4.9},{speaker:'b',seconds:5},{speaker:'c',seconds:10.1}]}),
+    ['reference_people_over_recommended','voice_subjects_over_recommended','voice_sample_length','voice_sample_length']);
+  const local = promptGuidance('fasth3_omni_reference').recommended;
+  assert.deepEqual([codes(local, {frames:345}), codes(local, {frames:362}), codes(undefined, {people:99})], [[], ['frames_over_reference_pipeline'], []]);
+});
+
+test('Seedance shots are numbered and an authored prompt keeps, drops or renumbers the label', () => {
+  const shots = [
+    {shotId:'s1', startFrame:0, endFrame:36, transition:'open', framing:'Medium shot.'},
+    {shotId:'s2', startFrame:36, endFrame:96, transition:'hard_cut', framing:'Close on the latch.'}];
+  const words = list => sceneTimelineWords({fps:24, images:[], shots:list}, {}, {modelFacing:true, modelPacedCuts:true, writer:'seedance', cutTiming:'action_beats'});
+  assert.deepEqual(words(shots).split('\n'), ['Shot 1: Medium shot.', 'Shot 2: Close on the latch.']);
+  assert.equal(words(shots.slice(0,1)), 'Medium shot.');
+  const lines = [{speaker:'hero', tts:'Look.', delivery:'on_screen'}], cast = [{speaker:'hero', name:'Hero'}];
+  const composed = 'Shot 1: Medium shot. hero: "Look."\nShot 2: Close on the latch.';
+  for (const draft of [composed, 'Medium shot. hero: "Look."\nThen cut directly. Close on the latch.', 'Shot 1: Close on the latch.\nShot 2: hero: "Look."'])
+    assert.doesNotThrow(() => assertSceneDialogue(draft, lines, cast, composed), draft);
+  assert.throws(() => assertSceneDialogue('Shot 1: Medium shot. hero: "Look."\nShot 2: The latch explodes.', lines, cast, composed), /scene_direction_unverified/);
+  // A prompt whose planner version has no numbered shots takes no typed label.
+  const plain = 'Medium shot. hero: "Look."\nThen cut directly. Close on the latch.';
+  assert.throws(() => assertSceneDialogue('Shot 1: Medium shot. hero: "Look."', lines, cast, plain), /scene_direction_unverified/);
 });

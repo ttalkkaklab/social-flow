@@ -1759,7 +1759,7 @@ test('one Seedance scene binds all three original characters and their voices in
   f.board.SCENES[1].referenceImage = 'guide.png';
   f.save();
   const plan=planVideo({episode:f.episode,sceneNo:1,requestId:'three-originals'},false);
-  const shots = plan.args.prompt.split('Then cut directly.');
+  const shots = plan.args.prompt.split(/^Shot \d+: /m).slice(1);
   assert.equal(shots.length, 3);
   assert.match(shots[0], /ada[^"\n]*Audio 1[^"\n]*"Wait\."/);
   assert.doesNotMatch(shots[0], /"Go\."/);
@@ -2237,6 +2237,9 @@ test('the same authored names take picture and audio tags on the H3 reference la
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'mlx',model:'ddalcu/FastH3-Omni-MLX-Serve-8bit'},[62,62],2);
  const input={episode:f.episode,sceneNo:1,requestId:'h3',args:{}};
  const compiled=planVideo(input,false);
+ // The adapter takes 362 frames; the model's reference pipeline ends at 345, and a longer plan says so without being refused.
+ const long=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'mlx',model:'ddalcu/FastH3-Omni-MLX-Serve-8bit'},[181,181],2);
+ assert.deepEqual([compiled,planVideo({...input,episode:long.episode,args:{width:512,height:288}},false)].map(plan => plan.promptGuidance.advice.map(item => item.code)),[[],['frames_over_reference_pipeline']]);
  const motion = path.join(f.episode,'storyboard','motion-with-audio.mp4');
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=s=64x64:r=12','-f','lavfi','-i','sine=frequency=330',
    '-t','2','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac',motion]);
@@ -2317,6 +2320,16 @@ test('Seedance scene previews bind local motion to the selected model dialect', 
         assert.ok(preview.promptSlots.some(slot => slot.key === key && slot.label === prefix + label),key);
       assert.ok(preview.promptTemplate.includes('{pan.motion}'));
       assert.equal(planVideo({...input,prompt:preview.promptTemplate},false).args.prompt,preview.args.prompt);
+      // Both series number their shots, and a draft in the wording before that still plans.
+      assert.deepEqual(preview.args.prompt.match(/^Shot \d+:/gm),['Shot 1:','Shot 2:']);
+      const earlier = preview.promptTemplate.replace(/^Shot 1: /m,'').replace(/^Shot 2: /m,'Then cut directly. ');
+      assert.match(planVideo({...input,prompt:earlier},false).args.prompt,/^Then cut directly\. /m);
+      // The vendor's recommended ranges are said beside the plan and stay out of the manifest an approval signs.
+      assert.ok(preview.promptGuidance.reference.endsWith('prompt-seedance.md'));
+      assert.deepEqual([...new Set(preview.promptGuidance.advice.map(item => item.code))],[prefix ? 'voice_sample_length' : 'reference_assets_over_recommended']);
+      const saved = planVideo(input);
+      const manifest = JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/plans',saved.id + '.json'),'utf8'));
+      assert.deepEqual([saved.id,manifest.promptGuidance],[preview.id,undefined]);
     });
   }
 });

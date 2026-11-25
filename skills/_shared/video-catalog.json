@@ -18,6 +18,7 @@
       },
       "sceneCutTiming": "action_beats",
       "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -258,6 +259,7 @@
       },
       "sceneCutTiming": "action_beats",
       "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -501,6 +503,7 @@
       },
       "sceneCutTiming": "action_beats",
       "sceneWritingGuide": "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-seedance.md",
       "voice": {
         "maxPinnedVoicesPerRender": {
           "dreamina-seedance-2-5-260628": 10,
@@ -1107,6 +1110,7 @@
       },
       "sceneCutTiming": "approximate_holds",
       "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
       "voice": {
         "maxPinnedVoicesPerRender": 2,
         "postLipSync": false,
@@ -1250,6 +1254,7 @@
       },
       "sceneCutTiming": "approximate_holds",
       "sceneWritingGuide": "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
       "voice": {
         "maxPinnedVoicesPerRender": 2,
         "postLipSync": false,
@@ -1651,6 +1656,7 @@
       },
       "sceneCutTiming": "action_beats",
       "sceneWritingGuide": "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
         "maxPinnedVoicesPerRender": 3,
         "postLipSync": false,
@@ -2793,6 +2799,7 @@
       },
       "sceneCutTiming": "cut_order",
       "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
         "maxPinnedVoicesPerRender": 0,
         "postLipSync": false,
@@ -2840,6 +2847,7 @@
       },
       "sceneCutTiming": "action_beats",
       "sceneWritingGuide": "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+      "promptReference": "skills/generate-cut-videos/references/prompt-h3.md",
       "voice": {
         "maxPinnedVoicesPerRender": 3,
         "postLipSync": false,

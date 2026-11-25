@@ -47,6 +47,8 @@ For a silent Veo scene, use a start and end time for each view. For Seedance ref
 
 A scene shares one soundtrack from frame zero, including its lead-in. Check each cut and beat against the requested scene frames. Subject panels establish identity and outfit. The shot action controls when the person enters. See the [scene input contract](../_shared/video-routing.md).
 
+Read the plan's `promptGuidance` with its prompt. `guide` is the writing sentence for the selected model and `reference` is that model family's page: [MiniMax H3 and FastH3](references/prompt-h3.md), [LTX-2.5 with MSR](references/prompt-ltx-msr.md) or [Seedance 2.0 and 2.5](references/prompt-seedance.md). `advice` lists each count the request holds outside the range the vendor's guide recommends, such as more than four reference people on Seedance 2.0. An entry is a report: the plan stands, and the page says what to change on the board if the take fails that way.
+
 Plan a scene without `sceneRendering` when it fits one model call: the plan returns the prompt it will send as `promptTemplate`, and an edited copy goes back as `prompt`. Choose `sceneRendering:"per_shot"` for exact cut timing or shot-specific controls. The gateway then renders each shot apart and writes each shot's prompt from its card, so the plan returns no `promptTemplate` and a wording change goes on the card. `single_msr` and `auto` are retired.
 
 ## Correcting a scene take

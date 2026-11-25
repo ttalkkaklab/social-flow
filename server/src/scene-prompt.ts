@@ -20,12 +20,17 @@ const transitions: Record<string, string> = {
   hard_cut:'cut directly', dissolve:'dissolve to the next view', fade:'fade to the next view',
 };
 
-function shotHeading(shot: SceneShot, fps: number, options: TimelineOptions): string {
+// The numbered label of a storyboard shot. Where the planner numbers shots, an author may keep, drop or renumber it.
+const shotLabel = /^Shot \d+:\s*/u;
+
+function shotHeading(shot: SceneShot, fps: number, options: TimelineOptions, number?: number): string {
   const transition = shot.transition.replaceAll('_', ' ');
   if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}–${shot.endFrame - 1}] ${transition}.`;
   const cut = transitions[shot.transition] ?? transition;
   if (!options.modelPacedCuts)
     return shot.transition === 'open' ? '' : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+  // The 2.0 guide recommends Shot 1, Shot 2 identifiers and calls precise timing unstable. The 2.5 guide reads either.
+  if (options.writer === 'seedance' && number) return `Shot ${number}:`;
   if (options.writer === 'fastH3' && shot.transition === 'hard_cut') return 'Hard cut to the next camera setup.';
   if (options.writer === 'hostedH3' && shot.transition === 'hard_cut') return 'Cut to the next view.';
   const order = shot.transition === 'open' ? '' : `Then ${cut}.`;
@@ -50,7 +55,7 @@ export function sceneTimelineWords(timeline: SceneTimeline, scene: Partial<Scene
   const rows: string[] = [];
   if (!modelFacing) rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
   let turnIndex = 0;
-  for (const shot of timeline.shots) {
+  for (const [index, shot] of timeline.shots.entries()) {
     const images = timeline.images.filter(image => image.shotId === shot.shotId);
     const cues = images.filter(image => image.cue).map(image => `${timing(image.frame)}: ${image.cue}`);
     const guides = images.flatMap(image => image.reference?.scope === 'shot_guide' ? [image.reference.purpose] : []);
@@ -67,7 +72,7 @@ export function sceneTimelineWords(timeline: SceneTimeline, scene: Partial<Scene
     const hold = describeDelivery && options.cutTiming === 'approximate_holds' &&
       `Hold this view for about ${duration} ${duration === 1 ? 'second' : 'seconds'}.`;
     rows.push([
-      shotHeading(shot, timeline.fps, options), hold,
+      shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : undefined), hold,
       ...[shot.framing, shot.blocking, shot.action].filter(value => value && !wholeTake.has(value)),
       ...cues, ...guides, shot.sound && shot.sound !== scene.sound && 'Sound: ' + shot.sound,
       describeDelivery && deliveryDirection(lines), ...spoken,
@@ -226,14 +231,18 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   const script = expected.flatMap(line => line.tts ? [line.tts] : []);
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed,script);
+  const numbered = original.some(span => !span.quoted && /(?:^|\n)Shot \d+: /u.test(span.text));
+  const unlabel = (text: string) => numbered ? text.trim().replace(shotLabel,'') : text.trim();
   const approvedDirections = new Set(original.filter(span => !span.quoted)
-    .flatMap(span => splitSentences(span.text)).map(text => text.trim()));
+    .flatMap(span => splitSentences(span.text)).map(unlabel));
+  // A draft written before shots were numbered keeps the sentence the planner then wrote between them.
+  if (numbered) approvedDirections.add('Then cut directly');
   const attributions: string[] = [];
   const visualQuotes: {words:string; lead:string}[] = [];
   for (const [i, span] of original.entries()) {
     if (!span.quoted) continue;
     const words = span.text.slice(1,-1);
-    const lead = splitSentences(original[i-1]?.text ?? '').at(-1)?.trim() ?? '';
+    const lead = unlabel(splitSentences(original[i-1]?.text ?? '').at(-1) ?? '');
     if (nativeDialogue && words === script[attributions.length]) attributions.push(lead);
     else visualQuotes.push({words,lead});
   }
@@ -244,10 +253,10 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   for (const [partIndex, span] of parts.entries()) {
     if (!span.quoted) {
       const sentences = splitSentences(span.text);
-      wrappedClause = span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1)?.trim() ?? '';
-      clause = parts[partIndex+1]?.quoted ? sentences.pop() ?? '' : '';
+      wrappedClause = unlabel(span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1) ?? '');
+      clause = parts[partIndex+1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
       for (const sentence of sentences) {
-        const text = sentence.trim();
+        const text = unlabel(sentence);
         if (!text || approvedDirections.has(text)) continue;
         grammar.checkStageDirection(text,nativeDialogue);
       }

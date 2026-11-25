@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { adapterParameters, assertSelection, COMMON_PARAMETERS } from '../dist/adapter-parameters.js';
 import { VIDEO_ADAPTERS, videoCatalog } from '../dist/video-registry.js';
 import { IMAGE_ADAPTERS, imageCatalog } from '../dist/image-registry.js';
@@ -24,6 +25,11 @@ test('a catalog call names an engine for its parameter schemas and nothing for t
   const read = async (name, args) => JSON.parse((await ROUTES[name](args)).content[0].text);
   for (const [name, list] of [['video_catalog', videoCatalog()], ['image_catalog', imageCatalog()], ['music_catalog', musicCatalog()]])
     assert.deepEqual(await read(name, {}), JSON.parse(JSON.stringify(list)), name);
+  // A model family with a reference page names it on each of its rows, in the list and in an engine's answer.
+  const paged = videoCatalog().adapters.filter(row => row.promptReference);
+  assert.deepEqual(paged.map(row => row.tool).sort(), ['astra_genai_img2video','astra_genai_msr','fasth3_omni_reference','minimax_img2video','minimax_reference','seedance_img2video','seedance_reference','seedance_text2video']);
+  for (const row of paged) assert.ok(fs.existsSync(new URL('../../' + row.promptReference, import.meta.url)), row.tool);
+  assert.equal((await read('video_catalog', { engine: 'seedance', operation: 'reference' })).adapters[0].promptReference, 'skills/generate-cut-videos/references/prompt-seedance.md');
   const image = await read('video_catalog', { engine: 'astra-genai', operation: 'image' });
   assert.deepEqual(image.adapters.map(adapter => adapter.tool), ['astra_genai_img2video']);
   assert.equal(image.adapters[0].parameters.common.properties.prompt.type, 'string');

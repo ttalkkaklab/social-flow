@@ -9,7 +9,7 @@ import * as mlx from './mlx-serve-client.js';
 import { resolveVideoDuration } from './video-duration.js';
 import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { minimaxImg2VideoSchema, minimaxReferenceSchema, MINIMAX_MODELS } from './minimax-video.js';
-import { scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
+import { promptGuidance, scenePromptProfile, sceneWritingGuide } from './scene-prompt-profile.js';
 import { SCENE_ROUTE } from './genai-scene.js';
 export { referenceLabel } from './scene-prompt-profile.js';
 import { heygenImg2VideoSchema, heygenReferenceSchema } from './heygen-video.js';
@@ -201,6 +201,7 @@ export function sceneInputCapabilities(tool: string) {
 
 const videoCatalogRow = (tool: string, a: VideoAdapter) => ({ tool, engine: a.engine, deployment: a.deployment, operation: a.operation,
   sceneInputs: sceneInputCapabilities(tool), sceneCutTiming: scenePromptProfile(tool).cutTiming, sceneWritingGuide: sceneWritingGuide(scenePromptProfile(tool)),
+  ...(promptGuidance(tool).reference ? { promptReference: promptGuidance(tool).reference } : {}),
   voice: videoVoiceCapabilities(tool), ...(a.replacement ? { deprecated: true, replacement: a.replacement } : {}),
   fields: keys(a.schema), modelConstraints: a.modelConstraints ?? { note: 'Use video_plan; deployment-specific schema is authoritative' } });
 export function videoCatalog() {

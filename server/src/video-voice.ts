@@ -122,7 +122,7 @@ function msrSubject(character: Record<string, unknown>, refs: Record<string, unk
   return { index, slot };
 }
 /** Seconds of a voice sample, or undefined when ffprobe cannot read it. */
-function sampleSeconds(file: string): number | undefined {
+export function sampleSeconds(file: string): number | undefined {
   try {
     const seconds = Number(execFileSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file], { encoding: 'utf8', timeout: 15_000 }));
     return Number.isFinite(seconds) ? seconds : undefined;

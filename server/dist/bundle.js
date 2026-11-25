@@ -91859,6 +91859,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "action_beats",
           sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+          promptReference: "skills/generate-cut-videos/references/prompt-seedance.md",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92099,6 +92100,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "action_beats",
           sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+          promptReference: "skills/generate-cut-videos/references/prompt-seedance.md",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -92342,6 +92344,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "action_beats",
           sceneWritingGuide: "Give each numbered asset a role. Advance the scene in action beats and describe what changes at each transition. Use the reference labels of the selected model version.",
+          promptReference: "skills/generate-cut-videos/references/prompt-seedance.md",
           voice: {
             maxPinnedVoicesPerRender: {
               "dreamina-seedance-2-5-260628": 10,
@@ -92948,6 +92951,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "approximate_holds",
           sceneWritingGuide: "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
+          promptReference: "skills/generate-cut-videos/references/prompt-ltx-msr.md",
           voice: {
             maxPinnedVoicesPerRender: 2,
             postLipSync: false,
@@ -93091,6 +93095,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "approximate_holds",
           sceneWritingGuide: "Place each cast member at their opening landmark. Pair their face and voice with the same cast ID. Keep every turn with its action and show what the listener does.",
+          promptReference: "skills/generate-cut-videos/references/prompt-ltx-msr.md",
           voice: {
             maxPinnedVoicesPerRender: 2,
             postLipSync: false,
@@ -93492,6 +93497,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "action_beats",
           sceneWritingGuide: "Assign picture, motion and voice references by role. Use the submitted slot map, including any audio carried by a video. Describe a new view at each cut.",
+          promptReference: "skills/generate-cut-videos/references/prompt-h3.md",
           voice: {
             maxPinnedVoicesPerRender: 3,
             postLipSync: false,
@@ -94634,6 +94640,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "cut_order",
           sceneWritingGuide: "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+          promptReference: "skills/generate-cut-videos/references/prompt-h3.md",
           voice: {
             maxPinnedVoicesPerRender: 0,
             postLipSync: false,
@@ -94681,6 +94688,7 @@ var require_video_catalog = __commonJS({
           },
           sceneCutTiming: "action_beats",
           sceneWritingGuide: "Identify the purpose of each supplied reference. Describe visual changes and attributed dialogue in chronological order. Place continuous ambience after the action.",
+          promptReference: "skills/generate-cut-videos/references/prompt-h3.md",
           voice: {
             maxPinnedVoicesPerRender: 3,
             postLipSync: false,
@@ -113339,13 +113347,13 @@ async function requestMlxVideo(body) {
   const url = `${mlxServeUrl()}/v1/video/generations`;
   if (!body.stream) return requestRaw("post", url, authHeaders(), body, MLX_VIDEO_TIMEOUT_MS);
   try {
-    const fastH3 = body.model === FASTH3_OMNI_MODEL;
+    const fastH32 = body.model === FASTH3_OMNI_MODEL;
     const response = await fetch(url, {
       method: "POST",
       headers: { ...authHeaders(), "Content-Type": "application/json" },
-      ...fastH3 ? { dispatcher: h3RenderTransport } : {},
+      ...fastH32 ? { dispatcher: h3RenderTransport } : {},
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(fastH3 ? H3_RENDER_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS)
+      signal: AbortSignal.timeout(fastH32 ? H3_RENDER_TIMEOUT_MS : MLX_VIDEO_TIMEOUT_MS)
     });
     if (!response.ok || !response.headers.get("content-type")?.includes("text/event-stream"))
       return { ok: response.ok, status: response.status, body: await response.text() };
@@ -130096,6 +130104,46 @@ var authoring = {
 function sceneWritingGuide(profile) {
   return profile.writer ? authoring[profile.writer] : "Establish the opening and describe the ordered action, dialogue, transitions and final state in one scene.";
 }
+var PAGES = "skills/generate-cut-videos/references/";
+var pages = {
+  hostedH3: "prompt-h3.md",
+  fastH3: "prompt-h3.md",
+  msr: "prompt-ltx-msr.md",
+  seedance: "prompt-seedance.md"
+};
+var seedance20 = { people: 4, assets: 5, source: "Dreamina Seedance 2.0 series prompt guide" };
+var seedance25 = { people: 8, voices: 5, voiceSeconds: [5, 10], source: "Seedance 2.5 prompt guide" };
+var fastH3 = { frames: 345, source: "MiniMax-H3 reference pipeline, 5 to 15 seconds at 24 fps" };
+function seedanceSeries(model2) {
+  if (typeof model2 !== "string") return void 0;
+  return model2.startsWith("dreamina-seedance-2-5-") ? "2.5" : model2.startsWith("dreamina-seedance-2-0-") ? "2.0" : void 0;
+}
+function promptGuidance(tool2, model2) {
+  const profile = scenePromptProfile(tool2, model2);
+  const page = tool2 === "astra_genai_img2video" ? pages.msr : profile.writer && pages[profile.writer];
+  const series = profile.writer === "seedance" ? seedanceSeries(model2) : void 0;
+  const note = series === "2.0" ? " This series follows shot numbers and does not follow timestamps, so leave each shot's length to the model." : series === "2.5" ? " This series reads shot numbers and whole-second ranges." : "";
+  const recommended = series === "2.0" ? seedance20 : series === "2.5" ? seedance25 : tool2 === "fasth3_omni_reference" ? fastH3 : void 0;
+  return { guide: sceneWritingGuide(profile) + note, ...page ? { reference: PAGES + page } : {}, ...recommended ? { recommended } : {} };
+}
+function referenceAdvice(recommended, counts) {
+  if (!recommended) return [];
+  const { people, assets, voices, voiceSeconds, frames, source } = recommended;
+  const advice = [];
+  const over = (code, count2, limit2, unit, consequence) => {
+    if (count2 !== void 0 && limit2 !== void 0 && count2 > limit2)
+      advice.push({ code, detail: `${count2} ${unit}; the ${source} recommends at most ${limit2}. ${consequence}` });
+  };
+  over("reference_people_over_recommended", counts.people, people, "reference people", "Past it the guide reports a wrong number of people or a duplicated character.");
+  over("reference_assets_over_recommended", counts.assets, assets, "reference files", "The guide advises against filling the limit: the model loses track of which reference matters.");
+  over("voice_subjects_over_recommended", counts.voices, voices, "voice subjects", "Past it the guide reports less stable output.");
+  over("frames_over_reference_pipeline", counts.frames, frames, "frames", "Whether the local build renders the longer take as asked is not verified.");
+  if (voiceSeconds) for (const sample of counts.voiceSeconds ?? []) {
+    if (sample.seconds >= voiceSeconds[0] && sample.seconds <= voiceSeconds[1]) continue;
+    advice.push({ code: "voice_sample_length", detail: `${sample.speaker}: the voice sample runs ${sample.seconds.toFixed(1)} s; the ${source} recommends ${voiceSeconds[0]} to ${voiceSeconds[1]} s.` });
+  }
+  return advice;
+}
 var ordered = {
   cutTiming: "cut_order",
   referenceLabels: "indexed",
@@ -130325,6 +130373,7 @@ var videoCatalogRow = (tool2, a) => ({
   sceneInputs: sceneInputCapabilities(tool2),
   sceneCutTiming: scenePromptProfile(tool2).cutTiming,
   sceneWritingGuide: sceneWritingGuide(scenePromptProfile(tool2)),
+  ...promptGuidance(tool2).reference ? { promptReference: promptGuidance(tool2).reference } : {},
   voice: videoVoiceCapabilities(tool2),
   ...a.replacement ? { deprecated: true, replacement: a.replacement } : {},
   fields: keys(a.schema),
@@ -130631,12 +130680,14 @@ var transitions = {
   dissolve: "dissolve to the next view",
   fade: "fade to the next view"
 };
-function shotHeading(shot, fps, options) {
+var shotLabel = /^Shot \d+:\s*/u;
+function shotHeading(shot, fps, options, number3) {
   const transition = shot.transition.replaceAll("_", " ");
   if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}\u2013${shot.endFrame - 1}] ${transition}.`;
   const cut = transitions[shot.transition] ?? transition;
   if (!options.modelPacedCuts)
     return shot.transition === "open" ? "" : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+  if (options.writer === "seedance" && number3) return `Shot ${number3}:`;
   if (options.writer === "fastH3" && shot.transition === "hard_cut") return "Hard cut to the next camera setup.";
   if (options.writer === "hostedH3" && shot.transition === "hard_cut") return "Cut to the next view.";
   const order = shot.transition === "open" ? "" : `Then ${cut}.`;
@@ -130658,7 +130709,7 @@ function sceneTimelineWords(timeline, scene, options = {}) {
   const rows = [];
   if (!modelFacing) rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
   let turnIndex = 0;
-  for (const shot of timeline.shots) {
+  for (const [index, shot] of timeline.shots.entries()) {
     const images = timeline.images.filter((image2) => image2.shotId === shot.shotId);
     const cues = images.filter((image2) => image2.cue).map((image2) => `${timing2(image2.frame)}: ${image2.cue}`);
     const guides = images.flatMap((image2) => image2.reference?.scope === "shot_guide" ? [image2.reference.purpose] : []);
@@ -130677,7 +130728,7 @@ function sceneTimelineWords(timeline, scene, options = {}) {
     const duration5 = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
     const hold = describeDelivery && options.cutTiming === "approximate_holds" && `Hold this view for about ${duration5} ${duration5 === 1 ? "second" : "seconds"}.`;
     rows.push([
-      shotHeading(shot, timeline.fps, options),
+      shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : void 0),
       hold,
       ...[shot.framing, shot.blocking, shot.action].filter((value) => value && !wholeTake.has(value)),
       ...cues,
@@ -130810,13 +130861,16 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
   const script = expected.flatMap((line) => line.tts ? [line.tts] : []);
   const splitSentences2 = (text4) => text4.trimEnd().replace(/([:—–=])\s*\n\s*/gu, "$1 ").split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed, script);
-  const approvedDirections = new Set(original.filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map((text4) => text4.trim()));
+  const numbered = original.some((span) => !span.quoted && /(?:^|\n)Shot \d+: /u.test(span.text));
+  const unlabel = (text4) => numbered ? text4.trim().replace(shotLabel, "") : text4.trim();
+  const approvedDirections = new Set(original.filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map(unlabel));
+  if (numbered) approvedDirections.add("Then cut directly");
   const attributions = [];
   const visualQuotes = [];
   for (const [i2, span] of original.entries()) {
     if (!span.quoted) continue;
     const words = span.text.slice(1, -1);
-    const lead = splitSentences2(original[i2 - 1]?.text ?? "").at(-1)?.trim() ?? "";
+    const lead = unlabel(splitSentences2(original[i2 - 1]?.text ?? "").at(-1) ?? "");
     if (nativeDialogue && words === script[attributions.length]) attributions.push(lead);
     else visualQuotes.push({ words, lead });
   }
@@ -130827,10 +130881,10 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
   for (const [partIndex, span] of parts.entries()) {
     if (!span.quoted) {
       const sentences = splitSentences2(span.text);
-      wrappedClause = span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1)?.trim() ?? "";
-      clause = parts[partIndex + 1]?.quoted ? sentences.pop() ?? "" : "";
+      wrappedClause = unlabel(span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1) ?? "");
+      clause = parts[partIndex + 1]?.quoted ? unlabel(sentences.pop() ?? "") : "";
       for (const sentence2 of sentences) {
-        const text4 = sentence2.trim();
+        const text4 = unlabel(sentence2);
         if (!text4 || approvedDirections.has(text4)) continue;
         grammar.checkStageDirection(text4, nativeDialogue);
       }
@@ -132972,7 +133026,7 @@ function checkVideoEnvironment(tool2) {
 function saveVideoPlan(plan2) {
   const file2 = path27.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file2)) {
-    const { promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
+    const { promptProfile: _profile, promptGuidance: _guidance, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
     if (manifest2.sceneRendering) delete manifest2.promptIssues;
     atomicJson(file2, manifest2);
   }
@@ -133691,7 +133745,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       quote: { reserveUsd: 0, estimatedUsd: 0, revision: "host-allowance-v1", basis: "External host allowance; limits and actual tool schema must be checked by host; not API enforcement" },
       execution: "host_handoff"
     };
-    const plan3 = { ...body2, id: hash2(body2), ...prepared ? { promptProfile } : {} };
+    const plan3 = { ...body2, id: hash2(body2), promptGuidance: { ...promptGuidance("host_external", selection.model), advice: [] }, ...prepared ? { promptProfile } : {} };
     return persist ? saveVideoPlan(plan3) : plan3;
   }
   if (!tool2) throw new Error("Selected deployment has no adapter for this operation");
@@ -133976,9 +134030,23 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     quote,
     execution: "server"
   };
+  const guidance = promptGuidance(tool2, selection.model);
+  const sent = (field2) => Array.isArray(args[field2]) ? args[field2].length : 0;
+  const advice = referenceAdvice(guidance.recommended, {
+    // A person is a cast member the request shows in a picture or a video; a voice alone is not counted as one.
+    ...characterBindings ? { people: new Set(characterBindings.flatMap((binding) => binding.media !== "Audio" && binding.character ? [binding.character] : [])).size } : {},
+    assets: ["referenceImagePaths", "referenceAudioPaths", "referenceVideoPaths", "referenceVideoTaskIds", "referenceVideoUrls"].reduce((count2, field2) => count2 + sent(field2), 0),
+    voices: (voice.voiceContinuity?.speakers ?? []).filter((speaker) => speaker.audioIndex).length,
+    voiceSeconds: guidance.recommended?.voiceSeconds ? (voice.voiceContinuity?.speakers ?? []).flatMap((speaker) => {
+      const seconds2 = speaker.audioIndex && speaker.reference?.path ? sampleSeconds(speaker.reference.path) : void 0;
+      return seconds2 === void 0 ? [] : [{ speaker: speaker.speaker, seconds: seconds2 }];
+    }) : [],
+    ...typeof args.numFrames === "number" ? { frames: args.numFrames } : {}
+  });
   const plan2 = {
     ...body,
     id: hash2(body),
+    promptGuidance: { ...guidance, advice },
     ...prepared ? { promptProfile, promptSlots: promptSlots.slots } : {},
     ...typeof args.prompt === "string" ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt("", args.openingPositions), script) : {}
   };
@@ -147304,7 +147372,7 @@ TOOLS.push(
   {
     name: "video_catalog",
     title: "Inspect installed video adapters",
-    description: "List installed video adapter contracts. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across video adapters and parameters.options the adapter's own. Engine ltx-desktop-local alone queries downloaded offerings and supported settings directly from the local Desktop application. Every mode is read-only.",
+    description: "List installed video adapter contracts. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across video adapters and parameters.options the adapter's own. A row whose model family has a prompt reference page names it as promptReference. Engine ltx-desktop-local alone queries downloaded offerings and supported settings directly from the local Desktop application. Every mode is read-only.",
     inputSchema: {
       type: "object",
       properties: {
@@ -147318,7 +147386,7 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan made without sceneRendering carries one provider prompt, which the plugin writes and returns as promptTemplate for editing; the GenAI gateway receives the approved prompt as written. Under sceneRendering per_shot the gateway writes the prompt of each shot instead and the plan says so. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan made without sceneRendering carries one provider prompt, which the plugin writes and returns as promptTemplate for editing; the GenAI gateway receives the approved prompt as written. Under sceneRendering per_shot the gateway writes the prompt of each shot instead and the plan says so. promptGuidance carries the writing sentence for the selected model, its reference page and an advice entry for each count outside the range the vendor guide recommends; advice never refuses a plan. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       wholeScene: { type: "boolean", enum: [true], description: "Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it." },
@@ -155695,7 +155763,7 @@ async function snsIssueScout(input) {
   const recency = input.recency ?? DEFAULT_SNS_RECENCY;
   const gl = (input.gl ?? DEFAULT_SNS_GL).toLowerCase();
   const hl = input.hl ?? DEFAULT_SNS_HL;
-  const pages = clamp2(Math.floor(input.pagesPerQuery ?? 1), 1, MAX_SNS_PAGES_PER_QUERY);
+  const pages2 = clamp2(Math.floor(input.pagesPerQuery ?? 1), 1, MAX_SNS_PAGES_PER_QUERY);
   const limit2 = clamp2(Math.floor(input.limit ?? DEFAULT_SNS_KEYWORD_LIMIT), 3, 30);
   const includeTrending = input.includeTrending ?? true;
   const errors = [];
@@ -155706,7 +155774,7 @@ async function snsIssueScout(input) {
   let duplicates = 0;
   for (const platform of platforms) {
     for (const query of queries) {
-      for (let page = 1; page <= pages; page++) {
+      for (let page = 1; page <= pages2; page++) {
         searches += 1;
         const params = { query: `site:${SNS_SITE[platform]} ${query}`, gl, hl, page, recency };
         let { error: error2, hits } = await fetchGoogleOrganic(params);
@@ -155778,7 +155846,7 @@ ${errors.join("\n")}`);
       recency,
       gl,
       hl,
-      pagesPerQuery: pages,
+      pagesPerQuery: pages2,
       sites: Object.fromEntries(platforms.map((p) => [p, SNS_SITE[p]])),
       ranking: "Google relevance order \u2014 this lane carries no engagement counts such as likes, replies, or views",
       scoring: "Topic-phrase score = mention count \xD7 (1 + 0.25 \xD7 (platform count \u2212 1)). A different yardstick from the YouTube scout's channel-median multiple, so never mix it into the same table",
