@@ -24,7 +24,7 @@ const checkScene=(scene,options={})=>{const advice=[];return routing.checkScene(
 const { scenePlan } = require('../../skills/produce/references/seedance-route.js');
 function fixture(n = 3) {
   const win = { FORMAT: 'shorts-9x16', PRODUCTION: { mode: 'full_video', imageProvider: 'host',
-    maxAttempts: 3, videoBudgetUsd: 15,
+    videoBudgetUsd: 15,
     // The two HITL choices every generated cut needs (user directive 2026-09-11).
     previz: { renderer: 'threejs', selection: { kind: 'user', reference: 'User chose the three.js previz (no Blender on this machine).' } },
     videoModel: { model: 'dreamina-seedance-2-0-260128', resolution: '1080p', selection: { kind: 'user', reference: 'User chose Seedance 2.0 at 1080p with the displayed table.' } },
@@ -97,8 +97,8 @@ test('quotes six choices with billed seconds, retry range and API rates, excludi
   assert.equal(q.options.video_80.clips, 12);
   assert.equal(q.options.no_video.firstPassUsd, 0);
   assert.equal(q.options.full_video.firstPassUsd, 5.7);
-  assert.equal(q.options.full_video.retryHighUsd, 17.1);
-  assert.equal(q.options.full_video.retryHighKrw, 23940);
+  assert.equal(q.options.full_video.retryHighUsd, 28.5);
+  assert.equal(q.options.full_video.retryHighKrw, 39900);
   assert.equal(q.exchangeRateIsAssumption, true);
   win.SCENES[0].duration = 1.5;
   assert.equal(quote(win).options.full_video.rows[0].seconds, 4);
@@ -232,23 +232,21 @@ test('approval is bound to actual plan and prices but recording a generated outp
   win.PRODUCTION.approval.quoteFingerprint = 'old-price-table'; save(win); assert.match(check(board).errors.join(), /quote is stale/);
   delete win.PRODUCTION; save(win); assert.match(check(board, { requireSelection: true }).errors.join(), /Choose a production mode/);
 }));
-test('retry-inclusive budget, per-shot attempt limit and actual spend block new calls', () => withBoard(({ board, work, save }) => {
+test('preflight retains budget checks without counting historical shot attempts', () => withBoard(({ board, work, save }) => {
   const win = fixture(); win.PRODUCTION.videoBudgetUsd = .5; approve(win); save(win);
   assert.match(check(board).errors.join(), /Retry-inclusive/);
-  win.PRODUCTION.videoBudgetUsd = 4; approve(win); save(win);
-  writeFileSync(path.join(work, 'cost-tally.tsv'), [1, 2, 3].map(n => `seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${n}`).join('\n'));
-  assert.match(check(board, { beforeCall: 1 }).errors.join(), /attempt limit/);
+  win.PRODUCTION.videoBudgetUsd = 10; approve(win); save(win);
+  writeFileSync(path.join(work, 'cost-tally.tsv'), [1, 2, 3, 4, 5].map(n => `seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${n}`).join('\n'));
+  assert.deepEqual(production.check(board, { beforeCall: 1 }).errors, []);
   assert.deepEqual(production.check(board, { beforeCall: 2 }).errors, []);
-  writeFileSync(path.join(work, 'cost-tally.tsv'), 'seedance.1-5-pro-silent.1080p\t100\tvideo:shot=1:attempt=1\n');
+  writeFileSync(path.join(work, 'cost-tally.tsv'), 'seedance.1-5-pro-silent.1080p\t1000\tvideo:shot=1:attempt=1\n');
   assert.match(check(board, { beforeCall: 2 }).errors.join(), /Actual video spend/);
 }));
-test('approved revisions count their own retries while retaining historical spend',()=>withBoard(({board,work,save})=>{
+test('revised approvals retain historical spend',()=>withBoard(({board,work,save})=>{
  const win=fixture(1);win.PRODUCTION.generationRevision='content-v3';approve(win);save(win);
  const ledger=path.join(work,'cost-tally.tsv');
  const old=Array.from({length:3},(_,i)=>`seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${i+1}\n`).join('');
  writeFileSync(ledger,old);assert.deepEqual(production.check(board,{beforeCall:1}).errors, []);
- const current=Array.from({length:3},(_,i)=>`seedance.1-5-pro-silent.1080p\t5\tvideo:shot=1:attempt=${i+1} revision=content-v3\n`).join('');
- writeFileSync(ledger,old+current);assert.ok(check(board,{beforeCall:1}).errors.some(x=>x.includes('attempt limit')));
  win.PRODUCTION.generationRevision='content-v4';save(win);assert.ok(check(board,{beforeCall:1}).errors.some(x=>x.includes('stale')));
  approve(win);save(win);writeFileSync(ledger,old+'seedance.1-5-pro-silent.1080p\t300\tvideo:shot=1:attempt=1 revision=content-v2\n');
  assert.ok(check(board,{beforeCall:1}).errors.some(x=>x.includes('spend exceeds')));
@@ -354,7 +352,7 @@ test('explicit imports pass scene and production gates at zero generation cost, 
  assert.ok(mixedResult.warnings.some(message=>message.includes('same source image reference')));
  assert.equal(quote(mixed).options.hybrid.reusedClips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,0);
  mixed.SCENES[1]=fixture(1).SCENES[0];mixed.SCENES[1].shot.render={mode:'generated_video',purpose:'live_action',motionEssential:true,reason:'Watch the buildings rise.',action:'Buildings rise.',whyNotStill:'The removal is continuous.'};
- assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.38);assert.equal(quote(mixed).options.hybrid.retryHighUsd,.76);
+ assert.equal(quote(mixed).options.hybrid.clips,1);assert.equal(quote(mixed).options.hybrid.firstPassUsd,.38);assert.equal(quote(mixed).options.hybrid.retryHighUsd,1.9);
  assert.equal(quote(mixed).options.hybrid.rows[0].shot,2);
  save(w);
  const s=w.SCENES[0],original=structuredClone(s);
@@ -381,7 +379,7 @@ test('generation output existence never discounts a new generation or its retrie
  const w=fixture(1);w.PRODUCTION.mode='hybrid';const before=quote(w);
  const video=path.join(work,'existing.mp4');writeFileSync(video,'already exists');w.SCENES[0].visual.video.clip=video;
  assert.deepEqual(quote(w),before);
- assert.equal(before.options.hybrid.firstPassUsd,.38);assert.equal(before.options.hybrid.retryHighUsd,1.14);
+ assert.equal(before.options.hybrid.firstPassUsd,.38);assert.equal(before.options.hybrid.retryHighUsd,1.9);
 }));
 test('the previz renderer and the video model are HITL choices recorded before any render or call', () => {
   const win = fixture();

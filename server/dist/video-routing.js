@@ -1234,7 +1234,8 @@ function authorization(context) {
     const p = context.production;
     if (p.videoAuthorization !== undefined) {
         const auth = z.object({ reference: z.string().min(1), maxUsd: z.number().finite().nonnegative(),
-            maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3),
+            maxConcurrent: z.number().int().min(1).max(64).default(1),
+            maxAttempts: z.unknown().optional(), // Accept the obsolete field on saved boards.
             // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
             openingSpendUsd: z.number().finite().nonnegative().optional() }).strict().parse(p.videoAuthorization);
         return auth;
@@ -1246,8 +1247,7 @@ function authorization(context) {
     const quote = load(helper).quote(context.board);
     if (quote.quoteFingerprint !== approval.quoteFingerprint)
         throw new Error('Existing quote changed; spending authorization does not cover this plan');
-    return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1,
-        maxAttempts: z.number().int().min(1).max(5).parse(p.maxAttempts) };
+    return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1 };
 }
 // Each shot's video waits for the user's yes to its plan, unless they approved every shot (user directive 2026-10-31).
 export const videoApproveSchema = z.object({
@@ -1389,6 +1389,7 @@ export async function executeVideo(raw, dispatch) {
         await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
     checkVideoEnvironment(plan.tool);
     const auth = authorization(context);
+    const { SCENE_VIDEO_ATTEMPT_LIMIT } = load('../../skills/storyboard/references/production-mode.js');
     const cached = videoTransaction(episode, state => {
         const existing = state.jobs[plan.requestId];
         if (existing) {
@@ -1411,10 +1412,9 @@ export async function executeVideo(raw, dispatch) {
         const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
         if (used + plan.quote.reserveUsd > auth.maxUsd + 1e-9)
             throw new Error('video_budget_exceeded');
-        for (const shotId of plan.shotIds ?? [plan.shotId]) {
-            const attempts = priorPlans.filter(previous => (previous.shotIds ?? [previous.shotId]).includes(shotId)).length;
-            if (attempts >= auth.maxAttempts)
-                throw new Error('video_attempt_limit: ' + shotId);
+        const attempts = priorPlans.filter(previous => previous.sceneNo === plan.sceneNo).length;
+        if (attempts >= SCENE_VIDEO_ATTEMPT_LIMIT) {
+            throw new Error(`video_attempt_limit: scene ${plan.sceneNo} has used all ${SCENE_VIDEO_ATTEMPT_LIMIT} attempts`);
         }
         state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
             status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

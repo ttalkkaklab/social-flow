@@ -280,7 +280,7 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 | Scene | One place, one event in one continuous stretch of time. The head is `S#1. inside the café / day` | a `STRUCTURE.scenes[]` object — `{ no, place, time, event, charge, turn, out }` (§structure). Each shot points at it with `scene`; `sceneSlug` is derived. A new number when place or time changes, or when the value turned and a second event starts — an explanation screen is a shot of the story scene it explains |
 | Shot (a "cut" on set) | One unbroken chunk from recording ON to OFF | **one `SCENES[]` entry**. `type` is the role (cover/points/…), not a grammar unit |
 | Reveal | The moment on-screen text appears within the same shot | `narration` segments and bullets. Not a shot — the scene-frame row label is "reveal" |
-| Take | A retry of the same shot | Not an entry in this array. Generation rounds live in `PRODUCTION.maxAttempts` and `.work/cost-tally.tsv`; a filmed shot's retries are the last take in the file (shot-script-template) |
+| Take | One attempt at generating a scene or filming a shot | Generated takes are recorded in `.work/video-routing/`; each scene has up to five attempts. A filmed shot's takes go in the shot script |
 | Coverage | Alternative views available to the edit | Choose views for a reveal, action boundary, reaction, viewpoint or necessary spatial clarity. No minimum shot count or size quota. |
 
 A short is usually one sequence. A scene breaks when place or time changes, or a completed

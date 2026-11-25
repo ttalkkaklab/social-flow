@@ -124,7 +124,7 @@ Quality scores, storytelling choices and review stamps are not execution gates.
 
 `PRODUCTION.videoAuthorization.maxUsd` is the one ceiling routing enforces; when it is
 absent, routing falls back to the legacy quote — `PRODUCTION.approval` (its
-`quoteFingerprint` must still match the board), `videoBudgetUsd` and `maxAttempts`.
+`quoteFingerprint` must still match the board) and `videoBudgetUsd`.
 The channel's `video_budget_usd` and the project's `production.episodeBudgetUsd` are
 planning ceilings routing never reads; the author carries the applicable one into
 `maxUsd`. For an explicit spending instruction not represented by the legacy quote,
@@ -133,7 +133,7 @@ record its reference and limits without manufacturing approval:
 ```js
 window.PRODUCTION.videoAuthorization = {
   reference: 'The actual user instruction or standing authorization reference',
-  maxUsd: 10, maxConcurrent: 1, maxAttempts: 3
+  maxUsd: 10, maxConcurrent: 1
 };
 ```
 
@@ -148,9 +148,14 @@ reported completion tokens. Other providers retain the quoted estimate, explicit
 not measured billing. Provider price changes can exceed a pinned estimate.
 
 A stable `requestId` identifies one logical attempt. Completed requests return the
-cached result. Pending or ambiguous requests never submit again. Managed ASTRA audio requests bind
-`maxAttempts: 1`; explicit multi-generation adapter retries are rejected. Use the
-episode attempt limit for separately tracked attempts after a terminal result.
+cached result. Pending or ambiguous requests never submit again. Each episode allows
+five managed generation attempts per scene, including the first. The server counts
+jobs by the scene number in the original plan, including failed jobs. Edits keep the
+scene's count, and a shot moved to another scene carries no attempts with it.
+Historical jobs with a scene number count toward that scene; shot-only jobs still
+count toward episode spending. Old board `maxAttempts` fields are accepted for
+compatibility with saved boards and approved quotes. Managed ASTRA audio requests bind
+`maxAttempts: 1`; explicit multi-generation adapter retries are rejected.
 The retired [shot-render CLI](../produce/references/render-astra-shot.js) directs existing callers to the scene planner.
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`

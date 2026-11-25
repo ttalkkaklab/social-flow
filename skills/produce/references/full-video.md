@@ -371,11 +371,11 @@ plan reaches the model; never replace it with a global "static or subtle drift" 
    on the channel voice. An upgrade requires a priced plan and approval; never silently escalate.
 5. Keep every attempt; set `visual.video.clip` to the chosen file. Append actual billed usage
    to `.work/cost-tally.tsv` immediately, including billed rejects:
-   `seedance.2-0-video.1080p<TAB>10<TAB>video:shot=1:attempt=1` (output plus previz seconds on the with-video row).
-   Shot numbers start at 1; an attempt includes the first call. An uncertain bill blocks the
+   `seedance.2-0-video.1080p<TAB>10<TAB>video:scene=1:attempt=1` (output plus previz seconds on the with-video row).
+   Scene numbers start at 1 and the first call counts as one attempt. An uncertain bill blocks the
    next call until reconciled. Never erase ledger rows to create room for another attempt.
 6. Reuse the same source for retries, adjust the action plan when necessary and re-approve a
-   changed plan. Retry only the defective shot. Inspect the whole clip, not its thumbnail.
+   changed plan. Regenerate the affected scene. Inspect the whole clip.
 
 ## Visual review
 
@@ -501,8 +501,7 @@ from the approved estimate and all other production costs.
 When the user approves a revised storyboard, give it a stable `PRODUCTION.generationRevision`
 identifier such as `content-v3` before quoting. Append `revision=content-v3` as a separate token
 in each new video's ledger memo. The quote binds this identifier. The retry gate counts that
-revision's attempts per shot; all historical rows still count toward the episode dollar cap.
-Do not change the revision to bypass a failed shot's retry limit. A new revision requires a
-real revised plan and its approval. Keep historical rows and their original shot numbers intact.
+scene's attempts across revisions. All historical rows still count toward the episode dollar cap.
+A new revision requires a revised plan and its approval. Keep historical ledger rows intact.
 
 Existing generated inputs use [visual.reuse](../../storyboard/references/scenes-schema.md#existing-generated-clip-input-visualreuse). Skip generation steps for those shots and keep their imported-file playback review. Do not create a source image or call a video API for an imported input.

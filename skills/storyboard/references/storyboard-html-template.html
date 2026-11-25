@@ -1939,7 +1939,7 @@ window.STORYBOARD_READY = (async function () {
       prodMode: "Mode", prodClips: "Generated clips", prodFirst: "First pass", prodRetry: "With retries",
       prodModes: { hybrid: "Hybrid (legacy)", full_video: "100% or more", video_50: "50% or more", video_30: "30% or more", hook_only: "Hook only", stills_only: "Stills only (no generated video)" },
       prodScope: "Video API cost only. Images, narration, editing and tax are excluded; the mode not selected is an estimate under stated assumptions.",
-      prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per clip: " + attempts + "."; },
+      prodTerms: function (rate, cap, attempts) { return "Assumed KRW/USD: " + rate + ". Approved video budget: $" + cap + ". Total attempts per scene: " + attempts + "."; },
       prodRows: "Model, resolution and cost per shot", prodShot: "Shot ", withAudio: "with audio", silent: "silent",
       prodOutside: function (label) { return "Selected mode: " + label + ". It generates no video, so it is not one of the four options compared above."; },
       refImage: "Still generation only", refVideo: "Video conditioning plan", refBoth: "Still + video conditioning plan",
@@ -2309,7 +2309,7 @@ window.STORYBOARD_READY = (async function () {
       prodMode: "방식", prodClips: "생성 영상", prodFirst: "최초 생성", prodRetry: "재시도 포함 예상",
       prodModes: { hybrid: "혼합 제작 (기존 승인)", full_video: "100% 이상", video_50: "50% 이상", video_30: "30% 이상", hook_only: "훅만 영상", stills_only: "정지 전용 (생성 영상 0)" },
       prodScope: "영상 API 비용만 계산합니다. 이미지·음성·편집·세금은 제외하며 선택하지 않은 방식은 가정에 따른 추산입니다.",
-      prodTerms: function (rate, cap, attempts) { return "원화 환산 가정: 1달러=" + rate + "원. 승인 예산: $" + cap + ". 장면당 총 시도 한도: " + attempts + "회."; },
+      prodTerms: function (rate, cap, attempts) { return "환산 기준은 1달러당 " + rate + "원입니다. 승인 예산은 $" + cap + "입니다. 씬마다 첫 생성을 포함해 최대 " + attempts + "회 시도할 수 있습니다."; },
       prodRows: "장면별 모델·해상도·생성비", prodShot: "장면 ", withAudio: "음성 포함", silent: "무음",
       prodOutside: function (label) { return "선택한 방식: " + label + ". 생성 영상이 없어 위 네 가지 비교에는 들어가지 않습니다."; },
       refImage: "이미지 제작에 사용", refVideo: "영상 참조로 전달 예정", refBoth: "이미지·영상에 사용 예정",
@@ -5400,7 +5400,8 @@ window.STORYBOARD_READY = (async function () {
           ' (≈₩' + o.retryLowKrw.toLocaleString() + '–₩' + o.retryHighKrw.toLocaleString() + ')</td></tr>';
       });
       h += '</tbody></table><p>' + esc(T.prodScope) + '</p><p>' +
-        esc(T.prodTerms(PCOST.krwPerUsd, window.PRODUCTION.videoBudgetUsd, window.PRODUCTION.maxAttempts)) + '</p>';
+        esc(T.prodTerms(PCOST.krwPerUsd, window.PRODUCTION.videoAuthorization?.maxUsd ?? window.PRODUCTION.videoBudgetUsd,
+          window.PRODUCTION_MODE.SCENE_VIDEO_ATTEMPT_LIMIT)) + '</p>';
       // A selected mode the quote carries no entry for must not take the whole page down.
       // stills_only is deliberately outside CHOICES (production-mode.js): a channel capped at 0
       // generated video has nothing to compare. Say which mode is selected and read no row for it.
