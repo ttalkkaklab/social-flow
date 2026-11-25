@@ -2335,6 +2335,7 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
   fs.writeFileSync(path.join(dir,'cast.json'),JSON.stringify({characters}));
   f.board.STRUCTURE.version='structure-v1';
   f.board.STRUCTURE.sequences=[{id:'q1',title:'The visitor',purpose:'A reunion',scenes:[1]}];
+  f.board.STORY = { ...f.board.STORY, primaryHookType: 'in_medias_res', hookContractVersion: 1 };
   f.board.SCENES.forEach((s,i)=>{s.id='s000'+(i+1);s.summary=s.visual.action;s.type='hooking';s.visual.character=s.narration[0].speaker;});
   f.save();
   const input={episode:f.episode,sceneNo:1,wholeScene:true,args:{reserveUsd:0}};
@@ -2351,7 +2352,7 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     const draft = {engine:original.selection.engine,model:original.selection.model,operation:'reference',prompt};
     const stored = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
       event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,promptDrafts:[draft]}}]});
-    assert.ok(!stored.isError);
+    assert.ok(!stored.isError, stored.content[0].text);
   }
   const edit = text => original.promptTemplate + '\n' + text;
   for (const [invalid,reason] of [

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /** Scenario input contract, S1–S12. No production values are written.
- * node check-scenario.js <candidates/|scenario.md> [--json] | --selftest
+ * node check-scenario.js <candidates/|scenario.md> [--json] [--authoring] | --selftest
  * Exit 0: no violations, 1: violations, 3: input error.
  * Frontmatter uses the documented YAML subset: scalar fields, anchors mapping,
  * numeric claims arrays, quoted/folded/literal strings. Unsupported syntax fails.
@@ -170,7 +170,7 @@ function analyse(src, research, opts = {}) {
   }
   return { meta:m, findings };
 }
-function checkPath(target) {
+function checkPath(target, { authoring = false } = {}) {
   if (!fs.existsSync(target)) throw Error('path not found: ' + target);
   const directory = fs.statSync(target).isDirectory();
   const files = directory ? fs.readdirSync(target).filter(f => /^d\d+\.md$/.test(f)).sort((a,b) => Number(a.slice(1,-3))-Number(b.slice(1,-3))).map(f => path.join(target, f)) : [target];
@@ -187,11 +187,13 @@ function checkPath(target) {
       try { pool = JSON.parse(fs.readFileSync(path.join(directory, 'cast.json'), 'utf8')).characters; } catch (_) { pool = undefined; }
     }
     const result = analyse(src, research ? fs.readFileSync(research, 'utf8') : null, {
-      directory, pool, where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
+      directory, pool, authoring, where:file, long:fmt ? fmt.format === 'youtube-long-16x9' : ['answer-first','story'].includes(m.arc),
       chosen:path.basename(file) === 'scenario.md', hasScenes:fs.existsSync(path.join(path.dirname(file), 'scenes.js'))
     });
+    if (authoring && m.version !== 'scenario-v2')
+      result.findings.push({level:'bad', code:'hook_type_required', where:file, what:'hook_type_required: new scenarios require a scenario-v2 primaryHookType'});
     if (result.data) {
-      const { difference, ...story } = result.data;
+      const { difference, primaryHookType, ...story } = result.data;
       stories.push(JSON.stringify(story));
       const signature = require('./scenario-v2.js').observableOpeningSignature(result.data);
       if (signature) openings.set(signature, [...(openings.get(signature) || []), path.basename(file)]);
@@ -201,7 +203,7 @@ function checkPath(target) {
     const structuralV2 = /exactly one scenario-json|Unexpected|JSON|must contain an object|beats must be an array|beat must be an object|needs events|events need kind and text|event character is not cast|dialogue needs an addressee|unknown dialogue addressee|each event needs|factual events require existing|character is not in channel pool|cast.*(?:array|unique)|source.*(?:missing|not found)/i;
     const parseErrors = parseScenario(src).errors;
     findings.push(...result.findings.map(f => {
-      if (f.level !== 'bad') return f;
+      if (f.level !== 'bad' || f.code?.startsWith('hook_type_') || (authoring && parseErrors.some(e => f.what === 'S1 ' + e))) return f;
       const keep = m.version === 'scenario-v2' ? structuralV2.test(f.what)
         : parseErrors.some(message => f.what === 'S1 ' + message);
       return keep ? f : {...f, level:'warn'};
@@ -302,8 +304,8 @@ function main() {
   try {
     if (argv.includes('--selftest')) return selftest();
     const targets = argv.filter(a => !a.startsWith('--'));
-    if (targets.length !== 1 || argv.some(a => a.startsWith('--') && a !== '--json')) throw Error('usage: check-scenario.js <candidates/|scenario.md> [--json] | --selftest');
-    const result = checkPath(targets[0]);
+    if (targets.length !== 1 || argv.some(a => a.startsWith('--') && a !== '--json' && a !== '--authoring')) throw Error('usage: check-scenario.js <candidates/|scenario.md> [--json] [--authoring] | --selftest');
+    const result = checkPath(targets[0], { authoring: argv.includes('--authoring') });
     if (argv.includes('--json')) process.stdout.write(JSON.stringify(result,null,2) + '\n');
     else {
       process.stdout.write('scenario contract — ' + result.files.length + ' file(s)\n');

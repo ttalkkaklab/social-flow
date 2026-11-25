@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { atomicJson, canonicalPath } from './routing-files.js';
 import { requireReadyProject } from './project.js';
+import { readOpeningReviewSummary } from './opening-review.js';
 /**
  * A progress record, not a gate (user directive 2026-10-31): stages complete in any order and no
  * other tool consults this state. The one check left is the story order a story-v2 text
@@ -68,6 +69,7 @@ export function manageWorkflow(raw) {
     try {
         const state = read(episode);
         const stage = input.stage;
+        let openingReview;
         if (input.action === 'begin') {
             state.active = { stage, entries: (input.entries ?? []).map(entry => ({ ...entry,
                     text: canonicalPath(path.resolve(episode, entry.text)), ...(entry.image ? { image: canonicalPath(path.resolve(episode, entry.image)) } : {}),
@@ -80,7 +82,7 @@ export function manageWorkflow(raw) {
             if (state.active?.stage !== stage)
                 throw new Error('workflow_out_of_order: begin this stage first');
             if (stage === 'text_storyboard')
-                requireStoryOutline(episode);
+                openingReview = requireStoryOutline(episode);
             const hashes = {};
             for (const entry of state.active.entries)
                 for (const file of [entry.text, entry.image, ...(entry.images ?? []), entry.blend, entry.video])
@@ -95,7 +97,7 @@ export function manageWorkflow(raw) {
                 delete state.active;
         }
         atomicJson(stateFile(episode), state);
-        return progress(episode, state);
+        return { ...progress(episode, state), ...(openingReview && { openingReview }) };
     }
     finally {
         fs.closeSync(fd);
@@ -112,10 +114,16 @@ function requireStoryOutline(episode) {
         return;
     const load = nodeModule.createRequire(import.meta.url);
     const board = load(fileURLToPath(new URL('../../skills/_shared/scenes-vm.js', import.meta.url))).evaluateWindowScript(fs.readFileSync(file, 'utf8'), { filename: file });
-    if (board.STORY?.version !== 'story-v2')
-        return;
-    const contract = load(fileURLToPath(new URL('../../skills/storyboard/references/structure-contract.js', import.meta.url)));
-    const gaps = [...contract.outlineGaps(board), ...contract.castGaps(board)];
-    if (gaps.length)
-        throw new Error('story_outline_required: ' + gaps.join('; '));
+    const hooks = load(fileURLToPath(new URL('../../skills/storyboard/references/opening-hook.js', import.meta.url)));
+    const violations = hooks.checkBoardHook(board, path.dirname(file));
+    if (violations.length)
+        throw new Error(violations.map(issue => issue.what).join('; '));
+    if (board.STORY?.version === 'story-v2') {
+        const contract = load(fileURLToPath(new URL('../../skills/storyboard/references/structure-contract.js', import.meta.url)));
+        const gaps = [...contract.outlineGaps(board), ...contract.castGaps(board)];
+        if (gaps.length)
+            throw new Error('story_outline_required: ' + gaps.join('; '));
+    }
+    if (board.STORY?.hookContractVersion === 1)
+        return readOpeningReviewSummary(file);
 }

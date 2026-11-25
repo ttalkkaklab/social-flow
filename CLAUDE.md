@@ -140,9 +140,20 @@ platforms differ in title, caption and cover, which carry the same promise. Long
 the title and thumbnail first; the first 7 s confirm them and the next 20 s open a bigger
 question (YouTube's Intro reads who is still watching at 30 s). The synopsis gives the opening
 its own paragraph, `story_sequence` records it as `STORY.opening`, and every story-first board
-write prints a reading of it against the format and platforms. This reports and never refuses;
-it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
+write prints a reading of it against the format and platforms. Follow `skills/storyboard/references/opening-by-format.md`.
 Evidence and its limits: [opening hooks study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks).
+
+## Primary hook and three-second opening review (user directive, 2026-11-25)
+
+Each new or substantially rewritten synopsis candidate and board carries one
+[primary hook type](skills/storyboard/references/opening-hook-types.json). Carry the selected
+scenario's ID into the board. A direct board chooses its type on the first sequence.
+After authoring each synopsis and again after completing the text storyboard, give the
+audience's first three seconds to three independent host readers. Revise an above-ceiling
+opening, with at most five revision rounds shared by both stages and all candidates.
+Report the best valid version, its evidence and unresolved findings when the allowance
+runs out. Follow the [opening review](skills/storyboard/references/opening-review.md)
+for scoring, recovery and synopsis-only handoff.
 
 ## Dramatic pressure and payoff (user directive, 2026-11-20)
 
@@ -240,12 +251,12 @@ order and deliverables. See `skills/_shared/production-workflow.md`.
 
 ## Checks removed for speed (user directive, 2026-10-31)
 
-Production is too slow, so every check except the story order and the episode cast (2026-11-01,
-above) goes until the quality is known; checks come back afterwards. `production_workflow` is an optional progress record:
+The story tools enforce story order, cast readiness and the primary hook contract.
+`production_workflow` is an optional progress record:
 stages complete in any order and no other tool reads it. Image and video plans, storyboard
 writes, Blender renders and assembly no longer wait for workflow stages, independent
-reviews, Blender compositions or reviewed media. `storyboard_apply` refuses only an
-unreadable board and the story order; `storyboard_check` runs every other rule on request.
+reviews, Blender compositions or reviewed media. `storyboard_apply` protects board
+readability, story order and the primary hook. `storyboard_check` runs editorial checks on request.
 review-context, review-camera, compose-blender, review-cut-images and review-cut-videos run
 only when the user asks. Spending limits, generation authorization, adapter input validation,
 `video_prompt_language`, `msr_character_limit` and the voice-lane rules stay. Existing

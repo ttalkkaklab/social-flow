@@ -4,6 +4,8 @@
 // Refresh the shared review shell without changing the episode's editorial metadata.
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 
 const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js', 'motion-graphics.js', 'production-mode.js', 'structure-contract.js', 'style-samples.js', 'film-techniques.js', 'shot-direction.js', 'scene-direction.js', 'review-layout.js', 'prop-continuity.js', 'prop-sheet.js', 'location-contract.js', 'location-review-runtime.js', 'location-review.css'];
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
@@ -53,6 +55,18 @@ function storyboardHtml(directory, check = false) {
   const html = current === null ? template : refreshHtml(template, current);
   const available = ['storyboard.md', 'script.md', 'research.md', 'scenes.js'].filter(name => fs.existsSync(path.join(dir, name)));
   const win = fs.existsSync(path.join(dir, 'scenes.js')) ? require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir, 'scenes.js')) : null;
+  let openingReview = {status: 'not_reviewed'};
+  if (fs.existsSync(path.join(dir, 'opening-review.json'))) {
+    const bundle = path.resolve(__dirname, '../../../server/dist/bundle.js');
+    const summary = execFileSync(process.execPath, [bundle, '--opening-review-summary', dir], {encoding: 'utf8'});
+    openingReview = JSON.parse(summary);
+    if (win && ['pass', 'high', 'limit_reached'].includes(openingReview.status)) {
+      // An offline reader may open an older export beside a newly edited scenes.js.
+      const keys = ['STORY', 'FORMAT', 'STRUCTURE', 'SCENES', 'COMPREHENSION', 'PRODUCTION', 'THEME'];
+      const digest = createHash('sha256').update(JSON.stringify(keys.map(key => win[key]))).digest('hex');
+      openingReview.exportSource = {keys, digest};
+    }
+  }
   const locationData = win ? [...locationSheets(win, dir), ...require('./location-assets.js').preview(win, dir)] : [];
   // file:// pages cannot fetch a GLB, so the data file carries each set's bytes, keyed by the path an entry names.
   const glbs = {};
@@ -60,6 +74,7 @@ function storyboardHtml(directory, check = false) {
   const locationLinks=Object.fromEntries((win?.SB_DOC?.locations||[]).map(e=>[e.id,'../../../assets/locations/details/'+require('./location-assets.js').detailFilename(path.basename(path.dirname(dir)),e.id)]));
   const portraits = {};
   const typeLabels = Object.fromEntries(require('../../_shared/video-types.json').types.map(type => [type.id, type.label]));
+  const hookLabels = Object.fromEntries(require('./opening-hook-types.json').map(({id, en, ko}) => [id, {en, ko}]));
   const characters = win?.SB_DOC?.characters || [];
   const ids = Array.isArray(characters) ? characters.map(c => c?.id) : Object.keys(characters);
   for (const id of ids) {
@@ -82,6 +97,8 @@ function storyboardHtml(directory, check = false) {
     ...(tool === 'veo_reference' ? { assetLimits: Object.fromEntries(Object.entries(modelConstraints).map(([model, spec]) => [model, spec.maxAssetImages])) } : {}),
   }));
   const reviewData = 'window.REVIEW_LOCALIZATION = ' + JSON.stringify(translations).replace(/</g, '\\u003c') + ';\n' +
+    'window.REVIEW_HOOK_LABELS = ' + JSON.stringify(hookLabels).replace(/</g, '\\u003c') + ';\n' +
+    'window.REVIEW_OPENING = ' + JSON.stringify(openingReview).replace(/</g, '\\u003c') + ';\n' +
     'window.LOCATION_DETAIL_LINKS = '+JSON.stringify(locationLinks).replace(/</g,'\\u003c')+';\n' +
     'window.REVIEW_PANEL_FINDINGS = ' + JSON.stringify(panelFindings).replace(/</g, '\\u003c') + ';\n' +
     'window.REVIEW_FILES = ' + JSON.stringify(available) + ';\n' +
