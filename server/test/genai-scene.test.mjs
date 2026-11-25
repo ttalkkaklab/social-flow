@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { buildSceneWire, parseSceneCapabilities, sceneRequestIssues, SCENE_LIMITS } from '../dist/genai-scene.js';
+import { buildSceneWire, parseSceneCapabilities, sceneRequestIssues, validateSceneBody, SCENE_LIMITS } from '../dist/genai-scene.js';
+import { config } from '../dist/config.js';
 import { png } from './workflow-fixture.mjs';
 
 // The keys every gateway returns. One deployed before 2026-11-24 reports no limits and no seed.
@@ -71,4 +72,21 @@ test('a shot seed reaches the body only where the gateway takes one for that ren
   // A dev scene whose track drives the picture renders every shot as audio2video.
   const driven = {...request, audio:{path:'/unused.wav', startFrame:0, endFrame:96, cues:[]}};
   assert.equal(sceneRequestIssues(driven, parseSceneCapabilities({...deployed, seed:['msr','generate']}), {bindings, model:'ltx-2.5-22b-dev'}).length, 2);
+});
+
+// This route writes each shot's prompt. One render per shot is the only execution a plan may reach (user directive 2026-11-25).
+test('the scene body names no execution and a validate answer for another one is refused', async t => {
+  const model = 'ltx-2.5-22b-distilled', expected = {model, shots:2};
+  const {body} = await buildSceneWire(scene(t, [{frames:48}, {frames:48}]), model, '720p');
+  assert.equal(Object.hasOwn(body, 'execution'), false);
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = key; });
+  let answer = {schema_valid:true, model, shots:2};
+  t.mock.method(globalThis, 'fetch', async () => Response.json(answer));
+  await validateSceneBody(body, 'scene-fixture', expected);
+  answer = {...answer, execution:'per_shot'};
+  await validateSceneBody(body, 'scene-fixture', expected);
+  answer = {...answer, execution:'single_msr'};
+  await assert.rejects(validateSceneBody(body, 'scene-fixture', expected), /scene_render_selection/);
 });

@@ -91855,7 +91855,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -92096,7 +92095,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -92340,7 +92338,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -92594,7 +92591,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92642,7 +92638,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92691,7 +92686,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
@@ -92748,7 +92742,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92793,7 +92786,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92839,7 +92831,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92889,7 +92880,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "gateway_prompt_only",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -92918,7 +92908,6 @@ var require_video_catalog = __commonJS({
             "resolution",
             "fps",
             "generateAudio",
-            "shots",
             "reserveUsd",
             "outputPath",
             "filename"
@@ -92928,7 +92917,7 @@ var require_video_catalog = __commonJS({
               "ltx-2.5-22b-distilled",
               "ltx-2.5-22b-dev"
             ],
-            note: "Use duration, exact numFrames or automatic duration. Optional shots describe 2\u20134 cuts. Plain distilled generation accepts registered LoRAs on supporting backends."
+            note: "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
           }
         },
         {
@@ -92949,18 +92938,12 @@ var require_video_catalog = __commonJS({
                 "mix"
               ],
               sceneRendering: "per_shot",
-              executionModes: [
-                "auto",
-                "single_msr",
-                "per_shot"
-              ],
-              requiresUserChoice: false,
+              promptWriter: "gateway",
               capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
               validation: "/v1/ltx/v2/scene-to-video/validate"
             },
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "gateway_prompt_only",
             sceneAudio: false
           },
           sceneCutTiming: "approximate_holds",
@@ -92989,7 +92972,6 @@ var require_video_catalog = __commonJS({
             "resolution",
             "fps",
             "generateAudio",
-            "shots",
             "reserveUsd",
             "outputPath",
             "filename",
@@ -93044,16 +93026,12 @@ var require_video_catalog = __commonJS({
                 "conditioning"
               ],
               sceneRendering: "per_shot",
-              executionModes: [
-                "per_shot"
-              ],
-              requiresUserChoice: true,
+              promptWriter: "gateway",
               capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
               validation: "/v1/ltx/v2/scene-to-video/validate"
             },
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
@@ -93109,7 +93087,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "approximate_holds",
@@ -93163,7 +93140,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93215,7 +93191,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93269,7 +93244,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93317,7 +93291,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
@@ -93373,7 +93346,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93423,7 +93395,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93465,7 +93436,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93518,7 +93488,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -93573,7 +93542,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93628,7 +93596,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93672,7 +93639,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93718,7 +93684,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
@@ -93763,7 +93728,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -93962,7 +93926,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: true
           },
           sceneCutTiming: "cut_order",
@@ -94160,7 +94123,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
@@ -94287,7 +94249,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
@@ -94416,7 +94377,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
@@ -94544,7 +94504,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "time_ranges",
@@ -94671,7 +94630,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -94719,7 +94677,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -94768,7 +94725,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: true,
             endingImage: true,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "cut_order",
@@ -94814,7 +94770,6 @@ var require_video_catalog = __commonJS({
             frameAddressedNativeDialogue: false,
             openingImage: false,
             endingImage: false,
-            shotDescriptions: "prompt",
             sceneAudio: false
           },
           sceneCutTiming: "action_beats",
@@ -95794,8 +95749,8 @@ var require_production_mode = __commonJS({
         if (!reused(scene)) return [];
         const v = scene.visual || {}, r2 = v.reuse, errors = [];
         if (!r2 || typeof r2 !== "object" || Array.isArray(r2)) return ["visual.reuse must be an imported clip record"];
-        const local2 = (file2) => text4(file2) && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(file2) && !/[\t\r\n|]/.test(file2);
-        if (!local2(r2.clip) || !/\.(mp4|mov|m4v|webm)$/i.test(r2.clip)) errors.push("visual.reuse.clip must be a local, already trimmed file path");
+        const local3 = (file2) => text4(file2) && !/^[a-z][a-z0-9+.-]*:|^\/\//i.test(file2) && !/[\t\r\n|]/.test(file2);
+        if (!local3(r2.clip) || !/\.(mp4|mov|m4v|webm)$/i.test(r2.clip)) errors.push("visual.reuse.clip must be a local, already trimmed file path");
         if (!/^[a-f0-9]{64}$/.test(r2.sha256 || "")) errors.push("visual.reuse.sha256 must identify the imported file bytes");
         if (!text4(r2.sourceEpisode)) errors.push("visual.reuse.sourceEpisode must identify the original generated episode");
         const range = r2.sourceRange;
@@ -97543,7 +97498,7 @@ var require_scene_cast = __commonJS({
       }
       if (!limit2 || ["astra_genai_img2video", "astra_genai_msr"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled")
         throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
-      const perShot = !!rendering && rendering !== "single_msr" && !scene?.videoDirection?.oneTake;
+      const perShot = !!rendering && !scene?.videoDirection?.oneTake;
       const groups = perShot ? cards.map((card) => [card]) : [cards];
       for (const group of groups) {
         const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
@@ -97567,8 +97522,8 @@ var require_scene_cast = __commonJS({
         throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
       const owners = /* @__PURE__ */ new Map();
       const canonical5 = (file2) => {
-        const local2 = path40.resolve(boardDir, file2);
-        return fs26.existsSync(local2) ? fs26.realpathSync(local2) : local2;
+        const local3 = path40.resolve(boardDir, file2);
+        return fs26.existsSync(local3) ? fs26.realpathSync(local3) : local3;
       };
       for (const actor2 of actors) for (const file2 of [actor2.imageUrl, ...Object.values(actor2.panels || {}), ...actor2.voiceReference?.imagePaths || []]) {
         if (typeof file2 === "string") owners.set(canonical5(file2), actor2.id);
@@ -97683,7 +97638,7 @@ var require_scene_cast = __commonJS({
         ];
         if (!index) openingRefs = slots;
         const shotPositions = (rows2) => {
-          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows2.some((local2) => local2.character === row.character)) : [];
+          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows2.some((local3) => local3.character === row.character)) : [];
           return positions([...rows2, ...inherited], slots);
         };
         const timeline = card.timeline && {
@@ -97701,9 +97656,9 @@ var require_scene_cast = __commonJS({
         };
         if (originals.size && updated.character?.length) {
           updated.characterInputs = updated.character.map((character) => {
-            const local2 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
+            const local3 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
             const original2 = originals.get(character);
-            return original2 && local2.visibility !== "hands_only" && local2.visibility !== "body_only" ? { ...local2, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local2;
+            return original2 && local3.visibility !== "hands_only" && local3.visibility !== "body_only" ? { ...local3, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local3;
           });
         }
         if (updated.characterInputs?.length === 0) delete updated.characterInputs;
@@ -102292,8 +102247,8 @@ var require_video_selection = __commonJS({
           }
         }
         for (const member of members) {
-          const local2 = (member.visual?.references ?? []).filter((ref) => !ref.character || ref.use === "image");
-          member.visual = { ...member.visual, references: [...identities.values(), ...local2] };
+          const local3 = (member.visual?.references ?? []).filter((ref) => !ref.character || ref.use === "image");
+          member.visual = { ...member.visual, references: [...identities.values(), ...local3] };
         }
         if (scene.videoDirection) {
           scene.videoDirection = { ...scene.videoDirection, openingPositions: scene.videoDirection.openingPositions.map((row) => ({
@@ -103782,7 +103737,7 @@ var require_video_groups = __commonJS({
           if (+h2.nb_read_frames !== expected.handleFrames || n / d !== p.fps) throw new Error("video group plan: rendered live handle clock differs");
           const g = expected.groups.at(-1);
           for (const index of /* @__PURE__ */ new Set([0, Math.floor((expected.handleFrames - 1) / 2), expected.handleFrames - 1])) {
-            const local2 = index / p.fps, sourceAt = g.sourceIn + (p.bodyFrames - g.startFrame) / p.fps + local2;
+            const local3 = index / p.fps, sourceAt = g.sourceIn + (p.bodyFrames - g.startFrame) / p.fps + local3;
             const sourceOutputFrame = p.bodyFrames - g.startFrame + index;
             const a = frame2(handle, index), b = frame2(g.file, sourceOutputFrame, g);
             if (a.length !== 80 * 46 || a.length !== b.length) throw new Error("video group plan: cannot inspect live handle frame");
@@ -103790,7 +103745,7 @@ var require_video_groups = __commonJS({
             for (let i2 = 0; i2 < a.length; i2++) diff += Math.abs(a[i2] - b[i2]);
             diff /= a.length;
             if (diff > 15) throw new Error("video group plan: rendered live handle differs from declared trimmed source");
-            samples.push({ segment: g.segment, kind: "outgoing-live-handle", frame: index, at: local2, sourceAt, sourceOutputFrame, meanPixelError: diff });
+            samples.push({ segment: g.segment, kind: "outgoing-live-handle", frame: index, at: local3, sourceAt, sourceOutputFrame, meanPixelError: diff });
           }
         }
         checks.push({ card, runtimeSha256: hash8(record4), samples });
@@ -104020,7 +103975,7 @@ var require_shot_continuity = __commonJS({
     var text4 = (value2) => typeof value2 === "string" && value2.trim().length > 0;
     var hash8 = (value2) => createHash36("sha256").update(value2).digest("hex");
     var fileHash2 = (file2) => hash8(fs26.readFileSync(file2));
-    var local2 = (dir, file2) => {
+    var local3 = (dir, file2) => {
       if (!text4(file2) || /^[a-z][a-z0-9+.-]*:/i.test(file2)) throw new Error("expected a local media path");
       return path40.resolve(dir, file2);
     };
@@ -104061,7 +104016,7 @@ var require_shot_continuity = __commonJS({
     function segment(scene, dir) {
       if (!generated(scene) || scene.visual?.video?.groupPlan) throw new Error("capture requires one generated clip; inspect grouped/imported footage separately");
       const declared = scene.visual?.video?.clip;
-      const clip2 = local2(typeof declared === "string" && declared.startsWith(".work/") ? path40.dirname(dir) : dir, declared);
+      const clip2 = local3(typeof declared === "string" && declared.startsWith(".work/") ? path40.dirname(dir) : dir, declared);
       const sourceIn = scene.edit?.in ?? 0, seconds2 = scene.duration;
       if (!Number.isFinite(sourceIn) || sourceIn < 0 || !Number.isFinite(seconds2) || seconds2 <= 0)
         throw new Error("capture requires a finite selected duration and nonnegative edit.in");
@@ -104086,7 +104041,7 @@ var require_shot_continuity = __commonJS({
         const selected = segment(scene, dir);
         if (binding(scene, selected, fileHash2(selected.clip)) !== record4.binding)
           throw new Error("clip, trim, duration or shot plan changed; recapture the selected endpoint");
-        const image2 = local2(dir, record4.path);
+        const image2 = local3(dir, record4.path);
         if (fileHash2(image2) !== record4.sha256) throw new Error("captured endpoint bytes changed");
         return { ...record4, path: image2, status: "captured_not_reviewed" };
       } catch (error2) {
@@ -114799,6 +114754,1317 @@ async function generateElevenMusic(raw) {
   };
 }
 
+// node_modules/zod-to-json-schema/dist/esm/Options.js
+var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
+var defaultOptions = {
+  name: void 0,
+  $refStrategy: "root",
+  basePath: ["#"],
+  effectStrategy: "input",
+  pipeStrategy: "all",
+  dateStrategy: "format:date-time",
+  mapStrategy: "entries",
+  removeAdditionalStrategy: "passthrough",
+  allowedAdditionalProperties: true,
+  rejectedAdditionalProperties: false,
+  definitionPath: "definitions",
+  target: "jsonSchema7",
+  strictUnions: false,
+  definitions: {},
+  errorMessages: false,
+  markdownDescription: false,
+  patternStrategy: "escape",
+  applyRegexFlags: false,
+  emailStrategy: "format:email",
+  base64Strategy: "contentEncoding:base64",
+  nameStrategy: "ref",
+  openAiAnyTypeName: "OpenAiAnyType"
+};
+var getDefaultOptions = (options) => typeof options === "string" ? {
+  ...defaultOptions,
+  name: options
+} : {
+  ...defaultOptions,
+  ...options
+};
+
+// node_modules/zod-to-json-schema/dist/esm/Refs.js
+var getRefs = (options) => {
+  const _options = getDefaultOptions(options);
+  const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
+  return {
+    ..._options,
+    flags: { hasReferencedOpenAiAnyType: false },
+    currentPath,
+    propertyPath: void 0,
+    seen: new Map(Object.entries(_options.definitions).map(([name2, def]) => [
+      def._def,
+      {
+        def: def._def,
+        path: [..._options.basePath, _options.definitionPath, name2],
+        // Resolution of references will be forced even though seen, so it's ok that the schema is undefined here for now.
+        jsonSchema: void 0
+      }
+    ]))
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+function addErrorMessage(res2, key, errorMessage, refs) {
+  if (!refs?.errorMessages)
+    return;
+  if (errorMessage) {
+    res2.errorMessage = {
+      ...res2.errorMessage,
+      [key]: errorMessage
+    };
+  }
+}
+function setResponseValueAndErrors(res2, key, value2, errorMessage, refs) {
+  res2[key] = value2;
+  addErrorMessage(res2, key, errorMessage, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+var getRelativePath = (pathA, pathB) => {
+  let i2 = 0;
+  for (; i2 < pathA.length && i2 < pathB.length; i2++) {
+    if (pathA[i2] !== pathB[i2])
+      break;
+  }
+  return [(pathA.length - i2).toString(), ...pathB.slice(i2)].join("/");
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+function parseAnyDef(refs) {
+  if (refs.target !== "openAi") {
+    return {};
+  }
+  const anyDefinitionPath = [
+    ...refs.basePath,
+    refs.definitionPath,
+    refs.openAiAnyTypeName
+  ];
+  refs.flags.hasReferencedOpenAiAnyType = true;
+  return {
+    $ref: refs.$refStrategy === "relative" ? getRelativePath(anyDefinitionPath, refs.currentPath) : anyDefinitionPath.join("/")
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+function parseArrayDef(def, refs) {
+  const res2 = {
+    type: "array"
+  };
+  if (def.type?._def && def.type?._def?.typeName !== ZodFirstPartyTypeKind.ZodAny) {
+    res2.items = parseDef(def.type._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "items"]
+    });
+  }
+  if (def.minLength) {
+    setResponseValueAndErrors(res2, "minItems", def.minLength.value, def.minLength.message, refs);
+  }
+  if (def.maxLength) {
+    setResponseValueAndErrors(res2, "maxItems", def.maxLength.value, def.maxLength.message, refs);
+  }
+  if (def.exactLength) {
+    setResponseValueAndErrors(res2, "minItems", def.exactLength.value, def.exactLength.message, refs);
+    setResponseValueAndErrors(res2, "maxItems", def.exactLength.value, def.exactLength.message, refs);
+  }
+  return res2;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+function parseBigintDef(def, refs) {
+  const res2 = {
+    type: "integer",
+    format: "int64"
+  };
+  if (!def.checks)
+    return res2;
+  for (const check2 of def.checks) {
+    switch (check2.kind) {
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check2.inclusive) {
+            setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
+          } else {
+            setResponseValueAndErrors(res2, "exclusiveMinimum", check2.value, check2.message, refs);
+          }
+        } else {
+          if (!check2.inclusive) {
+            res2.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check2.inclusive) {
+            setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
+          } else {
+            setResponseValueAndErrors(res2, "exclusiveMaximum", check2.value, check2.message, refs);
+          }
+        } else {
+          if (!check2.inclusive) {
+            res2.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res2, "multipleOf", check2.value, check2.message, refs);
+        break;
+    }
+  }
+  return res2;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+function parseBooleanDef() {
+  return {
+    type: "boolean"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+function parseBrandedDef(_def, refs) {
+  return parseDef(_def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+var parseCatchDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+function parseDateDef(def, refs, overrideDateStrategy) {
+  const strategy = overrideDateStrategy ?? refs.dateStrategy;
+  if (Array.isArray(strategy)) {
+    return {
+      anyOf: strategy.map((item, i2) => parseDateDef(def, refs, item))
+    };
+  }
+  switch (strategy) {
+    case "string":
+    case "format:date-time":
+      return {
+        type: "string",
+        format: "date-time"
+      };
+    case "format:date":
+      return {
+        type: "string",
+        format: "date"
+      };
+    case "integer":
+      return integerDateParser(def, refs);
+  }
+}
+var integerDateParser = (def, refs) => {
+  const res2 = {
+    type: "integer",
+    format: "unix-time"
+  };
+  if (refs.target === "openApi3") {
+    return res2;
+  }
+  for (const check2 of def.checks) {
+    switch (check2.kind) {
+      case "min":
+        setResponseValueAndErrors(
+          res2,
+          "minimum",
+          check2.value,
+          // This is in milliseconds
+          check2.message,
+          refs
+        );
+        break;
+      case "max":
+        setResponseValueAndErrors(
+          res2,
+          "maximum",
+          check2.value,
+          // This is in milliseconds
+          check2.message,
+          refs
+        );
+        break;
+    }
+  }
+  return res2;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+function parseDefaultDef(_def, refs) {
+  return {
+    ...parseDef(_def.innerType._def, refs),
+    default: _def.defaultValue()
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+function parseEffectsDef(_def, refs) {
+  return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+function parseEnumDef(def) {
+  return {
+    type: "string",
+    enum: Array.from(def.values)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+var isJsonSchema7AllOfType = (type) => {
+  if ("type" in type && type.type === "string")
+    return false;
+  return "allOf" in type;
+};
+function parseIntersectionDef(def, refs) {
+  const allOf = [
+    parseDef(def.left._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "0"]
+    }),
+    parseDef(def.right._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "allOf", "1"]
+    })
+  ].filter((x2) => !!x2);
+  let unevaluatedProperties = refs.target === "jsonSchema2019-09" ? { unevaluatedProperties: false } : void 0;
+  const mergedAllOf = [];
+  allOf.forEach((schema2) => {
+    if (isJsonSchema7AllOfType(schema2)) {
+      mergedAllOf.push(...schema2.allOf);
+      if (schema2.unevaluatedProperties === void 0) {
+        unevaluatedProperties = void 0;
+      }
+    } else {
+      let nestedSchema = schema2;
+      if ("additionalProperties" in schema2 && schema2.additionalProperties === false) {
+        const { additionalProperties, ...rest } = schema2;
+        nestedSchema = rest;
+      } else {
+        unevaluatedProperties = void 0;
+      }
+      mergedAllOf.push(nestedSchema);
+    }
+  });
+  return mergedAllOf.length ? {
+    allOf: mergedAllOf,
+    ...unevaluatedProperties
+  } : void 0;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+function parseLiteralDef(def, refs) {
+  const parsedType2 = typeof def.value;
+  if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
+    return {
+      type: Array.isArray(def.value) ? "array" : "object"
+    };
+  }
+  if (refs.target === "openApi3") {
+    return {
+      type: parsedType2 === "bigint" ? "integer" : parsedType2,
+      enum: [def.value]
+    };
+  }
+  return {
+    type: parsedType2 === "bigint" ? "integer" : parsedType2,
+    const: def.value
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+var emojiRegex2 = void 0;
+var zodPatterns = {
+  /**
+   * `c` was changed to `[cC]` to replicate /i flag
+   */
+  cuid: /^[cC][^\s-]{8,}$/,
+  cuid2: /^[0-9a-z]+$/,
+  ulid: /^[0-9A-HJKMNP-TV-Z]{26}$/,
+  /**
+   * `a-z` was added to replicate /i flag
+   */
+  email: /^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-\.]*)[a-zA-Z0-9_+-]@([a-zA-Z0-9][a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/,
+  /**
+   * Constructed a valid Unicode RegExp
+   *
+   * Lazily instantiate since this type of regex isn't supported
+   * in all envs (e.g. React Native).
+   *
+   * See:
+   * https://github.com/colinhacks/zod/issues/2433
+   * Fix in Zod:
+   * https://github.com/colinhacks/zod/commit/9340fd51e48576a75adc919bff65dbc4a5d4c99b
+   */
+  emoji: () => {
+    if (emojiRegex2 === void 0) {
+      emojiRegex2 = RegExp("^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$", "u");
+    }
+    return emojiRegex2;
+  },
+  /**
+   * Unused
+   */
+  uuid: /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/,
+  /**
+   * Unused
+   */
+  ipv4: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/,
+  ipv4Cidr: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/,
+  /**
+   * Unused
+   */
+  ipv6: /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/,
+  ipv6Cidr: /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/,
+  base64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/,
+  base64url: /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/,
+  nanoid: /^[a-zA-Z0-9_-]{21}$/,
+  jwt: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/
+};
+function parseStringDef(def, refs) {
+  const res2 = {
+    type: "string"
+  };
+  if (def.checks) {
+    for (const check2 of def.checks) {
+      switch (check2.kind) {
+        case "min":
+          setResponseValueAndErrors(res2, "minLength", typeof res2.minLength === "number" ? Math.max(res2.minLength, check2.value) : check2.value, check2.message, refs);
+          break;
+        case "max":
+          setResponseValueAndErrors(res2, "maxLength", typeof res2.maxLength === "number" ? Math.min(res2.maxLength, check2.value) : check2.value, check2.message, refs);
+          break;
+        case "email":
+          switch (refs.emailStrategy) {
+            case "format:email":
+              addFormat(res2, "email", check2.message, refs);
+              break;
+            case "format:idn-email":
+              addFormat(res2, "idn-email", check2.message, refs);
+              break;
+            case "pattern:zod":
+              addPattern(res2, zodPatterns.email, check2.message, refs);
+              break;
+          }
+          break;
+        case "url":
+          addFormat(res2, "uri", check2.message, refs);
+          break;
+        case "uuid":
+          addFormat(res2, "uuid", check2.message, refs);
+          break;
+        case "regex":
+          addPattern(res2, check2.regex, check2.message, refs);
+          break;
+        case "cuid":
+          addPattern(res2, zodPatterns.cuid, check2.message, refs);
+          break;
+        case "cuid2":
+          addPattern(res2, zodPatterns.cuid2, check2.message, refs);
+          break;
+        case "startsWith":
+          addPattern(res2, RegExp(`^${escapeLiteralCheckValue(check2.value, refs)}`), check2.message, refs);
+          break;
+        case "endsWith":
+          addPattern(res2, RegExp(`${escapeLiteralCheckValue(check2.value, refs)}$`), check2.message, refs);
+          break;
+        case "datetime":
+          addFormat(res2, "date-time", check2.message, refs);
+          break;
+        case "date":
+          addFormat(res2, "date", check2.message, refs);
+          break;
+        case "time":
+          addFormat(res2, "time", check2.message, refs);
+          break;
+        case "duration":
+          addFormat(res2, "duration", check2.message, refs);
+          break;
+        case "length":
+          setResponseValueAndErrors(res2, "minLength", typeof res2.minLength === "number" ? Math.max(res2.minLength, check2.value) : check2.value, check2.message, refs);
+          setResponseValueAndErrors(res2, "maxLength", typeof res2.maxLength === "number" ? Math.min(res2.maxLength, check2.value) : check2.value, check2.message, refs);
+          break;
+        case "includes": {
+          addPattern(res2, RegExp(escapeLiteralCheckValue(check2.value, refs)), check2.message, refs);
+          break;
+        }
+        case "ip": {
+          if (check2.version !== "v6") {
+            addFormat(res2, "ipv4", check2.message, refs);
+          }
+          if (check2.version !== "v4") {
+            addFormat(res2, "ipv6", check2.message, refs);
+          }
+          break;
+        }
+        case "base64url":
+          addPattern(res2, zodPatterns.base64url, check2.message, refs);
+          break;
+        case "jwt":
+          addPattern(res2, zodPatterns.jwt, check2.message, refs);
+          break;
+        case "cidr": {
+          if (check2.version !== "v6") {
+            addPattern(res2, zodPatterns.ipv4Cidr, check2.message, refs);
+          }
+          if (check2.version !== "v4") {
+            addPattern(res2, zodPatterns.ipv6Cidr, check2.message, refs);
+          }
+          break;
+        }
+        case "emoji":
+          addPattern(res2, zodPatterns.emoji(), check2.message, refs);
+          break;
+        case "ulid": {
+          addPattern(res2, zodPatterns.ulid, check2.message, refs);
+          break;
+        }
+        case "base64": {
+          switch (refs.base64Strategy) {
+            case "format:binary": {
+              addFormat(res2, "binary", check2.message, refs);
+              break;
+            }
+            case "contentEncoding:base64": {
+              setResponseValueAndErrors(res2, "contentEncoding", "base64", check2.message, refs);
+              break;
+            }
+            case "pattern:zod": {
+              addPattern(res2, zodPatterns.base64, check2.message, refs);
+              break;
+            }
+          }
+          break;
+        }
+        case "nanoid": {
+          addPattern(res2, zodPatterns.nanoid, check2.message, refs);
+        }
+        case "toLowerCase":
+        case "toUpperCase":
+        case "trim":
+          break;
+        default:
+          /* @__PURE__ */ ((_) => {
+          })(check2);
+      }
+    }
+  }
+  return res2;
+}
+function escapeLiteralCheckValue(literal2, refs) {
+  return refs.patternStrategy === "escape" ? escapeNonAlphaNumeric(literal2) : literal2;
+}
+var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
+function escapeNonAlphaNumeric(source2) {
+  let result = "";
+  for (let i2 = 0; i2 < source2.length; i2++) {
+    if (!ALPHA_NUMERIC.has(source2[i2])) {
+      result += "\\";
+    }
+    result += source2[i2];
+  }
+  return result;
+}
+function addFormat(schema2, value2, message, refs) {
+  if (schema2.format || schema2.anyOf?.some((x2) => x2.format)) {
+    if (!schema2.anyOf) {
+      schema2.anyOf = [];
+    }
+    if (schema2.format) {
+      schema2.anyOf.push({
+        format: schema2.format,
+        ...schema2.errorMessage && refs.errorMessages && {
+          errorMessage: { format: schema2.errorMessage.format }
+        }
+      });
+      delete schema2.format;
+      if (schema2.errorMessage) {
+        delete schema2.errorMessage.format;
+        if (Object.keys(schema2.errorMessage).length === 0) {
+          delete schema2.errorMessage;
+        }
+      }
+    }
+    schema2.anyOf.push({
+      format: value2,
+      ...message && refs.errorMessages && { errorMessage: { format: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema2, "format", value2, message, refs);
+  }
+}
+function addPattern(schema2, regex, message, refs) {
+  if (schema2.pattern || schema2.allOf?.some((x2) => x2.pattern)) {
+    if (!schema2.allOf) {
+      schema2.allOf = [];
+    }
+    if (schema2.pattern) {
+      schema2.allOf.push({
+        pattern: schema2.pattern,
+        ...schema2.errorMessage && refs.errorMessages && {
+          errorMessage: { pattern: schema2.errorMessage.pattern }
+        }
+      });
+      delete schema2.pattern;
+      if (schema2.errorMessage) {
+        delete schema2.errorMessage.pattern;
+        if (Object.keys(schema2.errorMessage).length === 0) {
+          delete schema2.errorMessage;
+        }
+      }
+    }
+    schema2.allOf.push({
+      pattern: stringifyRegExpWithFlags(regex, refs),
+      ...message && refs.errorMessages && { errorMessage: { pattern: message } }
+    });
+  } else {
+    setResponseValueAndErrors(schema2, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
+  }
+}
+function stringifyRegExpWithFlags(regex, refs) {
+  if (!refs.applyRegexFlags || !regex.flags) {
+    return regex.source;
+  }
+  const flags = {
+    i: regex.flags.includes("i"),
+    m: regex.flags.includes("m"),
+    s: regex.flags.includes("s")
+    // `.` matches newlines
+  };
+  const source2 = flags.i ? regex.source.toLowerCase() : regex.source;
+  let pattern = "";
+  let isEscaped = false;
+  let inCharGroup = false;
+  let inCharRange = false;
+  for (let i2 = 0; i2 < source2.length; i2++) {
+    if (isEscaped) {
+      pattern += source2[i2];
+      isEscaped = false;
+      continue;
+    }
+    if (flags.i) {
+      if (inCharGroup) {
+        if (source2[i2].match(/[a-z]/)) {
+          if (inCharRange) {
+            pattern += source2[i2];
+            pattern += `${source2[i2 - 2]}-${source2[i2]}`.toUpperCase();
+            inCharRange = false;
+          } else if (source2[i2 + 1] === "-" && source2[i2 + 2]?.match(/[a-z]/)) {
+            pattern += source2[i2];
+            inCharRange = true;
+          } else {
+            pattern += `${source2[i2]}${source2[i2].toUpperCase()}`;
+          }
+          continue;
+        }
+      } else if (source2[i2].match(/[a-z]/)) {
+        pattern += `[${source2[i2]}${source2[i2].toUpperCase()}]`;
+        continue;
+      }
+    }
+    if (flags.m) {
+      if (source2[i2] === "^") {
+        pattern += `(^|(?<=[\r
+]))`;
+        continue;
+      } else if (source2[i2] === "$") {
+        pattern += `($|(?=[\r
+]))`;
+        continue;
+      }
+    }
+    if (flags.s && source2[i2] === ".") {
+      pattern += inCharGroup ? `${source2[i2]}\r
+` : `[${source2[i2]}\r
+]`;
+      continue;
+    }
+    pattern += source2[i2];
+    if (source2[i2] === "\\") {
+      isEscaped = true;
+    } else if (inCharGroup && source2[i2] === "]") {
+      inCharGroup = false;
+    } else if (!inCharGroup && source2[i2] === "[") {
+      inCharGroup = true;
+    }
+  }
+  try {
+    new RegExp(pattern);
+  } catch {
+    console.warn(`Could not convert regex pattern at ${refs.currentPath.join("/")} to a flag-independent form! Falling back to the flag-ignorant source`);
+    return regex.source;
+  }
+  return pattern;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+function parseRecordDef(def, refs) {
+  if (refs.target === "openAi") {
+    console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
+  }
+  if (refs.target === "openApi3" && def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
+    return {
+      type: "object",
+      required: def.keyType._def.values,
+      properties: def.keyType._def.values.reduce((acc, key) => ({
+        ...acc,
+        [key]: parseDef(def.valueType._def, {
+          ...refs,
+          currentPath: [...refs.currentPath, "properties", key]
+        }) ?? parseAnyDef(refs)
+      }), {}),
+      additionalProperties: refs.rejectedAdditionalProperties
+    };
+  }
+  const schema2 = {
+    type: "object",
+    additionalProperties: parseDef(def.valueType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    }) ?? refs.allowedAdditionalProperties
+  };
+  if (refs.target === "openApi3") {
+    return schema2;
+  }
+  if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.checks?.length) {
+    const { type, ...keyType } = parseStringDef(def.keyType._def, refs);
+    return {
+      ...schema2,
+      propertyNames: keyType
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
+    return {
+      ...schema2,
+      propertyNames: {
+        enum: def.keyType._def.values
+      }
+    };
+  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodBranded && def.keyType._def.type._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.type._def.checks?.length) {
+    const { type, ...keyType } = parseBrandedDef(def.keyType._def, refs);
+    return {
+      ...schema2,
+      propertyNames: keyType
+    };
+  }
+  return schema2;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+function parseMapDef(def, refs) {
+  if (refs.mapStrategy === "record") {
+    return parseRecordDef(def, refs);
+  }
+  const keys3 = parseDef(def.keyType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "0"]
+  }) || parseAnyDef(refs);
+  const values = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items", "items", "1"]
+  }) || parseAnyDef(refs);
+  return {
+    type: "array",
+    maxItems: 125,
+    items: {
+      type: "array",
+      items: [keys3, values],
+      minItems: 2,
+      maxItems: 2
+    }
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+function parseNativeEnumDef(def) {
+  const object7 = def.values;
+  const actualKeys = Object.keys(def.values).filter((key) => {
+    return typeof object7[object7[key]] !== "number";
+  });
+  const actualValues = actualKeys.map((key) => object7[key]);
+  const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
+  return {
+    type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
+    enum: actualValues
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+function parseNeverDef(refs) {
+  return refs.target === "openAi" ? void 0 : {
+    not: parseAnyDef({
+      ...refs,
+      currentPath: [...refs.currentPath, "not"]
+    })
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+function parseNullDef(refs) {
+  return refs.target === "openApi3" ? {
+    enum: ["null"],
+    nullable: true
+  } : {
+    type: "null"
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+var primitiveMappings = {
+  ZodString: "string",
+  ZodNumber: "number",
+  ZodBigInt: "integer",
+  ZodBoolean: "boolean",
+  ZodNull: "null"
+};
+function parseUnionDef(def, refs) {
+  if (refs.target === "openApi3")
+    return asAnyOf(def, refs);
+  const options = def.options instanceof Map ? Array.from(def.options.values()) : def.options;
+  if (options.every((x2) => x2._def.typeName in primitiveMappings && (!x2._def.checks || !x2._def.checks.length))) {
+    const types3 = options.reduce((types4, x2) => {
+      const type = primitiveMappings[x2._def.typeName];
+      return type && !types4.includes(type) ? [...types4, type] : types4;
+    }, []);
+    return {
+      type: types3.length > 1 ? types3 : types3[0]
+    };
+  } else if (options.every((x2) => x2._def.typeName === "ZodLiteral" && !x2.description)) {
+    const types3 = options.reduce((acc, x2) => {
+      const type = typeof x2._def.value;
+      switch (type) {
+        case "string":
+        case "number":
+        case "boolean":
+          return [...acc, type];
+        case "bigint":
+          return [...acc, "integer"];
+        case "object":
+          if (x2._def.value === null)
+            return [...acc, "null"];
+        case "symbol":
+        case "undefined":
+        case "function":
+        default:
+          return acc;
+      }
+    }, []);
+    if (types3.length === options.length) {
+      const uniqueTypes = types3.filter((x2, i2, a) => a.indexOf(x2) === i2);
+      return {
+        type: uniqueTypes.length > 1 ? uniqueTypes : uniqueTypes[0],
+        enum: options.reduce((acc, x2) => {
+          return acc.includes(x2._def.value) ? acc : [...acc, x2._def.value];
+        }, [])
+      };
+    }
+  } else if (options.every((x2) => x2._def.typeName === "ZodEnum")) {
+    return {
+      type: "string",
+      enum: options.reduce((acc, x2) => [
+        ...acc,
+        ...x2._def.values.filter((x3) => !acc.includes(x3))
+      ], [])
+    };
+  }
+  return asAnyOf(def, refs);
+}
+var asAnyOf = (def, refs) => {
+  const anyOf = (def.options instanceof Map ? Array.from(def.options.values()) : def.options).map((x2, i2) => parseDef(x2._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", `${i2}`]
+  })).filter((x2) => !!x2 && (!refs.strictUnions || typeof x2 === "object" && Object.keys(x2).length > 0));
+  return anyOf.length ? { anyOf } : void 0;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+function parseNullableDef(def, refs) {
+  if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
+    if (refs.target === "openApi3") {
+      return {
+        type: primitiveMappings[def.innerType._def.typeName],
+        nullable: true
+      };
+    }
+    return {
+      type: [
+        primitiveMappings[def.innerType._def.typeName],
+        "null"
+      ]
+    };
+  }
+  if (refs.target === "openApi3") {
+    const base2 = parseDef(def.innerType._def, {
+      ...refs,
+      currentPath: [...refs.currentPath]
+    });
+    if (base2 && "$ref" in base2)
+      return { allOf: [base2], nullable: true };
+    return base2 && { ...base2, nullable: true };
+  }
+  const base = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "0"]
+  });
+  return base && { anyOf: [base, { type: "null" }] };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+function parseNumberDef(def, refs) {
+  const res2 = {
+    type: "number"
+  };
+  if (!def.checks)
+    return res2;
+  for (const check2 of def.checks) {
+    switch (check2.kind) {
+      case "int":
+        res2.type = "integer";
+        addErrorMessage(res2, "type", check2.message, refs);
+        break;
+      case "min":
+        if (refs.target === "jsonSchema7") {
+          if (check2.inclusive) {
+            setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
+          } else {
+            setResponseValueAndErrors(res2, "exclusiveMinimum", check2.value, check2.message, refs);
+          }
+        } else {
+          if (!check2.inclusive) {
+            res2.exclusiveMinimum = true;
+          }
+          setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
+        }
+        break;
+      case "max":
+        if (refs.target === "jsonSchema7") {
+          if (check2.inclusive) {
+            setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
+          } else {
+            setResponseValueAndErrors(res2, "exclusiveMaximum", check2.value, check2.message, refs);
+          }
+        } else {
+          if (!check2.inclusive) {
+            res2.exclusiveMaximum = true;
+          }
+          setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
+        }
+        break;
+      case "multipleOf":
+        setResponseValueAndErrors(res2, "multipleOf", check2.value, check2.message, refs);
+        break;
+    }
+  }
+  return res2;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+function parseObjectDef(def, refs) {
+  const forceOptionalIntoNullable = refs.target === "openAi";
+  const result = {
+    type: "object",
+    properties: {}
+  };
+  const required2 = [];
+  const shape2 = def.shape();
+  for (const propName in shape2) {
+    let propDef = shape2[propName];
+    if (propDef === void 0 || propDef._def === void 0) {
+      continue;
+    }
+    let propOptional = safeIsOptional(propDef);
+    if (propOptional && forceOptionalIntoNullable) {
+      if (propDef._def.typeName === "ZodOptional") {
+        propDef = propDef._def.innerType;
+      }
+      if (!propDef.isNullable()) {
+        propDef = propDef.nullable();
+      }
+      propOptional = false;
+    }
+    const parsedDef = parseDef(propDef._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "properties", propName],
+      propertyPath: [...refs.currentPath, "properties", propName]
+    });
+    if (parsedDef === void 0) {
+      continue;
+    }
+    result.properties[propName] = parsedDef;
+    if (!propOptional) {
+      required2.push(propName);
+    }
+  }
+  if (required2.length) {
+    result.required = required2;
+  }
+  const additionalProperties = decideAdditionalProperties(def, refs);
+  if (additionalProperties !== void 0) {
+    result.additionalProperties = additionalProperties;
+  }
+  return result;
+}
+function decideAdditionalProperties(def, refs) {
+  if (def.catchall._def.typeName !== "ZodNever") {
+    return parseDef(def.catchall._def, {
+      ...refs,
+      currentPath: [...refs.currentPath, "additionalProperties"]
+    });
+  }
+  switch (def.unknownKeys) {
+    case "passthrough":
+      return refs.allowedAdditionalProperties;
+    case "strict":
+      return refs.rejectedAdditionalProperties;
+    case "strip":
+      return refs.removeAdditionalStrategy === "strict" ? refs.allowedAdditionalProperties : refs.rejectedAdditionalProperties;
+  }
+}
+function safeIsOptional(schema2) {
+  try {
+    return schema2.isOptional();
+  } catch {
+    return true;
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+var parseOptionalDef = (def, refs) => {
+  if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
+    return parseDef(def.innerType._def, refs);
+  }
+  const innerSchema = parseDef(def.innerType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "anyOf", "1"]
+  });
+  return innerSchema ? {
+    anyOf: [
+      {
+        not: parseAnyDef(refs)
+      },
+      innerSchema
+    ]
+  } : parseAnyDef(refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+var parsePipelineDef = (def, refs) => {
+  if (refs.pipeStrategy === "input") {
+    return parseDef(def.in._def, refs);
+  } else if (refs.pipeStrategy === "output") {
+    return parseDef(def.out._def, refs);
+  }
+  const a = parseDef(def.in._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", "0"]
+  });
+  const b = parseDef(def.out._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "allOf", a ? "1" : "0"]
+  });
+  return {
+    allOf: [a, b].filter((x2) => x2 !== void 0)
+  };
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+function parsePromiseDef(def, refs) {
+  return parseDef(def.type._def, refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+function parseSetDef(def, refs) {
+  const items = parseDef(def.valueType._def, {
+    ...refs,
+    currentPath: [...refs.currentPath, "items"]
+  });
+  const schema2 = {
+    type: "array",
+    uniqueItems: true,
+    items
+  };
+  if (def.minSize) {
+    setResponseValueAndErrors(schema2, "minItems", def.minSize.value, def.minSize.message, refs);
+  }
+  if (def.maxSize) {
+    setResponseValueAndErrors(schema2, "maxItems", def.maxSize.value, def.maxSize.message, refs);
+  }
+  return schema2;
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+function parseTupleDef(def, refs) {
+  if (def.rest) {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      items: def.items.map((x2, i2) => parseDef(x2._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i2}`]
+      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], []),
+      additionalItems: parseDef(def.rest._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "additionalItems"]
+      })
+    };
+  } else {
+    return {
+      type: "array",
+      minItems: def.items.length,
+      maxItems: def.items.length,
+      items: def.items.map((x2, i2) => parseDef(x2._def, {
+        ...refs,
+        currentPath: [...refs.currentPath, "items", `${i2}`]
+      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], [])
+    };
+  }
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+function parseUndefinedDef(refs) {
+  return {
+    not: parseAnyDef(refs)
+  };
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+function parseUnknownDef(refs) {
+  return parseAnyDef(refs);
+}
+
+// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+var parseReadonlyDef = (def, refs) => {
+  return parseDef(def.innerType._def, refs);
+};
+
+// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+var selectParser = (def, typeName, refs) => {
+  switch (typeName) {
+    case ZodFirstPartyTypeKind.ZodString:
+      return parseStringDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodNumber:
+      return parseNumberDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodObject:
+      return parseObjectDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBigInt:
+      return parseBigintDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBoolean:
+      return parseBooleanDef();
+    case ZodFirstPartyTypeKind.ZodDate:
+      return parseDateDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodUndefined:
+      return parseUndefinedDef(refs);
+    case ZodFirstPartyTypeKind.ZodNull:
+      return parseNullDef(refs);
+    case ZodFirstPartyTypeKind.ZodArray:
+      return parseArrayDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodUnion:
+    case ZodFirstPartyTypeKind.ZodDiscriminatedUnion:
+      return parseUnionDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodIntersection:
+      return parseIntersectionDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodTuple:
+      return parseTupleDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodRecord:
+      return parseRecordDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodLiteral:
+      return parseLiteralDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodEnum:
+      return parseEnumDef(def);
+    case ZodFirstPartyTypeKind.ZodNativeEnum:
+      return parseNativeEnumDef(def);
+    case ZodFirstPartyTypeKind.ZodNullable:
+      return parseNullableDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodOptional:
+      return parseOptionalDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodMap:
+      return parseMapDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodSet:
+      return parseSetDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodLazy:
+      return () => def.getter()._def;
+    case ZodFirstPartyTypeKind.ZodPromise:
+      return parsePromiseDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodNaN:
+    case ZodFirstPartyTypeKind.ZodNever:
+      return parseNeverDef(refs);
+    case ZodFirstPartyTypeKind.ZodEffects:
+      return parseEffectsDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodAny:
+      return parseAnyDef(refs);
+    case ZodFirstPartyTypeKind.ZodUnknown:
+      return parseUnknownDef(refs);
+    case ZodFirstPartyTypeKind.ZodDefault:
+      return parseDefaultDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodBranded:
+      return parseBrandedDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodReadonly:
+      return parseReadonlyDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodCatch:
+      return parseCatchDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodPipeline:
+      return parsePipelineDef(def, refs);
+    case ZodFirstPartyTypeKind.ZodFunction:
+    case ZodFirstPartyTypeKind.ZodVoid:
+    case ZodFirstPartyTypeKind.ZodSymbol:
+      return void 0;
+    default:
+      return /* @__PURE__ */ ((_) => void 0)(typeName);
+  }
+};
+
+// node_modules/zod-to-json-schema/dist/esm/parseDef.js
+function parseDef(def, refs, forceResolution = false) {
+  const seenItem = refs.seen.get(def);
+  if (refs.override) {
+    const overrideResult = refs.override?.(def, refs, seenItem, forceResolution);
+    if (overrideResult !== ignoreOverride) {
+      return overrideResult;
+    }
+  }
+  if (seenItem && !forceResolution) {
+    const seenSchema = get$ref(seenItem, refs);
+    if (seenSchema !== void 0) {
+      return seenSchema;
+    }
+  }
+  const newItem = { def, path: refs.currentPath, jsonSchema: void 0 };
+  refs.seen.set(def, newItem);
+  const jsonSchemaOrGetter = selectParser(def, def.typeName, refs);
+  const jsonSchema = typeof jsonSchemaOrGetter === "function" ? parseDef(jsonSchemaOrGetter(), refs) : jsonSchemaOrGetter;
+  if (jsonSchema) {
+    addMeta(def, refs, jsonSchema);
+  }
+  if (refs.postProcess) {
+    const postProcessResult = refs.postProcess(jsonSchema, def, refs);
+    newItem.jsonSchema = jsonSchema;
+    return postProcessResult;
+  }
+  newItem.jsonSchema = jsonSchema;
+  return jsonSchema;
+}
+var get$ref = (item, refs) => {
+  switch (refs.$refStrategy) {
+    case "root":
+      return { $ref: item.path.join("/") };
+    case "relative":
+      return { $ref: getRelativePath(refs.currentPath, item.path) };
+    case "none":
+    case "seen": {
+      if (item.path.length < refs.currentPath.length && item.path.every((value2, index) => refs.currentPath[index] === value2)) {
+        console.warn(`Recursive reference detected at ${refs.currentPath.join("/")}! Defaulting to any`);
+        return parseAnyDef(refs);
+      }
+      return refs.$refStrategy === "seen" ? parseAnyDef(refs) : void 0;
+    }
+  }
+};
+var addMeta = (def, refs, jsonSchema) => {
+  if (def.description) {
+    jsonSchema.description = def.description;
+    if (refs.markdownDescription) {
+      jsonSchema.markdownDescription = def.description;
+    }
+  }
+  return jsonSchema;
+};
+
+// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+var zodToJsonSchema = (schema2, options) => {
+  const refs = getRefs(options);
+  let definitions2 = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name3, schema3]) => ({
+    ...acc,
+    [name3]: parseDef(schema3._def, {
+      ...refs,
+      currentPath: [...refs.basePath, refs.definitionPath, name3]
+    }, true) ?? parseAnyDef(refs)
+  }), {}) : void 0;
+  const name2 = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
+  const main2 = parseDef(schema2._def, name2 === void 0 ? refs : {
+    ...refs,
+    currentPath: [...refs.basePath, refs.definitionPath, name2]
+  }, false) ?? parseAnyDef(refs);
+  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
+  if (title !== void 0) {
+    main2.title = title;
+  }
+  if (refs.flags.hasReferencedOpenAiAnyType) {
+    if (!definitions2) {
+      definitions2 = {};
+    }
+    if (!definitions2[refs.openAiAnyTypeName]) {
+      definitions2[refs.openAiAnyTypeName] = {
+        // Skipping "object" as no properties can be defined and additionalProperties must be "false"
+        type: ["string", "number", "integer", "boolean", "array", "null"],
+        items: {
+          $ref: refs.$refStrategy === "relative" ? "1" : [
+            ...refs.basePath,
+            refs.definitionPath,
+            refs.openAiAnyTypeName
+          ].join("/")
+        }
+      };
+    }
+  }
+  const combined = name2 === void 0 ? definitions2 ? {
+    ...main2,
+    [refs.definitionPath]: definitions2
+  } : main2 : {
+    $ref: [
+      ...refs.$refStrategy === "relative" ? [] : refs.basePath,
+      refs.definitionPath,
+      name2
+    ].join("/"),
+    [refs.definitionPath]: {
+      ...definitions2,
+      [name2]: main2
+    }
+  };
+  if (refs.target === "jsonSchema7") {
+    combined.$schema = "http://json-schema.org/draft-07/schema#";
+  } else if (refs.target === "jsonSchema2019-09" || refs.target === "openAi") {
+    combined.$schema = "https://json-schema.org/draft/2019-09/schema#";
+  }
+  if (refs.target === "openAi" && ("anyOf" in combined || "oneOf" in combined || "allOf" in combined || "type" in combined && Array.isArray(combined.type))) {
+    console.warn("Warning: OpenAI may not support schemas with unions as roots! Try wrapping it in an object property.");
+  }
+  return combined;
+};
+
+// src/adapter-parameters.ts
+var COMMON_PARAMETERS = {
+  video: ["prompt", "negativePrompt", "model", "resolution", "seed", "generateAudio", "outputPath", "filename"],
+  image: ["prompt", "negativePrompt", "model", "size", "seed", "outputPath", "filename"],
+  music: ["prompt", "model", "seed", "outputPath", "filename"]
+};
+function adapterParameters(schema2, kind) {
+  const json3 = zodToJsonSchema(schema2, { $refStrategy: "none" });
+  const shared5 = COMMON_PARAMETERS[kind];
+  const part = (common7) => ({
+    type: "object",
+    properties: Object.fromEntries(Object.entries(json3.properties ?? {}).filter(([name2]) => shared5.includes(name2) === common7)),
+    required: (json3.required ?? []).filter((name2) => shared5.includes(name2) === common7)
+  });
+  return { common: part(true), options: part(false) };
+}
+function adapterContracts(kind, rows2, adapters2, asked) {
+  const named = Object.fromEntries(Object.entries(asked).filter(([, value2]) => value2 !== void 0));
+  if (!rows2.length) throw new Error(`${kind}_adapter_unsupported: no installed adapter for ${Object.values(named).join(" ")}`);
+  return { version: 1, ...named, adapters: rows2.map((row) => ({ ...row, parameters: adapterParameters(adapters2[row.tool].schema, kind) })) };
+}
+function assertSelection(kind, selection, expected) {
+  for (const field2 of ["engine", "model"])
+    if (expected[field2] !== void 0 && expected[field2] !== selection[field2])
+      throw new Error(`${kind === "video" ? "model" : kind}_selection_mismatch: ${field2} ${expected[field2]} differs from the saved ${selection[field2] ?? "selection"}. Change the saved selection with project_manage; a plan never switches it`);
+}
+
 // src/music-registry.ts
 var MUSIC_MODELS = [
   { engine: "lyria", model: "lyria-3-clip-preview", tool: "music_generate_song", vocals: true, duration: "30 seconds; fixed", provider: "Google official" },
@@ -114829,6 +116095,15 @@ function parseMusicArgs(tool2, input) {
   if (tool2 === "suno_generate") assertGenerateArgs(sunoGenerateSchema.parse(args));
   if (tool2 === "suno_generate_sound") throw new Error(SUNO_SOUND_UNVERIFIED);
   return args;
+}
+function musicAdapterContracts(engine, model2) {
+  const known = model2 === void 0 || engine === "mlx" || MUSIC_MODELS.some((row) => row.engine === engine && row.model === model2);
+  return adapterContracts(
+    "music",
+    musicCatalog().adapters.filter((row) => known && row.engine === engine && (!model2 || !row.fixedModel || row.fixedModel === model2)),
+    MUSIC_ADAPTERS,
+    { engine, model: model2 }
+  );
 }
 function musicCatalog() {
   return {
@@ -120170,1290 +121445,6 @@ function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// node_modules/zod-to-json-schema/dist/esm/Options.js
-var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
-var defaultOptions = {
-  name: void 0,
-  $refStrategy: "root",
-  basePath: ["#"],
-  effectStrategy: "input",
-  pipeStrategy: "all",
-  dateStrategy: "format:date-time",
-  mapStrategy: "entries",
-  removeAdditionalStrategy: "passthrough",
-  allowedAdditionalProperties: true,
-  rejectedAdditionalProperties: false,
-  definitionPath: "definitions",
-  target: "jsonSchema7",
-  strictUnions: false,
-  definitions: {},
-  errorMessages: false,
-  markdownDescription: false,
-  patternStrategy: "escape",
-  applyRegexFlags: false,
-  emailStrategy: "format:email",
-  base64Strategy: "contentEncoding:base64",
-  nameStrategy: "ref",
-  openAiAnyTypeName: "OpenAiAnyType"
-};
-var getDefaultOptions = (options) => typeof options === "string" ? {
-  ...defaultOptions,
-  name: options
-} : {
-  ...defaultOptions,
-  ...options
-};
-
-// node_modules/zod-to-json-schema/dist/esm/Refs.js
-var getRefs = (options) => {
-  const _options = getDefaultOptions(options);
-  const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
-  return {
-    ..._options,
-    flags: { hasReferencedOpenAiAnyType: false },
-    currentPath,
-    propertyPath: void 0,
-    seen: new Map(Object.entries(_options.definitions).map(([name2, def]) => [
-      def._def,
-      {
-        def: def._def,
-        path: [..._options.basePath, _options.definitionPath, name2],
-        // Resolution of references will be forced even though seen, so it's ok that the schema is undefined here for now.
-        jsonSchema: void 0
-      }
-    ]))
-  };
-};
-
-// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
-function addErrorMessage(res2, key, errorMessage, refs) {
-  if (!refs?.errorMessages)
-    return;
-  if (errorMessage) {
-    res2.errorMessage = {
-      ...res2.errorMessage,
-      [key]: errorMessage
-    };
-  }
-}
-function setResponseValueAndErrors(res2, key, value2, errorMessage, refs) {
-  res2[key] = value2;
-  addErrorMessage(res2, key, errorMessage, refs);
-}
-
-// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
-var getRelativePath = (pathA, pathB) => {
-  let i2 = 0;
-  for (; i2 < pathA.length && i2 < pathB.length; i2++) {
-    if (pathA[i2] !== pathB[i2])
-      break;
-  }
-  return [(pathA.length - i2).toString(), ...pathB.slice(i2)].join("/");
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
-function parseAnyDef(refs) {
-  if (refs.target !== "openAi") {
-    return {};
-  }
-  const anyDefinitionPath = [
-    ...refs.basePath,
-    refs.definitionPath,
-    refs.openAiAnyTypeName
-  ];
-  refs.flags.hasReferencedOpenAiAnyType = true;
-  return {
-    $ref: refs.$refStrategy === "relative" ? getRelativePath(anyDefinitionPath, refs.currentPath) : anyDefinitionPath.join("/")
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
-function parseArrayDef(def, refs) {
-  const res2 = {
-    type: "array"
-  };
-  if (def.type?._def && def.type?._def?.typeName !== ZodFirstPartyTypeKind.ZodAny) {
-    res2.items = parseDef(def.type._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "items"]
-    });
-  }
-  if (def.minLength) {
-    setResponseValueAndErrors(res2, "minItems", def.minLength.value, def.minLength.message, refs);
-  }
-  if (def.maxLength) {
-    setResponseValueAndErrors(res2, "maxItems", def.maxLength.value, def.maxLength.message, refs);
-  }
-  if (def.exactLength) {
-    setResponseValueAndErrors(res2, "minItems", def.exactLength.value, def.exactLength.message, refs);
-    setResponseValueAndErrors(res2, "maxItems", def.exactLength.value, def.exactLength.message, refs);
-  }
-  return res2;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
-function parseBigintDef(def, refs) {
-  const res2 = {
-    type: "integer",
-    format: "int64"
-  };
-  if (!def.checks)
-    return res2;
-  for (const check2 of def.checks) {
-    switch (check2.kind) {
-      case "min":
-        if (refs.target === "jsonSchema7") {
-          if (check2.inclusive) {
-            setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
-          } else {
-            setResponseValueAndErrors(res2, "exclusiveMinimum", check2.value, check2.message, refs);
-          }
-        } else {
-          if (!check2.inclusive) {
-            res2.exclusiveMinimum = true;
-          }
-          setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
-        }
-        break;
-      case "max":
-        if (refs.target === "jsonSchema7") {
-          if (check2.inclusive) {
-            setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
-          } else {
-            setResponseValueAndErrors(res2, "exclusiveMaximum", check2.value, check2.message, refs);
-          }
-        } else {
-          if (!check2.inclusive) {
-            res2.exclusiveMaximum = true;
-          }
-          setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
-        }
-        break;
-      case "multipleOf":
-        setResponseValueAndErrors(res2, "multipleOf", check2.value, check2.message, refs);
-        break;
-    }
-  }
-  return res2;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
-function parseBooleanDef() {
-  return {
-    type: "boolean"
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
-function parseBrandedDef(_def, refs) {
-  return parseDef(_def.type._def, refs);
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
-var parseCatchDef = (def, refs) => {
-  return parseDef(def.innerType._def, refs);
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
-function parseDateDef(def, refs, overrideDateStrategy) {
-  const strategy = overrideDateStrategy ?? refs.dateStrategy;
-  if (Array.isArray(strategy)) {
-    return {
-      anyOf: strategy.map((item, i2) => parseDateDef(def, refs, item))
-    };
-  }
-  switch (strategy) {
-    case "string":
-    case "format:date-time":
-      return {
-        type: "string",
-        format: "date-time"
-      };
-    case "format:date":
-      return {
-        type: "string",
-        format: "date"
-      };
-    case "integer":
-      return integerDateParser(def, refs);
-  }
-}
-var integerDateParser = (def, refs) => {
-  const res2 = {
-    type: "integer",
-    format: "unix-time"
-  };
-  if (refs.target === "openApi3") {
-    return res2;
-  }
-  for (const check2 of def.checks) {
-    switch (check2.kind) {
-      case "min":
-        setResponseValueAndErrors(
-          res2,
-          "minimum",
-          check2.value,
-          // This is in milliseconds
-          check2.message,
-          refs
-        );
-        break;
-      case "max":
-        setResponseValueAndErrors(
-          res2,
-          "maximum",
-          check2.value,
-          // This is in milliseconds
-          check2.message,
-          refs
-        );
-        break;
-    }
-  }
-  return res2;
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
-function parseDefaultDef(_def, refs) {
-  return {
-    ...parseDef(_def.innerType._def, refs),
-    default: _def.defaultValue()
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
-function parseEffectsDef(_def, refs) {
-  return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
-function parseEnumDef(def) {
-  return {
-    type: "string",
-    enum: Array.from(def.values)
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
-var isJsonSchema7AllOfType = (type) => {
-  if ("type" in type && type.type === "string")
-    return false;
-  return "allOf" in type;
-};
-function parseIntersectionDef(def, refs) {
-  const allOf = [
-    parseDef(def.left._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "allOf", "0"]
-    }),
-    parseDef(def.right._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "allOf", "1"]
-    })
-  ].filter((x2) => !!x2);
-  let unevaluatedProperties = refs.target === "jsonSchema2019-09" ? { unevaluatedProperties: false } : void 0;
-  const mergedAllOf = [];
-  allOf.forEach((schema2) => {
-    if (isJsonSchema7AllOfType(schema2)) {
-      mergedAllOf.push(...schema2.allOf);
-      if (schema2.unevaluatedProperties === void 0) {
-        unevaluatedProperties = void 0;
-      }
-    } else {
-      let nestedSchema = schema2;
-      if ("additionalProperties" in schema2 && schema2.additionalProperties === false) {
-        const { additionalProperties, ...rest } = schema2;
-        nestedSchema = rest;
-      } else {
-        unevaluatedProperties = void 0;
-      }
-      mergedAllOf.push(nestedSchema);
-    }
-  });
-  return mergedAllOf.length ? {
-    allOf: mergedAllOf,
-    ...unevaluatedProperties
-  } : void 0;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
-function parseLiteralDef(def, refs) {
-  const parsedType2 = typeof def.value;
-  if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
-    return {
-      type: Array.isArray(def.value) ? "array" : "object"
-    };
-  }
-  if (refs.target === "openApi3") {
-    return {
-      type: parsedType2 === "bigint" ? "integer" : parsedType2,
-      enum: [def.value]
-    };
-  }
-  return {
-    type: parsedType2 === "bigint" ? "integer" : parsedType2,
-    const: def.value
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
-var emojiRegex2 = void 0;
-var zodPatterns = {
-  /**
-   * `c` was changed to `[cC]` to replicate /i flag
-   */
-  cuid: /^[cC][^\s-]{8,}$/,
-  cuid2: /^[0-9a-z]+$/,
-  ulid: /^[0-9A-HJKMNP-TV-Z]{26}$/,
-  /**
-   * `a-z` was added to replicate /i flag
-   */
-  email: /^(?!\.)(?!.*\.\.)([a-zA-Z0-9_'+\-\.]*)[a-zA-Z0-9_+-]@([a-zA-Z0-9][a-zA-Z0-9\-]*\.)+[a-zA-Z]{2,}$/,
-  /**
-   * Constructed a valid Unicode RegExp
-   *
-   * Lazily instantiate since this type of regex isn't supported
-   * in all envs (e.g. React Native).
-   *
-   * See:
-   * https://github.com/colinhacks/zod/issues/2433
-   * Fix in Zod:
-   * https://github.com/colinhacks/zod/commit/9340fd51e48576a75adc919bff65dbc4a5d4c99b
-   */
-  emoji: () => {
-    if (emojiRegex2 === void 0) {
-      emojiRegex2 = RegExp("^(\\p{Extended_Pictographic}|\\p{Emoji_Component})+$", "u");
-    }
-    return emojiRegex2;
-  },
-  /**
-   * Unused
-   */
-  uuid: /^[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}$/,
-  /**
-   * Unused
-   */
-  ipv4: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])$/,
-  ipv4Cidr: /^(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])\/(3[0-2]|[12]?[0-9])$/,
-  /**
-   * Unused
-   */
-  ipv6: /^(([a-f0-9]{1,4}:){7}|::([a-f0-9]{1,4}:){0,6}|([a-f0-9]{1,4}:){1}:([a-f0-9]{1,4}:){0,5}|([a-f0-9]{1,4}:){2}:([a-f0-9]{1,4}:){0,4}|([a-f0-9]{1,4}:){3}:([a-f0-9]{1,4}:){0,3}|([a-f0-9]{1,4}:){4}:([a-f0-9]{1,4}:){0,2}|([a-f0-9]{1,4}:){5}:([a-f0-9]{1,4}:){0,1})([a-f0-9]{1,4}|(((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2}))\.){3}((25[0-5])|(2[0-4][0-9])|(1[0-9]{2})|([0-9]{1,2})))$/,
-  ipv6Cidr: /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))\/(12[0-8]|1[01][0-9]|[1-9]?[0-9])$/,
-  base64: /^([0-9a-zA-Z+/]{4})*(([0-9a-zA-Z+/]{2}==)|([0-9a-zA-Z+/]{3}=))?$/,
-  base64url: /^([0-9a-zA-Z-_]{4})*(([0-9a-zA-Z-_]{2}(==)?)|([0-9a-zA-Z-_]{3}(=)?))?$/,
-  nanoid: /^[a-zA-Z0-9_-]{21}$/,
-  jwt: /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]*$/
-};
-function parseStringDef(def, refs) {
-  const res2 = {
-    type: "string"
-  };
-  if (def.checks) {
-    for (const check2 of def.checks) {
-      switch (check2.kind) {
-        case "min":
-          setResponseValueAndErrors(res2, "minLength", typeof res2.minLength === "number" ? Math.max(res2.minLength, check2.value) : check2.value, check2.message, refs);
-          break;
-        case "max":
-          setResponseValueAndErrors(res2, "maxLength", typeof res2.maxLength === "number" ? Math.min(res2.maxLength, check2.value) : check2.value, check2.message, refs);
-          break;
-        case "email":
-          switch (refs.emailStrategy) {
-            case "format:email":
-              addFormat(res2, "email", check2.message, refs);
-              break;
-            case "format:idn-email":
-              addFormat(res2, "idn-email", check2.message, refs);
-              break;
-            case "pattern:zod":
-              addPattern(res2, zodPatterns.email, check2.message, refs);
-              break;
-          }
-          break;
-        case "url":
-          addFormat(res2, "uri", check2.message, refs);
-          break;
-        case "uuid":
-          addFormat(res2, "uuid", check2.message, refs);
-          break;
-        case "regex":
-          addPattern(res2, check2.regex, check2.message, refs);
-          break;
-        case "cuid":
-          addPattern(res2, zodPatterns.cuid, check2.message, refs);
-          break;
-        case "cuid2":
-          addPattern(res2, zodPatterns.cuid2, check2.message, refs);
-          break;
-        case "startsWith":
-          addPattern(res2, RegExp(`^${escapeLiteralCheckValue(check2.value, refs)}`), check2.message, refs);
-          break;
-        case "endsWith":
-          addPattern(res2, RegExp(`${escapeLiteralCheckValue(check2.value, refs)}$`), check2.message, refs);
-          break;
-        case "datetime":
-          addFormat(res2, "date-time", check2.message, refs);
-          break;
-        case "date":
-          addFormat(res2, "date", check2.message, refs);
-          break;
-        case "time":
-          addFormat(res2, "time", check2.message, refs);
-          break;
-        case "duration":
-          addFormat(res2, "duration", check2.message, refs);
-          break;
-        case "length":
-          setResponseValueAndErrors(res2, "minLength", typeof res2.minLength === "number" ? Math.max(res2.minLength, check2.value) : check2.value, check2.message, refs);
-          setResponseValueAndErrors(res2, "maxLength", typeof res2.maxLength === "number" ? Math.min(res2.maxLength, check2.value) : check2.value, check2.message, refs);
-          break;
-        case "includes": {
-          addPattern(res2, RegExp(escapeLiteralCheckValue(check2.value, refs)), check2.message, refs);
-          break;
-        }
-        case "ip": {
-          if (check2.version !== "v6") {
-            addFormat(res2, "ipv4", check2.message, refs);
-          }
-          if (check2.version !== "v4") {
-            addFormat(res2, "ipv6", check2.message, refs);
-          }
-          break;
-        }
-        case "base64url":
-          addPattern(res2, zodPatterns.base64url, check2.message, refs);
-          break;
-        case "jwt":
-          addPattern(res2, zodPatterns.jwt, check2.message, refs);
-          break;
-        case "cidr": {
-          if (check2.version !== "v6") {
-            addPattern(res2, zodPatterns.ipv4Cidr, check2.message, refs);
-          }
-          if (check2.version !== "v4") {
-            addPattern(res2, zodPatterns.ipv6Cidr, check2.message, refs);
-          }
-          break;
-        }
-        case "emoji":
-          addPattern(res2, zodPatterns.emoji(), check2.message, refs);
-          break;
-        case "ulid": {
-          addPattern(res2, zodPatterns.ulid, check2.message, refs);
-          break;
-        }
-        case "base64": {
-          switch (refs.base64Strategy) {
-            case "format:binary": {
-              addFormat(res2, "binary", check2.message, refs);
-              break;
-            }
-            case "contentEncoding:base64": {
-              setResponseValueAndErrors(res2, "contentEncoding", "base64", check2.message, refs);
-              break;
-            }
-            case "pattern:zod": {
-              addPattern(res2, zodPatterns.base64, check2.message, refs);
-              break;
-            }
-          }
-          break;
-        }
-        case "nanoid": {
-          addPattern(res2, zodPatterns.nanoid, check2.message, refs);
-        }
-        case "toLowerCase":
-        case "toUpperCase":
-        case "trim":
-          break;
-        default:
-          /* @__PURE__ */ ((_) => {
-          })(check2);
-      }
-    }
-  }
-  return res2;
-}
-function escapeLiteralCheckValue(literal2, refs) {
-  return refs.patternStrategy === "escape" ? escapeNonAlphaNumeric(literal2) : literal2;
-}
-var ALPHA_NUMERIC = new Set("ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvxyz0123456789");
-function escapeNonAlphaNumeric(source2) {
-  let result = "";
-  for (let i2 = 0; i2 < source2.length; i2++) {
-    if (!ALPHA_NUMERIC.has(source2[i2])) {
-      result += "\\";
-    }
-    result += source2[i2];
-  }
-  return result;
-}
-function addFormat(schema2, value2, message, refs) {
-  if (schema2.format || schema2.anyOf?.some((x2) => x2.format)) {
-    if (!schema2.anyOf) {
-      schema2.anyOf = [];
-    }
-    if (schema2.format) {
-      schema2.anyOf.push({
-        format: schema2.format,
-        ...schema2.errorMessage && refs.errorMessages && {
-          errorMessage: { format: schema2.errorMessage.format }
-        }
-      });
-      delete schema2.format;
-      if (schema2.errorMessage) {
-        delete schema2.errorMessage.format;
-        if (Object.keys(schema2.errorMessage).length === 0) {
-          delete schema2.errorMessage;
-        }
-      }
-    }
-    schema2.anyOf.push({
-      format: value2,
-      ...message && refs.errorMessages && { errorMessage: { format: message } }
-    });
-  } else {
-    setResponseValueAndErrors(schema2, "format", value2, message, refs);
-  }
-}
-function addPattern(schema2, regex, message, refs) {
-  if (schema2.pattern || schema2.allOf?.some((x2) => x2.pattern)) {
-    if (!schema2.allOf) {
-      schema2.allOf = [];
-    }
-    if (schema2.pattern) {
-      schema2.allOf.push({
-        pattern: schema2.pattern,
-        ...schema2.errorMessage && refs.errorMessages && {
-          errorMessage: { pattern: schema2.errorMessage.pattern }
-        }
-      });
-      delete schema2.pattern;
-      if (schema2.errorMessage) {
-        delete schema2.errorMessage.pattern;
-        if (Object.keys(schema2.errorMessage).length === 0) {
-          delete schema2.errorMessage;
-        }
-      }
-    }
-    schema2.allOf.push({
-      pattern: stringifyRegExpWithFlags(regex, refs),
-      ...message && refs.errorMessages && { errorMessage: { pattern: message } }
-    });
-  } else {
-    setResponseValueAndErrors(schema2, "pattern", stringifyRegExpWithFlags(regex, refs), message, refs);
-  }
-}
-function stringifyRegExpWithFlags(regex, refs) {
-  if (!refs.applyRegexFlags || !regex.flags) {
-    return regex.source;
-  }
-  const flags = {
-    i: regex.flags.includes("i"),
-    m: regex.flags.includes("m"),
-    s: regex.flags.includes("s")
-    // `.` matches newlines
-  };
-  const source2 = flags.i ? regex.source.toLowerCase() : regex.source;
-  let pattern = "";
-  let isEscaped = false;
-  let inCharGroup = false;
-  let inCharRange = false;
-  for (let i2 = 0; i2 < source2.length; i2++) {
-    if (isEscaped) {
-      pattern += source2[i2];
-      isEscaped = false;
-      continue;
-    }
-    if (flags.i) {
-      if (inCharGroup) {
-        if (source2[i2].match(/[a-z]/)) {
-          if (inCharRange) {
-            pattern += source2[i2];
-            pattern += `${source2[i2 - 2]}-${source2[i2]}`.toUpperCase();
-            inCharRange = false;
-          } else if (source2[i2 + 1] === "-" && source2[i2 + 2]?.match(/[a-z]/)) {
-            pattern += source2[i2];
-            inCharRange = true;
-          } else {
-            pattern += `${source2[i2]}${source2[i2].toUpperCase()}`;
-          }
-          continue;
-        }
-      } else if (source2[i2].match(/[a-z]/)) {
-        pattern += `[${source2[i2]}${source2[i2].toUpperCase()}]`;
-        continue;
-      }
-    }
-    if (flags.m) {
-      if (source2[i2] === "^") {
-        pattern += `(^|(?<=[\r
-]))`;
-        continue;
-      } else if (source2[i2] === "$") {
-        pattern += `($|(?=[\r
-]))`;
-        continue;
-      }
-    }
-    if (flags.s && source2[i2] === ".") {
-      pattern += inCharGroup ? `${source2[i2]}\r
-` : `[${source2[i2]}\r
-]`;
-      continue;
-    }
-    pattern += source2[i2];
-    if (source2[i2] === "\\") {
-      isEscaped = true;
-    } else if (inCharGroup && source2[i2] === "]") {
-      inCharGroup = false;
-    } else if (!inCharGroup && source2[i2] === "[") {
-      inCharGroup = true;
-    }
-  }
-  try {
-    new RegExp(pattern);
-  } catch {
-    console.warn(`Could not convert regex pattern at ${refs.currentPath.join("/")} to a flag-independent form! Falling back to the flag-ignorant source`);
-    return regex.source;
-  }
-  return pattern;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
-function parseRecordDef(def, refs) {
-  if (refs.target === "openAi") {
-    console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
-  }
-  if (refs.target === "openApi3" && def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
-    return {
-      type: "object",
-      required: def.keyType._def.values,
-      properties: def.keyType._def.values.reduce((acc, key) => ({
-        ...acc,
-        [key]: parseDef(def.valueType._def, {
-          ...refs,
-          currentPath: [...refs.currentPath, "properties", key]
-        }) ?? parseAnyDef(refs)
-      }), {}),
-      additionalProperties: refs.rejectedAdditionalProperties
-    };
-  }
-  const schema2 = {
-    type: "object",
-    additionalProperties: parseDef(def.valueType._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "additionalProperties"]
-    }) ?? refs.allowedAdditionalProperties
-  };
-  if (refs.target === "openApi3") {
-    return schema2;
-  }
-  if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.checks?.length) {
-    const { type, ...keyType } = parseStringDef(def.keyType._def, refs);
-    return {
-      ...schema2,
-      propertyNames: keyType
-    };
-  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodEnum) {
-    return {
-      ...schema2,
-      propertyNames: {
-        enum: def.keyType._def.values
-      }
-    };
-  } else if (def.keyType?._def.typeName === ZodFirstPartyTypeKind.ZodBranded && def.keyType._def.type._def.typeName === ZodFirstPartyTypeKind.ZodString && def.keyType._def.type._def.checks?.length) {
-    const { type, ...keyType } = parseBrandedDef(def.keyType._def, refs);
-    return {
-      ...schema2,
-      propertyNames: keyType
-    };
-  }
-  return schema2;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
-function parseMapDef(def, refs) {
-  if (refs.mapStrategy === "record") {
-    return parseRecordDef(def, refs);
-  }
-  const keys3 = parseDef(def.keyType._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "items", "items", "0"]
-  }) || parseAnyDef(refs);
-  const values = parseDef(def.valueType._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "items", "items", "1"]
-  }) || parseAnyDef(refs);
-  return {
-    type: "array",
-    maxItems: 125,
-    items: {
-      type: "array",
-      items: [keys3, values],
-      minItems: 2,
-      maxItems: 2
-    }
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
-function parseNativeEnumDef(def) {
-  const object7 = def.values;
-  const actualKeys = Object.keys(def.values).filter((key) => {
-    return typeof object7[object7[key]] !== "number";
-  });
-  const actualValues = actualKeys.map((key) => object7[key]);
-  const parsedTypes = Array.from(new Set(actualValues.map((values) => typeof values)));
-  return {
-    type: parsedTypes.length === 1 ? parsedTypes[0] === "string" ? "string" : "number" : ["string", "number"],
-    enum: actualValues
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
-function parseNeverDef(refs) {
-  return refs.target === "openAi" ? void 0 : {
-    not: parseAnyDef({
-      ...refs,
-      currentPath: [...refs.currentPath, "not"]
-    })
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
-function parseNullDef(refs) {
-  return refs.target === "openApi3" ? {
-    enum: ["null"],
-    nullable: true
-  } : {
-    type: "null"
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
-var primitiveMappings = {
-  ZodString: "string",
-  ZodNumber: "number",
-  ZodBigInt: "integer",
-  ZodBoolean: "boolean",
-  ZodNull: "null"
-};
-function parseUnionDef(def, refs) {
-  if (refs.target === "openApi3")
-    return asAnyOf(def, refs);
-  const options = def.options instanceof Map ? Array.from(def.options.values()) : def.options;
-  if (options.every((x2) => x2._def.typeName in primitiveMappings && (!x2._def.checks || !x2._def.checks.length))) {
-    const types3 = options.reduce((types4, x2) => {
-      const type = primitiveMappings[x2._def.typeName];
-      return type && !types4.includes(type) ? [...types4, type] : types4;
-    }, []);
-    return {
-      type: types3.length > 1 ? types3 : types3[0]
-    };
-  } else if (options.every((x2) => x2._def.typeName === "ZodLiteral" && !x2.description)) {
-    const types3 = options.reduce((acc, x2) => {
-      const type = typeof x2._def.value;
-      switch (type) {
-        case "string":
-        case "number":
-        case "boolean":
-          return [...acc, type];
-        case "bigint":
-          return [...acc, "integer"];
-        case "object":
-          if (x2._def.value === null)
-            return [...acc, "null"];
-        case "symbol":
-        case "undefined":
-        case "function":
-        default:
-          return acc;
-      }
-    }, []);
-    if (types3.length === options.length) {
-      const uniqueTypes = types3.filter((x2, i2, a) => a.indexOf(x2) === i2);
-      return {
-        type: uniqueTypes.length > 1 ? uniqueTypes : uniqueTypes[0],
-        enum: options.reduce((acc, x2) => {
-          return acc.includes(x2._def.value) ? acc : [...acc, x2._def.value];
-        }, [])
-      };
-    }
-  } else if (options.every((x2) => x2._def.typeName === "ZodEnum")) {
-    return {
-      type: "string",
-      enum: options.reduce((acc, x2) => [
-        ...acc,
-        ...x2._def.values.filter((x3) => !acc.includes(x3))
-      ], [])
-    };
-  }
-  return asAnyOf(def, refs);
-}
-var asAnyOf = (def, refs) => {
-  const anyOf = (def.options instanceof Map ? Array.from(def.options.values()) : def.options).map((x2, i2) => parseDef(x2._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "anyOf", `${i2}`]
-  })).filter((x2) => !!x2 && (!refs.strictUnions || typeof x2 === "object" && Object.keys(x2).length > 0));
-  return anyOf.length ? { anyOf } : void 0;
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
-function parseNullableDef(def, refs) {
-  if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
-    if (refs.target === "openApi3") {
-      return {
-        type: primitiveMappings[def.innerType._def.typeName],
-        nullable: true
-      };
-    }
-    return {
-      type: [
-        primitiveMappings[def.innerType._def.typeName],
-        "null"
-      ]
-    };
-  }
-  if (refs.target === "openApi3") {
-    const base2 = parseDef(def.innerType._def, {
-      ...refs,
-      currentPath: [...refs.currentPath]
-    });
-    if (base2 && "$ref" in base2)
-      return { allOf: [base2], nullable: true };
-    return base2 && { ...base2, nullable: true };
-  }
-  const base = parseDef(def.innerType._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "anyOf", "0"]
-  });
-  return base && { anyOf: [base, { type: "null" }] };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
-function parseNumberDef(def, refs) {
-  const res2 = {
-    type: "number"
-  };
-  if (!def.checks)
-    return res2;
-  for (const check2 of def.checks) {
-    switch (check2.kind) {
-      case "int":
-        res2.type = "integer";
-        addErrorMessage(res2, "type", check2.message, refs);
-        break;
-      case "min":
-        if (refs.target === "jsonSchema7") {
-          if (check2.inclusive) {
-            setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
-          } else {
-            setResponseValueAndErrors(res2, "exclusiveMinimum", check2.value, check2.message, refs);
-          }
-        } else {
-          if (!check2.inclusive) {
-            res2.exclusiveMinimum = true;
-          }
-          setResponseValueAndErrors(res2, "minimum", check2.value, check2.message, refs);
-        }
-        break;
-      case "max":
-        if (refs.target === "jsonSchema7") {
-          if (check2.inclusive) {
-            setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
-          } else {
-            setResponseValueAndErrors(res2, "exclusiveMaximum", check2.value, check2.message, refs);
-          }
-        } else {
-          if (!check2.inclusive) {
-            res2.exclusiveMaximum = true;
-          }
-          setResponseValueAndErrors(res2, "maximum", check2.value, check2.message, refs);
-        }
-        break;
-      case "multipleOf":
-        setResponseValueAndErrors(res2, "multipleOf", check2.value, check2.message, refs);
-        break;
-    }
-  }
-  return res2;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
-function parseObjectDef(def, refs) {
-  const forceOptionalIntoNullable = refs.target === "openAi";
-  const result = {
-    type: "object",
-    properties: {}
-  };
-  const required2 = [];
-  const shape2 = def.shape();
-  for (const propName in shape2) {
-    let propDef = shape2[propName];
-    if (propDef === void 0 || propDef._def === void 0) {
-      continue;
-    }
-    let propOptional = safeIsOptional(propDef);
-    if (propOptional && forceOptionalIntoNullable) {
-      if (propDef._def.typeName === "ZodOptional") {
-        propDef = propDef._def.innerType;
-      }
-      if (!propDef.isNullable()) {
-        propDef = propDef.nullable();
-      }
-      propOptional = false;
-    }
-    const parsedDef = parseDef(propDef._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "properties", propName],
-      propertyPath: [...refs.currentPath, "properties", propName]
-    });
-    if (parsedDef === void 0) {
-      continue;
-    }
-    result.properties[propName] = parsedDef;
-    if (!propOptional) {
-      required2.push(propName);
-    }
-  }
-  if (required2.length) {
-    result.required = required2;
-  }
-  const additionalProperties = decideAdditionalProperties(def, refs);
-  if (additionalProperties !== void 0) {
-    result.additionalProperties = additionalProperties;
-  }
-  return result;
-}
-function decideAdditionalProperties(def, refs) {
-  if (def.catchall._def.typeName !== "ZodNever") {
-    return parseDef(def.catchall._def, {
-      ...refs,
-      currentPath: [...refs.currentPath, "additionalProperties"]
-    });
-  }
-  switch (def.unknownKeys) {
-    case "passthrough":
-      return refs.allowedAdditionalProperties;
-    case "strict":
-      return refs.rejectedAdditionalProperties;
-    case "strip":
-      return refs.removeAdditionalStrategy === "strict" ? refs.allowedAdditionalProperties : refs.rejectedAdditionalProperties;
-  }
-}
-function safeIsOptional(schema2) {
-  try {
-    return schema2.isOptional();
-  } catch {
-    return true;
-  }
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
-var parseOptionalDef = (def, refs) => {
-  if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
-    return parseDef(def.innerType._def, refs);
-  }
-  const innerSchema = parseDef(def.innerType._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "anyOf", "1"]
-  });
-  return innerSchema ? {
-    anyOf: [
-      {
-        not: parseAnyDef(refs)
-      },
-      innerSchema
-    ]
-  } : parseAnyDef(refs);
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
-var parsePipelineDef = (def, refs) => {
-  if (refs.pipeStrategy === "input") {
-    return parseDef(def.in._def, refs);
-  } else if (refs.pipeStrategy === "output") {
-    return parseDef(def.out._def, refs);
-  }
-  const a = parseDef(def.in._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "allOf", "0"]
-  });
-  const b = parseDef(def.out._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "allOf", a ? "1" : "0"]
-  });
-  return {
-    allOf: [a, b].filter((x2) => x2 !== void 0)
-  };
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
-function parsePromiseDef(def, refs) {
-  return parseDef(def.type._def, refs);
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
-function parseSetDef(def, refs) {
-  const items = parseDef(def.valueType._def, {
-    ...refs,
-    currentPath: [...refs.currentPath, "items"]
-  });
-  const schema2 = {
-    type: "array",
-    uniqueItems: true,
-    items
-  };
-  if (def.minSize) {
-    setResponseValueAndErrors(schema2, "minItems", def.minSize.value, def.minSize.message, refs);
-  }
-  if (def.maxSize) {
-    setResponseValueAndErrors(schema2, "maxItems", def.maxSize.value, def.maxSize.message, refs);
-  }
-  return schema2;
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
-function parseTupleDef(def, refs) {
-  if (def.rest) {
-    return {
-      type: "array",
-      minItems: def.items.length,
-      items: def.items.map((x2, i2) => parseDef(x2._def, {
-        ...refs,
-        currentPath: [...refs.currentPath, "items", `${i2}`]
-      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], []),
-      additionalItems: parseDef(def.rest._def, {
-        ...refs,
-        currentPath: [...refs.currentPath, "additionalItems"]
-      })
-    };
-  } else {
-    return {
-      type: "array",
-      minItems: def.items.length,
-      maxItems: def.items.length,
-      items: def.items.map((x2, i2) => parseDef(x2._def, {
-        ...refs,
-        currentPath: [...refs.currentPath, "items", `${i2}`]
-      })).reduce((acc, x2) => x2 === void 0 ? acc : [...acc, x2], [])
-    };
-  }
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
-function parseUndefinedDef(refs) {
-  return {
-    not: parseAnyDef(refs)
-  };
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
-function parseUnknownDef(refs) {
-  return parseAnyDef(refs);
-}
-
-// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
-var parseReadonlyDef = (def, refs) => {
-  return parseDef(def.innerType._def, refs);
-};
-
-// node_modules/zod-to-json-schema/dist/esm/selectParser.js
-var selectParser = (def, typeName, refs) => {
-  switch (typeName) {
-    case ZodFirstPartyTypeKind.ZodString:
-      return parseStringDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodNumber:
-      return parseNumberDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodObject:
-      return parseObjectDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodBigInt:
-      return parseBigintDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodBoolean:
-      return parseBooleanDef();
-    case ZodFirstPartyTypeKind.ZodDate:
-      return parseDateDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodUndefined:
-      return parseUndefinedDef(refs);
-    case ZodFirstPartyTypeKind.ZodNull:
-      return parseNullDef(refs);
-    case ZodFirstPartyTypeKind.ZodArray:
-      return parseArrayDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodUnion:
-    case ZodFirstPartyTypeKind.ZodDiscriminatedUnion:
-      return parseUnionDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodIntersection:
-      return parseIntersectionDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodTuple:
-      return parseTupleDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodRecord:
-      return parseRecordDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodLiteral:
-      return parseLiteralDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodEnum:
-      return parseEnumDef(def);
-    case ZodFirstPartyTypeKind.ZodNativeEnum:
-      return parseNativeEnumDef(def);
-    case ZodFirstPartyTypeKind.ZodNullable:
-      return parseNullableDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodOptional:
-      return parseOptionalDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodMap:
-      return parseMapDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodSet:
-      return parseSetDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodLazy:
-      return () => def.getter()._def;
-    case ZodFirstPartyTypeKind.ZodPromise:
-      return parsePromiseDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodNaN:
-    case ZodFirstPartyTypeKind.ZodNever:
-      return parseNeverDef(refs);
-    case ZodFirstPartyTypeKind.ZodEffects:
-      return parseEffectsDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodAny:
-      return parseAnyDef(refs);
-    case ZodFirstPartyTypeKind.ZodUnknown:
-      return parseUnknownDef(refs);
-    case ZodFirstPartyTypeKind.ZodDefault:
-      return parseDefaultDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodBranded:
-      return parseBrandedDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodReadonly:
-      return parseReadonlyDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodCatch:
-      return parseCatchDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodPipeline:
-      return parsePipelineDef(def, refs);
-    case ZodFirstPartyTypeKind.ZodFunction:
-    case ZodFirstPartyTypeKind.ZodVoid:
-    case ZodFirstPartyTypeKind.ZodSymbol:
-      return void 0;
-    default:
-      return /* @__PURE__ */ ((_) => void 0)(typeName);
-  }
-};
-
-// node_modules/zod-to-json-schema/dist/esm/parseDef.js
-function parseDef(def, refs, forceResolution = false) {
-  const seenItem = refs.seen.get(def);
-  if (refs.override) {
-    const overrideResult = refs.override?.(def, refs, seenItem, forceResolution);
-    if (overrideResult !== ignoreOverride) {
-      return overrideResult;
-    }
-  }
-  if (seenItem && !forceResolution) {
-    const seenSchema = get$ref(seenItem, refs);
-    if (seenSchema !== void 0) {
-      return seenSchema;
-    }
-  }
-  const newItem = { def, path: refs.currentPath, jsonSchema: void 0 };
-  refs.seen.set(def, newItem);
-  const jsonSchemaOrGetter = selectParser(def, def.typeName, refs);
-  const jsonSchema = typeof jsonSchemaOrGetter === "function" ? parseDef(jsonSchemaOrGetter(), refs) : jsonSchemaOrGetter;
-  if (jsonSchema) {
-    addMeta(def, refs, jsonSchema);
-  }
-  if (refs.postProcess) {
-    const postProcessResult = refs.postProcess(jsonSchema, def, refs);
-    newItem.jsonSchema = jsonSchema;
-    return postProcessResult;
-  }
-  newItem.jsonSchema = jsonSchema;
-  return jsonSchema;
-}
-var get$ref = (item, refs) => {
-  switch (refs.$refStrategy) {
-    case "root":
-      return { $ref: item.path.join("/") };
-    case "relative":
-      return { $ref: getRelativePath(refs.currentPath, item.path) };
-    case "none":
-    case "seen": {
-      if (item.path.length < refs.currentPath.length && item.path.every((value2, index) => refs.currentPath[index] === value2)) {
-        console.warn(`Recursive reference detected at ${refs.currentPath.join("/")}! Defaulting to any`);
-        return parseAnyDef(refs);
-      }
-      return refs.$refStrategy === "seen" ? parseAnyDef(refs) : void 0;
-    }
-  }
-};
-var addMeta = (def, refs, jsonSchema) => {
-  if (def.description) {
-    jsonSchema.description = def.description;
-    if (refs.markdownDescription) {
-      jsonSchema.markdownDescription = def.description;
-    }
-  }
-  return jsonSchema;
-};
-
-// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
-var zodToJsonSchema = (schema2, options) => {
-  const refs = getRefs(options);
-  let definitions2 = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name3, schema3]) => ({
-    ...acc,
-    [name3]: parseDef(schema3._def, {
-      ...refs,
-      currentPath: [...refs.basePath, refs.definitionPath, name3]
-    }, true) ?? parseAnyDef(refs)
-  }), {}) : void 0;
-  const name2 = typeof options === "string" ? options : options?.nameStrategy === "title" ? void 0 : options?.name;
-  const main2 = parseDef(schema2._def, name2 === void 0 ? refs : {
-    ...refs,
-    currentPath: [...refs.basePath, refs.definitionPath, name2]
-  }, false) ?? parseAnyDef(refs);
-  const title = typeof options === "object" && options.name !== void 0 && options.nameStrategy === "title" ? options.name : void 0;
-  if (title !== void 0) {
-    main2.title = title;
-  }
-  if (refs.flags.hasReferencedOpenAiAnyType) {
-    if (!definitions2) {
-      definitions2 = {};
-    }
-    if (!definitions2[refs.openAiAnyTypeName]) {
-      definitions2[refs.openAiAnyTypeName] = {
-        // Skipping "object" as no properties can be defined and additionalProperties must be "false"
-        type: ["string", "number", "integer", "boolean", "array", "null"],
-        items: {
-          $ref: refs.$refStrategy === "relative" ? "1" : [
-            ...refs.basePath,
-            refs.definitionPath,
-            refs.openAiAnyTypeName
-          ].join("/")
-        }
-      };
-    }
-  }
-  const combined = name2 === void 0 ? definitions2 ? {
-    ...main2,
-    [refs.definitionPath]: definitions2
-  } : main2 : {
-    $ref: [
-      ...refs.$refStrategy === "relative" ? [] : refs.basePath,
-      refs.definitionPath,
-      name2
-    ].join("/"),
-    [refs.definitionPath]: {
-      ...definitions2,
-      [name2]: main2
-    }
-  };
-  if (refs.target === "jsonSchema7") {
-    combined.$schema = "http://json-schema.org/draft-07/schema#";
-  } else if (refs.target === "jsonSchema2019-09" || refs.target === "openAi") {
-    combined.$schema = "https://json-schema.org/draft/2019-09/schema#";
-  }
-  if (refs.target === "openAi" && ("anyOf" in combined || "oneOf" in combined || "allOf" in combined || "type" in combined && Array.isArray(combined.type))) {
-    console.warn("Warning: OpenAI may not support schemas with unions as roots! Try wrapping it in an object property.");
-  }
-  return combined;
-};
-
 // node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function getMethodLiteral(schema2) {
   const shape2 = getObjectShape(schema2);
@@ -124707,8 +124698,11 @@ var MUSIC_TOOLS = [
   {
     name: "music_catalog",
     title: "Inspect music models",
-    description: "Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.",
-    inputSchema: { type: "object", additionalProperties: false, properties: {} },
+    description: "Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call. Name an engine, and a model to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across music adapters and parameters.options the adapter's own.",
+    inputSchema: { type: "object", additionalProperties: false, properties: {
+      engine: { type: "string", enum: ["lyria", "suno-api", "elevenlabs", "mlx"], description: "Music engine as saved in models.music.engine, e.g. lyria." },
+      model: { type: "string", description: "One exact model of that engine, e.g. lyria-3.5. Needs engine." }
+    } },
     annotations: { readOnlyHint: true, openWorldHint: false }
   },
   {
@@ -124717,6 +124711,8 @@ var MUSIC_TOOLS = [
     description: "Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute \u2014 use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.",
     inputSchema: { type: "object", additionalProperties: false, properties: {
       ...context,
+      engine: { type: "string", description: "Optional assertion of the saved music engine. A different saved engine refuses the plan (music_selection_mismatch); a plan never switches the selection." },
+      model: { type: "string", description: "Optional assertion of the saved music model, checked the same way." },
       tool: { type: "string", enum: ["music_generate_song", "music_generate_clip", "music_generate", "music_generate_advanced", "music_elevenlabs_generate", "suno_generate", "mlx_music_generate"], description: "Optional adapter; must match saved model. Default comes from music_catalog." },
       args: { type: "object", description: 'Selected adapter fields, e.g. {prompt:"Soft piano",instrumental:true,filename:"bgm.wav"} for Lyria song. Unknown fields fail.' }
     }, required: ["directory", "assetId", "requestId", "args"] },
@@ -124830,10 +124826,10 @@ function buildNativeImageBody(input, edit2 = false) {
   const { outputPath: _output, filename: _filename, requestId: _requestId, ...fields3 } = args;
   const body = { ...fields3, n: 1, response_format: "b64_json" };
   if (body.size === void 0 && !(edit2 && args.model === "h3-image")) body.size = "1024x1024";
-  for (const [local2, wire] of [["guidanceScale", "guidance_scale"], ["negativePrompt", "negative_prompt"], ["refResolution", "ref_resolution"]]) {
-    if (body[local2] !== void 0) {
-      body[wire] = body[local2];
-      delete body[local2];
+  for (const [local3, wire] of [["guidanceScale", "guidance_scale"], ["negativePrompt", "negative_prompt"], ["refResolution", "ref_resolution"]]) {
+    if (body[local3] !== void 0) {
+      body[wire] = body[local3];
+      delete body[local3];
     }
   }
   if (edit2) {
@@ -125164,7 +125160,7 @@ var common2 = external_exports.object({
   model,
   prompt: external_exports.string().trim().min(1),
   resolution,
-  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
+  promptProvenance: external_exports.enum(["typed", "enhanced"]).optional().describe("Desktop rewrite policy: enhanced sends a caller-finished prompt without another rewrite; typed lets the app's automatic enhancement settings rewrite it. Omitted sends enhanced for a written prompt, e.g. 'typed' to opt into the app's rewrite. This is not a quality review."),
   seed: external_exports.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   cameraMotion: external_exports.enum(["none", "dolly_in", "dolly_out", "dolly_left", "dolly_right", "jib_up", "jib_down", "static", "focus_shift"]).optional(),
@@ -125254,11 +125250,13 @@ function buildDesktopBody(operation, input, assets) {
     return { assetId: assets[file2] };
   };
   if (targetResolution) params.resolution = targetResolution;
+  const edits = ["extend", "retake"].includes(operation);
+  if (!edits && params.prompt) params.promptProvenance ??= "enhanced";
   if (operation === "keyframes") return {
     params: { ...params, model: "fast" },
     keyframes: keyframes2.map(({ imagePath: file2, ...frame2 }) => ({ ...ref(file2), ...frame2 }))
   };
-  const inputs2 = operation === "image-to-video" ? { startFrame: ref(imagePath), ...lastFramePath ? { endFrame: ref(lastFramePath) } : {} } : operation === "audio-to-video" ? { audio: ref(audioPath), ...imagePath ? { startFrame: ref(imagePath) } : {} } : ["extend", "retake"].includes(operation) ? { video: ref(sourceVideoPath) } : void 0;
+  const inputs2 = operation === "image-to-video" ? { startFrame: ref(imagePath), ...lastFramePath ? { endFrame: ref(lastFramePath) } : {} } : operation === "audio-to-video" ? { audio: ref(audioPath), ...imagePath ? { startFrame: ref(imagePath) } : {} } : edits ? { video: ref(sourceVideoPath) } : void 0;
   return {
     params,
     contract_version: 1,
@@ -125446,7 +125444,7 @@ var descriptions = {
   kind: "Catalog to read, e.g. speech for registered voices; discovery never generates media.",
   model: "Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.",
   prompt: "Requested subject/action or changes, e.g. A blue ball rolls across a table.",
-  promptProvenance: "Desktop rewrite policy, e.g. enhanced for a caller-finished prompt that must not be rewritten again; typed follows the app's enhancement settings. Omitted keeps its default. Does not certify quality.",
+  promptProvenance: "Desktop rewrite policy, e.g. typed to let the app's enhancement settings rewrite the prompt. Omitted sends enhanced for a written prompt, which reaches generation without another rewrite. Does not certify quality.",
   size: "Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.",
   seed: "Optional reproducibility seed, e.g. 42; omit for provider handling.",
   steps: "Optional sampling steps, e.g. 8 for Qwen Turbo. Omit to preserve model schedule.",
@@ -127278,7 +127276,6 @@ var capabilitiesSchema = external_exports.object({
   version: external_exports.literal(1),
   execution: external_exports.literal("per_shot"),
   transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
-  execution_modes: external_exports.array(external_exports.string()).optional(),
   motion_prefix: external_exports.boolean().optional(),
   timed_dialogue: external_exports.string().nullish(),
   scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
@@ -127294,7 +127291,6 @@ function parseSceneCapabilities(response) {
   const body = capabilitiesSchema.parse(response);
   const limits = body.limits ?? {};
   return {
-    executionModes: body.execution_modes ?? ["per_shot"],
     motionPrefix: body.motion_prefix === true,
     timedDialogue: body.timed_dialogue ?? null,
     audioModes: body.scene_audio_modes ?? {},
@@ -127337,7 +127333,7 @@ function sceneRequestIssues(scene, capabilities, options = {}) {
   }
   return issues;
 }
-async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings, execution) {
+async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings) {
   const attachments = [];
   const conditioned = conditionedBy(scene, model2);
   const shots = scene.shots.map((shot) => {
@@ -127388,7 +127384,6 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
   if (trackBytes > 32 * 1024 * 1024) throw new Error("scene_audio@0: exceeds the 32 MiB gateway upload limit");
   const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
   const body = {
-    ...execution && execution !== "per_shot" ? { execution } : {},
     model: model2,
     resolution: resolution2,
     fps: scene.fps,
@@ -127438,31 +127433,16 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
   }
   return { body, attachments, bodySha256: createHash14("sha256").update(wire).digest("hex"), bytes: Buffer.byteLength(wire) };
 }
-async function validateScenePayload(endpoint2, scene, model2, resolution2, requestId) {
-  let sent;
-  try {
-    const { body, attachments, bytes, bodySha256 } = await buildSceneWire(scene, model2, resolution2);
-    sent = { bodySha256, bytes, ...attachments.length ? { requestBody: body, attachments } : {} };
-    const result = await requestGenai("POST", endpoint2, body, 12e4, void 0, void 0, requestId);
-    const accepted = external_exports.object({ schema_valid: external_exports.literal(true), model: external_exports.literal(model2) }).safeParse(result);
-    return { endpoint: endpoint2, requestId, ...sent, status: accepted.success ? "schema_accepted" : "unverified", result: accepted.data };
-  } catch (error2) {
-    if (error2 instanceof GenaiRequestError && [400, 422].includes(error2.httpStatus))
-      return { endpoint: endpoint2, requestId, ...sent, status: "schema_rejected", httpStatus: error2.httpStatus, detail: error2.message };
-    return { endpoint: endpoint2, requestId, ...sent, status: "unverified", detail: error2 instanceof Error ? error2.message : String(error2) };
-  }
-}
 async function validateSceneBody(body, requestId, expected) {
   const result = await requestGenai("POST", SCENE_ROUTE + "/validate", body, 12e4, void 0, void 0, requestId);
   const checked = external_exports.object({
     schema_valid: external_exports.literal(true),
     model: external_exports.literal(expected.model),
     shots: external_exports.literal(expected.shots),
-    execution: external_exports.enum(["per_shot", "single_msr"]).optional()
+    execution: external_exports.string().optional()
   }).parse(result);
-  if (expected.execution === "auto" && !checked.execution || expected.execution && expected.execution !== "auto" && (checked.execution ?? "per_shot") !== expected.execution)
-    throw new Error("scene_render_selection: gateway did not validate the planned execution mode");
-  return checked.execution ?? "per_shot";
+  if ((checked.execution ?? "per_shot") !== "per_shot")
+    throw new Error("scene_render_selection: the gateway answered " + checked.execution + " for a per_shot scene");
 }
 async function submitSceneBody(body, requestId) {
   const response = await requestGenai("POST", SCENE_ROUTE, body, 12e4, void 0, void 0, requestId);
@@ -127510,11 +127490,6 @@ function devNegativeRule(args, ctx) {
   if (args.negativePrompt.length > 2e3) issue2("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
 var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
-var genaiShotsSchema = external_exports.array(external_exports.object({
-  description: external_exports.string().trim().min(1).max(2e3),
-  audio: external_exports.string().trim().min(1).max(2e3).optional(),
-  transition: external_exports.literal("hard_cut").optional()
-}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
 var temporalImages = external_exports.array(external_exports.object({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -127567,7 +127542,6 @@ var textVideoFields = external_exports.object({
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  shots: genaiShotsSchema.optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name2) => name2.endsWith(".mp4"), "Use an .mp4 filename").optional()
@@ -127587,15 +127561,6 @@ function localVideoTiming(args, ctx) {
     ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
   if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
-  if (args.shots) {
-    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
-    const parts = [openingPrompt(args.prompt, args.openingPositions)];
-    args.shots.forEach((shot, i2) => {
-      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
-      if (shot.audio) parts.push("Audio: " + shot.audio);
-    });
-    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
-  }
 }
 var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
   localVideoTiming(args, ctx);
@@ -127792,7 +127757,6 @@ function buildGenaiVideoBody(args) {
     resolution: args.resolution,
     fps: args.fps,
     generate_audio: args.generateAudio,
-    ...args.shots ? { shots: args.shots } : {},
     ...samplingBody(args),
     ...temporalBody(args.keyframes),
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
@@ -128012,12 +127976,7 @@ async function checkGenaiVideoOptions(tool2, args) {
       }
     }
     const prompt = openingPrompt(String(args.prompt), args.openingPositions);
-    const parts = [prompt];
-    for (const [i2, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
-      parts.push((i2 === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
-      if (shot.audio) parts.push("Audio: " + shot.audio);
-    }
-    const chars = Math.max([...parts.join("\n\n")].length, [...String(args.negativePrompt ?? "")].length);
+    const chars = Math.max([...prompt].length, [...String(args.negativePrompt ?? "")].length);
     if (chars > 2e3) {
       const caps = external_exports.object({ prompt_max_chars: external_exports.number().int().optional() }).parse(
         await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3)
@@ -128032,7 +127991,6 @@ async function checkGenaiVideoOptions(tool2, args) {
     lora: "lora",
     numGeneratedKeyframes: "num_generated_keyframes",
     numFrames: "num_frames",
-    shots: "shots",
     negativePrompt: "negative_prompt",
     guidanceScale: "guidance_scale",
     referenceStrength: "reference_strength",
@@ -128214,8 +128172,7 @@ var video = {
   ...sampleOptions,
   numGeneratedKeyframes: { type: "integer", minimum: 0, maximum: 16, description: "Internally generated keyframes on ordinary text/image pipelines." },
   lora: { ...zodToJsonSchema(genaiVisualSampling.lora.unwrap(), { target: "openApi3" }), description: "Registered LoRA names or name/strength pairs on plain distilled generation." },
-  shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy: "none" }), description: "2\u20134 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot." },
-  prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here." },
+  prompt: { type: "string", minLength: 1, maxLength: 2e3, description: "The whole prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion and every cut here. The gateway receives it as written; openingPositions, when given, are written ahead of it by this tool." },
   negativePrompt: { type: "string", minLength: 1, maxLength: 5e3, description: devNegative + " Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0." },
   model: { type: "string", enum: [...GENAI_VIDEO_MODELS], description: "Local gateway model. Cloud ltx-2-5-fast/pro models are not supported." },
   duration: { type: ["integer", "null"], minimum: 1, description: "Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps." },
@@ -128935,6 +128892,14 @@ function parseImageArgs(tool2, input) {
     args
   );
   return args;
+}
+function imageAdapterContracts(engine, operation) {
+  return adapterContracts(
+    "image",
+    imageCatalog().adapters.filter((row) => row.engine === engine && (!operation || row.operation === operation)),
+    IMAGE_ADAPTERS,
+    { engine, operation }
+  );
 }
 function imageCatalog() {
   return {
@@ -131152,9 +131117,9 @@ function videoDurationLimits(tool2, input = {}) {
       throw new Error("frameRate must be finite in 1..60");
     limits = { min: ASTRA_VIDEO_MIN_FRAMES, max: ASTRA_VIDEO_FRAME_LIMITS[mode], step: ASTRA_VIDEO_FRAME_STEP, frameRate };
   } else {
-    const local2 = localVideoStrategy(tool2);
-    if (!local2) return null;
-    limits = { ...local2.frames };
+    const local3 = localVideoStrategy(tool2);
+    if (!local3) return null;
+    limits = { ...local3.frames };
     if (tool2 === "fasth3_omni_reference") {
       const width = input.width ?? 768, height = input.height ?? 448;
       if (typeof width !== "number" || typeof height !== "number" || width <= 0 || height <= 0)
@@ -131263,13 +131228,23 @@ var load6 = createRequire11(import.meta.url);
 function requiredCharacters(shot) {
   return load6("../../skills/_shared/scene-cast.js").requiredCharacters(shot);
 }
-var entry = (engine, deployment, operation, schema2) => ({ engine, deployment, operation, schema: schema2, voice: operation === "audio" ? "supplied" : "none" });
-var reference = (engine, deployment, schema2) => ({ ...entry(engine, deployment, "reference", schema2), voice: "reference" });
+var entry = (engine, deployment, operation, schema2, facts = {}) => ({ engine, deployment, operation, schema: schema2, voice: operation === "audio" ? "supplied" : "none", ...facts });
+var reference = (engine, deployment, schema2, facts = {}) => ({ ...entry(engine, deployment, "reference", schema2, facts), voice: "reference" });
+var SEEDANCE = { modelConstraints: SEEDANCE_MODEL_SPECS };
+var SEEDANCE_VOICES = Object.fromEntries(Object.entries(SEEDANCE_MODEL_SPECS).map(([model2, spec]) => [model2, spec.referenceAudio.maxClips]));
+var DESKTOP = { modelConstraints: { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } };
+var MINIMAX = { modelConstraints: { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } };
+var HEYGEN = { modelConstraints: { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } };
+var LOCAL_NOTES = {
+  ltx_video_generate: "LTX 8k+1 frames; MLX-Serve backend.",
+  fasth3_omni_reference: "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation."
+};
+var local2 = (tool2) => ({ modelConstraints: { frames: LOCAL_VIDEO_MODELS[tool2].frames, note: LOCAL_NOTES[tool2] } });
 var VIDEO_ADAPTERS = Object.freeze({
-  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema),
-  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema),
+  seedance_text2video: entry("seedance", "byteplus", "text", seedanceText2VideoSchema, SEEDANCE),
+  seedance_img2video: entry("seedance", "byteplus", "image", seedanceImg2VideoSchema, SEEDANCE),
   seedance_reference: {
-    ...reference("seedance", "byteplus", seedanceReferenceSchema),
+    ...reference("seedance", "byteplus", seedanceReferenceSchema, { ...SEEDANCE, pinnedVoices: SEEDANCE_VOICES }),
     bindCharacterSources(args, cast) {
       const originals = /* @__PURE__ */ new Map();
       for (const person of cast) {
@@ -131294,30 +131269,58 @@ var VIDEO_ADAPTERS = Object.freeze({
   },
   ...Object.fromEntries(Object.entries(DESKTOP_SCHEMAS).map(([feature, schema2]) => [
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
-    entry("astra-genai-desktop", "gateway-desktop-v1", { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature, schema2)
+    entry(
+      "astra-genai-desktop",
+      "gateway-desktop-v1",
+      { "text-to-video": "text", "image-to-video": "image", "audio-to-video": "audio", keyframes: "keyframe" }[feature] || feature,
+      schema2,
+      feature === "keyframes" ? { ...DESKTOP, timedImages: true } : DESKTOP
+    )
   ])),
-  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema),
-  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema),
-  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema),
-  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema),
+  astra_genai_text2video: entry("astra-genai", "genai-ltx-v2", "text", genaiTextToVideoSchema, { modelConstraints: {
+    models: GENAI_VIDEO_MODELS,
+    note: "Use duration, exact numFrames or automatic duration. The gateway receives the prompt as written; describe every cut in it. Plain distilled generation accepts registered LoRAs on supporting backends."
+  } }),
+  astra_genai_img2video: entry("astra-genai", "genai-ltx-v2", "image", genaiImageToVideoSchema, {
+    timedImages: true,
+    pinnedVoices: 2,
+    voiceOnSubjects: true,
+    sceneRenderer: { model: "ltx-2.5-22b-distilled", sceneAudioModes: ["native", "mix"] },
+    modelConstraints: {
+      models: GENAI_VIDEO_MODELS,
+      references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" },
+      note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support."
+    }
+  }),
+  astra_genai_audio2video: entry("astra-genai", "genai-ltx-v2", "audio", genaiAudioToVideoSchema, {
+    timedImages: true,
+    sceneRenderer: { model: "ltx-2.5-22b-dev", sceneAudioModes: ["conditioning"] },
+    modelConstraints: {
+      models: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"],
+      note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters."
+    }
+  }),
+  astra_genai_msr: reference("astra-genai", "genai-ltx-msr", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
+    note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
+  } }),
   astra_text2video: entry("astra", "self-hosted-ltx", "text", astraText2VideoSchema),
   astra_img2video: entry("astra", "self-hosted-ltx", "image", astraImg2VideoSchema),
-  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema),
+  astra_keyframe_video: entry("astra", "self-hosted-ltx", "keyframe", astraKeyframeVideoSchema, { timedImages: true }),
   astra_audio2video: entry("astra", "self-hosted-ltx", "audio", astraAudio2VideoSchema),
   astra_ic_lora: entry("astra", "self-hosted-ltx", "control", astraIcLoraSchema),
   astra_video_retake: entry("astra", "self-hosted-ltx", "retake", astraVideoRetakeSchema),
-  ...Object.fromEntries(Object.entries(LOCAL_VIDEO_MODELS).map(([tool2, model2]) => [
-    tool2,
-    model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema) : entry("mlx", "local-mlx", model2.operation, model2.schema)
-  ])),
-  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema),
+  ...Object.fromEntries(Object.keys(LOCAL_VIDEO_MODELS).map((tool2) => {
+    const model2 = LOCAL_VIDEO_MODELS[tool2];
+    return [tool2, model2.operation === "reference" ? reference("mlx", "local-mlx", model2.schema, local2(tool2)) : entry("mlx", "local-mlx", model2.operation, model2.schema, local2(tool2))];
+  })),
+  mlx_video_generate: entry("mlx", "local-mlx", "text", mlxVideoGenerateSchema, { ...local2("ltx_video_generate"), replacement: "ltx_video_generate" }),
   // Hosted vendors through the common layer (vendor-video.ts). Image lanes render silent cuts;
   // spoken cuts use the reference lanes (MiniMax, HeyGen) or LTX audio-to-video.
   ...HOSTED_VIDEO_ROUTES,
-  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema),
-  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema),
-  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema),
-  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema)
+  minimax_img2video: entry("minimax", "minimax-open-platform-v2", "image", minimaxImg2VideoSchema, MINIMAX),
+  minimax_reference: reference("minimax", "minimax-open-platform-v2", minimaxReferenceSchema, MINIMAX),
+  heygen_img2video: entry("heygen", "heygen-v3", "image", heygenImg2VideoSchema, HEYGEN),
+  heygen_reference: reference("heygen", "heygen-v3", heygenReferenceSchema, { ...HEYGEN, voiceByBackend: true })
 });
 var VENDOR_REFERENCE_TOOLS = ["minimax_reference", "heygen_reference"];
 function keys2(schema2) {
@@ -131326,8 +131329,9 @@ function keys2(schema2) {
   return [];
 }
 function voiceReferenceLimit(tool2, model2) {
-  if (tool2 === "seedance_reference") return SEEDANCE_MODEL_SPECS[model2 ?? DEFAULT_SEEDANCE_MODEL]?.referenceAudio.maxClips ?? 0;
-  if (tool2 === "astra_genai_img2video" || tool2 === "astra_genai_msr") return 2;
+  const own = VIDEO_ADAPTERS[tool2]?.pinnedVoices;
+  if (typeof own === "number") return own;
+  if (own) return own[model2 ?? DEFAULT_SEEDANCE_MODEL] ?? 0;
   let schema2 = VIDEO_ADAPTERS[tool2]?.schema;
   while (schema2 instanceof external_exports.ZodEffects) schema2 = schema2.innerType();
   let field2 = schema2 instanceof external_exports.ZodObject ? schema2.shape.referenceAudioPaths : void 0;
@@ -131365,58 +131369,65 @@ var FRAME_FIELDS = {
   heygen_img2video: ["sourceImagePath", "lastImagePath"]
 };
 function sceneInputCapabilities(tool2) {
-  const fields3 = FRAME_FIELDS[tool2];
-  const schemaFields = VIDEO_ADAPTERS[tool2] ? keys2(VIDEO_ADAPTERS[tool2].schema) : [];
+  const fields3 = FRAME_FIELDS[tool2], adapter2 = VIDEO_ADAPTERS[tool2];
+  const schemaFields = adapter2 ? keys2(adapter2.schema) : [];
   return {
     fpsField: schemaFields.includes("frameRate") ? "frameRate" : schemaFields.includes("fps") ? "fps" : null,
     frameAccurateCuts: false,
-    timedImages: ["astra_keyframe_video", "astra_genai_desktop_keyframes", "astra_genai_img2video", "astra_genai_audio2video"].includes(tool2),
+    timedImages: Boolean(adapter2?.timedImages),
     shotScopedReferences: false,
     frameAddressedNativeDialogue: false,
-    ...["astra_genai_img2video", "astra_genai_audio2video"].includes(tool2) ? { sceneRenderer: {
-      model: tool2 === "astra_genai_img2video" ? "ltx-2.5-22b-distilled" : "ltx-2.5-22b-dev",
-      sceneAudioModes: tool2 === "astra_genai_img2video" ? ["native", "mix"] : ["conditioning"],
+    // The scene route renders each shot apart and writes each shot's prompt from the manifest. Only a call naming per_shot reaches it.
+    ...adapter2?.sceneRenderer ? { sceneRenderer: {
+      ...adapter2.sceneRenderer,
       sceneRendering: "per_shot",
-      executionModes: tool2 === "astra_genai_img2video" ? ["auto", "single_msr", "per_shot"] : ["per_shot"],
-      requiresUserChoice: tool2 !== "astra_genai_img2video",
+      promptWriter: "gateway",
       capabilities: SCENE_ROUTE + "/capabilities",
       validation: SCENE_ROUTE + "/validate"
     } } : {},
     openingImage: Boolean(fields3),
     endingImage: Boolean(fields3?.[1]),
-    shotDescriptions: ["astra_genai_text2video", "astra_genai_img2video"].includes(tool2) ? "gateway_prompt_only" : "prompt",
-    sceneAudio: ["astra_genai_audio2video", "astra_genai_desktop_audio2video", "astra_audio2video", "ltx_api_audio2video", "ltx_desktop_audio2video"].includes(tool2)
+    sceneAudio: adapter2?.operation === "audio"
   };
 }
+var videoCatalogRow = (tool2, a) => ({
+  tool: tool2,
+  engine: a.engine,
+  deployment: a.deployment,
+  operation: a.operation,
+  sceneInputs: sceneInputCapabilities(tool2),
+  sceneCutTiming: scenePromptProfile(tool2).cutTiming,
+  sceneWritingGuide: sceneWritingGuide(scenePromptProfile(tool2)),
+  voice: videoVoiceCapabilities(tool2),
+  ...a.replacement ? { deprecated: true, replacement: a.replacement } : {},
+  fields: keys2(a.schema),
+  modelConstraints: a.modelConstraints ?? { note: "Use video_plan; deployment-specific schema is authoritative" }
+});
 function videoCatalog() {
   return {
     version: 1,
-    adapters: Object.entries(VIDEO_ADAPTERS).map(([tool2, a]) => ({
-      tool: tool2,
-      engine: a.engine,
-      deployment: a.deployment,
-      operation: a.operation,
-      sceneInputs: sceneInputCapabilities(tool2),
-      sceneCutTiming: scenePromptProfile(tool2).cutTiming,
-      sceneWritingGuide: sceneWritingGuide(scenePromptProfile(tool2)),
-      voice: videoVoiceCapabilities(tool2),
-      ...tool2 === "mlx_video_generate" ? { deprecated: true, replacement: "ltx_video_generate" } : {},
-      fields: keys2(a.schema),
-      modelConstraints: HOSTED_VIDEO_ROUTES[tool2] ? HOSTED_VIDEO_ROUTES[tool2].modelConstraints : localVideoStrategy(tool2) ? { frames: localVideoStrategy(tool2).frames, note: tool2 === "fasth3_omni_reference" ? "8 steps; 9 images, 3 videos, 3 audios, 12 total; visual reference required; 256 MiB RGB cap; no exact speech preservation." : "LTX 8k+1 frames; MLX-Serve backend." } : a.engine === "seedance" ? SEEDANCE_MODEL_SPECS : a.engine === "astra-genai-desktop" ? { discovery: "astra_genai_catalog", note: "Gateway /models and /contracts specify installed matrices. I2V: start/end only; A2V: audio and optional start; keyframes: 1..10. LoRA only on text/keyframes; audio truncation defaults false." } : tool2 === "astra_genai_msr" ? { note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt." } : tool2 === "astra_genai_audio2video" ? { models: ["ltx-2.5-22b-dev", "ltx-2.5-22b-distilled"], note: "Up to eight temporal images including endpoints on gateways with keyframes support. Length equals the audio, at most 361 frames per fps. Mono/stereo wav, mp3, m4a or ogg; 3+ channels 422. Sample rate kept: AAC standard 7350-96000 Hz only, others 422. Data URI at most 15,000,000 base64 characters." } : tool2 === "astra_genai_img2video" ? { models: GENAI_VIDEO_MODELS, references: { subjects: 4, background: 1, model: "ltx-2.5-22b-distilled", voiceSubjects: [1, 2], capability: "/v1/ltx/msr/capabilities:image_conditioning", voiceCapability: "voice_references" }, note: "Start image and optional end frame; additional references use the distilled MSR IC-LoRA with duration or numFrames. Dev takes temporal images. generateAudio:false removes the soundtrack. Timed keyframes require gateway support." } : a.engine === "astra-genai" ? { models: GENAI_VIDEO_MODELS, note: "Use duration, exact numFrames or automatic duration. Optional shots describe 2\u20134 cuts. Plain distilled generation accepts registered LoRAs on supporting backends." } : a.engine === "minimax" ? { models: Object.keys(MINIMAX_MODELS), note: "MiniMax H3 open platform. 4-15 s (Max 5-15), 24 fps, native stereo audio always on. First/last frames and references never share a request: the reference lane sends the start image as its last picture, unpinned. Up to 9 pictures and 3 voice samples (2-15 s each, 15 s total); 5 pictures free (Max 2). No seed." } : a.engine === "heygen" ? { models: ["heygen-video-1"], note: "HeyGen Video 1, a MiniMax H3 post-train. 480p/768p, 5-15 s with prompt enhancement disabled, native audio always on. Files upload to /v3/assets first. Reference voice behaviour comes from secondary sources only; the start image rides as the last picture, unpinned." } : { note: "Use video_plan; deployment-specific schema is authoritative" }
-    })),
+    adapters: Object.entries(VIDEO_ADAPTERS).map(([tool2, a]) => videoCatalogRow(tool2, a)),
     host: { execution: "external", note: "Host tools are outside MCP enforcement; never claim an API gate protects their calls." },
     unimplemented: []
   };
+}
+function videoAdapterContracts(engine, operation) {
+  return adapterContracts(
+    "video",
+    videoCatalog().adapters.filter((row) => row.engine === engine && (!operation || row.operation === operation)),
+    VIDEO_ADAPTERS,
+    { engine, operation }
+  );
 }
 function videoVoiceCapabilities(tool2) {
   const adapter2 = VIDEO_ADAPTERS[tool2];
   if (!adapter2) throw new Error("Unsupported video tool: " + tool2);
   return {
-    maxPinnedVoicesPerRender: tool2 === "seedance_reference" ? Object.fromEntries(Object.entries(SEEDANCE_MODEL_SPECS).map(([model2, spec]) => [model2, spec.referenceAudio.maxClips])) : voiceReferenceLimit(tool2),
+    maxPinnedVoicesPerRender: typeof adapter2.pinnedVoices === "object" ? adapter2.pinnedVoices : voiceReferenceLimit(tool2),
     postLipSync: false,
-    lane: tool2 === "astra_genai_img2video" ? "conditional_reference" : adapter2.voice,
-    dialogue: scenePromptProfile(tool2).allowsGeneratedVoice ? "requires_model_generated_scene_voice" : tool2 === "astra_genai_img2video" ? "requires_subject_references" : adapter2.voice === "none" ? "refused" : "allowed",
-    voiceReference: tool2 === "astra_genai_img2video" ? "backend_dependent_with_subject_references" : adapter2.voice !== "reference" ? "unsupported" : ["astra_genai_msr", "heygen_reference"].includes(tool2) ? "backend_dependent" : "supported",
+    lane: adapter2.voiceOnSubjects ? "conditional_reference" : adapter2.voice,
+    dialogue: scenePromptProfile(tool2).allowsGeneratedVoice ? "requires_model_generated_scene_voice" : adapter2.voiceOnSubjects ? "requires_subject_references" : adapter2.voice === "none" ? "refused" : "allowed",
+    voiceReference: adapter2.voiceOnSubjects ? "backend_dependent_with_subject_references" : adapter2.voice !== "reference" ? "unsupported" : adapter2.voiceByBackend ? "backend_dependent" : "supported",
     suppliedSpeech: adapter2.voice === "supplied" ? "audio_conditioned_reencoded" : "unsupported",
     exactAudioPreservation: false,
     review: "not_reviewed"
@@ -131985,9 +131996,9 @@ function registeredVideoSubjects(board, episode, paths3) {
       const files3 = [row.imageUrl, ...Object.values(row.panels ?? {}), ...versions];
       for (const file2 of files3) {
         if (typeof file2 !== "string" || !file2) continue;
-        const local2 = path20.resolve(episode, "storyboard", file2);
-        if (!existsSync20(local2)) continue;
-        const actual = realpathSync5(local2);
+        const local3 = path20.resolve(episode, "storyboard", file2);
+        if (!existsSync20(local3)) continue;
+        const actual = realpathSync5(local3);
         if (!submitted.has(actual)) continue;
         const owners = matches.get(actual) ?? /* @__PURE__ */ new Set();
         owners.add(kind + ":" + row.id);
@@ -132232,9 +132243,9 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
     const putFrame = (id, file2, field2) => {
       const absolute = bind(id, file2, id, "video", id === "start" ? "Opening state" : "Ending state", true);
       if (gatewayFrames) {
-        const local2 = id === "start" ? "imagePath" : "lastFramePath";
+        const local3 = id === "start" ? "imagePath" : "lastFramePath";
         const uri = id === "start" ? "imageUri" : "lastFrameUri";
-        if (input[local2] !== void 0) field2 = local2;
+        if (input[local3] !== void 0) field2 = local3;
         else if (input[uri] !== void 0) field2 = uri;
       }
       if (!field2.endsWith("Uri")) return put2(field2, absolute);
@@ -132791,9 +132802,9 @@ function bindRegisteredPanels(scene, episode, board) {
   for (const actor2 of cast) {
     for (const file2 of Object.values(actor2.panels ?? {})) {
       if (typeof file2 !== "string") continue;
-      const local2 = path22.resolve(episode, "storyboard", file2);
-      if (!existsSync22(local2)) continue;
-      const panel = realpathSync7(local2);
+      const local3 = path22.resolve(episode, "storyboard", file2);
+      if (!existsSync22(local3)) continue;
+      const panel = realpathSync7(local3);
       const ids = owners.get(panel) ?? /* @__PURE__ */ new Set();
       ids.add(actor2.id);
       owners.set(panel, ids);
@@ -132891,7 +132902,7 @@ var SceneInputError = class extends Error {
   model;
   resolution;
 };
-async function inspectSceneInputContract(error2, validation) {
+async function inspectSceneInputContract(error2) {
   if (error2.tool !== "astra_genai_img2video") return void 0;
   const endpoint2 = "/v1/ltx/v2/image-to-video";
   const address = { baseUrl: astraGenaiBaseUrl(), endpoint: endpoint2 };
@@ -132920,7 +132931,6 @@ async function inspectSceneInputContract(error2, validation) {
     };
     const schemaRef = (route) => document2.paths[route]?.post?.requestBody?.content?.["application/json"]?.schema?.$ref;
     const ref = schemaRef(endpoint2);
-    const validationEndpoint = endpoint2 + "/validate";
     const array2 = external_exports.object({ items: external_exports.object({ $ref: external_exports.string() }) });
     const arrayFields = (name2) => {
       const property = document2.components.schemas[ref.split("/").pop()].properties[name2];
@@ -132931,18 +132941,13 @@ async function inspectSceneInputContract(error2, validation) {
       }
       throw new Error("Unknown array schema");
     };
-    const contract2 = {
+    return {
       ...deployment,
       status: "verified",
       requestFields: fields3(ref),
-      shotFields: arrayFields("shots"),
       temporalImageFields: arrayFields("keyframes"),
       referenceFields: arrayFields("references")
     };
-    if (!validation) return contract2;
-    if (schemaRef(validationEndpoint) !== ref || !error2.model || !error2.resolution || Object.keys(validation.args).some((key) => key !== "reserveUsd"))
-      return { ...contract2, validation: { status: "not_sent", reason: "Requires the deployed submission schema, saved geometry and unmodified adapter settings" } };
-    return { ...contract2, validation: await validateScenePayload(validationEndpoint, error2.sceneRequest, error2.model, error2.resolution, validation.requestId) };
   } catch {
     return { ...deployment, status: "unverified" };
   }
@@ -133828,6 +133833,7 @@ function assertNoPostLipSync(value2) {
 var modelSettings = fileURLToPath8(new URL("../../skills/_shared/model-settings.js", import.meta.url));
 var structurePath = fileURLToPath8(new URL("../../skills/storyboard/references/structure-contract.js", import.meta.url));
 var CHANNEL_ASSET_RE = /^data\/[a-z0-9][a-z0-9-]*\/assets(\/|$)/;
+var RENDERING_REFUSAL = "scene_render_selection: per_shot is the only rendering mode. Leave sceneRendering out to plan the scene as one render: the plan returns promptTemplate and takes an authored prompt. single_msr and auto had the gateway write that prompt and are retired";
 function routingContext(episode, shotId, sceneNo, selectionOnly, rendering) {
   const reader = load11(shared2);
   try {
@@ -133942,8 +133948,7 @@ var videoPlanSchema = external_exports.object({
   episode: external_exports.string().min(1),
   sceneNo: external_exports.number().int().positive(),
   requestId: idSchema,
-  validateScenePayload: external_exports.boolean().optional(),
-  sceneRendering: external_exports.enum(["auto", "single_msr", "per_shot"]).optional(),
+  sceneRendering: external_exports.enum(["per_shot"], { errorMap: () => ({ message: RENDERING_REFUSAL }) }).optional(),
   shotBindings: sceneShotBindingsSchema.optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
@@ -133951,6 +133956,8 @@ var videoPlanSchema = external_exports.object({
   maxCostUsd: external_exports.number().nonnegative().finite().optional(),
   wholeScene: external_exports.literal(true).optional(),
   prompt: external_exports.string().optional(),
+  engine: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
   operation: external_exports.string().optional(),
   tool: external_exports.string().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -133993,8 +134000,8 @@ function requireSupportedSelection(selection) {
 function bindSelection(tool2, input, selection) {
   const adapter2 = VIDEO_ADAPTERS[tool2];
   if (!adapter2 || adapter2.engine !== selection.engine) throw new Error("model_selection_mismatch: tool does not match selected engine");
-  const local2 = localVideoStrategy(tool2);
-  if (local2 && selection.model && !local2.acceptsModel(selection.model)) throw new Error("model_selection_mismatch: model does not match video adapter");
+  const local3 = localVideoStrategy(tool2);
+  if (local3 && selection.model && !local3.acceptsModel(selection.model)) throw new Error("model_selection_mismatch: model does not match video adapter");
   const args = { ...input };
   if (tool2 === "astra_audio2video") {
     if (args.maxAttempts !== void 0 && args.maxAttempts !== 1)
@@ -134039,6 +134046,7 @@ function saveVideoPlan(plan2) {
   const file2 = path27.join(plan2.episode, ".work/video-routing/plans", plan2.id + ".json");
   if (!fs19.existsSync(file2)) {
     const { promptProfile: _profile, promptSlots: _slots, promptTemplate: _template, promptHeader: _header, ...manifest2 } = plan2;
+    if (manifest2.sceneRendering) delete manifest2.promptIssues;
     atomicJson(file2, manifest2);
   }
   fs19.rmSync(blockedPlanFile(plan2.episode, plan2.requestId), { force: true });
@@ -134196,14 +134204,11 @@ async function validateShotRenderPlan(plan2) {
   }
   const refused = sceneRequestIssues(scene, capabilities, { bindings: plan2.shotBindings, model: model2 });
   if (refused.length) throw new Error("scene_render_inputs_unsupported:\n" + refused.join("\n"));
-  const executionMode = plan2.sceneRendering === "auto" && !capabilities.executionModes.includes("auto") ? "per_shot" : plan2.sceneRendering;
-  if (!capabilities.executionModes.includes(executionMode))
-    throw new Error("scene_render_selection: this gateway does not advertise " + plan2.sceneRendering);
-  const prepared = await buildSceneWire(scene, model2, String(plan2.selection.resolution), true, plan2.shotBindings, executionMode);
+  const prepared = await buildSceneWire(scene, model2, String(plan2.selection.resolution), true, plan2.shotBindings);
   if (plan2.conditioningInputs && prepared.attachments.find((file2) => file2.role === "scene_audio")?.sha256 !== plan2.conditioningInputs.driverSha256)
     throw new Error("video_plan_stale: the staged conditioning master differs from the approved scene");
-  const execution = await validateSceneBody(prepared.body, sceneRequestId(plan2.id), { model: model2, shots: plan2.shotIds.length, execution: executionMode });
-  return { ...prepared, execution, ...plan2.conditioningInputs ? { conditioningInputs: plan2.conditioningInputs } : {} };
+  await validateSceneBody(prepared.body, sceneRequestId(plan2.id), { model: model2, shots: plan2.shotIds.length });
+  return { ...prepared, execution: "per_shot", ...plan2.conditioningInputs ? { conditioningInputs: plan2.conditioningInputs } : {} };
 }
 async function executeShotRenderPlan(plan2, prepared) {
   const target = resolveOutputFile(String(plan2.args.outputPath), String(plan2.args.filename), "video");
@@ -134228,6 +134233,11 @@ async function executeShotRenderPlan(plan2, prepared) {
   const result = await pollGenaiJob(() => getGenaiVideoStatus({ receiptPath: receiptPath2, download: true }), "Poll this scene request with video_status.");
   return { content: [{ type: "text", text: JSON.stringify({ ...result, receiptPath: receiptPath2 }) }] };
 }
+var GATEWAY_WRITES_PROMPTS = {
+  level: "warning",
+  code: "gateway_composed_prompt",
+  detail: "The gateway renders each shot apart and writes each shot's prompt from this manifest. No promptTemplate is returned and no authored prompt is taken. Revise a shot through its card, or plan without sceneRendering when the scene fits one render."
+};
 function requireSpeechSignal(file2, code) {
   const signal = load11("../../skills/_shared/audio-signal.js").inspect(file2);
   if (signal.status !== "signal") throw new Error(code + ": audible speech is required in " + path27.basename(file2));
@@ -134266,6 +134276,7 @@ function resolvePlanContext(input) {
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, void 0, input.sceneNo, false, input.sceneRendering);
   requireSupportedSelection(context2.selection);
+  assertSelection("video", context2.selection, input);
   const structure = load11(structurePath);
   const gaps = structure.imageGaps(context2.board, input.sceneNo, (file2) => {
     try {
@@ -134340,9 +134351,7 @@ async function prepareManagedPlan(input) {
     await refreshGenaiMsrVoice();
   let plan2 = buildVideoPlan(input, resolved, false);
   if (plan2.sceneRendering) {
-    const checked = await validateShotRenderPlan(plan2);
-    if (plan2.sceneRendering === "auto")
-      plan2 = buildVideoPlan({ ...input, sceneRendering: checked.execution }, resolved, false);
+    await validateShotRenderPlan(plan2);
     return saveVideoPlan(plan2);
   }
   if (plan2.characterBindings) await checkRegisteredBindings(plan2.characterBindings);
@@ -134383,11 +134392,7 @@ function numberedImages(args, bindings = [], speakers = [], cast, episode, first
 }
 function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
   if (!input.sceneRendering && context2.speechRoute?.rendering)
-    throw new Error("scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request.");
-  if (input.sceneRendering === "auto" && (context2.speechRoute?.rendering === "per_shot" || input.shotBindings?.length))
-    input = { ...input, sceneRendering: "per_shot" };
-  if (input.sceneRendering === "single_msr" && context2.speechRoute?.rendering === "per_shot")
-    throw new Error("scene_render_selection: these shot controls require per_shot rendering");
+    throw new Error(`scene_prompt_unsupported: this board requires separate native renders. Revise its temporal anchors for a single scene request, or name sceneRendering:"per_shot", where the gateway writes each shot's prompt.`);
   const sourceArgs = input.args;
   const speakers = context2.speechRoute.speakers;
   const opening = context2.speechRoute.opening;
@@ -134472,7 +134477,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     if (!input.prompt.trim()) throw new Error("scene_prompt_empty: write the prompt, or leave it out for the composed one");
     if (input.prompt.length > 32e3) throw new Error("prompt_too_long: a prompt takes at most 32000 characters");
     if (input.sceneRendering)
-      throw new Error("scene_prompt_unsupported: an authored prompt describes one render of the whole scene; per-shot rendering writes each shot from its own card");
+      throw new Error("scene_prompt_unsupported: an authored prompt describes one render of the whole scene. Under per_shot the gateway writes each shot's prompt from its card");
   }
   if (input.sceneRendering) {
     for (const card of context2.sceneMembers ?? []) {
@@ -134578,19 +134583,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const filename = settings.filename ?? "video-" + input.requestId + ".mp4";
     resolveOutputFile(outputPath, filename, "video");
     const args2 = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
-    const modelPaced = input.sceneRendering === "single_msr";
     const body2 = {
       ...take,
       version: 1,
       episode: context2.episode,
       shotId: context2.shotId,
       requestId: input.requestId,
-      ...modelPaced ? { directionWarnings: ["The model chooses cut and speech timing in one MSR generation."] } : {},
       ...conditioningInputs ? { conditioningInputs } : {},
       sceneRendering: input.sceneRendering,
       ...cast.length ? { characterInputs: cast } : {},
       ...input.shotBindings ? { shotBindings: input.shotBindings } : {},
-      sceneRequest: { ...request, ...modelPaced ? { modelPacedCuts: true } : {}, ...!speakers.length ? { silentPicture: true } : {} },
+      sceneRequest: { ...request, ...!speakers.length ? { silentPicture: true } : {} },
       tool: tool3,
       args: args2,
       sourceArgs: input.args,
@@ -134601,7 +134604,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
       quote: quoteFor(tool3, args2),
       execution: "server"
     };
-    const plan3 = { ...body2, id: hash3(body2) };
+    const plan3 = { ...body2, id: hash3(body2), promptIssues: [GATEWAY_WRITES_PROMPTS] };
     if (persist) throw new Error("scene_render_validation: use video_plan to validate deployed renderer inputs before approval");
     return plan3;
   }
@@ -134661,7 +134664,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     } : args2;
   };
   let callArgs = withPrompt(compiled?.prompt ?? video2?.prompt);
-  if (input.args.shots !== void 0 || input.args.prompt !== void 0 && (scene || input.args.prompt !== video2?.prompt))
+  if (input.args.prompt !== void 0 && (scene || input.args.prompt !== video2?.prompt))
     throw new Error("scene_video_prompt: edit story_scene.videoDirection and the authored dialogue to revise the scene");
   const members = context2.sceneMembers ?? [];
   const bindTurns = Boolean(bindDialogueSeparately || tool2 === "astra_genai_msr" || tool2 && VENDOR_REFERENCE_TOOLS.includes(tool2));
@@ -135149,6 +135152,8 @@ async function adaptiveSeedanceOutputError(plan2) {
 }
 function approvedContext(plan2) {
   if (!plan2.sceneNo) throw new Error("scene_video_scope: use video_status for a historical shot receipt; new generation requires a scene plan");
+  if (plan2.sceneRendering && plan2.sceneRendering !== "per_shot")
+    throw new Error("video_plan_stale: this plan used the retired " + plan2.sceneRendering + " rendering. Plan the scene again without sceneRendering");
   try {
     return routingContext(plan2.episode, plan2.shotId, plan2.sceneNo, false, plan2.sceneRendering);
   } catch (error2) {
@@ -135595,6 +135600,8 @@ var imagePlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
   assetId: idSchema2,
   requestId: idSchema2,
+  engine: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
   operation: external_exports.enum(["text", "edit", "variation"]).optional(),
   tool: external_exports.string().optional(),
   reserveUsd: external_exports.number().finite().nonnegative().optional(),
@@ -135662,6 +135669,7 @@ function planImage(raw) {
   requireReadyProject(input.directory);
   const context2 = imageContext(input.directory, input.assetId);
   const { selection } = context2;
+  assertSelection("image", selection, input);
   let tool2 = input.tool;
   if (!tool2) tool2 = Object.keys(IMAGE_ADAPTERS).find((name2) => IMAGE_ADAPTERS[name2].engine === selection.engine && IMAGE_ADAPTERS[name2].operation === (input.operation === "variation" ? "text" : input.operation));
   let args = { ...input.args }, outputFile;
@@ -143895,7 +143903,7 @@ var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and 
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use.
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan made without sceneRendering carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt, and the GenAI gateway receives the approved text as written. Only sceneRendering per_shot has the gateway write prompts, one per shot. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -148383,23 +148391,31 @@ TOOLS.push(
   {
     name: "video_catalog",
     title: "Inspect installed video adapters",
-    description: "List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.",
-    inputSchema: { type: "object", properties: { engine: { type: "string", enum: ["ltx-desktop-local"] } }, additionalProperties: false },
+    description: "List installed video adapter contracts. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across video adapters and parameters.options the adapter's own. Engine ltx-desktop-local alone queries downloaded offerings and supported settings directly from the local Desktop application. Every mode is read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        engine: { type: "string", enum: [...new Set(Object.values(VIDEO_ADAPTERS).map((adapter2) => adapter2.engine))], description: "Video engine as saved in models.video.engine, e.g. astra-genai." },
+        operation: { type: "string", enum: [...new Set(Object.values(VIDEO_ADAPTERS).map((adapter2) => adapter2.operation))], description: "One operation of that engine, e.g. image. Needs engine." }
+      },
+      additionalProperties: false
+    },
     annotations: { readOnlyHint: true, openWorldHint: false }
   },
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan made without sceneRendering carries one provider prompt, which the plugin writes and returns as promptTemplate for editing; the GenAI gateway receives the approved prompt as written. Under sceneRendering per_shot the gateway writes the prompt of each shot instead and the plan says so. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       wholeScene: { type: "boolean", enum: [true], description: "Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it." },
       prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional complete scene prompt. Edit the returned promptTemplate, using the names in promptSlots for cast, images, motion and soundtracks. Overrides the saved draft for this plan." },
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: "none" }),
-      sceneRendering: { type: "string", enum: ["auto", "single_msr", "per_shot"], description: "Choose the shot manifest renderer explicitly. Auto validates one MSR call or separate renders before approval. Require single_msr for one call or per_shot for exact cuts. Whole-scene prompt edits use the separate authored prompt route." },
+      sceneRendering: { type: "string", enum: ["per_shot"], description: "Leave out to plan the scene as one render with promptTemplate and an authored prompt. per_shot renders each shot apart through the gateway scene route, for cuts one render cannot hold. That route writes each shot's prompt from the manifest and takes no authored prompt; the plan says so (gateway_composed_prompt)." },
+      engine: { type: "string", description: "Optional assertion of the saved video engine. A different saved engine refuses the plan (model_selection_mismatch); a plan never switches the selection." },
+      model: { type: "string", description: "Optional assertion of the saved video model, checked the same way." },
       maxCostUsd: { type: "number", minimum: 0, description: "Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval." },
-      validateScenePayload: { type: "boolean", description: "On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation." },
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },
       basedOnRequestId: { type: "string", description: "Earlier request for this shot, used to compare candidates." },
       changeNote: { type: "string", minLength: 1, maxLength: 1e3, description: "What changed for this candidate." },
@@ -148465,8 +148481,15 @@ TOOLS.push(
   {
     name: "image_catalog",
     title: "Inspect image adapters and models",
-    description: "Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "Read installed image adapter contracts, model retirement dates and capability boundaries. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across image adapters and parameters.options the adapter's own. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        engine: { type: "string", enum: [...new Set(Object.values(IMAGE_ADAPTERS).map((adapter2) => adapter2.engine))], description: "Image engine as saved in models.image.engine, e.g. astra-genai." },
+        operation: { type: "string", enum: ["text", "edit"], description: "One operation of that engine. Needs engine." }
+      },
+      additionalProperties: false
+    },
     annotations: { readOnlyHint: true, openWorldHint: false }
   },
   {
@@ -148476,6 +148499,8 @@ TOOLS.push(
     inputSchema: { ...imageContextSchema, properties: {
       ...imageContextSchema.properties,
       operation: { type: "string", enum: ["text", "edit", "variation"], description: "Requested operation; selected model determines its adapter." },
+      engine: { type: "string", description: "Optional assertion of the saved image engine. A different saved engine refuses the plan (image_selection_mismatch); a plan never switches the selection." },
+      model: { type: "string", description: "Optional assertion of the saved image model, checked the same way." },
       tool: { type: "string", description: "Optional exact adapter name; must match saved selection." },
       args: { type: "object", additionalProperties: true, description: "Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail." }
     } },
@@ -148681,6 +148706,8 @@ var musicPlanSchema = external_exports.object({
   directory: external_exports.string().min(1),
   assetId: idSchema3,
   requestId: idSchema3,
+  engine: external_exports.string().min(1).optional(),
+  model: external_exports.string().min(1).optional(),
   tool: external_exports.string().optional(),
   reserveUsd: external_exports.number().finite().nonnegative().optional(),
   args: external_exports.record(external_exports.unknown()).default({})
@@ -148734,6 +148761,7 @@ function planMusic(raw) {
   requireReadyProject(input.directory);
   const context2 = musicContext(input.directory, input.assetId);
   const { selection } = context2;
+  assertSelection("music", selection, input);
   if (selection.engine === "none") throw new Error("music_generation_disabled: this selection uses existing music or no score");
   const tool2 = input.tool ?? (selection.engine === "mlx" ? "mlx_music_generate" : MUSIC_MODELS.find((m2) => m2.engine === selection.engine && m2.model === selection.model)?.tool);
   if (!tool2) throw new Error("music_model_unsupported");
@@ -148749,10 +148777,10 @@ function planMusic(raw) {
   if (!withinDirectory(context2.directory, String(args.outputPath))) throw new Error("music_raw_output_outside_directory");
   const inputs2 = inputFiles3(args, context2.directory);
   if (Object.hasOwn(inputs2, outputFile)) throw new Error("music_output_overwrites_input");
-  const local2 = selection.engine === "mlx";
-  if (local2 ? input.reserveUsd !== void 0 && input.reserveUsd !== 0 : !Number.isFinite(input.reserveUsd) || (input.reserveUsd ?? 0) <= 0)
+  const local3 = selection.engine === "mlx";
+  if (local3 ? input.reserveUsd !== void 0 && input.reserveUsd !== 0 : !Number.isFinite(input.reserveUsd) || (input.reserveUsd ?? 0) <= 0)
     throw new Error("music_quote_required: positive total provider estimate for API, zero for local; not an invoice cap");
-  const quote = { reserveUsd: input.reserveUsd ?? 0, basis: local2 ? "Local compute; hardware excluded" : "Caller estimate including all returned tracks; not a provider invoice cap", revision: "2026-10-18" };
+  const quote = { reserveUsd: input.reserveUsd ?? 0, basis: local3 ? "Local compute; hardware excluded" : "Caller estimate including all returned tracks; not a provider invoice cap", revision: "2026-10-18" };
   const body = {
     version: 1,
     directory: context2.directory,
@@ -158843,9 +158871,11 @@ var dispatchVideo = (name2, args) => videoDispatch[name2](args);
 for (const name2 of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name2] = (args) => routeLegacyVideo(name2, args, dispatchVideo);
 }
+var catalogQuery = (field2) => external_exports.object({ engine: external_exports.string().min(1).optional(), [field2]: external_exports.string().min(1).optional() }).strict().refine((query) => query.engine !== void 0 || query[field2] === void 0, { message: "catalog_engine_required: name the engine with " + field2 });
 ROUTES.video_catalog = async (args) => {
-  const { engine } = external_exports.object({ engine: external_exports.literal("ltx-desktop-local").optional() }).strict().parse(args ?? {});
-  return text3(JSON.stringify(engine ? await localDesktopCatalog() : videoCatalog(), null, 2));
+  const { engine, operation } = catalogQuery("operation").parse(args ?? {});
+  const catalog2 = !engine ? videoCatalog() : engine === LOCAL_DESKTOP_ENGINE && !operation ? await localDesktopCatalog() : videoAdapterContracts(engine, operation);
+  return text3(JSON.stringify(catalog2, null, 2));
 };
 ROUTES.video_plan = async (args) => {
   const input = videoPlanSchema.parse(args);
@@ -158861,7 +158891,7 @@ ROUTES.video_plan = async (args) => {
       requestId: input.requestId,
       tool: error2.tool,
       model: error2.model,
-      deployment: await inspectSceneInputContract(error2, input.validateScenePayload ? { requestId: input.requestId, args: input.args } : void 0),
+      deployment: await inspectSceneInputContract(error2),
       missing: error2.missing,
       sceneRequest: error2.sceneRequest
     }, null, 2)), isError: true };
@@ -158873,7 +158903,10 @@ ROUTES.video_status = async (args) => text3(JSON.stringify(await videoStatus(arg
 var imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map((name2) => [name2, ROUTES[name2]]));
 var dispatchImage = (name2, args) => imageDispatch[name2](args);
 for (const name2 of Object.keys(IMAGE_ADAPTERS)) ROUTES[name2] = (args) => routeLegacyImage(name2, args, dispatchImage);
-ROUTES.image_catalog = async () => text3(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_catalog = async (args) => {
+  const { engine, operation } = catalogQuery("operation").parse(args ?? {});
+  return text3(JSON.stringify(engine ? imageAdapterContracts(engine, operation) : imageCatalog(), null, 2));
+};
 ROUTES.image_plan = async (args) => text3(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = (args) => executeImage(args, dispatchImage);
 ROUTES.image_status = async (args) => text3(JSON.stringify(await imageStatus(args), null, 2));
@@ -158948,7 +158981,10 @@ ROUTES.shot_image = async (args) => {
 var musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map((name2) => [name2, ROUTES[name2]]));
 var dispatchMusic = (name2, args) => musicDispatch[name2](args);
 for (const name2 of Object.keys(MUSIC_ADAPTERS)) ROUTES[name2] = (args) => routeLegacyMusic(name2, args, dispatchMusic);
-ROUTES.music_catalog = async () => text3(JSON.stringify(musicCatalog(), null, 2));
+ROUTES.music_catalog = async (args) => {
+  const { engine, model: model2 } = catalogQuery("model").parse(args ?? {});
+  return text3(JSON.stringify(engine ? musicAdapterContracts(engine, model2) : musicCatalog(), null, 2));
+};
 ROUTES.music_plan = async (args) => text3(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = (args) => executeMusic(args, dispatchMusic);
 ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(args) : text3(JSON.stringify(musicStatus(args), null, 2));

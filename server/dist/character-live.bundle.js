@@ -35476,7 +35476,6 @@ var capabilitiesSchema = external_exports.object({
   version: external_exports.literal(1),
   execution: external_exports.literal("per_shot"),
   transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
-  execution_modes: external_exports.array(external_exports.string()).optional(),
   motion_prefix: external_exports.boolean().optional(),
   timed_dialogue: external_exports.string().nullish(),
   scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
@@ -35527,11 +35526,6 @@ function devNegativeRule(args, ctx) {
   if (args.negativePrompt.length > 2e3) issue("The dev backend accepts a negativePrompt of at most 2000 characters");
 }
 var exactFrames = external_exports.number().int().min(25).max(361).refine((n) => (n - 1) % 8 === 0, "Use 8k+1 frames");
-var genaiShotsSchema = external_exports.array(external_exports.object({
-  description: external_exports.string().trim().min(1).max(2e3),
-  audio: external_exports.string().trim().min(1).max(2e3).optional(),
-  transition: external_exports.literal("hard_cut").optional()
-}).strict()).min(2).max(4).refine((shots) => !shots[0].transition, "Omit transition on the opening shot");
 var temporalImages = external_exports.array(external_exports.object({
   imageUri: genaiImageUriSchema.optional(),
   imagePath: external_exports.string().min(1).optional(),
@@ -35584,7 +35578,6 @@ var textVideoFields = external_exports.object({
   resolution: localResolution,
   fps: external_exports.union([external_exports.literal(24), external_exports.literal(25), external_exports.literal(48), external_exports.literal(50)]).default(24),
   generateAudio: external_exports.boolean().default(true),
-  shots: genaiShotsSchema.optional(),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name) => name.endsWith(".mp4"), "Use an .mp4 filename").optional()
@@ -35604,15 +35597,6 @@ function localVideoTiming(args, ctx) {
     ctx.addIssue({ code: "custom", path: ["numFrames"], message: "Omit duration when using numFrames" });
   if (args.duration != null && 8 * Math.ceil((args.duration * args.fps - 1) / 8) + 1 > 361)
     ctx.addIssue({ code: "custom", path: ["duration"], message: "Duration and fps exceed the local 361-frame limit" });
-  if (args.shots) {
-    if (args.shots[0].transition) ctx.addIssue({ code: "custom", path: ["shots", 0, "transition"], message: "Omit transition on the opening shot" });
-    const parts = [openingPrompt(args.prompt, args.openingPositions)];
-    args.shots.forEach((shot, i) => {
-      parts.push((i === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
-      if (shot.audio) parts.push("Audio: " + shot.audio);
-    });
-    if ([...parts.join("\n\n")].length > promptLimit) ctx.addIssue({ code: "custom", path: ["shots"], message: "Composed shot prompt exceeds " + promptLimit + " characters" });
-  }
 }
 var genaiTextToVideoSchema = textVideoFields.superRefine((args, ctx) => {
   localVideoTiming(args, ctx);
@@ -35803,7 +35787,6 @@ function buildGenaiVideoBody(args) {
     resolution: args.resolution,
     fps: args.fps,
     generate_audio: args.generateAudio,
-    ...args.shots ? { shots: args.shots } : {},
     ...samplingBody(args),
     ...temporalBody(args.keyframes),
     // Local frames travel as checked data URIs, like MSR and audio-to-video.
@@ -36023,12 +36006,7 @@ async function checkGenaiVideoOptions(tool, args) {
       }
     }
     const prompt = openingPrompt(String(args.prompt), args.openingPositions);
-    const parts = [prompt];
-    for (const [i, shot] of (Array.isArray(args.shots) ? args.shots : []).entries()) {
-      parts.push((i === 0 ? "The opening shot shows " : "A hard cut moves to ") + shot.description);
-      if (shot.audio) parts.push("Audio: " + shot.audio);
-    }
-    const chars = Math.max([...parts.join("\n\n")].length, [...String(args.negativePrompt ?? "")].length);
+    const chars = Math.max([...prompt].length, [...String(args.negativePrompt ?? "")].length);
     if (chars > 2e3) {
       const caps = external_exports.object({ prompt_max_chars: external_exports.number().int().optional() }).parse(
         await requestGenai("GET", "/v1/ltx/msr/capabilities", void 0, 15e3)
@@ -36043,7 +36021,6 @@ async function checkGenaiVideoOptions(tool, args) {
     lora: "lora",
     numGeneratedKeyframes: "num_generated_keyframes",
     numFrames: "num_frames",
-    shots: "shots",
     negativePrompt: "negative_prompt",
     guidanceScale: "guidance_scale",
     referenceStrength: "reference_strength",

@@ -537,15 +537,12 @@ test('private compatibility results cannot send the gateway token to foreign URL
   }
 });
 
-test('exact frames and multishot instructions reach v2 with no seconds conversion', () => {
-  const shots = [{ description: 'The dancer enters.' }, { description: 'The group turns.', transition: 'hard_cut', audio: 'Clapping.' }];
-  const args = { ...base, duration: undefined, numFrames: 121, shots };
+test('exact frames reach v2 with no seconds conversion', () => {
+  const args = { ...base, duration: undefined, numFrames: 121 };
   const body = buildGenaiVideoBody(genaiTextToVideoSchema.parse(args));
-  assert.deepEqual(body.shots, shots);
   assert.equal(body.num_frames, 121);
   assert.equal(Object.hasOwn(body, 'duration'), false);
-  for (const change of [{ duration: 5 }, { numFrames: 120 }, { shots: [shots[1], shots[0]] },
-    { shots: [{ description: 'a'.repeat(1990) }, shots[1]] }])
+  for (const change of [{ duration: 5 }, { numFrames: 120 }])
     assert.equal(genaiTextToVideoSchema.safeParse({ ...args, ...change }).success, false);
 });
 
@@ -569,12 +566,16 @@ test('combined image conditioning uses the deployed MSR prompt limit', async t =
   assert.equal(speechVideoCapabilities('astra-genai', base.model, 'audio').audioConditioning, true);
 });
 
-test('v2 text and image bodies preserve untimed shot descriptions, and A2V refuses them', () => {
+// The gateway turns shots[] into prompt text of its own. The caller's prompt is the whole prompt (user directive 2026-11-25).
+test('no v2 adapter takes shot text for the gateway to write a prompt from', () => {
   const shots = [{description:'Spectators wait.'},{description:'The hand presses play.',transition:'hard_cut'}];
-  for (const [schema,inputs] of [[genaiTextToVideoSchema,base],[genaiImageToVideoSchema,{...base,imageUri:'https://example.com/open.png'}]]) {
-    assert.deepEqual(buildGenaiVideoBody(schema.parse({...inputs,shots})).shots,shots);
-    assert.equal(schema.safeParse({...inputs,shots:[{...shots[0],transition:'hard_cut'},shots[1]]}).success,false);
-    assert.equal(schema.safeParse({...inputs,shots:[shots[0],{...shots[1],frame:42}]}).success,false);
+  for (const [tool,schema,inputs] of [['astra_genai_text2video',genaiTextToVideoSchema,base],
+    ['astra_genai_img2video',genaiImageToVideoSchema,{...base,imageUri:'https://example.com/open.png'}]]) {
+    assert.equal(schema.safeParse({...inputs,shots}).success,false);
+    assert.throws(()=>parseVideoArgs(tool,{...inputs,shots}),/Unsupported/);
+    const body = buildGenaiVideoBody(schema.parse(inputs));
+    assert.equal(body.prompt,base.prompt);
+    assert.equal(Object.hasOwn(body,'shots'),false);
   }
   assert.throws(()=>parseVideoArgs('astra_genai_audio2video',{...base,audioPath:'scene.wav',shots}),/Unsupported/);
 });

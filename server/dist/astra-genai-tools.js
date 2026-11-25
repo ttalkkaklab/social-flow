@@ -1,7 +1,7 @@
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { openingPositionsSchema } from './msr-opening.js';
 import { NATIVE_GENAI_TOOLS } from './astra-genai-native-tools.js';
-import { GENAI_VIDEO_MODELS, genaiSampling, genaiVisualSampling, genaiShotsSchema } from './astra-genai-video.js';
+import { GENAI_VIDEO_MODELS, genaiSampling, genaiVisualSampling } from './astra-genai-video.js';
 // The default target writes exclusiveMinimum as a number. The openApi3 target writes a boolean, which the host API rejects and drops the whole tool.
 export const openingPositionsProperty = zodToJsonSchema(openingPositionsSchema, { $refStrategy: 'none' });
 const subjectVoice = {
@@ -38,8 +38,7 @@ const video = {
     ...sampleOptions,
     numGeneratedKeyframes: { type: 'integer', minimum: 0, maximum: 16, description: 'Internally generated keyframes on ordinary text/image pipelines.' },
     lora: { ...zodToJsonSchema(genaiVisualSampling.lora.unwrap(), { target: 'openApi3' }), description: 'Registered LoRA names or name/strength pairs on plain distilled generation.' },
-    shots: { ...zodToJsonSchema(genaiShotsSchema, { $refStrategy: 'none' }), description: '2–4 ordered shot descriptions. Later hard_cut transitions are prompt instructions; there is no time, frame or image slot per shot.' },
-    prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'Scene and action prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion here.' },
+    prompt: { type: 'string', minLength: 1, maxLength: 2000, description: 'The whole prompt, at most 2000 characters, e.g. A leaf sways as the camera moves closer. Describe camera motion and every cut here. The gateway receives it as written; openingPositions, when given, are written ahead of it by this tool.' },
     negativePrompt: { type: 'string', minLength: 1, maxLength: 5000, description: devNegative + ' Requires ltx-2.5-22b-dev: distilled sampling has no negative pass, except image-to-video references with guidanceScale > 1 or nagScale > 0.' },
     model: { type: 'string', enum: [...GENAI_VIDEO_MODELS], description: 'Local gateway model. Cloud ltx-2-5-fast/pro models are not supported.' },
     duration: { type: ['integer', 'null'], minimum: 1, description: 'Whole seconds, e.g. 5, or null for automatic duration without an end frame. Rounded-up 8k+1 frames must fit 361 at the selected fps.' },

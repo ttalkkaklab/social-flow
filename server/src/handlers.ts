@@ -4,14 +4,14 @@ import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
-import { MUSIC_ADAPTERS, musicCatalog } from './music-registry.js';
+import { MUSIC_ADAPTERS, musicCatalog, musicAdapterContracts } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
-import { IMAGE_ADAPTERS, imageCatalog } from './image-registry.js';
+import { IMAGE_ADAPTERS, imageCatalog, imageAdapterContracts } from './image-registry.js';
 import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatus } from './image-routing.js';
 import { videoStatus } from './video-routing.js';
 import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
-import { VIDEO_ADAPTERS, videoCatalog } from './video-registry.js';
+import { VIDEO_ADAPTERS, videoCatalog, videoAdapterContracts } from './video-registry.js';
 import { routeSpeech, speechRouteSchema } from './tts-routing.js';
 import { hostReview } from './host-review.js';
 import { runOpeningReview } from './opening-review.js';
@@ -69,7 +69,7 @@ import { CHANNEL_SLUG_RE } from './config.js';
 import { DURATION_TOOLS, resolveVideoDuration } from './video-duration.js';
 import { manageCharacter } from './character-manage.js';
 import { characterPanelRequest, characterPanelSchema, recordCharacterPanel } from './character-panel.js';
-import { localDesktopCatalog } from './ltx-desktop-local.js';
+import { localDesktopCatalog, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.js';
 
 /** MCP content blocks — generated images are also returned as base64 image blocks. */
 export type ToolContent =
@@ -1753,9 +1753,15 @@ export const dispatchVideo = (name: string, args: Record<string, unknown>) => vi
 for (const name of Object.keys(VIDEO_ADAPTERS)) {
   ROUTES[name] = args => routeLegacyVideo(name, args, dispatchVideo);
 }
+/** A catalog call names nothing for the whole list, or an engine (and one narrowing field) for that engine's parameter schemas. */
+const catalogQuery = <Field extends 'operation' | 'model'>(field: Field) =>
+  z.object({ engine: z.string().min(1).optional(), [field]: z.string().min(1).optional() } as Record<'engine' | Field, z.ZodOptional<z.ZodString>>).strict()
+    .refine(query => query.engine !== undefined || query[field] === undefined, { message: 'catalog_engine_required: name the engine with ' + field });
 ROUTES.video_catalog = async args => {
-  const {engine} = z.object({engine:z.literal('ltx-desktop-local').optional()}).strict().parse(args ?? {});
-  return text(JSON.stringify(engine ? await localDesktopCatalog() : videoCatalog(), null, 2));
+  const { engine, operation } = catalogQuery('operation').parse(args ?? {});
+  // The Desktop application answers for itself when only its engine is named; its adapters' parameters need the operation too.
+  const catalog = !engine ? videoCatalog() : engine === LOCAL_DESKTOP_ENGINE && !operation ? await localDesktopCatalog() : videoAdapterContracts(engine, operation);
+  return text(JSON.stringify(catalog, null, 2));
 };
 ROUTES.video_plan = async args => {
   const input = videoPlanSchema.parse(args);
@@ -1765,7 +1771,7 @@ ROUTES.video_plan = async args => {
     if (report?.videoSubmitted === false) return seedancePreflightError({...report, executable:false, requestId:input.requestId});
     if (!(error instanceof SceneInputError)) throw error;
     return { ...text(JSON.stringify({ code:'scene_inputs_unsupported', executable:false, requestId:input.requestId, tool:error.tool,
-      model:error.model, deployment:await inspectSceneInputContract(error, input.validateScenePayload ? {requestId:input.requestId, args:input.args} : undefined),
+      model:error.model, deployment:await inspectSceneInputContract(error),
       missing:error.missing, sceneRequest:error.sceneRequest }, null, 2)), isError:true };
   }
 };
@@ -1778,7 +1784,10 @@ ROUTES.video_status = async args => text(JSON.stringify(await videoStatus(args),
 const imageDispatch = Object.fromEntries(Object.keys(IMAGE_ADAPTERS).map(name => [name, ROUTES[name]]));
 const dispatchImage = (name: string, args: Record<string, unknown>) => imageDispatch[name](args);
 for (const name of Object.keys(IMAGE_ADAPTERS)) ROUTES[name] = args => routeLegacyImage(name, args, dispatchImage);
-ROUTES.image_catalog = async () => text(JSON.stringify(imageCatalog(), null, 2));
+ROUTES.image_catalog = async args => {
+  const { engine, operation } = catalogQuery('operation').parse(args ?? {});
+  return text(JSON.stringify(engine ? imageAdapterContracts(engine, operation) : imageCatalog(), null, 2));
+};
 ROUTES.image_plan = async args => text(JSON.stringify(imagePlanSummary(planImage(args)), null, 2));
 ROUTES.image_execute = args => executeImage(args, dispatchImage);
 ROUTES.image_status = async args => text(JSON.stringify(await imageStatus(args), null, 2));
@@ -1828,7 +1837,10 @@ ROUTES.shot_image = async args => {
 const musicDispatch = Object.fromEntries(Object.keys(MUSIC_ADAPTERS).map(name => [name, ROUTES[name]]));
 const dispatchMusic = (name: string, args: Record<string, unknown>) => musicDispatch[name](args);
 for (const name of Object.keys(MUSIC_ADAPTERS)) ROUTES[name] = args => routeLegacyMusic(name, args, dispatchMusic);
-ROUTES.music_catalog = async () => text(JSON.stringify(musicCatalog(), null, 2));
+ROUTES.music_catalog = async args => {
+  const { engine, model } = catalogQuery('model').parse(args ?? {});
+  return text(JSON.stringify(engine ? musicAdapterContracts(engine, model) : musicCatalog(), null, 2));
+};
 ROUTES.music_plan = async args => text(JSON.stringify(musicPlanSummary(planMusic(args)), null, 2));
 ROUTES.music_execute = args => executeMusic(args, dispatchMusic);
 ROUTES.music_status = async args => (args as { action?: unknown })?.action === 'resume' ? resumeMusic(args) : text(JSON.stringify(musicStatus(args), null, 2));

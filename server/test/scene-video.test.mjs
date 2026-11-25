@@ -471,9 +471,10 @@ test('a refused I2V scene reads the selected endpoint and renderer contract with
   const control={descriptions:'prompt',frame_accurate_cuts:false,shot_scoped_references:false,frame_addressed_native_dialogue:false};
   const schema=name=>({$ref:'#/components/schemas/'+name});
   const list=name=>({type:'array',items:schema(name)});
+  // The route's own shots grammar is not read: the plugin sends it no shot text (user directive 2026-11-25).
   const definition={paths:{'/v1/ltx/v2/image-to-video':{post:{requestBody:{content:{'application/json':{schema:schema('Input')}}}}}},
-    components:{schemas:{Input:{properties:{shots:{anyOf:[{type:'null'},list('Shot')]},keyframes:list('Pin'),references:list('Subject')}},
-      Shot:{properties:{description:{},transition:{}}}, Pin:{properties:{frame_idx:{}}},Subject:{properties:{audio_uri:{}}}}}};
+    components:{schemas:{Input:{properties:{keyframes:list('Pin'),references:list('Subject')}},
+      Pin:{properties:{frame_idx:{}}},Subject:{properties:{audio_uri:{}}}}}};
   const routes=[];
   globalThis.fetch=async(url,options)=>{
     routes.push(new URL(url).pathname);
@@ -483,82 +484,11 @@ test('a refused I2V scene reads the selected endpoint and renderer contract with
   const refusal=new SceneInputError('astra_genai_img2video',{images:[{role:'face'}]},[],'ltx-2.5-22b-distilled');
   const contract=await inspectSceneInputContract(refusal);
   assert.deepEqual(routes.sort(),['/openapi.json','/v1/ltx/v2/capabilities']);
+  assert.equal(contract.status,'verified');
   assert.deepEqual(contract.shotControl,control);
-  assert.deepEqual(contract.shotFields,['description','transition']);
+  assert.deepEqual(contract.requestFields,['keyframes','references']);
   assert.deepEqual(contract.temporalImageFields,['frame_idx']);
   assert.deepEqual(contract.referenceFields,['audio_uri']);
-  const f=busking(t);
-  const compiled=f.capture(request=>request).request;
-  const voicePath=path.join(f.dir,f.scene.audio.path);
-  compiled.shots[1].dialogue=[{lineId:'reply',speaker:'miran',text:'제가 찢었습니다.',delivery:'on_screen',
-    frame:compiled.shots[1].startFrame,voice:{path:voicePath}}];
-  const refused=new SceneInputError('astra_genai_img2video',compiled,[],'ltx-2.5-22b-distilled','576x1024');
-  const input={requestId:'scene-1',args:{reserveUsd:0}};
-  assert.equal((await inspectSceneInputContract(refused,input)).validation.status,'not_sent');
-  const endpoint='/v1/ltx/v2/image-to-video/validate';
-  definition.paths[endpoint]=definition.paths['/v1/ltx/v2/image-to-video'];
-  const discovery=globalThis.fetch;
-  let posts=0, wireHash;
-  globalThis.fetch=async(url,options)=>{
-    if(options.method==='GET') return discovery(url,options);
-    assert.equal(new URL(url).pathname,endpoint);
-    assert.equal(options.headers['X-Request-ID'],input.requestId);
-    wireHash=createHash('sha256').update(options.body).digest('hex');
-    const body=JSON.parse(options.body);
-    assert.deepEqual(body.shots.map(s=>s.shot_id),compiled.shotIds);
-    assert.equal(body.resolution,refused.resolution);
-    assert.equal(body.num_frames,compiled.frameCount);
-    assert.equal(body.shots[1].transition,'hard_cut');
-    assert.equal(body.shots[1].dialogue[0].frame,body.shots[1].start_frame);
-    assert.equal(body.shots[1].dialogue[0].voice_uri,'data:audio/wav;base64,'+fs.readFileSync(voicePath,'base64'));
-    assert.equal(body.scene_audio.audio_uri,body.shots[1].dialogue[0].voice_uri);
-    assert.equal(body.shots.flatMap(s=>s.images).length,compiled.images.length);
-    assert.equal(JSON.stringify(body).split('제가 찢었습니다.').length,2);
-    posts++;
-    return Response.json({error:{message:'body.shots.0.images: extra inputs'}},{status:400});
-  };
-  const checked=await inspectSceneInputContract(refused,input);
-  assert.equal(checked.validation.status,'schema_rejected');
-  assert.equal(checked.validation.httpStatus,400);
-  assert.equal(checked.validation.bodySha256,wireHash);
-  assert.equal(posts,1);
-  // A large soundtrack also used as a voice sample travels unchanged through the standard chunked upload.
-  fs.appendFileSync(voicePath,Buffer.alloc(4_500_000));
-  const sessions=new Map(), finished=new Map();
-  globalThis.fetch=async(url,options)=>{
-    const route=new URL(url).pathname;
-    if(options.method==='GET') return discovery(url,options);
-    if(route==='/v1/uploads'){
-      const info=JSON.parse(options.body), id=String(sessions.size+1);
-      sessions.set(id,info);
-      return Response.json({upload_id:id,chunk_size:5*1024*1024,chunks:1});
-    }
-    if(options.method==='PUT'){
-      const id=route.split('/')[3], sha=createHash('sha256').update(options.body).digest('hex');
-      assert.equal(sha,sessions.get(id).sha256);
-      finished.set(id,sha);
-      return Response.json({});
-    }
-    if(route.endsWith('/complete')){
-      const id=route.split('/')[3];
-      assert.ok(finished.has(id));
-      return Response.json({file_id:id,uri:'genai-file://'+id});
-    }
-    assert.equal(route,endpoint);
-    assert.ok(Buffer.byteLength(options.body)<8000000);
-    const body=JSON.parse(options.body);
-    assert.equal(body.image_uri,body.shots[0].images.find(p=>p.role==='start').image_uri);
-    assert.equal(body.scene_audio.audio_uri,body.shots[1].dialogue[0].voice_uri);
-    assert.ok(body.shots.flatMap(s=>s.images).every(p=>p.image_uri.startsWith('genai-file://')));
-    return Response.json({error:{message:'unsupported shot inputs'}},{status:400});
-  };
-  const staged=(await inspectSceneInputContract(refused,input)).validation;
-  assert.equal(staged.status,'schema_rejected');
-  assert.equal(staged.attachments.length,compiled.images.length+2);
-  assert.equal(staged.requestBody.shots[1].dialogue[0].text,'제가 찢었습니다.');
-  assert.equal(staged.bodySha256,createHash('sha256').update(JSON.stringify(staged.requestBody)).digest('hex'));
-  assert.equal(checked.validation.requestBody,undefined);
-  assert.equal(staged.attachments.at(-1).sha256,createHash('sha256').update(fs.readFileSync(voicePath)).digest('hex'));
   globalThis.fetch=async()=>Response.json({},{status:503});
   assert.equal((await inspectSceneInputContract(refusal)).status,'unverified');
 });

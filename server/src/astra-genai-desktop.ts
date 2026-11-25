@@ -23,7 +23,7 @@ const local = {
   filename: bareFilenameSchema('video').refine(n => n.endsWith('.mp4')).optional(),
 };
 const common = z.object({ model, prompt: z.string().trim().min(1), resolution,
-  promptProvenance: z.enum(['typed', 'enhanced']).optional().describe("Desktop rewrite policy: typed follows the app's automatic enhancement settings; enhanced sends a caller-finished prompt without another rewrite, e.g. 'enhanced'. Omitted keeps the Desktop default. This is not a quality review."),
+  promptProvenance: z.enum(['typed', 'enhanced']).optional().describe("Desktop rewrite policy: enhanced sends a caller-finished prompt without another rewrite; typed lets the app's automatic enhancement settings rewrite it. Omitted sends enhanced for a written prompt, e.g. 'typed' to opt into the app's rewrite. This is not a quality review."),
   seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
   fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
   cameraMotion: z.enum(['none','dolly_in','dolly_out','dolly_left','dolly_right','jib_up','jib_down','static','focus_shift']).optional(),
@@ -79,12 +79,16 @@ export function buildDesktopBody(operation: DesktopOperation, input: unknown, as
     return { assetId: assets[file] };
   };
   if (targetResolution) params.resolution = targetResolution;
+  // Desktop's default (typed) lets the app rewrite the prompt. A written prompt reaches generation as written
+  // unless the call names typed (user directive 2026-11-25). Extend and retake take no policy.
+  const edits = ['extend', 'retake'].includes(operation);
+  if (!edits && params.prompt) params.promptProvenance ??= 'enhanced';
   if (operation === 'keyframes') return { params: { ...params, model: 'fast' },
     keyframes: (keyframes as {imagePath: string; frameIndex: number; strength: number}[])
       .map(({ imagePath: file, ...frame }) => ({ ...ref(file), ...frame })) };
   const inputs = operation === 'image-to-video' ? { startFrame: ref(imagePath), ...(lastFramePath ? { endFrame: ref(lastFramePath) } : {}) }
     : operation === 'audio-to-video' ? { audio: ref(audioPath), ...(imagePath ? { startFrame: ref(imagePath) } : {}) }
-    : ['extend', 'retake'].includes(operation) ? { video: ref(sourceVideoPath) } : undefined;
+    : edits ? { video: ref(sourceVideoPath) } : undefined;
   return { params, contract_version: 1, ...(inputs ? { inputs } : {}),
     ...(operation === 'audio-to-video' ? { allowAudioTruncation } : {}) };
 }

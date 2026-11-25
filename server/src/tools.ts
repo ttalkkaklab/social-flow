@@ -1067,7 +1067,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan made without sceneRendering carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt, and the GenAI gateway receives the approved text as written. Only sceneRendering per_shot has the gateway write prompts, one per shot. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -5464,17 +5464,21 @@ for (const tool of TOOLS) {
   }
 }
 TOOLS.push(
-  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
-    inputSchema: { type: 'object', properties: {engine:{type:'string',enum:['ltx-desktop-local']}}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
-  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
+  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across video adapters and parameters.options the adapter\'s own. Engine ltx-desktop-local alone queries downloaded offerings and supported settings directly from the local Desktop application. Every mode is read-only.',
+    inputSchema: { type: 'object', properties: {
+      engine: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))], description: 'Video engine as saved in models.video.engine, e.g. astra-genai.' },
+      operation: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.operation))], description: 'One operation of that engine, e.g. image. Needs engine.' } },
+      additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan made without sceneRendering carries one provider prompt, which the plugin writes and returns as promptTemplate for editing; the GenAI gateway receives the approved prompt as written. Under sceneRendering per_shot the gateway writes the prompt of each shot instead and the plan says so. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
       wholeScene: { type: 'boolean', enum: [true], description: 'Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it.' },
       prompt: {type: 'string', minLength: 1, maxLength: 32000, description: 'Optional complete scene prompt. Edit the returned promptTemplate, using the names in promptSlots for cast, images, motion and soundtracks. Overrides the saved draft for this plan.'},
       sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy:'none' }),
-      sceneRendering: {type:'string',enum:['auto','single_msr','per_shot'],description:'Choose the shot manifest renderer explicitly. Auto validates one MSR call or separate renders before approval. Require single_msr for one call or per_shot for exact cuts. Whole-scene prompt edits use the separate authored prompt route.'},
+      sceneRendering: {type:'string',enum:['per_shot'],description:'Leave out to plan the scene as one render with promptTemplate and an authored prompt. per_shot renders each shot apart through the gateway scene route, for cuts one render cannot hold. That route writes each shot\'s prompt from the manifest and takes no authored prompt; the plan says so (gateway_composed_prompt).'},
+      engine: { type: 'string', description: 'Optional assertion of the saved video engine. A different saved engine refuses the plan (model_selection_mismatch); a plan never switches the selection.' },
+      model: { type: 'string', description: 'Optional assertion of the saved video model, checked the same way.' },
       maxCostUsd: { type: 'number', minimum: 0, description: 'Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval.' },
-      validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
       purpose: { type: 'string', enum: ['draft','final','revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
       basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },
       changeNote: { type: 'string', minLength: 1, maxLength: 1000, description: 'What changed for this candidate.' },
@@ -5521,12 +5525,17 @@ for (const tool of TOOLS) {
 }
 TOOLS.push(
   { name: 'image_catalog', title: 'Inspect image adapters and models',
-    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across image adapters and parameters.options the adapter\'s own. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
+    inputSchema: { type: 'object', properties: {
+      engine: { type: 'string', enum: [...new Set(Object.values(IMAGE_ADAPTERS).map(adapter => adapter.engine))], description: 'Image engine as saved in models.image.engine, e.g. astra-genai.' },
+      operation: { type: 'string', enum: ['text', 'edit'], description: 'One operation of that engine. Needs engine.' } },
+      additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'image_plan', title: 'Plan an image with saved selection',
     description: 'Prepare an image request for an episode or workspace asset. Resolves saved selection and explicit overrides, checks adapter capabilities and image inputs, pins hashes and an API reservation estimate, then saves a local plan. No generation. Returns plan ID and provenance without echoing base64 inputs. Host plans require external handoff. Use image_execute for server adapters.',
     inputSchema: { ...imageContextSchema, properties: { ...imageContextSchema.properties,
       operation: { type: 'string', enum: ['text', 'edit', 'variation'], description: 'Requested operation; selected model determines its adapter.' },
+      engine: { type: 'string', description: 'Optional assertion of the saved image engine. A different saved engine refuses the plan (image_selection_mismatch); a plan never switches the selection.' },
+      model: { type: 'string', description: 'Optional assertion of the saved image model, checked the same way.' },
       tool: { type: 'string', description: 'Optional exact adapter name; must match saved selection.' },
       args: { type: 'object', additionalProperties: true, description: 'Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },

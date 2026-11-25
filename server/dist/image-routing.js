@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { z } from 'zod';
 import { mlxImageFamily } from './image-models.js';
+import { assertSelection } from './adapter-parameters.js';
 import { IMAGE_ADAPTERS, parseImageArgs } from './image-registry.js';
 import { imageQuote, imageUsageUsd } from './image-pricing.js';
 import { imageTransaction, readImageState } from './image-state.js';
@@ -24,6 +25,7 @@ const selectionHelper = fileURLToPath(new URL('../../skills/_shared/image-select
 export const imageContext = (directory, assetId) => load(selectionHelper).readImageContext(directory, assetId);
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const imagePlanSchema = z.object({ directory: z.string().min(1), assetId: idSchema, requestId: idSchema,
+    engine: z.string().min(1).optional(), model: z.string().min(1).optional(),
     operation: z.enum(['text', 'edit', 'variation']).optional(), tool: z.string().optional(),
     reserveUsd: z.number().finite().nonnegative().optional(), args: z.record(z.unknown()).default({}) }).strict();
 export const imageExecuteSchema = z.object({ directory: z.string().min(1), planId: z.string().regex(/^[a-f0-9]{64}$/) }).strict();
@@ -99,6 +101,7 @@ export function planImage(raw) {
     requireReadyProject(input.directory);
     const context = imageContext(input.directory, input.assetId);
     const { selection } = context;
+    assertSelection('image', selection, input);
     let tool = input.tool;
     if (!tool)
         tool = Object.keys(IMAGE_ADAPTERS).find(name => IMAGE_ADAPTERS[name].engine === selection.engine &&

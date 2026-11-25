@@ -3,14 +3,18 @@
  * scene-video.ts compiles a storyboard scene into a `SceneRequest`. This module is the
  * only place that knows what the gateway does with one: the route's addresses, what a
  * deployment advertises, the request body's field names, and the validate and submit
- * calls. Frame numbers are relative to the scene and shot ends are exclusive. */
+ * calls. Frame numbers are relative to the scene and shot ends are exclusive.
+ *
+ * The route renders each shot apart and writes each shot's prompt from the manifest
+ * fields below. It has no field for a caller's own prompt, so the planner comes here
+ * only when a call names `per_shot` and says so in the plan (user directive 2026-11-25). */
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { readFileSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { videoTextPolicy } from './video-prompt.js';
-import { GENAI_AUDIO_TYPES, GenaiRequestError, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
+import { GENAI_AUDIO_TYPES, genaiAudioUri, genaiSourceUri, requestGenai } from './astra-genai-client.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, uploadGenaiFile } from './astra-genai-upload.js';
 const load = createRequire(import.meta.url);
 export const SCENE_ROUTE = '/v1/ltx/v2/scene-to-video';
@@ -27,7 +31,6 @@ const count = z.number().int().positive();
 const capabilitiesSchema = z.object({
     version: z.literal(1), execution: z.literal('per_shot'),
     transitions: z.array(z.string()).refine(values => values.includes('hard_cut')),
-    execution_modes: z.array(z.string()).optional(),
     motion_prefix: z.boolean().optional(), timed_dialogue: z.string().nullish(),
     scene_audio_modes: z.record(z.string()).optional().catch(undefined),
     limits: z.object({
@@ -42,7 +45,6 @@ export function parseSceneCapabilities(response) {
     const body = capabilitiesSchema.parse(response);
     const limits = body.limits ?? {};
     return {
-        executionModes: body.execution_modes ?? ['per_shot'],
         motionPrefix: body.motion_prefix === true, timedDialogue: body.timed_dialogue ?? null,
         audioModes: body.scene_audio_modes ?? {},
         limits: {
@@ -90,7 +92,7 @@ export function sceneRequestIssues(scene, capabilities, options = {}) {
     return issues;
 }
 /** Build the request body. Files ride inline until the body is too large, a guide file is bound or `stageFiles` asks; then each is uploaded once. */
-export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings, execution) {
+export async function buildSceneWire(scene, model, resolution, stageFiles = false, bindings) {
     const attachments = [];
     const conditioned = conditionedBy(scene, model);
     const shots = scene.shots.map(shot => {
@@ -123,7 +125,7 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
     if (trackBytes > 32 * 1024 * 1024)
         throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
     const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
-    const body = { ...(execution && execution !== 'per_shot' ? { execution } : {}), model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
+    const body = { model, resolution, fps: scene.fps, num_frames: scene.frameCount, generate_audio: true, prompt: prompt || 'Follow the ordered storyboard shots.',
         image_uri: shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
         ...(scene.audio ? { scene_audio: { ...(scene.audio.mode ? { mode: scene.audio.mode } : {}), audio_uri: stageTrack ? '' : genaiAudioUri(undefined, scene.audio.path), start_frame: scene.audio.startFrame,
                 end_frame: scene.audio.endFrame, cues: scene.audio.cues } } : {}) };
@@ -165,31 +167,14 @@ export async function buildSceneWire(scene, model, resolution, stageFiles = fals
     }
     return { body, attachments, bodySha256: createHash('sha256').update(wire).digest('hex'), bytes: Buffer.byteLength(wire) };
 }
-/** Send the full scene to the authenticated validation-only route. A schema pass never authorizes execution. */
-export async function validateScenePayload(endpoint, scene, model, resolution, requestId) {
-    let sent;
-    try {
-        const { body, attachments, bytes, bodySha256 } = await buildSceneWire(scene, model, resolution);
-        sent = { bodySha256, bytes, ...(attachments.length ? { requestBody: body, attachments } : {}) };
-        const result = await requestGenai('POST', endpoint, body, 120000, undefined, undefined, requestId);
-        const accepted = z.object({ schema_valid: z.literal(true), model: z.literal(model) }).safeParse(result);
-        return { endpoint, requestId, ...sent, status: accepted.success ? 'schema_accepted' : 'unverified', result: accepted.data };
-    }
-    catch (error) {
-        if (error instanceof GenaiRequestError && [400, 422].includes(error.httpStatus))
-            return { endpoint, requestId, ...sent, status: 'schema_rejected', httpStatus: error.httpStatus, detail: error.message };
-        return { endpoint, requestId, ...sent, status: 'unverified', detail: error instanceof Error ? error.message : String(error) };
-    }
-}
 /** Run every gateway check on the staged body. Nothing is reserved or rendered. */
 export async function validateSceneBody(body, requestId, expected) {
     const result = await requestGenai('POST', SCENE_ROUTE + '/validate', body, 120000, undefined, undefined, requestId);
     const checked = z.object({ schema_valid: z.literal(true), model: z.literal(expected.model), shots: z.literal(expected.shots),
-        execution: z.enum(['per_shot', 'single_msr']).optional() }).parse(result);
-    if (expected.execution === 'auto' && !checked.execution ||
-        expected.execution && expected.execution !== 'auto' && (checked.execution ?? 'per_shot') !== expected.execution)
-        throw new Error('scene_render_selection: gateway did not validate the planned execution mode');
-    return checked.execution ?? 'per_shot';
+        execution: z.string().optional() }).parse(result);
+    // The body names no execution, which this route reads as one render per shot. Any other answer would put the whole scene in one gateway-written prompt.
+    if ((checked.execution ?? 'per_shot') !== 'per_shot')
+        throw new Error('scene_render_selection: the gateway answered ' + checked.execution + ' for a per_shot scene');
 }
 /** Submit the scene job. The gateway returns the same job for a repeated `requestId` with the same body. */
 export async function submitSceneBody(body, requestId) {

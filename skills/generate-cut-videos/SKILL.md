@@ -47,7 +47,7 @@ For a silent Veo scene, use a start and end time for each view. For Seedance ref
 
 A scene shares one soundtrack from frame zero, including its lead-in. Check each cut and beat against the requested scene frames. Subject panels establish identity and outfit. The shot action controls when the person enters. See the [scene input contract](../_shared/video-routing.md).
 
-For an explicit LTX shot-manifest request, choose `sceneRendering:"single_msr"` to require one model call. Choose `per_shot` for exact cut timing or shot-specific controls. With `auto`, review the resolved mode before approval. Authored whole-scene prompts use the whole-scene route.
+Plan a scene without `sceneRendering` when it fits one model call: the plan returns the prompt it will send as `promptTemplate`, and an edited copy goes back as `prompt`. Choose `sceneRendering:"per_shot"` for exact cut timing or shot-specific controls. The gateway then renders each shot apart and writes each shot's prompt from its card, so the plan returns no `promptTemplate` and a wording change goes on the card. `single_msr` and `auto` are retired.
 
 ## Correcting a scene take
 
