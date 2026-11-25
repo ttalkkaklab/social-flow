@@ -8,30 +8,32 @@ The character compiler selects the model's direction syntax: legacy Gemini promp
 Gemini 3.8 turn metadata, ElevenLabs inline tags, or free-text gateway/local direction. Research candidates are not adapters.
 Character limits in this registry are local adapter limits, not vendor token limits.
 
-## Common tool
+## Speech tools
 
-`tts_route` accepts:
+1. Read `tts_catalog` for installed models and their single-speaker or dialogue generators. Pass `engine` and an optional `model` to inspect the adapter parameter schemas.
+2. Save the take with `tts_plan`. Supply an absolute output `directory` and a stable
+   `requestId`. For a character line, copy the fields in the line's
+   `speech_manage plan_audio` result under `ttsPlan`. For standalone speech, supply
+   `generator` and its `generation` arguments directly. The plan stores the normalized
+   arguments, voice binding and local conditioning hashes. Planning makes no provider call.
+3. Call `tts_execute` with the returned `directory` and `planId`. Execution rechecks
+   the character and input files, dispatches the saved take and records the receipt.
+   Matching completed requests reuse the audio and its usage entry.
+4. After interruption read `tts_status` with the same `directory` and `requestId`.
+   It reports the recorded execution state. `not_found` means no execution receipt
+   exists. A plan alone has no receipt. Inspect a `submitting` or `uncertain`
+   request before making another take.
 
-- `action: "capabilities"`: read the six implemented model contracts without a key or generation.
-- `action: "plan"`, `generator`, `generation`: parse the selected raw tool payload,
-  apply defaults and report capabilities, tool enablement and warnings. No provider
-  request or output directory is created. This is not a quote or spending approval.
-- `action: "execute"`, the same `generator` and `generation`, plus a stable
-  `requestId` (letters, digits, `_`, `-`, at most 100 characters). `generation.outputPath`
-  is required so the receipt survives a restart. Use an absolute episode work directory.
-
-Example plan:
+Example standalone `tts_plan` arguments:
 
 ```json
-{"action":"plan","generator":"tts_gemini_38","generation":{"model":"gemini-3.8-flash-tts","voice":"Kore","turns":[{"text":"잠깐, 그 말 진심이야?","style":"Quiet disbelief, then a short pause."}],"outputPath":"/absolute/episode/.work/speech","filename":"line-01.wav"}}
+{"directory":"/absolute/project/.work/speech","requestId":"intro-r1","generator":"tts_local_voxcpm2","generation":{"model":"voxcpm2","text":"Welcome back.","filename":"intro.wav"}}
 ```
 
-Execute the returned `generation` with the same generator and a request ID such as
-`episode-line-01-r1`. Reusing that ID in the same canonical output directory reuses
-completed bytes only if arguments and audio/sidecar hashes match. It returns
-`replayed: true` and does not add another usage entry. Changing text, voice or settings
-requires a new ID. `speech_manage plan_audio` remains the character/line planning
-entrypoint; its generator/arguments can be passed to this common tool.
+The compatibility tool `tts_route` still takes `action: "capabilities"`, `"plan"`
+or `"execute"`. Its plan only validates arguments in memory. Its execute action
+takes the same generator and generation with an outputPath and a requestId.
+Both interfaces use the same execution receipts and duplicate-request checks.
 
 ## Character retakes
 
@@ -72,9 +74,7 @@ Do not relabel transformed audio with an original take's receipt: it covers only
 original bytes. Historical attachments without a receipt remain reusable with their
 existing checks; the new requirement applies when attaching a new gateway take.
 
-The existing five raw synthesis tools remain available and share these runtime
-checks. They allocate a fresh request ID per call, so callers needing restart-safe
-replay must use `tts_route execute`. Auditions and the legacy checked wrapper use
+Raw synthesis tools share these runtime checks. Use a saved plan and a stable request ID for restart-safe replay. Auditions and the legacy checked wrapper use
 the same adapter preparation; they do not acquire automatic listening review.
 
 ## Execution gates and receipts
@@ -110,6 +110,6 @@ unless the user requests actual listening review.
 
 Select speech engine `mlx-audio` and model `voxcpm2` for an offline WAV. Set `python` (the interpreter with mlx-audio installed) and `model` (the downloaded VoxCPM2 directory) to absolute paths in `~/.config/social-flow/voxcpm2.json`. The MCP process can override them with `VOXCPM2_PYTHON` and `VOXCPM2_MODEL_PATH`. The MLX-Serve GUI can be closed.
 
-Use `tts_route` with generator `tts_local_voxcpm2`. Supply `text`, `model`, `outputPath` and a stable request ID for execution. For a new voice use `instructions`. For a recurring speaker pass the original `referenceAudio`. A continuation uses both `continuationAudio` and its verbatim `continuationText`. Both audio roles can be supplied together. Optional sampling controls are `steps`, `guidance` and `maxTokens`. Each plugin execution releases its local worker after the take.
+Use `tts_plan` with generator `tts_local_voxcpm2`, an output directory and a stable request ID. Supply `text` and `model` in `generation`. Execute by plan ID. For a new voice use `instructions`. For a recurring speaker pass the original `referenceAudio`. A continuation uses both `continuationAudio` and its verbatim `continuationText`. Both audio roles can be supplied together. Optional sampling controls are `steps`, `guidance` and `maxTokens`. Each plugin execution releases its local worker after the take.
 
 For a character choose `voiceId: default`, speed 1, and the local engine. Cast and pin the audition through the usual character workflow. For episode dialogue copy the result of `speech_manage plan_audio`; it includes the pinned audio path, digest and scene revision. Attach the completed receipt. Hosted VoxCPM2 continues to use engine `astra-genai` with its gateway-registered voice ID.

@@ -14,12 +14,14 @@ export const localVoxSchema = genaiSpeechSchema.pick({
 }).extend({
   model: z.literal('voxcpm2'), voice: z.literal('default').default('default'),
   referenceAudio: file.optional(), referenceSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
-  continuationAudio: file.optional(), continuationText: z.string().trim().min(1).optional(),
+  continuationAudio: file.optional(), continuationSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(), continuationText: z.string().trim().min(1).optional(),
   steps: z.number().int().min(1).max(100).optional(), guidance: z.number().min(0).max(10).optional(),
   maxTokens: z.number().int().min(2).max(8000).optional(),
 }).strict().superRefine((args, ctx) => {
   if (!!args.continuationAudio !== !!args.continuationText)
     ctx.addIssue({ code: 'custom', message: 'Continuation requires the recording and its exact transcript' });
+  if (args.continuationSha256 && !args.continuationAudio)
+    ctx.addIssue({ code: 'custom', message: 'Continuation digest requires continuationAudio' });
   if (args.referenceSha256 && !args.referenceAudio)
     ctx.addIssue({ code: 'custom', message: 'Reference digest requires referenceAudio' });
 });
@@ -44,7 +46,6 @@ export function localVoxConfigured(): boolean {
 
 export async function generateLocalVox(input: unknown) {
   const args = localVoxSchema.parse(input);
-  const runtime = localRuntime();
   const scratch = mkdtempSync(join(tmpdir(), 'social-flow-vox-'));
   function snapshot(source: string | undefined, role: string) {
     if (!source) return;
@@ -56,6 +57,8 @@ export async function generateLocalVox(input: unknown) {
     const reference = snapshot(args.referenceAudio, 'reference');
     const continuation = snapshot(args.continuationAudio, 'continuation');
     if (args.referenceSha256 && args.referenceSha256 !== reference?.sha256) throw new Error('Reference voice bytes changed');
+    if (args.continuationSha256 && args.continuationSha256 !== continuation?.sha256) throw new Error('Continuation voice bytes changed');
+    const runtime = localRuntime();
     return await executeSpeech('tts_local_voxcpm2', { ...args, referenceSha256: reference?.sha256,
       continuationSha256: continuation?.sha256, modelDirectory: runtime.model }, async output => {
       const audioPath = join(output.outputPath, output.filename);

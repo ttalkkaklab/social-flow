@@ -1,4 +1,4 @@
-/** One shape for the video, image and music catalogs: an engine's adapters with their parameters as
+/** One shape for the media catalogs: an engine's adapters with their parameters as
  * JSON Schema, the names every adapter of that media type shares apart from an adapter's own
  * (user directive 2026-11-25). The adapter's zod schema stays the only definition. */
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 export const COMMON_PARAMETERS = {
   video: ['prompt', 'negativePrompt', 'model', 'resolution', 'seed', 'generateAudio', 'outputPath', 'filename'],
   image: ['prompt', 'negativePrompt', 'model', 'size', 'seed', 'outputPath', 'filename'],
+  tts: ['model', 'text', 'outputPath', 'filename'],
   music: ['prompt', 'model', 'seed', 'outputPath', 'filename'],
 } as const;
 export type MediaKind = keyof typeof COMMON_PARAMETERS;

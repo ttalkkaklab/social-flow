@@ -12,7 +12,7 @@ import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatu
 import { videoStatus } from './video-routing.js';
 import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, videoAdapterContracts } from './video-registry.js';
-import { routeSpeech, speechRouteSchema } from './tts-routing.js';
+import { routeSpeech, speechRouteSchema, speechCatalog, planSpeech, executeSpeechPlan, speechStatus } from './tts-routing.js';
 import { hostReview } from './host-review.js';
 import { runOpeningReview } from './opening-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
@@ -1061,6 +1061,13 @@ export const ROUTES = {
         const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
         return text(JSON.stringify(result, null, 2), result.success !== true);
     },
+    tts_catalog: async (args) => text(JSON.stringify(speechCatalog(args), null, 2)),
+    tts_plan: async (args) => text(JSON.stringify(planSpeech(args), null, 2)),
+    tts_execute: async (args) => {
+        const result = await executeSpeechPlan(args);
+        return text(JSON.stringify(result, null, 2), !result.success);
+    },
+    tts_status: async (args) => text(JSON.stringify(speechStatus(args), null, 2)),
     tts_route: async (args) => {
         const result = await routeSpeech(speechRouteSchema.parse(args));
         return text(JSON.stringify(result, null, 2), 'success' in result && result.success === false);

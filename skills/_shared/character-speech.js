@@ -90,10 +90,11 @@ function plannedGenerationErrors(voice, proof, line) {
   return errors;
 }
 
-/** Pure local preflight used by both the gateway raw tool and tts_route. */
+/** Check the line binding before synthesis, including saved plans for hosted voices. */
 function validateSpeechContext(generator, args) {
   const context = args.speechContext;
-  const outputBoard = ['tts_astra_genai','tts_local_voxcpm2'].includes(generator) ? episodeBoardForOutput(args.outputPath) : undefined;
+  const requiresContext = ['tts_astra_genai','tts_local_voxcpm2'].includes(generator);
+  const outputBoard = (context || requiresContext) ? episodeBoardForOutput(args.outputPath) : undefined;
   if (!context) {
     if (outputBoard) throw new Error('speech_context_required: use speech_manage plan_audio for episode TTS');
     return;

@@ -815,10 +815,10 @@ social-flow/
 ├── mcp.json                     #   its stdio server entry
 ├── manifest.json                # Claude Desktop extension (.mcpb) manifest — .mcpbignore picks the contents
 ├── .mcp.json                    # internal MCP server registration (social-flow)
-├── server/                      # internal MCP server (TypeScript, stdio) — 172 tools
+├── server/                      # internal MCP server (TypeScript, stdio) — 176 tools
 │   └── src/
 │       ├── index.ts             # entry (publish/insights tools exposed per credential file)
-│       ├── tools.ts             # tool definitions — 172 tools, including voice auditions and opt-in acting review
+│       ├── tools.ts             # tool definitions — 176 tools, including voice auditions and opt-in acting review
 │       ├── handlers.ts          # zod validation + routing
 │       ├── sns-client.ts        # Threads·IG·FB·YouTube publish/comments
 │       ├── serp-client.ts       # SerpApi (key masking + response slimming)
@@ -853,7 +853,7 @@ social-flow/
 │   │   └── references/          #   scenes-schema.md (§structure — sequences · scenes · shots) · structure-contract.js (the rules storyboard_apply · check-scenes.js · storyboard.html share) · directing-grammar.md · motion-slide-template.html (studio ground · slab material · rendered object) · slide-design.md (look · motion tokens · the slide-reviewer rubric) · check-slide.js · rendered-object.md + bake-object.py (an SDF-raymarched object baked to a frame sheet, numpy + Pillow, ₩0 an episode) · blender-objects.md + bake-blender.py (the mesh recipe path-traced by Blender Cycles into the same sheet — real cast shadow, minutes of local GPU per cut, `--probe` forecasts them)
 │   ├── produce/                 # /social-flow:produce — stills (§1.5) → clips → slides (§3.6) → video build + per-platform text
 │   │   └── references/          #   build-reel.sh (subtitle-free master; `SUB_MODE` is a legacy burn-in switch the builder ignores) · speedup.sh (required final pace pass, 1.0 default, ≤6.2 chars/s) · bgm-bed.sh · bgm-scoring.md · video-template.html · render-motion-slide.mjs (motion slide → one clip per reveal group, no npm dependency) · QA harness
-│   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · raw TTS · not_reviewed)
+│   ├── edit-speech/             # /social-flow:edit-speech — targeted speech corrections for one shot or character (speech_manage · saved TTS plans · not_reviewed)
 │   ├── upscale-video/           # /social-flow:upscale-video — local Real-ESRGAN/Lanczos adapters, resumable batches; opt-in LTX re-render
 │   ├── generate-cover/          # /social-flow:generate-cover — the episode cover and thumbnail from a moment the cut shows, code-drawn copy, per-platform crops (episode_cover)
 │   │   └── references/          #   cover-template.html (copy layout page Chrome captures) · cover-font-data.js (cmap coverage of the bundled CJK faces)
@@ -895,7 +895,7 @@ channel's tone, theme and pinned character voice IDs (the speech model itself is
 
 <a id="mcp-tools"></a>
 
-## MCP tool surface (172 tools)
+## MCP tool surface (176 tools)
 
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
@@ -941,8 +941,8 @@ platform gate and stay listed without tokens — the YouTube scout needs
 | ASTRA GenAI job history | `astra_genai_jobs` | Read-only list of the token's recent gateway jobs (`GET /v1/jobs`), newest first, for a request whose response was lost before a job ID or result arrived: queued, running, succeeded, failed or cancelled, with the error code and a status URL. `gateway` picks `main`, `image`, `speech` or `desktop`, each with its own URL and key where configured. Rows carry no prompt; match by endpoint, model and time. A gateway older than the route answers with active jobs only and `history:false`. It never submits, downloads or reconciles a receipt. |
 | ASTRA GenAI model-bound gateway | `astra_genai_catalog` / `astra_genai_image_generate` / `astra_genai_image_edit` / `tts_astra_genai` / `astra_genai_desktop_text2video` / `astra_genai_desktop_img2video` / `astra_genai_desktop_audio2video` / `astra_genai_desktop_extend` / `astra_genai_desktop_retake` / `astra_genai_desktop_keyframes` / `astra_genai_desktop_status` | Explicit `astra-genai-native` image, `astra-genai` speech and `astra-genai-desktop` video engines on the newer gateway (same `ASTRA_GENAI_URL` and `ASTRA_GENAI_API_KEY`; `ASTRA_GENAI_IMAGE_URL`/`ASTRA_GENAI_SPEECH_URL` with their `_API_KEY` send model-bound images or speech to another gateway). Desktop can use its own `ASTRA_GENAI_DESKTOP_URL` and `ASTRA_GENAI_DESKTOP_API_KEY`. The catalog lists installed aliases and LoRAs; see `skills/_shared/astra-genai.md` (Model-bound gateway). |
 | ASTRA upload management | `astra_video_list_uploads` / `astra_video_delete_upload` | List uploads with no arguments; delete one with `uploadId` after user approval. Requires `ASTRA_VIDEO` and server endpoint support. Uploads expire after 24h, with 200 files per key. Unsupported endpoints and invalid responses return errors; live verification is pending. |
-| Common speech routing | `tts_route` | Read capabilities, validate a plan, or execute with a stable request ID. Existing raw tools share model, payload, output and concurrency checks. [TTS layers and recovery](skills/_shared/tts-routing.md). |
-| Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production uses raw generators and records `not_reviewed`. |
+| Common speech routing | `tts_catalog` / `tts_plan` / `tts_execute` / `tts_status` | Inspect models, save a take, execute by plan ID and read its receipt. Existing `tts_route` calls share the same execution and replay checks. [TTS layers and recovery](skills/_shared/tts-routing.md). |
+| Optional checked narration | `tts_generate_checked` | Legacy single-take synthesis wrapper with no automatic listening, scoring or retakes. New production executes saved TTS plans and records `not_reviewed`. |
 | Host media review | `host_review`, `acting_review`, `tts_review_acting`, `tts_review_final` | On request: prepare local media and record the executing host LLM’s actual observations; findings are evidence, not a delivery gate. No external evaluation API. Sampled frames support composition only; unsupported playback or listening stays unverified. |
 | Pronunciation dictionary | `tts_elevenlabs_dictionary` | Creates Korean alias rules and returns pinned dictionary/version IDs for `pronunciationDictionaryLocators`. Keep the source name intact and test the actual pronunciation. |
 | Voice identity design | `tts_voice_design` | Create a stored Gemini voice from age, timbre and accent, or remix `baseVoice`. Saves a WAV preview, reusable `voice_` ID and provider usage receipt. See [voice design](skills/_shared/gemini-voice-design.md). |
@@ -1220,7 +1220,7 @@ New storyboards assign stable line ids, explicit speakers (narrator included) an
 modes. `speech_manage` lists, prepares, patches and binds audio to dialogue, and plans video
 from adapter capabilities. Per-line `acting` separates situation, intent, emotion, vocal and
 visual direction from the pinned character voice, with optional reaction time before/after
-speech. `plan_audio` returns the selected raw generator arguments and unsupported-control
+speech. `plan_audio` returns the line-bound `ttsPlan` fields, generator arguments and unsupported-control
 warnings; production uses those arguments instead of repeating one generic character tone.
 Video prompts use the same beat and a matching source-image state. Distinct emotional beats
 are not concatenated by shared image and sliced at arbitrary audio boundaries.
