@@ -301,7 +301,7 @@ export function prepareVideoVoice(tool, input, context) {
             if (context.sceneDirection) {
                 const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
                 const imageSlot = image ?? owner?.images[0];
-                const deliveryCue = sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
+                const deliveryCue = context.briefDelivery ? '' : sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
                 const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
                 return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
             }

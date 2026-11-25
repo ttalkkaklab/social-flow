@@ -6,7 +6,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema } from './msr-opening.js';
-import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
+import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualParts, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection } from './video-prompt.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel } from './scene-prompt-profile.js';
@@ -207,7 +207,10 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
         !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut')));
     const cutTiming = options.profile?.cutTiming;
     const directedCuts = cutTiming === 'time_ranges' || cutTiming === 'action_beats';
-    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.namedReferencesOnly, options.guideMode, options.guideLimit, modelPacedCuts && (options.bindDialogue || directedCuts));
+    const concise = modelPacedCuts && (options.bindDialogue || directedCuts);
+    const timeline = compileSceneTimeline(members, scene, episode, board, coverage, options.namedReferencesOnly, options.guideMode, options.guideLimit, concise);
+    const fitStep = options.fitStep ?? 0;
+    const fitted = fitStep ? fitSceneTimeline(timeline, members, scene, coverage, concise, fitStep) : timeline;
     const common = coverage.common;
     const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
     const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(' ');
@@ -218,9 +221,9 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const suffix = (value) => [value, options.suffix].filter(Boolean).join(' ');
     const prompt = suffix(openingPrompt(complete, scene.openingPositions));
     const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
-    const providerTimeline = sceneTimelineWords(timeline, scene, {
+    const providerTimeline = sceneTimelineWords(fitted, scene, {
         ...providerTiming, includeDialogue: !options.bindDialogue,
-        describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue,
+        describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3,
     });
     const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
     const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
@@ -247,9 +250,37 @@ export function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, 
     const bindSceneTurns = (prompt, turns, describeDelivery = true) => {
         if (!prompt.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
             throw new Error('scene_dialogue_binding: the dialogue no longer matches the planned shot sequence');
-        return prompt.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { ...providerTiming, boundTurns: turns, describeDelivery }));
+        return prompt.replace(providerTimeline, () => sceneTimelineWords(fitted, scene, { ...providerTiming, boundTurns: turns, describeDelivery: describeDelivery && fitStep < 3 }));
     };
     return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
+}
+/**
+ * A GenAI scene over its model's prompt cap is composed again with fewer optional words (user's choice 2026-11-25). Step 1
+ * says each sentence once and shortens the panel sentence; 2 leaves out design notes (opening attention, crop and
+ * viewpoint, depth, accents, lighting); 3 the timed acting beats and delivery direction; 4 expressions; 5 per-shot sound,
+ * blocking, closing states, screen axis and continuity. Size, angle, camera move, focus, action and lines always stay.
+ */
+export const SCENE_FIT_STEPS = ['repeated sentences and the long panel sentence', 'design notes', 'timed acting beats and delivery direction',
+    'expressions', 'per-shot sound, blocking, closing states, axis and continuity'];
+function fitSceneTimeline(timeline, members, scene, coverage, concise, step) {
+    // A sentence whose words, after any short label, were already said adds nothing.
+    const body = (text) => text.replace(/^[^.:"]{1,40}:\s*/, '').replace(/[.\s]+$/, '').toLowerCase();
+    const drop = new Set([...(step >= 2 ? ['view', 'depth', 'accent', 'design'] : []),
+        ...(step >= 4 ? ['expression'] : []), ...(step >= 5 ? ['end', 'space'] : [])]);
+    return { ...timeline, shots: timeline.shots.map((shot, index) => {
+            const card = members[index], notes = sceneShotNotes(card, concise), said = [];
+            const keep = (text) => text && !said.some(earlier => earlier.toLowerCase().includes(body(text))) ? (said.push(text), text) : '';
+            const framing = shotVisualParts(card, coverage.shots[index], coverage.common, concise ? '' : notes.end, card.timeline?.framing, concise).filter(part => !drop.has(part.kind))
+                .flatMap(part => part.kind === 'view' ? part.text.split(/(?=Opening (?:attention|crop|viewpoint): )/).map(text => text.trim()) : [part.text])
+                .map(keep).filter(Boolean).join(' ');
+            const blocking = step >= 5 ? '' : keep(notes.blocking);
+            const action = [keep(notes.action || (members.length === 1 ? scene.action || scene.emotion : '')),
+                ...(step >= 3 ? [] : notes.beats.map(keep))].filter(Boolean).join(' ');
+            const { blocking: _blocking, sound, closingState, ...rest } = shot;
+            const dialogue = step >= 3 ? shot.dialogue?.map(({ direction: _direction, ...line }) => line) : shot.dialogue;
+            return { ...rest, framing: framing || shot.framing, action, ...(dialogue ? { dialogue } : {}), ...(blocking ? { blocking } : {}),
+                ...(step < 5 && sound ? { sound } : {}), ...(step < 5 && closingState ? { closingState } : {}) };
+        }) };
 }
 export class SceneInputError extends Error {
     tool;

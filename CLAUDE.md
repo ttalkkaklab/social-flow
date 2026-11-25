@@ -606,7 +606,13 @@ cast with the panels the sheet rule gives that many (one: face, front, back; two
 each front; three or four: one face each), and a person who enters later gets an opening row that
 says so; more than four is refused (`scene_cast_exceeded`). An ending or timed picture inside a
 shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
-each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The direct tools and
+each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The gateway
+caps the numbered scene prompt (2,000 characters on `ltx-2.5-22b-distilled`); a longer one is
+composed again with fewer optional words, in order: repeated sentences and the long panel sentence,
+design notes, timed acting beats and delivery cues, expressions, then per-shot sound, blocking,
+closing states, axis and continuity. Size, angle, camera move, action and lines stay, the plan
+names what went (`scene_prompt_fitted`), and a scene still over at the last step is refused before
+any upload (`scene_prompt_too_long`) (user's choice, 2026-11-25). The direct tools and
 the live character use the common modes `text2video`, `image2video`, `audio2video` and `msr`;
 the gateway refuses at submission what its backend does not take. Clips the retired per-shot
 route made keep their receipts and are still verified and assembled, each card counted as its

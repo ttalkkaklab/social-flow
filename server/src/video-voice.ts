@@ -28,6 +28,8 @@ const fileHash = (file: string) => createHash('sha256').update(readFileSync(file
 
 interface VoiceContext {
   bindSceneTurns?: (prompt:string, turns:string[]) => string;
+  /** A scene fitted to its model's prompt cap leaves each line's delivery cue out. */
+  briefDelivery?: boolean;
   timed?: boolean;
   modelVoice?: boolean;
   sceneDirection?: { openingPositions: { character: string; position: string; images: number[] }[] };
@@ -318,7 +320,7 @@ export function prepareVideoVoice(tool: string, input: Record<string, unknown>, 
       if (context.sceneDirection) {
         const owner = context.sceneDirection.openingPositions.find(p => p.character === id);
         const imageSlot = image ?? owner?.images[0];
-        const deliveryCue = sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
+        const deliveryCue = context.briefDelivery ? '' : sceneVoiceDirection(object(line.acting), text(line.tts), legacyScene);
         const binding = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === 'off_screen' && 'off screen'].filter(Boolean).join(', ');
         return `${deliveryCue ? deliveryCue + ' ' : ''}${id}${binding ? ' (' + binding + ')' : ''}: "${text(line.tts)}"`;
       }

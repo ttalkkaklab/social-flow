@@ -132029,21 +132029,27 @@ function sceneShotNotes(card, concise = false) {
     beats: [...notes.beats, ...notes.motion].map(english2).filter(Boolean)
   };
 }
-function shotVisualWords(shot, rows2, common7, end, framing, concise = false) {
+function shotVisualParts(shot, rows2, common7, end, framing, concise = false) {
   const dir = shotVisualDirection(shot, concise), visual = object4(shot.visual), camera = object4(visual.camera);
   const expression = expressionWords(shot);
-  return [...new Set([
-    framing,
-    dir.framing,
-    ...dir.openingView,
-    dir.focusWords,
-    dir.depthWords,
-    ...dir.accentWords,
-    ...Object.entries(rows2).filter(([key]) => !common7[key]).map(([key, row]) => attributeWords(key, row, camera)),
-    dir.settle && sentence("Closing frame: " + dir.settle),
-    expression && sentence("Expressions: " + expression),
-    end && sentence("End on " + end)
-  ].filter((v) => !!v && !nonEnglishOutsideQuotes(v)))].join(" ");
+  const rowKind = (key) => key === "camera" ? "camera" : ["lighting", "attention"].includes(key) ? "design" : "space";
+  const parts = [
+    { kind: "framing", text: framing },
+    { kind: "framing", text: dir.framing },
+    ...dir.openingView.map((text4) => ({ kind: "view", text: text4 })),
+    { kind: "focus", text: dir.focusWords },
+    { kind: "depth", text: dir.depthWords },
+    ...dir.accentWords.map((text4) => ({ kind: "accent", text: text4 })),
+    ...Object.entries(rows2).filter(([key]) => !common7[key]).map(([key, row]) => ({ kind: rowKind(key), text: attributeWords(key, row, camera) })),
+    { kind: "settle", text: dir.settle && sentence("Closing frame: " + dir.settle) },
+    { kind: "expression", text: expression && sentence("Expressions: " + expression) },
+    { kind: "end", text: end && sentence("End on " + end) }
+  ];
+  const seen = /* @__PURE__ */ new Set();
+  return parts.filter((part) => typeof part.text === "string" && Boolean(part.text) && !nonEnglishOutsideQuotes(part.text) && !seen.has(part.text) && Boolean(seen.add(part.text)));
+}
+function shotVisualWords(shot, rows2, common7, end, framing, concise = false) {
+  return shotVisualParts(shot, rows2, common7, end, framing, concise).map((part) => part.text).join(" ");
 }
 function compileVideoPrompt(shot, source2, names = {}, options = {}) {
   const plan2 = object4(shot.shot), visual = object4(shot.visual), frames = object4(visual.frames), camera = object4(visual.camera);
@@ -132139,7 +132145,7 @@ function nearestRatio(width, height) {
   return ratios.reduce((best, ratio) => value2(ratio) < value2(best) ? ratio : best);
 }
 var PANEL_VIEWS = { face: "face", front: "headless front body", back: "headless back body" };
-function msrPanelBinding(paths3, refs, compact5 = false) {
+function msrPanelBinding(paths3, refs, compact5 = false, brief = false) {
   const groups = /* @__PURE__ */ new Map();
   const fitting = /* @__PURE__ */ new Set();
   paths3.forEach((file3, i2) => {
@@ -132156,6 +132162,7 @@ function msrPanelBinding(paths3, refs, compact5 = false) {
     groups.set(folder, [...groups.get(folder) ?? [], `Image ${i2 + 1} (${PANEL_VIEWS[view]})`]);
     if (panels[view].wardrobe === "fitting") fitting.add(folder);
   });
+  if (brief) return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => `${items.join(", ")}: one person, ${path20.basename(folder)}.`).join("\n");
   return [...groups].filter(([, items]) => items.length > 1).map(([folder, items]) => compact5 ? `Images ${items.map((item) => item.replace(/Image (\d+) \(([^)]+)\)/, "$1($2)")).join(", ")}: ONE ${path20.basename(folder)}; head/hair only from face; ${fitting.has(folder) ? "physique from body, wardrobe from the scene" : "physique/clothes only from body"}; ignore face-panel clothing.` : `${items.join(", ")} show one character, ${path20.basename(folder)}: render one complete character with the head and hair from the face and ${fitting.has(folder) ? "physique from the body panels, dressed for the scene" : "the body and outfit from the headless panels"}. Ignore clothing visible in the face panel; never duplicate a person for separate panels.`).join("\n");
 }
 function characterKey(file3) {
@@ -132258,7 +132265,7 @@ function sceneTimedImages(members, fps, genai) {
   }
   return timeline;
 }
-function prepareVideoImages(tool2, input, shot, episode, members) {
+function prepareVideoImages(tool2, input, shot, episode, members, briefPanels = false) {
   const visual = shot.visual ?? {};
   const routing = imageRouting();
   const frames = routing.framePlan(shot);
@@ -132479,7 +132486,7 @@ function prepareVideoImages(tool2, input, shot, episode, members) {
       put2("references", paths3.map((file3, i2) => msrReference(file3, ordered2[i2].role)));
       args.prompt = [
         ...ordered2.map((ref, i2) => `Image ${i2 + 1}: ${ref.role}, ${ref.purpose}${routing.referenceConstraints(ref) ? " " + routing.referenceConstraints(ref) : ""}`),
-        msrPanelBinding(paths3, ordered2),
+        msrPanelBinding(paths3, ordered2, false, briefPanels),
         "",
         String(args.prompt ?? "")
       ].filter(Boolean).join("\n");
@@ -132749,7 +132756,7 @@ function prepareVideoVoice(tool2, input, context2) {
       if (context2.sceneDirection) {
         const owner2 = context2.sceneDirection.openingPositions.find((p) => p.character === id2);
         const imageSlot = image2 ?? owner2?.images[0];
-        const deliveryCue = sceneVoiceDirection(object5(line.acting), text2(line.tts), legacyScene);
+        const deliveryCue = context2.briefDelivery ? "" : sceneVoiceDirection(object5(line.acting), text2(line.tts), legacyScene);
         const binding2 = [imageSlot && img(imageSlot), audio && aud(audio), line.delivery === "off_screen" && "off screen"].filter(Boolean).join(", ");
         return `${deliveryCue ? deliveryCue + " " : ""}${id2}${binding2 ? " (" + binding2 + ")" : ""}: "${text2(line.tts)}"`;
       }
@@ -132959,6 +132966,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const modelPacedCuts = members.length > 1 && (options.sceneMode || ownsFrames && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut")));
   const cutTiming = options.profile?.cutTiming;
   const directedCuts = cutTiming === "time_ranges" || cutTiming === "action_beats";
+  const concise = modelPacedCuts && (options.bindDialogue || directedCuts);
   const timeline = compileSceneTimeline(
     members,
     scene,
@@ -132968,8 +132976,10 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     options.namedReferencesOnly,
     options.guideMode,
     options.guideLimit,
-    modelPacedCuts && (options.bindDialogue || directedCuts)
+    concise
   );
+  const fitStep = options.fitStep ?? 0;
+  const fitted = fitStep ? fitSceneTimeline(timeline, members, scene, coverage2, concise, fitStep) : timeline;
   const common7 = coverage2.common;
   const camera = sceneCameraDirection([], common7.camera && attributeWords("camera", common7.camera));
   const staging = Object.entries(common7).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(" ");
@@ -132980,10 +132990,10 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const suffix = (value2) => [value2, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
   const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
-  const providerTimeline = sceneTimelineWords(timeline, scene, {
+  const providerTimeline = sceneTimelineWords(fitted, scene, {
     ...providerTiming,
     includeDialogue: !options.bindDialogue,
-    describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue
+    describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3
   });
   const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions, (index) => formatReferenceLabel(options.profile?.referenceLabels ?? "indexed", "image", index)));
@@ -133017,9 +133027,52 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const bindSceneTurns = (prompt2, turns, describeDelivery = true) => {
     if (!prompt2.includes(providerTimeline) || turns.length !== timeline.shots.reduce((n, shot) => n + (shot.dialogue?.length ?? 0), 0))
       throw new Error("scene_dialogue_binding: the dialogue no longer matches the planned shot sequence");
-    return prompt2.replace(providerTimeline, () => sceneTimelineWords(timeline, scene, { ...providerTiming, boundTurns: turns, describeDelivery }));
+    return prompt2.replace(providerTimeline, () => sceneTimelineWords(fitted, scene, { ...providerTiming, boundTurns: turns, describeDelivery: describeDelivery && fitStep < 3 }));
   };
   return { request, providerPrompt, camera, mapped: mapInputs(request), bindSceneTurns };
+}
+var SCENE_FIT_STEPS = [
+  "repeated sentences and the long panel sentence",
+  "design notes",
+  "timed acting beats and delivery direction",
+  "expressions",
+  "per-shot sound, blocking, closing states, axis and continuity"
+];
+function fitSceneTimeline(timeline, members, scene, coverage2, concise, step) {
+  const body = (text4) => text4.replace(/^[^.:"]{1,40}:\s*/, "").replace(/[.\s]+$/, "").toLowerCase();
+  const drop = /* @__PURE__ */ new Set([
+    ...step >= 2 ? ["view", "depth", "accent", "design"] : [],
+    ...step >= 4 ? ["expression"] : [],
+    ...step >= 5 ? ["end", "space"] : []
+  ]);
+  return { ...timeline, shots: timeline.shots.map((shot, index) => {
+    const card = members[index], notes = sceneShotNotes(card, concise), said = [];
+    const keep2 = (text4) => text4 && !said.some((earlier) => earlier.toLowerCase().includes(body(text4))) ? (said.push(text4), text4) : "";
+    const framing = shotVisualParts(
+      card,
+      coverage2.shots[index],
+      coverage2.common,
+      concise ? "" : notes.end,
+      card.timeline?.framing,
+      concise
+    ).filter((part) => !drop.has(part.kind)).flatMap((part) => part.kind === "view" ? part.text.split(/(?=Opening (?:attention|crop|viewpoint): )/).map((text4) => text4.trim()) : [part.text]).map(keep2).filter(Boolean).join(" ");
+    const blocking = step >= 5 ? "" : keep2(notes.blocking);
+    const action2 = [
+      keep2(notes.action || (members.length === 1 ? scene.action || scene.emotion : "")),
+      ...step >= 3 ? [] : notes.beats.map(keep2)
+    ].filter(Boolean).join(" ");
+    const { blocking: _blocking, sound, closingState, ...rest } = shot;
+    const dialogue = step >= 3 ? shot.dialogue?.map(({ direction: _direction, ...line }) => line) : shot.dialogue;
+    return {
+      ...rest,
+      framing: framing || shot.framing,
+      action: action2,
+      ...dialogue ? { dialogue } : {},
+      ...blocking ? { blocking } : {},
+      ...step < 5 && sound ? { sound } : {},
+      ...step < 5 && closingState ? { closingState } : {}
+    };
+  }) };
 }
 var SceneInputError = class extends Error {
   constructor(tool2, sceneRequest, missing, model2, resolution3) {
@@ -134400,7 +134453,7 @@ async function prepareManagedPlan(input) {
   const resolved = resolvePlanContext(input);
   const { context: context2 } = resolved;
   if (context2.selection.engine === "astra-genai") await refreshGenaiVideoCatalog();
-  let plan2 = buildVideoPlan(input, resolved, false);
+  let plan2 = buildFittedPlan(input, resolved, false);
   if (plan2.tool === "astra_genai_scene") return saveVideoPlan({ ...plan2, sceneValidation: await validateGenaiScenePlan(plan2) });
   if (plan2.characterBindings) await checkRegisteredBindings(plan2.characterBindings);
   if (plan2.tool === "seedance_reference" && plan2.args.referenceVideoTaskIds)
@@ -134411,7 +134464,7 @@ async function prepareManagedPlan(input) {
     const duration5 = await checkDesktopOffering(plan2.args, minimum);
     if (minimum !== void 0 && duration5 !== plan2.args.durationSeconds) {
       const { requiredSeconds: _required, ...args } = input.args;
-      plan2 = buildVideoPlan({ ...input, args: { ...args, durationSeconds: duration5 } }, resolved, false);
+      plan2 = buildFittedPlan({ ...input, args: { ...args, durationSeconds: duration5 } }, resolved, false);
     }
   }
   if (plan2.sceneRequest) await checkSceneDeployment(plan2.sceneRequest, plan2.tool, plan2.args);
@@ -134419,7 +134472,16 @@ async function prepareManagedPlan(input) {
 }
 function planVideo(raw, persist = true) {
   const input = videoPlanSchema.parse(raw);
-  return buildVideoPlan(input, resolvePlanContext(input), persist);
+  return buildFittedPlan(input, resolvePlanContext(input), persist);
+}
+function buildFittedPlan(input, resolved, persist) {
+  for (let step = 0; ; step++) {
+    try {
+      return buildVideoPlan(input, resolved, persist, step);
+    } catch (error2) {
+      if (!resolved.sceneTool || input.prompt !== void 0 || step >= SCENE_FIT_STEPS.length || !(error2 instanceof Error) || !error2.message.startsWith("scene_prompt_too_long")) throw error2;
+    }
+  }
 }
 function genaiSceneArgs(sceneTool, args, scene, openingPath, storyboard, slots, script, selection) {
   const request = "shots" in scene ? scene : void 0;
@@ -134493,7 +134555,7 @@ function numberedImages(args, bindings = [], speakers = [], cast, episode, first
     return { number: number3, owner: guide ? void 0 : owner, role: role2, id: binding.id, shotId: scene.shotId ?? (binding.id === "start" ? firstShot : void 0), guide };
   });
 }
-function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, persist) {
+function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, persist, fitStep = 0) {
   const sourceArgs = input.args;
   const speakers = context2.speechRoute.speakers;
   const opening = context2.speechRoute.opening;
@@ -134650,6 +134712,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
       guideMode,
       guideLimit,
       sceneMode: Boolean(sceneTool),
+      fitStep,
       profile: promptProfile,
       namedReferencesOnly: tool2 === "seedance_reference" || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.subjectAssets)
     },
@@ -134714,6 +134777,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   }
   for (const pin of sceneTool ? sceneRequest?.images.filter((image2) => !image2.reference && ["end", "keyframe"].includes(image2.role)) ?? [] : [])
     cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
+  if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join("; ")}`);
   const sentImages = new Set(sceneRequest?.images.map((image2) => image2.path));
   const boardCards = sceneTool && sceneRequest ? (context2.board.SCENES ?? []).filter((card) => card.scene === context2.sceneNo) : [];
   for (const card of boardCards) for (const ref of card.visual?.references ?? []) {
@@ -134794,7 +134858,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     if (cast.length && sourceBinder) args2 = sourceBinder(args2, cast);
     if (timedImages2) return { args: args2, imageBindings: timedImages2.imageBindings };
     if (sceneRequest && !sceneRequest.images.length) return { args: args2, imageBindings: void 0 };
-    const images2 = prepareVideoImages(tool2, args2, shot, context2.episode);
+    const images2 = prepareVideoImages(tool2, args2, shot, context2.episode, void 0, Boolean(sceneTool) && fitStep > 0);
     const extra = prepared?.mapped.gatewayKeyframes;
     if (!extra) return images2;
     return { args: { ...images2.args, ...extra.args }, imageBindings: [...images2.imageBindings ?? [], ...extra.imageBindings] };
@@ -134806,6 +134870,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     shot,
     msrVoice: genaiSceneVoices(String(selection.model)),
     modelVoice,
+    briefDelivery: Boolean(sceneTool) && fitStep >= 3,
     bindSceneTurns: bindTurns && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : void 0
   };
   const voiceFor = (callArgs2, voiceContext2) => {

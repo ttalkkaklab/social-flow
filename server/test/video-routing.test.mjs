@@ -1992,7 +1992,20 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
     ['s0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'back')]);
   // The person who enters later still has an opening row, so the gateway is told where they start.
   assert.match(plan.args.prompt, /guest \(\{guest\.face\}, \{guest\.front\}\): Not in the opening view; appears in a later shot\./);
-  // The gateway caps the numbered prompt; a longer scene is refused before any file is uploaded.
+  // Over the cap the scene is composed again with fewer optional words, in a fixed order: design notes and expressions
+  // go, the action and lines stay, and the plan says what was left out.
+  const host = f.board.SCENES[0].visual;
+  host.camera = {framing:'The host stands at the left by the open door under the hall lamp. '.repeat(14).trim()};
+  host.expression = {hero:'brows raised, lips parted and shoulders drawn up toward the door. '.repeat(24).trim()};
+  f.save();
+  const fitted = planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false);
+  assert.match(fitted.directionWarnings.find(warning => warning.startsWith('scene_prompt_fitted')),
+    /cap the scene leaves out repeated sentences and the long panel sentence; design notes; timed acting beats and delivery direction; expressions$/);
+  assert.doesNotMatch(fitted.args.prompt, /hall lamp|brows raised/);
+  assert.match(fitted.args.prompt, /The host waits\.[\s\S]*The guest steps in\./);
+  // The short panel sentence keeps every reference name whole, so the gateway's numbering still reaches it.
+  assert.match(fitted.args.prompt, /\{hero\.face\} \(face\), \{hero\.front\} \(headless front body\): one person, hero\./);
+  // The gateway caps the numbered prompt; a scene still longer at the last step is refused before any file is uploaded.
   f.board.SCENES[1].visual.action = 'The guest steps in. '.repeat(100).trim();
   f.save();
   assert.throws(() => planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false), /scene_prompt_too_long: scene prompt runs \d+ characters after numbering; ltx-2\.5-22b-distilled takes at most 2000/);

@@ -1,4 +1,4 @@
-import { bindRegisteredPanels, prepareSceneRequest, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
+import { bindRegisteredPanels, prepareSceneRequest, SCENE_FIT_STEPS, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
 import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
@@ -521,7 +521,7 @@ async function prepareManagedPlan(input: PlanInput) {
   const resolved = resolvePlanContext(input);
   const { context } = resolved;
   if (context.selection.engine === 'astra-genai') await refreshGenaiVideoCatalog();
-  let plan = buildVideoPlan(input, resolved, false);
+  let plan = buildFittedPlan(input, resolved, false);
   if (plan.tool === 'astra_genai_scene') return saveVideoPlan({...plan, sceneValidation:await validateGenaiScenePlan(plan)});
   if (plan.characterBindings) await checkRegisteredBindings(plan.characterBindings);
   if (plan.tool === 'seedance_reference' && plan.args.referenceVideoTaskIds)
@@ -533,7 +533,7 @@ async function prepareManagedPlan(input: PlanInput) {
     const duration = await checkDesktopOffering(plan.args, minimum);
     if (minimum !== undefined && duration !== plan.args.durationSeconds) {
       const { requiredSeconds: _required, ...args } = input.args;
-      plan = buildVideoPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
+      plan = buildFittedPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
     }
   }
   if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
@@ -542,7 +542,17 @@ async function prepareManagedPlan(input: PlanInput) {
 
 export function planVideo(raw: unknown, persist = true): VideoPlan {
   const input = videoPlanSchema.parse(raw);
-  return buildVideoPlan(input, resolvePlanContext(input), persist);
+  return buildFittedPlan(input, resolvePlanContext(input), persist);
+}
+/** A GenAI scene over its model's prompt cap is composed again with fewer optional words, one step at a time. An authored prompt is the author's to fit. */
+function buildFittedPlan(input: PlanInput, resolved: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
+  for (let step = 0; ; step++) {
+    try { return buildVideoPlan(input, resolved, persist, step); }
+    catch (error) {
+      if (!resolved.sceneTool || input.prompt !== undefined || step >= SCENE_FIT_STEPS.length ||
+          !(error instanceof Error) || !error.message.startsWith('scene_prompt_too_long')) throw error;
+    }
+  }
 }
 
 /** Hand a scene composed as one LTX MSR render to the GenAI scene adapter: the references become a cast and references
@@ -608,7 +618,7 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
     return {number, owner: guide ? undefined : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === 'start' ? firstShot : undefined), guide};
   });
 }
-function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
+function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType<typeof resolvePlanContext>, persist: boolean, fitStep = 0): VideoPlan {
   const sourceArgs = input.args;
   const speakers = context.speechRoute!.speakers;
   const opening = context.speechRoute!.opening;
@@ -766,7 +776,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     ? SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL) as SeedanceModel]?.referenceImages[1]
     : guideMode === 'composition' ? 9 : undefined;
   const prepared = scene && context.timed ? prepareSceneRequest(context.sceneNo!, members, scene, context.episode, lines,
-    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit, sceneMode:Boolean(sceneTool),
+    { bindDialogue:bindTurns, bindOpening, suffix:silentSuffix, guideMode, guideLimit, sceneMode:Boolean(sceneTool), fitStep,
       profile:promptProfile,
       namedReferencesOnly:tool === 'seedance_reference' || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.subjectAssets) }, request => {
       try { return bindSceneAdapter(request, tool ?? 'host_external', selection.model, shot, input.args, context.episode, selection.resolution); }
@@ -837,6 +847,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   // Scene mode takes one picture per shot: an ending or a timed picture inside a shot is not sent, and is named here.
   for (const pin of sceneTool ? sceneRequest?.images.filter(image => !image.reference && ['end', 'keyframe'].includes(image.role)) ?? [] : [])
     cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
+  if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join('; ')}`);
   // The scene sends one cast by the sheet rule for its head count, so a panel a shot named on its own can drop out.
   const sentImages = new Set(sceneRequest?.images.map(image => image.path));
   const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: unknown; scene?: unknown; visual?: {references?: {role?: string; use?: string; path?: string}[]}}[])
@@ -909,14 +920,14 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     if (cast.length && sourceBinder) args = sourceBinder(args, cast);
     if (timedImages) return { args, imageBindings: timedImages.imageBindings };
     if (sceneRequest && !sceneRequest.images.length) return { args, imageBindings: undefined };
-    const images = prepareVideoImages(tool, args, shot, context.episode);
+    const images = prepareVideoImages(tool, args, shot, context.episode, undefined, Boolean(sceneTool) && fitStep > 0);
     const extra = prepared?.mapped.gatewayKeyframes;
     if (!extra) return images;
     return { args: { ...images.args, ...extra.args }, imageBindings: [...(images.imageBindings ?? []), ...extra.imageBindings] };
   };
   if (modelVoice) bound.generateAudio = true;
   let images = bindImages(bound);
-  const voiceContext = { ...context, shot, msrVoice: genaiSceneVoices(String(selection.model)), modelVoice,
+  const voiceContext = { ...context, shot, msrVoice: genaiSceneVoices(String(selection.model)), modelVoice, briefDelivery: Boolean(sceneTool) && fitStep >= 3,
     bindSceneTurns: bindTurns && sceneRequest?.modelPacedCuts ? prepared?.bindSceneTurns : undefined };
   // A GenAI scene voices a speaker through a picture of that speaker; the image lane it is composed on says so in its own terms.
   const voiceFor = (callArgs: Record<string, unknown>, voiceContext: Parameters<typeof prepareVideoVoice>[2]) => {

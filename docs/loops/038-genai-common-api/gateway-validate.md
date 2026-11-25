@@ -60,11 +60,28 @@ Pundago scene 3 was also sent to the production `/v1/generations/validate` (free
 existed. The gateway refused it: `prompt_too_long`, 4,225 characters after substitution, at most 2,000 for
 `ltx-2.5-22b-distilled`. `/v1/models` reports the same 2,000 for the scene prompt.
 
-On pundago scene 3 (two shots, two people) the fixed part of the numbered prompt is about 1,190 characters: the opening
-positions (242), four reference lines, two "show one character" sentences of about 280 each, the voice line and the
-text-free sentence. That leaves about 810 characters for the shots, whose words run about 3,040. Turning on the timeline's
-`concise` flag changed nothing, since the shot words come from another path.
+On pundago scene 3 (two shots, two people) the fixed part of the numbered prompt was about 1,190 characters: the
+opening positions (242), four reference lines, two "show one character" sentences of about 280 each, the voice line and
+the text-free sentence. That left about 810 characters for shot words that ran about 3,040. Those words were already the
+timeline's `concise` form, and the planner's over-limit fallback did not run on this path, since its lines are bound
+without `bindSceneTurns`.
 
-Planning now refuses a scene prompt over the model's limit before any file is uploaded (`scene_prompt_too_long`). How a
-scene should fit the cap (a shorter reference grammar, a scene compiler that drops lower-priority words, a gateway cap
-change or shorter scenes) is the user's decision and is open as of this record.
+### Fitting the scene prompt (user's choice, 2026-11-25)
+
+The user chose to have the plugin fit the prompt. A scene over the cap is composed again in up to five steps: (1) each
+sentence said once and a short panel sentence that keeps every `Image N` whole, (2) design notes, (3) timed acting beats
+and delivery cues, (4) expressions, (5) per-shot sound, blocking, closing states, axis and continuity. Size, angle,
+camera move, action and lines always stay. The plan names the steps taken (`scene_prompt_fitted`); a scene still over
+at step 5 is refused before any upload (`scene_prompt_too_long`).
+
+| Pundago scene | Before | After fitting | Production `/v1/generations/validate` |
+|---|---|---|---|
+| 1 (2 shots) | 6,315 | 2,935, refused | not sent |
+| 2 (5 shots) | 7,234 | 2,531, refused | not sent |
+| 3 (2 shots) | 4,224 | 1,817 at step 5 | accepted; resolved prompt equals the plan's |
+| 5 (2 shots) | 4,191 | under 2,000 at step 5 | accepted; resolved prompt equals the plan's |
+
+Scenes 1 and 2 stay over because their authored shot framing and action sentences are long (scene 1's first shot
+action alone runs 773 characters); they need shorter shot text or a split. With the other refusals unchanged
+(pundago 4, 6, 7 and mochi_bo 5 over 361 frames; mochi_bo 1 to 4 and 6 driven by a supplied soundtrack), 2 of the 13
+scenes plan and validate. No render was submitted.
