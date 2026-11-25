@@ -37,7 +37,7 @@ export const genaiSceneSchema = z.object({
   prompt: z.string().min(1).max(16000).describe('The whole scene in one prompt. Name inputs with placeholders: {cast.role}, ' +
     '{cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them.'),
   cast: z.array(z.object({
-    id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(9),
+    id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
     voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
   }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two referenced people').default([]),
   references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),

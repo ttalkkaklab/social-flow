@@ -201,6 +201,10 @@ test('three speaking subjects exceed one distilled MSR render, including an unin
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest','friend']);
  const input={episode:f.episode,sceneNo:1,requestId:'three-voices',args:{reserveUsd:0}};
  const check=()=>planVideo(input);
+ // All three faces are explicitly bound at the opening, even though the third line arrives later.
+ assert.throws(check, e => e.report?.shotId === 's1' && !e.report.splitBefore.length);
+ f.board.STRUCTURE.scenes[0].videoDirection.openingPositions.pop();
+ f.save();
  assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.join() === 's3');
  const [shot]=f.board.SCENES;
  shot.narration=f.board.SCENES.flatMap(card=>card.narration);

@@ -35532,7 +35532,7 @@ var genaiSceneSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(16e3).describe("The whole scene in one prompt. Name inputs with placeholders: {cast.role}, {cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them."),
   cast: external_exports.array(external_exports.object({
     id,
-    images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(9),
+    images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
   }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),

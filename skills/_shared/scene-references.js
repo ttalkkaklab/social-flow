@@ -55,11 +55,11 @@ function sceneReferenceGroups(scene, cards, registry) {
     const staged = unique([...people, ...castIds(visual.bystanders), ...marks.map(mark => mark.character), ...lines.map(line => line.speaker)]);
     return {card, people:unique([...people, ...declared.filter(id => staged.includes(id))])};
   });
+  const opening = (scene.videoDirection?.openingPositions ?? []).filter(mark => mark.images?.length)
+    .map(mark => mark.character);
+  if (rows.length) rows[0].people = unique([...rows[0].people, ...opening]);
   // A scene-wide reference without any shot attribution cannot be dropped at a proposed cut.
   const unplaced = declared.filter(id => !rows.some(row => row.people.includes(id)));
-  const opening = (scene.videoDirection?.openingPositions ?? []).filter(mark => mark.images?.length)
-    .map(mark => mark.character).filter(id => !rows.some(row => row.people.includes(id)));
-  if (rows.length) rows[0].people = unique([...rows[0].people, ...opening]);
   const groups = [];
   let group;
   for (const {card, people} of rows) {

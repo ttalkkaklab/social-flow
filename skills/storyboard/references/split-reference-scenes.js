@@ -5,6 +5,7 @@ const { referenceOwners, sceneReferenceGroups, referenceConflict, castIds } = re
 const { readVideoSnapshot } = require('../../_shared/video-selection.js');
 const { resolveVideoChoice } = require('./production-mode.js');
 const { orderedSpeech } = require('./scene-direction.js');
+const { framePlan } = require('./render-routing.js');
 
 const spoken = cards => [...new Set(cards.flatMap(orderedSpeech).filter(line => line.tts?.trim()).map(line => line.speaker).filter(Boolean))];
 
@@ -17,8 +18,28 @@ function localTimeline(timeline, offset, first) {
     ...(timeline.dialogueCues ? {dialogueCues:shift(timeline.dialogueCues)} : {})};
 }
 
+function bindBoundaryFrame(part, card, role, pin, sceneOwnsFrames) {
+  const images = card.timeline?.images ?? [];
+  const sameFrame = image => image.frame === pin.frame && ['start','end','keyframe'].includes(image.role);
+  const previous = sceneOwnsFrames ? part.frames?.[role] : framePlan(card)[role];
+  if (previous && previous !== pin.path || images.some(image => sameFrame(image) && image.path !== pin.path))
+    throw new Error('scene_image_conflict: split ' + role + ' of ' + card.id + ' has two different pictures');
+  if (sceneOwnsFrames) {
+    part.frames ??= {};
+    part.frames[role] = pin.path;
+  }
+  if (card.timeline && (!sceneOwnsFrames || images.some(sameFrame))) {
+    card.timeline = {...card.timeline, images:[...images.filter(image => !sameFrame(image)), {...pin, role}]};
+  } else if (!sceneOwnsFrames) {
+    const frames = {...card.visual?.frames, [role]:pin.path};
+    frames.mode = role === 'end' || framePlan(card).end ? 'first_last' : frames.mode ?? 'first';
+    card.visual = {...card.visual, frames};
+  }
+}
+
 function assignGroups(scene, groups, cards, numbers) {
   const fps = scene.videoDirection?.fps ?? 24;
+  const sceneOwnsFrames = scene.frames !== undefined || scene.speakers !== undefined;
   let seconds = 0;
   const byId = new Map(cards.map(card => {
     const start = card.timeline?.startFrame ?? Math.round(seconds * fps);
@@ -38,7 +59,7 @@ function assignGroups(scene, groups, cards, numbers) {
     if (scene.speakers) part.speakers = [...new Set([...scene.speakers.filter(id => lines.includes(id)), ...lines])];
     if (scene.speakerReferences) part.speakerReferences = scene.speakerReferences.filter(ref => group.characters.includes(ref.character));
     const start = index === 0 ? scene.frames?.start : first.timeline?.images?.find(pin => pin.role === 'start')?.path ?? first.referenceImage ?? first.visual?.frames?.start;
-    if (scene.frames !== undefined || start) part.frames = {...(start ? {start} : {}), ...(last && scene.frames?.end ? {end:scene.frames.end} : {})};
+    if (scene.frames !== undefined || sceneOwnsFrames && start) part.frames = {...(start ? {start} : {}), ...(last && scene.frames?.end ? {end:scene.frames.end} : {})};
     if (index) delete part.videoOpeningSha256;
     if (scene.videoDirection) {
       const dir = {...scene.videoDirection};
@@ -46,15 +67,14 @@ function assignGroups(scene, groups, cards, numbers) {
       const marks = index ? first.timeline?.openingPositions ?? first.visual?.video?.openingPositions ?? [] : dir.openingPositions;
       const staged = new Set([...group.characters, ...castIds(first.visual?.bystanders)]);
       dir.openingPositions = (marks ?? []).filter(row => staged.has(row.character));
-      const pins = (dir.keyframes ?? []).filter(pin => pin.frame >= offset && pin.frame < end);
-      if (pins[0]?.frame === offset && index) {
-        // The old interior pin now belongs to the new opening.
-        part.frames ??= {};
-        if (part.frames.start && part.frames.start !== pins[0].path)
-          throw new Error('scene_image_conflict: split opening ' + first.id + ' has two different pictures');
-        part.frames.start = pins.shift().path;
+      const interior = [];
+      for (const pin of dir.keyframes ?? []) {
+        if (pin.frame < offset || pin.frame >= end) continue;
+        if (index && pin.frame === offset) bindBoundaryFrame(part, first, 'start', pin, sceneOwnsFrames);
+        else if (!last && pin.frame === end - 1) bindBoundaryFrame(part, members.at(-1), 'end', pin, sceneOwnsFrames);
+        else interior.push({...pin, frame:pin.frame - offset});
       }
-      if (pins.length) dir.keyframes = pins.map(pin => ({...pin, frame:pin.frame - offset}));
+      if (interior.length) dir.keyframes = interior;
       else delete dir.keyframes;
       delete dir.promptDrafts;
       part.videoDirection = dir;
@@ -66,12 +86,13 @@ function assignGroups(scene, groups, cards, numbers) {
       const frames = card.visual?.frames;
       if (frames?.storyboardKeyframes && frames.keyframes === undefined) {
         const shotStart = byId.get(card.id).start;
-        frames.storyboardKeyframes = frames.storyboardKeyframes.map(pin => {
+        const storyboardKeyframes = frames.storyboardKeyframes.map(pin => {
           if (pin.startFrame === undefined) return pin;
           const frame = pin.startFrame < shotStart && pin.startSeconds !== undefined
             ? shotStart + Math.round(pin.startSeconds * fps) : pin.startFrame;
           return {...pin, startFrame:frame - offset};
         });
+        card.visual = {...card.visual, frames:{...frames, storyboardKeyframes}};
       }
     }
     return part;

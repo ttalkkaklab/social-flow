@@ -531,6 +531,8 @@ describe('story first, then characters and lines', () => {
 
     // An older board kept both pairs in one scene. Previewing its repair preserves the original file.
     archive.win.SCENES.forEach((card,i) => { card.visual = {...card.visual, character:saved.SCENES[i].visual.character}; });
+    archive.win.STRUCTURE.scenes[0].videoDirection = {emotion:'The visitors relax.',openingPositions:positions(['ada','bo']),
+      keyframes:[{frame:72,path:'first.png'},{frame:48,path:'second.png'},{frame:47,path:'last.png'}]};
     archive.win.SCENES[1].visual.frames = {storyboardKeyframes:[{file:'second.png',startFrame:48},{file:'last.png',startFrame:95}]};
     const source = serializeBoard(archive.win,archive.header);
     writeFileSync(join(dir,'scenes.js'),source);
@@ -541,7 +543,36 @@ describe('story first, then characters and lines', () => {
     assert.equal(preview.written,false);
     assert.equal(readFileSync(join(dir,'scenes.js'),'utf8'),source);
     assert.equal(applyStoryboard(repair).written,true);
-    assert.deepEqual(readBoard(dir).win.SCENES[1].visual.frames.storyboardKeyframes.map(pin=>pin.startFrame),[0,47]);
+    const repaired = readBoard(dir).win;
+    assert.deepEqual(repaired.SCENES[1].visual.frames.storyboardKeyframes.map(pin=>pin.startFrame),[0,47]);
+    assert.equal(repaired.STRUCTURE.scenes[0].frames.end,'last.png');
+    assert.equal(repaired.STRUCTURE.scenes[0].videoDirection.keyframes,undefined);
+    assert.deepEqual(repaired.STRUCTURE.scenes[1].videoDirection.keyframes,[{frame:24,path:'first.png'}]);
+    for (const sceneNo of [1,3]) assert.equal(planVideo({episode:dirname(dir),sceneNo,requestId:'archived-'+sceneNo,args:{reserveUsd:0}},false).args.shots[0].frames,48);
+  });
+  it('keeps legacy per-shot artwork when splitting a GenAI scene with three shot openings', () => {
+    const root = mkdtempSync(join(tmpdir(),'sb-reference-')); dirs.push(root);
+    const video = {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'};
+    setupProject(root,{video});
+    const dir = join(root,'data/c/episodes/legacy/storyboard'); mkdirSync(dir,{recursive:true});
+    castFile(dir,['ada','bo','cy'],{root});
+    const marks = people => people.map(character => ({character,images:[],position:'By the door.'}));
+    const scene = {no:1,place:'Hall',time:'Day',event:'The key changes hands',videoDirection:{openingPositions:marks(['ada','bo']),
+      emotion:'The visitors relax.',keyframes:[{frame:48,path:'second.png'},{frame:47,path:'end.png'}]}};
+    const names = ['first.png','second.png','third.png'];
+    for (const name of [...names,'end.png']) writeFileSync(join(dir,name),png);
+    const cards = [['ada','bo'],['bo','cy'],['cy']].map((people,i) => ({...shot('points','body',1),id:'s000'+(i+1),duration:2,
+      narration:[],shot:{size:'ms',angle:'eye',render:{mode:'generated_video'}},
+      visual:{character:people,action:'They pass the key.',frames:{mode:'first',start:names[i]},video:{openingPositions:marks(people)}}}));
+    writeFileSync(join(dir,'scenes.js'),serializeBoard({PRODUCTION:{videoModel:video},STRUCTURE:structure([scene]),SCENES:cards}));
+    const update = applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
+    assert.ok(update.written, JSON.stringify(update.findings));
+    const repaired = readBoard(dir).win;
+    assert.deepEqual(repaired.STRUCTURE.scenes.map(scene=>scene.frames),[undefined,undefined]);
+    assert.deepEqual(repaired.SCENES.map(card=>contract().shotImage(repaired,card)),names);
+    assert.deepEqual(contract().imageGaps(repaired,2),[]);
+    assert.equal(repaired.SCENES[0].visual.frames.end,'end.png');
+    assert.deepEqual(planVideo({episode:dirname(dir),sceneNo:2,requestId:'legacy-part',args:{reserveUsd:0}},false).args.shots.map(s=>s.imagePath.split('/').at(-1)),names.slice(1));
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();

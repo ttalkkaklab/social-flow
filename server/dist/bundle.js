@@ -97611,9 +97611,9 @@ var require_scene_references = __commonJS({
         const staged = unique([...people, ...castIds(visual.bystanders), ...marks.map((mark) => mark.character), ...lines.map((line) => line.speaker)]);
         return { card, people: unique([...people, ...declared.filter((id2) => staged.includes(id2))]) };
       });
-      const unplaced = declared.filter((id2) => !rows2.some((row) => row.people.includes(id2)));
-      const opening = (scene.videoDirection?.openingPositions ?? []).filter((mark) => mark.images?.length).map((mark) => mark.character).filter((id2) => !rows2.some((row) => row.people.includes(id2)));
+      const opening = (scene.videoDirection?.openingPositions ?? []).filter((mark) => mark.images?.length).map((mark) => mark.character);
       if (rows2.length) rows2[0].people = unique([...rows2[0].people, ...opening]);
+      const unplaced = declared.filter((id2) => !rows2.some((row) => row.people.includes(id2)));
       const groups = [];
       let group;
       for (const { card, people } of rows2) {
@@ -128020,7 +128020,7 @@ var genaiSceneSchema = external_exports.object({
   prompt: external_exports.string().min(1).max(16e3).describe("The whole scene in one prompt. Name inputs with placeholders: {cast.role}, {cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them."),
   cast: external_exports.array(external_exports.object({
     id,
-    images: external_exports.array(external_exports.object({ role, imagePath: file2 }).strict()).min(1).max(9),
+    images: external_exports.array(external_exports.object({ role, imagePath: file2 }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file2.optional().describe("Pinned voice sample; it rides on the member's first picture.")
   }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file2 }).strict()).max(9).default([]),
