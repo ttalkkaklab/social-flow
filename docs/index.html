@@ -75,6 +75,8 @@
 <ul>
 <li><a href="#image-request-recovery">Recovering an interrupted image request</a></li>
 <li><a href="#stock-media">Stock media and attribution</a></li>
+<li><a href="https://github.com/ttalkkaklab/social-flow/blob/main/docs/research/2026-11-24-video-model-prompting/README.md">Video model prompt research and examples</a> and <a href="https://github.com/ttalkkaklab/social-flow/blob/main/docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md">scene prompt design</a></li>
+<li><a href="https://github.com/ttalkkaklab/social-flow/blob/main/docs/research/2026-11-25-reference-limits/index.html">Reference limits for MiniMax H3, LTX-2.5 MSR and Seedance</a>: characters, voices and shot pictures per request</li>
 <li><a href="#mlx-ltx-2.5">Local LTX video</a> and <a href="#fasth3-omni">FastH3 Omni video</a></li>
 <li><a href="#tool-contracts">MCP tool contracts</a> and the <a href="#pipeline-manifest">pipeline manifest</a></li>
 <li><a href="#design">Offline review pages</a>, <a href="#motion">motion graphics</a> and <a href="#fonts">bundled fonts</a></li>
@@ -439,6 +441,40 @@ node --import ./test/isolate.mjs --test --test-name-pattern='managed success|amb
 continue to resolve. New catalog-based LTX planning selects the canonical name.
 MLX-Serve is the internal backend; <code>engine:"mlx"</code> in saved settings is unchanged.
 No existing settings or episode snapshots are migrated implicitly.</p>
+<h2 id="fasth3-omni-mac-image-and-video-settings">Mac image and video settings</h2>
+<p>Select <code>{"engine":"mlx","model":"ddalcu/MiniMax-H3-Image-MLX-Serve-4bit"}</code> for
+images and <code>{"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","operation":"reference"}</code>
+for talking shots. The Mac image tools send requests directly to MLX-Serve.
+Check its model catalog for the installed image checkpoint. Use <code>image_plan</code>
+and <code>image_execute</code> for a managed generation or edit. For an edit, pass
+the source in <code>imagePath</code> and up to nine ordered <code>refImagePaths</code>. The result
+keeps the source dimensions up to the worker’s 6272-pixel long-side limit.
+The plan records the expected output size. The worker owns the six sampling steps. Use
+GPT Image 2 when the image must display or preserve readable text.</p>
+<p>Managed direct H3 image plans pin the MLX endpoint and reference hashes. After
+a disconnect, refresh the original image request with <code>image_status</code>. A saved
+native PNG under the plan ID can finish delivery without another inference.
+A request that has not returned any bytes stays unresolved.</p>
+<p>A separately selected legacy gateway binding uses its own image receipt and
+request lookup. Existing plans keep their approved destination.</p>
+<p>For an on-screen speaker, pin the character's voice sample and list the owned
+face under <code>voiceReference.imagePaths</code>. Give each shot its own composition
+image. Keep the dialogue in the storyboard and set <code>STORY.language</code>, for example
+<code>vi</code>. The planner compiles a speaker tag, a picture index, an audio index and
+the original words in a <code>&lt;d&gt;[Vietnamese] …&lt;/d&gt;</code> span.</p>
+<p>A 240-frame scene at 24 fps needs a 243-frame native take. Managed FastH3
+execution keeps the original MP4 in <code>.work/fasth3/&lt;plan-id&gt;/native.mp4</code> and
+delivers the authored frame count with its matching audio duration. After a
+disconnect, call <code>video_status</code> with the original request ID and <code>action:"refresh"</code>.
+A complete local take can finish delivery without another model invocation.
+If the worker disconnected before returning media, the request remains unresolved.</p>
+<p>For character dialogue, inspect <code>voiceReferenceCheck</code> on the delivery receipt.
+On the Mac test, a take generated the requested Vietnamese line and replayed
+its Korean reference recording later in the same shot. The waveform check
+reports the reference index, time and correlation for a possible full-sample
+replay. Exclude that interval from speaker-similarity scoring and listen to
+the complete clip before adoption. Short phrases or paraphrases can escape
+the waveform check.</p>
 <h2 id="fasth3-omni-architecture">Architecture</h2>
 <p><code>local-video-models.ts</code> is a small Strategy registry. Each entry owns its schema,
 frame grid, model match and request serializer. <code>fasth3-omni.ts</code> validates and
@@ -529,7 +565,7 @@ A standalone adapter accepts the following inputs.</p>
   256 MiB compatibility limit (the installed MLX-Serve 26.10.3 UI limit). A 15-second request needs a smaller canvas than a 5-second one.</li>
 <li>Up to 9 PNG/JPEG images, 3 videos and 3 audio files; at most 12 total and at
   least one image or video. Each clip is 2–15 seconds; video references total
-  at most 15 seconds. The encoded request must fit 60 MiB.</li>
+  at most 15 seconds and standalone audio references have their own 15-second total. The encoded request must fit 60 MiB.</li>
 <li>Reference videos are decoded to JPEG frames at 24 fps with a maximum 768px
   side. Their soundtracks are converted to stereo 32kHz PCM WAV. By default,
   references that require tail trimming fail. <code>trimReferenceVideos:true</code>
