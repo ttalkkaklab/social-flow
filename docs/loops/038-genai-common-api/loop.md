@@ -62,9 +62,12 @@ Achieved in round 2 of 5: total 98, zero P0, green gate.
 |---|---|---|---|---|
 | 1 | 90 | 0 | build 0, 1413/1413 | below the user's 95 |
 | 2 | 98 | 0 | build 0, 1413/1413 | met |
+| 3 | 98 | 0 | build 0, 1417/1417 | met, after the user's pooling and prompt-fitting choices |
 
 The two missing points are the one retained label of the retired per-shot route's receipts
 (`skills/_shared/scene-speech-receipt.js`), kept because clips that route made are still in use
 and are verified from it. Production evidence covers `POST /v1/generations/validate` only; no
-render was submitted on the new path. Reviews: `verify-1.md`, `verify-2.md`; round summary:
-`iter-1-summary.md`.
+render was submitted on the new path. Reviews: `verify-1.md`, `verify-2.md`, `verify-3.md`; round summary:
+`iter-1-summary.md`. Round 3 reviewed the later choices (one scene cast pooled from the shots, scene prompts fitted to
+the 2,000-character cap); on the two per-shot-era boards 2 of 13 scenes now plan and validate, and the rest need shorter
+shot text, a split at 361 frames or another engine for a supplied soundtrack (`gateway-validate.md`).

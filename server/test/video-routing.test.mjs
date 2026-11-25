@@ -2008,7 +2008,9 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
   // The gateway caps the numbered prompt; a scene still longer at the last step is refused before any file is uploaded.
   f.board.SCENES[1].visual.action = 'The guest steps in. '.repeat(100).trim();
   f.save();
-  assert.throws(() => planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false), /scene_prompt_too_long: scene prompt runs \d+ characters after numbering; ltx-2\.5-22b-distilled takes at most 2000/);
+  assert.throws(() => planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}), /scene_prompt_too_long: scene prompt runs \d+ characters after numbering; ltx-2\.5-22b-distilled takes at most 2000/);
+  // No step of the retry leaves a plan or a blocked-plan record behind.
+  assert.deepEqual(['plans', 'blocked'].filter(dir => fs.existsSync(path.join(f.episode, '.work/video-routing', dir))), []);
 });
 
 test('a scene dip and two fractional shot lengths still fit exactly 113 frames', t => {
