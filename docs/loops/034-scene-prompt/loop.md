@@ -74,6 +74,9 @@ both files and of their tests. What this branch still adds is the model-rule spe
 numeric `exclusiveMinimum` fix with its contract case, two assertions (the direction record of an authored prompt,
 a cast id equal to a shot id) and this record.
 
+Pull request #709 then added the shot-manifest renderer's modes (`sceneRendering`: `auto`, `single_msr`,
+`per_shot`) and merged without a conflict.
+
 `dev` changed what capabilities 1 and 3 describe, and the merged tree follows `dev`:
 
 - In a scene with a cast or natively voiced dialogue an edited prompt may remove or reorder the planner's
@@ -85,6 +88,8 @@ a cast id equal to a shot id) and this record.
 - A typed number that names no input is refused (`reference_unknown`); one that names an input is refused under
   `wholeScene` and in a saved draft. A second picture of one role is named `role-<asset id>`, and two inputs that
   would share a name are refused (`placeholder_ambiguous`).
+- A plan made with a `sceneRendering` mode returns no `promptTemplate` and refuses `prompt`
+  (`scene_prompt_unsupported`), `single_msr` included.
 
 Each line above was run on the merged build. No verifier scored the merged tree. Its gate,
 `cd server && HOME=$(mktemp -d) npm test`, gives 1374 pass, 0 fail.

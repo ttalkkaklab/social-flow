@@ -502,9 +502,9 @@ is outside it. See `skills/storyboard/SKILL.md` §3.
 ## Authored scene prompts (user directive, 2026-11-24; bounded edits 2026-11-25)
 
 The planner composed every scene prompt from the shot cards, so the session could not adjust
-its wording for a model. Every plan rendered in one request returns `promptTemplate`, the
-submitted prompt with each reference number turned into a name, and `video_plan` takes an
-edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
+its wording for a model. Every scene plan made without a `sceneRendering` mode returns
+`promptTemplate`, the submitted prompt with each reference number turned into a name, and
+`video_plan` takes an edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
 `{castId.image}` for a single picture, `{castId.voice}`, `{referenceId.image}`,
 `{shotId.image}` and the other names the plan lists in `promptSlots`. The planner fills in the
 numbers of the request it submits. An edit kept for later is saved per engine, model and
@@ -520,11 +520,11 @@ speaker (`scene_dialogue_mismatch`, `scene_dialogue_speaker`). A scene with neit
 wording. Also refused: a name with no submitted reference or another brace
 (`placeholder_unresolved`), a shot image sent as a timed frame (`placeholder_unlabeled`), a
 typed number that names no input (`reference_unknown`), a prompt over the model's limit, an
-empty prompt, per-shot rendering (`scene_prompt_unsupported`) and an adapter's own rule for its
-prompt (`prompt_refused`). `promptIssues` reports a typed number that names an input
-(`label_literal`, refused under `wholeScene` and in a saved draft), a submitted reference the
-prompt never names, the text-free or silent-picture sentence the planner's own prompt carries
-and the author's leaves out, and white space an adapter trims
+empty prompt, a call that also names a `sceneRendering` mode (`scene_prompt_unsupported`) and an
+adapter's own rule for its prompt (`prompt_refused`). `promptIssues` reports a typed number
+that names an input (`label_literal`, refused under `wholeScene` and in a saved draft), a
+submitted reference the prompt never names, the text-free or silent-picture sentence the
+planner's own prompt carries and the author's leaves out, and white space an adapter trims
 (`prompt_whitespace_normalized`). Camera direction is not read from an authored prompt for the
 plan's direction record. Cast, shots and lines stay on the board as the evidence for lengths,
 limits and attachment. See

@@ -118,6 +118,8 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
     // Reference-mode display images are not temporal pins. Named video/both assets carry appearance.
     if (frames.start && !(namedReferencesOnly && frames.mode === 'reference') && !pins.some(p => p.role === 'start' && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: 'start' });
     if (frames.end && !pins.some(p => p.role === 'end' && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: 'end' });
+    if (shotScoped && member.referenceImage && !pins.some(pin => pin.role === 'start'))
+      pins.push({path:member.referenceImage, frame:startFrame, role:'start'});
     const occupied = new Set<number>();
     const references: Reference[] = render.imageReferences(member).filter((r: Reference) => ['video','both'].includes(r.use));
     const add = (pin: Omit<SceneImage,'shotId'>) => {

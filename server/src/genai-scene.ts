@@ -40,6 +40,7 @@ const count = z.number().int().positive();
 const capabilitiesSchema = z.object({
   version: z.literal(1), execution: z.literal('per_shot'),
   transitions: z.array(z.string()).refine(values => values.includes('hard_cut')),
+  execution_modes: z.array(z.string()).optional(),
   motion_prefix: z.boolean().optional(), timed_dialogue: z.string().nullish(),
   scene_audio_modes: z.record(z.string()).optional().catch(undefined),
   limits: z.object({
@@ -52,6 +53,7 @@ const capabilitiesSchema = z.object({
 });
 
 export interface SceneCapabilities {
+  executionModes: string[];
   motionPrefix: boolean;
   timedDialogue: string | null;
   /** Scene audio mode → the model that renders it. */
@@ -65,6 +67,7 @@ export function parseSceneCapabilities(response: unknown): SceneCapabilities {
   const body = capabilitiesSchema.parse(response);
   const limits = body.limits ?? {};
   return {
+    executionModes:body.execution_modes ?? ['per_shot'],
     motionPrefix: body.motion_prefix === true, timedDialogue: body.timed_dialogue ?? null,
     audioModes: body.scene_audio_modes ?? {},
     limits: {
@@ -113,7 +116,7 @@ export function sceneRequestIssues(scene: SceneRequest, capabilities: SceneCapab
 }
 
 /** Build the request body. Files ride inline until the body is too large, a guide file is bound or `stageFiles` asks; then each is uploaded once. */
-export async function buildSceneWire(scene: SceneRequest, model: string, resolution: string, stageFiles = false, bindings?: ShotBindings) {
+export async function buildSceneWire(scene: SceneRequest, model: string, resolution: string, stageFiles = false, bindings?: ShotBindings, execution?: 'auto'|'single_msr'|'per_shot') {
   const attachments: {shotId?:string; role:string; frame:number; sha256:string; bytes:number}[] = [];
   const conditioned = conditionedBy(scene, model);
   const shots = scene.shots.map(shot => {
@@ -145,7 +148,7 @@ export async function buildSceneWire(scene: SceneRequest, model: string, resolut
   const trackBytes = scene.audio ? statSync(scene.audio.path).size : 0;
   if (trackBytes > 32 * 1024 * 1024) throw new Error('scene_audio@0: exceeds the 32 MiB gateway upload limit');
   const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
-  const body = {model, resolution, fps:scene.fps, num_frames:scene.frameCount, generate_audio:true, prompt:prompt || 'Follow the ordered storyboard shots.',
+  const body = {...(execution && execution !== 'per_shot' ? {execution} : {}), model, resolution, fps:scene.fps, num_frames:scene.frameCount, generate_audio:true, prompt:prompt || 'Follow the ordered storyboard shots.',
     image_uri:shots[0]?.images.find(image => image.role === 'start')?.image_uri, shots,
     ...(scene.audio ? {scene_audio:{...(scene.audio.mode ? {mode:scene.audio.mode} : {}),audio_uri:stageTrack ? '' : genaiAudioUri(undefined,scene.audio.path),start_frame:scene.audio.startFrame,
       end_frame:scene.audio.endFrame,cues:scene.audio.cues}} : {})};
@@ -201,9 +204,14 @@ export async function validateScenePayload(endpoint: string, scene: SceneRequest
 }
 
 /** Run every gateway check on the staged body. Nothing is reserved or rendered. */
-export async function validateSceneBody(body: unknown, requestId: string, expected: { model: string; shots: number }) {
+export async function validateSceneBody(body: unknown, requestId: string, expected: { model: string; shots: number; execution?: string }) {
   const result = await requestGenai('POST', SCENE_ROUTE + '/validate', body, 120000, undefined, undefined, requestId);
-  z.object({schema_valid:z.literal(true), model:z.literal(expected.model), shots:z.literal(expected.shots)}).parse(result);
+  const checked = z.object({schema_valid:z.literal(true), model:z.literal(expected.model), shots:z.literal(expected.shots),
+    execution:z.enum(['per_shot','single_msr']).optional()}).parse(result);
+  if (expected.execution === 'auto' && !checked.execution ||
+      expected.execution && expected.execution !== 'auto' && (checked.execution ?? 'per_shot') !== expected.execution)
+    throw new Error('scene_render_selection: gateway did not validate the planned execution mode');
+  return checked.execution ?? 'per_shot';
 }
 /** Submit the scene job. The gateway returns the same job for a repeated `requestId` with the same body. */
 export async function submitSceneBody(body: unknown, requestId: string) {
