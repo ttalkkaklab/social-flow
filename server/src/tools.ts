@@ -4933,9 +4933,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
       type: 'object', additionalProperties: false,
       properties: {
         path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
-        split: {type:'object', additionalProperties:false, required:['beforeShot','newSceneNo'], properties:{
+        split: {type:'object', additionalProperties:false, required:['beforeShot'], properties:{
           beforeShot:{type:'string',pattern:'^s[0-9]{4,}$'}, newSceneNo:{type:'integer',minimum:1}
-        },description:'For separate production prompts, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. The shot IDs and playback order are preserved.'},
+        },description:'For separate production prompts, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs.'},
         scenes: { type: 'array', minItems: 1, description: 'Scenes in playback order', items: { type: 'object', additionalProperties: false, required: ['sequence', 'no', 'place', 'time', 'event', 'summary'], properties: {
           sequence: { type: 'string', description: 'The sequence id this scene belongs to' },
           no: { type: 'integer', minimum: 1, description: 'Scene number, unique on the board' },

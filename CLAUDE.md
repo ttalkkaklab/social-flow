@@ -1038,4 +1038,4 @@ Before generating images, save the scene's seats or standing marks, fixed landma
 
 ## One production prompt per storyboard scene (owner directive, 2026-11-26)
 
-Each storyboard scene supplies one production prompt covering all its ordered shots. When two prompts must both render, split the storyboard at an existing shot before planning. Use `story_scene.split`, give both scenes their complete `videoDirection.prompt`, then plan each scene number separately. A revised take reads its current storyboard prompt. Keep previous takes in the production history.
+Each storyboard scene supplies one production prompt covering all its ordered shots. When two prompts must both render, split the storyboard at an existing shot before planning. Use `story_scene.split`, give both scenes their complete `videoDirection.prompt`, then plan each scene number separately. Number the parts consecutively and move later scenes forward in playback order. A revised take reads its current storyboard prompt. Keep previous takes in the production history.

@@ -1457,7 +1457,7 @@ export const storySceneSchema = z.object({
     path: outlinePath,
     split: z.object({
         beforeShot: shotIdSchema.describe('First existing shot of the second scene. The first scene must retain at least one shot.'),
-        newSceneNo: z.number().int().positive().describe('Unused scene number inserted immediately after the first scene in playback order.'),
+        newSceneNo: z.number().int().positive().optional().describe('Number of the second part in playback order. By default the two parts and all following scenes are numbered consecutively.'),
     }).strict().optional().describe('Move the suffix of a scene into its own storyboard scene in the same write as both complete prompts.'),
     scenes: z.array(z.object({
         sequence: nonEmpty.describe('The id of the sequence this scene belongs to — written first with story_sequence'),
@@ -1494,7 +1494,7 @@ function readOutline(path) {
     const { win, sha256 } = existsSync(file) ? readBoard(file) : { win: {}, sha256: createHash('sha256').digest('hex') };
     return { win, st: win.STRUCTURE ?? emptyStructure(), sha256 };
 }
-function writeOutline(path, sha256, win, structure, shots, language, opening, hookChange, titlePlan) {
+function writeOutline(path, sha256, win, structure, shots, language, opening, hookChange, titlePlan, sceneGlobals) {
     // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
     // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
     // project_manage gives a new board; without it the board reads as the 9:16 default.
@@ -1529,7 +1529,7 @@ function writeOutline(path, sha256, win, structure, shots, language, opening, ho
     const result = applyStoryboard({
         path, expectedSha256: sha256, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
-        ...(globals ? { globals } : {}),
+        ...(globals || sceneGlobals ? { globals: { ...globals, ...sceneGlobals } } : {}),
     }, { outline: true, cliches: true, hookChange });
     const kept = !language || !story ? undefined
         : story.language !== undefined ? (story.language !== language ? `this board is written in "${String(story.language)}"` : undefined)
@@ -1552,30 +1552,60 @@ export function writeStorySequences(args) {
     const result = writeOutline(args.path, sha256, win, { ...st, sequences }, undefined, args.language, args.opening, hookChange, args.titlePlan);
     return { ...result, findings: [...result.findings, ...notes] };
 }
-/** Split at a stable shot ID. Other scenes keep their numbers and their production histories. */
+/** Reindex scene-keyed editorial notes in the same write as the board. Shot numbers and receipt IDs are stable. */
+function renumberSceneNotes(win, numbers) {
+    const globals = {};
+    const doc = win.SB_DOC;
+    if (doc) {
+        const notes = { ...doc };
+        for (const key of ['sceneNotes', 'audioNotes', 'privacy']) {
+            const value = doc[key];
+            if (value && typeof value === 'object' && !Array.isArray(value))
+                notes[key] = Object.fromEntries(Object.entries(value).map(([id, entry]) => [numbers.get(Number(id)) ?? id, entry]));
+        }
+        if (JSON.stringify(notes) !== JSON.stringify(doc))
+            globals.SB_DOC = notes;
+    }
+    const cliches = win.CLICHES;
+    if (Array.isArray(cliches?.uses)) {
+        const uses = cliches.uses.map(use => Array.isArray(use?.scenes) ? { ...use, scenes: use.scenes.map(no => numbers.get(no) ?? no) } : use);
+        if (JSON.stringify(uses) !== JSON.stringify(cliches.uses))
+            globals.CLICHES = { ...cliches, uses };
+    }
+    return globals;
+}
+/** Split at a stable shot ID and assign scene numbers in playback order across sequences. */
 function splitStoryScene(args, win, st) {
-    const { beforeShot, newSceneNo } = args.split;
+    const { beforeShot, newSceneNo: requestedNo } = args.split;
     const shots = win.SCENES ?? [];
     const first = shots.find(shot => shot.id === beforeShot);
     const source = st.scenes.find(scene => scene.no === first?.scene);
-    if (first && source?.no === newSceneNo && shots.find(shot => shot.scene === newSceneNo)?.id === beforeShot) {
+    if (!first || !source)
+        throw new Error('scene_split_boundary: name an existing shot in a storyboard scene');
+    if (shots.find(shot => shot.scene === source.no)?.id === beforeShot) {
+        const newSceneNo = source.no;
         const group = st.sequences.find(q => q.scenes.includes(newSceneNo));
         const previous = group?.scenes[group.scenes.indexOf(newSceneNo) - 1];
         const pair = [previous, newSceneNo].map(no => args.scenes.find(scene => scene.no === no));
         const same = pair.every(scene => scene?.sequence === group?.id && scene?.videoDirection?.prompt &&
             scene.videoDirection.prompt === st.scenes.find(saved => saved.no === scene.no)?.videoDirection?.prompt);
-        if (same)
-            return { shots, scenes: args.scenes.map(scene => ({ ...scene, videoDirection: scene.videoDirection && {
+        if (same && (requestedNo === undefined || requestedNo === newSceneNo))
+            return { shots, baseScenes: st.scenes, globals: {}, scenes: args.scenes.map(scene => ({ ...scene, videoDirection: scene.videoDirection && {
                         ...st.scenes.find(saved => saved.no === scene.no)?.videoDirection, ...scene.videoDirection
                     } })), sequences: st.sequences };
-    }
-    if (!first || !source || st.scenes.some(scene => scene.no === newSceneNo))
-        throw new Error('scene_split_boundary: name an existing shot and an unused scene number');
-    const members = shots.filter(shot => shot.scene === source.no), boundary = members.indexOf(first);
-    if (boundary < 1)
         throw new Error('scene_split_boundary: split between two existing shots');
+    }
+    const order = st.sequences.flatMap(sequence => sequence.scenes);
+    const index = order.indexOf(source.no);
+    if (index < 0)
+        throw new Error('scene_split_boundary: the shot must belong to a sequence');
+    const leftNo = index + 1, newSceneNo = leftNo + 1;
+    if (requestedNo !== undefined && requestedNo !== newSceneNo)
+        throw new Error('scene_split_number: use ' + newSceneNo + ' for the second part; later scenes move forward in playback order');
+    const numbers = new Map(order.map((no, i) => [no, i + (i > index ? 2 : 1)]));
+    const members = shots.filter(shot => shot.scene === source.no), boundary = members.indexOf(first);
     const sequence = st.sequences.find(sequence => sequence.scenes.includes(source.no));
-    const left = args.scenes.find(scene => scene.no === source.no), right = args.scenes.find(scene => scene.no === newSceneNo);
+    const left = args.scenes.find(scene => scene.no === leftNo), right = args.scenes.find(scene => scene.no === newSceneNo);
     if (!sequence || !left?.videoDirection?.prompt || !right?.videoDirection?.prompt ||
         left.sequence !== sequence.id || right.sequence !== sequence.id)
         throw new Error('scene_split_prompts: supply both scenes and their complete prompts in the original sequence');
@@ -1589,7 +1619,7 @@ function splitStoryScene(args, win, st) {
     const moved = new Set(members.slice(boundary).map(shot => shot.id));
     const revised = shots.map(shot => {
         if (!moved.has(shot.id))
-            return shot;
+            return shot.scene === undefined ? shot : { ...shot, scene: numbers.get(shot.scene) ?? shot.scene };
         const tl = shot.timeline;
         if (tl && tl.startFrame < offset)
             throw new Error('scene_split_timing: inconsistent shot timeline');
@@ -1614,9 +1644,11 @@ function splitStoryScene(args, win, st) {
         return { ...scene, frames: scene === left ? leftFrames : rightFrames, videoDirection: { ...direction, fps,
                 ...(!direction.keyframes && pins.length ? { keyframes: pins } : {}) } };
     });
-    const sequences = st.sequences.map(q => q.id !== sequence.id ? q :
-        { ...q, scenes: q.scenes.flatMap(no => no === source.no ? [no, newSceneNo] : [no]) });
-    return { shots: revised, scenes: parts, sequences };
+    const sequences = st.sequences.map(q => ({ ...q,
+        scenes: q.scenes.flatMap(no => no === source.no ? [leftNo, newSceneNo] : [numbers.get(no)]),
+        ...(q.payoff !== undefined ? { payoff: numbers.get(q.payoff) ?? q.payoff } : {}) }));
+    const baseScenes = st.scenes.map(scene => ({ ...scene, no: numbers.get(scene.no) ?? scene.no }));
+    return { shots: revised, scenes: parts, sequences, baseScenes, globals: renumberSceneNotes(win, numbers) };
 }
 function assertArchivedSceneDrafts(next, previous) {
     if (!next?.length || sameShape(next) === sameShape(previous))
@@ -1632,8 +1664,10 @@ export function writeStoryScenes(args, requireSceneCast = false) {
         throw new Error('story_order: write the sequences first with story_sequence');
     let { sequences, scenes } = st;
     const split = args.split && splitStoryScene(args, win, st);
-    if (split)
+    if (split) {
         sequences = split.sequences;
+        scenes = split.baseScenes;
+    }
     for (const { sequence, ...scene } of split?.scenes ?? args.scenes) {
         if (!sequences.some((q) => q.id === sequence))
             throw new Error(`story_order: sequence ${sequence} does not exist — write it with story_sequence`);
@@ -1658,7 +1692,9 @@ export function writeStoryScenes(args, requireSceneCast = false) {
             ? (q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] })
             : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
     }
-    return writeOutline(args.path, sha256, win, { ...st, sequences, scenes }, split?.shots);
+    if (split)
+        scenes.sort((a, b) => a.no - b.no);
+    return writeOutline(args.path, sha256, win, { ...st, sequences, scenes }, split?.shots, undefined, undefined, undefined, undefined, split?.globals);
 }
 export function writeStoryShots(args) {
     const { win, st, sha256 } = readOutline(args.path);

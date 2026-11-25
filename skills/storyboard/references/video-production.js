@@ -52,6 +52,13 @@ function read(directory, board, {verifyInputs=true} = {}) {
  }
  const win=board || (fs.existsSync(path.join(dir,'scenes.js'))?require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir,'scenes.js')):{});
  const shots=win.SCENES || [], contexts=new Map(), hashes=new Map();
+ const grouped=new Map();
+ for(const shot of shots) if(Number.isInteger(shot.scene) && shot.id) {
+  if(!grouped.has(shot.scene))grouped.set(shot.scene,[]);
+  grouped.get(shot.scene).push(shot.id);
+ }
+ const sceneNumbers=new Map([...grouped].map(([no,ids])=>[JSON.stringify(ids),no]));
+ const approvedPlans=obj(json(path.join(store,'approvals.json'))?.plans),sceneApprovals={};
  const local=file=>{
   if(typeof file!=='string'||!file||/^[a-z][a-z0-9+.-]*:/i.test(file))return null;
   const absolute=path.resolve(dir,file), relative=path.relative(dir,absolute).split(path.sep).join('/');
@@ -102,8 +109,15 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(receipt?.baseUrl) {try{const u=new URL(receipt.baseUrl);if(['http:','https:'].includes(u.protocol))endpoint=u.origin;}catch{/* Unusable endpoint is not evidence. */}}
   const settings=Object.fromEntries(['durationSeconds','duration','numFrames','frameRate','resolution','width','height','generateAudio'].filter(k=>args[k]!==undefined).map(k=>[k,args[k]]));
   const inputs=Object.entries(obj(plan.inputs)).map(([file,sha256])=>({path:path.relative(dir,file).split(path.sep).join('/'),sha256,changed:verifyInputs?hash(file)!==sha256:null}));
-  const revision=current(plan.shotId,plan.sceneNo)?.revision ?? null;
-  const boardMatches=revision===null?null:revision===plan.contextRevision;
+  // A scene number can move after a split. Its ordered shot IDs identify the same take.
+  const bound=plan.sceneNo && sceneNumbers.size>0 && Array.isArray(plan.shotIds);
+  const sceneNo=bound?sceneNumbers.get(JSON.stringify(plan.shotIds)):plan.sceneNo;
+  const historicalScene=Boolean(bound && sceneNo===undefined);
+  const approval=source.root===episode && approvedPlans[plan.id];
+  if(sceneNo && approval && (!sceneApprovals[sceneNo] || approval.at>=sceneApprovals[sceneNo].at))
+   sceneApprovals[sceneNo]={planId:plan.id,requestId:plan.requestId,at:approval.at};
+  const revision=historicalScene?null:current(plan.shotId,sceneNo)?.revision ?? null;
+  const boardMatches=historicalScene?false:revision===null?null:revision===plan.contextRevision;
   const stale=boardMatches===false||inputs.some(i=>i.changed===true)?true:boardMatches===null||inputs.some(i=>i.changed===null)?null:false;
   const attached=typeof video.clip==='string'?video.clip:typeof shot?.visual?.clip==='string'?shot.visual.clip:null;
   const selected=Boolean(clip&&attached&&path.resolve(dir,attached)===path.resolve(dir,clip)&&
@@ -111,7 +125,8 @@ function read(directory, board, {verifyInputs=true} = {}) {
     const member=shots.find(s=>s.id===id), file=member?.visual?.video?.clip || member?.visual?.clip;
     return typeof file==='string' && path.resolve(dir,file)===path.resolve(dir,clip);
    })));
-  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
+  candidates.push({...(plan.sceneNo ? {sceneNo:sceneNo ?? plan.sceneNo,shotIds:plan.shotIds,
+    ...(sceneNo!==plan.sceneNo?{submittedSceneNo:plan.sceneNo}:{}),...(historicalScene?{historicalScene:true}:{})} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
    createdAt:fs.statSync(record).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
    status:job?.status||'planned',providerStatus:job?.providerStatus||null,observedAt:job?.observedAt||null,providerId:job?.providerId||receipt?.jobId||null,endpoint,
    selection:plan.selection,generationMode:generationMode(plan.selection,plan.tool,args.references,adapters),settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',
@@ -150,7 +165,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
   const mode=currentPlan(candidates,undefined,[shot.id])?.generationMode || current(shot.id)?.mode;
   if(mode)shotModes[shot.id]=mode;
  }
- return {version:1,storyboardPath:dir,sceneModes,shotModes,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
+ return {version:1,storyboardPath:dir,sceneModes,shotModes,sceneApprovals,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
   summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:attachedIds.size,reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
    pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,blocked,warnings,repairs};
@@ -163,7 +178,7 @@ function write(episode) {
  try {fs.writeFileSync(tmp,'window.VIDEO_PRODUCTION = '+JSON.stringify(data).replace(/</g,'\\u003c')+';\n',{mode:0o600});fs.renameSync(tmp,file);} finally {fs.rmSync(tmp,{force:true});}
 }
 function render(report,shotId,language,sceneNo) {
- const ko=language==='ko',t=(a,b)=>ko?a:b,items=(report?.candidates||[]).filter(c=>sceneNo === undefined ? !c.sceneNo && c.shotId===shotId : c.sceneNo===sceneNo);
+ const ko=language==='ko',t=(a,b)=>ko?a:b,items=(report?.candidates||[]).filter(c=>!c.historicalScene && (sceneNo === undefined ? !c.sceneNo && c.shotId===shotId : c.sceneNo===sceneNo));
  const problems=(report?.blocked||[]).filter(p=>sceneNo===undefined?p.shotId===shotId:p.sceneNo===sceneNo)
   .map(p=>'<p class="production-review">'+esc([p.shotId,p.character,p.role,p.code].filter(Boolean).join(' · '))+'<br>'+esc(p.message)+'</p>').join('');
  if(!items.length)return problems;

@@ -439,25 +439,31 @@ describe('story first, then characters and lines', () => {
   });
   it('splits a scene and writes both prompts atomically at an existing shot', () => {
     const dir=tmp(), scene={sequence:'q1',no:1,place:'Workshop',time:'Day',event:'A handover',summary:'The key changes hands.',speakers:[]};
-    writeStorySequences({path:dir,primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door'}]});
-    writeStoryScenes({path:dir,scenes:[scene,{...scene,no:2}]});
+    writeStorySequences({path:dir,primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door'},{id:'q2',title:'Inside',purpose:'Find the room'}]});
+    writeStoryScenes({path:dir,scenes:[scene,{...scene,no:2},{...scene,no:3,sequence:'q2'}]});
     const timeline=(start,end)=>({startFrame:start,endFrame:end,transition:start?'hard_cut':'open',framing:'Medium shot.',action:'Turn the key.'});
     writeStoryShots({path:dir,shots:[{scene:1,summary:'Lift the key.',timeline:timeline(0,24)},
-      {scene:1,summary:'Turn the key.',timeline:timeline(24,60)},{scene:2,summary:'Walk inside.'}]});
+      {scene:1,summary:'Turn the key.',timeline:timeline(24,60)},{scene:2,summary:'Walk inside.'},{scene:3,summary:'Cross the hall.'}]});
+    applyStoryboard({path:dir,draft:true,globals:{SB_DOC:{audioNotes:{2:'The door closes.',3:'A distant echo.'}}}});
     const specs=[{...scene,videoDirection:{emotion:'Expectant.',openingPositions:[],prompt:'Lift the key.'}},
-      {...scene,no:3,videoDirection:{emotion:'Relief.',openingPositions:[],prompt:'Turn the key.'}}];
+      {...scene,no:2,videoDirection:{emotion:'Relief.',openingPositions:[],prompt:'Turn the key.'}}];
     const drafts=['first','second'].map(model=>({engine:'test',model,operation:'reference',prompt:model}));
     assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{emotion:'Concern.',openingPositions:[],promptDrafts:drafts}}]}),/scene_split_required/);
     const before=readBoard(dir).sha256;
-    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs.slice(1)}),/scene_split_prompts/);
+    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002'},scenes:specs.slice(1)}),/scene_split_prompts/);
     assert.equal(readBoard(dir).sha256,before);
-    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}));
-    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}));
+    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}),/scene_split_number/);
+    writeStorySequences({path:dir,sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door',payoff:2}]});
+    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002'},scenes:specs}));
+    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:2},scenes:specs}));
     const {win}=readBoard(dir);
-    assert.deepEqual(win.STRUCTURE.sequences[0].scenes,[1,3,2]);
-    assert.deepEqual(win.SCENES.map(s=>[s.id,s.scene]),[['s0001',1],['s0002',3],['s0003',2]]);
+    assert.deepEqual(win.STRUCTURE.sequences[0].scenes,[1,2,3]);
+    assert.equal(win.STRUCTURE.sequences[0].payoff,3);
+    assert.deepEqual(win.STRUCTURE.sequences[1].scenes,[4]);
+    assert.deepEqual(win.SB_DOC.audioNotes,{3:'The door closes.',4:'A distant echo.'});
+    assert.deepEqual(win.SCENES.map(s=>[s.id,s.scene]),[['s0001',1],['s0002',2],['s0003',3],['s0004',4]]);
     assert.deepEqual([win.SCENES[1].timeline.startFrame,win.SCENES[1].timeline.endFrame,win.SCENES[1].timeline.transition],[0,36,'open']);
-    assert.deepEqual([1,3].map(no=>win.STRUCTURE.scenes.find(s=>s.no===no).videoDirection.prompt),['Lift the key.','Turn the key.']);
+    assert.deepEqual([1,2].map(no=>win.STRUCTURE.scenes.find(s=>s.no===no).videoDirection.prompt),['Lift the key.','Turn the key.']);
   });
   it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
     const dir = tmp();

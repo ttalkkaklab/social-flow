@@ -201,7 +201,7 @@ export interface VideoPlan {
   /** The selected model's writing sentence and reference page, with a finding for each count outside the range its vendor recommends. */
   promptGuidance?: PromptGuidance & {advice: {code: string; detail: string}[]};
   mlxDeployment?: {endpoint:string; renderFrames:number; deliveryFrames:number};
-  /** The submitted prompt with reference numbers as names; an author edits it and plans again with `prompt`. */
+  /** The submitted prompt with named references. Save revisions on the storyboard scene before replanning. */
   promptTemplate?: string;
   promptSlots?: {key: string; label: string}[];
   /** Opening positions the LTX lanes state ahead of the prompt; not part of the template. */

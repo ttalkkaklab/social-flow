@@ -95,6 +95,30 @@ test('canonical reviews keep completed remote history and recognise a separately
  assert.deepEqual(review.read(board,win).candidates.map(c=>c.planId),[liveId]);
 });
 
+test('a scene moved by a split keeps its take and receipt; the old combined scene stays in history',t=>{
+ const ep=fs.mkdtempSync(path.join(os.tmpdir(),'sf-scene-numbers-'));t.after(()=>fs.rmSync(ep,{recursive:true,force:true}));
+ const board=path.join(ep,'storyboard'),store=path.join(ep,'.work/video-routing');
+ fs.mkdirSync(board);fs.mkdirSync(path.join(store,'plans'),{recursive:true});
+ const original='a'.repeat(64),moved='b'.repeat(64);
+ const plan=(id,sceneNo,shotIds)=>({id,episode:ep,requestId:id,sceneNo,shotId:shotIds[0],shotIds,args:{prompt:'A full take.',outputPath:ep,filename:id+'.mp4'},inputs:{}});
+ for(const p of [plan(original,1,['s1','s2']),plan(moved,2,['s3','s4'])]){
+  fs.writeFileSync(path.join(store,'plans',p.id+'.json'),JSON.stringify(p));
+  fs.writeFileSync(path.join(ep,p.id+'.mp4'),'fixture');
+ }
+ fs.writeFileSync(path.join(store,'state.json'),JSON.stringify({jobs:Object.fromEntries([original,moved].map(id=>[id,{planId:id,status:'completed'}]))}));
+ fs.writeFileSync(path.join(store,'approvals.json'),JSON.stringify({plans:{[moved]:{at:'2026-01-02'}}}));
+ const shots=[{id:'s1',scene:1},{id:'s2',scene:2},{id:'s3',scene:3},{id:'s4',scene:3}];
+ const r=review.read(board,{SCENES:shots});
+ assert.equal(r.candidates.find(c=>c.planId===original).historicalScene,true);
+ const take=r.candidates.find(c=>c.planId===moved);
+ assert.deepEqual([take.sceneNo,take.submittedSceneNo,take.requestId],[3,2,moved]);
+ assert.equal(r.sceneApprovals[3].planId,moved);
+ assert.doesNotMatch(review.render(r,null,'en',1),/<video/);
+ assert.doesNotMatch(review.render(r,null,'en',2),/<video/);
+ assert.match(review.render(r,null,'en',3),/<video/);
+ assert.equal(JSON.parse(fs.readFileSync(path.join(store,'plans',moved+'.json'))).sceneNo,2);
+});
+
 test('background snapshots distinguish unchecked review evidence from zero passed reviews',t=>{
  const episode=fs.mkdtempSync(path.join(os.tmpdir(),'sf-reviewed-'));
  t.after(()=>fs.rmSync(episode,{recursive:true,force:true}));

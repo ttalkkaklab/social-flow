@@ -3901,7 +3901,7 @@ The scene's narrative attention applies throughout. A shot separately records it
 
 Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
 
-`videoDirection.prompt` holds the complete prompt for the current scene. To render two prompts, call `story_scene` with `split: {beforeShot, newSceneNo}` and include both scene records with their complete prompts. The new number follows the original in sequence playback order. The moved shots retain their IDs, lines and durations. Their scene-frame intervals, image frames and dialogue cues start at the new scene origin. A new take reads the current board again.
+`videoDirection.prompt` holds the complete prompt for the current scene. To render two prompts, call `story_scene` with `split: {beforeShot}` and include both scene records with their complete prompts. Give the parts consecutive playback numbers. Later scenes, their shots and sequence payoff references move forward together. The moved shots retain their IDs, lines and durations. Their scene-frame intervals, image frames and dialogue cues start at the new scene origin. A new take reads the current board again.
 
 ```js
 videoDirection: {

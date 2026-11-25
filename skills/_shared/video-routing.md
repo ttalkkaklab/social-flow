@@ -217,9 +217,9 @@ when effects and ambience will be supplied in the edit.
 settings through the same compiler as `speech_manage plan_video`. It preserves action
 order, concurrent speech/action groups and lead-in/tail-out. Attached, hash-matching
 speech can supply measured intervals; native speech stays `model_timed` until measured.
-Do not invent timestamps for unresolved speech. MSR dialogue is still added once, with
-its actual image/audio bindings. Passing `args.prompt` bypasses this compilation and
-returns a warning; prefer updating the board and omitting that argument.
+Do not invent timestamps for unresolved speech. MSR dialogue is added once with its actual image and audio bindings. Save prompt changes
+on the storyboard scene and plan again. If both prompts will render, split the scene
+at a shot boundary and give each resulting scene its own prompt.
 
 Optional `visual.references[].preserve` and `.avoid` are arrays of English instructions.
 They say what to retain and what not to copy from that reference. Image authoring keeps

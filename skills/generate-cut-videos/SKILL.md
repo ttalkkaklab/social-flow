@@ -8,7 +8,7 @@ allowed-tools: ["Read", "Write", "Edit", "Bash", "Agent", "AskUserQuestion", "mc
 
 # Generate Cut Videos
 
-Use one production prompt for every shot in a storyboard scene. When different prompts must both render, split the storyboard first with `story_scene.split`. Give the two scenes their full `videoDirection.prompt` values, then make a separate `video_plan` for each scene number. Keep shot IDs, dialogue and playback order when splitting. A retake of the same scene uses its current storyboard prompt.
+One production prompt covers all the ordered shots in a storyboard scene. When different prompts must both render, split the storyboard first with `story_scene.split`. Give the two scenes their full `videoDirection.prompt` values, then make a separate `video_plan` for each scene number. Number the two parts consecutively and shift each later scene forward. Keep every shot ID, line and playback position. A retake of the same scene uses its current storyboard prompt.
 
 Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
 
