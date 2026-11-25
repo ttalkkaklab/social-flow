@@ -178,11 +178,16 @@ export function cameraDrift(prompt: string, movement: string): 'missing' | 'cont
 export function shotVisualDirection(shot: Record<string, unknown>, concise = false) {
   const plan = object(shot.shot), camera = object(object(shot.visual).camera);
   const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { frameSizeWords(size:string, camera:unknown, noPerson:boolean, cutRole:string):string; ANGLE_WORDS: Record<string, string> };
-  const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string; withoutPeople(card:unknown):boolean };
+  const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string; withoutPeople(card:unknown):boolean; openingFraming(timeline:string):string; framingConflicts(size:string, view:unknown, scene:string, noPerson:boolean):string[] };
   const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
   const catalogue = load('../../skills/storyboard/references/film-techniques.js') as { byId: Record<string, { category: string; fields: Record<string, string>; prompt?: string; instruction: string; label: { en: string } }> };
   const contract = load('../../skills/storyboard/references/structure-contract.js');
   const frame = directions().framing(shot);
+  const timedFraming = text(object(shot.timeline).framing);
+  if (timedFraming && frame.size) {
+    const conflicts = views.framingConflicts(frame.size, {subjectType:object(camera.view).subjectType}, views.openingFraming(timedFraming), views.withoutPeople(shot));
+    if (conflicts.length) throw new Error(`shot_framing_conflict: ${shot.id || 'shot'} timeline.framing conflicts with size ${frame.size}. Revise its opening crop and keep the remaining composition notes. ${conflicts.join('. ')}`);
+  }
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map(t => ({
     id: text(t.id), from: text(t.from), to: text(t.to), on: text(t.on), entry: catalogue.byId[text(t.id)],
   }));

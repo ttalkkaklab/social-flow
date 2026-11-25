@@ -338,7 +338,7 @@ function frameOptions(scene, frame = 'start') {
   const framing = scope.framing(scene);
   return { frame, noPerson:require('./shot-view.js').withoutPeople(scene), cutRole:framing.cutRole, framingTerms:endpoint ? [] : scope.framingTerms(scene), omitFraming: endpoint, size: endpoint ? undefined : framing.size, angle: endpoint ? undefined : framing.angle,
     techniques: sh.techniques, depth, camera, stillCamera: sh.render?.mode === 'still_camera' ? sh.render.camera : null,
-    ...(end ? { endState: visual.frames?.endState } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
+    ...(end ? { endState: scope.closingState(scene) } : { layout: sp.layout, facing: sp.facing, line: sp.line, light: sp.light,
       composition: sh.composition, eyeline: sh.eyeline }),
     // A view replaces camera crop/orientation, not actor placement or interaction.
     ...(view ? { composition: undefined,
@@ -352,7 +352,7 @@ function cameraSourceInstructions(opts) {
   if (view && !opts.omitFraming) parts.push(require('./shot-view.js').instructions(view));
   if (end && cam.end) parts.push('Closing composition: ' + cam.end + '. This closing view takes priority over the opening crop and viewpoint.');
   else if (!end && !view && cam.framing) parts.push('Opening composition: ' + cam.framing + '.');
-  if (end && opts.endState) parts.push('Closing story state: ' + opts.endState + '.');
+  if (end && opts.endState) parts.push('Closing story state: ' + String(opts.endState).replace(/[.!?]+$/, '') + '.');
   if (!view && !(end && cam.end)) {
     if (cam.rear) parts.push('View the subject from behind.');
     if (cam.pov) parts.push('Point of view: ' + (typeof cam.pov === 'string' ? cam.pov : 'the named character') + '.');

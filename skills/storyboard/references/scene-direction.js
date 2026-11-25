@@ -61,6 +61,9 @@
     lines.forEach((_, index) => groups.add(index));
     return Array.from(groups, index => lines[index]);
   }
+  function closingState(card) {
+    return text(card.shot?.videoDesign?.after) || text(card.visual?.frames?.endState) || text(card.visual?.video?.promptSource?.end);
+  }
   function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
     const visual = card.visual || {}, video = visual.video || {}, source = video.promptSource || {};
     const design = card.shot?.videoDesign || {}, lines = card.narration || [];
@@ -129,7 +132,7 @@
       .map(beat => (Number.isFinite(beat.at) ? 'At ' + beat.at + ' s into this shot: ' : '') + text(beat.state));
     return {actions:actions.length ? actions : fallback.slice(0,1), fallback, motion,
       blocking:text(design.before), sound:text(card.sound?.diegetic) || text(design.sound) || text(visual.audio) || text(source.sound),
-      end:text(design.after) || text(visual.frames?.endState) || text(source.end), beats};
+      end:closingState(card), beats};
   }
   function base(scene = {}) {
     const defaults = scene.directionDefaults || {};
@@ -185,7 +188,7 @@
     const common = Object.fromEntries(Object.entries(defaults).filter(([key]) => shots.every(rows => rows[key]?.source === 'scene')));
     return {defaults, common, shots};
   }
-  const api = {labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, notes, base, resolve, withCameraDefaults, actingFields, actingPauses, orderedSpeech};
+  const api = {labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, closingState, notes, base, resolve, withCameraDefaults, actingFields, actingPauses, orderedSpeech};
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.SCENE_DIRECTION = api;
 })(typeof window === 'object' ? window : globalThis);

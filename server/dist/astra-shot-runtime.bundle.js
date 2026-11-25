@@ -50378,6 +50378,11 @@ function shotVisualDirection(shot, concise = false) {
   const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
   const frame2 = directions().framing(shot);
+  const timedFraming = text(object(shot.timeline).framing);
+  if (timedFraming && frame2.size) {
+    const conflicts = views.framingConflicts(frame2.size, { subjectType: object(camera.view).subjectType }, views.openingFraming(timedFraming), views.withoutPeople(shot));
+    if (conflicts.length) throw new Error(`shot_framing_conflict: ${shot.id || "shot"} timeline.framing conflicts with size ${frame2.size}. Revise its opening crop and keep the remaining composition notes. ${conflicts.join(". ")}`);
+  }
   const picked = (Array.isArray(plan.techniques) ? plan.techniques : []).map(object).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),

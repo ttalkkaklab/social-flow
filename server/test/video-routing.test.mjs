@@ -2551,3 +2551,40 @@ test('a legacy camera default returns after the middle dolly in the public Seeda
   assert.match(last.framing,/camera locked/);
   assert.equal(plan.args.prompt.split(legacy).length-1,2);
 });
+
+test('timed shot positions, closing frames and opening crops agree in the actual request after public edits', async t => {
+  const f=await pinnedSpeakerScene(t, 'image', []), root=path.join(f.episode,'storyboard');
+  const position=place=>[{character:'witness',images:[],position:place}];
+  f.board.STORY={version:'story-v2',authoring:'story-first',hookContractVersion:1,primaryHookType:'cause_mystery',language:'en'};
+  f.board.STRUCTURE={version:'structure-v1',sequences:[{id:'q1',title:'Arrival',purpose:'Find the witness.',scenes:[1]}],
+    scenes:[{no:1,place:'Room',time:'Day',event:'Someone arrives.',summary:'At the hatch.',frames:{start:'opening.png'},videoDirection:{fps:24,emotion:'Alarm.',openingPositions:[]}}]};
+  f.board.SCENES=[0,1].map(i=>({id:'s000'+(i+1),type:'points',scene:1,duration:2,referenceImage:'opening.png',
+    summary:'A trace of light.',shot:{size:'ls',angle:'eye',render:{mode:'generated_video',purpose:'action',reason:'Follow the light.'}},
+    visual:{character:[],frames:{mode:'first_last',start:'opening.png',end:'opening.png',endState:'The latch is shut.'}},narration:[],
+    timeline:{startFrame:48*i,endFrame:48*(i+1),transition:i?'hard_cut':'open',framing:'Wide full-figure shot. The rail crosses the foreground.',
+      action:'A trace of light moves.',...(i?{openingPositions:position('At the old red door.')}:{})}}));
+  f.save();
+  const getPlan=async()=>JSON.parse((await ROUTES.video_plan({episode:f.episode,sceneNo:1,wholeScene:true,requestId:'edit-openings',args:{reserveUsd:0}})).content[0].text);
+  const id='s0002', positions=position('Beside the new blue window.');
+  assert.match((await ROUTES.shot_prompt({path:root,id,action:'The light dims.',openingPositions:positions,end:'The latch stands wide open.'})).content[0].text,/Wrote/);
+  const revised=await getPlan();
+  assert.deepEqual(revised.sceneRequest.shots[1].openingPositions,positions);
+  assert.ok(revised.args, JSON.stringify({keys:Object.keys(revised),code:revised.code,missing:revised.missing}));
+  assert.match(revised.args.prompt,/new blue window/);
+  assert.doesNotMatch(revised.args.prompt,/old red door|latch is shut/);
+  assert.match(revised.args.prompt,/latch stands wide open/);
+  const {assemble,frameOptions}=(await import('../../skills/storyboard/references/assemble-bg-prompt.js')).default;
+  const current=()=>readBoard(root).win.SCENES[1];
+  const endImage=()=>assemble(frameOptions(current(),'end')).prompt;
+  assert.match(endImage(),/latch stands wide open/);
+  assert.doesNotMatch(endImage(),/latch is shut/);
+  assert.match((await ROUTES.shot_icons({path:root,shots:[{id,size:'cu',frames:{mode:'first_last',endState:'The latch falls shut.'}}]})).content[0].text,/Wrote/);
+  assert.match(endImage(),/latch falls shut/);
+  await assert.rejects(getPlan,/shot_framing_conflict.*s0002.*timeline.framing/);
+  const saved=current(), framing='Close-up of the dial at first. Wide shot at the end as the camera pulls back to reveal the room.';
+  assert.match((await ROUTES.storyboard_apply({path:root,shotsById:[{id,shot:{...saved,timeline:{...saved.timeline,framing}}}],draft:true})).content[0].text,/Wrote/);
+  const fixed=await getPlan();
+  assert.ok(fixed.args.prompt.includes(framing));
+  assert.match(fixed.args.prompt,/latch falls shut/);
+  assert.doesNotMatch(fixed.args.prompt,/latch stands wide open/);
+});

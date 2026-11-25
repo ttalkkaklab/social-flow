@@ -95193,6 +95193,9 @@ var require_scene_direction = __commonJS({
         lines.forEach((_, index) => groups.add(index));
         return Array.from(groups, (index) => lines[index]);
       }
+      function closingState(card) {
+        return text4(card.shot?.videoDesign?.after) || text4(card.visual?.frames?.endState) || text4(card.visual?.video?.promptSource?.end);
+      }
       function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
         const visual = card.visual || {}, video2 = visual.video || {}, source2 = video2.promptSource || {};
         const design = card.shot?.videoDesign || {}, lines = card.narration || [];
@@ -95262,7 +95265,7 @@ var require_scene_direction = __commonJS({
           motion,
           blocking: text4(design.before),
           sound: text4(card.sound?.diegetic) || text4(design.sound) || text4(visual.audio) || text4(source2.sound),
-          end: text4(design.after) || text4(visual.frames?.endState) || text4(source2.end),
+          end: closingState(card),
           beats
         };
       }
@@ -95318,7 +95321,7 @@ var require_scene_direction = __commonJS({
         const common7 = Object.fromEntries(Object.entries(defaults2).filter(([key]) => shots.every((rows2) => rows2[key]?.source === "scene")));
         return { defaults: defaults2, common: common7, shots };
       }
-      const api2 = { labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, notes, base, resolve: resolve17, withCameraDefaults, actingFields, actingPauses, orderedSpeech };
+      const api2 = { labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, closingState, notes, base, resolve: resolve17, withCameraDefaults, actingFields, actingPauses, orderedSpeech };
       if (typeof module === "object" && module.exports) module.exports = api2;
       else root.SCENE_DIRECTION = api2;
     })(typeof window === "object" ? window : globalThis);
@@ -96154,6 +96157,16 @@ var require_shot_view = __commonJS({
       if (!checked(view)) return "";
       return "Opening attention: " + view.subject + ". Opening crop: " + view.crop + ". Opening viewpoint: " + WORDS[view.mode] + (view.viewerId ? " (observer " + view.viewerId + ")" : "") + ".";
     }
+    function openingFraming(timeline) {
+      const opening = [];
+      for (const sentence2 of timeline.split(/[.!?;]\s*/)) {
+        const [first, later] = sentence2.split(/\b(?:then|before (?:the camera|we) (?:pull|zoom|move|push)|ending on|settling on)\b/i, 2);
+        if (/\b(?:at|by) the end(?: of (?:the|this) (?:shot|move|take))?(?=\s*(?:$|,|as\b|when\b))|\b(?:closing (?:frame|view)|end frame|later in the shot)\b/i.test(first)) break;
+        opening.push(first);
+        if (later !== void 0) break;
+      }
+      return opening.join(". ");
+    }
     function framingConflicts(size, view, scene = "", noPerson = false) {
       const aliases = { ws: "ls" }, chosen = aliases[size] || size;
       const known = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert"];
@@ -96170,10 +96183,10 @@ var require_shot_view = __commonJS({
       for (const [field2, text4] of parts) for (const sentence2 of text4.split(/[.!?;]\s*/)) {
         if (/\b(?:no|not|without|never|avoid)\b/i.test(sentence2)) continue;
         if (field2 === "scene" && !/^\s*(?:(?:a|an|the)\s+)?(?:extreme |medium |big |tight |wide |full |close[- ]up|head[- ]to[- ]toe|waist[- ]up|chest[- ]up)/i.test(sentence2)) continue;
-        const shot = sentence2.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:establishing )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
+        const shot = sentence2.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:(?:establishing|full[- ]figure) )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
         if (shot) {
           const label = shot[1].toLowerCase().replace(/-/g, " ");
-          const stated = label.startsWith("extreme wide") || label.startsWith("extreme long") ? "els" : label === "medium close up" ? "mcu" : /^medium (full|long)/.test(label) ? "mfs" : label === "extreme close up" ? "ecu" : /^(big|tight) close up$/.test(label) ? "choker" : /^(wide (establishing )?|long )shot$/.test(label) ? "ls" : label === "full shot" ? "fs" : label === "medium shot" ? "ms" : "cu";
+          const stated = label.startsWith("extreme wide") || label.startsWith("extreme long") ? "els" : label === "medium close up" ? "mcu" : /^medium (full|long)/.test(label) ? "mfs" : label === "extreme close up" ? "ecu" : /^(big|tight) close up$/.test(label) ? "choker" : /^(wide (?:(?:establishing|full[- ]figure) )?|long )shot$/.test(label) ? "ls" : label === "full shot" ? "fs" : label === "medium shot" ? "ms" : "cu";
           if (stated !== chosen && !(chosen === "insert" && ["cu", "ecu"].includes(stated))) out.push(field2 + " says " + shot[1] + " but shot.size is " + size);
         }
         if (person) for (const [pattern, allowed] of rules) {
@@ -96191,7 +96204,7 @@ var require_shot_view = __commonJS({
     function subjectKind(view, size, noPerson, cutRole) {
       return view?.subjectType || (noPerson ? "object" : view?.target || cutRole === "insert" || ["insert", "ecu"].includes(size) ? "detail" : "person");
     }
-    module.exports = { withoutPeople, subjectKind, BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions, framingConflicts };
+    module.exports = { openingFraming, withoutPeople, subjectKind, BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions, framingConflicts };
   }
 });
 
@@ -101579,13 +101592,7 @@ var require_structure_contract = __commonJS({
           }
           if (placeKey && WIDE.some((z) => sizes.has(z))) seenWidePlace.add(placeKey);
           pics.forEach((x2) => {
-            const frame2 = framingOf(x2.s), sz = frame2.size, lay = x2.s.shot?.space?.layout;
-            const subjectType = x2.s.visual?.camera?.view?.subjectType;
-            const nonHumanCrop = frame2.cutRole === "insert" || ["object", "detail", "environment"].includes(subjectType);
-            if (!nonHumanCrop && ["cu", "mcu", "choker"].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
-              warn("shot " + x2.no, `size "${sz}" but the layout shows no face ("${lay.trim().slice(0, 30)}\u2026") \u2014 a close-up is a face; a hand, a label or a screen filling the frame is an insert (directing-grammar \xA76)`);
-            if (!nonHumanCrop && ["ms", "mcu"].indexOf(sz) !== -1 && lay && !(castOf(x2.s) || []).length && !PERSON_RE.test(lay.replace(NO_PERSON_RE, "")) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
-              warn("shot " + x2.no, `size "${sz}" but the layout has no person ("${lay.trim().slice(0, 30)}\u2026") \u2014 the size scale is a body (ms is the waist); a frame of objects is a wide of the place or an insert (directing-grammar \xA76)`);
+            const sz = framingOf(x2.s).size, lay = x2.s.shot?.space?.layout;
             if (["els", "ls", "ws"].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
               warn("shot " + x2.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}\u2026") \u2014 the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
           });
@@ -127689,9 +127696,12 @@ function sceneTimelineWords(timeline, scene, options = {}) {
     }
     const duration5 = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
     const hold = describeDelivery && options.cutTiming === "approximate_holds" && `Hold this view for about ${duration5} ${duration5 === 1 ? "second" : "seconds"}.`;
+    const positions = (shot.openingPositions || []).filter((person) => index !== 0 || !scene.openingPositions?.some((initial) => initial.character === person.character && initial.position === person.position));
+    const opening = positions.map((person) => person.character + ": " + person.position.replace(/[.!?]+$/, "") + ".").join(" ");
     rows2.push([
       shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : void 0),
       hold,
+      opening && "At the start of this shot, " + opening,
       ...[shot.framing, shot.blocking, shot.action].filter((value2) => value2 && !wholeTake.has(value2)),
       ...cues,
       ...guides,
@@ -132384,6 +132394,11 @@ function shotVisualDirection(shot, concise = false) {
   const catalogue = load6("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load6("../../skills/storyboard/references/structure-contract.js");
   const frame2 = directions().framing(shot);
+  const timedFraming = text(object4(shot.timeline).framing);
+  if (timedFraming && frame2.size) {
+    const conflicts = views.framingConflicts(frame2.size, { subjectType: object4(camera.view).subjectType }, views.openingFraming(timedFraming), views.withoutPeople(shot));
+    if (conflicts.length) throw new Error(`shot_framing_conflict: ${shot.id || "shot"} timeline.framing conflicts with size ${frame2.size}. Revise its opening crop and keep the remaining composition notes. ${conflicts.join(". ")}`);
+  }
   const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object4).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -137294,8 +137309,17 @@ function validateStructure(structure) {
   return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
 }
 var sameShape = (value2) => JSON.stringify(value2, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : v);
-function syncCopiedAction(previous, shot) {
+function syncCopiedShotAttributes(previous, shot) {
   if (!previous) return shot;
+  const lastFrame = (card) => card.visual?.frames;
+  const endDesign = (card) => card.shot?.videoDesign;
+  const beforeEnd = endDesign(previous)?.after, nextEnd = endDesign(shot)?.after, frameEnd = lastFrame(shot)?.endState;
+  if (typeof beforeEnd === "string" && beforeEnd === lastFrame(previous)?.endState) {
+    if (typeof frameEnd === "string" && frameEnd !== beforeEnd && nextEnd === beforeEnd)
+      shot = { ...shot, shot: { ...shot.shot, videoDesign: { ...endDesign(shot), after: frameEnd } } };
+    if (typeof nextEnd === "string" && nextEnd !== beforeEnd && frameEnd === beforeEnd)
+      shot = { ...shot, visual: { ...shot.visual, frames: { ...lastFrame(shot), endState: nextEnd } } };
+  }
   const actionSlots = (card) => [card.timeline?.action, card.shot?.videoDesign?.action, card.visual?.action];
   const before = actionSlots(previous), after = actionSlots(shot);
   const edits = after.flatMap((value2, i2) => typeof value2 === "string" && typeof before[i2] === "string" && value2 !== before[i2] ? [i2] : []);
@@ -137493,7 +137517,7 @@ function applyPatch(win, patch, opts = {}) {
     joinNotes.push({ level: "warn", where: String(shot.id), what: `the shot before it changed, so its join (${transition}) was cleared \u2014 set it again with shot_icons next on the shot that now precedes it` });
     return Object.keys(edit2).length ? { ...rest, edit: edit2 } : rest;
   });
-  shots = shots.map((shot, i2) => syncCopiedAction(priorById.get(shot.id) ?? (!originalShots[i2]?.id ? originalShots[i2] : void 0), shot));
+  shots = shots.map((shot, i2) => syncCopiedShotAttributes(priorById.get(shot.id) ?? (!originalShots[i2]?.id ? originalShots[i2] : void 0), shot));
   next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot });
   function archivedPrompts(shot) {
     const vis = shot?.visual;
@@ -138670,6 +138694,9 @@ function writeShotIcons(args) {
       techniques = [...techniques.filter((t2) => !field2(t2.id, "accent")), ...accents];
     }
     if (move !== void 0 && routed.mode !== "still_camera" || focus !== void 0 || accents !== void 0) plan2.techniques = techniques;
+    if (frames?.mode === "first_last" && frames.endState) {
+      plan2.videoDesign = { ...plan2.videoDesign, after: frames.endState };
+    }
     if (frames && !(routed.mode === "generated_video" && st.scenes.some((scene) => scene.no === shots[index].scene && scene.frames !== void 0))) {
       const old = visual.frames ?? {}, next2 = { ...old, ...frames };
       if (old.mode !== frames.mode && !frames.reason) delete next2.reason;
@@ -139500,12 +139527,28 @@ function writeShotPrompt(args) {
   if (!shot.timeline || design.action !== void 0) design.action = args.action;
   shots[index] = {
     ...shot,
-    ...shot.timeline ? { timeline: { ...shot.timeline, action: args.action } } : {},
+    ...shot.timeline ? { timeline: { ...shot.timeline, action: args.action, ...args.openingPositions ? { openingPositions: args.openingPositions } : {} } } : {},
     shot: { ...plan2, videoDesign: design },
-    visual: { ...visual, ...visual.action !== void 0 ? { action: args.action } : {}, ...Object.keys(video2).length ? { video: video2 } : {} },
+    visual: {
+      ...visual,
+      ...visual.action !== void 0 ? { action: args.action } : {},
+      ...args.end && frames.mode === "first_last" ? { frames: { ...frames, endState: args.end } } : {},
+      ...Object.keys(video2).length ? { video: video2 } : {}
+    },
     ...args.sound ? { sound: { ...shot.sound, diegetic: args.sound } } : {}
   };
-  return writeOutline(args.path, sha2563, win, st, shots);
+  let structure = st;
+  const members = (win.SCENES || []).filter((card) => card.scene === shot.scene);
+  const owner = st.scenes.find((scene) => scene.no === shot.scene);
+  const positions = args.openingPositions;
+  if (positions && members[0] === shot && owner?.videoDirection?.openingPositions && (!owner.frames?.start || owner.frames.start === start)) {
+    const revised = members.length === 1 ? positions : owner.videoDirection.openingPositions.map((row) => {
+      const local3 = positions.find((person) => person.character === row.character);
+      return local3 ? { ...row, position: local3.position } : row;
+    });
+    structure = { ...st, scenes: st.scenes.map((scene) => scene === owner ? { ...owner, videoDirection: { ...owner.videoDirection, openingPositions: revised } } : scene) };
+  }
+  return writeOutline(args.path, sha2563, win, structure, shots);
 }
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -144713,7 +144756,7 @@ Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` 
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
-Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\` (the clich\xE9s it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: author sequences, scenes and shot stories with \`story_sequence\`, \`story_scene\` and \`story_shot\`. Record selected clich\xE9s with \`story_cliche\`. Record cast, dialogue, music decisions and shot attributes with \`shot_characters\`, \`shot_dialogue\`, \`story_music\` and \`shot_icons\`. Use \`shot_prompt\` for an action, closing state, diegetic sound or inspected speaker binding. Use \`storyboard_read\`, \`storyboard_apply\` and \`storyboard_check\` for review and edits. When an image is requested, use \`shot_image\`. When video is requested, use \`video_plan\` to compile the current scene and its shots. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` \u2192 \`music_plan\` \u2192 \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -148809,7 +148852,7 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, up to four principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
-Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
+Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and video_plan read these words when the user requests images or video, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
 A shot may carry lines from several of its characters; the selected video model limits how many pinned voices one render takes, and video_plan reports a scene over it (scene_render_voice_limit). bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: up to four named cast members in the shot. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; bystanders have no separate video input unless a reference explicitly names them. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 

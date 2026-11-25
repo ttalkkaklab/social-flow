@@ -76,14 +76,14 @@ test('shared English staging words do not certify duplicated story information',
   assert.ok(structure.check(win, { draft: true }).some(f => /repeated shot.info text/.test(f.what)));
 });
 
-test('a medium shot that lists its characters has a person on screen whatever language its layout uses', () => {
+test('a medium shot can frame people or objects without a face requirement in either language', () => {
   const shot = (id, cast, layout) => ({ id, type: 'points', scene: 1, visual: { character: cast }, shot: { size: 'ms', space: { layout } } });
   const win = { STORY: { version: 'story-v2' }, STRUCTURE: { version: 'structure-v1',
     sequences: [{ id: 'q1', scenes: [1], title: 'Night', purpose: 'Find a friend' }],
     scenes: [{ no: 1, place: 'Club', time: 'Night', event: 'A friend arrives', summary: 'A friend arrives' }] },
     SCENES: [shot('s0001', ['mina'], 'Mina stands left of the door, waist up'), shot('s0002', [], 'two cups on a table by the window')] };
   const noPerson = structure.check(win, { draft: true }).filter(f => /layout has no person/.test(f.what)).map(f => f.where);
-  assert.deepEqual(noPerson, ['shot 2']);
+  assert.deepEqual(noPerson, []);
 });
 
 test('a shot with a structured opening view owes no composition record', () => {

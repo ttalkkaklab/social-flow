@@ -792,9 +792,18 @@ export function validateStructure(structure) {
 const sameShape = (value) => JSON.stringify(value, (_key, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
 // Historical tools copied the same action into several slots. An edit to one copy should
 // update its unchanged twins while separately authored performance and timed beats stay intact.
-function syncCopiedAction(previous, shot) {
+function syncCopiedShotAttributes(previous, shot) {
     if (!previous)
         return shot;
+    const lastFrame = (card) => card.visual?.frames;
+    const endDesign = (card) => card.shot?.videoDesign;
+    const beforeEnd = endDesign(previous)?.after, nextEnd = endDesign(shot)?.after, frameEnd = lastFrame(shot)?.endState;
+    if (typeof beforeEnd === 'string' && beforeEnd === lastFrame(previous)?.endState) {
+        if (typeof frameEnd === 'string' && frameEnd !== beforeEnd && nextEnd === beforeEnd)
+            shot = { ...shot, shot: { ...shot.shot, videoDesign: { ...endDesign(shot), after: frameEnd } } };
+        if (typeof nextEnd === 'string' && nextEnd !== beforeEnd && frameEnd === beforeEnd)
+            shot = { ...shot, visual: { ...shot.visual, frames: { ...lastFrame(shot), endState: nextEnd } } };
+    }
     const actionSlots = (card) => [card.timeline?.action, card.shot?.videoDesign?.action, card.visual?.action];
     const before = actionSlots(previous), after = actionSlots(shot);
     const edits = after.flatMap((value, i) => typeof value === 'string' && typeof before[i] === 'string' && value !== before[i] ? [i] : []);
@@ -1029,7 +1038,7 @@ export function applyPatch(win, patch, opts = {}) {
         joinNotes.push({ level: 'warn', where: String(shot.id), what: `the shot before it changed, so its join (${transition}) was cleared — set it again with shot_icons next on the shot that now precedes it` });
         return (Object.keys(edit).length ? { ...rest, edit } : rest);
     });
-    shots = shots.map((shot, i) => syncCopiedAction(priorById.get(shot.id) ?? (!originalShots[i]?.id ? originalShots[i] : undefined), shot));
+    shots = shots.map((shot, i) => syncCopiedShotAttributes(priorById.get(shot.id) ?? (!originalShots[i]?.id ? originalShots[i] : undefined), shot));
     next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot }); // sync() writes sceneSlug/sequence — never into the caller's objects
     // Opening an old board or saving unrelated changes preserves its historical text.
     function archivedPrompts(shot) {
@@ -2379,6 +2388,10 @@ export function writeShotIcons(args) {
         }
         if ((move !== undefined && routed.mode !== 'still_camera') || focus !== undefined || accents !== undefined)
             plan.techniques = techniques;
+        // A scene may own the endpoint asset while the shot owns the closing story state.
+        if (frames?.mode === 'first_last' && frames.endState) {
+            plan.videoDesign = { ...plan.videoDesign, after: frames.endState };
+        }
         if (frames && !(routed.mode === 'generated_video' && st.scenes.some(scene => scene.no === shots[index].scene && scene.frames !== undefined))) {
             const old = (visual.frames ?? {}), next = { ...old, ...frames };
             // A reason explains one plan: a new mode given without its own reason does not inherit the old one.
@@ -3230,10 +3243,24 @@ export function writeShotPrompt(args) {
     // Timed boards own their action in the timeline. Retain existing aliases for older readers.
     if (!shot.timeline || design.action !== undefined)
         design.action = args.action;
-    shots[index] = { ...shot, ...(shot.timeline ? { timeline: { ...shot.timeline, action: args.action } } : {}),
-        shot: { ...plan, videoDesign: design }, visual: { ...visual, ...(visual.action !== undefined ? { action: args.action } : {}), ...(Object.keys(video).length ? { video } : {}) },
+    shots[index] = { ...shot, ...(shot.timeline ? { timeline: { ...shot.timeline, action: args.action, ...(args.openingPositions ? { openingPositions: args.openingPositions } : {}) } } : {}),
+        shot: { ...plan, videoDesign: design }, visual: { ...visual, ...(visual.action !== undefined ? { action: args.action } : {}),
+            ...(args.end && frames.mode === 'first_last' ? { frames: { ...frames, endState: args.end } } : {}), ...(Object.keys(video).length ? { video } : {}) },
         ...(args.sound ? { sound: { ...shot.sound, diegetic: args.sound } } : {}) };
-    return writeOutline(args.path, sha256, win, st, shots);
+    // The scene opening and its first shot can describe the same inspected frame. Later
+    // shot positions remain local; a scene's reference numbers belong to its own cast list.
+    let structure = st;
+    const members = (win.SCENES || []).filter(card => card.scene === shot.scene);
+    const owner = st.scenes.find(scene => scene.no === shot.scene);
+    const positions = args.openingPositions;
+    if (positions && members[0] === shot && owner?.videoDirection?.openingPositions && (!owner.frames?.start || owner.frames.start === start)) {
+        const revised = members.length === 1 ? positions : owner.videoDirection.openingPositions.map(row => {
+            const local = positions.find(person => person.character === row.character);
+            return local ? { ...row, position: local.position } : row;
+        });
+        structure = { ...st, scenes: st.scenes.map(scene => scene === owner ? { ...owner, videoDirection: { ...owner.videoDirection, openingPositions: revised } } : scene) };
+    }
+    return writeOutline(args.path, sha256, win, structure, shots);
 }
 const scenarioCheckResultSchema = z.object({
     files: z.array(z.string()),

@@ -793,14 +793,7 @@
       }
       if (placeKey && WIDE.some(z => sizes.has(z))) seenWidePlace.add(placeKey);
       pics.forEach(x => {
-        const frame = framingOf(x.s), sz = frame.size, lay = x.s.shot?.space?.layout;
-        const subjectType = x.s.visual?.camera?.view?.subjectType;
-        const nonHumanCrop = frame.cutRole === 'insert' || ['object','detail','environment'].includes(subjectType);
-        if (!nonHumanCrop && ['cu', 'mcu', 'choker'].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
-          warn('shot ' + x.no, `size "${sz}" but the layout shows no face ("${lay.trim().slice(0, 30)}…") — a close-up is a face; a hand, a label or a screen filling the frame is an insert (directing-grammar §6)`);
-        // A shot that lists its characters has a person on screen, whatever language the layout is written in.
-        if (!nonHumanCrop && ['ms', 'mcu'].indexOf(sz) !== -1 && lay && !(castOf(x.s) || []).length && !PERSON_RE.test(lay.replace(NO_PERSON_RE, '')) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
-          warn('shot ' + x.no, `size "${sz}" but the layout has no person ("${lay.trim().slice(0, 30)}…") — the size scale is a body (ms is the waist); a frame of objects is a wide of the place or an insert (directing-grammar §6)`);
+        const sz = framingOf(x.s).size, lay = x.s.shot?.space?.layout;
         if (['els', 'ls', 'ws'].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}…") — the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
       });
@@ -1365,7 +1358,7 @@
       return available(frames.end) ? [] : [id + ' has an unreadable end image (' + frames.end + ')'];
     });
   }
-  /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
+  /** The inputs identified by an archived visual.video.promptBasis: the frame plan,
       the cast, the on-screen lines (MSR adds its own), the camera move, the focus technique and, on
       MSR, the size, angle and depth. isFocus(id) names the focus techniques (film-techniques.js). */
   function promptBasis(s, isFocus) {
@@ -1388,7 +1381,7 @@
   function videoLines(s) {
     return (s && Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery !== 'voiceover').map(l => [l.speaker || '', l.delivery || '', l.tts || '']);
   }
-  /** The promptBasis parts that changed since shot_prompt wrote the prompt; [] when current or not written by shot_prompt. */
+  /** The recorded inputs that changed since this archived prompt was saved. */
   function promptDrift(s, isFocus) {
     const video = s && s.visual && s.visual.video, basis = video && video.promptBasis;
     if (!basis || typeof video.prompt !== 'string') return [];
