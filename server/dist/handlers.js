@@ -814,7 +814,7 @@ export const ROUTES = {
         const request = parseArgs(mlx.mlxImageGenerateSchema, args);
         const result = await mlx.generateMlxImage(request);
         if (!result.success)
-            return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: true };
+            return { ...text(`MLX Core image generation failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
         return text(`Image generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
             `Size: ${result.width}x${result.height}\nSteps: ${result.steps ?? 'model default'}\n` +
             `Seed: ${result.seed ?? 'random'}\nGeneration time: ${result.elapsedSeconds}s`);
@@ -823,7 +823,7 @@ export const ROUTES = {
         const request = parseArgs(mlx.mlxImageEditSchema, args);
         const result = await mlx.editMlxImage(request);
         if (!result.success)
-            return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: true };
+            return { ...text(`MLX Core image edit failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
         return text(`Image edited via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
             (result.width && result.height ? `Size: ${result.width}x${result.height}\n` : '') +
             `Steps: ${result.steps ?? 'model default'}\nSeed: ${result.seed ?? 'random'}\n` +

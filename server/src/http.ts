@@ -1,3 +1,4 @@
+import type { Dispatcher } from 'undici';
 import { config } from './config.js';
 
 export interface ApiResult {
@@ -17,11 +18,13 @@ export async function requestRaw(
   headers: Record<string, string>,
   body?: unknown,
   timeoutMs?: number,
+  dispatcher?: Dispatcher,
 ): Promise<ApiResult> {
   const effectiveTimeoutMs = timeoutMs ?? config.requestTimeoutMs;
   try {
     const res = await fetch(url, {
       method: method.toUpperCase(),
+      ...(dispatcher ? {dispatcher} : {}),
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...headers,

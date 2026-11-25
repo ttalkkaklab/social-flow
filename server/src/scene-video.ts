@@ -1,3 +1,4 @@
+import { fasth3RenderFrames } from './fasth3-omni.js';
 // Frame numbers throughout this module are relative to the scene. Shot ends are exclusive.
 import path from 'node:path';
 import { createHash } from 'node:crypto';
@@ -474,13 +475,15 @@ export function bindSceneAdapter(request: SceneRequest, tool: string, model: str
   const { pins, refs, caps } = mapSceneInputs(request, tool, model, [], resolution);
   const args: Record<string,unknown> = {};
   const sceneSeconds = request.frameCount / request.fps;
-  if (tool === 'astra_genai_msr') args.numFrames = request.frameCount;
+  const renderFrames = tool === 'fasth3_omni_reference'
+    ? fasth3RenderFrames(request.frameCount) : request.frameCount;
+  if (tool === 'astra_genai_msr' || tool === 'fasth3_omni_reference') args.numFrames = renderFrames;
   for (const field of ['duration','durationSeconds','requiredSeconds']) {
     if (tool.startsWith('seedance_') && field === 'durationSeconds' && input[field] === -1) continue;
     if (input[field] !== undefined && input[field] !== sceneSeconds)
       throw new Error('scene_video_timing: ' + field + ' differs from the authored scene duration');
   }
-  if (['numFrames','frames'].some(field => input[field] !== undefined && input[field] !== request.frameCount))
+  if (['numFrames','frames'].some(field => input[field] !== undefined && input[field] !== renderFrames))
     throw new Error('scene_video_timing: requested frame count differs from the storyboard');
   const { fpsField } = caps;
   if (fpsField) {

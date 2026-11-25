@@ -75,7 +75,7 @@ numeric `exclusiveMinimum` fix with its contract case, two assertions (the direc
 a cast id equal to a shot id) and this record.
 
 Pull request #709 then added the shot-manifest renderer's modes (`sceneRendering`: `auto`, `single_msr`,
-`per_shot`) and merged without a conflict.
+`per_shot`), and #710 added local FastH3 delivery. Both merged without a conflict.
 
 `dev` changed what capabilities 1 and 3 describe, and the merged tree follows `dev`:
 
@@ -91,7 +91,9 @@ Pull request #709 then added the shot-manifest renderer's modes (`sceneRendering
 - A plan made with a `sceneRendering` mode returns no `promptTemplate` and refuses `prompt`
   (`scene_prompt_unsupported`), `single_msr` included.
 
-Each line above was run on the merged build. No verifier scored the merged tree. Its gate,
-`cd server && HOME=$(mktemp -d) npm test`, gives 1374 pass, 0 fail.
+Each line above was run on the build merged with `dev` at `588a233b`. No verifier scored the merged tree. Its
+gate, `cd server && HOME=$(mktemp -d) npm test`, gives 1381 pass, 0 fail. Three earlier runs of the same gate, made
+while other suites loaded the machine, failed headless Chrome cases in `test/cover.test.mjs` (and once a builder
+case in `test/music-timeline.test.mjs`); those two files pass alone and this branch does not touch them.
 
 Artifacts: `loop.md`, `verify-1.md` to `verify-4.md`, `iter-1-summary.md` to `iter-4-summary.md`.

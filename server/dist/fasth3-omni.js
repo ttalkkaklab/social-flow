@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +8,14 @@ import { bareFilenameSchema } from './media-utils.js';
 import { readImageMetadata } from './image-media.js';
 export const FASTH3_OMNI_MODEL = 'ddalcu/FastH3-Omni-MLX-Serve-8bit';
 export const FASTH3_FRAME_LIMITS = { min: 124, max: 362, step: 17, frameRate: 24, frameOffset: 5 };
+/** The raw take includes the shortest tail that covers the authored 24 fps edit. */
+export function fasth3RenderFrames(editFrames) {
+    const { min, max, frameOffset, step } = FASTH3_FRAME_LIMITS;
+    const frames = Math.max(min, frameOffset + step * Math.ceil((editFrames - frameOffset) / step));
+    if (frames > max)
+        throw new Error('FastH3 scene exceeds 362 frames; split the shot before planning');
+    return frames;
+}
 export const FASTH3_MAX_RGB_BYTES = 256 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 60 * 1024 * 1024;
 const dimension = z.number().int().min(256).max(1536).refine(n => n % 32 === 0, 'Dimensions must be multiples of 32');
@@ -21,7 +30,7 @@ export const fasth3OmniSchema = z.object({
     seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional().describe('Reproducible seed, e.g. 2026.'),
     referenceImagePaths: paths(9).describe('Ordered PNG/JPEG paths, e.g. ["/tmp/character.png"]; <Picture 1> etc.'),
     referenceVideoPaths: paths(3).describe('Ordered local video paths, e.g. ["/tmp/motion.mp4"]; 2–15 seconds each, 15 seconds total. Video sound is included.'),
-    referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2–15 seconds each. Voice imitation does not preserve exact speech timing.'),
+    referenceAudioPaths: paths(3).describe('Ordered voice/music paths, e.g. ["/tmp/voice.wav"]; 2–15 seconds each and 15 seconds total. Voice imitation does not preserve exact speech timing.'),
     trimReferenceVideos: z.boolean().default(false).describe('Allow trimming reference video tails to output length and the 17k+5 ladder; false refuses any trim.'),
     referenceSize: z.enum(['match', 'max']).default('match').describe('match caps references to output area; max preserves more detail at higher memory/time cost.'),
     outputPath: z.string().optional().describe('Output directory, e.g. /tmp/video-test.'),
@@ -50,6 +59,58 @@ export function fasth3VideoAudioCount(files) {
 }
 function ffmpeg(args) {
     execFileSync('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-nostdin', '-y', ...args], { timeout: 120_000, maxBuffer: 1024 * 1024 });
+}
+/** Detect a replay of a voice sample in a take before using it for a speaker comparison. */
+export function checkFasth3VoiceReplay(video, references) {
+    if (!references.length)
+        return { status: 'no_voice_references' };
+    const rate = 2000;
+    const pcm = (file) => {
+        const bytes = execFileSync('ffmpeg', ['-nostdin', '-v', 'error', '-i', file, '-map', '0:a:0',
+            '-t', '16', '-ac', '1', '-af', 'highpass=f=80,lowpass=f=650', '-ar', String(rate), '-f', 'f32le', '-'], { timeout: 20_000, maxBuffer: 140_000, stdio: ['ignore', 'pipe', 'pipe'] });
+        return new Float32Array(Uint8Array.from(bytes).buffer);
+    };
+    try {
+        const take = pcm(video);
+        const matches = [];
+        for (const reference of references) {
+            if (createHash('sha256').update(readFileSync(reference.path)).digest('hex') !== reference.sha256)
+                return { status: 'unmeasured' };
+            const ref = pcm(reference.path);
+            if (ref.length < rate || ref.length > take.length)
+                continue;
+            // Rank offsets with a sparse sample, then measure the full waveform at the strongest offsets.
+            const stride = Math.max(1, Math.floor(ref.length / 256));
+            const candidates = [];
+            const correlate = (offset, step) => {
+                let dot = 0, sourceEnergy = 0, takeEnergy = 0;
+                for (let i = 0; i < ref.length; i += step) {
+                    const a = ref[i], b = take[offset + i];
+                    dot += a * b;
+                    sourceEnergy += a * a;
+                    takeEnergy += b * b;
+                }
+                return Math.abs(dot) / Math.sqrt(Math.max(1e-12, sourceEnergy * takeEnergy));
+            };
+            for (let offset = 0; offset <= take.length - ref.length; offset++) {
+                const score = correlate(offset, stride);
+                if (score < 0.4 || (candidates.length === 8 && score <= candidates[7].score))
+                    continue;
+                candidates.push({ offset, score });
+                candidates.sort((a, b) => b.score - a.score);
+                if (candidates.length > 8)
+                    candidates.pop();
+            }
+            const best = candidates.map(({ offset }) => ({ offset, score: correlate(offset, 1) })).sort((a, b) => b.score - a.score)[0];
+            if (best && best.score >= 0.55)
+                matches.push({ audioIndex: reference.audioIndex, speaker: reference.speaker, startSeconds: best.offset / rate,
+                    durationSeconds: ref.length / rate, waveformCorrelation: Number(best.score.toFixed(3)) });
+        }
+        return { status: matches.length ? 'possible_reference_replay' : 'no_full_sample_match', matches };
+    }
+    catch {
+        return { status: 'unmeasured' };
+    }
 }
 /** Convert bounded local references to the backend wire format before loading any weights. */
 export function buildFasth3Body(raw) {
@@ -93,7 +154,10 @@ export function buildFasth3Body(raw) {
                 throw new Error('Reference video must fit the requested output frame count and 17k+5 ladder; trim it explicitly before submitting');
             return { frames: files.slice(0, accepted).map(f => encode(join(temp, f))), ...(meta.hasAudio ? { audio: audio(file, `video-audio-${i}`, accepted / 24) } : {}) };
         });
-        const audios = r.referenceAudioPaths.map((file, i) => { probe(file); return audio(file, `audio-${i}`); });
+        const audioSeconds = r.referenceAudioPaths.reduce((sum, file) => sum + probe(file).duration, 0);
+        if (audioSeconds > 15)
+            throw new Error('Reference audio clips exceed fifteen seconds total');
+        const audios = r.referenceAudioPaths.map((file, i) => audio(file, `audio-${i}`));
         return { stream: true, model: r.model, prompt: r.prompt, width: r.width, height: r.height, num_frames: r.numFrames,
             steps: r.steps, ...(r.seed === undefined ? {} : { seed: r.seed }), ref_image_size: r.referenceSize,
             ref_images: images, ref_videos: videos, ref_audios: audios };

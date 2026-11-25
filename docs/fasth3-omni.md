@@ -6,6 +6,47 @@ continue to resolve. New catalog-based LTX planning selects the canonical name.
 MLX-Serve is the internal backend; `engine:"mlx"` in saved settings is unchanged.
 No existing settings or episode snapshots are migrated implicitly.
 
+## Mac image and video settings
+
+Select `{"engine":"mlx","model":"ddalcu/MiniMax-H3-Image-MLX-Serve-4bit"}` for
+images and `{"engine":"mlx","model":"ddalcu/FastH3-Omni-MLX-Serve-8bit","operation":"reference"}`
+for talking shots. The Mac image tools send requests directly to MLX-Serve.
+Check its model catalog for the installed image checkpoint. Use `image_plan`
+and `image_execute` for a managed generation or edit. For an edit, pass
+the source in `imagePath` and up to nine ordered `refImagePaths`. The result
+keeps the source dimensions up to the worker’s 6272-pixel long-side limit.
+The plan records the expected output size. The worker owns the six sampling steps. Use
+GPT Image 2 when the image must display or preserve readable text.
+
+Managed direct H3 image plans pin the MLX endpoint and reference hashes. After
+a disconnect, refresh the original image request with `image_status`. A saved
+native PNG under the plan ID can finish delivery without another inference.
+A request that has not returned any bytes stays unresolved.
+
+A separately selected legacy gateway binding uses its own image receipt and
+request lookup. Existing plans keep their approved destination.
+
+For an on-screen speaker, pin the character's voice sample and list the owned
+face under `voiceReference.imagePaths`. Give each shot its own composition
+image. Keep the dialogue in the storyboard and set `STORY.language`, for example
+`vi`. The planner compiles a speaker tag, a picture index, an audio index and
+the original words in a `<d>[Vietnamese] …</d>` span.
+
+A 240-frame scene at 24 fps needs a 243-frame native take. Managed FastH3
+execution keeps the original MP4 in `.work/fasth3/<plan-id>/native.mp4` and
+delivers the authored frame count with its matching audio duration. After a
+disconnect, call `video_status` with the original request ID and `action:"refresh"`.
+A complete local take can finish delivery without another model invocation.
+If the worker disconnected before returning media, the request remains unresolved.
+
+For character dialogue, inspect `voiceReferenceCheck` on the delivery receipt.
+On the Mac test, a take generated the requested Vietnamese line and replayed
+its Korean reference recording later in the same shot. The waveform check
+reports the reference index, time and correlation for a possible full-sample
+replay. Exclude that interval from speaker-similarity scoring and listen to
+the complete clip before adoption. Short phrases or paraphrases can escape
+the waveform check.
+
 ## Architecture
 
 `local-video-models.ts` is a small Strategy registry. Each entry owns its schema,
@@ -79,7 +120,7 @@ The 256 MiB RGB ceiling, 60 MiB encoded upload limit, dimension range and explic
   256 MiB compatibility limit (the installed MLX-Serve 26.10.3 UI limit). A 15-second request needs a smaller canvas than a 5-second one.
 - Up to 9 PNG/JPEG images, 3 videos and 3 audio files; at most 12 total and at
   least one image or video. Each clip is 2–15 seconds; video references total
-  at most 15 seconds. The encoded request must fit 60 MiB.
+  at most 15 seconds and standalone audio references have their own 15-second total. The encoded request must fit 60 MiB.
 - Reference videos are decoded to JPEG frames at 24 fps with a maximum 768px
   side. Their soundtracks are converted to stereo 32kHz PCM WAV. By default,
   references that require tail trimming fail. `trimReferenceVideos:true`
