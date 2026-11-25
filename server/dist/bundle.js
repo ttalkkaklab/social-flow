@@ -150673,7 +150673,8 @@ async function renderCover(path40) {
   mkdirSync19(join21(stage2, "previews"), { recursive: true });
   const previous = previousOutputs(dir);
   try {
-    const template = readFileSync39(TEMPLATE_FILE, "utf8");
+    const templateBytes = readFileSync39(TEMPLATE_FILE);
+    const template = templateBytes.toString("utf8");
     const kind = landscape(ep.spec) ? "landscape" : "vertical";
     const files3 = [], previews = [], warnings = [], measurements = {};
     const sources = {}, fonts = {};
@@ -150797,7 +150798,7 @@ async function renderCover(path40) {
       version: 1,
       renderVersion: RENDER_VERSION,
       decisionSha256: decisionSha(decision),
-      templateSha256: templateSha(),
+      templateSha256: sha2562(templateBytes),
       sources,
       fonts,
       format: ep.format,

@@ -64,6 +64,12 @@ is the author's call, and none of them stops the work.
 Long-form may add up to two `variants` (another moment, focus or copy) for YouTube Test &
 Compare, which picks by watch time, not clicks. Shorts have no A/B testing, so they get none.
 
+When the user wants the full picture behind text they have already placed, keep the saved
+shot, copy and text position. In the affected cover layout, fit the picture to the canvas
+and remove the panel or mask that hides it. Render again and compare the four edges with
+the source and the text bounds with the previous render. Open the storyboard library to
+check the thumbnail at its displayed size.
+
 ## 4. When the picture is the wrong shape
 
 Only when no shot fits the canvas (a 16:9 thumbnail from 9:16 pictures, say): plan a text-free
