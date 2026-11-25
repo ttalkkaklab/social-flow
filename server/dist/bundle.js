@@ -92939,6 +92939,11 @@ var require_video_catalog = __commonJS({
                 "mix"
               ],
               sceneRendering: "per_shot",
+              executionModes: [
+                "auto",
+                "single_msr",
+                "per_shot"
+              ],
               requiresUserChoice: false,
               capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
               validation: "/v1/ltx/v2/scene-to-video/validate"
@@ -93028,6 +93033,9 @@ var require_video_catalog = __commonJS({
                 "conditioning"
               ],
               sceneRendering: "per_shot",
+              executionModes: [
+                "per_shot"
+              ],
               requiresUserChoice: true,
               capabilities: "/v1/ltx/v2/scene-to-video/capabilities",
               validation: "/v1/ltx/v2/scene-to-video/validate"
@@ -97459,8 +97467,18 @@ var require_scene_cast = __commonJS({
       });
       const mixedCuts = distilled && mode === "reference" && !direction.oneTake && cutVoiceover;
       if (mixedCuts) operation = "image";
-      const perShot = distilled && operation === "image" && cards.length > 1 && !direction.oneTake && (mixedCuts || mode === "reference" && speakers.length > 2 || anchoredCuts);
-      return { speakers, operation, mode, ...perShot ? { rendering: "per_shot" } : {}, external: !visible && physical.length > 0 };
+      let rendering;
+      const cutScene = distilled && cards.length > 1 && !direction.oneTake;
+      const structured = cards.every((card, i2) => i2 === 0 && scene.frames?.start || card.referenceImage || card.timeline?.images?.some((pin) => pin.role === "start") || card.visual?.frames?.start);
+      const visualReferences = scene.speakerReferences?.length || cards.some((card) => card.timeline?.images?.some((pin) => pin.role === "face") || card.visual?.references?.some((ref) => ref.use !== "image" && ref.role === "character"));
+      if (cutScene && structured && (mode === "reference" || mode === "picture" && visualReferences)) {
+        operation = "image";
+        const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
+        rendering = cards.some((card) => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 || frames > 361 || cards.length > 4 || cards.some((card) => card.timeline?.dialogueCues?.length) ? "per_shot" : "auto";
+      } else if (cutScene && operation === "image" && (mixedCuts || speakers.length > 2 || anchoredCuts)) {
+        rendering = "per_shot";
+      }
+      return { speakers, operation, mode, ...rendering ? { rendering } : {}, external: !visible && physical.length > 0 };
     }
     function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, rendering = route.rendering, generateAudio, limit: limit2 }) {
       if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => orderedSpeech(card).some((line) => line.delivery !== "voiceover" && line.tts?.trim()) && require_production_mode().videoSlot(card)?.generateAudio === false)))
@@ -97473,7 +97491,7 @@ var require_scene_cast = __commonJS({
       }
       if (!limit2 || ["astra_genai_img2video", "astra_genai_msr"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled")
         throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
-      const perShot = rendering === "per_shot" && !scene?.videoDirection?.oneTake;
+      const perShot = !!rendering && rendering !== "single_msr" && !scene?.videoDirection?.oneTake;
       const groups = perShot ? cards.map((card) => [card]) : [cards];
       for (const group of groups) {
         const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
@@ -102143,7 +102161,7 @@ var require_video_selection = __commonJS({
           storedMembers[i2] = { ...storedMembers[i2], narration: storedMembers[i2].narration?.map((line) => line.delivery === "off_screen" ? { ...line, delivery: "voiceover" } : line) };
       }
       const sourceCards = storedMembers.map((raw) => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-      const cast = scene && projectSceneCast(scene, sourceCards, board, path40.join(root, "storyboard"), savedSelection.engine, speechRoute?.mode === "conditioned", (rendering ?? speechRoute?.rendering) === "per_shot");
+      const cast = scene && projectSceneCast(scene, sourceCards, board, path40.join(root, "storyboard"), savedSelection.engine, speechRoute?.mode === "conditioned", Boolean(rendering ?? speechRoute?.rendering));
       if (cast) scene = { ...scene, videoDirection: cast.direction };
       const members = (cast?.members ?? sourceCards).map((shotWithRefs) => {
         const raw = shotWithRefs;
@@ -125799,6 +125817,7 @@ var capabilitiesSchema = external_exports.object({
   version: external_exports.literal(1),
   execution: external_exports.literal("per_shot"),
   transitions: external_exports.array(external_exports.string()).refine((values) => values.includes("hard_cut")),
+  execution_modes: external_exports.array(external_exports.string()).optional(),
   motion_prefix: external_exports.boolean().optional(),
   timed_dialogue: external_exports.string().nullish(),
   scene_audio_modes: external_exports.record(external_exports.string()).optional().catch(void 0),
@@ -125814,6 +125833,7 @@ function parseSceneCapabilities(response) {
   const body = capabilitiesSchema.parse(response);
   const limits = body.limits ?? {};
   return {
+    executionModes: body.execution_modes ?? ["per_shot"],
     motionPrefix: body.motion_prefix === true,
     timedDialogue: body.timed_dialogue ?? null,
     audioModes: body.scene_audio_modes ?? {},
@@ -125856,7 +125876,7 @@ function sceneRequestIssues(scene, capabilities, options = {}) {
   }
   return issues;
 }
-async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings) {
+async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bindings, execution) {
   const attachments = [];
   const conditioned = conditionedBy(scene, model2);
   const shots = scene.shots.map((shot) => {
@@ -125907,6 +125927,7 @@ async function buildSceneWire(scene, model2, resolution2, stageFiles = false, bi
   if (trackBytes > 32 * 1024 * 1024) throw new Error("scene_audio@0: exceeds the 32 MiB gateway upload limit");
   const stageTrack = Boolean(scene.audio && (stageFiles || trackBytes * 4 / 3 > GENAI_MSR_INLINE_MAX_BYTES));
   const body = {
+    ...execution && execution !== "per_shot" ? { execution } : {},
     model: model2,
     resolution: resolution2,
     fps: scene.fps,
@@ -125972,7 +125993,15 @@ async function validateScenePayload(endpoint2, scene, model2, resolution2, reque
 }
 async function validateSceneBody(body, requestId, expected) {
   const result = await requestGenai("POST", SCENE_ROUTE + "/validate", body, 12e4, void 0, void 0, requestId);
-  external_exports.object({ schema_valid: external_exports.literal(true), model: external_exports.literal(expected.model), shots: external_exports.literal(expected.shots) }).parse(result);
+  const checked = external_exports.object({
+    schema_valid: external_exports.literal(true),
+    model: external_exports.literal(expected.model),
+    shots: external_exports.literal(expected.shots),
+    execution: external_exports.enum(["per_shot", "single_msr"]).optional()
+  }).parse(result);
+  if (expected.execution === "auto" && !checked.execution || expected.execution && expected.execution !== "auto" && (checked.execution ?? "per_shot") !== expected.execution)
+    throw new Error("scene_render_selection: gateway did not validate the planned execution mode");
+  return checked.execution ?? "per_shot";
 }
 async function submitSceneBody(body, requestId) {
   const response = await requestGenai("POST", SCENE_ROUTE, body, 12e4, void 0, void 0, requestId);
@@ -129844,6 +129873,7 @@ function sceneInputCapabilities(tool2) {
       model: tool2 === "astra_genai_img2video" ? "ltx-2.5-22b-distilled" : "ltx-2.5-22b-dev",
       sceneAudioModes: tool2 === "astra_genai_img2video" ? ["native", "mix"] : ["conditioning"],
       sceneRendering: "per_shot",
+      executionModes: tool2 === "astra_genai_img2video" ? ["auto", "single_msr", "per_shot"] : ["per_shot"],
       requiresUserChoice: tool2 !== "astra_genai_img2video",
       capabilities: SCENE_ROUTE + "/capabilities",
       validation: SCENE_ROUTE + "/validate"
@@ -130858,6 +130888,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     }
     if (frames.start && !(namedReferencesOnly && frames.mode === "reference") && !pins.some((p) => p.role === "start" && p.path === frames.start)) pins.push({ path: frames.start, frame: startFrame, role: "start" });
     if (frames.end && !pins.some((p) => p.role === "end" && p.path === frames.end && (!fallback || p.frame === endFrame - 1))) pins.push({ path: frames.end, frame: endFrame - 1, role: "end" });
+    if (shotScoped && member.referenceImage && !pins.some((pin) => pin.role === "start"))
+      pins.push({ path: member.referenceImage, frame: startFrame, role: "start" });
     const occupied = /* @__PURE__ */ new Set();
     const references = render.imageReferences(member).filter((r2) => ["video", "both"].includes(r2.use));
     const add = (pin) => {
@@ -132115,7 +132147,7 @@ var videoPlanSchema = external_exports.object({
   sceneNo: external_exports.number().int().positive(),
   requestId: idSchema,
   validateScenePayload: external_exports.boolean().optional(),
-  sceneRendering: external_exports.literal("per_shot").optional(),
+  sceneRendering: external_exports.enum(["auto", "single_msr", "per_shot"]).optional(),
   shotBindings: sceneShotBindingsSchema.optional(),
   purpose: external_exports.enum(["draft", "final", "revision"]).optional(),
   basedOnRequestId: idSchema.optional(),
@@ -132254,11 +132286,14 @@ async function validateShotRenderPlan(plan2) {
   }
   const refused = sceneRequestIssues(scene, capabilities, { bindings: plan2.shotBindings, model: model2 });
   if (refused.length) throw new Error("scene_render_inputs_unsupported:\n" + refused.join("\n"));
-  const prepared = await buildSceneWire(scene, model2, String(plan2.selection.resolution), true, plan2.shotBindings);
+  const executionMode = plan2.sceneRendering === "auto" && !capabilities.executionModes.includes("auto") ? "per_shot" : plan2.sceneRendering;
+  if (!capabilities.executionModes.includes(executionMode))
+    throw new Error("scene_render_selection: this gateway does not advertise " + plan2.sceneRendering);
+  const prepared = await buildSceneWire(scene, model2, String(plan2.selection.resolution), true, plan2.shotBindings, executionMode);
   if (plan2.conditioningInputs && prepared.attachments.find((file) => file.role === "scene_audio")?.sha256 !== plan2.conditioningInputs.driverSha256)
     throw new Error("video_plan_stale: the staged conditioning master differs from the approved scene");
-  await validateSceneBody(prepared.body, sceneRequestId(plan2.id), { model: model2, shots: plan2.shotIds.length });
-  return plan2.conditioningInputs ? { ...prepared, conditioningInputs: plan2.conditioningInputs } : prepared;
+  const execution = await validateSceneBody(prepared.body, sceneRequestId(plan2.id), { model: model2, shots: plan2.shotIds.length, execution: executionMode });
+  return { ...prepared, execution, ...plan2.conditioningInputs ? { conditioningInputs: plan2.conditioningInputs } : {} };
 }
 async function executeShotRenderPlan(plan2, prepared) {
   const target = resolveOutputFile(String(plan2.args.outputPath), String(plan2.args.filename), "video");
@@ -132395,7 +132430,9 @@ async function prepareManagedPlan(input) {
     await refreshGenaiMsrVoice();
   let plan2 = buildVideoPlan(input, resolved, false);
   if (plan2.sceneRendering) {
-    await validateShotRenderPlan(plan2);
+    const checked = await validateShotRenderPlan(plan2);
+    if (plan2.sceneRendering === "auto")
+      plan2 = buildVideoPlan({ ...input, sceneRendering: checked.execution }, resolved, false);
     return saveVideoPlan(plan2);
   }
   if (plan2.characterBindings) await checkRegisteredBindings(plan2.characterBindings);
@@ -132418,7 +132455,7 @@ function planVideo(raw, persist = true) {
   return buildVideoPlan(input, resolvePlanContext(input), persist);
 }
 function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
-  if (!input.sceneRendering && context2.speechRoute?.rendering) input = { ...input, sceneRendering: context2.speechRoute.rendering };
+  if (!input.sceneRendering && context2.speechRoute?.rendering) input = { ...input, sceneRendering: input.shotBindings?.length ? "per_shot" : context2.speechRoute.rendering };
   const sourceArgs = input.args;
   const speakers = context2.speechRoute.speakers;
   const opening = context2.speechRoute.opening;
@@ -132588,17 +132625,19 @@ function buildVideoPlan(input, { context: context2, tool: tool2 }, persist) {
     const filename = settings.filename ?? "video-" + input.requestId + ".mp4";
     resolveOutputFile(outputPath, filename, "video");
     const args2 = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
+    const modelPaced = input.sceneRendering === "single_msr";
     const body2 = {
       ...take,
       version: 1,
       episode: context2.episode,
       shotId: context2.shotId,
       requestId: input.requestId,
+      ...modelPaced ? { directionWarnings: ["The model chooses cut and speech timing in one MSR generation."] } : {},
       ...conditioningInputs ? { conditioningInputs } : {},
       sceneRendering: input.sceneRendering,
       ...cast.length ? { characterInputs: cast } : {},
       ...input.shotBindings ? { shotBindings: input.shotBindings } : {},
-      sceneRequest: { ...request, ...!speakers.length ? { silentPicture: true } : {} },
+      sceneRequest: { ...request, ...modelPaced ? { modelPacedCuts: true } : {}, ...!speakers.length ? { silentPicture: true } : {} },
       tool: tool3,
       args: args2,
       sourceArgs: input.args,
@@ -146201,7 +146240,7 @@ TOOLS.push(
       ...videoContextSchema.properties,
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: "none" }),
-      sceneRendering: { type: "string", enum: ["per_shot"], description: "Use the saved model\u2019s per-shot renderer for one scene job. The planner can select this for compatible multi-shot dialogue that needs different voice references across cuts. Review the render plan before approval." },
+      sceneRendering: { type: "string", enum: ["auto", "single_msr", "per_shot"], description: "Use auto for flexible cuts. The gateway can render a short scene in one MSR generation and the plan records its choice before approval. Choose per_shot for exact cuts or isolated speaker control, or single_msr to require one model job." },
       maxCostUsd: { type: "number", minimum: 0, description: "Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval." },
       validateScenePayload: { type: "boolean", description: "On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation." },
       purpose: { type: "string", enum: ["draft", "final", "revision"], description: "Candidate purpose; does not change model, resolution or authorization." },

@@ -5217,7 +5217,7 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy: 'none' }),
-            sceneRendering: { type: 'string', enum: ['per_shot'], description: 'Use the saved model’s per-shot renderer for one scene job. The planner can select this for compatible multi-shot dialogue that needs different voice references across cuts. Review the render plan before approval.' },
+            sceneRendering: { type: 'string', enum: ['auto', 'single_msr', 'per_shot'], description: 'Use auto for flexible cuts. The gateway can render a short scene in one MSR generation and the plan records its choice before approval. Choose per_shot for exact cuts or isolated speaker control, or single_msr to require one model job.' },
             maxCostUsd: { type: 'number', minimum: 0, description: 'Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval.' },
             validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
             purpose: { type: 'string', enum: ['draft', 'final', 'revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },

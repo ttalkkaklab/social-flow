@@ -170,7 +170,7 @@ function stable(value) {
 const hash = (value) => createHash('sha256').update(JSON.stringify(stable(value))).digest('hex');
 const idSchema = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/);
 export const videoPlanSchema = z.object({ episode: z.string().min(1), sceneNo: z.number().int().positive(), requestId: idSchema,
-    validateScenePayload: z.boolean().optional(), sceneRendering: z.literal('per_shot').optional(), shotBindings: sceneShotBindingsSchema.optional(),
+    validateScenePayload: z.boolean().optional(), sceneRendering: z.enum(['auto', 'single_msr', 'per_shot']).optional(), shotBindings: sceneShotBindingsSchema.optional(),
     purpose: z.enum(['draft', 'final', 'revision']).optional(),
     basedOnRequestId: idSchema.optional(), changeNote: z.string().min(1).max(1000).optional(),
     maxCostUsd: z.number().nonnegative().finite().optional(),
@@ -332,11 +332,14 @@ async function validateShotRenderPlan(plan) {
     const refused = sceneRequestIssues(scene, capabilities, { bindings: plan.shotBindings, model });
     if (refused.length)
         throw new Error('scene_render_inputs_unsupported:\n' + refused.join('\n'));
-    const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings);
+    const executionMode = plan.sceneRendering === 'auto' && !capabilities.executionModes.includes('auto') ? 'per_shot' : plan.sceneRendering;
+    if (!capabilities.executionModes.includes(executionMode))
+        throw new Error('scene_render_selection: this gateway does not advertise ' + plan.sceneRendering);
+    const prepared = await buildSceneWire(scene, model, String(plan.selection.resolution), true, plan.shotBindings, executionMode);
     if (plan.conditioningInputs && prepared.attachments.find(file => file.role === 'scene_audio')?.sha256 !== plan.conditioningInputs.driverSha256)
         throw new Error('video_plan_stale: the staged conditioning master differs from the approved scene');
-    await validateSceneBody(prepared.body, sceneRequestId(plan.id), { model, shots: plan.shotIds.length });
-    return plan.conditioningInputs ? { ...prepared, conditioningInputs: plan.conditioningInputs } : prepared;
+    const execution = await validateSceneBody(prepared.body, sceneRequestId(plan.id), { model, shots: plan.shotIds.length, execution: executionMode });
+    return { ...prepared, execution, ...(plan.conditioningInputs ? { conditioningInputs: plan.conditioningInputs } : {}) };
 }
 async function executeShotRenderPlan(plan, prepared) {
     const target = resolveOutputFile(String(plan.args.outputPath), String(plan.args.filename), 'video');
@@ -452,7 +455,9 @@ async function prepareManagedPlan(input) {
         await refreshGenaiMsrVoice();
     let plan = buildVideoPlan(input, resolved, false);
     if (plan.sceneRendering) {
-        await validateShotRenderPlan(plan);
+        const checked = await validateShotRenderPlan(plan);
+        if (plan.sceneRendering === 'auto')
+            plan = buildVideoPlan({ ...input, sceneRendering: checked.execution }, resolved, false);
         return saveVideoPlan(plan);
     }
     if (plan.characterBindings)
@@ -479,7 +484,7 @@ export function planVideo(raw, persist = true) {
 }
 function buildVideoPlan(input, { context, tool }, persist) {
     if (!input.sceneRendering && context.speechRoute?.rendering)
-        input = { ...input, sceneRendering: context.speechRoute.rendering };
+        input = { ...input, sceneRendering: input.shotBindings?.length ? 'per_shot' : context.speechRoute.rendering };
     const sourceArgs = input.args;
     const speakers = context.speechRoute.speakers;
     const opening = context.speechRoute.opening;
@@ -649,9 +654,11 @@ function buildVideoPlan(input, { context, tool }, persist) {
         const filename = settings.filename ?? 'video-' + input.requestId + '.mp4';
         resolveOutputFile(outputPath, filename, 'video');
         const args = { model: selection.model, resolution: selection.resolution, prompt: request.prompt, reserveUsd: settings.reserveUsd, outputPath, filename };
+        const modelPaced = input.sceneRendering === 'single_msr';
         const body = { ...take, version: 1, episode: context.episode, shotId: context.shotId, requestId: input.requestId,
+            ...(modelPaced ? { directionWarnings: ['The model chooses cut and speech timing in one MSR generation.'] } : {}),
             ...(conditioningInputs ? { conditioningInputs } : {}),
-            sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: { ...request, ...(!speakers.length ? { silentPicture: true } : {}) }, tool, args, sourceArgs: input.args, inputs, selection,
+            sceneRendering: input.sceneRendering, ...(cast.length ? { characterInputs: cast } : {}), ...(input.shotBindings ? { shotBindings: input.shotBindings } : {}), sceneRequest: { ...request, ...(modelPaced ? { modelPacedCuts: true } : {}), ...(!speakers.length ? { silentPicture: true } : {}) }, tool, args, sourceArgs: input.args, inputs, selection,
             source: context.source, contextRevision: context.revision, quote: quoteFor(tool, args), execution: 'server' };
         const plan = { ...body, id: hash(body) };
         if (persist)

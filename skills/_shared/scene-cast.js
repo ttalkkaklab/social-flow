@@ -84,9 +84,22 @@ function sceneSpeechRoute(scene, cards, selection) {
   });
   const mixedCuts = distilled && mode === 'reference' && !direction.oneTake && cutVoiceover;
   if (mixedCuts) operation = 'image';
-  const perShot = distilled && operation === 'image' && cards.length > 1 && !direction.oneTake &&
-    (mixedCuts || mode === 'reference' && speakers.length > 2 || anchoredCuts);
-  return {speakers, operation, mode, ...(perShot ? {rendering:'per_shot'} : {}), external:!visible && physical.length > 0};
+  let rendering;
+  const cutScene = distilled && cards.length > 1 && !direction.oneTake;
+  const structured = cards.every((card, i) => (i === 0 && scene.frames?.start) ||
+    card.referenceImage || card.timeline?.images?.some(pin => pin.role === 'start') || card.visual?.frames?.start);
+  const visualReferences = scene.speakerReferences?.length || cards.some(card =>
+    card.timeline?.images?.some(pin => pin.role === 'face') || card.visual?.references?.some(ref => ref.use !== 'image' && ref.role === 'character'));
+  if (cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
+    operation = 'image';
+    const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
+    rendering = cards.some(card => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 ||
+      frames > 361 || cards.length > 4 || cards.some(card => card.timeline?.dialogueCues?.length)
+      ? 'per_shot' : 'auto';
+  } else if (cutScene && operation === 'image' && (mixedCuts || speakers.length > 2 || anchoredCuts)) {
+    rendering = 'per_shot';
+  }
+  return {speakers, operation, mode, ...(rendering ? {rendering} : {}), external:!visible && physical.length > 0};
 }
 
 // Each native render binds its own speakers. A finished soundtrack uses one audio input.
@@ -103,7 +116,7 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering 
   }
   if (!limit || ['astra_genai_img2video','astra_genai_msr'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-  const perShot = rendering === 'per_shot' && !scene?.videoDirection?.oneTake;
+  const perShot = !!rendering && rendering !== 'single_msr' && !scene?.videoDirection?.oneTake;
   const groups = perShot ? cards.map(card => [card]) : [cards];
   for (const group of groups) {
     const voices = new Set(group.flatMap(orderedSpeech).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker));

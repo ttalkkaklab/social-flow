@@ -1098,6 +1098,11 @@
             "mix"
           ],
           "sceneRendering": "per_shot",
+          "executionModes": [
+            "auto",
+            "single_msr",
+            "per_shot"
+          ],
           "requiresUserChoice": false,
           "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
           "validation": "/v1/ltx/v2/scene-to-video/validate"
@@ -1187,6 +1192,9 @@
             "conditioning"
           ],
           "sceneRendering": "per_shot",
+          "executionModes": [
+            "per_shot"
+          ],
           "requiresUserChoice": true,
           "capabilities": "/v1/ltx/v2/scene-to-video/capabilities",
           "validation": "/v1/ltx/v2/scene-to-video/validate"

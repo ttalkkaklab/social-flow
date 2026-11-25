@@ -149,7 +149,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false, rende
         line.delivery === 'off_screen' ? {...line,delivery:'voiceover'} : line)};
   }
   const sourceCards = storedMembers.map(raw => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', (rendering ?? speechRoute?.rendering) === 'per_shot');
+  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', Boolean(rendering ?? speechRoute?.rendering));
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
     const raw = shotWithRefs;

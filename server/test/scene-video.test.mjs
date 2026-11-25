@@ -147,16 +147,7 @@ test('EP2 keeps the dolly in one shot and binds Miran’s line, position and ref
   assert.match(providerPrompt, /Keep the gaze steady/);
   assert.doesNotMatch(providerPrompt, /s000[12]|Frame 171/);
   assert.equal(wire.shots[1].dialogue[0].frame,171);
-  assert.throws(()=>planVideo(f.input), error=>{
-    assert.deepEqual(error.sceneRequest.cuts,request.cuts);
-    assert.deepEqual(error.sceneRequest.shotIds,request.shotIds);
-    assert.deepEqual(error.sceneRequest.images.filter(i=>i.reference?.scope==='scene').map(i=>i.character), ['nephew','miran','nephew','miran']);
-    assert.ok(error.missing.some(m=>m.lineId==='s0001-l1' && m.frame===171 && m.speaker==='miran'));
-    assert.deepEqual(error.missing.filter(m=>m.input==='image').map(m=>[m.shotId,m.role,m.frame]),
-      [['s0002','end',170],['s0001','start',171]]);
-    assert.deepEqual(error.missing.filter(m=>m.input==='position').map(m=>m.frame),[0,171]);
-    return true;
-  });
+  assert.throws(()=>planVideo(f.input), /s0001@171.*performance_audio/);
   assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
   const board = path.join(f.dir,'scenes.js');
   fs.appendFileSync(board, '\nwindow.PRODUCTION='+JSON.stringify({videoAuthorization:{
