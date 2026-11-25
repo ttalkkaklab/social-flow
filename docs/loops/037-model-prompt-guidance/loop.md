@@ -156,3 +156,16 @@ gaps in that path.
   before round 1; `server/dist/bundle.js` conflicted and was rebuilt, `npm run check:dist`
   reports the committed build fresh, and every selftest step of `.github/workflows/check.yml`
   exits 0.
+
+## Result
+
+| Round | Score | P0 | Objective gate | Verdict |
+|---|---|---|---|---|
+| 1 | 98 | 0 | exit 0, 1,419 of 1,419 | PASS |
+
+The target was met in round 1 ([verify-1.md](verify-1.md)). The two non-blocking directives,
+a test that the plan id ignores advice and call-site cases for the people and voice-subject
+codes, were not applied: the loop stops at its bar and neither changes behavior. The H3
+comparison kept the compiler unchanged on one scene and two seeds per form; the six-section
+form spoke the lines exactly in both takes and the planner's form in one, which is a reason
+to compare again on more scenes.
