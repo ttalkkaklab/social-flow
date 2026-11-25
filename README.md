@@ -900,7 +900,7 @@ channel's tone, theme and pinned character voice IDs (the speech model itself is
 `project_manage`: options · status · init · update · episode. Local project setup
 with genre, models, style, ratio, format and SNS records; no generation or publishing.
 
-**`tools/list` does not show all 128.** The credential-gated publish, review and insights tools
+**Credentials and tool settings determine which tools appear in `tools/list`.** The publish, review and insights tools
 (`threads_draft_create` · `threads_review_submit` · `threads_publish` · `instagram_publish` · `facebook_publish` · `facebook_comment` ·
 `youtube_publish` · `threads_insights` · `instagram_insights` · `youtube_insights` ·
 `threads_search`) are exposed **only for platforms whose credential file exists** —
