@@ -215,7 +215,6 @@ Use the phone examples when scouting. Set the actual lens, camera position and l
 | `cu` | close-up (클로즈업) | shoulder line at the bottom, **crown lightly cropped**, almost no headroom | "look at this now" — the director's command; the emotion workhorse | the one line that matters in the scene | step back 1.5–2 m and use the 2× tele — never lean in | voice and breath forward |
 | `choker` | choker | forehead to chin | emotion at its peak | once, at the peak | — | breath forward |
 | `ecu` | extreme close-up (완전 붙여) | eyes only, mouth only, fingertips | detail, the peak of tension | name the detail and the change it reveals | — | the detail's own sound |
-| `insert` | insert (인서트) | an object, a hand, a screen — no face | the one thing that matters; one insert replaces three lines of dialogue | "the phone is ringing" | — | the object's sound |
 
 Record the visible scale in `shot.size`. A new shot records participant count in `shot.arrangement`, viewpoint in `visual.camera.view.mode` and editorial purpose in `shot.cutRole`. Use `shot_icons.arrangement`, `view` and `cutRole` to set them. The reader recognizes historical size labels such as `two`, `ots` and `reaction`; on their own they establish no scale. A medium two-shot can become an over-the-shoulder reaction without changing the crop. `mfs` ends at mid-thigh and `ms` at the waist on a standing person.
 
@@ -476,8 +475,8 @@ move while the other dials stayed at their defaults.
 | height | `static` at `low` / `high` / `overhead` | see §3 — the angle does the work and the camera stays still | `static` is a decision, not an empty slot |
 | viewpoint | `handheld` | presence · unease · the documentary feel — and it cuts the AI look | micro-shake only; it reads real |
 | viewpoint | snorricam (camera fixed to the body) | a mind coming apart — the person locked, the world shaking | no vendor row — write `handheld` in `movement` and describe the body-locked frame in `framing` |
-| viewpoint | `pov` (in `framing`: view from the character eyes, no view of their face) | inside the character | |
-| viewpoint | rear / `back` (in `framing`: the back fills the frame, static) | withholding the face — the audience imagines the feeling | a held laugh, a quiet reaction |
+| viewpoint | Set `view.mode: "pov"` and identify the observer in `viewerId`. | See the action from that person’s eyes. | Name the visible subject and select its crop. |
+| viewpoint | Set `view.mode: "rear"`. | Withhold the face. | Set the crop and camera movement separately. |
 | focus | rack focus | Shift sharpness from one subject to another when the cue occurs. | Set `shot_icons.focus.from`, `to` and `on`. Select the camera movement independently. |
 | distortion · focus | `dutch` (in `shot.angle`, camera static) | something is wrong | see §3 — story-specific reason written |
 | distortion · focus | push past (dolly through a doorway, a window) | a scene change done by camera instead of by cut | no vendor row (no `push`) — `movement: dolly in`, the doorway in `framing`, the far room in `end` |
@@ -611,10 +610,10 @@ scene that needs a held view uses an authored hold rather than alternating effec
 | cornered · no way out (궁지·압박) | `mcu` | `eye` | `dolly zoom out` | slow `in`, `focus` on the person | action-led | the room closes in — a low drone rises | use only when the perspective change serves this beat |
 | hidden information revealed (숨은 정보 공개) | A scale that keeps the foreground and background legible, or a close-up of the detail | `eye` | `rack focus` / `static` | `in` + `focus` at the detail | action-led | the object's sound | an insert replaces three lines |
 | the rhythm of travel (이동의 리듬) | `fs`/`ms` | `eye` | `truck` | `pan` in the travel's direction | action-led | footsteps, passing space | |
-| inside the character · immersion (몰입·1인칭) | `pov` or `tracking` from behind | `eye` | `tracking` | `in` + `drift` | action-led | breathing, footsteps | |
+| inside the character · immersion (몰입·1인칭) | Scale the visible subject to the detail the audience needs. | `eye` | `tracking` if following | `in` + `drift` | action-led | breathing, footsteps | Set the observer in `view.mode: "pov"`, or choose `rear` to follow behind a character. |
 | presence · this is real (현장감·실재) | `mcu`/`ms` | `eye` | `handheld` | `hold` + `drift` | action-led | room tone | cuts the AI look |
 | trust · a person telling me (신뢰 — talking head, speech clip) | `mcu` | **`eye`** | `static` | `hold` + `drift` | action-led | voice clean | `[study]` the default for hook cuts and quote clips |
-| withhold · let them imagine (감추기·상상) | `back` | `eye` | `static` | `hold` + `drift` | action-led | no face — the sound does the face's job | |
+| withhold · let them imagine (감추기·상상) | A close-up can hold the back of the head. | `eye` | `static` | `hold` + `drift` | action-led | footsteps stop | Set `view.mode: "rear"` to withhold the face. |
 | transition · impact (전환·타격) | any | `eye` | `whip pan` / push past | `punch`, or a plain cut | action-led | whoosh or a hard cut | |
 | closing · the end (닫힘·엔딩) | `els` | `eye` → rising | `pedestal up` / `dolly out` rising | `out` | action-led | space | the person shrinks as the frame rises |
 | detail · the peak of tension (디테일·긴장의 정점) | `ecu` | — | `static` | `in` + `focus` | action-led | the detail's sound | name the detail and the change it reveals |
