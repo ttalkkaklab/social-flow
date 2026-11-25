@@ -6,10 +6,63 @@ import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { runInNewContext } from 'node:vm';
 import { tmpdir } from 'node:os';
+import { createHash, webcrypto } from 'node:crypto';
+import { runOpeningReview } from '../dist/opening-review.js';
 const require = createRequire(import.meta.url);
 const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js');
 const review = require('../../skills/storyboard/references/video-production.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
+
+test('the offline opening review labels the selected hook and suppresses a verdict after the board changes', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'opening-board-'));
+  t.after(() => rmSync(dir, {recursive: true, force: true}));
+  const file = join(dir, 'scenes.js');
+  const story = {primaryHookType: 'cause_mystery', language: 'en'};
+  const shot = {id: 's0001', type: 'generated', scene: 1, duration: 3, shot: {videoDesign: {before: 'One dumpling has split.'}}};
+  function save() {
+    const src = 'window.STORY = ' + JSON.stringify(story) + ';\nwindow.SCENES = ' + JSON.stringify([shot]) + ';\n';
+    writeFileSync(file, src);
+    return createHash('sha256').update(src).digest('hex');
+  }
+  const board = {stage: 'storyboard', path: dir, expectedSha256: save()};
+  const draft = await runOpeningReview({...board, action: 'prepare', surface: 'reels', audience: 'Home cooks'});
+  const {direction, sourceRevision, packetDigest} = draft.packets[0];
+  const verdicts = ['reader-a', 'reader-b', 'reader-c'].map(reviewerId => ({
+    reviewerId, ratings: Array.from({length: 5}, () => ({score: 0})), reasonToStay: 'The split dumpling at 0 s invites a cause.',
+  }));
+  await runOpeningReview({...board, action: 'record', runId: draft.runId, direction, sourceRevision, packetDigest, policyVersion: draft.policyVersion, verdicts, eligibleForRestore:false, editorialFinding:'The promised cause never appears.'});
+  storyboardHtml(dir);
+  const template = readFileSync(join(dir, 'storyboard.html'), 'utf8');
+  const start = template.indexOf('  async function currentOpeningReview()');
+  const renderer = template.slice(start, template.indexOf('  // Character count', start));
+  const strings = [...template.matchAll(/^      openingReview: \{[^]*?^      \},$/gm)].map(m => runInNewContext('({' + m[0].slice(0, -1) + '})').openingReview);
+  const window = {crypto: webcrypto};
+  function reload() {
+    runInNewContext(readFileSync(file, 'utf8'), {window});
+    runInNewContext(readFileSync(join(dir, 'review-files.js'), 'utf8'), {window});
+  }
+  const render = (lang, words) => runInNewContext(renderer + '\ncurrentOpeningReview().then(openingReviewRows)', {
+    window, TextEncoder, LANG: lang, T: {openingReview: words}, esc: String,
+  });
+  reload();
+  assert.equal(Object.keys(window.REVIEW_HOOK_LABELS).length, 18);
+  for (const [index, lang] of ['en', 'ko'].entries()) {
+    const html = await render(lang, strings[index]);
+    assert.ok(html.includes(window.REVIEW_HOOK_LABELS.cause_mystery[lang]));
+    assert.ok(html.includes(strings[index].pass) && html.includes(strings[index].editorial));
+    assert.ok(html.includes(strings[index].ineligible));
+    assert.match(html, /The promised cause never appears\./);
+    assert.match(html, /The split dumpling at 0 s invites a cause\./);
+  }
+  shot.shot.videoDesign.before = 'A cook walks into the empty shop.';
+  save();
+  reload();
+  assert.match(await render('en', strings[0]), /Refresh the review export/);
+  assert.doesNotMatch(await render('en', strings[0]), /Within ceiling/);
+  storyboardHtml(dir);
+  reload();
+  assert.match(await render('en', strings[0]), /Opening changed since review/);
+});
 
 test('review durations preserve fractional seconds before switching to minutes', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');

@@ -8,9 +8,11 @@ description: >
   then plans shots and content-led timing. Saves the local
   review board. Produce builds an approved board; autoproduce runs both unattended.
 argument-hint: "<channel> <topic or topic hint>"
-allowed-tools: ["mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__story_cliche", "mcp__plugin_social-flow_social-flow__story_cliche", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan"]
+allowed-tools: ["mcp__social-flow__scenario_check", "mcp__plugin_social-flow_social-flow__scenario_check", "mcp__social-flow__story_opening_review", "mcp__plugin_social-flow_social-flow__story_opening_review",
+  "mcp__social-flow__video_catalog", "mcp__plugin_social-flow_social-flow__video_catalog", "mcp__social-flow__video_plan", "mcp__plugin_social-flow_social-flow__video_plan", "mcp__social-flow__character_manage", "mcp__social-flow__character_panel", "mcp__plugin_social-flow_social-flow__character_manage", "mcp__plugin_social-flow_social-flow__character_panel", "mcp__social-flow__production_workflow", "mcp__plugin_social-flow_social-flow__production_workflow", "mcp__social-flow__music_catalog", "mcp__plugin_social-flow_social-flow__music_catalog", "mcp__social-flow__host_review", "mcp__plugin_social-flow_social-flow__host_review", "mcp__social-flow__project_manage", "mcp__plugin_social-flow_social-flow__project_manage", "mcp__social-flow__location_manage", "mcp__plugin_social-flow_social-flow__location_manage", "mcp__social-flow__speech_manage", "mcp__plugin_social-flow_social-flow__speech_manage", "Read", "Write", "Edit", "Glob", "Bash", "Agent", "AskUserQuestion", "WebSearch", "WebFetch", "mcp__social-flow__capability_status", "mcp__plugin_social-flow_social-flow__capability_status", "mcp__social-flow__story_sequence", "mcp__plugin_social-flow_social-flow__story_sequence", "mcp__social-flow__story_scene", "mcp__plugin_social-flow_social-flow__story_scene", "mcp__social-flow__story_shot", "mcp__plugin_social-flow_social-flow__story_shot", "mcp__social-flow__story_music", "mcp__plugin_social-flow_social-flow__story_music", "mcp__social-flow__story_cliche", "mcp__plugin_social-flow_social-flow__story_cliche", "mcp__social-flow__shot_characters", "mcp__plugin_social-flow_social-flow__shot_characters", "mcp__social-flow__shot_dialogue", "mcp__plugin_social-flow_social-flow__shot_dialogue", "mcp__social-flow__shot_icons", "mcp__plugin_social-flow_social-flow__shot_icons", "mcp__social-flow__shot_image", "mcp__plugin_social-flow_social-flow__shot_image", "mcp__social-flow__shot_prompt", "mcp__plugin_social-flow_social-flow__shot_prompt", "mcp__social-flow__storyboard_apply", "mcp__plugin_social-flow_social-flow__storyboard_apply", "mcp__social-flow__storyboard_check", "mcp__plugin_social-flow_social-flow__storyboard_check", "mcp__social-flow__storyboard_read", "mcp__plugin_social-flow_social-flow__storyboard_read", "mcp__social-flow__naver_search", "mcp__plugin_social-flow_social-flow__naver_search", "mcp__social-flow__serp_web_search", "mcp__plugin_social-flow_social-flow__serp_web_search", "mcp__social-flow__serp_news_search", "mcp__plugin_social-flow_social-flow__serp_news_search", "mcp__social-flow__serp_naver_search", "mcp__plugin_social-flow_social-flow__serp_naver_search", "mcp__social-flow__serp_image_search", "mcp__plugin_social-flow_social-flow__serp_image_search", "mcp__social-flow__stock_search", "mcp__plugin_social-flow_social-flow__stock_search", "mcp__social-flow__datago_search", "mcp__plugin_social-flow_social-flow__datago_search", "mcp__social-flow__datago_detail", "mcp__plugin_social-flow_social-flow__datago_detail", "mcp__social-flow__datago_file_download", "mcp__plugin_social-flow_social-flow__datago_file_download", "mcp__social-flow__datago_file_fetch", "mcp__plugin_social-flow_social-flow__datago_file_fetch", "mcp__social-flow__datago_api_call", "mcp__plugin_social-flow_social-flow__datago_api_call", "mcp__social-flow__suno_generate_lyrics", "mcp__plugin_social-flow_social-flow__suno_generate_lyrics", "mcp__social-flow__story_intensity_plan", "mcp__plugin_social-flow_social-flow__story_intensity_plan", "mcp__social-flow__story_catharsis_plan", "mcp__plugin_social-flow_social-flow__story_catharsis_plan"]
 ---
-Before drafting a synopsis or storyboard, identify the project directory the user selected.
+For a chat-only synopsis, validate and review the inline prose. Before writing episode
+files or drafting a storyboard, identify the project directory the user selected.
 If it is unclear, ask for it and wait. Follow [project setup](../project-init/SKILL.md)
 until `project_manage status` returns `ready` in that directory.
 
@@ -64,8 +66,10 @@ review HTML. Keep that scope distinction when the user asks to make a story more
 After drafting or revising a synopsis, complete the **required
 [reality check](references/synopsis-reality-check.md)** before presenting it or developing
 scenes. Apply the findings to the prose and show the sources and any unresolved points.
-For a synopsis-only request, deliver the checked prose and brief findings. If the central
-event still depends on an unverified assumption, present it as provisional and stop before
+For each candidate, choose one [primary hook](references/opening-hook-types.json),
+validate it with `scenario_check` and run the [three-second opening review](references/opening-review.md)
+on the finished prose. Include the type, current receipt and findings in a synopsis-only handoff.
+If the central event still depends on an unverified assumption, present it as provisional and stop before
 detailed scenes or production.
 
 For every new or substantially revised synopsis and board, apply
@@ -85,7 +89,8 @@ SNS platforms first. Short-form gets one opening for every platform, built for t
 window (Reels, 3 s): the first frame shows the subject already changed or mid-action and the
 promise is complete by about 3 s. Long-form decides its title and thumbnail first; the first
 7 s confirm them and the next 20 s open a bigger question. Record the plan with
-`story_sequence` `opening`; every board write prints a reading of it and refuses nothing.
+`story_sequence` `opening`. The first sequence inherits `primaryHookType` from the
+selected scenario. On a direct board, supply the type with that first write.
 
 For a numbered story series, choose the episode's public headline when writing the first
 sequence. Save its number, one editorial type and the thumbnail cue with `story_sequence.titlePlan`.
@@ -288,6 +293,7 @@ change the audience's guess, the actual resolution and the response it enables. 
 ending in the author-facing synopsis. Give the opening its own paragraph: format and
 platforms, first frame, the promise and where it is paid, and on long-form the title,
 thumbnail and the bigger question by 30 s ([opening by format](references/opening-by-format.md#7-write-it-down-and-read-it-back)).
+For alternatives, validate every candidate's ID and review each opening before selection.
 Repair a middle that only postpones the same answer;
 do not hide the missing progression behind a teaser or an emotion label. Use ordinary prose
 or existing expectation/change/setup notes, not an added planning schema.
@@ -710,6 +716,12 @@ the content disagree before exporting the review.
 
 ## 6. Validate and deliver the plan honestly
 
+Once the text storyboard has its shot actions and timing, complete the
+[three-second opening review](references/opening-review.md) before exporting or delivering it,
+including a direct board outside a managed workflow. Carry the synopsis receipt into
+this stage. Use the remaining rounds of the same five-edit allowance. Report the current
+disposition and the concrete cue behind it.
+
 Set `SB_DOC.speechPlanVersion:1` and `SB_DOC.performanceTimingVersion:1` on new boards.
 The latter distinguishes new action timing from legacy audio-clock compatibility: drafting
 may show unknown action time, but production needs finite independent-action durations.
@@ -719,7 +731,7 @@ independent script files. Generate readable exports from this source. When the u
 for a check or a blind read, use:
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js" storyboard/scenario.md
+node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenario.js" storyboard/scenario.md --authoring
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js" storyboard/ --text
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js" storyboard/ --draft
 ```

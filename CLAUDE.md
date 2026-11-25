@@ -140,9 +140,20 @@ platforms differ in title, caption and cover, which carry the same promise. Long
 the title and thumbnail first; the first 7 s confirm them and the next 20 s open a bigger
 question (YouTube's Intro reads who is still watching at 30 s). The synopsis gives the opening
 its own paragraph, `story_sequence` records it as `STORY.opening`, and every story-first board
-write prints a reading of it against the format and platforms. This reports and never refuses;
-it is writing guidance, not a score. Follow `skills/storyboard/references/opening-by-format.md`.
+write prints a reading of it against the format and platforms. Follow `skills/storyboard/references/opening-by-format.md`.
 Evidence and its limits: [opening hooks study](https://github.com/ttalkkaklab/social-flow/tree/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-11-18-opening-hooks).
+
+## Primary hook and three-second opening review (user directive, 2026-11-25)
+
+Each new or substantially rewritten synopsis candidate and board carries one
+[primary hook type](skills/storyboard/references/opening-hook-types.json). Carry the selected
+scenario's ID into the board. A direct board chooses its type on the first sequence.
+After authoring each synopsis and again after completing the text storyboard, give the
+audience's first three seconds to three independent host readers. Revise an above-ceiling
+opening, with at most five revision rounds shared by both stages and all candidates.
+Report the best valid version, its evidence and unresolved findings when the allowance
+runs out. Follow the [opening review](skills/storyboard/references/opening-review.md)
+for scoring, recovery and synopsis-only handoff.
 
 ## Dramatic pressure and payoff (user directive, 2026-11-20)
 
@@ -240,12 +251,12 @@ order and deliverables. See `skills/_shared/production-workflow.md`.
 
 ## Checks removed for speed (user directive, 2026-10-31)
 
-Production is too slow, so every check except the story order and the episode cast (2026-11-01,
-above) goes until the quality is known; checks come back afterwards. `production_workflow` is an optional progress record:
+The story tools enforce story order, cast readiness and the primary hook contract.
+`production_workflow` is an optional progress record:
 stages complete in any order and no other tool reads it. Image and video plans, storyboard
 writes, Blender renders and assembly no longer wait for workflow stages, independent
-reviews, Blender compositions or reviewed media. `storyboard_apply` refuses only an
-unreadable board and the story order; `storyboard_check` runs every other rule on request.
+reviews, Blender compositions or reviewed media. `storyboard_apply` protects board
+readability, story order and the primary hook. `storyboard_check` runs editorial checks on request.
 review-context, review-camera, compose-blender, review-cut-images and review-cut-videos run
 only when the user asks. Spending limits, generation authorization, adapter input validation,
 `video_prompt_language`, `msr_character_limit` and the voice-lane rules stay. Existing
@@ -529,6 +540,50 @@ planner's own prompt carries and the author's leaves out, and white space an ada
 plan's direction record. Cast, shots and lines stay on the board as the evidence for lengths,
 limits and attachment. See
 [scene prompt design](docs/research/2026-11-24-video-model-prompting/scene-prompt-design.md).
+
+## Prompt ownership and the engine interface (user directive, 2026-11-25)
+
+A video model takes one prompt for each call, so the prompt belongs to the scene, where the
+session can read and adjust it, and no request this plugin builds asks the GenAI gateway to
+write one for a single call. The gateway wrote it on two paths: `shots[]` text on the GenAI
+text and image adapters, and the `single_msr` and `auto` rendering modes. The adapters now
+refuse `shots` and `video_plan` refuses those modes (`scene_render_selection`). A scene that
+fits one model call is planned without `sceneRendering`: the planner writes its one prompt,
+the plan returns it as `promptTemplate`, an edited copy comes back as `prompt` under the
+bounded-edit rules above, and the GenAI gateway receives the approved text as the request's
+prompt (captured on the distilled LTX image route, for the planner's own prompt and for an
+edited one). Other engines' adapters keep their own wire dialect. On the
+distilled LTX route the model paces the cuts (`scene_cut_timing_model_paced`), and the plan
+names each later shot whose composition image the operation cannot send
+(`shot_reference_omitted`).
+
+`sceneRendering:"per_shot"` is the one exception and says so. The gateway's scene route
+renders each shot apart and writes each shot's prompt from the manifest; it has no field for
+a caller's prompt. Only a call naming `per_shot` reaches that route. Its plan carries
+`gateway_composed_prompt` and returns no `promptTemplate`, a wording change goes on the shot
+card, and a validation answer for any other execution is refused. A plan saved under a
+retired mode reads `video_plan_stale` at approval and execution, before any upload;
+`video_status` still collects a job it had submitted. `validateScenePayload` is removed: it
+posted the shot manifest to the image route's validation endpoint with no mode named.
+
+Desktop's default provenance, `typed`, lets the app's enhancement settings rewrite a prompt.
+The gateway Desktop adapters send `promptProvenance:"enhanced"` for a written prompt unless
+the call names `typed`. The GenAI image adapter sends `promptExtend` false unless the call
+sets it.
+
+`video_catalog`, `image_catalog` and `music_catalog` list every adapter when called with no
+argument. With an `engine`, and an `operation` or for music a `model`, they return the
+matching adapters (`ltx-desktop-local` alone still answers with the app's live catalog) with their parameters as JSON Schema read from each adapter's own zod
+schema: `parameters.common` holds the names that mean the same across that media type, such as
+the prompt, model, seed and output path, and `parameters.options` the adapter's own. `video_plan`, `image_plan` and `music_plan` take
+`engine` and `model` as a check on the saved selection. A mismatch is refused
+(`model_selection_mismatch`, `image_selection_mismatch`, `music_selection_mismatch`) and a
+plan never switches the selection. The video catalog reads timed images, the scene renderer
+and pinned voices from each registry entry.
+
+That the kept routes add no words is read from the gateway's source, and no render compared
+a plugin-written prompt with a gateway-written one. Record and evidence:
+[loop 036](docs/loops/036-prompt-ownership/loop.md).
 
 ## English video prompts (user directive, 2026-10-31)
 

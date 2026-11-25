@@ -15,10 +15,11 @@ import { VIDEO_ADAPTERS } from './video-registry.js';
 import { DURATION_TOOLS } from './video-duration.js';
 import { characterFieldsProperty } from './character-manage.js';
 import { CHANNEL_SLUG_RE } from './config.js';
-import { titlePlanSchema, audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
+import { titlePlanSchema, primaryHookTypeIds, audienceDecisionSchema, audienceEndForSchema, sceneFramesSchema, sceneSpeakerReferencesSchema, sceneSpeakersSchema, sceneSchema, audienceEffectsSchema, sfxEntriesSchema, techniqueContract, cameraContract, motionThemeContract, motionGraphicTypes, renderPurposes, stillCameraEffectList, shotViewContract, contract as storyboardContract } from './storyboard.js';
 import type { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { MUSIC_GENERATION_MODES, MUSIC_SCALES } from './music-client.js';
 import { storyCatharsisSchema, storyIntensitySchema } from './story-devices.js';
+import { openingReviewSchema } from './opening-review.js';
 
 /** Advertise only models that have not reached their shutdown date; the schema still rejects retired ones by name. */
 const AVAILABLE_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS.filter(model => { try { assertImageModelAvailable(model); return true; } catch { return false; } });
@@ -1066,7 +1067,7 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan made without sceneRendering carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt, and the GenAI gateway receives the approved text as written. Only sceneRendering per_shot has the gateway write prompts, one per shot. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -4857,7 +4858,7 @@ Returns JSON with matching patterns in catalog order (all 15 if no filter), each
     name: 'story_sequence',
     title: 'Write storyboard sequences (story step 1 of 3)',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. After the opening image exists, save videoDirection for one scene generation: openingPositions and emotion, plus any essential action, sound or camera. Dialogue stays on its ordered shot cards. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
+    description: `The first storyboard step after the scenario is settled writes only the story, in three layers: story_sequence → story_scene → story_shot. Each new board inherits the chosen scenario's primaryHookType or requires one of the catalog IDs on this call. Later sequence updates keep the saved type. Use it first: it upserts sequences by id (title · purpose · question · payoff — a payoff outside the sequence's scenes warns), records the episode's opening plan as STORY.opening (skills/storyboard/references/opening-by-format.md) and creates scenes.js as a story-v2 board when it is missing, inside an episode on the FORMAT and PRODUCTION its saved snapshot hands off. A sequence's scene list is filled by story_scene. After the opening image exists, save videoDirection for one scene generation: openingPositions and emotion, plus any essential action, sound or camera. Dialogue stays on its ordered shot cards. Inside an episode the board starts only after the cast is ready, and story_scene and story_shot repeat this check on a story-first board: refused (cast_required) until storyboard/cast.json names at least one character, (cast_source_missing) for an entry whose source is not an existing assets/characters/<id>/identity.md, and (character_panel_missing) for an entry without "voiceOnly": true that lacks its face, front or back sheet panel — make those with character_manage and character_panel first.
 
 Do NOT write scenes, shots, dialogue or pictures here. Characters and lines come after the shot stories (shot_characters → shot_dialogue); camera and image plans after that, through storyboard_apply.
 
@@ -4866,6 +4867,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
       type: 'object', additionalProperties: false,
       properties: {
         path: { type: 'string', description: 'The storyboard directory (data/<channel>/episodes/<topic>/storyboard/) or its scenes.js' },
+        primaryHookType: { type: 'string', enum: primaryHookTypeIds, description: 'One primary opening hook for the episode. Inherited from the selected scenario when present.' },
+        expectedSha256: { type: 'string', pattern: '^[a-f0-9]{64}$', description: 'Current scenes.js hash from storyboard_read for an intentional change to the saved hook.' },
+        previousPrimaryHookType: { anyOf: [{ type: 'string', enum: primaryHookTypeIds }, { type: 'null' }], description: 'Expected old selection for a deliberate change. Use null to enroll an existing unclassified board.' },
         language: { type: 'string', description: 'The language the story and its lines are written in, as a BCP-47 tag ("en", "ja", "zh-Hans", "es", "fr", "de", "vi", "ko"): the one the user asked for, else the saved languages.speech, else the language the channel already works in (profile, cast voices, earlier episodes), else the language of the user\'s request. Recorded once as STORY.language; a new episode board without it takes the saved languages.speech, and a board that has one or already has shots keeps its language (a different value warns). Line timing reads it.' },
         titlePlan: zodToJsonSchema(titlePlanSchema, { $refStrategy: 'none' }),
         sequences: { type: 'array', minItems: 1, description: 'Sequences in playback order', items: { type: 'object', additionalProperties: false, required: ['id', 'title', 'purpose'], properties: {
@@ -5360,21 +5364,28 @@ Returns: counts (violations · warnings · deferred) and two lists — structure
   },
   {
     name: 'scenario_check',
-    title: 'Check scenario candidates against their contract',
+    title: 'Check synopsis options or a selected scenario',
     annotations: HINT.local,
-    description: `Check local scenario candidates or a selected story plan.
-
-Use it after drafting the scenario or its candidates, before selection, and on scenario.md before board authoring. Reads local files and runs a local script; no writes or API calls. Legacy scenarios use S1–S12. scenario-v2 reads cast.json and character identity paths, validates actions and attributed speech, and requires research references only for factual assertions; fiction has no search quota.
-Do NOT use for shot/camera validation — use storyboard_check. A pass verifies structure and references, not factual truth, character motivation, entertainment value or user approval.
-
-Returns: JSON — { files, violations, warnings, findings: [{ level, where, what }] }, in candidate file order. Findings start with S1–S12 or V2; violations block authoring, warnings do not.`,
+    description: `Use it to validate inline synopsis options before presenting them, or a local candidate directory or selected scenario.md. Each newly authored candidate chooses one catalog ID. Use authoring for new and rewritten files. Do NOT use it to score first-three-second exit risk; call story_opening_review with the checked prose. Archival reads keep older files readable. File checks also verify scenario structure and applicable cast and research references. Returns: checked options or local file findings and violation counts. Read violations before advancing.`,
     inputSchema: {
-      type: 'object',
+      type: 'object', additionalProperties: false,
       properties: {
-        path: { type: 'string', description: 'Local candidate directory or selected page, e.g. data/my-channel/episodes/my-topic/storyboard/candidates or data/my-channel/episodes/my-topic/storyboard/scenario.md' },
+        path: { type: 'string', minLength: 1, description: 'Local candidates directory or its selected scenario.md. Use exactly one of path and synopses.' },
+        authoring: { type: 'boolean', description: 'Require a primary hook on each newly authored or rewritten scenario file.' },
+        synopses: { type: 'array', minItems: 1, description: 'Synopsis-only options. Validation reads no files.', items: {
+          type: 'object', additionalProperties: false, required: ['direction', 'text', 'primaryHookType'], properties: {
+            direction: { type: 'string', pattern: '^D[1-9][0-9]*$' }, text: { type: 'string', minLength: 1 }, primaryHookType: { type: 'string', enum: primaryHookTypeIds },
+          },
+        } },
       },
-      required: ['path'],
     },
+  },
+  {
+    name: 'story_opening_review',
+    title: 'Review the first three seconds and reserve opening edits',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    description: `Use it to prepare blind packets from a completed synopsis or board, record independent reviewers' witnessed cues and scores, or reserve one edit for an above-ceiling batch. Do NOT pass writer intentions, results or receipts to a blind reader. Give each reviewer only the blind packet. Carry the returned receipt from synopsis to board. Five revision rounds are shared across stages. Use incomplete when the host cannot independently review the evidence. Returns: blind packets, the recorded verdict or a reserved edit slot, with shared budget and revision information.`,
+    inputSchema: zodToJsonSchema(openingReviewSchema, { $refStrategy: 'none' }) as Tool['inputSchema'],
   },
 ];
 
@@ -5454,17 +5465,21 @@ for (const tool of TOOLS) {
   }
 }
 TOOLS.push(
-  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Pass engine ltx-desktop-local to query downloaded offerings and supported settings directly from the local Desktop application. Both modes are read-only.',
-    inputSchema: { type: 'object', properties: {engine:{type:'string',enum:['ltx-desktop-local']}}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
-  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains one provider prompt, member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
+  { name: 'video_catalog', title: 'Inspect installed video adapters', description: 'List installed video adapter contracts. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across video adapters and parameters.options the adapter\'s own. Engine ltx-desktop-local alone queries downloaded offerings and supported settings directly from the local Desktop application. Every mode is read-only.',
+    inputSchema: { type: 'object', properties: {
+      engine: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))], description: 'Video engine as saved in models.video.engine, e.g. astra-genai.' },
+      operation: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.operation))], description: 'One operation of that engine, e.g. image. Needs engine.' } },
+      additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+  { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan made without sceneRendering carries one provider prompt, which the plugin writes and returns as promptTemplate for editing; the GenAI gateway receives the approved prompt as written. Under sceneRendering per_shot the gateway writes the prompt of each shot instead and the plan says so. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
       wholeScene: { type: 'boolean', enum: [true], description: 'Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it.' },
       prompt: {type: 'string', minLength: 1, maxLength: 32000, description: 'Optional complete scene prompt. Edit the returned promptTemplate, using the names in promptSlots for cast, images, motion and soundtracks. Overrides the saved draft for this plan.'},
       sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
       shotBindings: zodToJsonSchema(sceneShotBindingsSchema, { $refStrategy:'none' }),
-      sceneRendering: {type:'string',enum:['auto','single_msr','per_shot'],description:'Choose the shot manifest renderer explicitly. Auto validates one MSR call or separate renders before approval. Require single_msr for one call or per_shot for exact cuts. Whole-scene prompt edits use the separate authored prompt route.'},
+      sceneRendering: {type:'string',enum:['per_shot'],description:'Leave out to plan the scene as one render with promptTemplate and an authored prompt. per_shot renders each shot apart through the gateway scene route, for cuts one render cannot hold. That route writes each shot\'s prompt from the manifest and takes no authored prompt; the plan says so (gateway_composed_prompt).'},
+      engine: { type: 'string', description: 'Optional assertion of the saved video engine. A different saved engine refuses the plan (model_selection_mismatch); a plan never switches the selection.' },
+      model: { type: 'string', description: 'Optional assertion of the saved video model, checked the same way.' },
       maxCostUsd: { type: 'number', minimum: 0, description: 'Maximum planned USD reservation for this request. Used as the gateway reservation when it has no published rate. Hosted quotes above this amount fail before approval.' },
-      validateScenePayload: { type: 'boolean', description: 'On a refused GenAI I2V scene, send its authored media to the deployed schema validation endpoint. No job or usage reservation.' },
       purpose: { type: 'string', enum: ['draft','final','revision'], description: 'Candidate purpose; does not change model, resolution or authorization.' },
       basedOnRequestId: { type: 'string', description: 'Earlier request for this shot, used to compare candidates.' },
       changeNote: { type: 'string', minLength: 1, maxLength: 1000, description: 'What changed for this candidate.' },
@@ -5511,12 +5526,17 @@ for (const tool of TOOLS) {
 }
 TOOLS.push(
   { name: 'image_catalog', title: 'Inspect image adapters and models',
-    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
+    description: 'Read installed image adapter contracts, model retirement dates and capability boundaries. Name an engine, and an operation to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across image adapters and parameters.options the adapter\'s own. No provider request or model loading. Research-only APIs are listed as unimplemented. Use image_plan to validate a concrete request.',
+    inputSchema: { type: 'object', properties: {
+      engine: { type: 'string', enum: [...new Set(Object.values(IMAGE_ADAPTERS).map(adapter => adapter.engine))], description: 'Image engine as saved in models.image.engine, e.g. astra-genai.' },
+      operation: { type: 'string', enum: ['text', 'edit'], description: 'One operation of that engine. Needs engine.' } },
+      additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'image_plan', title: 'Plan an image with saved selection',
     description: 'Prepare an image request for an episode or workspace asset. Resolves saved selection and explicit overrides, checks adapter capabilities and image inputs, pins hashes and an API reservation estimate, then saves a local plan. No generation. Returns plan ID and provenance without echoing base64 inputs. Host plans require external handoff. Use image_execute for server adapters.',
     inputSchema: { ...imageContextSchema, properties: { ...imageContextSchema.properties,
       operation: { type: 'string', enum: ['text', 'edit', 'variation'], description: 'Requested operation; selected model determines its adapter.' },
+      engine: { type: 'string', description: 'Optional assertion of the saved image engine. A different saved engine refuses the plan (image_selection_mismatch); a plan never switches the selection.' },
+      model: { type: 'string', description: 'Optional assertion of the saved image model, checked the same way.' },
       tool: { type: 'string', description: 'Optional exact adapter name; must match saved selection.' },
       args: { type: 'object', additionalProperties: true, description: 'Adapter fields. Saved model/quality are inherited; conflicting or unknown fields fail.' } } },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },

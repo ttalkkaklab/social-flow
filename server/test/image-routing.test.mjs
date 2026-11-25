@@ -50,6 +50,8 @@ test('plan rejects mismatch, unknown fields, invalid operations and escaped outp
   const f = fixture(t);
   assert.throws(() => f.plan('a', { surprise: true }), /argument_unsupported/);
   assert.throws(() => f.plan('a', {}, { tool: 'gpt_image_text2img' }), /selection_mismatch/);
+  assert.throws(() => f.plan('a', {}, { engine: 'gpt-image' }), /image_selection_mismatch: engine/);
+  assert.equal(f.plan('a', {}, { engine: 'zimage' }).id, f.plan('a').id);
   assert.throws(() => f.plan('a', {}, { operation: 'edit' }), /operation_unsupported/);
   assert.throws(() => f.plan('a', { outputPath: '../outside' }), /output_outside/);
   assert.throws(() => f.plan('a', { filename: 'state.json' }));

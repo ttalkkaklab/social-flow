@@ -219,6 +219,9 @@
   }
   .meta-grid dt { color: var(--faint); font-size: var(--t-aux); font-weight: 600; }
   .meta-grid dd { margin: 0; word-break: keep-all; }
+  @media (min-width: 721px) {
+    #opening-review .meta-grid { grid-template-columns: max-content minmax(0, 1fr); }
+  }
 
   /* Check strip — collects contract violations at the top of the document */
   .audit {
@@ -1672,6 +1675,7 @@ window.STORYBOARD_READY = (async function () {
     app.innerHTML = '<div class="error-box">Could not load scenes.js — open this file inside the storyboard/ directory, next to scenes.js.</div>';
     return;
   }
+  var openingReview = await currentOpeningReview();
   // A board still in its story steps has no channel colors yet; the stylesheet defaults stand in.
   var THEME = window.THEME || {}, SCENES = window.SCENES, DOC = Object.assign({}, window.SB_DOC || {}, window.SB_SCENES_DOC || {});
   var MUSIC = window.MUSIC || null;   // named music cues — absent means one bed all the way through
@@ -1892,6 +1896,14 @@ window.STORYBOARD_READY = (async function () {
         planned: "planned · timing pending", placed: "placed at export", stale: "retime", timing_unchecked: "timing unverified" },
       musicCue: function (name) { return "music → " + name; },
       musicLane: function (names, gaps) { return "♪ " + names.join(" → ") + (gaps ? " · " + gaps + (gaps === 1 ? " gap" : " gaps") : ""); },
+      openingReview: {
+        type: "Primary hook", unclassified: "Unclassified", invalid: "Unknown hook type",
+        title: "Storyboard · first 3 seconds", not_reviewed: "No review recorded", incomplete: "Review incomplete",
+        stale: "Opening changed since review", refresh: "Refresh the review export to verify this board",
+        pass: "Within ceiling", high: "High abandonment risk", limit_reached: "Revision limit reached",
+        editorial: "Editorial risk", observed: "Observed abandonment", points: " points",
+        ceiling: "ceiling", ineligible: "Opening cannot be restored", findings: "Review findings", rounds: function (n) { return n + " of 5 shared revisions used"; }
+      },
       /* Clichés — what story_cliche recorded (window.CLICHES; references/cliche-use.md) */
       cliche: {
         head: "Clichés", lane: "CLICHÉ", undecided: "undecided — nothing is recorded yet", none: "none used",
@@ -2247,6 +2259,14 @@ window.STORYBOARD_READY = (async function () {
       musicBadge: function (tracks, drops) {
         return (tracks === null ? "한 곡 깔기" : tracks + "곡") +
                (drops ? " · " + drops + "번 비움" : ""); },
+      openingReview: {
+        type: "대표 후킹 유형", unclassified: "미분류", invalid: "알 수 없는 후킹 유형",
+        title: "스토리보드 · 첫 3초", not_reviewed: "검토 기록 없음", incomplete: "검토 미완료",
+        stale: "검토 후 도입부 변경", refresh: "이 버전을 확인하려면 검토 페이지를 다시 내보내세요",
+        pass: "기준 이내", high: "이탈 위험 높음", limit_reached: "수정 횟수 소진",
+        editorial: "편집상 이탈 위험", observed: "실측 이탈률", points: "점",
+        ceiling: "기준", ineligible: "복원 대상에서 제외", findings: "검토 근거", rounds: function (n) { return "전체 수정 5회 중 " + n + "회 사용"; }
+      },
       musicBed: "채널 기본 곡", musicDrop: "음악 빠짐", musicSilence: "음악 비움",
       audienceSound: { label: "관객용 심리음", undecided: "미정", none: "안 씀", use: "사용",
         preview: "씬 사운드 디자인", stem: "심리음만 듣기 · 스토리보드 시간 기준", audition: "이 구간 듣기", original: "원본 음원", absent: "음원 준비 전", error: "미리듣기를 열 수 없습니다",
@@ -2583,6 +2603,50 @@ window.STORYBOARD_READY = (async function () {
         var who = typeof u.character === "string" && u.character ? esc(castName(u.character)) : "";
         return "<li>" + clicheChip(u) + (at || who ? "<span>" + [at, who].filter(Boolean).join(" · ") + "</span>" : "") + "</li>";
       }).join("") + "</ul>" : "") + "</section>";
+  }
+  async function currentOpeningReview() {
+    var review = window.REVIEW_OPENING || {status: "not_reviewed"};
+    if (!["pass", "high", "limit_reached"].includes(review.status)) return review;
+    var basis = review.exportSource;
+    if (basis && Array.isArray(basis.keys) && window.crypto && window.crypto.subtle) {
+      try {
+        var content = JSON.stringify(basis.keys.map(function (key) { return window[key]; }));
+        var digest = await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(content));
+        var hex = Array.from(new Uint8Array(digest), function (byte) { return byte.toString(16).padStart(2, "0"); }).join("");
+        if (hex === basis.digest) return review;
+      } catch (error) { /* A browser without a usable digest can still show the board. */ }
+    }
+    return {status: "refresh"};
+  }
+  function openingReviewRows(review) {
+    var labels = window.REVIEW_HOOK_LABELS || {};
+    var id = window.STORY && window.STORY.primaryHookType;
+    var words = T.openingReview;
+    var label = typeof id === "string" && Object.prototype.hasOwnProperty.call(labels, id) ? labels[id][LANG] : "";
+    var type = label ? esc(label) + " <code>" + esc(id) + "</code>" : esc(id ? words.invalid : words.unclassified);
+    var current = ["pass", "high", "limit_reached"].includes(review.status);
+    var status = current || ["stale", "not_reviewed", "refresh"].includes(review.status) ? review.status : "incomplete";
+    var parts = [esc(words[status])];
+    var metric = review.metric;
+    if (current && metric && Number.isFinite(metric.value) && Number.isFinite(metric.ceiling)) {
+      var percent = metric.unit === "percent";
+      if (percent || metric.unit === "points") {
+        var unit = percent ? "%" : words.points;
+        parts.push(esc((percent ? words.observed : words.editorial) + " " + metric.value + unit +
+          " (" + words.ceiling + " " + metric.ceiling + unit + ")"));
+      }
+    }
+    if (current && review.editorialValidity === "ineligible") {
+      parts.push(esc(words.ineligible) + (review.editorialFinding ? " · " + esc(review.editorialFinding) : ""));
+    }
+    if (Number.isInteger(review.editsUsed)) parts.push(esc(words.rounds(review.editsUsed)));
+    var findings = (Array.isArray(review.findings) ? review.findings : []).map(function (finding) {
+      return finding && [finding.at, finding.cue].filter(Boolean).map(esc).join(" · ");
+    }).filter(Boolean);
+    var evidence = findings.length ? '<details><summary>' + esc(words.findings) + '</summary><ul><li>' +
+      Array.from(new Set(findings)).join('</li><li>') + '</li></ul></details>' : '';
+    return '<dt>' + esc(words.type) + '</dt><dd>' + type + '</dd><dt>' + esc(words.title) +
+      '</dt><dd>' + parts.join(" · ") + evidence + '</dd>';
   }
   // Character count: displayed = full length after ** is stripped / net = whitespace and punctuation excluded
   function dispLen(s) { return strip(s).length; }
@@ -5273,6 +5337,7 @@ window.STORYBOARD_READY = (async function () {
 
 
   h += styleCard();
+  h += '<section id="opening-review"><dl class="meta-grid">' + openingReviewRows(openingReview) + '</dl></section>';
   h += '<dl class="meta-grid">';
   if (DOC.keyMessage) h += "<dt>" + esc(T.keyMessage) + "</dt><dd>" + mark(DOC.keyMessage) + "</dd>";
   if (DOC.hook) h += "<dt>" + esc(T.coverHook) + "</dt><dd>" + mark(DOC.hook) + "</dd>";

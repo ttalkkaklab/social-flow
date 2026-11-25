@@ -19,8 +19,11 @@ Create or resume the episode with `project_manage episode`.
 
 The story tools enforce story order and cast readiness. The author completes the required
 [synopsis reality check](../storyboard/references/synopsis-reality-check.md) after drafting or
-revising a synopsis and before handing it over or opening scenes. Independent reviews and
-Blender compositions run on request. Spending limits, generation authorization and adapter
+revising a synopsis and before handing it over or opening scenes. Choose one
+[primary hook](../storyboard/references/opening-hook-types.json) per candidate and carry
+the selected ID into the board. The [opening review](../storyboard/references/opening-review.md)
+runs after each completed synopsis and text board. Other independent reviews and Blender
+compositions run on request. Spending limits, generation authorization and adapter
 input validation stay. Work in this order:
 
 1. Characters — identity text (`character_manage`) and sheet images (`character_panel`, which draws
@@ -78,7 +81,8 @@ is an existing `assets/characters/<id>/identity.md` (`cast_source_missing`) and 
 without `voiceOnly` has its face, front and back panels (`character_panel_missing`). On a
 story-first board `shot_characters` and `shot_dialogue` repeat that check, take the cast from
 `cast.json` alone and refuse a `voiceOnly` character on screen (`cast_voice_only`). A synopsis-only
-request stops after the reality check. A text-only storyboard request stops after step 4,
+request ends with its checked prose, opening review receipt and findings.
+A text-only storyboard request ends after step 4 and its opening review,
 with the cast's panels made first under spending authorization. An image request stops
 after step 6. Missing character media or
 spending authorization is reported, never silently bypassed.
@@ -124,17 +128,19 @@ and [review-cut-videos](../review-cut-videos/SKILL.md) run only when the user as
 [generate-cut-videos](../generate-cut-videos/SKILL.md) steps 7–8.
 [generate-cover](../generate-cover/SKILL.md) makes the cover once shots have pictures, any time
 before publishing; it is outside the numbered order. Autoproduce coordinates.
-`storyboard_check` runs every storyboard rule when the user asks; `storyboard_apply`
-refuses only an unreadable board and the story order.
+`storyboard_check` reports board integrity and editorial findings on request.
+Board writes protect story order, cast readiness and the saved primary hook.
 
 ## Progress record
 
 `production_workflow` keeps an optional record per episode (absolute `episode` path):
 `begin` registers a stage's files (`entries:[{id,text,image,images,video}]`), `complete`
 stores their hashes, `rewind` drops a stage's record and `status` shows them. Stages
-complete in any order and no other tool reads this record. The one check left: a story-v2
-`text_storyboard` completes only once every shot has its story and characters
-(`story_outline_required`). For CLI use, put the same JSON in a request file and run
+complete in any order and no other tool reads this record. At `text_storyboard`,
+story-v2 requires each shot's story and characters (`story_outline_required`).
+Enrolled boards require a valid primary hook matching the selected scenario. Completion
+reports the review on the current opening, including unresolved findings. For CLI use,
+put the same JSON in a request file and run
 `node "$CLAUDE_PLUGIN_ROOT/server/dist/bundle.js" --workflow request.json`.
 
 ```json

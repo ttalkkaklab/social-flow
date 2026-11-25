@@ -16,7 +16,6 @@ import { HOSTED_VIDEO_ROUTES } from './hosted-video-routes.js';
 import { astraGenaiBaseUrl, requestGenai } from './astra-genai-client.js';
 import { FRAME_FIELDS, requiredCharacters, sceneInputCapabilities, VIDEO_ADAPTERS } from './video-registry.js';
 import { currentSceneVoice } from './video-voice.js';
-import { validateScenePayload } from './genai-scene.js';
 export { buildSceneWire } from './genai-scene.js';
 const load = createRequire(import.meta.url);
 const temporal = (image) => ['start', 'keyframe', 'end'].includes(image.role) && !image.reference;
@@ -314,7 +313,8 @@ export class SceneInputError extends Error {
     }
 }
 /** Read the deployed I2V request grammar for a refused scene. Discovery never enables a mapper. */
-export async function inspectSceneInputContract(error, validation) {
+/** What the deployed image-to-video route takes, read from its published schema and capabilities. Nothing of the scene is sent. */
+export async function inspectSceneInputContract(error) {
     if (error.tool !== 'astra_genai_img2video')
         return undefined;
     const endpoint = '/v1/ltx/v2/image-to-video';
@@ -342,7 +342,6 @@ export async function inspectSceneInputContract(error, validation) {
         };
         const schemaRef = (route) => document.paths[route]?.post?.requestBody?.content?.['application/json']?.schema?.$ref;
         const ref = schemaRef(endpoint);
-        const validationEndpoint = endpoint + '/validate';
         const array = z.object({ items: z.object({ $ref: z.string() }) });
         const arrayFields = (name) => {
             const property = document.components.schemas[ref.split('/').pop()].properties[name];
@@ -354,13 +353,8 @@ export async function inspectSceneInputContract(error, validation) {
             }
             throw new Error('Unknown array schema');
         };
-        const contract = { ...deployment, status: 'verified', requestFields: fields(ref), shotFields: arrayFields('shots'),
+        return { ...deployment, status: 'verified', requestFields: fields(ref),
             temporalImageFields: arrayFields('keyframes'), referenceFields: arrayFields('references') };
-        if (!validation)
-            return contract;
-        if (schemaRef(validationEndpoint) !== ref || !error.model || !error.resolution || Object.keys(validation.args).some(key => key !== 'reserveUsd'))
-            return { ...contract, validation: { status: 'not_sent', reason: 'Requires the deployed submission schema, saved geometry and unmodified adapter settings' } };
-        return { ...contract, validation: await validateScenePayload(validationEndpoint, error.sceneRequest, error.model, error.resolution, validation.requestId) };
     }
     catch {
         return { ...deployment, status: 'unverified' };

@@ -93,6 +93,7 @@ function sceneSpeechRoute(scene, cards, selection, requestedRendering) {
   if (requestedRendering && cutScene && structured && (mode === 'reference' || mode === 'picture' && visualReferences)) {
     operation = 'image';
     const frames = Math.round(cards.reduce((sum, card) => sum + card.duration, 0) * (direction.fps ?? 24));
+    // 'auto' marks a cut scene that would also fit one render. Only per_shot can be requested; approved plans hash this value.
     rendering = cards.some(card => card.timeline) || mixedCuts || direction.audio || speakers.length > 2 ||
       frames > 361 || cards.length > 4
       ? 'per_shot' : 'auto';
@@ -116,7 +117,7 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, rendering 
   }
   if (!limit || ['astra_genai_img2video','astra_genai_msr'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
-  const perShot = !!rendering && rendering !== 'single_msr' && !scene?.videoDirection?.oneTake;
+  const perShot = !!rendering && !scene?.videoDirection?.oneTake;
   const groups = perShot ? cards.map(card => [card]) : [cards];
   for (const group of groups) {
     const voices = new Set(group.flatMap(orderedSpeech).filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker));

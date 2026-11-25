@@ -3,7 +3,7 @@
 ## Numbered episode titles
 
 For a numbered story series, use its assigned episode number and the episode language.
-Save `titlePlan` on the first `story_sequence`. The writer stores it in `STORY.titlePlan`.
+Save `titlePlan` alongside `primaryHookType` on the first `story_sequence`. The primary hook describes how the video starts. The title type describes the response the headline invites. The writer stores it in `STORY.titlePlan`.
 The public heading is **EP09 · Headline**. Enter only the words after the separator in
 `headline`. Pick one type from what viewers can see, hear or decide.
 

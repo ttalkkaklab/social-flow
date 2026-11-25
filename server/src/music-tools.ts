@@ -11,11 +11,15 @@ const context = {
 };
 export const MUSIC_TOOLS: Tool[] = [
   { name: 'music_catalog', title: 'Inspect music models',
-    description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call.',
-    inputSchema: { type: 'object', additionalProperties: false, properties: {} }, annotations: { readOnlyHint: true, openWorldHint: false } },
+    description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call. Name an engine, and a model to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across music adapters and parameters.options the adapter\'s own.',
+    inputSchema: { type: 'object', additionalProperties: false, properties: {
+      engine: { type: 'string', enum: ['lyria', 'suno-api', 'elevenlabs', 'mlx'], description: 'Music engine as saved in models.music.engine, e.g. lyria.' },
+      model: { type: 'string', description: 'One exact model of that engine, e.g. lyria-3.5. Needs engine.' } } }, annotations: { readOnlyHint: true, openWorldHint: false } },
   { name: 'music_plan', title: 'Plan music from saved settings',
     description: 'Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute — use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.',
     inputSchema: { type: 'object', additionalProperties: false, properties: { ...context,
+      engine: { type: 'string', description: 'Optional assertion of the saved music engine. A different saved engine refuses the plan (music_selection_mismatch); a plan never switches the selection.' },
+      model: { type: 'string', description: 'Optional assertion of the saved music model, checked the same way.' },
       tool: { type: 'string', enum: ['music_generate_song', 'music_generate_clip', 'music_generate', 'music_generate_advanced', 'music_elevenlabs_generate', 'suno_generate', 'mlx_music_generate'], description: 'Optional adapter; must match saved model. Default comes from music_catalog.' },
       args: { type: 'object', description: 'Selected adapter fields, e.g. {prompt:"Soft piano",instrumental:true,filename:"bgm.wav"} for Lyria song. Unknown fields fail.' },
     }, required: ['directory', 'assetId', 'requestId', 'args'] }, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
