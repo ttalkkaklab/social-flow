@@ -53655,6 +53655,8 @@ function videoDurationLimits(tool, input = {}) {
     limits = { ...HEYGEN_SECONDS };
   } else if (tool === "astra_genai_msr") {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
+  } else if (tool === "astra_genai_scene") {
+    limits = { ...GENAI_MSR_FRAMES, frameRate: input.fps ?? GENAI_MSR_FRAMES.frameRate };
   } else if (DURATION_TOOLS.includes(tool) && tool.startsWith("astra_")) {
     const mode = tool === "astra_audio2video" ? "audio2video" : tool === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;

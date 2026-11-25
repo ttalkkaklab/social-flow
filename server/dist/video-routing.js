@@ -161,7 +161,8 @@ export function readShotVideoTiming(episode, shotId) {
     const context = routingContext(episode, shotId, undefined, true);
     requireSupportedSelection(context.selection);
     const video = context.shot.visual?.video ?? {};
-    const tool = selectedVideoTool(context.selection);
+    // Timing reads the adapter the scene will be planned for, so a GenAI shot is measured on the scene-mode grid.
+    const tool = sceneVideoTool(context.selection);
     const args = tool ? bindSelection(tool, video, context.selection) : video;
     return { shotId, selection: context.selection, source: context.source,
         ...shotVideoTiming(context, tool ?? 'unresolved', args) };

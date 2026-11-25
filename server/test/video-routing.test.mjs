@@ -827,6 +827,17 @@ test('storyboard timing follows snapshot, scoped overrides, source trim and outg
   assert.equal(changed.status, 'fits');
 });
 
+test('storyboard timing on a GenAI project reads the scene grid', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024', operation:'reference'});
+  Object.assign(f.board.SCENES[0], { duration: 5, shot: { render: { mode: 'generated_video' } } });
+  f.save();
+  const fit = readShotVideoTiming(f.episode, 's1');
+  assert.equal(fit.status, 'fits');
+  assert.ok(Math.abs(fit.maxSeconds - 361/24) < 1e-9);
+  f.board.SCENES[0].duration = 16; f.save();
+  assert.equal(readShotVideoTiming(f.episode, 's1').status, 'split_required');
+});
+
 test('two-speaker planning preserves the exact scene duration and refuses a stale performance',async t=>{
  const f=await pinnedSpeakerScene(t);
  const input={episode:f.episode,sceneNo:1,requestId:'timed',args:{reserveUsd:0}};

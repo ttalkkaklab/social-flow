@@ -739,7 +739,9 @@ async function generateGenaiScene(args, signal, polling = {}) {
     }
     const requestPath = `${videoPath}.${randomUUID()}.generation.json`;
     fs.writeFileSync(requestPath, JSON.stringify(submitted), { flag: 'wx', mode: 0o600 });
-    const requestId = 'scene-' + fingerprint;
+    // The ID names this output as well as the body. The gateway ties an ID to its first job even after that job fails, so a
+    // new plan of the same scene (a retry, under a new request and filename) must not share it.
+    const requestId = 'scene-' + createHash('sha256').update(fingerprint + '\n' + videoPath).digest('hex');
     const receipt = { version: 1, baseUrl: astraGenaiBaseUrl(), operation: 'scene', fingerprint, videoPath, expected,
         native: sceneNativeContract(args), requestId, requestPath, submittedAt: new Date().toISOString(), status: 'submitting' };
     signal?.throwIfAborted();

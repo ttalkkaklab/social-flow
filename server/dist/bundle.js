@@ -128366,7 +128366,7 @@ async function generateGenaiScene(args, signal, polling = {}) {
   }
   const requestPath = `${videoPath}.${randomUUID8()}.generation.json`;
   fs12.writeFileSync(requestPath, JSON.stringify(submitted), { flag: "wx", mode: 384 });
-  const requestId = "scene-" + fingerprint;
+  const requestId = "scene-" + createHash14("sha256").update(fingerprint + "\n" + videoPath).digest("hex");
   const receipt = {
     version: 1,
     baseUrl: astraGenaiBaseUrl(),
@@ -131385,6 +131385,8 @@ function videoDurationLimits(tool2, input = {}) {
     limits = { ...HEYGEN_SECONDS };
   } else if (tool2 === "astra_genai_msr") {
     limits = { ...GENAI_MSR_FRAMES, frameRate: input.frameRate ?? GENAI_MSR_FRAMES.frameRate };
+  } else if (tool2 === "astra_genai_scene") {
+    limits = { ...GENAI_MSR_FRAMES, frameRate: input.fps ?? GENAI_MSR_FRAMES.frameRate };
   } else if (DURATION_TOOLS.includes(tool2) && tool2.startsWith("astra_")) {
     const mode = tool2 === "astra_audio2video" ? "audio2video" : tool2 === "astra_keyframe_video" ? "keyframe" : input.tier === "guided" ? "guided" : input.tier === "fast" ? "guided_fast" : input.tier === "hq" ? "guided_hq" : "generate";
     const frameRate = input.frameRate ?? 24;
@@ -133987,7 +133989,7 @@ function readShotVideoTiming(episode, shotId) {
   const context2 = routingContext(episode, shotId, void 0, true);
   requireSupportedSelection(context2.selection);
   const video2 = context2.shot.visual?.video ?? {};
-  const tool2 = selectedVideoTool(context2.selection);
+  const tool2 = sceneVideoTool(context2.selection);
   const args = tool2 ? bindSelection(tool2, video2, context2.selection) : video2;
   return {
     shotId,

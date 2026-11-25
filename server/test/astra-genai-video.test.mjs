@@ -579,6 +579,25 @@ test('a scene receipt without a job is linked by one replay of its saved request
   assert.equal(JSON.parse(fs.readFileSync(receiptPath, 'utf8')).jobId, undefined);
 });
 
+test('a new plan of the same scene sends its own request ID, so a retry after a failure is a new job', async t => {
+  const dir = setup(t), face = path.join(dir, 'hero.png');
+  fs.writeFileSync(face, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aXioAAAAASUVORK5CYII=', 'base64'));
+  const scene = filename => ({ model: 'ltx-2.5-22b-distilled', prompt: '{hero.face} waves.', resolution: '64x64', reserveUsd: 0, outputPath: dir, filename,
+    cast: [{ id: 'hero', images: [{ role: 'face', imagePath: face }] }], shots: [{ id: 's1', frames: 24, imagePath: face }] });
+  const ids = [];
+  globalThis.fetch = async (url, options) => {
+    if (route(url) === '/v1/uploads') return new Response(null, { status: 404 });
+    if (route(url) === '/v1/generations/validate')
+      return Response.json({ resolved: { num_frames: 25, prompt: 'Image 1 waves.', labels: { 'hero.face': 'Image 1' }, shots: [{ id: 's1', start_frame: 0 }] }, warnings: [] });
+    if (options.method === 'POST') { ids.push(options.headers['X-Request-ID']); return Response.json({ id: 'job-' + ids.length }, { status: 202 }); }
+    return Response.json({ id: route(url).split('/').pop(), status: 'failed', error: { message: 'out of memory' } });
+  };
+  for (const filename of ['take-1.mp4', 'take-2.mp4']) await assert.rejects(generateGenaiVideo('scene', scene(filename)), /failed/);
+  assert.equal(ids.length, 2);
+  assert.notEqual(ids[0], ids[1]);
+  assert.ok(ids.every(id => /^scene-[a-f0-9]{64}$/.test(id)));
+});
+
 test('a scene download must have the native 8k+1 frames and is cut back to the storyboard frames', async t => {
   const dir = setup(t), receiptPath = path.join(dir, 'scene.mp4.astra-genai.json'), target = path.join(dir, 'scene.mp4');
   const clip = frames => {

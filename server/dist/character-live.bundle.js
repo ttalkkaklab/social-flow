@@ -36350,7 +36350,7 @@ async function generateGenaiScene(args, signal, polling = {}) {
   }
   const requestPath = `${videoPath}.${randomUUID4()}.generation.json`;
   fs3.writeFileSync(requestPath, JSON.stringify(submitted), { flag: "wx", mode: 384 });
-  const requestId = "scene-" + fingerprint;
+  const requestId = "scene-" + createHash5("sha256").update(fingerprint + "\n" + videoPath).digest("hex");
   const receipt = {
     version: 1,
     baseUrl: astraGenaiBaseUrl(),
