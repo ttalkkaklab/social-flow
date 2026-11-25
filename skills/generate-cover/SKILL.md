@@ -23,6 +23,12 @@ decided the packaging first; `episode_cover read` shows that plan, and the cover
 
 ## 1. Choose the moment
 
+Start with `episode_cover read`. A numbered episode returns `plan.title`, `plan.type`
+and `plan.thumbnailCue`. Use the [type's thumbnail direction](../storyboard/references/storyboard-template.md#numbered-episode-titles)
+to pick an actual shot and complementary words. Explain in `decision.reason` how that
+moment carries the selected type. Follow the channel's series layout and number placement.
+When the board changes, `changed: ["titlePlan"]` calls for a new cover decision before rendering.
+
 Read the board with `storyboard_read`, then pick one shot:
 
 - **Story and drama:** one or two people at the moment of a decision or a threat. The face shows

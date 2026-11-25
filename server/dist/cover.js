@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
-import { PLUGIN_ROOT, readBoard, scenesPath, shotIdSchema } from './storyboard.js';
+import { PLUGIN_ROOT, contract, readBoard, scenesPath, shotIdSchema, titlePlanSchema } from './storyboard.js';
 import { readImageState } from './image-state.js';
 import { workflowEpisode } from './production-workflow.js';
 import { episodeHandoff } from './project.js';
@@ -59,6 +59,7 @@ export const episodeCoverSchema = z.object({
     action: z.enum(['set', 'render', 'read']),
     decision: coverDecisionSchema.optional(),
 }).strict();
+const coverBriefSchema = titlePlanSchema.omit({ searchTerm: true });
 function episodeOf(path) {
     const board = readBoard(path);
     // Real paths throughout, so sources recorded relative to the episode stay inside it (macOS /var is /private/var).
@@ -188,14 +189,22 @@ function copyWarnings(ep, copy, language, label) {
     const max = unit === 'chars' ? ep.spec.copyMax.chars : ep.spec.copyMax.words;
     return n > max ? [{ code: 'cover_copy_long', message: `${label}copy runs ${n} ${unit}; this format reads best at ${max} or fewer` }] : [];
 }
-/** Copy the title already says, checked whenever output/youtube/meta.md has a title. */
+function coverBrief(ep) {
+    const plan = ep.board.win.STORY?.titlePlan;
+    if (!plan)
+        return undefined;
+    const { searchTerm, ...brief } = titlePlanSchema.parse(plan);
+    return brief;
+}
+/** Check against both the storyboard headline and any platform-specific title. */
 function titleWarnings(ep, decision) {
-    const title = youtubeTitle(ep);
-    if (!title)
-        return [];
+    const titles = [coverBrief(ep)?.headline, youtubeTitle(ep)];
     const norm = (s) => s.normalize('NFC').toLowerCase().replace(/[\s\p{P}]/gu, '');
-    return [decision, ...decision.variants].flatMap((look, i) => look.copy && norm(look.copy.text) && norm(title).includes(norm(look.copy.text))
-        ? [{ code: 'cover_copy_repeats_title', message: `${i ? `variant ${VARIANT_LABELS[i]}: ` : ''}copy "${look.copy.text}" repeats the title "${title}"; the cover adds what the title does not say` }] : []);
+    return [decision, ...decision.variants].flatMap((look, i) => {
+        const copy = look.copy && norm(look.copy.text);
+        const title = copy && titles.find(t => t && norm(t).includes(copy));
+        return title ? [{ code: 'cover_copy_repeats_title', message: `${i ? `variant ${VARIANT_LABELS[i]}: ` : ''}copy "${look.copy.text}" repeats the title "${title}"` }] : [];
+    });
 }
 function lookOf(ep, base, warnings, label) {
     if (base.copy?.emphasis && !base.copy.text.includes(base.copy.emphasis))
@@ -221,7 +230,8 @@ export function setCover(path, input) {
         warnings.push(...copyWarnings(ep, look.copy, language, i ? `variant ${VARIANT_LABELS[i]}: ` : ''));
         warnings.push(...sizeWarnings(ep, look, i ? `variant ${VARIANT_LABELS[i]}: ` : ''));
     }
-    const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main, variants };
+    const titleBrief = coverBrief(ep);
+    const decision = { version: 1, language, reason: input.reason, format: ep.format, ...main, variants, ...(titleBrief ? { titleBrief } : {}) };
     warnings.push(...titleWarnings(ep, decision));
     const file = join(ep.storyboard, 'cover.json');
     atomicWrite(file, JSON.stringify(decision, null, 2) + '\n');
@@ -258,6 +268,7 @@ const storedSourceSchema = z.union([
 ].map(s => s.extend({ path: z.string().min(1), sha256: z.string().regex(/^[a-f0-9]{64}$/) })));
 const storedLookSchema = z.object({ source: storedSourceSchema, focus: focusSchema, copy: copySchema.nullable() }).strict();
 const storedDecisionSchema = storedLookSchema.extend({
+    titleBrief: coverBriefSchema.optional(),
     version: z.literal(1), language: z.string().min(1), reason: z.string().min(1), format: z.string().min(1), variants: z.array(storedLookSchema).max(2),
 }).strict();
 const even = (n) => Math.max(2, Math.round(n / 2) * 2);
@@ -434,6 +445,8 @@ export async function renderCover(path) {
     const decision = readDecision(ep);
     if (!decision)
         throw new Error('cover_decision_missing: write the decision with episode_cover set first');
+    if (canonical(coverBrief(ep)) !== canonical(decision.titleBrief))
+        throw new Error('cover_title_changed: read the current title and thumbnail cue, then set the cover again');
     if (decision.format !== ep.format)
         throw new Error(`cover_format_changed: the decision was made for ${decision.format} and the board is now ${ep.format}; set it again`);
     const dir = join(ep.episode, 'output', 'cover');
@@ -627,7 +640,9 @@ export function cutPreviews(shot, dir, stem, kind, spec) {
 export function readCover(path) {
     const ep = episodeOf(path);
     const story = ep.board.win.STORY;
-    const plan = story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : undefined;
+    const brief = coverBrief(ep);
+    const plan = brief ? { ...brief, title: contract().episodeTitle(ep.board.win), thumbnail: brief.thumbnailCue }
+        : story?.opening?.thumbnail || story?.opening?.title ? { title: story?.opening?.title, thumbnail: story?.opening?.thumbnail } : undefined;
     const base = { format: ep.format, unverified: ep.spec.unverified, ...(plan ? { plan } : {}) };
     let decision;
     try {
@@ -638,6 +653,8 @@ export function readCover(path) {
     }
     if (!decision)
         return { status: 'missing', ...base, next: 'episode_cover set: choose the moment, the copy and why' };
+    if (canonical(brief) !== canonical(decision.titleBrief))
+        return { status: 'stale', changed: ['titlePlan'], ...base, decision, publish: { stale: true }, next: 'episode_cover set with the current title and thumbnail cue, then render' };
     const dir = join(ep.episode, 'output', 'cover'), renderFile = join(dir, 'render.json');
     if (!existsSync(renderFile))
         return { status: 'unrendered', decision, ...base, next: 'episode_cover render' };

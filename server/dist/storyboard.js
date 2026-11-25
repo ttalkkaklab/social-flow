@@ -773,7 +773,16 @@ export function applyPatch(win, patch, opts = {}) {
             // use is written. A patch that carries the block unchanged (a board written back whole) passes.
             if (k === 'CLICHES' && !opts.cliches && sameShape(v) !== sameShape(win.CLICHES))
                 throw new Error('cliche_record: window.CLICHES is written by story_cliche, which checks the episode type and the user\'s pick — storyboard_apply globals cannot change it');
-            next[k] = v;
+            if (k === 'STORY' && v && typeof v === 'object' && 'titlePlan' in v) {
+                const plan = titlePlanSchema.parse(v.titlePlan);
+                const episodeSlug = basename(dirname(dirname(scenesPath(patch.path))));
+                const numbered = /^ep(\d+)(?:[-_]|$)/i.exec(episodeSlug);
+                if (numbered && Number(numbered[1]) !== plan.episodeNumber)
+                    throw new Error(`episode_number_mismatch: ${episodeSlug} cannot use EP${plan.episodeNumber}`);
+                next[k] = { ...v, titlePlan: plan };
+            }
+            else
+                next[k] = v;
         }
     // Carry the board's authoring version through a globals.STORY replacement. Earlier files remain opt-in.
     const previousStory = win.STORY;
@@ -1127,7 +1136,7 @@ export function openingReading(win, platforms = []) {
             ? `${head}: no plan — story_sequence opening records the promise and the first frame${long ? ', the title and thumbnail it confirms and the bigger question' : ''} (references/opening-by-format.md)`
             : `${head}: promise "${flat(plan.promise)}" · first frame: ${plan.firstFrame ? flat(plan.firstFrame) : 'not written'}`];
     if (long && plan?.promise && flat(plan.promise)) {
-        const missing = [!plan.title && 'title', !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
+        const missing = [!contract().episodeTitle(win) && !plan.title && 'title', !plan.thumbnail && 'thumbnail', !plan.widen && 'bigger question'].filter(Boolean);
         if (missing.length)
             lines.push(`opening: no ${missing.join(', ')} — the first 30 s confirms the title and thumbnail, then opens a bigger question`);
     }
@@ -1334,8 +1343,16 @@ export function applyStoryboard(args, opts = {}) {
 // The first storyboard step writes only the story, one layer at a time, through three tools.
 // Each layer needs the one above it; dialogue, pictures and prompts come after.
 const outlinePath = z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing) or its scenes.js');
+export const titlePlanSchema = z.object({
+    episodeNumber: z.number().int().positive().safe(),
+    type: z.enum(['scene', 'reason', 'choice', 'empathy']),
+    headline: nonEmpty.regex(/^(?!ep(?:isode)?\.?\s*\d)/i, 'Write the headline without the episode prefix').describe('Public headline in the episode language, without the EP number'),
+    thumbnailCue: nonEmpty.describe('Visible moment and complementary copy idea for this title type'),
+    searchTerm: nonEmpty.optional().describe('Optional search phrase that fits the story'),
+}).strict();
 export const storySequenceSchema = z.object({
     path: outlinePath,
+    titlePlan: titlePlanSchema.optional(),
     language: z.string().regex(/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/, 'a BCP-47 tag such as "en", "ja" or "zh-Hans"').optional()
         .describe('The language the story and its lines are written in'),
     sequences: z.array(z.object({
@@ -1390,7 +1407,7 @@ function readOutline(path) {
     const win = existsSync(file) ? readBoard(file).win : {};
     return { win, st: win.STRUCTURE ?? emptyStructure() };
 }
-function writeOutline(path, win, structure, shots, language, opening) {
+function writeOutline(path, win, structure, shots, language, opening, titlePlan) {
     // A board the story tools start is story-first: every writer keeps its layer order (structure-contract.js).
     // Inside an episode it also starts on the episode's saved canvas and production choice, the handoff
     // project_manage gives a new board; without it the board reads as the 9:16 default.
@@ -1411,8 +1428,9 @@ function writeOutline(path, win, structure, shots, language, opening) {
     const speech = language ?? handoff?.LANGUAGES?.speech;
     const written = !!win.SCENES?.length;
     const takesLanguage = !!language && story?.language === undefined && !written;
-    const globals = story ? (takesLanguage || opening ? { STORY: { ...story, ...(takesLanguage ? { language } : {}), ...(opening ? { opening } : {}) } } : undefined) : {
-        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}), ...(opening ? { opening } : {}) },
+    const editorial = { ...(opening ? { opening } : {}), ...(titlePlan ? { titlePlan } : {}) };
+    const globals = story ? (takesLanguage || opening || titlePlan ? { STORY: { ...story, ...(takesLanguage ? { language } : {}), ...editorial } } : undefined) : {
+        STORY: { version: 'story-v2', authoring: 'story-first', ...(speech ? { language: speech } : {}), ...editorial },
         ...(handoff?.FORMAT && win.FORMAT === undefined ? { FORMAT: handoff.FORMAT } : {}),
         ...(handoff?.PRODUCTION && win.PRODUCTION === undefined ? { PRODUCTION: handoff.PRODUCTION } : {}),
         // A type that applies clichés by default starts with an open record, so each write says it is undecided
@@ -1438,7 +1456,7 @@ export function writeStorySequences(args) {
     // The payoff is one of the sequence's own scenes (storyboard_check); before its scenes exist there is nothing to compare.
     const notes = sequences.filter((q) => q.payoff !== undefined && q.scenes.length && !q.scenes.includes(q.payoff))
         .map((q) => ({ level: 'warn', where: `sequence ${q.id}`, what: `payoff names scene ${q.payoff}, which is outside this sequence — fix it with story_sequence or story_scene` }));
-    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language, args.opening);
+    const result = writeOutline(args.path, win, { ...st, sequences }, undefined, args.language, args.opening, args.titlePlan);
     return { ...result, findings: [...result.findings, ...notes] };
 }
 export function writeStoryScenes(args, requireSceneCast = false) {

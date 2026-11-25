@@ -22,6 +22,22 @@ test('review durations preserve fractional seconds before switching to minutes',
   assert.equal(render(150), '2.5m');
 });
 
+test('the offline header shows a numbered headline and its cue while legacy boards keep their display title', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'numbered-title-'));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  storyboardHtml(dir);
+  const window = {};
+  runInNewContext(readFileSync(join(dir, 'structure-contract.js'), 'utf8'), { window });
+  const html = readFileSync(join(dir, 'storyboard.html'), 'utf8');
+  const header = html.slice(html.indexOf('  var numberedTitle'), html.indexOf('  if (THEME.motionGraphicTheme)', html.indexOf('  var numberedTitle')));
+  const escape = value => String(value).replaceAll('<', '&lt;');
+  const render = () => runInNewContext(header + '\nh', { window, LANG: 'en', h: '', copy: escape, esc: escape, DOC: { displayTitle: 'Old title' } });
+  assert.match(render(), />Old title</);
+  window.STORY = { titlePlan: { episodeNumber: 11, headline: 'Ba Mochi?', type: 'reason', thumbnailCue: 'Show <Mochi>', searchTerm: 'phỏng vấn' } };
+  const output = render();
+  for (const text of ['EP11 · Ba Mochi?', 'Reason', 'Show &lt;Mochi>', 'phỏng vấn']) assert.ok(output.includes(text));
+});
+
 test('cast cards show the episode wardrobe and continuity when reusing a character sheet', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const cast = template.slice(template.indexOf('  if (CAST.length) {'), template.indexOf('  // One strip handler for cast'));

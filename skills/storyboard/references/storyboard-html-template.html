@@ -4251,7 +4251,15 @@ window.STORYBOARD_READY = (async function () {
   var channelName = DOC.channelName || DOC.channel || THEME.brand;
   h += '<div class="doc-kicker">' + esc(channelName) +
        (DOC.series && DOC.series !== channelName ? " · " + esc(DOC.series) : "") + "</div>";
-  h += '<h1 class="doc-title">' + copy(DOC.displayTitle || DOC.topic || "") + "</h1>";
+  var numberedTitle = window.STRUCTURE_CONTRACT && window.STRUCTURE_CONTRACT.episodeTitle && window.STRUCTURE_CONTRACT.episodeTitle(window);
+  var titlePlan = numberedTitle && window.STORY.titlePlan;
+  h += '<h1 class="doc-title">' + (numberedTitle ? esc(numberedTitle) : copy(DOC.displayTitle || DOC.topic || "")) + "</h1>";
+  if (titlePlan) {
+    var typeLabels = LANG === 'ko' ? {scene:'장면형', reason:'이유형', choice:'선택형', empathy:'공감형'} : {scene:'Scene', reason:'Reason', choice:'Choice', empathy:'Empathy'};
+    h += '<p class="review-video-type">' + esc(typeLabels[titlePlan.type]) + ' · ' +
+      esc(LANG === 'ko' ? '썸네일' : 'Thumbnail') + ' · ' + esc(titlePlan.thumbnailCue) +
+      (titlePlan.searchTerm ? ' · ' + esc(LANG === 'ko' ? '검색어' : 'Search phrase') + ' · ' + esc(titlePlan.searchTerm) : '') + '</p>';
+  }
   if (THEME.motionGraphicTheme) {
     var commonMotion = THEME.motionGraphicTheme;
     var commonMotionInfo = window.MOTION_GRAPHICS && MOTION_GRAPHICS.THEMES[commonMotion.id];
@@ -6405,7 +6413,7 @@ window.STORYBOARD_READY = (async function () {
     app.prepend(notice);
   }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
-  document.title = CONTENT.text(DOC.displayTitle || DOC.topic || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
+  document.title = (numberedTitle || CONTENT.text(DOC.displayTitle || DOC.topic || "Storyboard")) + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
 <link rel="stylesheet" href="./location-review.css">

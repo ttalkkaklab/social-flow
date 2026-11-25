@@ -388,6 +388,27 @@ describe('story first, then characters and lines', () => {
     assert.throws(() => storySequenceSchema.parse({ path: dir, sequences, opening: { promise: 'p' } }));
   });
 
+  it('keeps a numbered editorial title across story edits and rejects inconsistent input', () => {
+    const dir = join(tmp(), 'ep09-test', 'storyboard');
+    mkdirSync(dir, { recursive: true });
+    const base = { path: dir, sequences: [{ id: 'q1', title: 'Opening', purpose: 'An encounter' }] };
+    const plan = { episodeNumber: 9, headline: 'Ai kéo ghế?', thumbnailCue: 'Bơ turns around' };
+    for (const type of ['scene', 'reason', 'choice', 'empathy']) {
+      const titlePlan = { ...plan, type };
+      writeStorySequences(storySequenceSchema.parse({ ...base, titlePlan }));
+      writeStorySequences(base);
+      const read = readStoryboard(storyboardReadSchema.parse({ path: dir }));
+      assert.equal(read.title, 'EP09 · Ai kéo ghế?');
+      assert.deepEqual(read.titlePlan, titlePlan);
+    }
+    const before = readBoard(dir).sha256;
+    for (const patch of [{ type: 'search' }, { headline: ' EP09 · Again' }, { headline: 'Episode 09: Again' },
+      { episodeNumber: 0 }, { episodeNumber: 9.1 }, { thumbnailCue: ' ' }, { searchTerm: ' ' }, { episodeNumber: 10 }]) {
+      assert.throws(() => writeStorySequences(storySequenceSchema.parse({ ...base, titlePlan: { ...plan, type: 'scene', ...patch } })));
+    }
+    assert.equal(readBoard(dir).sha256, before);
+  });
+
   it('each layer needs the one before it, and a new shot plays at the end of its scene', () => {
     const dir = tmp();
     assert.throws(() => writeStoryScenes({ path: dir, scenes: [{ sequence: 'q1', no: 1, place: '숲', time: '낮', event: 'e', summary: '씬' }] }), /story_order/);
