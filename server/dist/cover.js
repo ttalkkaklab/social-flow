@@ -457,7 +457,8 @@ export async function renderCover(path) {
     mkdirSync(join(stage, 'previews'), { recursive: true });
     const previous = previousOutputs(dir);
     try {
-        const template = readFileSync(TEMPLATE_FILE, 'utf8');
+        const templateBytes = readFileSync(TEMPLATE_FILE);
+        const template = templateBytes.toString('utf8');
         const kind = landscape(ep.spec) ? 'landscape' : 'vertical';
         const files = [], previews = [], warnings = [], measurements = {};
         const sources = {}, fonts = {};
@@ -583,7 +584,7 @@ export async function renderCover(path) {
         for (const name of previous)
             if (!made.has(name))
                 rmSync(join(dir, name), { force: true });
-        const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: templateSha(), sources, fonts,
+        const render = { version: 1, renderVersion: RENDER_VERSION, decisionSha256: decisionSha(decision), templateSha256: sha256(templateBytes), sources, fonts,
             format: ep.format, files, previews, measurements, warnings, copied };
         atomicWrite(join(dir, 'render.json'), JSON.stringify(render, null, 2) + '\n');
         const episodesDir = dirname(ep.episode);

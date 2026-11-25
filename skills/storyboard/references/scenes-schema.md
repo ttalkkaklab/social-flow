@@ -103,7 +103,7 @@ report missing mappings; they do not certify the scene's artistic quality.
   - [Frame space (`shot.space`)](#frame-space-shotspace)
   - [Character reference (`visual.character`)](#character-reference-visualcharacter)
   - [Clip audio (`visual.audio`)](#clip-audio-visualaudio)
-  - [Clip prompt — one scene, one call, the prompt stored here](#clip-prompt-one-scene-one-call-the-prompt-stored-here)
+  - [Video prompts and generation requests](#video-prompts-and-generation-requests)
   - [Music cues (`window.MUSIC` · `sound`)](#music-cues-windowmusic-sound)
   - [Sound effects (`window.SFX` · `sound.effects`)](#sound-effects-windowsfx-soundeffects)
   - [Cut length (`duration`) — decided by what the cut is for](#cut-length-duration-decided-by-what-the-cut-is-for)
@@ -1751,8 +1751,6 @@ voice already says it.
     bg: null,
     clip: {                               // the speech clip plan (produce generates it) — without it, a still quotation card
       avatar: "…path to the avatar image, or null",
-      prompt: "…the stored final clip prompt (§clip prompt — assembled with --clip --with-space; background unified to THEME dark)"
-      // no negative field here — exclusions are written into the prompt as positive description
     }
   }
 }
@@ -1915,16 +1913,14 @@ frozen under the voice (owner directive 2026-09-03) — `check-scenes.js` report
 on a still, and `build-reel.sh` refuses a still card with `zoom=none` or a bare `hold`; the
 frozen frame is for footage that already moves. The reason it is
 written here and not at generation time: **the four values are settled before the first call
-that costs money.** The clip prompt is assembled out of these slots here and stored (§clip
-prompt); produce sends it verbatim, it doesn't invent one.
+that costs money.** The video request reads these slots when the user asks for generation.
 
 `end` is the slot that gets dropped. Leave it empty and nothing tells the model where to stop, so
 the last second drifts. It is also the slot our own vendor reading asks for — Seedance's camera
 sub-formula is `opening frame composition + move + closing frame composition`, and `end` is that
 closing composition.
 
-**The slots become the camera span of the stored clip prompt** (§clip prompt) — assembled at
-the storyboard by `assemble-bg-prompt.js --clip` in this order: `framing`, then
+**The video request composes the camera instruction** from the stored attributes in this order: `framing`, then
 `speed movement`, then `ending on end`; on a travelling move (pan, tilt, truck, pedestal,
 crane, dolly, zoom, dolly zoom) the span carries the two holds of L13–L14 — `framing, pauses,
 then speed movement, settling on end` — so the clip opens held on A and closes held on B, the
@@ -1932,7 +1928,7 @@ handles the edit needs (a static camera, `handheld` and `aerial` keep the plain 
 
 > `chest-up on the subject, pauses, then slow dolly in, settling on subject centred at mid-frame`
 
-produce keeps the same recipe as its fallback for an older scenes.js with no stored prompt.
+A request can also compile the recorded camera attributes of an older board.
 
 The rules that applied to the old one-string camera line now apply per slot:
 
@@ -2003,12 +1999,7 @@ when two people (or a person and what they look at) share the scene — that is 
 sentence the shooting script prints. Slide scenes have no still, so they skip this block.
 
 The words, the banned forms, and the assembly order live in `directing-grammar.md` §3.5.
-`assemble-bg-prompt.js` is the machine form: the storyboard runs it when the shot plan is written
-(SKILL.md §4) with
-`--scene`·`--mood`·`--exclude` and stores the full stdout as `bgPrompt`; produce reruns it only
-when a `shot` field changed on a still it regenerates (a plain regeneration resends the stored
-string). produce assembles a video prompt from the camera slots and adds nothing from `space` —
-the PNG already holds the floor plan.
+When an image is requested, `shot_image` composes the source-image prompt from the subject, crop, space, lighting and chosen style. Its production record keeps the request text. A video request reads the current scene and shot attributes independently.
 
 | Slot | Required when | What it names |
 |---|---|---|
@@ -2139,48 +2130,11 @@ images and boundary playback; metadata cannot measure pupils or prove target dis
 
 ### Depth of field (`shot.depth`, L11)
 
-One structured property owns the depth plan. The approval icon, MCP schema, source-image
-prompt and shooting script read it; do not store a second depth note in `visual.camera` or in
-the prompt alone. The rule is a count: how many things must the viewer read in this frame at
-the same moment? One thing → `shallow` with the sharp plane named; two or more → `deep` with
-the planes listed front to back. A blurred background is a choice, not the default.
+The shared geography lives in `directionDefaults.continuity`. A local prop or action change goes in `shot.videoDesign.continuity`. When blocking establishes a new layout, set `shot.space.continuity` on the shot where it changes. Later shots inherit the new layout.
 
-```js
-depth: { mode: "shallow", reads: 1, focus: "A's eyes", sound: "near" }
-depth: { mode: "deep", reads: 3, planes: ["the cup", "A at the table", "the window"], sound: "full" }
-depth: { mode: "none", reason: "Flat chart on the studio stage" }
-```
+A scene can set `directionDefaults.depthPolicy` and `lensPolicy`. A photographic shot names its actual sharp subject in `depth.focus` for shallow focus or lists the sharp planes front to back in `depth.planes` for deep focus. Two people at the same distance can share a shallow plane. `reads` is an optional editorial count. Flat graphics can omit optical direction. A still-camera focus mask uses shallow focus.
 
-| Field | Values | Meaning |
-|---|---|---|
-| `mode` | `shallow` / `deep` / `none` | how many planes stay sharp; `none` when depth carries no information (graphs, flat slides, type) |
-| `reads` | integer ≥ 1 | the number of things the viewer must read at once; shallow with 2+ or deep with 1 needs a `reason` |
-| `focus` | text (shallow only) | the one sharp plane; on a person, name the eyes |
-| `planes` | 2–3 strings front to back (deep only) | every plane that must read, in depth order |
-| `sound` | `near` / `full` | sound perspective; shallow usually pairs with `near`, deep with `full` |
-| `reason` | text | required for `none` and for a count that departs from the mode; optional depth intent otherwise |
-
-**Required or optional:** new boards declare it on every placed photographic cut that is a
-close size (`mcu` and tighter, `insert`, `two`, `three`, `ots`) or a still-camera
-`focus-in` / `rack-focus` cut. HTML and chart routes never need it. As with `eyeline` and
-`composition`, the first `depth` record in a scene enrolls the scene: other needy cuts then
-fail without one, and an old scene with no record warns. The story draft defers missing
-records; full checks block them. A shallow record on a `two` / `three` / `ots` size warns
-that the partner disappears; a deep record on `choker` / `ecu` / `insert` warns that the
-frame rarely holds two readable planes.
-
-**Still lane caveat.** `still-camera.js` fakes focus with a feathered elliptical mask, so a
-`focus-in` or `rack-focus` cut is always `shallow`; a `deep` record on one fails. The mask
-does not know distance: two objects at the same depth blur differently when only one sits
-inside the ellipse. When that shows, the cut is not a focus-effect cut. A generated still
-that arrives with the key subject soft is a failed still, not a style.
-
-**Sound pairs with depth.** Shallow means the voice is forward and the room is faint;
-deep means every source is heard. `sound` records that pairing and a mismatch warns.
-The shooting script prints the depth handle: shallow opens the aperture, gets close, uses a
-longer lens and separates the subject from the background, never a post blur; deep stops
-down and adds light. Phone portrait mode is a mask like the still lane and shows the same
-edge halo on hair and glasses.
+Use `shot_icons.focus` for the initial subject, destination and trigger of a focus pull. `shot_icons.optics` can record focal length in millimetres, aperture as an f-number and focus distance in metres. Use `directionDefaults.soundPerspective` for the scene and `shot_icons.soundPerspective` for a shot adjustment, stored in `sound.perspective`. Legacy `depth.sound` is read as a listening choice.
 
 ### Axis crossings and 30° coverage
 
@@ -2283,81 +2237,9 @@ What to write depends on whether the clip's own sound survives the build:
 | motion background (`visual.video`) | discarded — TTS and BGM carry on over it | write it anyway; the model composes a calmer clip when it isn't left to invent a soundtrack |
 | `quote` speech clip | the character speaking is the point | what is heard besides the voice — the room, and nothing else |
 
-### Clip prompt — one scene, one call, the prompt stored here
+### Video prompts and generation requests
 
-```js
-engine: "seedance",                  // the planned route — seedance when absent;
-                                     // "host" under PRODUCTION.videoProvider:"host" — the CLI's own image_to_video (Grok)
-prompt: "chest-up on the subject, pauses, then slow dolly in, settling on subject centred at mid-frame. steam curling off the cup. Audio: quiet room tone, no music, no speech.",
-```
-
-**Every shot that becomes a generated video is exactly one API call, and the storyboard stores
-the call's final prompt** (user directive, 2026-08-25). The prompt's home follows the shot's
-shape — `visual.prompt` on `broll`, `visual.video.prompt` on a motion background,
-`visual.clip.prompt` on a `quote` speech clip. The
-reason it is written here and not at generation time is the same as `bgPrompt`'s: **the
-sentence the model gets is the sentence the review read.** produce sends it verbatim, adds the
-API arguments (references, `durationSeconds`), and re-runs the assembler only
-when a slot changed.
-
-**Assemble it, don't prose it** — `assemble-bg-prompt.js --clip` builds the prompt from parts
-that are each already reviewed, in this order:
-
-1. *(quote only)* the `From the camera: …` space sentence (`--with-space`) and the subject
-   description (`--scene`) — a quote clip has no still behind it, so its prompt carries the
-   floor plan. A motion background and a b-roll **never re-describe the layout, facing or
-   lighting**: the source PNG already drew them, and re-describing makes the engine redesign
-   the scene. Who the subject *is* (video-model-selection §prompt grammar):
-   a seedance route may reuse the bgPrompt's **identity words** (who and what, never
-   where) with a consistency lock in `--locks` ("the subject stays exactly consistent with
-   the input frame; add no unrelated elements" — the vendor's own i2v pattern).
-2. the camera span from the four `visual.camera` slots — `framing`, then `speed movement`,
-   then `ending on end` (§camera).
-3. `--motion` — the subject motion: what moves in the picture while the camera does its one
-   thing. Three kinds, alone or combined — camera motion, subject animation, environmental
-   animation ("fog rolls in slowly") — and the person in the source PNG is never re-described. An
-   in-clip state change carries its own length **in words** ("the visor snaps shut
-   in under half a second"); left open, the engine spreads the change across the whole clip.
-4. `--locks` — what holds in every frame, said positively, each reference given its scope
-   (video-model-selection §positive locks). **On a seedance route it is required**: the
-   lock is the only place an exclusion can go, and the vendor's own image-lane pattern closes
-   on one.
-5. the `visual.audio` sentence, closing the prompt as `Audio: …` (§clip audio).
-
-The assembler exits 1 on what the route can't take, so a stored prompt is a checked prompt:
-banned space language (§frame space), negative directives in the body (two exemptions — the
-`Audio:` sentence, where "no music, no speech" is a state description, and on a seedance
-route the vendor-templated **artifact classes**: subtitles, on-frame text, logos, watermarks,
-BGM), timecodes and digit seconds on a seedance route
-(`--engine seedance-2.5` opens integer-second forms — that model officially takes them),
-**Korean anywhere outside a dialogue quote on a seedance route** (that body reads Chinese or
-English; 2.5 is the one model that reads Korean),
-and **a seedance prompt with no consistency lock**. `check-scenes.js` re-runs those last two
-against every stored prompt, so a prompt written by hand meets the same bar as an assembled
-one, and `seedance-client.ts` refuses the Korean body one more time at the call itself.
-
-**Time inside the clip.** A Seedance-routed prompt names no clock — the 2.0 vendor docs
-self-report unstable precision timing, so beats are ordered by description ("then", "as the
-door closes") and cut in the edit.
-
-**One scene stays inside one clip — and one clip holds one moment.** Chaining several
-distinct events into one short prompt comes back muddled or incomplete. The scene was cut to one beat at design time; the call keeps that
-cut. `duration` fits the routed engine's server-validated
-range — seedance 4–15s on the 2.0
-grades and 4–30s on 2.5, the previz route every motion background takes
-(`server/src/seedance-client.ts` is the binding table). A scene that needs more is a
-storyboard defect: trim the narration, split the scene, or route to a model that takes it —
-never plan a looping clip. A Seedance scene with **internal cuts** may write them as
-`Shot 1: … Shot 2: …` inside the one call — the form is vendor-exemplified
-(examples run 2–5 cuts), the later cuts inherit the floor plan the first cut establishes, so
-open on the widest frame, and the prompt carries the cut line: *"Sequence of cuts, no
-timecodes — cuts only at the specified points, the camera does not cut on its own."* Time
-each cut by a **dialogue or action beat**, not a clock ("as she opens her palm, cut to a
-close-up of the hand"), give each cut its own shot size and distinct content, and don't
-constrain per-segment durations — the vendor says to let the model pace the segments from the
-plot, and packing too much into the time comes back as extra cuts or dropped plot. The camera
-slots describe the opening cut; each further cut names its own framing in its `Shot n:`
-sentence, with the reason the scene needs a sequence written on the shot.
+The board records scene and shot attributes. When video is requested, `video_plan` reads the current board and composes the scene for the selected model and operation. Its request and approval retain the exact prompt. A matching saved request appears on the scene review. An older board can contain historical `visual.prompt`, `visual.video.prompt`, `visual.clip.prompt` or `videoDirection.promptDrafts`. Record reusable changes as attributes. Save an exact wording edit in `videoDirection.prompt`. Each scene supplies one production prompt. Use `story_scene.split` when two separate prompts must render.
 
 ### Music cues (`window.MUSIC` · `sound`)
 
@@ -2398,7 +2280,7 @@ audio after that point than the span needs loops, and the build report says so.
 **Each scene's decision lives on the scene.** `story_music` writes
 `STRUCTURE.scenes[].music = { decision: "score" | "none", reason, span? }` together with the
 span it describes, where `span` is the `$timeline` id. A scene on a story-first board without
-it is `undecided`: the review page, `storyboard_read.musicSpotting`, `shot_prompt` and the
+it is `undecided`: the review page, `storyboard_read.musicSpotting` and the
 build report name those scenes, and a scene whose decision the timeline contradicts is a
 `mismatch`. These are reports; the build goes on.
 
@@ -2596,7 +2478,7 @@ these as working practice, as in bgm-scoring §3. On a story-v2 board:
   or a gap between lines covers the exit.
 - **Hit points.** A generated bed is not composed to picture, so there is no tempo map or click
   track. An accent on a cut is an effect at the cut or a `musicGain` swell after the line.
-- **Keep model music out of clips.** `shot_prompt` closes the `Audio:` sentence with "no music"
+- **Keep model music out of clips.** The requested video plan closes the `Audio:` sentence with "no music"
   unless the sound names music on purpose, such as a radio in the scene.
 
 The review page draws the cue lane under each sequence and scene heading and marks the shots
@@ -2695,8 +2577,6 @@ Gemini Developer API Veo previews, Gemini Omni and Seedance 1.x left the plugin 
     bg: "images/scene-3.png",         // the source still — made with the saved image model in the episode's style preset (§broll source clause)
     bgPrompt: "…",
     video: {
-      prompt: "chest-up, slow dolly in, ending on subject centred. hair swaying gently. Audio: quiet room tone, no music, no speech.",
-                                           // the stored final clip prompt (§clip prompt) — camera span from visual.camera + subject motion + the audio sentence
       clip: ".work/motion/motion-i2.mp4"   // produce output record — motion-i<scene index>.mp4
     },
     camera: { movement: "dolly in", speed: "slow", framing: "chest-up", end: "subject centred" }   // slow · steady · fast on a generated shot
@@ -2718,23 +2598,7 @@ facts the validation needs — **whether there's a face in the source and, if so
 an adult**. Link each photoreal face to its character's portrait. If the account lacks the
 entitlement needed to register that portrait, preserve the approved cut and report the error.
 
-**`prompt` is the stored final clip prompt, written in the route's grammar** (§clip prompt) —
-for this slot that means Seedance grammar. The camera part is not written by hand: the
-assembler builds it from the four `visual.camera` slots (§camera), which is exactly Seedance's
-`opening frame composition + move + closing frame composition`. What `--motion` adds on top is
-the subject motion — what moves in the picture while the camera does its one thing — and the
-`visual.audio` sentence closes it. An approaching move is written as `dolly in`:
-Seedance's own vendor vocabulary is Chinese (`推`), so no English word is confirmed, and the
-plugin keeps one camera vocabulary across routes. **The span isn't a format the vendor requires** — in the Seedance top-level formula
-the camera slot itself is `非必须`, and the "move amplitude" once written as a required slot
-failed re-verification against the original (2026-08-15 camera research). The reason for
-writing it as a stretch is our own: **it's a motion-background cut whose composition has to be
-reproduced.** The storyboard writes **one move** — the one-move-per-cut recommendation is Seedance 2.0's —
-and a second only with the reason written on the shot (§camera · directing-grammar §4).
-Two things the assembler blocks — **seconds in the body** (length is set by the scene's
-`duration`; an in-clip state change is written in words) and **exclusions in the body**
-(Seedance has no exclusion-only argument — re-describe the scene so it doesn't appear). Write the prompt in English — the body takes
-only Chinese or English.
+The generation request reads the four camera slots, subject action and sound. The selected adapter sets the available controls and timing grid.
 
 **A change of state inside the clip carries its own duration** — armour snapping on, a light
 coming up, a door closing. Write it as "in under half a second" or "over two seconds"; left
@@ -2822,12 +2686,11 @@ either way (absolute rule 10); this is about words that live inside the picture.
     picture: "ai-video", overlay: "none",
     src: "images/scene-1.png",       // the same file as `SCENES[after]`'s visual.bg — absolute rules 8 and 12
     clip: ".work/broll/broll-a0-mixed.mp4",   // the trim + loudnorm + BGM mix (the original is broll-a0.mp4)
-    camera: {                                 // §camera — the span of the stored prompt is assembled from these four
+    camera: {                                 // §camera — camera attributes for the generation request
       movement: "dolly in", speed: "slow",    // a generated shot takes slow · steady · fast — `very slow` is the still lane's word
       framing: "chest-up on the subject", end: "subject centred at mid-frame"
     },
     audio: "quiet studio room tone with a faint fabric rustle, no music, no speech",
-    prompt: "…the stored final clip prompt (§clip prompt — assemble-bg-prompt.js --clip --engine seedance)"
   }
 }
 ```
@@ -3631,7 +3494,7 @@ the claim.
 
 > story-v1 only — guidance for resumed boards; story-v2 boards follow character-scenarios.md and
 > storyboard SKILL §6. The identifier, enum and file-shape items below (FORMAT, filenames,
-> `transition`, stock licenses, camera slots, stored prompts, MOTION_POLICY copy) still apply to
+> `transition`, stock licenses, camera slots, shot attributes, MOTION_POLICY copy) still apply to
 > every board.
 
 The machine-measurable items below (character counts, speech rate, scene length, total length,
@@ -3721,7 +3584,7 @@ strip says no violations.
       from the ordered table in §scene transition, never from the `scene` number: `jcut`
       only when the two shots are one continuous moment, `cut` only for a smash. Consecutive
       stills in one scene change size by two steps or the angle (directing-grammar §6 rule 16)
-- [ ] **Every generated clip's prompt closes with positive locks** — what has to hold in every
+- [ ] **When reviewing a requested clip, check its positive locks** — what has to hold in every
       frame, written as positive sentences, with each reference given its scope in
       `visual.character` (`{ id, scope }` — "controls the helmet and body only", "appears only in
       the last second"). No "no ~" phrasing in the clip prompt or the camera slots, no bare
@@ -3814,10 +3677,7 @@ strip says no violations.
 - [ ] If you placed a `visual.video` scene — points type · `duration` inside the route's one-call
       cap (seedance 2.0 grades 4–15, 2.5 4–30, server-validated) · `narration[].img`
       unused · the source `bg` is a real PNG from the saved image model
-- [ ] **Every generated-video shot stores its final prompt and route** (§clip prompt) —
-      `visual.prompt` / `visual.video.prompt` / `visual.clip.prompt` assembled with
-      `assemble-bg-prompt.js --clip --engine <route>` and stored whole, exclusion nouns in the
-      sibling `negative` field, no timecodes or digit seconds on a seedance route
+- [ ] Each generated shot records its route, camera, action, closing state and sound. Review the compiled request when generation is requested.
 - [ ] **Every generated-video shot has all four `visual.camera` slots filled** (§camera) — b-roll,
       motion background, and quote speech clips. An empty `end` is the defect this checks for;
       `movement: "static"` is a filled slot, not an empty one, and `speed` is the one slot that
@@ -4035,9 +3895,9 @@ directionDefaults: {
 }
 ```
 
-Use a movement ID from the film technique catalogue. Leave a shot’s move unset to inherit the default. To restore inheritance on an existing shot, call `shot_icons` with `move:null`. For a single dolly, set that shot’s `shot_icons.move` with its speed and target. The next shot inherits the scene default again. Describe each move once. Existing free-text `videoDirection.camera` supplies the camera default when the scene has no catalogue choice. A shot's own movement, `space.line`, `space.light` or `videoDesign.continuity` takes precedence for that attribute. An explicit axis crossing establishes the new side for following shots. The review page labels each icon with its scope. Location, light and spatial continuity inform the shot images. The scene request carries shared direction once and puts exceptions in their shot intervals.
+Use a movement ID from the film technique catalogue. Leave a shot’s move unset to inherit the default. To restore inheritance on an existing shot, call `shot_icons` with `move:null`. For a single dolly, set that shot’s `shot_icons.move` with its speed and target. The next shot inherits the scene default again. Describe each move once. Existing free-text `videoDirection.camera` supplies the camera default when the scene has no catalogue choice. Each shot can override movement and specify the current axis. Local light and shot state add detail to the scene lighting and geography. An explicit replacement layout in `shot.space.continuity` carries forward from that shot. An explicit axis crossing establishes the new side for following shots. The review page labels each icon with its scope. Location, light and spatial continuity inform the shot images. The scene request carries shared direction once and puts exceptions in their shot intervals.
 
-A shot's rack-focus path, shallow-focus subject or explicit opening view supplies its own attention cue. The next shot resumes the scene subject unless it has a cue of its own. The closing-state icon and video request also read `visual.frames.endState` when the shot has no separate ending in its video direction.
+The scene's narrative attention applies throughout. A shot separately records its sharp subject, any focus pull and its opening view. The closing-state icon and video request also read `visual.frames.endState` when the shot has no separate ending in its video direction.
 
 Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
 

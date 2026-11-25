@@ -52,14 +52,8 @@
     }
     return { selection, source };
   }
-  function sceneProductionPrompt(direction, selection, operation) {
+  function sceneProductionPrompt(direction) {
     if (typeof direction?.prompt === 'string') return direction.prompt;
-    if (!selection || !Array.isArray(direction?.promptDrafts)) return;
-    const operations = selection.engine === 'astra-genai' ? ['reference','image'] : [operation || selection.operation];
-    for (const value of operations) {
-      const draft = direction.promptDrafts.find(d => d.engine === selection.engine && d.model === selection.model && d.operation === value);
-      if (draft) return draft.prompt;
-    }
   }
   const SCENE_VIDEO_ATTEMPT_LIMIT = 5;
   const CHOICES = ['full_video', 'video_80', 'video_50', 'video_30', 'video_lt10', 'no_video'];
@@ -153,6 +147,8 @@
       preset: { type: 'string', enum: Object.keys(CAMERA_PRESETS), description: 'Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location.' },
       variant: { type: 'string', enum: Object.keys(CAMERA_PRESETS['drone-flythrough'].variants), description: 'cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough.' },
       purpose: { type: 'string', description: 'Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons.' },
+      cue: {type:'string', description:'Action, sound or line that starts the shot move.'},
+      lensMm:{type:'number', exclusiveMinimum:0}, fStop:{type:'number', exclusiveMinimum:0}, focusDistanceM:{type:'number', exclusiveMinimum:0},
       movement: { type: 'string', description: 'One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar §4–§5): static · dolly in/out · zoom in/out (lens only) · dolly zoom in/out · pan left/right · tilt up/down · whip pan · truck left/right · pedestal up/down · crane up/down · arc shot · tracking · handheld · aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js.' },
       speed: { type: 'string', description: 'Movement pace as slow, steady or fast — never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots.' },
       backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening camera direction relative to the location sheet; front is the establishing view, back is the opposite view. Defaults to front.' },
@@ -205,6 +201,10 @@
   function cameraInputErrors(camera) {
     if (!camera || typeof camera !== 'object' || Array.isArray(camera)) return ['camera must be an object'];
     const errors = [];
+    for (const key of ['lensMm','fStop','focusDistanceM']) {
+      if (camera[key] !== undefined && !(Number.isFinite(camera[key]) && camera[key] > 0)) errors.push(key + ' must be a positive number');
+    }
+    if (camera.cue !== undefined && (typeof camera.cue !== 'string' || !camera.cue.trim())) errors.push('cue must be nonempty text');
     if (camera.backgroundView !== undefined && !['front', 'back'].includes(camera.backgroundView)) errors.push('backgroundView must be front or back');
     for (const slot of CAMERA_SLOTS) if (camera[slot] !== undefined && typeof camera[slot] !== 'string') errors.push(slot + ' must be text');
     if (camera.preset !== undefined && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push('unknown camera preset');
@@ -717,10 +717,14 @@
         bad('full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice');
       if (['broll', 'quote'].includes(s.type)) bad('full_video generated cuts use ordinary narrated cards');
       // A stock photograph (visual.source "stock") is a supplied source image: a license record, no prompt.
-      const owner = win.STRUCTURE?.scenes?.find(scene => scene.no === s.scene);
-      const sourceImage = v.bg || s.referenceImage || owner?.frames?.start;
-      if (!text(sourceImage) || (!text(v.bgPrompt) && v.source !== 'stock')) bad('keep a source image path and its generation prompt');
-      if (!text(v.video?.prompt)) bad('store the motion prompt before generation' + (win.STORY?.authoring === 'story-first' ? ' (shot_prompt)' : ''));
+      // A board can specify references, sound or camera settings before an image exists.
+      // The requested video operation checks its material inputs when it is planned.
+      if (v.video.prompt || v.video.path || v.video.file) {
+        const owner = win.STRUCTURE?.scenes?.find(scene => scene.no === s.scene);
+        const first = win.SCENES.find(member => member.scene === s.scene);
+        const source = s.referenceImage || s.timeline?.images?.find(image => image.role === 'start')?.path || v.frames?.start || v.bg || (first === s && owner?.frames?.start);
+        if (!text(source)) bad('keep the source image path used for this video');
+      }
       // The host video tool (owner directive 2026-09-07) tops out at 720p and takes every full_video cut.
       let selected;
       try { selected = resolveVideoChoice(p, s, snapshot); }

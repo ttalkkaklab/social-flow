@@ -1257,6 +1257,7 @@
         "seed",
         "referenceImageShortEdge",
         "numInferenceSteps",
+        "holdToMinDuration",
         "generateAudio",
         "reserveUsd",
         "outputPath",

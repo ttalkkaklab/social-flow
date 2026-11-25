@@ -678,8 +678,7 @@ the price.
   the channel policy enables it, and the opening is then a still with a camera move. When a
   generated hook is planned: optionally render the three.js previz (`previz-template.html` →
   `render-motion-slide.mjs --previz`), edit the cover still from its first frame, and call
-  `seedance_reference` with the previz as `referenceVideoPaths`, the stored `visual.video.prompt`
-  verbatim, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
+  `seedance_reference` with the previz as `referenceVideoPaths`, the scene request compiled by `video_plan`, `generateAudio: false`, the cover's `duration` (4–8 s; input plus output seconds are
   billed on the `…-video` rows — 2.0 mini 720p ≈ $0.54 for a 6 s cut, 2.0 1080p ≈ $2.74). The
   builder keeps only the video track and composes the narration separately, without subtitle overlays. No `ARK_API_KEY` means no hook video.
   `.work/motion/motion-i0.mp4`. This is the one slot the baseline pays for
@@ -700,10 +699,7 @@ the price.
   model resolution; missing old metadata never requires regeneration.
 
   Request the broll scene's `duration` (default 4s) and keep the original, per produce §6's
-  trim+mix conventions. **Send the scene's stored `visual.prompt` verbatim** — every exclusion
-  goes into the prompt body as positive description (scenes-schema §clip prompt); an older
-  scenes.js with no stored prompt gets the fallback assembly — English, motion
-  only, one line of audio directives at the end. Re-describing what's already
+  trim+mix conventions. When generation is authorized, call `video_plan` with the current scene attributes and inspect the numbered inputs. Re-describing what's already
   visible in the source image makes the model
   redesign the scene. `.work/broll/broll-a<after>.mp4`
   (`broll-a0.mp4` for the opening slot).

@@ -19,8 +19,11 @@ export const GENAI_SCENE_MODELS = ['ltx-2.5-22b-distilled', 'minimax-h3'] as con
 /** LTX renders 8k+1 frames in 25..361. A scene renders the next count up and the extra frames belong to its last shot. */
 export const GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 } as const;
 const H3_FRAMES = { min: 124, max: 345, step: 17, offset: 5 } as const;
-export function genaiSceneFrames(frames: number, model?: string) {
-  if (model === 'minimax-h3') return H3_FRAMES.step * Math.ceil(Math.max(0, frames - H3_FRAMES.offset) / H3_FRAMES.step) + H3_FRAMES.offset;
+export function genaiSceneFrames(frames: number, model?: string, holdToMinDuration = false) {
+  if (model === 'minimax-h3') {
+    const rounded = H3_FRAMES.step * Math.ceil(Math.max(0, frames - H3_FRAMES.offset) / H3_FRAMES.step) + H3_FRAMES.offset;
+    return holdToMinDuration ? Math.max(H3_FRAMES.min, rounded) : rounded;
+  }
   return Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
 }
 /** LTX MSR slots: four subjects, one background, and a voice on subjects 1 and 2. */
@@ -50,13 +53,14 @@ export const genaiSceneSchema = z.object({
   seed: z.number().int().min(0).max(2147483647).optional(),
   referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
   numInferenceSteps: h3InferenceSteps.optional(),
+  holdToMinDuration: z.boolean().optional().describe('Render an extra final hold when the H3 scene is shorter than the model minimum. The delivered clip has the original storyboard frame count.'),
   generateAudio: z.boolean().default(true).describe('false removes the generated soundtrack from the delivered clip.'),
   reserveUsd: z.number().finite().nonnegative(),
   outputPath: z.string().optional(),
   filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
-  if ((args.referenceImageShortEdge !== undefined || args.numInferenceSteps !== undefined) && args.model !== 'minimax-h3') issue('H3 reference image and sampling settings require MiniMax H3');
+  if ((args.referenceImageShortEdge !== undefined || args.numInferenceSteps !== undefined || args.holdToMinDuration) && args.model !== 'minimax-h3') issue('H3 reference image and sampling settings require MiniMax H3');
   const ids = [...args.cast.map(m => m.id), ...args.references.map(r => r.id), ...args.shots.map(s => s.id)];
   if (new Set(ids).size !== ids.length) issue('Cast, reference and shot IDs share one namespace and must be distinct');
   for (const member of args.cast) if (new Set(member.images.map(i => i.role)).size !== member.images.length)
@@ -69,7 +73,7 @@ export const genaiSceneSchema = z.object({
     if (args.cast.filter(member => member.voicePath).length > 3) issue('H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.');
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue('H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.');
-    const frames = genaiSceneFrames(sceneFrames(args), args.model);
+    const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
     if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue('H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.');
     if (args.shots.some(shot => shot.strength !== undefined && shot.strength !== 1)) issue('H3 shot pictures are untimed references and take no strength.');
     return;
@@ -80,7 +84,7 @@ export const genaiSceneSchema = z.object({
   if (subjects < 1 || subjects > LIMITS.subjects) issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
   if (args.references.filter(r => r.role === 'background').length > LIMITS.backgrounds) issue('LTX scene mode takes one background');
   if (args.cast.filter(m => m.voicePath).length > LIMITS.voices) issue(`LTX scene mode takes ${LIMITS.voices} voices`);
-  if (genaiSceneFrames(sceneFrames(args), args.model) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
+  if (genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
 export type GenaiSceneArgs = z.infer<typeof genaiSceneSchema>;
 
@@ -147,6 +151,7 @@ export function resolveScenePrompt(prompt: string, labels: Record<string, string
 /** The common body. `uri` turns a local file into the URI the request carries. */
 export function genaiSceneBody(args: GenaiSceneArgs, uri: (file: string, kind: 'image' | 'audio') => string) {
   const [width, height] = args.resolution.split('x').map(Number);
+  const tail = args.model === 'minimax-h3' && args.holdToMinDuration ? Math.max(0, H3_FRAMES.min - sceneFrames(args)) : 0;
   const h3 = {
     ...(args.referenceImageShortEdge === undefined ? {} : {reference_image_short_edge:args.referenceImageShortEdge}),
     ...(args.numInferenceSteps === undefined ? {} : {num_inference_steps:args.numInferenceSteps}),
@@ -158,7 +163,7 @@ export function genaiSceneBody(args: GenaiSceneArgs, uri: (file: string, kind: '
       cast: args.cast.map(member => ({ id: member.id, images: member.images.map(image => ({ role: image.role, uri: uri(image.imagePath, 'image') })),
         ...(member.voicePath ? { voice: { uri: uri(member.voicePath, 'audio') } } : {}) })),
       references: args.references.map(ref => ({ id: ref.id, role: ref.role, uri: uri(ref.imagePath, 'image') })),
-      shots: args.shots.map(shot => ({ id: shot.id, seconds: shot.frames / args.fps,
+      shots: args.shots.map((shot,index) => ({ id: shot.id, seconds: (shot.frames + (index === args.shots.length - 1 ? tail : 0)) / args.fps,
         ...(shot.imagePath ? { image: { uri: uri(shot.imagePath, 'image'), ...(shot.strength === undefined ? {} : { strength: shot.strength }) } } : {}) })),
     },
     parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }),
@@ -180,8 +185,8 @@ export function checkSceneValidation(args: GenaiSceneArgs, result: unknown) {
   let start = 0;
   const starts = args.shots.map(shot => { const at = start; start += shot.frames; return { id: shot.id, start_frame: at }; });
   if (resolved.prompt !== expected) throw new Error('genai_scene_labels: the gateway numbers this scene differently from the plan');
-  if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args), args.model))
-    throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args), args.model));
+  if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration))
+    throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration));
   if (JSON.stringify(resolved.shots.map(s => ({ id: s.id, start_frame: s.start_frame }))) !== JSON.stringify(starts))
     throw new Error('genai_scene_cuts: the gateway places the shots at other frames than the plan');
   if (args.referenceImageShortEdge !== undefined && resolved.reference_image_short_edge !== args.referenceImageShortEdge)

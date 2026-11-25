@@ -5,9 +5,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import fs, { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const { setCover, renderCover, readCover, chromePath, encodeJpeg, injectConfig, cutPreviews } = await import('../dist/cover.js');
 
@@ -96,6 +98,27 @@ test('a shot cover reaches the library and reports a changed source', { skip: !c
   assert.equal(stale.publish.stale, true);
   await assert.rejects(renderCover(sb), /cover_source_changed/);
 
+});
+
+test('a template edit during rendering leaves the captured cover stale', { skip: !chromePath() && 'no Chrome' }, async t => {
+  const { dir, sb } = episode(t);
+  setCover(sb, decision());
+  const template = fileURLToPath(new URL('../../skills/generate-cover/references/cover-template.html', import.meta.url));
+  const localTemplate = join(dir, 'cover-template.html');
+  const original = readFileSync(template, 'utf8');
+  writeFileSync(localTemplate, original);
+  const read = fs.readFileSync;
+  const reader = t.mock.method(fs, 'readFileSync', (path, ...args) => read(path === template ? localTemplate : path, ...args));
+  syncBuiltinESMExports();
+  try {
+    const capturing = renderCover(sb);
+    writeFileSync(localTemplate, original.replace('</style>', '#bg { top: 35%; }\n</style>'));
+    await capturing;
+    assert.deepEqual(readCover(sb).changed, ['template']);
+  } finally {
+    reader.mock.restore();
+    syncBuiltinESMExports();
+  }
 });
 
 test('a cover carries the board brief and requires a new decision after an editorial change', async t => {

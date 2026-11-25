@@ -1732,7 +1732,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   shot_prompt: async (args) => {
     storyboard.contract();
     const r = storyboard.writeShotPrompt(parseArgs(storyboard.shotPromptSchema, args));
-    return text(storyboard.renderApply(r) + '\n\nVideo prompt (visual.video.prompt):\n' + r.prompt, r.findings.some((f) => f.level === 'bad'));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
   },
   storyboard_check: async (args) => {
     storyboard.contract();

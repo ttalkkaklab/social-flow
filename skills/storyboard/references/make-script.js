@@ -19,6 +19,14 @@ const dir = path.resolve(process.argv[2] || ".");
 global.window = {};
 require(path.join(dir, "scenes.js"));
 const S = global.window.SCENES || [];
+const direction = require('./scene-direction.js');
+const scenes = Array.isArray(window.STRUCTURE?.scenes) ? window.STRUCTURE.scenes : [];
+const owners = new Map(scenes.filter(Boolean).map(scene => [scene.no, scene]));
+const selected = new Map();
+for (const [no, scene] of owners) {
+  const cards = S.filter(card => card.scene === no);
+  direction.resolve(scene, cards).shots.forEach((rows, i) => selected.set(cards[i], rows));
+}
 const FORMAT = global.window.FORMAT || "shorts-9x16";
 const VOICE = global.window.VOICE === "user";
 const topic = path.basename(path.dirname(dir)); // episodes/<topic>/storyboard
@@ -101,9 +109,7 @@ m += `
 
 - **느낌이 먼저다.** 샷마다 "관객이 여기서 무엇을 느껴야 하나"가 적혀 있고 사이즈와 앵글은
   그것을 위해 고른 값이다. 화면이 예뻐도 그 느낌이 안 나오면 다시 찍는다.
-- **사이즈는 발로 바꾼다, 줌으로 바꾸지 않는다.** 서 있는 사람 기준 와이드 5~6 m · 풀숏 약 3 m ·
-  익스트림 롱 20 m 이상. 클로즈업은 1.5~2 m 물러나 2배 망원으로 당긴다 — 얼굴 앞에 들이대면
-  코와 이마가 튀어나온다.
+- 같은 샷사이즈라도 렌즈와 카메라 위치에 따라 인물 뒤에 보이는 공간이 달라진다. 샷에 적힌 구도와 렌즈로 잡는다.
 - **프레임 아래 끝을 관절에 두지 않는다** — 목·손목·팔꿈치·허리·무릎·발목 말고 가슴 중간·허벅지
   중간·정강이 중간에서 자른다.
 - **아이레벨의 기준은 상대의 눈이다.** 앉은 사람을 서서 찍으면 30~50 cm 위에서 내려다보는
@@ -114,8 +120,7 @@ m += `
   조명이 좋아도 자리를 옮기지 말고 같은 편에서 더 가까이 가거나 각도만 돌린다.
 - **같은 피사체를 다시 찍을 땐 각도를 30도 이상 벌리거나 크기를 두 단계 바꾸거나 동작 중간에
   끊는다.** 반 걸음만 옮기면 컷이 튄다 — 확실히 바꾸거나 아예 안 바꾼다.
-- **소리는 사이즈를 따라간다.** 와이드는 공간음이 살아도 되고 클로즈업은 목소리가 깨끗해야
-  한다. 한 번 앉은 자리와 마이크를 바꾸지 않는다 — 바꾸면 붙는 자리가 들린다.
+- 씬의 기본 소리 원근과 샷별 변화를 확인한다. 마이크를 옮긴 샷은 앞뒤 소리가 어떻게 이어지는지 듣는다.
 - **카메라를 움직이는 샷은 앞뒤에 정지 3초를 찍는다.** 시작 그림에서 3초 멈춤 → 움직임 → 끝
   그림에서 3초 멈춤. 이 정지 구간이 없으면 그 컷은 편집에서 앞뒤 어디에도 안 붙는다. 시작 그림과
   끝 그림이 샷마다 적혀 있다 — 둘이 정해지지 않은 팬은 걸지 않는다.
@@ -153,6 +158,8 @@ const cameraLine = cam => {
   const hit = CAMERA_KR.find(([re]) => re.test(String(cam.movement).trim()));
   const how = hit ? hit[1] : `${cam.movement} (어휘 밖 — directing-grammar §4)`;
   const bits = [how];
+  if (cam.target) bits.push(cam.target);
+  if (cam.cue) bits.push(cam.cue);
   if (cam.speed && !/^(?:static|fixed|locked)/i.test(cam.movement)) bits.push(`속도 ${cam.speed}`);
   let out = `**카메라**: ${bits.join(" · ")}\n`;
   if (cam.framing || cam.end) out += `**시작 → 끝**: ${cam.framing || "(시작 그림 없음)"} → ${cam.end || "(끝 그림 없음 — 팬·달리는 걸지 않는다)"}\n`;
@@ -162,24 +169,23 @@ const cameraLine = cam => {
 const SIZE_KR = { els: "익스트림 롱(완전 풀)", ls: "롱·와이드", ws: "와이드", fs: "풀숏", mfs: "니숏(미디엄 풀)", ms: "미디엄",
                   mcu: "바스트(미디엄 클로즈업)", cu: "클로즈업", choker: "초커", ecu: "익스트림 클로즈업", insert: "인서트",
                   two: "투샷", three: "쓰리샷", ots: "어깨 너머", pov: "1인칭 시점", back: "뒷모습", cutaway: "컷어웨이", reaction: "리액션" };
-const DIST_KR = { els: "20 m 이상 물러난다", ls: "5~6 m 뒤에서", ws: "5~6 m 뒤에서", fs: "약 3 m 뒤에서",
-                  cu: "1.5~2 m 물러나 2배 망원으로", choker: "1.5~2 m 물러나 망원으로", ecu: "망원으로 눈·입·손끝만" };
 const ANGLE_KR = { eye: "아이레벨 — 카메라를 상대 눈높이에", high: "하이 앵글(부감) — 상대 눈보다 위에서 내려다본다",
                    low: "로우 앵글(앙각) — 상대 눈보다 아래에서 올려다본다", overhead: "탑샷 — 바로 위에서 수직으로",
                    dutch: "더치 — 수평을 기울인다(이유를 샷에 적었을 때만, 회차에 한 번)" };
-const SOUND_KR = { els: "공간음이 앞, 말소리는 멀어도 된다", ls: "공간음 앞, 말소리는 멀어도 된다", ws: "공간음 앞, 말소리는 멀어도 된다",
-                   fs: "공간음과 말소리 균형", mfs: "균형", ms: "말소리 또렷, 공간음은 뒤", mcu: "목소리 깨끗하게, 공간음은 뒤로",
-                   cu: "목소리와 숨소리가 앞", choker: "숨소리가 앞", ecu: "그 디테일의 소리", insert: "그 물체의 소리" };
 const shotLine = s => {
-  const sh = s.shot || {};   // no shot block at all (older files) — still print the prompt, the template flags the same shot
-  const sz = sh.size ? (SIZE_KR[sh.size] || `${sh.size} (어휘 밖)`) : "";
-  const dist = sh.size && DIST_KR[sh.size] ? ` — ${DIST_KR[sh.size]}` : "";
-  const an = sh.angle ? (ANGLE_KR[sh.angle] || `${sh.angle} (어휘 밖)`) : "아이레벨(기본)";
-  const sd = sh.size && SOUND_KR[sh.size] ? `**소리**: ${SOUND_KR[sh.size]}` : "";
+  const sh = s.shot || {}, frame = direction.framing(s), rows = selected.get(s) || {};
+  const camera = {...s.visual?.camera};
+  if (rows.camera) {
+    camera.movement = rows.camera.id ? direction.movement(rows.camera.id) : rows.camera.value;
+    camera.speed = rows.camera.speed || camera.speed;
+  }
+  const sz = [SIZE_KR[frame.size] || frame.size, frame.crop, SIZE_KR[frame.viewpoint] || frame.viewpoint,
+    SIZE_KR[frame.arrangement] || frame.arrangement, SIZE_KR[frame.cutRole] || frame.cutRole].filter(Boolean).join(' · ');
+  const an = ANGLE_KR[frame.angle] || frame.angle;
   let out = "";
   if (sh.feel) out += `**느낌**: ${sh.feel}\n`;
   else out += `**느낌**: (적히지 않음 — 스토리보드에서 shot.feel 을 먼저 적는다)\n`;
-  if (sz || sh.angle) out += `**사이즈·앵글**: ${[sz + dist, an].filter(Boolean).join(" · ")}\n`;
+  if (sz || an) out += `**사이즈·앵글**: ${[sz, an].filter(Boolean).join(" · ")}\n`;
   const sp = sh.space || {};
   if (sp.layout || sp.facing || sp.line || sp.light) {
     const bits = [];
@@ -189,7 +195,14 @@ const shotLine = s => {
     if (sp.light) bits.push(sp.light);
     out += `**자리**: 카메라 기준 — ${bits.join(" · ")}\n`;
   }
-  out += cameraLine(s.visual && s.visual.camera);
+  out += cameraLine(camera);
+  const optics = direction.opticsWords(camera);
+  if (optics) out += '**렌즈 설정** · ' + optics + '\n';
+  const focus = (sh.techniques || []).find(choice => choice.id === 'camera.rack-focus');
+  if (focus) out += '**초점 이동** · ' + [focus.from,focus.to].filter(Boolean).join(' → ') + (focus.on ? ' · ' + focus.on : '') + '\n';
+  for (const key of ['axis','continuity','continuityChange','shotLight']) {
+    if (rows[key] && rows[key].source !== 'scene') out += '**' + direction.labels[key][0] + '** · ' + rows[key].value + '\n';
+  }
   if (sh.composition) {
     const composition = require("./structure-contract.js").compositionText(sh.composition);
     out += `**구도**: ${composition || sh.composition.reason || ""}\n`;
@@ -197,11 +210,13 @@ const shotLine = s => {
   const depth = sh.depth;
   if (depth) {
     const modeLabel = { shallow: "얕은 심도", deep: "딥포커스", none: "심도 선택 없음" }[depth.mode] || depth.mode;
-    out += `**심도**: ${modeLabel}${depth.reads ? ` · 읽을 정보 ${depth.reads}개` : ""}${depth.mode === "shallow" ? ` · 초점 ${depth.focus}` : depth.mode === "deep" && Array.isArray(depth.planes) ? ` · 앞에서 뒤로 ${depth.planes.join(" / ")}` : ""}${depth.sound ? ` · 소리 ${depth.sound === "near" ? "대사 앞, 주변음 뒤" : "발소리·문소리까지 다 살림"}` : ""}\n`;
+    out += `**심도**: ${modeLabel}${depth.reads ? ` · 읽을 정보 ${depth.reads}개` : ""}${depth.mode === "shallow" ? ` · 초점 ${depth.focus}` : depth.mode === "deep" && Array.isArray(depth.planes) ? ` · 앞에서 뒤로 ${depth.planes.join(" / ")}` : ""}\n`;
     if (depth.reason) out += `**심도 의도**: ${depth.reason}\n`;
     if (depth.mode === "shallow") out += `**심도 손잡이**: 조리개를 열거나 피사체에 붙거나 망원으로 당기거나 배경을 뒤로 뗀다 — 후보정 흐림으로 대신하지 않는다.\n`;
     if (depth.mode === "deep") out += `**심도 손잡이**: 조리개를 조이고 빛을 더 준다 — 전경·중경·원경이 한 프레임에서 같이 읽혀야 한다.\n`;
   }
+  const perspective = rows.soundPerspective?.value || s.sound?.perspective || depth?.sound;
+  if (perspective) out += `**소리의 원근** · ${perspective === "near" ? "인물 가까이" : "공간 전체"}\n`;
   const eye = sh.eyeline;
   if (eye) {
     out += `**시선**: ${require("./structure-contract.js").eyelineText(eye)}${eye.matchShot ? ` · 연결 컷 ${eye.matchShot}` : ""}\n`;
@@ -216,7 +231,8 @@ const shotLine = s => {
     const method = { camera_move: "카메라가 화면 안에서 선을 넘는다", subject_move: "인물 이동으로 선이 바뀐다", neutral: "중립 샷을 거친다", intentional: "혼란을 의도한다" }[crossing.method] || crossing.method;
     out += `**선 넘기**: ${method} · ${crossing.from} → ${crossing.to} · ${crossing.reason}${crossing.bridgeShot ? ` · 중립 샷 ${crossing.bridgeShot}` : ""}\n`;
   }
-  if (sd) out += `${sd}\n`;   // 소리는 자리 다음 — shot-script-template.md 의 블록 순서
+  const sound = s.sound?.diegetic || s.visual?.audio;
+  if (sound) out += '**현장음** · ' + sound + '\n';
   return out;
 };
 
@@ -246,7 +262,8 @@ list.forEach(({ s, no, at }) => {
     m += `\n### S#${s.scene}. ${s.sceneSlug}\n`;
     // window.STRUCTURE (scenes-schema §structure) — the scene's event and turn, so the person
     // filming knows what has to change on camera before the first shot heading.
-    const sc = (window.STRUCTURE && Array.isArray(window.STRUCTURE.scenes) ? window.STRUCTURE.scenes : []).find(x => x && x.no === s.scene);
+    const sc = owners.get(s.scene);
+    for (const [key,row] of Object.entries(direction.base(sc))) m += '\n**' + direction.labels[key][0] + '** · ' + row.value + '\n';
     if (sc) m += `\n사건: ${sc.event || ""}${sc.charge && sc.charge.open !== undefined && sc.charge.close !== undefined ? ` · 전환: ${sc.charge.open} → ${sc.charge.close}` : ""}, ${sc.turn || ""}\n`;
   }
   const beat = { hook: "커버", hooking: "후킹", drip: "전개", result: "결과물", body: "내용", turn: "전환", cta: "마무리" }[s.beat] || s.beat || s.type;

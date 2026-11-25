@@ -2,7 +2,7 @@
 
 For character speech, [voice-continuity.md](voice-continuity.md) supplements the
 recipes below. Use managed `video_plan` with the complete cast handoff. Its compiled
-voice mapping supplements the stored prompt without changing the selected model.
+voice mapping accompanies the request-time prompt without changing the selected model.
 Native imitation is separate from exact supplied-WAV synchronization.
 
 Read this **before the first generated-video call of an episode**. An episode whose
@@ -16,7 +16,7 @@ is enough there.
 - [Per-slot recipes](#per-slot-recipes) — b-roll, motion background, quote speaking clip
 - [What the clip brought back](#what-the-clip-brought-back) — burned text, an unasked soundtrack, an invented line: the check every returned clip passes
 
-Everything the storyboard already settled (the stored clip prompt, `visual.camera`,
+Everything the storyboard already settled (the scene and shot attributes, `visual.camera`,
 `shot.feel`/`size`/`angle`/`space`, `visual.character`, `duration`) stays in produce §3 —
 this file starts after the engine has to be chosen.
 
@@ -29,8 +29,7 @@ is `"api"` or `"astra"`. The decision table's source of truth is
 [video-model-selection.md](video-model-selection.md), and the order is
 **voice → face → sound**. Since the route follows from facts the storyboard already
 wrote (who speaks on screen, who is in the source, whether the slot uses its sound), **the
-storyboard records the planned route** — `visual.engine`, or the saved model — and writes
-the stored prompt in that route's grammar. This section is how you **validate** the route
+storyboard records the planned route** — `visual.engine`, or the saved model — with the intended operation. On request the planner writes the prompt for that operation. This section is how you **validate** the route
 against those facts. Return a spoken cut to the storyboard if its adapter has no voice lane.
 For a Seedance cut with a photoreal face, link its character sheet portrait. If registration
 is blocked by the account's library entitlement, keep the approved plan and report the provider error.
@@ -182,12 +181,7 @@ generated cover. These three are generated only when the episode has that kind o
     (**`.work/broll/broll-a<after>.mp4`**) — it's the reference point for a retrim.
     There's one reason `after` is in the filename — two slots with the same name overwrite
     each other.
-  Send the scene's stored `visual.prompt` verbatim; its exclusions are already positive
-  description in the body. On an older scenes.js with
-  no stored prompt, assemble from the `visual.camera` four slots (above), keep it **motion
-  only, in English**, and add the audio instruction at the end — `dolly in`, not `push in`
-  (the vocabulary rule above). For example:
-  `Audio: quiet studio room tone with a faint fabric rustle, no music, no speech.`
+  On a video request, compile this cut from its current motion, cast and room sound with `video_plan`. Review the resulting prompt and bind the selected source image.
   Re-describe the person, background, or lighting already visible in the image and the model
   redesigns the scene.
   - **Make the two slots from their own sources** — run the same PNG twice with only the
@@ -207,29 +201,15 @@ generated cover. These three are generated only when the episode has that kind o
   = the length that scene uses · the saved grade and resolution in `PRODUCTION.videoModel`; on
   `seedance_reference` an optional previz clip rides as the reference, on image-to-video, a host
   tool or ASTRA the previz is `frame_and_prompt` advice). Without the saved model's key the cut waits
-  for it; it does not move to another engine without an explicit exception. Use `visual.video.prompt` verbatim as the prompt — the
-  stored final clip prompt (camera span, subject motion, the consistency lock, the audio
-  sentence; on an older file it holds the motion only, and the camera span is assembled from
-  the slots). It never re-describes **the layout, facing or lighting** — the PNG already drew
-  them — while the subject's identity words may stay, which is the seedance image lane's own
-  pattern (§Video prompt grammar). A stored prompt that reaches here without a consistency
-  lock, or with Korean outside a dialogue quote, is a storyboard defect: `check-scenes.js`
-  reports it before capture and the server refuses the Korean one at the call. The clip's
-  sound goes unused in the build (§6's assembly lays down the video track only), so the audio
+  for it. On a generation request, pass the current scene to `video_plan` and review its motion, closing state and audio settings before approval.
+  When native sound goes unused in the build (§6's assembly lays down the video track only), the audio
   instruction is optional. **Make exactly what the storyboard has** — the selected ratio band and
   the budget are the ceiling, b-roll included (a channel's `generated_video_max` is a ceiling only;
   scenes-schema §Channel true-motion policy).
 - **quote speaking clip** (when planned): the saved model's reference adapter as the plan
   selects — `astra_genai_msr`, `seedance_reference` or `fasth3_omni_reference` — with the
   speaker's panels in the plan's reference order and the pinned voice sample; an adapter with
-  no voice lane is refused (①). Send the stored `visual.clip.prompt` verbatim (assembled at the storyboard with
-  `--clip --with-space`, so it already carries the character description, the
-  `From the camera: …` sentence, and the camera span). On an older draft prompt, assemble it
-  here: the character description + the shot's space sentence (`assemble-bg-prompt.js --from
-  scenes.js --shot N --space-only` — nothing when the shot wrote no `space`) + "static camera"
-  + "wide chest-up framing … subject appears small in the frame" + a background unified to
-  THEME dark. **Those two camera phrases are the default `visual.camera` for a quote clip, not
-  a competing instruction** — a scene carrying its own `visual.camera` overrides them.
+  no voice lane is refused. Compile the speaker’s current shot direction, blocking, dialogue and sound with `video_plan`. Inspect the reference roles and the actual request.
   Exclusions on this lane are written into the prompt as **positive
   description**: not "no mouth" but "below the eyes, one seamless matte white curve". Run `frame-persona-clip.py <input> .work/broll/<speaker>-palin.mp4` to unify
   the framing and make the palindrome. With several clips, hstack them side by side and

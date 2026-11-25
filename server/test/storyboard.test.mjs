@@ -564,7 +564,7 @@ describe('music is decided scene by scene', () => {
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 2, summary: 'b' }, { scene: 2, summary: 'c' }, { scene: 3, summary: 'd' }] });
     return dir;
   };
-  const tension = { name: 'tension', prompt: 'low strings, 76 BPM, leaves room for speech', reason: '오해가 깊어진다' };
+  const tension = { name: 'tension', direction: { instruments:'Low strings', tempo:'76 BPM', dialogueSpace:'Leave room for speech' }, reason: '오해가 깊어진다' };
 
   it('records score or none with its reason, writes the span, and lists what is still open', () => {
     const dir = outline();
@@ -583,6 +583,8 @@ describe('music is decided scene by scene', () => {
       sourceStartSeconds: 4, fadeInSeconds: 0.5, fadeOutSeconds: 1, gain: [{ atSeconds: 0, gainDb: -2 }] }]);
     assert.deepEqual(win.STRUCTURE.scenes.map((s) => s.music), [{ decision: 'none', reason: '대사만 듣게 한다' },
       { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }, { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }]);
+    assert.equal(win.MUSIC.tension.prompt, undefined);
+    assert.deepEqual(win.MUSIC.tension.direction,tension.direction);
     assert.deepEqual(r.spotting.undecided, []);
     assert.deepEqual(r.spotting.cues, [{ name: 'tension', source: 'generated', reason: '오해가 깊어진다' }]);
 
@@ -1060,7 +1062,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(request.prompt,/Stay on the door side/);
     make(dir, 's0002'); make(dir, 's0002', 'end');
     const authored = writeShotPrompt({path:dir, id:'s0001', action:'Press the signet into the wax.'});
-    assert.match(authored.prompt,/holds a static frame/);
+    assert.equal(authored.prompt, undefined);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.videoDesign.action, 'Press the signet into the wax.');
     assert.ok(!authored.findings.some(f=>f.what.includes('camera_move_unset')));
     assert.equal(readBoard(dir).win.SCENES[0].visual.camera?.movement,undefined);
     write({...defaults, lighting:'Cold blue moonlight.'});
@@ -1308,8 +1311,8 @@ describe('images and the video prompt follow the icon attributes', () => {
   it('content-led view survives icon writes and image planning, replaces legacy direction and invalidates saved media', () => {
     const { dir } = pictureBoard();
     icons(dir);
-    const view = { subject: 'Mina’s clenched hand', reason: 'The hand betrays the calm words', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
-    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', view }] });
+    const view = { subject: 'Mina’s clenched hand', subjectType: 'detail', reason: 'The hand betrays the calm words', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu', cutRole: 'insert', view }] });
     let shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.camera.view, view);
     const request = make(dir, 's0001', 'start', { location: 'room', prompt: 'The fingers tighten around the key.' });
@@ -1321,7 +1324,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotPrompt({ path: dir, id: 's0001', action: 'The fingers tighten around the key.' });
     const change = writeShotIcons({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'profile-right' } }] });
     assert.ok(change.findings.some(f => /remake it/.test(f.what)));
-    assert.ok(change.findings.some(f => /rewrite it with shot_prompt/.test(f.what)));
+    assert.equal(readBoard(dir).win.SCENES[0].visual.video?.prompt, undefined);
     shot = readBoard(dir).win.SCENES[0];
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
@@ -1333,11 +1336,34 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'camera.static' } }] });
     assert.equal(readBoard(dir).win.SCENES[1].visual.camera.movement, 'static');
   });
+  it('separates optical and listening choices, retains sibling edits and rejects stored prompts on every card shape', () => {
+    const {dir} = pictureBoard();
+    icons(dir);
+    const write = attrs => writeShotIcons({path:dir,shots:[{id:'s0001',...attrs}]});
+    write({size:'ms',arrangement:'two',cutRole:'reaction',optics:{lensMm:50,fStop:2},soundPerspective:'full',
+      depth:{mode:'shallow',reads:2,focus:'both faces at the same distance'},
+      move:{id:'camera.dolly-in',reason:'Follow the note',target:'the note',on:'the bell rings'},
+      focus:{id:'camera.rack-focus',reason:'Reveal the note',from:'two faces',to:'the note',on:'the seal breaks'}});
+    write({optics:{lensMm:35}});
+    const card = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([card.shot.size,card.shot.arrangement,card.shot.cutRole,card.shot.depth.sound,card.sound.perspective],
+      ['ms','two','reaction',undefined,'full']);
+    assert.deepEqual([card.visual.camera.lensMm,card.visual.camera.fStop,card.visual.camera.cue,card.shot.techniques.find(t=>t.id==='camera.rack-focus').on],
+      [35,2,'the bell rings','the seal breaks']);
+    for (const attrs of [{slide:{shots:[{group:1,prompt:'cached'}]}},{prompt:'cached'},{clip:{prompt:'cached'}},{video:{prompt:'cached'}},{video:{speechBinding:{videoPrompt:'cached'}}}]) {
+      assert.throws(()=>applyStoryboard({path:dir,shotsById:[{id:card.id,shot:{...card,visual:{...card.visual,...attrs}}}]}),/video_prompt_deferred/);
+    }
+    assert.throws(()=>applyStoryboard({path:dir,shotsById:[{id:card.id,shot:{...card,shot:{...card.shot,size:'ots'}}}]}),/shot_size/);
+    assert.equal(shotIconsSchema.safeParse({path:dir,shots:[{id:card.id,size:'insert'}]}).success,false);
+    write({soundPerspective:null,optics:null,move:null});
+    const cleared = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([cleared.sound?.perspective,cleared.visual.camera?.lensMm,cleared.visual.camera?.cue],[undefined,undefined,undefined]);
+  });
   it('a shot_icons call with both why and view keeps both reasons', () => {
     const { dir } = pictureBoard();
     icons(dir);
-    const view = { subject: 'Mina’s clenched hand', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
-    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', why: 'The hand is the whole beat', view }] });
+    const view = { subject: 'Mina’s clenched hand', subjectType: 'detail', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu', cutRole: 'insert', why: 'The hand is the whole beat', view }] });
     assert.equal(readBoard(dir).win.SCENES[0].shot.why, 'The hand is the whole beat');
     // Without a why the size keeps none: the view reason is not copied in, and the result names the shot.
     const bare = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu', view }] });
@@ -1794,43 +1820,34 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.ok(fallback.warnings.some((w) => /^the prop ledger has errors for the watch prop/.test(w.what)));
     assert.doesNotMatch(prop(fallback).purpose, /held by/);
   });
-  it('the video prompt reads the icon attributes after every picture exists', () => {
+  it('action and sound are editable before images and inspected bindings follow their own shot', () => {
     const { dir } = pictureBoard();
     icons(dir);
+    const early = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.', sound: 'Rain.' });
+    assert.ok(early.written);
+    assert.equal(early.prompt, undefined);
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.', speakerBindings: [{speaker:'mina',screenPosition:'left',description:'Woman in blue'}] }), /shot opening/);
     make(dir, 's0001', 'start', { location: 'room' });
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /story_order.*s0002 has no start image/);
     make(dir, 's0002', 'start', { location: 'room' });
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /s0002 has no end image/);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'end', prompt: 'p', location: 'room' }), /keeps its place/);
     const ended = make(dir, 's0002', 'end', { props: ['key'] });
     assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
-    const prompted = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }), msr = prompted.prompt;
-    // The clip is about to be made, so an open music decision on its scene is said here (warning only).
-    assert.ok(prompted.written && prompted.findings.some((f) => f.level === 'warn' && /scene 1 has no music decision/.test(f.what)));
-    assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
-    assert.match(msr, /Mina turns to the door\. Audio: no music\./);
-    assert.match(msr, /Keep the entire video image text-free/);
     writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', openingPositions: [{ character: 'mina', images: [1], position: 'by the door on the left' }], speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
     const bound = readBoard(dir).win.SCENES[0].visual.video;
-    assert.deepEqual(bound.promptSource, { action: 'Mina turns to the door.' });
+    assert.equal(bound.prompt, undefined);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.videoDesign.action, 'Mina turns to the door.');
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
     assert.equal(bound.openingPositions[0].position, 'by the door on the left');
     assert.equal(bound.openingImageSha256, bound.speakerBindingImageSha256);
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
-    const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
-    assert.match(framed, /^Start from the given first frame\. Mina looks up\./);
-    assert.match(framed, /speaker: mina; delivery: on_screen.*physically saying "안녕"/);
-    assert.match(framed, /End on the given last frame: she smiles\. Audio: no music\./);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\./);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\./);
-    writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
-    assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
-    const relined = writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '잠깐!' }] }] });
-    assert.ok(relined.findings.some((f) => f.where === 's0002' && /video prompt predates a change of on-screen lines/.test(f.what)));
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /physically saying "잠깐!"/);
+    writeShotPrompt({path:dir,id:'s0002',action:'Mina looks up.',end:'She smiles.',sound:'Rain on the window.'});
+    const updated = readBoard(dir).win.SCENES[1];
+    assert.deepEqual([updated.shot.videoDesign.action,updated.shot.videoDesign.after,updated.sound.diegetic,updated.visual.video?.prompt],
+      ['Mina looks up.','She smiles.','Rain on the window.',undefined]);
+    writeShotDialogue({path:dir,shots:[{id:'s0002',lines:[{speaker:'mina',tts:'잠깐!'}]}]});
     assert.deepEqual(contract().promptDrift(readBoard(dir).win.SCENES[1], () => false), []);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
     // A new start image takes the end image edited from the old one off the shot.
@@ -1839,11 +1856,11 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(remade.file, png);
     assert.deepEqual(recordShotImage(again, remade).findings.filter((f) => f.where === 's0002' && /end image/.test(f.what)).map((f) => f.level), ['warn']);
     assert.deepEqual([readBoard(dir).win.SCENES[1].visual.frames.end, readBoard(dir).win.SCENES[1].visual.frames.endProps, readBoard(dir).win.SCENES[1].visual.endPrompt], [undefined, undefined, undefined]);
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }), /s0002 has no end image/);
+    assert.ok(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).written);
     make(dir, 's0002', 'end');
     const replanned = writeShotIcons({ path: dir, shots: [{ id: 's0002', frames: { mode: 'reference', reason: 'MSR now' } }] });
     const msrShot = readBoard(dir).win.SCENES[1];
-    assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end', 'prompt']);
+    assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end']);
     assert.deepEqual([msrShot.visual.frames.end, msrShot.visual.frames.endState, msrShot.visual.endPrompt], [undefined, undefined, undefined]);
     assert.deepEqual([...new Set(msrShot.visual.references.filter((r) => r.role === 'character').map((r) => r.use))], ['image']);
     // A new cast leaves the start image behind; the tool says so. A departed panel goes by its folder or its shot_image id.
@@ -1852,11 +1869,11 @@ describe('images and the video prompt follow the icon attributes', () => {
       references: moved.visual.references.map((r) => r.id === 's0002-mina-face' ? { ...r, path: 'references/mina-face.png' } : r) } } }] });
     const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: [] }] });
     assert.ok(recast.findings.some((f) => f.where === 's0002' && /start image/.test(f.what)));
-    assert.ok(recast.findings.some((f) => f.where === 's0002' && /video prompt predates a change of frame plan, characters/.test(f.what)));
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video?.prompt, undefined);
     assert.deepEqual(readBoard(dir).win.SCENES[1].visual.references.filter((r) => r.role === 'character'), []);
     const hand = readBoard(dir).win.SCENES[1];
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...hand, visual: { ...hand.visual, video: { ...hand.visual.video, prompt: 'Start from the given first frame. Mina looks up slowly.' } } } }] });
-    assert.equal(readBoard(dir).win.SCENES[1].visual.video.promptBasis, undefined);
+    assert.throws(() => applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...hand, visual: { ...hand.visual, video: { ...hand.visual.video, prompt: 'Start from the given first frame. Mina looks up slowly.' } } } }] }), /video_prompt_deferred/);
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video?.promptBasis, undefined);
     // A new size after the start image leaves that picture behind; the tool says so.
     const resized = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu' }] });
     assert.ok(resized.findings.some((f) => f.where === 's0001' && /start image was made for the previous size/.test(f.what)));

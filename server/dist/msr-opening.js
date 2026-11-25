@@ -11,8 +11,10 @@ const sceneText = z.string().trim().min(1).refine(value => !nonEnglishOutsideQuo
 const load = createRequire(import.meta.url);
 export const sceneDefaultsSchema = z.object({
     camera: sceneText.refine(id => !!load('../../skills/storyboard/references/scene-direction.js').movement(id), 'Choose a movement ID from the camera catalogue').optional(),
+    cameraPolicy: sceneText.optional(), depthPolicy: sceneText.optional(), lensPolicy: sceneText.optional(),
+    soundPerspective: z.enum(['near', 'full']).optional(),
     axis: sceneText.optional(), continuity: sceneText.optional(), lighting: sceneText.optional(), attention: sceneText.optional(),
-}).strict().describe('Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.');
+}).strict().describe('Scene rules for camera, lenses, depth, lighting, geography and narrative disclosure. Set camera for an inherited movement ID, axis for the initial screen side and soundPerspective for the default listening perspective. Local focus, framing and state changes coexist with scene rules.');
 const frame = z.number().int().nonnegative();
 export const shotTimelineSchema = z.object({
     startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),
@@ -58,7 +60,7 @@ export const sceneVideoDirectionSchema = z.object({
     motionReferencePaths: z.array(z.string().trim().min(1)).min(1).max(3).optional().describe('Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot.'),
     prompt: z.string().min(1).max(32000).refine(text => !!text.trim(), 'Enter the complete scene prompt')
         .optional().describe('One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts.'),
-    promptDrafts: scenePromptDrafts.optional().describe('Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections.'),
+    promptDrafts: scenePromptDrafts.optional().describe('Archived drafts on older boards. The video request is compiled from current attributes.'),
     openingPositions: openingPositionsSchema,
     dialogueVoice: z.literal('model_generated').optional().describe('Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample.'),
     fps: z.number().int().positive().optional().describe('Frames per second on the scene timeline; defaults to 24.'),
@@ -74,7 +76,7 @@ export const sceneVideoDirectionSchema = z.object({
     emotion: sceneText.describe('The emotional change, naming each participant. For a factual scene give its visible subject and purpose.'),
     action: sceneText.optional().describe('Only story-essential movement, tied to the same visible landmark as the opening position.'),
     sound: sceneText.optional().describe('Room tone or sound from an essential action.'),
-    camera: sceneText.optional().describe('Shared camera direction. Each shot keeps its own framing and incoming transition.'),
+    camera: sceneText.optional().describe('Scene camera rule on older boards. Use directionDefaults.cameraPolicy for new work.'),
 }).strict();
 /** Use the cast's spoken names in provider prose. Authored dialogue and the board's IDs stay intact. */
 export function sceneCastProse(prompt, positions, speakers) {

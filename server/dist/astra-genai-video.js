@@ -373,7 +373,7 @@ export function msrOutputContract(operation, args) {
 }
 /** What scene mode renders: the next 8k+1 frames with a soundtrack, at the requested size. */
 function sceneNativeContract(args) {
-    return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model), audio: true });
+    return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration), audio: true });
 }
 function checkOutput(file, expected, counted = false) {
     const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', ...(expected || counted ? ['-count_frames'] : []),

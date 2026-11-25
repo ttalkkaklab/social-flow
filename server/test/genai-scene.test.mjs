@@ -97,5 +97,10 @@ test('H3 validates its own frame grid and numbers all shot pictures separately f
   assert.equal(genaiSceneSchema.safeParse({...sized,referenceImageShortEdge:2049}).success,false);
   assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:346}]}).success,false);
   assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:60}]}).success,false);
+  const short=genaiSceneSchema.parse({...input,holdToMinDuration:true,shots:[{id:'s1',frames:78,imagePath:'wide.png'}]});
+  assert.equal(short.shots[0].frames,78);
+  assert.equal(wire(short).input.shots[0].seconds,124/24);
+  const shortLabels=sceneLabels(short), shortPrompt='{s1.image}';
+  assert.equal(checkSceneValidation({...short,prompt:shortPrompt},{resolved:{labels:shortLabels,prompt:resolveScenePrompt(shortPrompt,shortLabels),num_frames:124,shots:[{id:'s1',start_frame:0}]}}).numFrames,124);
   assert.equal(genaiSceneSchema.safeParse({...input,cast:[...cast,{...cast[0],id:'d'}]}).success,false);
 });

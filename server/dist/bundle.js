@@ -48,9 +48,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/polyfills.js
+// ../../../server/node_modules/graceful-fs/polyfills.js
 var require_polyfills = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/polyfills.js"(exports, module) {
+  "../../../server/node_modules/graceful-fs/polyfills.js"(exports, module) {
     var constants6 = __require("constants");
     var origCwd = process.cwd;
     var cwd = null;
@@ -336,9 +336,9 @@ var require_polyfills = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/legacy-streams.js
+// ../../../server/node_modules/graceful-fs/legacy-streams.js
 var require_legacy_streams = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/legacy-streams.js"(exports, module) {
+  "../../../server/node_modules/graceful-fs/legacy-streams.js"(exports, module) {
     var Stream5 = __require("stream").Stream;
     module.exports = legacy;
     function legacy(fs26) {
@@ -432,9 +432,9 @@ var require_legacy_streams = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/clone.js
+// ../../../server/node_modules/graceful-fs/clone.js
 var require_clone = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/clone.js"(exports, module) {
+  "../../../server/node_modules/graceful-fs/clone.js"(exports, module) {
     "use strict";
     module.exports = clone3;
     var getPrototypeOf = Object.getPrototypeOf || function(obj2) {
@@ -455,9 +455,9 @@ var require_clone = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/graceful-fs.js
+// ../../../server/node_modules/graceful-fs/graceful-fs.js
 var require_graceful_fs = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/graceful-fs/graceful-fs.js"(exports, module) {
+  "../../../server/node_modules/graceful-fs/graceful-fs.js"(exports, module) {
     var fs26 = __require("fs");
     var polyfills = require_polyfills();
     var legacy = require_legacy_streams();
@@ -825,9 +825,9 @@ var require_graceful_fs = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js
+// ../../../server/node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options) {
       if (typeof options === "boolean") {
         options = { forever: options };
@@ -956,9 +956,9 @@ var require_retry_operation = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/lib/retry.js
+// ../../../server/node_modules/proper-lockfile/node_modules/retry/lib/retry.js
 var require_retry = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/lib/retry.js"(exports) {
+  "../../../server/node_modules/proper-lockfile/node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation();
     exports.operation = function(options) {
       var timeouts = exports.timeouts(options);
@@ -1042,16 +1042,16 @@ var require_retry = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/index.js
+// ../../../server/node_modules/proper-lockfile/node_modules/retry/index.js
 var require_retry2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/node_modules/retry/index.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/signal-exit/signals.js
+// ../../../server/node_modules/signal-exit/signals.js
 var require_signals = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/signal-exit/signals.js"(exports, module) {
+  "../../../server/node_modules/signal-exit/signals.js"(exports, module) {
     module.exports = [
       "SIGABRT",
       "SIGALRM",
@@ -1086,9 +1086,9 @@ var require_signals = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/signal-exit/index.js
+// ../../../server/node_modules/signal-exit/index.js
 var require_signal_exit = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/signal-exit/index.js"(exports, module) {
+  "../../../server/node_modules/signal-exit/index.js"(exports, module) {
     var process3 = global.process;
     var processOk = function(process4) {
       return process4 && typeof process4 === "object" && typeof process4.removeListener === "function" && typeof process4.emit === "function" && typeof process4.reallyExit === "function" && typeof process4.listeners === "function" && typeof process4.kill === "function" && typeof process4.pid === "number" && typeof process4.on === "function";
@@ -1245,9 +1245,9 @@ var require_signal_exit = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/mtime-precision.js
+// ../../../server/node_modules/proper-lockfile/lib/mtime-precision.js
 var require_mtime_precision = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/mtime-precision.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/lib/mtime-precision.js"(exports, module) {
     "use strict";
     var cacheSymbol = /* @__PURE__ */ Symbol();
     function probe5(file3, fs26, callback) {
@@ -1287,9 +1287,9 @@ var require_mtime_precision = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/lockfile.js
+// ../../../server/node_modules/proper-lockfile/lib/lockfile.js
 var require_lockfile = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/lockfile.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/lib/lockfile.js"(exports, module) {
     "use strict";
     var path41 = __require("path");
     var fs26 = require_graceful_fs();
@@ -1524,9 +1524,9 @@ var require_lockfile = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/adapter.js
+// ../../../server/node_modules/proper-lockfile/lib/adapter.js
 var require_adapter = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/lib/adapter.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/lib/adapter.js"(exports, module) {
     "use strict";
     var fs26 = require_graceful_fs();
     function createSyncFs(fs27) {
@@ -1589,9 +1589,9 @@ var require_adapter = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/index.js
+// ../../../server/node_modules/proper-lockfile/index.js
 var require_proper_lockfile = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/proper-lockfile/index.js"(exports, module) {
+  "../../../server/node_modules/proper-lockfile/index.js"(exports, module) {
     "use strict";
     var lockfile3 = require_lockfile();
     var { toPromise, toSync, toSyncOptions } = require_adapter();
@@ -1625,9 +1625,9 @@ var require_proper_lockfile = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/lib/retry_operation.js
+// ../../../server/node_modules/retry/lib/retry_operation.js
 var require_retry_operation2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "../../../server/node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options) {
       if (typeof options === "boolean") {
         options = { forever: options };
@@ -1760,9 +1760,9 @@ var require_retry_operation2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/lib/retry.js
+// ../../../server/node_modules/retry/lib/retry.js
 var require_retry3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/lib/retry.js"(exports) {
+  "../../../server/node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation2();
     exports.operation = function(options) {
       var timeouts = exports.timeouts(options);
@@ -1846,16 +1846,16 @@ var require_retry3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/index.js
+// ../../../server/node_modules/retry/index.js
 var require_retry4 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/retry/index.js"(exports, module) {
+  "../../../server/node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry3();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/p-retry/index.js
+// ../../../server/node_modules/p-retry/index.js
 var require_p_retry = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/p-retry/index.js"(exports, module) {
+  "../../../server/node_modules/p-retry/index.js"(exports, module) {
     "use strict";
     var retry2 = require_retry4();
     var networkErrorMsgs = [
@@ -1932,9 +1932,9 @@ var require_p_retry = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/extend/index.js
+// ../../../server/node_modules/extend/index.js
 var require_extend = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/extend/index.js"(exports, module) {
+  "../../../server/node_modules/extend/index.js"(exports, module) {
     "use strict";
     var hasOwn3 = Object.prototype.hasOwnProperty;
     var toStr = Object.prototype.toString;
@@ -2023,9 +2023,9 @@ var require_extend = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/package.json
+// ../../../server/node_modules/gaxios/package.json
 var require_package = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/package.json"(exports, module) {
+  "../../../server/node_modules/gaxios/package.json"(exports, module) {
     module.exports = {
       name: "gaxios",
       version: "7.3.0",
@@ -2134,18 +2134,18 @@ var require_package = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/util.cjs
+// ../../../server/node_modules/gaxios/build/cjs/src/util.cjs
 var require_util = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
+  "../../../server/node_modules/gaxios/build/cjs/src/util.cjs"(exports, module) {
     "use strict";
     var pkg = require_package();
     module.exports = { pkg };
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/common.js
+// ../../../server/node_modules/gaxios/build/cjs/src/common.js
 var require_common = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/common.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/common.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -2385,9 +2385,9 @@ var require_common = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/retry.js
+// ../../../server/node_modules/gaxios/build/cjs/src/retry.js
 var require_retry5 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/retry.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/retry.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRetryConfig = getRetryConfig;
@@ -2490,9 +2490,9 @@ var require_retry5 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/interceptor.js
+// ../../../server/node_modules/gaxios/build/cjs/src/interceptor.js
 var require_interceptor = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/interceptor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GaxiosInterceptorManager = void 0;
@@ -2502,9 +2502,9 @@ var require_interceptor = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ms/index.js
+// ../../../server/node_modules/ms/index.js
 var require_ms = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ms/index.js"(exports, module) {
+  "../../../server/node_modules/ms/index.js"(exports, module) {
     var s2 = 1e3;
     var m2 = s2 * 60;
     var h2 = m2 * 60;
@@ -2618,9 +2618,9 @@ var require_ms = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/common.js
+// ../../../server/node_modules/debug/src/common.js
 var require_common2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/common.js"(exports, module) {
+  "../../../server/node_modules/debug/src/common.js"(exports, module) {
     function setup(env2) {
       createDebug.debug = createDebug;
       createDebug.default = createDebug;
@@ -2795,9 +2795,9 @@ var require_common2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/browser.js
+// ../../../server/node_modules/debug/src/browser.js
 var require_browser = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/browser.js"(exports, module) {
+  "../../../server/node_modules/debug/src/browser.js"(exports, module) {
     exports.formatArgs = formatArgs;
     exports.save = save3;
     exports.load = load17;
@@ -2965,9 +2965,9 @@ var require_browser = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/node.js
+// ../../../server/node_modules/debug/src/node.js
 var require_node = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/node.js"(exports, module) {
+  "../../../server/node_modules/debug/src/node.js"(exports, module) {
     var tty = __require("tty");
     var util2 = __require("util");
     exports.init = init;
@@ -3139,9 +3139,9 @@ var require_node = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/index.js
+// ../../../server/node_modules/debug/src/index.js
 var require_src = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/debug/src/index.js"(exports, module) {
+  "../../../server/node_modules/debug/src/index.js"(exports, module) {
     if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
       module.exports = require_browser();
     } else {
@@ -3150,9 +3150,9 @@ var require_src = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/agent-base/dist/helpers.js
+// ../../../server/node_modules/agent-base/dist/helpers.js
 var require_helpers = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/agent-base/dist/helpers.js"(exports) {
+  "../../../server/node_modules/agent-base/dist/helpers.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -3220,9 +3220,9 @@ var require_helpers = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/agent-base/dist/index.js
+// ../../../server/node_modules/agent-base/dist/index.js
 var require_dist = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/agent-base/dist/index.js"(exports) {
+  "../../../server/node_modules/agent-base/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -3376,9 +3376,9 @@ var require_dist = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/https-proxy-agent/dist/parse-proxy-response.js
+// ../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js
 var require_parse_proxy_response = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
+  "../../../server/node_modules/https-proxy-agent/dist/parse-proxy-response.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -3472,9 +3472,9 @@ var require_parse_proxy_response = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/https-proxy-agent/dist/index.js
+// ../../../server/node_modules/https-proxy-agent/dist/index.js
 var require_dist2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/https-proxy-agent/dist/index.js"(exports) {
+  "../../../server/node_modules/https-proxy-agent/dist/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -3622,7 +3622,7 @@ var require_dist2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/data-uri-to-buffer/dist/index.js
+// ../../../server/node_modules/data-uri-to-buffer/dist/index.js
 function dataUriToBuffer(uri) {
   if (!/^data:/i.test(uri)) {
     throw new TypeError('`uri` does not appear to be a Data URI (must begin with "data:")');
@@ -3661,14 +3661,14 @@ function dataUriToBuffer(uri) {
 }
 var dist_default;
 var init_dist = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/data-uri-to-buffer/dist/index.js"() {
+  "../../../server/node_modules/data-uri-to-buffer/dist/index.js"() {
     dist_default = dataUriToBuffer;
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
+// ../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js
 var require_ponyfill_es2018 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
+  "../../../server/node_modules/web-streams-polyfill/dist/ponyfill.es2018.js"(exports, module) {
     (function(global2, factory) {
       typeof exports === "object" && typeof module !== "undefined" ? factory(exports) : typeof define === "function" && define.amd ? define(["exports"], factory) : (global2 = typeof globalThis !== "undefined" ? globalThis : global2 || self, factory(global2.WebStreamsPolyfill = {}));
     })(exports, (function(exports2) {
@@ -7941,9 +7941,9 @@ var require_ponyfill_es2018 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/streams.cjs
+// ../../../server/node_modules/fetch-blob/streams.cjs
 var require_streams = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/streams.cjs"() {
+  "../../../server/node_modules/fetch-blob/streams.cjs"() {
     var POOL_SIZE2 = 65536;
     if (!globalThis.ReadableStream) {
       try {
@@ -7987,7 +7987,7 @@ var require_streams = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/index.js
+// ../../../server/node_modules/fetch-blob/index.js
 async function* toIterator(parts, clone3 = true) {
   for (const part of parts) {
     if ("stream" in part) {
@@ -8024,7 +8024,7 @@ async function* toIterator(parts, clone3 = true) {
 }
 var import_streams, POOL_SIZE, _Blob, Blob3, fetch_blob_default;
 var init_fetch_blob = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/index.js"() {
+  "../../../server/node_modules/fetch-blob/index.js"() {
     import_streams = __toESM(require_streams(), 1);
     POOL_SIZE = 65536;
     _Blob = class Blob2 {
@@ -8191,10 +8191,10 @@ var init_fetch_blob = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/file.js
+// ../../../server/node_modules/fetch-blob/file.js
 var _File, File3, file_default;
 var init_file = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/file.js"() {
+  "../../../server/node_modules/fetch-blob/file.js"() {
     init_fetch_blob();
     _File = class File2 extends fetch_blob_default {
       #lastModified = 0;
@@ -8235,7 +8235,7 @@ var init_file = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/formdata-polyfill/esm.min.js
+// ../../../server/node_modules/formdata-polyfill/esm.min.js
 function formDataToBlob(F2, B = fetch_blob_default) {
   var b = `${r()}${r()}`.replace(/\./g, "").slice(-28).padStart(32, "-"), c = [], p = `--${b}\r
 Content-Disposition: form-data; name="`;
@@ -8251,7 +8251,7 @@ Content-Type: ${v.type || "application/octet-stream"}\r
 }
 var t, i, h, r, m, f, e, x, FormData2;
 var init_esm_min = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/formdata-polyfill/esm.min.js"() {
+  "../../../server/node_modules/formdata-polyfill/esm.min.js"() {
     init_fetch_blob();
     init_file();
     ({ toStringTag: t, iterator: i, hasInstance: h } = Symbol);
@@ -8332,10 +8332,10 @@ var init_esm_min = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/base.js
+// ../../../server/node_modules/node-fetch/src/errors/base.js
 var FetchBaseError;
 var init_base = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/base.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/base.js"() {
     FetchBaseError = class extends Error {
       constructor(message, type) {
         super(message);
@@ -8352,10 +8352,10 @@ var init_base = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/fetch-error.js
+// ../../../server/node_modules/node-fetch/src/errors/fetch-error.js
 var FetchError;
 var init_fetch_error = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/fetch-error.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/fetch-error.js"() {
     init_base();
     FetchError = class extends FetchBaseError {
       /**
@@ -8374,10 +8374,10 @@ var init_fetch_error = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/is.js
+// ../../../server/node_modules/node-fetch/src/utils/is.js
 var NAME, isURLSearchParameters, isBlob, isAbortSignal, isDomainOrSubdomain, isSameProtocol;
 var init_is = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/is.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/is.js"() {
     NAME = Symbol.toStringTag;
     isURLSearchParameters = (object7) => {
       return typeof object7 === "object" && typeof object7.append === "function" && typeof object7.delete === "function" && typeof object7.get === "function" && typeof object7.getAll === "function" && typeof object7.has === "function" && typeof object7.set === "function" && typeof object7.sort === "function" && object7[NAME] === "URLSearchParams";
@@ -8401,9 +8401,9 @@ var init_is = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-domexception/index.js
+// ../../../server/node_modules/node-domexception/index.js
 var require_node_domexception = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-domexception/index.js"(exports, module) {
+  "../../../server/node_modules/node-domexception/index.js"(exports, module) {
     if (!globalThis.DOMException) {
       try {
         const { MessageChannel } = __require("worker_threads"), port = new MessageChannel().port1, ab = new ArrayBuffer();
@@ -8416,12 +8416,12 @@ var require_node_domexception = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/from.js
+// ../../../server/node_modules/fetch-blob/from.js
 import { statSync as statSync2, createReadStream, promises as fs4 } from "node:fs";
 import { basename as basename2 } from "node:path";
 var import_node_domexception, stat, blobFromSync, blobFrom, fileFrom, fileFromSync, fromBlob, fromFile, BlobDataItem;
 var init_from = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fetch-blob/from.js"() {
+  "../../../server/node_modules/fetch-blob/from.js"() {
     import_node_domexception = __toESM(require_node_domexception(), 1);
     init_file();
     init_fetch_blob();
@@ -8480,7 +8480,7 @@ var init_from = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/multipart-parser.js
+// ../../../server/node_modules/node-fetch/src/utils/multipart-parser.js
 var multipart_parser_exports = {};
 __export(multipart_parser_exports, {
   toFormData: () => toFormData
@@ -8574,7 +8574,7 @@ async function toFormData(Body2, ct) {
 }
 var s, S, f2, F, LF, CR, SPACE, HYPHEN, COLON, A, Z, lower, noop, MultipartParser;
 var init_multipart_parser = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/multipart-parser.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/multipart-parser.js"() {
     init_from();
     init_esm_min();
     s = 0;
@@ -8842,7 +8842,7 @@ var init_multipart_parser = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/body.js
+// ../../../server/node_modules/node-fetch/src/body.js
 import Stream, { PassThrough } from "node:stream";
 import { types, deprecate, promisify } from "node:util";
 import { Buffer as Buffer2 } from "node:buffer";
@@ -8892,7 +8892,7 @@ async function consumeBody(data) {
 }
 var pipeline, INTERNALS, Body, clone, getNonSpecFormDataBoundary, extractContentType, getTotalBytes, writeToStream;
 var init_body = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/body.js"() {
+  "../../../server/node_modules/node-fetch/src/body.js"() {
     init_fetch_blob();
     init_esm_min();
     init_fetch_error();
@@ -9100,7 +9100,7 @@ var init_body = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/headers.js
+// ../../../server/node_modules/node-fetch/src/headers.js
 import { types as types2 } from "node:util";
 import http from "node:http";
 function fromRawHeaders(headers2 = []) {
@@ -9123,7 +9123,7 @@ function fromRawHeaders(headers2 = []) {
 }
 var validateHeaderName, validateHeaderValue, Headers2;
 var init_headers = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/headers.js"() {
+  "../../../server/node_modules/node-fetch/src/headers.js"() {
     validateHeaderName = typeof http.validateHeaderName === "function" ? http.validateHeaderName : (name2) => {
       if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(name2)) {
         const error2 = new TypeError(`Header name must be a valid HTTP token [${name2}]`);
@@ -9291,10 +9291,10 @@ var init_headers = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/is-redirect.js
+// ../../../server/node_modules/node-fetch/src/utils/is-redirect.js
 var redirectStatus, isRedirect;
 var init_is_redirect = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/is-redirect.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/is-redirect.js"() {
     redirectStatus = /* @__PURE__ */ new Set([301, 302, 303, 307, 308]);
     isRedirect = (code) => {
       return redirectStatus.has(code);
@@ -9302,10 +9302,10 @@ var init_is_redirect = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/response.js
+// ../../../server/node_modules/node-fetch/src/response.js
 var INTERNALS2, Response2;
 var init_response = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/response.js"() {
+  "../../../server/node_modules/node-fetch/src/response.js"() {
     init_headers();
     init_body();
     init_is_redirect();
@@ -9428,10 +9428,10 @@ var init_response = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/get-search.js
+// ../../../server/node_modules/node-fetch/src/utils/get-search.js
 var getSearch;
 var init_get_search = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/get-search.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/get-search.js"() {
     getSearch = (parsedURL) => {
       if (parsedURL.search) {
         return parsedURL.search;
@@ -9443,7 +9443,7 @@ var init_get_search = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/referrer.js
+// ../../../server/node_modules/node-fetch/src/utils/referrer.js
 import { isIP } from "node:net";
 function stripURLForUseAsAReferrer(url, originOnly = false) {
   if (url == null) {
@@ -9572,7 +9572,7 @@ function parseReferrerPolicyFromHeader(headers2) {
 }
 var ReferrerPolicy, DEFAULT_REFERRER_POLICY;
 var init_referrer = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/utils/referrer.js"() {
+  "../../../server/node_modules/node-fetch/src/utils/referrer.js"() {
     ReferrerPolicy = /* @__PURE__ */ new Set([
       "",
       "no-referrer",
@@ -9588,12 +9588,12 @@ var init_referrer = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/request.js
+// ../../../server/node_modules/node-fetch/src/request.js
 import { format as formatUrl } from "node:url";
 import { deprecate as deprecate2 } from "node:util";
 var INTERNALS3, isRequest, doBadDataWarn, Request2, getNodeRequestOptions;
 var init_request = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/request.js"() {
+  "../../../server/node_modules/node-fetch/src/request.js"() {
     init_headers();
     init_body();
     init_is();
@@ -9793,10 +9793,10 @@ var init_request = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/abort-error.js
+// ../../../server/node_modules/node-fetch/src/errors/abort-error.js
 var AbortError;
 var init_abort_error = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/errors/abort-error.js"() {
+  "../../../server/node_modules/node-fetch/src/errors/abort-error.js"() {
     init_base();
     AbortError = class extends FetchBaseError {
       constructor(message, type = "aborted") {
@@ -9806,7 +9806,7 @@ var init_abort_error = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/index.js
+// ../../../server/node_modules/node-fetch/src/index.js
 var src_exports = {};
 __export(src_exports, {
   AbortError: () => AbortError,
@@ -10092,7 +10092,7 @@ function fixResponseChunkedTransferBadEnding(request, errorCallback) {
 }
 var supportedSchemas;
 var init_src = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/node-fetch/src/index.js"() {
+  "../../../server/node_modules/node-fetch/src/index.js"() {
     init_dist();
     init_body();
     init_response();
@@ -10109,9 +10109,9 @@ var init_src = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/gaxios.js
+// ../../../server/node_modules/gaxios/build/cjs/src/gaxios.js
 var require_gaxios = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/gaxios.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -10583,9 +10583,9 @@ Content-Type: ${partContentType}\r
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/index.js
+// ../../../server/node_modules/gaxios/build/cjs/src/index.js
 var require_src2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gaxios/build/cjs/src/index.js"(exports) {
+  "../../../server/node_modules/gaxios/build/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -10622,9 +10622,9 @@ var require_src2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/bignumber.js/bignumber.js
+// ../../../server/node_modules/bignumber.js/bignumber.js
 var require_bignumber = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/bignumber.js/bignumber.js"(exports, module) {
+  "../../../server/node_modules/bignumber.js/bignumber.js"(exports, module) {
     (function(globalObject) {
       "use strict";
       var BigNumber, isNumeric = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i, mathceil = Math.ceil, mathfloor = Math.floor, bignumberError = "[BigNumber Error] ", tooManyDigits = bignumberError + "Number primitive has more than 15 significant digits: ", BASE2 = 1e14, LOG_BASE = 14, MAX_SAFE_INTEGER = 9007199254740991, POWS_TEN = [1, 10, 100, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13], SQRT_BASE = 1e7, MAX = 1e9;
@@ -11973,9 +11973,9 @@ var require_bignumber = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/lib/stringify.js
+// ../../../server/node_modules/json-bigint/lib/stringify.js
 var require_stringify = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/lib/stringify.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/lib/stringify.js"(exports, module) {
     var BigNumber = require_bignumber();
     var JSON2 = module.exports;
     (function() {
@@ -12085,9 +12085,9 @@ var require_stringify = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/lib/parse.js
+// ../../../server/node_modules/json-bigint/lib/parse.js
 var require_parse = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/lib/parse.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/lib/parse.js"(exports, module) {
     var BigNumber = null;
     var suspectProtoRx = /(?:_|\\u005[Ff])(?:_|\\u005[Ff])(?:p|\\u0070)(?:r|\\u0072)(?:o|\\u006[Ff])(?:t|\\u0074)(?:o|\\u006[Ff])(?:_|\\u005[Ff])(?:_|\\u005[Ff])/;
     var suspectConstructorRx = /(?:c|\\u0063)(?:o|\\u006[Ff])(?:n|\\u006[Ee])(?:s|\\u0073)(?:t|\\u0074)(?:r|\\u0072)(?:u|\\u0075)(?:c|\\u0063)(?:t|\\u0074)(?:o|\\u006[Ff])(?:r|\\u0072)/;
@@ -12366,9 +12366,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/index.js
+// ../../../server/node_modules/json-bigint/index.js
 var require_json_bigint = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-bigint/index.js"(exports, module) {
+  "../../../server/node_modules/json-bigint/index.js"(exports, module) {
     var json_stringify = require_stringify().stringify;
     var json_parse = require_parse();
     module.exports = function(options) {
@@ -12382,9 +12382,9 @@ var require_json_bigint = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gcp-metadata/build/src/gcp-residency.js
+// ../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js
 var require_gcp_residency = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
+  "../../../server/node_modules/gcp-metadata/build/src/gcp-residency.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCE_LINUX_BIOS_PATHS = void 0;
@@ -12437,9 +12437,9 @@ var require_gcp_residency = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/colours.js
+// ../../../server/node_modules/google-logging-utils/build/src/colours.js
 var require_colours = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/colours.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/colours.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Colours = void 0;
@@ -12498,9 +12498,9 @@ var require_colours = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/logging-utils.js
+// ../../../server/node_modules/google-logging-utils/build/src/logging-utils.js
 var require_logging_utils = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/logging-utils.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12787,9 +12787,9 @@ var require_logging_utils = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/index.js
+// ../../../server/node_modules/google-logging-utils/build/src/index.js
 var require_src3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-logging-utils/build/src/index.js"(exports) {
+  "../../../server/node_modules/google-logging-utils/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12812,9 +12812,9 @@ var require_src3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gcp-metadata/build/src/index.js
+// ../../../server/node_modules/gcp-metadata/build/src/index.js
 var require_src4 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/gcp-metadata/build/src/index.js"(exports) {
+  "../../../server/node_modules/gcp-metadata/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13068,9 +13068,9 @@ var require_src4 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/base64-js/index.js
+// ../../../server/node_modules/base64-js/index.js
 var require_base64_js = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/base64-js/index.js"(exports) {
+  "../../../server/node_modules/base64-js/index.js"(exports) {
     "use strict";
     exports.byteLength = byteLength;
     exports.toByteArray = toByteArray;
@@ -13169,9 +13169,9 @@ var require_base64_js = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/shared.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/shared.js
 var require_shared = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/shared.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.fromArrayBufferToHex = fromArrayBufferToHex;
@@ -13184,9 +13184,9 @@ var require_shared = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js
 var require_crypto = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/browser/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BrowserCrypto = void 0;
@@ -13280,9 +13280,9 @@ var require_crypto = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/node/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js
 var require_crypto2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/node/crypto.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NodeCrypto = void 0;
@@ -13349,9 +13349,9 @@ var require_crypto2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/crypto.js
+// ../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js
 var require_crypto3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/crypto/crypto.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13387,9 +13387,9 @@ var require_crypto3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/safe-buffer/index.js
+// ../../../server/node_modules/safe-buffer/index.js
 var require_safe_buffer = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/safe-buffer/index.js"(exports, module) {
+  "../../../server/node_modules/safe-buffer/index.js"(exports, module) {
     var buffer = __require("buffer");
     var Buffer4 = buffer.Buffer;
     function copyProps(src, dst) {
@@ -13445,9 +13445,9 @@ var require_safe_buffer = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
+// ../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js
 var require_param_bytes_for_alg = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
+  "../../../server/node_modules/ecdsa-sig-formatter/src/param-bytes-for-alg.js"(exports, module) {
     "use strict";
     function getParamSize(keySize) {
       var result = (keySize / 8 | 0) + (keySize % 8 === 0 ? 0 : 1);
@@ -13469,9 +13469,9 @@ var require_param_bytes_for_alg = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
+// ../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js
 var require_ecdsa_sig_formatter = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
+  "../../../server/node_modules/ecdsa-sig-formatter/src/ecdsa-sig-formatter.js"(exports, module) {
     "use strict";
     var Buffer4 = require_safe_buffer().Buffer;
     var getParamBytesForAlg = require_param_bytes_for_alg();
@@ -13609,9 +13609,9 @@ var require_ecdsa_sig_formatter = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/util.js
+// ../../../server/node_modules/google-auth-library/build/src/util.js
 var require_util2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/util.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LRUCache = void 0;
@@ -13724,9 +13724,9 @@ var require_util2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/package.json
+// ../../../server/node_modules/google-auth-library/package.json
 var require_package2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/package.json"(exports, module) {
+  "../../../server/node_modules/google-auth-library/package.json"(exports, module) {
     module.exports = {
       name: "google-auth-library",
       version: "10.9.1",
@@ -13820,9 +13820,9 @@ var require_package2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/shared.cjs
+// ../../../server/node_modules/google-auth-library/build/src/shared.cjs
 var require_shared2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/shared.cjs"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/shared.cjs"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.USER_AGENT = exports.PRODUCT_NAME = exports.pkg = void 0;
@@ -13835,9 +13835,9 @@ var require_shared2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/authclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/authclient.js
 var require_authclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/authclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AuthClient = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports.DEFAULT_UNIVERSE = void 0;
@@ -14070,9 +14070,9 @@ var require_authclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/loginticket.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js
 var require_loginticket = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/loginticket.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LoginTicket = void 0;
@@ -14122,9 +14122,9 @@ var require_loginticket = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/oauth2client.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js
 var require_oauth2client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuth2Client = exports.ClientAuthentication = exports.CertificateFormat = exports.CodeChallengeMethod = void 0;
@@ -14803,9 +14803,9 @@ var require_oauth2client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/computeclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js
 var require_computeclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/computeclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Compute = void 0;
@@ -14895,9 +14895,9 @@ var require_computeclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/idtokenclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js
 var require_idtokenclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/idtokenclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdTokenClient = void 0;
@@ -14941,9 +14941,9 @@ var require_idtokenclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/envDetect.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js
 var require_envDetect = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/envDetect.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GCPEnv = void 0;
@@ -15018,9 +15018,9 @@ var require_envDetect = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/data-stream.js
+// ../../../server/node_modules/jws/lib/data-stream.js
 var require_data_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/data-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/data-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var Stream5 = __require("stream");
     var util2 = __require("util");
@@ -15066,9 +15066,9 @@ var require_data_stream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/buffer-equal-constant-time/index.js
+// ../../../server/node_modules/buffer-equal-constant-time/index.js
 var require_buffer_equal_constant_time = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
+  "../../../server/node_modules/buffer-equal-constant-time/index.js"(exports, module) {
     "use strict";
     var Buffer4 = __require("buffer").Buffer;
     var SlowBuffer = __require("buffer").SlowBuffer;
@@ -15100,9 +15100,9 @@ var require_buffer_equal_constant_time = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jwa/index.js
+// ../../../server/node_modules/jwa/index.js
 var require_jwa = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jwa/index.js"(exports, module) {
+  "../../../server/node_modules/jwa/index.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var crypto2 = __require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
@@ -15324,9 +15324,9 @@ var require_jwa = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/tostring.js
+// ../../../server/node_modules/jws/lib/tostring.js
 var require_tostring = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/tostring.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/tostring.js"(exports, module) {
     var Buffer4 = __require("buffer").Buffer;
     module.exports = function toString(obj2) {
       if (typeof obj2 === "string")
@@ -15338,9 +15338,9 @@ var require_tostring = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/sign-stream.js
+// ../../../server/node_modules/jws/lib/sign-stream.js
 var require_sign_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/sign-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/sign-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -15413,9 +15413,9 @@ var require_sign_stream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/verify-stream.js
+// ../../../server/node_modules/jws/lib/verify-stream.js
 var require_verify_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/lib/verify-stream.js"(exports, module) {
+  "../../../server/node_modules/jws/lib/verify-stream.js"(exports, module) {
     var Buffer4 = require_safe_buffer().Buffer;
     var DataStream = require_data_stream();
     var jwa = require_jwa();
@@ -15528,9 +15528,9 @@ var require_verify_stream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/index.js
+// ../../../server/node_modules/jws/index.js
 var require_jws = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/jws/index.js"(exports) {
+  "../../../server/node_modules/jws/index.js"(exports) {
     var SignStream = require_sign_stream();
     var VerifyStream = require_verify_stream();
     var ALGORITHMS = [
@@ -15561,9 +15561,9 @@ var require_jws = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js
 var require_jwsSign = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/jwsSign.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.buildPayloadForJwsSign = buildPayloadForJwsSign;
@@ -15595,9 +15595,9 @@ var require_jwsSign = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/getToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js
 var require_getToken = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/getToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getToken = getToken;
@@ -15639,9 +15639,9 @@ var require_getToken = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js
 var require_errorWithCode = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/errorWithCode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ErrorWithCode = void 0;
@@ -15656,9 +15656,9 @@ var require_errorWithCode = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js
 var require_getCredentials = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/getCredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getCredentials = getCredentials;
@@ -15757,9 +15757,9 @@ var require_getCredentials = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js
 var require_tokenHandler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/tokenHandler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TokenHandler = void 0;
@@ -15848,9 +15848,9 @@ var require_tokenHandler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js
 var require_revokeToken = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/revokeToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.revokeToken = revokeToken;
@@ -15866,9 +15866,9 @@ var require_revokeToken = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/googleToken.js
+// ../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js
 var require_googleToken = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/gtoken/googleToken.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleToken = void 0;
@@ -15972,9 +15972,9 @@ var require_googleToken = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/jwtaccess.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js
 var require_jwtaccess = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/jwtaccess.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWTAccess = void 0;
@@ -16142,9 +16142,9 @@ var require_jwtaccess = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/jwtclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js
 var require_jwtclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/jwtclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.JWT = void 0;
@@ -16414,9 +16414,9 @@ var require_jwtclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/refreshclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js
 var require_refreshclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/refreshclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UserRefreshClient = exports.USER_REFRESH_ACCOUNT_TYPE = void 0;
@@ -16542,9 +16542,9 @@ var require_refreshclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/impersonated.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js
 var require_impersonated = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/impersonated.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Impersonated = exports.IMPERSONATED_ACCOUNT_TYPE = void 0;
@@ -16721,9 +16721,9 @@ var require_impersonated = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/oauth2common.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js
 var require_oauth2common = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/oauth2common.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.OAuthClientAuthHandler = void 0;
@@ -16869,9 +16869,9 @@ var require_oauth2common = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/stscredentials.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js
 var require_stscredentials = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/stscredentials.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.StsCredentials = void 0;
@@ -16957,9 +16957,9 @@ var require_stscredentials = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js
 var require_baseexternalclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/baseexternalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.BaseExternalAccountClient = exports.CLOUD_RESOURCE_MANAGER = exports.EXTERNAL_ACCOUNT_TYPE = exports.EXPIRATION_TIME_OFFSET = void 0;
@@ -17336,9 +17336,9 @@ var require_baseexternalclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js
 var require_filesubjecttokensupplier = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/filesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileSubjectTokenSupplier = void 0;
@@ -17401,9 +17401,9 @@ var require_filesubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js
 var require_urlsubjecttokensupplier = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/urlsubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UrlSubjectTokenSupplier = void 0;
@@ -17459,9 +17459,9 @@ var require_urlsubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js
 var require_certificatesubjecttokensupplier = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/certificatesubjecttokensupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
@@ -17643,9 +17643,9 @@ var require_certificatesubjecttokensupplier = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js
 var require_identitypoolclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/identitypoolclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IdentityPoolClient = void 0;
@@ -17755,9 +17755,9 @@ var require_identitypoolclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js
 var require_awsrequestsigner = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/awsrequestsigner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsRequestSigner = void 0;
@@ -17905,9 +17905,9 @@ ${credentialScope}
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js
 var require_defaultawssecuritycredentialssupplier = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/defaultawssecuritycredentialssupplier.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DefaultAwsSecurityCredentialsSupplier = void 0;
@@ -18060,9 +18060,9 @@ var require_defaultawssecuritycredentialssupplier = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/awsclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js
 var require_awsclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/awsclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AwsClient = void 0;
@@ -18174,9 +18174,9 @@ var require_awsclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/executable-response.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js
 var require_executable_response = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/executable-response.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InvalidSubjectTokenError = exports.InvalidMessageFieldError = exports.InvalidCodeFieldError = exports.InvalidTokenTypeFieldError = exports.InvalidExpirationTimeFieldError = exports.InvalidSuccessFieldError = exports.InvalidVersionFieldError = exports.ExecutableResponseError = exports.ExecutableResponse = void 0;
@@ -18305,9 +18305,9 @@ var require_executable_response = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js
 var require_pluggable_auth_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-handler.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthHandler = exports.ExecutableError = void 0;
@@ -18446,9 +18446,9 @@ var require_pluggable_auth_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js
 var require_pluggable_auth_client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/pluggable-auth-client.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PluggableAuthClient = exports.ExecutableError = void 0;
@@ -18573,9 +18573,9 @@ var require_pluggable_auth_client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/externalclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js
 var require_externalclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/externalclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountClient = void 0;
@@ -18622,9 +18622,9 @@ var require_externalclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js
 var require_externalAccountAuthorizedUserClient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/externalAccountAuthorizedUserClient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ExternalAccountAuthorizedUserClient = exports.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = void 0;
@@ -18809,9 +18809,9 @@ var require_externalAccountAuthorizedUserClient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/gdchclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js
 var require_gdchclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/gdchclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GdchClient = exports.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
@@ -19092,9 +19092,9 @@ var require_gdchclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/googleauth.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js
 var require_googleauth = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/googleauth.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
@@ -19900,9 +19900,9 @@ var require_googleauth = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/iam.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/iam.js
 var require_iam = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/iam.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.IAMAuth = void 0;
@@ -19936,9 +19936,9 @@ var require_iam = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/downscopedclient.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js
 var require_downscopedclient = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/downscopedclient.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DownscopedClient = exports.EXPIRATION_TIME_OFFSET = exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
@@ -20121,9 +20121,9 @@ var require_downscopedclient = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/passthrough.js
+// ../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js
 var require_passthrough = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/auth/passthrough.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.PassThroughClient = void 0;
@@ -20166,9 +20166,9 @@ var require_passthrough = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/index.js
+// ../../../server/node_modules/google-auth-library/build/src/index.js
 var require_src5 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/google-auth-library/build/src/index.js"(exports) {
+  "../../../server/node_modules/google-auth-library/build/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m2, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20302,9 +20302,9 @@ var require_src5 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/constants.js
+// ../../../server/node_modules/ws/lib/constants.js
 var require_constants = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/constants.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/constants.js"(exports, module) {
     "use strict";
     var BINARY_TYPES = ["nodebuffer", "arraybuffer", "fragments"];
     var hasBlob = typeof Blob !== "undefined";
@@ -20325,9 +20325,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/buffer-util.js
+// ../../../server/node_modules/ws/lib/buffer-util.js
 var require_buffer_util = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/buffer-util.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/buffer-util.js"(exports, module) {
     "use strict";
     var { EMPTY_BUFFER } = require_constants();
     var FastBuffer = Buffer[Symbol.species];
@@ -20400,9 +20400,9 @@ var require_buffer_util = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/limiter.js
+// ../../../server/node_modules/ws/lib/limiter.js
 var require_limiter = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/limiter.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/limiter.js"(exports, module) {
     "use strict";
     var kDone = /* @__PURE__ */ Symbol("kDone");
     var kRun = /* @__PURE__ */ Symbol("kRun");
@@ -20450,9 +20450,9 @@ var require_limiter = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/permessage-deflate.js
+// ../../../server/node_modules/ws/lib/permessage-deflate.js
 var require_permessage_deflate = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/permessage-deflate.js"(exports, module) {
     "use strict";
     var zlib2 = __require("zlib");
     var bufferUtil = require_buffer_util();
@@ -20833,9 +20833,9 @@ var require_permessage_deflate = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/validation.js
+// ../../../server/node_modules/ws/lib/validation.js
 var require_validation = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/validation.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/validation.js"(exports, module) {
     "use strict";
     var { isUtf8 } = __require("buffer");
     var { hasBlob } = require_constants();
@@ -21034,9 +21034,9 @@ var require_validation = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/receiver.js
+// ../../../server/node_modules/ws/lib/receiver.js
 var require_receiver = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/receiver.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("stream");
     var PerMessageDeflate2 = require_permessage_deflate();
@@ -21657,9 +21657,9 @@ var require_receiver = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/sender.js
+// ../../../server/node_modules/ws/lib/sender.js
 var require_sender = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/sender.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/sender.js"(exports, module) {
     "use strict";
     var { Duplex } = __require("stream");
     var { randomFillSync } = __require("crypto");
@@ -22150,9 +22150,9 @@ var require_sender = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/event-target.js
+// ../../../server/node_modules/ws/lib/event-target.js
 var require_event_target = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/event-target.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/event-target.js"(exports, module) {
     "use strict";
     var { kForOnEventAttribute, kListener } = require_constants();
     var kCode = /* @__PURE__ */ Symbol("kCode");
@@ -22379,9 +22379,9 @@ var require_event_target = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/extension.js
+// ../../../server/node_modules/ws/lib/extension.js
 var require_extension = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/extension.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/extension.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function push(dest, name2, elem) {
@@ -22532,9 +22532,9 @@ var require_extension = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/websocket.js
+// ../../../server/node_modules/ws/lib/websocket.js
 var require_websocket = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/websocket.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/websocket.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var https2 = __require("https");
@@ -23428,9 +23428,9 @@ var require_websocket = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/stream.js
+// ../../../server/node_modules/ws/lib/stream.js
 var require_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/stream.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/stream.js"(exports, module) {
     "use strict";
     var WebSocket2 = require_websocket();
     var { Duplex } = __require("stream");
@@ -23526,9 +23526,9 @@ var require_stream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/subprotocol.js
+// ../../../server/node_modules/ws/lib/subprotocol.js
 var require_subprotocol = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/subprotocol.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/subprotocol.js"(exports, module) {
     "use strict";
     var { tokenChars } = require_validation();
     function parse4(header) {
@@ -23571,9 +23571,9 @@ var require_subprotocol = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/websocket-server.js
+// ../../../server/node_modules/ws/lib/websocket-server.js
 var require_websocket_server = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/lib/websocket-server.js"(exports, module) {
+  "../../../server/node_modules/ws/lib/websocket-server.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("events");
     var http4 = __require("http");
@@ -23972,10 +23972,10 @@ var require_websocket_server = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/wrapper.mjs
+// ../../../server/node_modules/ws/wrapper.mjs
 var import_stream, import_extension, import_permessage_deflate, import_receiver, import_sender, import_subprotocol, import_websocket, import_websocket_server;
 var init_wrapper = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ws/wrapper.mjs"() {
+  "../../../server/node_modules/ws/wrapper.mjs"() {
     import_stream = __toESM(require_stream(), 1);
     import_extension = __toESM(require_extension(), 1);
     import_permessage_deflate = __toESM(require_permessage_deflate(), 1);
@@ -23987,7 +23987,7 @@ var init_wrapper = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@google/genai/dist/node/index.mjs
+// ../../../server/node_modules/@google/genai/dist/node/index.mjs
 var node_exports = {};
 __export(node_exports, {
   ActivityHandling: () => ActivityHandling,
@@ -38851,7 +38851,7 @@ function getApiKeyFromEnv() {
 }
 var import_p_retry, import_google_auth_library, _defaultBaseGeminiUrl, _defaultBaseVertexUrl, BaseModule, Outcome, Language, FunctionResponseScheduling, Type, AuthType, HttpElementLocation, ApiSpec, Environment, SafetyPolicy, PhishBlockThreshold, Behavior, DynamicRetrievalConfigMode, ThinkingLevel, PersonGeneration, ProminentPeople, HarmCategory, HarmBlockMethod, HarmBlockThreshold, FunctionCallingConfigMode, FinishReason, HarmProbability, HarmSeverity, UrlRetrievalStatus, BlockedReason, TrafficType, MediaModality, ModelStage, MediaResolution, Modality, Delivery, AspectRatio, ImageSize, TuningMode, AdapterSize, ResponseParseType, MatchOperation, ReinforcementTuningThinkingLevel, JobState, TuningJobState, AggregationMetric, PairwiseChoice, VideoOrientation, TuningSpeed, TuningTask, DocumentState, ServiceTier, MediaProcessing, PartMediaResolutionLevel, ToolType, ResourceScope, FeatureSelectionPreference, EmbeddingApiType, SafetyFilterLevel, ImagePromptLanguage, MaskReferenceMode, ControlReferenceType, SubjectReferenceType, EditMode, SegmentMode, VideoGenerationReferenceType, VideoGenerationMaskMode, VideoCompressionQuality, ImageResizeMode, TuningMethod, FileState, FileSource, TurnCompleteReason, InteractionStatus, VadSignalType, VoiceActivityType, StartSensitivity, EndSensitivity, ActivityHandling, TurnCoverage, AudioTranscriptionConfigMode, Scale, MusicGenerationMode, LiveMusicPlaybackControl, ToolResponse, FunctionResponseFileData, FunctionResponseBlob, FunctionResponsePart, FunctionResponse, HttpResponse, GenerateContentResponsePromptFeedback, GenerateContentResponseUsageMetadata, GenerateContentResponse, EmbedContentResponse, GenerateImagesResponse, EditImageResponse, UpscaleImageResponse, RecontextImageResponse, SegmentImageResponse, ListModelsResponse, DeleteModelResponse, AudioResponseFormat, ImageResponseFormat, TextResponseFormat, VideoResponseFormat, ResponseFormat, CountTokensResponse, ComputeTokensResponse, GenerateVideosResponse, GenerateVideosOperation, ReinforcementTuningParseResponseConfig, ReinforcementTuningAutoraterScorerParsedResponseConversionScorer, EvaluateDatasetResponse, ListTuningJobsResponse, CancelTuningJobResponse, ValidateRewardResponse, DeleteCachedContentResponse, ListCachedContentsResponse, ListDocumentsResponse, ListFileSearchStoresResponse, UploadToFileSearchStoreResumableResponse, ImportFileResponse, ImportFileOperation, ListFilesResponse, CreateFileResponse, DeleteFileResponse, RegisterFilesResponse, InlinedResponse, SingleEmbedContentResponse, InlinedEmbedContentResponse, ListBatchJobsResponse, ReplayResponse, RawReferenceImage, MaskReferenceImage, ControlReferenceImage, StyleReferenceImage, SubjectReferenceImage, ContentReferenceImage, LiveServerMessage, LiveClientToolResponse, LiveSendToolResponseParameters, LiveMusicServerMessage, UploadToFileSearchStoreResponse, UploadToFileSearchStoreOperation, PagedItem, Pager, Batches, Caches, Chats, Chat, ApiError, Files$1, CONTENT_TYPE_HEADER, SERVER_TIMEOUT_HEADER, USER_AGENT_HEADER, GOOGLE_API_CLIENT_HEADER, SDK_VERSION, LIBRARY_LABEL, VERTEX_AI_API_DEFAULT_VERSION, GOOGLE_AI_API_DEFAULT_VERSION, MULTI_REGIONAL_LOCATIONS, DEFAULT_RETRY_ATTEMPTS, DEFAULT_RETRY_INITIAL_DELAY, DEFAULT_RETRY_MAX_DELAY, DEFAULT_RETRY_EXP_BASE, DEFAULT_RETRY_JITTER, DEFAULT_RETRY_HTTP_STATUS_CODES, ApiClient, MCP_LABEL, hasMcpToolUsageFromMcpToTool, McpCallableTool, LiveMusic, LiveMusicSession, FUNCTION_RESPONSE_REQUIRES_ID, Live, defaultLiveSendClientContentParamerters, Session, DEFAULT_MAX_REMOTE_CALLS, Models, Operations, Tokens, Documents, FileSearchStores, envMemo, GoogleGenAISecurityProvider, GoogleGenAIAuthHook, HTTPClientError, UnexpectedClientError, InvalidRequestError, RequestAbortedError, RequestTimeoutError, ConnectionError, GoogleGenAiError, GeminiNextGenAPIClientError, APIError, APIUserAbortError, APIConnectionError, APIConnectionTimeoutError, BadRequestError, AuthenticationError, PermissionDeniedError, NotFoundError, ConflictError, UnprocessableEntityError, RateLimitError, InternalServerError, SDKHooks, hasOwn, ServerList, SDK_METADATA, encodeForm, encodeSimple, encodeFormQuery, DEFAULT_FETCHER, HTTPClient, mediaParamSeparator, codeRangeRE$1, defaultBackoff, PermanentError, TemporaryError, codeRangeRE, gt, webWorkerLike, isBrowserLike, ClientSDK, jsonLikeContentTypeRE, jsonlLikeContentTypeRE, GoogleGenAiDefaultError, Stream3, CR2, LF2, BOUNDARIES, MAX_BOUNDARY_LEN, DEFAULT_CONTENT_TYPES, headerValRE, SecurityErrorCode, SecurityError, _a, APIPromise, Agents, Files2, Environments, CancelInteractionByIdServerError, CancelInteractionByIdClientError, CreateInteractionServerError, CreateInteractionClientError, DeleteInteractionServerError, DeleteInteractionClientError, GetInteractionByIdServerError, GetInteractionByIdClientError, Interactions, Triggers, Webhooks, GoogleGenAI$1, LEGACY_LYRIA_MODELS, GeminiNextGenInteractions, GeminiNextGenAgents, GeminiNextGenWebhooks, GeminiNextGenTriggers, GeminiNextGenEnvironmentFiles, GeminiNextGenEnvironments, GOOGLE_API_KEY_HEADER, REQUIRED_VERTEX_AI_SCOPE, NodeAuth, NodeDownloader, NodeWebSocketFactory, NodeWebSocket, Tunings, MAX_CHUNK_SIZE, MAX_RETRY_COUNT, INITIAL_RETRY_DELAY_MS, DELAY_MULTIPLIER, X_GOOG_UPLOAD_STATUS_HEADER_FIELD, NodeUploader, NodeFiles, LANGUAGE_LABEL_PREFIX, GoogleGenAI2;
 var init_node = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@google/genai/dist/node/index.mjs"() {
+  "../../../server/node_modules/@google/genai/dist/node/index.mjs"() {
     import_p_retry = __toESM(require_p_retry(), 1);
     import_google_auth_library = __toESM(require_src5(), 1);
     init_wrapper();
@@ -46514,9 +46514,9 @@ var init_node = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/symbols.js
+// ../../../server/node_modules/undici/lib/core/symbols.js
 var require_symbols = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/symbols.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/symbols.js"(exports, module) {
     "use strict";
     module.exports = {
       kClose: /* @__PURE__ */ Symbol("close"),
@@ -46594,9 +46594,9 @@ var require_symbols = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/timers.js
+// ../../../server/node_modules/undici/lib/util/timers.js
 var require_timers = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/timers.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/timers.js"(exports, module) {
     "use strict";
     var fastNow = 0;
     var RESOLUTION_MS = 1e3;
@@ -46823,9 +46823,9 @@ var require_timers = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/errors.js
+// ../../../server/node_modules/undici/lib/core/errors.js
 var require_errors = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/errors.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/errors.js"(exports, module) {
     "use strict";
     var kUndiciError = /* @__PURE__ */ Symbol.for("undici.error.UND_ERR");
     var UndiciError = class extends Error {
@@ -47232,9 +47232,9 @@ var require_errors = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/constants.js
+// ../../../server/node_modules/undici/lib/core/constants.js
 var require_constants2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/constants.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/constants.js"(exports, module) {
     "use strict";
     var wellknownHeaderNames = (
       /** @type {const} */
@@ -47360,9 +47360,9 @@ var require_constants2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/tree.js
+// ../../../server/node_modules/undici/lib/core/tree.js
 var require_tree = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/tree.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/tree.js"(exports, module) {
     "use strict";
     var {
       wellknownHeaderNames,
@@ -47502,9 +47502,9 @@ var require_tree = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/util.js
+// ../../../server/node_modules/undici/lib/core/util.js
 var require_util3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/util.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { kDestroyed, kBodyUsed, kListeners, kBody } = require_symbols();
@@ -48323,9 +48323,9 @@ var require_util3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/stats.js
+// ../../../server/node_modules/undici/lib/util/stats.js
 var require_stats = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/stats.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/stats.js"(exports, module) {
     "use strict";
     var {
       kConnected,
@@ -48357,9 +48357,9 @@ var require_stats = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/diagnostics.js
+// ../../../server/node_modules/undici/lib/core/diagnostics.js
 var require_diagnostics = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/diagnostics.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/diagnostics.js"(exports, module) {
     "use strict";
     var diagnosticsChannel = __require("node:diagnostics_channel");
     var util2 = __require("node:util");
@@ -48574,9 +48574,9 @@ var require_diagnostics = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/request.js
+// ../../../server/node_modules/undici/lib/core/request.js
 var require_request = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/request.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/request.js"(exports, module) {
     "use strict";
     var {
       InvalidArgumentError,
@@ -48953,9 +48953,9 @@ var require_request = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/wrap-handler.js
+// ../../../server/node_modules/undici/lib/handler/wrap-handler.js
 var require_wrap_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/wrap-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/wrap-handler.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError } = require_errors();
     module.exports = class WrapHandler {
@@ -49036,9 +49036,9 @@ var require_wrap_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/dispatcher.js
+// ../../../server/node_modules/undici/lib/dispatcher/dispatcher.js
 var require_dispatcher = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/dispatcher.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/dispatcher.js"(exports, module) {
     "use strict";
     var EventEmitter = __require("node:events");
     var WrapHandler = require_wrap_handler();
@@ -49078,9 +49078,9 @@ var require_dispatcher = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/unwrap-handler.js
+// ../../../server/node_modules/undici/lib/handler/unwrap-handler.js
 var require_unwrap_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/unwrap-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/unwrap-handler.js"(exports, module) {
     "use strict";
     var { parseHeaders } = require_util3();
     var { InvalidArgumentError } = require_errors();
@@ -49166,9 +49166,9 @@ var require_unwrap_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/dispatcher-base.js
+// ../../../server/node_modules/undici/lib/dispatcher/dispatcher-base.js
 var require_dispatcher_base = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/dispatcher-base.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/dispatcher-base.js"(exports, module) {
     "use strict";
     var Dispatcher = require_dispatcher();
     var UnwrapHandler = require_unwrap_handler();
@@ -49318,9 +49318,9 @@ var require_dispatcher_base = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/connect.js
+// ../../../server/node_modules/undici/lib/core/connect.js
 var require_connect = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/connect.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/connect.js"(exports, module) {
     "use strict";
     var net = __require("node:net");
     var assert2 = __require("node:assert");
@@ -49444,9 +49444,9 @@ var require_connect = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/utils.js
+// ../../../server/node_modules/undici/lib/llhttp/utils.js
 var require_utils = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/utils.js"(exports) {
+  "../../../server/node_modules/undici/lib/llhttp/utils.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.enumToMap = enumToMap;
@@ -49460,9 +49460,9 @@ var require_utils = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/constants.js
+// ../../../server/node_modules/undici/lib/llhttp/constants.js
 var require_constants3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/constants.js"(exports) {
+  "../../../server/node_modules/undici/lib/llhttp/constants.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SPECIAL_HEADERS = exports.MINOR = exports.MAJOR = exports.HTAB_SP_VCHAR_OBS_TEXT = exports.QUOTED_STRING = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.HEX = exports.URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.STATUSES_HTTP = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.HEADER_STATE = exports.FINISH = exports.STATUSES = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
@@ -50083,9 +50083,9 @@ var require_constants3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/llhttp-wasm.js
+// ../../../server/node_modules/undici/lib/llhttp/llhttp-wasm.js
 var require_llhttp_wasm = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/llhttp-wasm.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/llhttp/llhttp-wasm.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer4 } = __require("node:buffer");
     var wasmBase64 = "AGFzbQEAAAABJwdgAX8Bf2ADf39/AX9gAn9/AGABfwBgBH9/f38Bf2AAAGADf39/AALLAQgDZW52GHdhc21fb25faGVhZGVyc19jb21wbGV0ZQAEA2VudhV3YXNtX29uX21lc3NhZ2VfYmVnaW4AAANlbnYLd2FzbV9vbl91cmwAAQNlbnYOd2FzbV9vbl9zdGF0dXMAAQNlbnYUd2FzbV9vbl9oZWFkZXJfZmllbGQAAQNlbnYUd2FzbV9vbl9oZWFkZXJfdmFsdWUAAQNlbnYMd2FzbV9vbl9ib2R5AAEDZW52GHdhc21fb25fbWVzc2FnZV9jb21wbGV0ZQAAAzU0BQYAAAMAAAAAAAADAQMAAwMDAAACAAAAAAICAgICAgICAgIBAQEBAQEBAQEBAwAAAwAAAAQFAXABExMFAwEAAgYIAX8BQcDZBAsHxQcoBm1lbW9yeQIAC19pbml0aWFsaXplAAgZX19pbmRpcmVjdF9mdW5jdGlvbl90YWJsZQEAC2xsaHR0cF9pbml0AAkYbGxodHRwX3Nob3VsZF9rZWVwX2FsaXZlADcMbGxodHRwX2FsbG9jAAsGbWFsbG9jADkLbGxodHRwX2ZyZWUADARmcmVlAAwPbGxodHRwX2dldF90eXBlAA0VbGxodHRwX2dldF9odHRwX21ham9yAA4VbGxodHRwX2dldF9odHRwX21pbm9yAA8RbGxodHRwX2dldF9tZXRob2QAEBZsbGh0dHBfZ2V0X3N0YXR1c19jb2RlABESbGxodHRwX2dldF91cGdyYWRlABIMbGxodHRwX3Jlc2V0ABMObGxodHRwX2V4ZWN1dGUAFBRsbGh0dHBfc2V0dGluZ3NfaW5pdAAVDWxsaHR0cF9maW5pc2gAFgxsbGh0dHBfcGF1c2UAFw1sbGh0dHBfcmVzdW1lABgbbGxodHRwX3Jlc3VtZV9hZnRlcl91cGdyYWRlABkQbGxodHRwX2dldF9lcnJubwAaF2xsaHR0cF9nZXRfZXJyb3JfcmVhc29uABsXbGxodHRwX3NldF9lcnJvcl9yZWFzb24AHBRsbGh0dHBfZ2V0X2Vycm9yX3BvcwAdEWxsaHR0cF9lcnJub19uYW1lAB4SbGxodHRwX21ldGhvZF9uYW1lAB8SbGxodHRwX3N0YXR1c19uYW1lACAabGxodHRw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AXRrQT5qIQILIAEgAjYCHCABQgA3AhAgAkECdEH01wBqIQACQEHI1QAoAgAiA0EBIAJ0IgdxRQRAIAAgATYCAEHI1QAgAyAHcjYCACABIAA2AhggASABNgIIIAEgATYCDAwBCyAEQRkgAkEBdmtBACACQR9HG3QhAiAAKAIAIQACQANAIAAiAygCBEF4cSAERg0BIAJBHXYhACACQQF0IQIgAyAAQQRxakEQaiIHKAIAIgANAAsgByABNgIAIAEgAzYCGCABIAE2AgwgASABNgIIDAELIAMoAggiACABNgIMIAMgATYCCCABQQA2AhggASADNgIMIAEgADYCCAtB5NUAQeTVACgCAEEBayIAQX8gABs2AgALCwcAIAAtACgLBwAgAC0AKgsHACAALQArCwcAIAAtACkLBwAgAC8BNAsHACAALQAwC0ABBH8gACgCGCEBIAAvAS4hAiAALQAoIQMgACgCOCEEIAAQOCAAIAQ2AjggACADOgAoIAAgAjsBLiAAIAE2AhgL5YUCAgd/A34gASACaiEEAkAgACIDKAIMIgANACADKAIEBEAgAyABNgIECyMAQRBrIgkkAAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAn8CQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAC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C0HjAQwHC0HXAQwGC0HYAQwFC0HZAQwEC0HaAQwDC0HbAQwCC0HdAQwBC0HcAQshAgNAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQCADAn8CQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAn8CQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAn8CQAJAAkACQAJAAkACQAJ/AkACQAJAAn8CQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAIAMCfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAg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ogKiAqICogKiAqICogKiAqICogKiAqICogIAogILIAQgAUEBaiIBRw0AC0HJACECDOwCCyABQQFqIQEgA0Evai0AAEEBcQ2lAiADQQA2AhwgAyABNgIUIANBlxA2AhAgA0EKNgIMQQAhAgzrAgsgASAERwRAA0AgAS0AAEEgRw0VIAQgAUEBaiIBRw0AC0H4ACECDOsCC0H4ACECDOoCCyADQQI6ACgMOAtBACECIANBADYCHCADQb8LNgIQIANBAjYCDCADIAFBAWo2AhQM6AILQQAhAgzOAgtBDSECDM0CC0ETIQIMzAILQRUhAgzLAgtBFiECDMoCC0EYIQIMyQILQRkhAgzIAgtBGiECDMcCC0EbIQIMxgILQRwhAgzFAgtBHSECDMQCC0EeIQIMwwILQR8hAgzCAgtBICECDMECC0EiIQIMwAILQSMhAgy/AgtBJSECDL4CC0HlACECDL0CCyADQT02AhwgAyABNgIUIAMgADYCDEEAIQIM1QILIANBGzYCHCADIAE2AhQgA0GkHDYCECADQRU2AgxBACECDNQCCyADQSA2AhwgAyABNgIUIANBmBo2AhAgA0EVNgIMQQAhAgzTAgsgA0ETNgIcIAMgATYCFCADQZgaNgIQIANBFTYCDEEAIQIM0gILIANBCzYCHCADIAE2AhQgA0GYGjYCECADQRU2AgxBACECDNECCyADQRA2AhwgAyABNgIUIANBmBo2AhAgA0EVNgIMQQAhAgzQAgsgA0EgNgIcIAMgATYCFCADQaQcNgIQIANBFTYCDEEAIQIMzwILIANBCzYCHCADIAE2AhQgA0GkHDYCECADQRU2AgxBACECDM4CCyADQQw2AhwgAyABNgIUIANBpBw2AhAgA0EVNgIMQQAhAgzNAgtBACECIANBADYCHCADIAE2AhQgA0HdDjYCECADQRI2AgwMzAILAkADQAJAIAEtAABBCmsOBAACAgACCyAEIAFBAWoiAUcNAAtB/QEhAgzMAgsCQAJAIAMtADZBAUcNAEEAIQACQCADKAI4IgJFDQAgAigCYCICRQ0AIAMgAhEAACEACyAARQ0AIABBFUcNASADQfwBNgIcIAMgATYCFCADQdwZNgIQIANBFTYCDEEAIQIMzQILQdwBIQIMswILIANBADYCHCADIAE2AhQgA0H5CzYCECADQR82AgxBACECDMsCCwJAAkAgAy0AKEEBaw4CBAEAC0HbASECDLICC0HUASECDLECCyADQQI6ADFBACEAAkAgAygCOCICRQ0AIAIoAgAiAkUNACADIAIRAAAhAAsgAEUEQEHdASECDLECCyAAQRVHBEAgA0EANgIcIAMgATYCFCADQbQMNgIQIANBEDYCDEEAIQIMygILIANB+wE2AhwgAyABNgIUIANBgRo2AhAgA0EVNgIMQQAhAgzJAgsgASAERgRAQfoBIQIMyQILIAEtAABByABGDQEgA0EBOgAoC0HAASECDK4CC0HaASECDK0CCyABIARHBEAgA0EMNgIIIAMgATYCBEHZASECDK0CC0H5ASECDMUCCyABIARGBEBB+AEhAgzFAgsgAS0AAEHIAEcNBCABQQFqIQFB2AEhAgyrAgsgASAERgRAQfcBIQIMxAILAkACQCABLQAAQcUAaw4QAAUFBQUFBQUFBQUFBQUFAQULIAFBAWohAUHWASECDKsCCyABQQFqIQFB1wEhAgyqAgtB9gEhAiABIARGDcICIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQbrVAGotAABHDQMgAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADMMCCyADKAIEIQAgA0IANwMAIAMgACAGQQFqIgEQLiIARQRAQeMBIQIMqgILIANB9QE2AhwgAyABNgIUIAMgADYCDEEAIQIMwgILQfQBIQIgASAERg3BAiADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEG41QBqLQAARw0CIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzCAgsgA0GBBDsBKCADKAIEIQAgA0IANwMAIAMgACAGQQFqIgEQLiIADQMMAgsgA0EANgIAC0EAIQIgA0EANgIcIAMgATYCFCADQeUfNgIQIANBCDYCDAy/AgtB1QEhAgylAgsgA0HzATYCHCADIAE2AhQgAyAANgIMQQAhAgy9AgtBACEAAkAgAygCOCICRQ0AIAIoAkAiAkUNACADIAIRAAAhAAsgAEUNbiAAQRVHBEAgA0EANgIcIAMgATYCFCADQYIPNgIQIANBIDYCDEEAIQIMvQILIANBjwE2AhwgAyABNgIUIANB7Bs2AhAgA0EVNgIMQQAhAgy8AgsgASAERwRAIANBDTYCCCADIAE2AgRB0wEhAgyjAgtB8gEhAgy7AgsgASAERgRAQfEBIQIMuwILAkACQAJAIAEtAABByABrDgsAAQgICAgICAgIAggLIAFBAWohAUHQASECDKMCCyABQQFqIQFB0QEhAgyiAgsgAUEBaiEBQdIBIQIMoQILQfABIQIgASAERg25AiADKAIAIgAgBCABa2ohBiABIABrQQJqIQUDQCABLQAAIABBtdUAai0AAEcNBCAAQQJGDQMgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAY2AgAMuQILQe8BIQIgASAERg24AiADKAIAIgAgBCABa2ohBiABIABrQQFqIQUDQCABLQAAIABBs9UAai0AAEcNAyAAQQFGDQIgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAY2AgAMuAILQe4BIQIgASAERg23AiADKAIAIgAgBCABa2ohBiABIABrQQJqIQUDQCABLQAAIABBsNUAai0AAEcNAiAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAY2AgAMtwILIAMoAgQhACADQgA3AwAgAyAAIAVBAWoiARArIgBFDQIgA0HsATYCHCADIAE2AhQgAyAANgIMQQAhAgy2AgsgA0EANgIACyADKAIEIQAgA0EANgIEIAMgACABECsiAEUNnAIgA0HtATYCHCADIAE2AhQgAyAANgIMQQAhAgy0AgtBzwEhAgyaAgtBACEAAkAgAygCOCICRQ0AIAIoAjQiAkUNACADIAIRAAAhAAsCQCAABEAgAEEVRg0BIANBADYCHCADIAE2AhQgA0HqDTYCECADQSY2AgxBACECDLQCC0HOASECDJoCCyADQesBNgIcIAMgATYCFCADQYAbNgIQIANBFTYCDEEAIQIMsgILIAEgBEYEQEHrASECDLICCyABLQAAQS9GBEAgAUEBaiEBDAELIANBADYCHCADIAE2AhQgA0GyODYCECADQQg2AgxBACECDLECC0HNASECDJcCCyABIARHBEAgA0EONgIIIAMgATYCBEHMASECDJcCC0HqASECDK8CCyABIARGBEBB6QEhAgyvAgsgAS0AAEEwayIAQf8BcUEKSQRAIAMgADoAKiABQQFqIQFBywEhAgyWAgsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDZcCIANB6AE2AhwgAyABNgIUIAMgADYCDEEAIQIMrgILIAEgBEYEQEHnASECDK4CCwJAIAEtAABBLkYEQCABQQFqIQEMAQsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDZgCIANB5gE2AhwgAyABNgIUIAMgADYCDEEAIQIMrgILQcoBIQIMlAILIAEgBEYEQEHlASECDK0CC0EAIQBBASEFQQEhB0EAIQICQAJAAkACQAJAAn8CQAJAAkACQAJAAkACQCABLQAAQTBrDgoKCQABAgMEBQYICwtBAgwGC0EDDAULQQQMBAtBBQwDC0EGDAILQQcMAQtBCAshAkEAIQVBACEHDAILQQkhAkEBIQBBACEFQQAhBwwBC0EAIQVBASECCyADIAI6ACsgAUEBaiEBAkACQCADLQAuQRBxDQACQAJAAkAgAy0AKg4DAQACBAsgB0UNAwwCCyAADQEMAgsgBUUNAQsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDQIgA0HiATYCHCADIAE2AhQgAyAANgIMQQAhAgyvAgsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDZoCIANB4wE2AhwgAyABNgIUIAMgADYCDEEAIQIMrgILIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ2YAiADQeQBNgIcIAMgATYCFCADIAA2AgwMrQILQckBIQIMkwILQQAhAAJAIAMoAjgiAkUNACACKAJEIgJFDQAgAyACEQAAIQALAkAgAARAIABBFUYNASADQQA2AhwgAyABNgIUIANBpA02AhAgA0EhNgIMQQAhAgytAgtByAEhAgyTAgsgA0HhATYCHCADIAE2AhQgA0HQGjYCECADQRU2AgxBACECDKsCCyABIARGBEBB4QEhAgyrAgsCQCABLQAAQSBGBEAgA0EAOwE0IAFBAWohAQwBCyADQQA2AhwgAyABNgIUIANBmRE2AhAgA0EJNgIMQQAhAgyrAgtBxwEhAgyRAgsgASAERgRAQeABIQIMqgILAkAgAS0AAEEwa0H/AXEiAkEKSQRAIAFBAWohAQJAIAMvATQiAEGZM0sNACADIABBCmwiADsBNCAAQf7/A3EgAkH//wNzSw0AIAMgACACajsBNAwCC0EAIQIgA0EANgIcIAMgATYCFCADQZUeNgIQIANBDTYCDAyrAgsgA0EANgIcIAMgATYCFCADQZUeNgIQIANBDTYCDEEAIQIMqgILQcYBIQIMkAILIAEgBEYEQEHfASECDKkCCwJAIAEtAABBMGtB/wFxIgJBCkkEQCABQQFqIQECQCADLwE0IgBBmTNLDQAgAyAAQQpsIgA7ATQgAEH+/wNxIAJB//8Dc0sNACADIAAgAmo7ATQMAgtBACECIANBADYCHCADIAE2AhQgA0GVHjYCECADQQ02AgwMqgILIANBADYCHCADIAE2AhQgA0GVHjYCECADQQ02AgxBACECDKkCC0HFASECDI8CCyABIARGBEBB3gEhAgyoAgsCQCABLQAAQTBrQf8BcSICQQpJBEAgAUEBaiEBAkAgAy8BNCIAQZkzSw0AIAMgAEEKbCIAOwE0IABB/v8DcSACQf//A3NLDQAgAyAAIAJqOwE0DAILQQAhAiADQQA2AhwgAyABNgIUIANBlR42AhAgA0ENNgIMDKkCCyADQQA2AhwgAyABNgIUIANBlR42AhAgA0ENNgIMQQAhAgyoAgtBxAEhAgyOAgsgASAERgRAQd0BIQIMpwILAkACQAJAAkAgAS0AAEEKaw4XAgMDAAMDAwMDAwMDAwMDAwMDAwMDAwEDCyABQQFqDAULIAFBAWohAUHDASECDI8CCyABQQFqIQEgA0Evai0AAEEBcQ0IIANBADYCHCADIAE2AhQgA0GNCzYCECADQQ02AgxBACECDKcCCyADQQA2AhwgAyABNgIUIANBjQs2AhAgA0ENNgIMQQAhAgymAgsgASAERwRAIANBDzYCCCADIAE2AgRBASECDI0CC0HcASECDKUCCwJAAkADQAJAIAEtAABBCmsOBAIAAAMACyAEIAFBAWoiAUcNAAtB2wEhAgymAgsgAygCBCEAIANBADYCBCADIAAgARAtIgBFBEAgAUEBaiEBDAQLIANB2gE2AhwgAyAANgIMIAMgAUEBajYCFEEAIQIMpQILIAMoAgQhACADQQA2AgQgAyAAIAEQLSIADQEgAUEBagshAUHBASECDIoCCyADQdkBNgIcIAMgADYCDCADIAFBAWo2AhRBACECDKICC0HCASECDIgCCyADQS9qLQAAQQFxDQEgA0EANgIcIAMgATYCFCADQeQcNgIQIANBGTYCDEEAIQIMoAILIAEgBEYEQEHZASEC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IAFBAWohAUGeASECDOQBCyABQQFqIQFBnwEhAgzjAQtBtwEhAiABIARGDfsBIAMoAgAiACAEIAFraiEFIAEgAGtBA2ohBgJAA0AgAS0AACAAQezUAGotAABHDSggAEEDRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADPwBCyADQQA2AgAgBkEBaiEBQQ0MKAtBtgEhAiABIARGDfoBIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQaHVAGotAABHDScgAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADPsBCyADQQA2AgAgBkEBaiEBQQwMJwtBtQEhAiABIARGDfkBIAMoAgAiACAEIAFraiEFIAEgAGtBAWohBgJAA0AgAS0AACAAQerUAGotAABHDSYgAEEBRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADPoBCyADQQA2AgAgBkEBaiEBQQMMJgtBtAEhAiABIARGDfgBIAMoAgAiACAEIAFraiEFIAEgAGtBAWohBgJAA0AgAS0AACAAQejUAGotAABHDSUgAEEBRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADPkBCyADQQA2AgAgBkEBaiEBQSYMJQsgASAERgRAQbMBIQIM+AELAkACQCABLQAAQdQAaw4CAAEnCyABQQFqIQFBmQEhAgzfAQsgAUEBaiEBQZoBIQIM3gELQbIBIQIgASAERg32ASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEHm1ABqLQAARw0jIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAz3AQsgA0EANgIAIAZBAWohAUEnDCMLQbEBIQIgASAERg31ASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEHk1ABqLQAARw0iIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAz2AQsgA0EANgIAIAZBAWohAUEcDCILQbABIQIgASAERg30ASADKAIAIgAgBCABa2ohBSABIABrQQVqIQYCQANAIAEtAAAgAEHe1ABqLQAARw0hIABBBUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAz1AQsgA0EANgIAIAZBAWohAUEGDCELQa8BIQIgASAERg3zASADKAIAIgAgBCABa2ohBSABIABrQQRqIQYCQANAIAEtAAAgAEHZ1ABqLQAARw0gIABBBEYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAz0AQsgA0EANgIAIAZBAWohAUEZDCALIAEgBEYEQEGuASECDPMBCwJAAkACQAJAIAEtAABBLWsOIwAkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJAEkJCQkJAIkJCQDJAsgAUEBaiEBQY4BIQIM3AELIAFBAWohAUGPASECDNsBCyABQQFqIQFBlAEhAgzaAQsgAUEBaiEBQZUBIQIM2QELQa0BIQIgASAERg3xASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEHX1ABqLQAARw0eIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzyAQsgA0EANgIAIAZBAWohAUELDB4LIAEgBEYEQEGsASECDPEBCwJAAkAgAS0AAEHBAGsOAwAgASALIAFBAWohAUGQASECDNgBCyABQQFqIQFBkwEhAgzXAQsgASAERgRAQasBIQIM8AELAkACQCABLQAAQcEAaw4PAB8fHx8fHx8fHx8fHx8BHwsgAUEBaiEBQZEBIQIM1wELIAFBAWohAUGSASECDNYBCyABIARGBEBBqgEhAgzvAQsgAS0AAEHMAEcNHCABQQFqIQFBCgwbC0GpASECIAEgBEYN7QEgAygCACIAIAQgAWtqIQUgASAAa0EFaiEGAkADQCABLQAAIABB0dQAai0AAEcNGiAAQQVGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM7gELIANBADYCACAGQQFqIQFBHgwaC0GoASECIAEgBEYN7AEgAygCACIAIAQgAWtqIQUgASAAa0EGaiEGAkADQCABLQAAIABBytQAai0AAEcNGSAAQQZGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM7QELIANBADYCACAGQQFqIQFBFQwZC0GnASECIAEgBEYN6wEgAygCACIAIAQgAWtqIQUgASAAa0ECaiEGAkADQCABLQAAIABBx9QAai0AAEcNGCAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM7AELIANBADYCACAGQQFqIQFBFwwYC0GmASECIAEgBEYN6gEgAygCACIAIAQgAWtqIQUgASAAa0EFaiEGAkADQCABLQAAIABBwdQAai0AAEcNFyAAQQVGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM6wELIANBADYCACAGQQFqIQFBGAwXCyABIARGBEBBpQEhAgzqAQsCQAJAIAEtAABByQBrDgcAGRkZGRkBGQsgAUEBaiEBQYsBIQIM0QELIAFBAWohAUGMASECDNABC0GkASECIAEgBEYN6AEgAygCACIAIAQgAWtqIQUgASAAa0EBaiEGAkADQCABLQAAIABBptUAai0AAEcNFSAAQQFGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM6QELIANBADYCACAGQQFqIQFBCQwVC0GjASECIAEgBEYN5wEgAygCACIAIAQgAWtqIQUgASAAa0EBaiEGAkADQCABLQAAIABBpNUAai0AAEcNFCAAQQFGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM6AELIANBADYCACAGQQFqIQFBHwwUC0GiASECIAEgBEYN5gEgAygCACIAIAQgAWtqIQUgASAAa0ECaiEGAkADQCABLQAAIABBvtQAai0AAEcNEyAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM5wELIANBADYCACAGQQFqIQFBAgwTC0GhASECIAEgBEYN5QEgAygCACIAIAQgAWtqIQUgASAAa0EBaiEGA0AgAS0AACAAQbzUAGotAABHDREgAEEBRg0CIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADOUBCyABIARGBEBBoAEhAgzlAQtBASABLQAAQd8ARw0RGiABQQFqIQFBhwEhAgzLAQsgA0EANgIAIAZBAWohAUGIASECDMoBC0GfASECIAEgBEYN4gEgAygCACIAIAQgAWtqIQUgASAAa0EIaiEGAkADQCABLQAAIABBhNUAai0AAEcNDyAAQQhGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM4wELIANBADYCACAGQQFqIQFBKQwPC0GeASECIAEgBEYN4QEgAygCACIAIAQgAWtqIQUgASAAa0EDaiEGAkADQCABLQAAIABBuNQAai0AAEcNDiAAQQNGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM4gELIANBADYCACAGQQFqIQFBLQwOCyABIARGBEBBnQEhAgzhAQsgAS0AAEHFAEcNDiABQQFqIQFBhAEhAgzHAQsgASAERgRAQZwBIQIM4AELAkACQCABLQAAQcwAaw4IAA8PDw8PDwEPCyABQQFqIQFBggEhAgzHAQsgAUEBaiEBQYMBIQIMxgELQZsBIQIgASAERg3eASADKAIAIgAgBCABa2ohBSABIABrQQRqIQYCQANAIAEtAAAgAEGz1ABqLQAARw0LIABBBEYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzfAQsgA0EANgIAIAZBAWohAUEjDAsLQZoBIQIgASAERg3dASADKAIAIgAgBCABa2ohBSABIABrQQJqIQYCQANAIAEtAAAgAEGw1ABqLQAARw0KIABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzeAQsgA0EANgIAIAZBAWohAUEADAoLIAEgBEYEQEGZASECDN0BCwJAAkAgAS0AAEHIAGsOCAAMDAwMDAwBDAsgAUEBaiEBQf0AIQIMxAELIAFBAWohAUGAASECDMMBCyABIARGBEBBmAEhAgzcAQsCQAJAIAEtAABBzgBrDgMACwELCyABQQFqIQFB/gAhAgzDAQsgAUEBaiEBQf8AIQIMwgELIAEgBEYEQEGXASECDNsBCyABLQAAQdkARw0IIAFBAWohAUEIDAcLQZYBIQIgASAERg3ZASADKAIAIgAgBCABa2ohBSABIABrQQNqIQYCQANAIAEtAAAgAEGs1ABqLQAARw0GIABBA0YNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzaAQsgA0EANgIAIAZBAWohAUEFDAYLQZUBIQIgASAERg3YASADKAIAIgAgBCABa2ohBSABIABrQQVqIQYCQANAIAEtAAAgAEGm1ABqLQAARw0FIABBBUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzZAQsgA0EANgIAIAZBAWohAUEWDAULQZQBIQIgASAERg3XASADKAIAIgAgBCABa2ohBSABIABrQQJqIQYCQANAIAEtAAAgAEGh1QBqLQAARw0EIABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzYAQsgA0EANgIAIAZBAWohAUEQDAQLIAEgBEYEQEGTASECDNcBCwJAAkAgAS0AAEHDAGsODAAGBgYGBgYGBgYGAQYLIAFBAWohAUH5ACECDL4BCyABQQFqIQFB+gAhAgy9AQtBkgEhAiABIARGDdUBIAMoAgAiACAEIAFraiEFIAEgAGtBBWohBgJAA0AgAS0AACAAQaDUAGotAABHDQIgAEEFRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADNYBCyADQQA2AgAgBkEBaiEBQSQMAgsgA0EANgIADAILIAEgBEYEQEGRASECDNQBCyABLQAAQcwARw0BIAFBAWohAUETCzoAKSADKAIEIQAgA0EANgIEIAMgACABEC4iAA0CDAELQQAhAiADQQA2AhwgAyABNgIUIANB/h82AhAgA0EGNgIMDNEBC0H4ACECDLcBCyADQZABNgIcIAMgATYCFCADIAA2AgxBACECDM8BC0EAIQACQCADKAI4IgJFDQAgAigCQCICRQ0AIAMgAhEAACEACyAARQ0AIABBFUYNASADQQA2AhwgAyABNgIUIANBgg82AhAgA0EgNgIMQQAhAgzOAQtB9wAhAgy0AQsgA0GPATYCHCADIAE2AhQgA0HsGzYCECADQRU2AgxBACECDMwBCyABIARGBEBBjwEhAgzMAQsCQCABLQAAQSBGBEAgAUEBaiEBDAELIANBADYCHCADIAE2AhQgA0GbHzYCECADQQY2AgxBACECDMwBC0ECIQIMsgELA0AgAS0AAEEgRw0CIAQgAUEBaiIBRw0AC0GOASECDMoBCyABIARGBEBBjQEhAgzKAQsCQCABLQAAQQlrDgRKAABKAAtB9QAhAgywAQsgAy0AKUEFRgRAQfYAIQIMsAELQfQAIQIMrwELIAEgBEYEQEGMASECDMgBCyADQRA2AgggAyABNgIEDAoLIAEgBEYEQEGLASECDMcBCwJAIAEtAABBCWsOBEcAAEcAC0HzACECDK0BCyABIARHBEAgA0EQNgIIIAMgATYCBEHxACECDK0BC0GKASECDMUBCwJAIAEgBEcEQANAIAEtAABBoNAAai0AACIAQQNHBEACQCAAQQFrDgJJAAQLQfAAIQIMrwELIAQgAUEBaiIBRw0AC0GIASEC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BCABQQFqIgFHDQALQfsAIQIMpwELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0DIANB2wA2AhwgAyABNgIUIAMgADYCDEEAIQIMpgELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0DIANB3QA2AhwgAyABNgIUIAMgADYCDEEAIQIMpQELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0DIANB+gA2AhwgAyABNgIUIAMgADYCDEEAIQIMpAELIANBADYCHCADIAE2AhQgA0G8CjYCECADQQc2AgxBACECDKMBC0HPACECDIkBC0HRACECDIgBC0HnACECDIcBCyABIARGBEBB+gAhAgygAQsCQCABLQAAQQlrDgQgAAAgAAsgAUEBaiEBQeYAIQIMhgELIAEgBEYEQEH5ACECDJ8BCwJAIAEtAABBCWsOBB8AAB8AC0EAIQACQCADKAI4IgJFDQAgAigCOCICRQ0AIAMgAhEAACEACyAARQRAQeIBIQIMhgELIABBFUcEQCADQQA2AhwgAyABNgIUIANByQ02AhAgA0EaNgIMQQAhAgyfAQsgA0H4ADYCHCADIAE2AhQgA0HqGjYCECADQRU2AgxBACECDJ4BCyABIARHBEAgA0ENNgIIIAMgATYCBEHkACECDIUBC0H3ACECDJ0BCyABIARGBEBB9gAhAgydAQsCQAJAAkAgAS0AAEHIAGsOCwABCwsLCwsLCwsCCwsgAUEBaiEBQd0AIQIMhQELIAFBAWohAUHgACECDIQBCyABQQFqIQFB4wAhAgyDAQtB9QAhAiABIARGDZsBIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQbXVAGotAABHDQggAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADJwBCyADKAIEIQAgA0IANwMAIAMgACAGQQFqIgEQKyIABEAgA0H0ADYCHCADIAE2AhQgAyAANgIMQQAhAgycAQtB4gAhAgyCAQtBACEAAkAgAygCOCICRQ0AIAIoAjQiAkUNACADIAIRAAAhAAsCQCAABEAgAEEVRg0BIANBADYCHCADIAE2AhQgA0HqDTYCECADQSY2AgxBACECDJwBC0HhACECDIIBCyADQfMANgIcIAMgATYCFCADQYAbNgIQIANBFTYCDEEAIQIMmgELIAMtACkiAEEja0ELSQ0JAkAgAEEGSw0AQQEgAHRBygBxRQ0ADAoLQQAhAiADQQA2AhwgAyABNgIUIANB7Qk2AhAgA0EINgIMDJkBC0HyACECIAEgBEYNmAEgAygCACIAIAQgAWtqIQUgASAAa0EBaiEGAkADQCABLQAAIABBs9UAai0AAEcNBSAAQQFGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAMmQELIAMoAgQhACADQgA3AwAgAyAAIAZBAWoiARArIgAEQCADQfEANgIcIAMgATYCFCADIAA2AgxBACECDJkBC0HfACECDH8LQQAhAAJAIAMoAjgiAkUNACACKAI0IgJFDQAgAyACEQAAIQALAkAgAARAIABBFUYNASADQQA2AhwgAyABNgIUIANB6g02AhAgA0EmNgIMQQAhAgyZAQtB3gAhAgx/CyADQfAANgIcIAMgATYCFCADQYAbNgIQIANBFTYCDEEAIQIMlwELIAMtAClBIUYNBiADQQA2AhwgAyABNgIUIANBkQo2AhAgA0EINgIMQQAhAgyWAQtB7wAhAiABIARGDZUBIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQbDVAGotAABHDQIgAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADJYBCyADKAIEIQAgA0IANwMAIAMgACAGQQFqIgEQKyIARQ0CIANB7QA2AhwgAyABNgIUIAMgADYCDEEAIQIMlQELIANBADYCAAsgAygCBCEAIANBADYCBCADIAAgARArIgBFDYABIANB7gA2AhwgAyABNgIUIAMgADYCDEEAIQIMkwELQdwAIQIMeQtBACEAAkAgAygCOCICRQ0AIAIoAjQiAkUNACADIAIRAAAhAAsCQCAABEAgAEEVRg0BIANBADYCHCADIAE2AhQgA0HqDTYCECADQSY2AgxBACECDJMBC0HbACECDHkLIANB7AA2AhwgAyABNgIUIANBgBs2AhAgA0EVNgIMQQAhAgyRAQsgAy0AKSIAQSNJDQAgAEEuRg0AIANBADYCHCADIAE2AhQgA0HJCTYCECADQQg2AgxBACECDJABC0HaACECDHYLIAEgBEYEQEHrACECDI8BCwJAIAEtAABBL0YEQCABQQFqIQEMAQsgA0EANgIcIAMgATYCFCADQbI4NgIQIANBCDYCDEEAIQIMjwELQdkAIQIMdQsgASAERwRAIANBDjYCCCADIAE2AgRB2AAhAgx1C0HqACECDI0BCyABIARGBEBB6QAhAgyNAQsgAS0AAEEwayIAQf8BcUEKSQRAIAMgADoAKiABQQFqIQFB1wAhAgx0CyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNeiADQegANgIcIAMgATYCFCADIAA2AgxBACECDIwBCyABIARGBEBB5wAhAgyMAQsCQCABLQAAQS5GBEAgAUEBaiEBDAELIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ17IANB5gA2AhwgAyABNgIUIAMgADYCDEEAIQIMjAELQdYAIQIMcgsgASAERgRAQeUAIQIMiwELQQAhAEEBIQVBASEHQQAhAgJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAIAEtAABBMGsOCgoJAAECAwQFBggLC0ECDAYLQQMMBQtBBAwEC0EFDAMLQQYMAgtBBwwBC0EICyECQQAhBUEAIQcMAgtBCSECQQEhAEEAIQVBACEHDAELQQAhBUEBIQILIAMgAjoAKyABQQFqIQECQAJAIAMtAC5BEHENAAJAAkACQCADLQAqDgMBAAIECyAHRQ0DDAILIAANAQwCCyAFRQ0BCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNAiADQeIANgIcIAMgATYCFCADIAA2AgxBACECDI0BCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNfSADQeMANgIcIAMgATYCFCADIAA2AgxBACECDIwBCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNeyADQeQANgIcIAMgATYCFCADIAA2AgwMiwELQdQAIQIMcQsgAy0AKUEiRg2GAUHTACECDHALQQAhAAJAIAMoAjgiAkUNACACKAJEIgJFDQAgAyACEQAAIQALIABFBEBB1QAhAgxwCyAAQRVHBEAgA0EANgIcIAMgATYCFCADQaQNNgIQIANBITYCDEEAIQIMiQELIANB4QA2AhwgAyABNgIUIANB0Bo2AhAgA0EVNgIMQQAhAgyIAQsgASAERgRAQeAAIQIMiAELAkACQAJAAkACQCABLQAAQQprDgQBBAQABAsgAUEBaiEBDAELIAFBAWohASADQS9qLQAAQQFxRQ0BC0HSACECDHALIANBADYCHCADIAE2AhQgA0G2ETYCECADQQk2AgxBACECDIgBCyADQQA2AhwgAyABNgIUIANBthE2AhAgA0EJNgIMQQAhAgyHAQsgASAERgRAQd8AIQIMhwELIAEtAABBCkYEQCABQQFqIQEMCQsgAy0ALkHAAHENCCADQQA2AhwgAyABNgIUIANBthE2AhAgA0ECNgIMQQAhAgyGAQsgASAERgRAQd0AIQIMhgELIAEtAAAiAkENRgRAIAFBAWohAUHQACECDG0LIAEhACACQQlrDgQFAQEFAQsgBCABIgBGBEBB3AAhAgyFAQsgAC0AAEEKRw0AIABBAWoMAgtBACECIANBADYCHCADIAA2AhQgA0HKLTYCECADQQc2AgwMgwELIAEgBEYEQEHbACECDIMBCwJAIAEtAABBCWsOBAMAAAMACyABQQFqCyEBQc4AIQIMaAsgASAERgRAQdoAIQIMgQELIAEtAABBCWsOBAABAQABC0EAIQIgA0EANgIcIANBmhI2AhAgA0EHNgIMIAMgAUEBajYCFAx/CyADQYASOwEqQQAhAAJAIAMoAjgiAkUNACACKAI4IgJFDQAgAyACEQAAIQALIABFDQAgAEEVRw0BIANB2QA2AhwgAyABNgIUIANB6ho2AhAgA0EVNgIMQQAhAgx+C0HNACECDGQLIANBADYCHCADIAE2AhQgA0HJDTYCECADQRo2AgxBACECDHwLIAEgBEYEQEHZACECDHwLIAEtAABBIEcNPSABQQFqIQEgAy0ALkEBcQ09IANBADYCHCADIAE2AhQgA0HCHDYCECADQR42AgxBACECDHsLIAEgBEYEQEHYACECDHsLAkACQAJAAkACQCABLQAAIgBBCmsOBAIDAwABCyABQQFqIQFBLCECDGULIABBOkcNASADQQA2AhwgAyABNgIUIANB5xE2AhAgA0EKNgIMQQAhAgx9CyABQQFqIQEgA0Evai0AAEEBcUUNcyADLQAyQYABcUUEQCADQTJqIQIgAxA1QQAhAAJAIAMoAjgiBkUNACAGKAIoIgZFDQAgAyAGEQAAIQALAkACQCAADhZNTEsBAQEBAQEBAQEBAQEBAQEBAQEAAQsgA0EpNgIcIAMgATYCFCADQawZNgIQIANBFTYCDEEAIQIMfgsg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c3BvbnNlIHN0YXR1cwBFeHBlY3RlZCBMRiBhZnRlciBoZWFkZXJzAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMAVXNlciBjYWxsYmFjayBlcnJvcgBgb25fcmVzZXRgIGNhbGxiYWNrIGVycm9yAGBvbl9jaHVua19oZWFkZXJgIGNhbGxiYWNrIGVycm9yAGBvbl9tZXNzYWdlX2JlZ2luYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX3ZhbHVlYCBjYWxsYmFjayBlcnJvcgBgb25fc3RhdHVzX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fdmVyc2lvbl9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX3VybF9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX3Byb3RvY29sX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9oZWFkZXJfdmFsdWVfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9tZXNzYWdlX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fbWV0aG9kX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25faGVhZGVyX2ZpZWxkX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX25hbWVgIGNhbGxiYWNrIGVycm9yAFVuZXhwZWN0ZWQgY2hhciBpbiB1cmwgc2VydmVyAEludmFsaWQgaGVhZGVyIHZhbHVlIGNoYXIASW52YWxpZCBoZWFkZXIgZmllbGQgY2hhcgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3ZlcnNpb24ASW52YWxpZCBtaW5vciB2ZXJzaW9uAEludmFsaWQgbWFqb3IgdmVyc2lvbgBFeHBlY3RlZCBzcGFjZSBhZnRlciB2ZXJzaW9uAEV4cGVjdGVkIENSTEYgYWZ0ZXIgdmVyc2lvbgBJbnZhbGlkIEhUVFAgdmVyc2lvbgBJbnZhbGlkIGhlYWRlciB0b2tlbgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3VybABJbnZhbGlkIGNoYXJhY3RlcnMgaW4gdXJsAFVuZXhwZWN0ZWQgc3RhcnQgY2hhciBpbiB1cmwARG91YmxlIEAgaW4gdXJsAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fcHJvdG9jb2wARW1wdHkgQ29udGVudC1MZW5ndGgASW52YWxpZCBjaGFyYWN0ZXIgaW4gQ29udGVudC1MZW5ndGgAVHJhbnNmZXItRW5jb2RpbmcgY2FuJ3QgYmUgcHJlc2VudCB3aXRoIENvbnRlbnQtTGVuZ3RoAER1cGxpY2F0ZSBDb250ZW50LUxlbmd0aABJbnZhbGlkIGNoYXIgaW4gdXJsIHBhdGgAQ29udGVudC1MZW5ndGggY2FuJ3QgYmUgcHJlc2VudCB3aXRoIFRyYW5zZmVyLUVuY29kaW5nAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgY2h1bmsgc2l6ZQBFeHBlY3RlZCBMRiBhZnRlciBjaHVuayBzaXplAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIHNpemUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfdmFsdWUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9jaHVua19leHRlbnNpb25fdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyB2YWx1ZQBVbmV4cGVjdGVkIHdoaXRlc3BhY2UgYWZ0ZXIgaGVhZGVyIHZhbHVlAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgaGVhZGVyIHZhbHVlAE1pc3NpbmcgZXhwZWN0ZWQgTEYgYWZ0ZXIgaGVhZGVyIHZhbHVlAEludmFsaWQgYFRyYW5zZmVyLUVuY29kaW5nYCBoZWFkZXIgdmFsdWUATWlzc2luZyBleHBlY3RlZCBDUiBhZnRlciBjaHVuayBleHRlbnNpb24gdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyBxdW90ZSB2YWx1ZQBJbnZhbGlkIHF1b3RlZC1wYWlyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGVkIHZhbHVlAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGVkIHZhbHVlAFBhdXNlZCBieSBvbl9oZWFkZXJzX2NvbXBsZXRlAEludmFsaWQgRU9GIHN0YXRlAG9uX3Jlc2V0IHBhdXNlAG9uX2NodW5rX2hlYWRlciBwYXVzZQBvbl9tZXNzYWdlX2JlZ2luIHBhdXNlAG9uX2NodW5rX2V4dGVuc2lvbl92YWx1ZSBwYXVzZQBvbl9zdGF0dXNfY29tcGxldGUgcGF1c2UAb25fdmVyc2lvbl9jb21wbGV0ZSBwYXVzZQBvbl91cmxfY29tcGxldGUgcGF1c2UAb25fcHJvdG9jb2xfY29tcGxldGUgcGF1c2UAb25fY2h1bmtfY29tcGxldGUgcGF1c2UAb25faGVhZGVyX3ZhbHVlX2NvbXBsZXRlIHBhdXNlAG9uX21lc3NhZ2VfY29tcGxldGUgcGF1c2UAb25fbWV0aG9kX2NvbXBsZXRlIHBhdXNlAG9uX2hlYWRlcl9maWVsZF9jb21wbGV0ZSBwYXVzZQBvbl9jaHVua19leHRlbnNpb25fbmFtZSBwYXVzZQBVbmV4cGVjdGVkIHNwYWNlIGFmdGVyIHN0YXJ0IGxpbmUATWlzc2luZyBleHBlY3RlZCBDUiBhZnRlciByZXNwb25zZSBsaW5lAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fY2h1bmtfZXh0ZW5zaW9uX25hbWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyBuYW1lAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgY2h1bmsgZXh0ZW5zaW9uIG5hbWUASW52YWxpZCBzdGF0dXMgY29kZQBQYXVzZSBvbiBDT05ORUNUL1VwZ3JhZGUAUGF1c2Ugb24gUFJJL1VwZ3JhZGUARXhwZWN0ZWQgSFRUUC8yIENvbm5lY3Rpb24gUHJlZmFjZQBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX21ldGhvZABFeHBlY3RlZCBzcGFjZSBhZnRlciBtZXRob2QAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfZmllbGQAUGF1c2VkAEludmFsaWQgd29yZCBlbmNvdW50ZXJlZABJbnZhbGlkIG1ldGhvZCBlbmNvdW50ZXJlZABNaXNzaW5nIGV4cGVjdGVkIENSIGFmdGVyIGNodW5rIGRhdGEARXhwZWN0ZWQgTEYgYWZ0ZXIgY2h1bmsgZGF0YQBVbmV4cGVjdGVkIGNoYXIgaW4gdXJsIHNjaGVtYQBSZXF1ZXN0IGhhcyBpbnZhbGlkIGBUcmFuc2Zlci1FbmNvZGluZ2AARGF0YSBhZnRlciBgQ29ubmVjdGlvbjogY2xvc2VgAFNXSVRDSF9QUk9YWQBVU0VfUFJPWFkATUtBQ1RJVklUWQBVTlBST0NFU1NBQkxFX0VOVElUWQBRVUVSWQBDT1BZAE1PVkVEX1BFUk1BTkVOVExZAFRPT19FQVJMWQBOT1RJRlkARkFJTEVEX0RFUEVOREVOQ1kAQkFEX0dBVEVXQVkAUExBWQBQVVQAQ0hFQ0tPVVQAR0FURVdBWV9USU1FT1VUAFJFUVVFU1RfVElNRU9VVABORVRXT1JLX0NPTk5FQ1RfVElNRU9VVABDT05ORUNUSU9OX1RJTUVPVVQATE9HSU5fVElNRU9VVABORVRXT1JLX1JFQURfVElNRU9VVABQT1NUAE1JU0RJUkVDVEVEX1JFUVVFU1QAQ0xJRU5UX0NMT1NFRF9SRVFVRVNUAENMSUVOVF9DTE9TRURfTE9BRF9CQUxBTkNFRF9SRVFVRVNUAEJBRF9SRVFVRVNUAEhUVFBfUkVRVUVTVF9TRU5UX1RPX0hUVFBTX1BPUlQAUkVQT1JUAElNX0FfVEVBUE9UAFJFU0VUX0NPTlRFTlQATk9fQ09OVEVOVABQQVJUSUFMX0NPTlRFTlQASFBFX0lOVkFMSURfQ09OU1RBTlQASFBFX0NCX1JFU0VUAEdFVABIUEVfU1RSSUNUAENPTkZMSUNUAFRFTVBPUkFSWV9SRURJUkVDVABQRVJNQU5FTlRfUkVESVJFQ1QAQ09OTkVDVABNVUxUSV9TVEFUVVMASFBFX0lOVkFMSURfU1RBVFVTAFRPT19NQU5ZX1JFUVVFU1RTAEVBUkxZX0hJTlRTAFVOQVZBSUxBQkxFX0ZPUl9MRUdBTF9SRUFTT05TAE9QVElPTlMAU1dJVENISU5HX1BST1RPQ09MUwBWQVJJQU5UX0FMU09fTkVHT1RJQVRFUwBNVUxUSVBMRV9DSE9JQ0VTAElOVEVSTkFMX1NFUlZFUl9FUlJPUgBXRUJfU0VSVkVSX1VOS05PV05fRVJST1IAUkFJTEdVTl9FUlJPUgBJREVOVElUWV9QUk9WSURFUl9BVVRIRU5USUNBVElPTl9FUlJPUgBTU0xfQ0VSVElGSUNBVEVfRVJST1IASU5WQUxJRF9YX0ZPUldBUkRFRF9GT1IAU0VUX1BBUkFNRVRFUgBHRVRfUEFSQU1FVEVSAEhQRV9VU0VSAFNFRV9PVEhFUgBIUEVfQ0JfQ0hVTktfSEVBREVSAEV4cGVjdGVkIExGIGFmdGVyIENSAE1LQ0FMRU5EQVIAU0VUVVAAV0VCX1NFUlZFUl9JU19ET1dOAFRFQVJET1dOAEhQRV9DTE9TRURfQ09OTkVDVElPTgBIRVVSSVNUSUNfRVhQSVJBVElPTgBESVNDT05ORUNURURfT1BFUkFUSU9OAE5PTl9BVVRIT1JJVEFUSVZFX0lORk9STUFUSU9OAEhQRV9JTlZBTElEX1ZFUlNJT04ASFBFX0NCX01FU1NBR0VfQkVHSU4AU0lURV9JU19GUk9aRU4ASFBFX0lOVkFMSURfSEVBREVSX1RPS0VOAElOVkFMSURfVE9LRU4ARk9SQklEREVOAEVOSEFOQ0VfWU9VUl9DQUxNAEhQRV9JTlZBTElEX1VSTABCTE9DS0VEX0JZX1BBUkVOVEFMX0NPTlRST0wATUtDT0wAQUNMAEhQRV9JTlRFUk5BTABSRVFVRVNUX0hFQURFUl9GSUVMRFNfVE9PX0xBUkdFX1VOT0ZGSUNJQUwASFBFX09LAFVOTElOSwBVTkxPQ0sAUFJJAFJFVFJZX1dJVEgASFBFX0lOVkFMSURfQ09OVEVOVF9MRU5HVEgASFBFX1VORVhQRUNURURfQ09OVEVOVF9MRU5HVEgARkxVU0gAUFJPUFBBVENIAE0tU0VBUkNIAFVSSV9UT09fTE9ORwBQUk9DRVNTSU5HAE1JU0NFTExBTkVPVVNfUEVSU0lTVEVOVF9XQVJOSU5HAE1JU0NFTExBTkVPVVNfV0FSTklORwBIUEVfSU5WQUxJRF9UUkFOU0ZFUl9FTkNPRElORwBFeHBlY3RlZCBDUkxGAEhQRV9JTlZBTElEX0NIVU5LX1NJWkUATU9WRQBDT05USU5VRQBIUEVfQ0JfU1RBVFVTX0NPTVBMRVRFAEhQRV9DQl9IRUFERVJTX0NPTVBMRVRFAEhQRV9DQl9WRVJTSU9OX0NPTVBMRVRFAEhQRV9DQl9VUkxfQ09NUExFVEUASFBFX0NCX1BST1RPQ09MX0NPTVBMRVRFAEhQRV9DQl9DSFVOS19DT01QTEVURQBIUEVfQ0JfSEVBREVSX1ZBTFVFX0NPTVBMRVRFAEhQRV9DQl9DSFVOS19FWFRFTlNJT05fVkFMVUVfQ09NUExFVEUASFBFX0NCX0NIVU5LX0VYVEVOU0lPTl9OQU1FX0NPTVBMRVRFAEhQRV9DQl9NRVNTQUdFX0NPTVBMRVRFAEhQRV9DQl9NRVRIT0RfQ09NUExFVEUASFBFX0NCX0hFQURFUl9GSUVMRF9DT01QTEVURQBERUxFVEUASFBFX0lOVkFMSURfRU9GX1NUQVRFAElOVkFMSURfU1NMX0NFUlRJRklDQVRFAFBBVVNFAE5PX1JFU1BPTlNFAFVOU1VQUE9SVEVEX01FRElBX1RZUEUAR09ORQBOT1RfQUNDRVBUQUJMRQBTRVJWSUNFX1VOQVZBSUxBQkxFAFJBTkdFX05PVF9TQVRJU0ZJQUJMRQBPUklHSU5fSVNfVU5SRUFDSEFCTEUAUkVTUE9OU0VfSVNfU1RBTEUAUFVSR0UATUVSR0UAUkVRVUVTVF9IRUFERVJfRklFTERTX1RPT19MQVJHRQBSRVFVRVNUX0hFQURFUl9UT09fTEFSR0UAUEFZTE9BRF9UT09fTEFSR0UASU5TVUZGSUNJRU5UX1NUT1JBR0UASFBFX1BBVVNFRF9VUEdSQURFAEhQRV9QQVVTRURfSDJfVVBHUkFERQBTT1VSQ0UAQU5OT1VOQ0UAVFJBQ0UASFBFX1VORVhQRUNURURfU1BBQ0UAREVTQ1JJQkUAVU5TVUJTQ1JJQkUAUkVDT1JEAEhQRV9JTlZBTElEX01FVEhPRABOT1RfRk9VTkQAUFJPUEZJTkQAVU5CSU5EAFJFQklORABVTkFVVEhPUklaRUQATUVUSE9EX05PVF9BTExPV0VEAEhUVFBfVkVSU0lPTl9OT1RfU1VQUE9SVEVEAEFMUkVBRFlfUkVQT1JURUQAQUNDRVBURUQATk9UX0lNUExFTUVOVEVEAExPT1BfREVURUNURUQASFBFX0NSX0VYUEVDVEVEAEhQRV9MRl9FWFBFQ1RFRABDUkVBVEVEAElNX1VTRUQASFBFX1BBVVNFRABUSU1FT1VUX09DQ1VSRUQAUEFZTUVOVF9SRVFVSVJFRABQUkVDT05ESVRJT05fUkVRVUlSRUQAUFJPWFlfQVVUSEVOVElDQVRJT05fUkVRVUlSRUQATkVUV09SS19BVVRIRU5USUNBVElPTl9SRVFVSVJFRABMRU5HVEhfUkVRVUlSRUQAU1NMX0NFUlRJRklDQVRFX1JFUVVJUkVEAFVQR1JBREVfUkVRVUlSRUQAUEFHRV9FWFBJUkVEAFBSRUNPTkRJVElPTl9GQUlMRUQARVhQRUNUQVRJT05fRkFJTEVEAFJFVkFMSURBVElPTl9GQUlMRUQAU1NMX0hBTkRTSEFLRV9GQUlMRUQATE9DS0VEAFRSQU5TRk9STUFUSU9OX0FQUExJRUQATk9UX01PRElGSUVEAE5PVF9FWFRFTkRFRABCQU5EV0lEVEhfTElNSVRfRVhDRUVERUQAU0lURV9JU19PVkVSTE9BREVEAEhFQUQARXhwZWN0ZWQgSFRUUC8sIFJUU1AvIG9yIElDRS8A5xUAAK8VAACkEgAAkhoAACYWAACeFAAA2xkAAHkVAAB+EgAA/hQAADYVAAALFgAA2BYAAPMSAABCGAAArBYAABIVAAAUFwAA7xcAAEgUAABxFwAAshoAAGsZAAB+GQAANRQAAIIaAABEFwAA/RYAAB4YAACHFwAAqhkAAJMSAAAHGAAALBcAAMoXAACkFwAA5xUAAOcVAABYFwAAOxgAAKASAAAtHAAAwxEAAEgRAADeEgAAQhMAAKQZAAD9EAAA9xUAAKUVAADvFgAA+BkAAEoWAABWFgAA9RUAAAoaAAAIGgAAARoAAKsVAABCEgAA1xAAAEwRAAAFGQAAVBYAAB4RAADKGQAAyBkAAE4WAAD/GAAAcRQAAPAVAADuFQAAlBkAAPwVAAC/GQAAmxkAAHwUAABDEQAAcBgAAJUUAAAnFAAAGRQAANUSAADUGQAARBYAAPcQAEG5OwsBAQBB0DsL4AEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQBBuj0LBAEAAAIAQdE9C14DBAMDAwMDAAADAwADAwADAwMDAwMDAwMDAAUAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAwADAEG6PwsEAQAAAgBB0T8LXgMAAwMDAwMAAAMDAAMDAAMDAwMDAwMDAwMABAAFAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwADAAMAQbDBAAsNbG9zZWVlcC1hbGl2ZQBBycEACwEBAEHgwQAL4AEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQBBycMACwEBAEHgwwAL5wEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAWNodW5rZWQAQfHFAAteAQABAQEBAQAAAQEAAQEAAQEBAQEBAQEBAQAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEAAQBB0McACyFlY3Rpb25lbnQtbGVuZ3Rob25yb3h5LWNvbm5lY3Rpb24AQYDIAAsgcmFuc2Zlci1lbmNvZGluZ3BncmFkZQ0KDQpTTQ0KDQoAQanIAAsFAQIAAQMAQcDIAAtfBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAQanKAAsFAQIAAQMAQcDKAAtfBAUFBgUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAQanMAAsEAQAAAQBBwcwAC14CAgACAgICAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAEGpzgALBQECAAEDAEHAzgALXwQFAAAFBQUFBQUFBQUFBQYFBQUFBQUFBQUFBQUABQAHCAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQAFAAUABQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAAAAFAEGp0AALBQEBAAEBAEHA0AALAQEAQdrQAAtBAgAAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAQanSAAsFAQEAAQEAQcDSAAsBAQBBytIACwYCAAAAAAIAQeHSAAs6AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwBBoNQAC50BTk9VTkNFRUNLT1VUTkVDVEVURUNSSUJFTFVTSEVURUFEU0VBUkNIUkdFQ1RJVklUWUxFTkRBUlZFT1RJRllQVElPTlNDSFNFQVlTVEFUQ0hHRVVFUllPUkRJUkVDVE9SVFJDSFBBUkFNRVRFUlVSQ0VCU0NSSUJFQVJET1dOQUNFSU5ETktDS1VCU0NSSUJFVFRQQ0VUU1BBRFRQLw==";
@@ -50098,9 +50098,9 @@ var require_llhttp_wasm = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/llhttp_simd-wasm.js
+// ../../../server/node_modules/undici/lib/llhttp/llhttp_simd-wasm.js
 var require_llhttp_simd_wasm = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/llhttp/llhttp_simd-wasm.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/llhttp/llhttp_simd-wasm.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer4 } = __require("node:buffer");
     var wasmBase64 = "AGFzbQEAAAABJwdgAX8Bf2ADf39/AX9gAn9/AGABfwBgBH9/f38Bf2AAAGADf39/AALLAQgDZW52GHdhc21fb25faGVhZGVyc19jb21wbGV0ZQAEA2VudhV3YXNtX29uX21lc3NhZ2VfYmVnaW4AAANlbnYLd2FzbV9vbl91cmwAAQNlbnYOd2FzbV9vbl9zdGF0dXMAAQNlbnYUd2FzbV9vbl9oZWFkZXJfZmllbGQAAQNlbnYUd2FzbV9vbl9oZWFkZXJfdmFsdWUAAQNlbnYMd2FzbV9vbl9ib2R5AAEDZW52GHdhc21fb25fbWVzc2FnZV9jb21wbGV0ZQAAAzU0BQYAAAMAAAAAAAADAQMAAwMDAAACAAAAAAICAgICAgICAgIBAQEBAQEBAQEBAwAAAwAAAAQFAXABExMFAwEAAgYIAX8BQcDZBAsHxQcoBm1lbW9yeQIAC19pbml0aWFsaXplAAgZX19pbmRpcmVjdF9mdW5jdGlvbl90YWJsZQEAC2xsaHR0cF9pbml0AAkYbGxodHRwX3Nob3VsZF9rZWVwX2FsaXZlADcMbGxodHRwX2FsbG9jAAsGbWFsbG9jADkLbGxodHRwX2ZyZWUADARmcmVlAAwPbGxodHRwX2dldF90eXBlAA0VbGxodHRwX2dldF9odHRwX21ham9yAA4VbGxodHRwX2dldF9odHRwX21pbm9yAA8RbGxodHRwX2dldF9tZXRob2QAEBZsbGh0dHBfZ2V0X3N0YXR1c19jb2RlABESbGxodHRwX2dldF91cGdyYWRlABIMbGxodHRwX3Jlc2V0ABMObGxodHRwX2V4ZWN1dGUAFBRsbGh0dHBfc2V0dGluZ3NfaW5pdAAVDWxsaHR0cF9maW5pc2gAFgxsbGh0dHBfcGF1c2UAFw1sbGh0dHBfcmVzdW1lABgbbGxodHRwX3Jlc3VtZV9hZnRlcl91cGdyYWRlABkQbGxodHRwX2dldF9lcnJubwAaF2xsaHR0cF9nZXRfZXJyb3JfcmVhc29uABsXbGxodHRwX3NldF9lcnJvcl9yZWFzb24AHBRsbGh0dHBfZ2V0X2Vycm9yX3BvcwAdEWxsaHR0cF9lcnJub19uYW1lAB4SbGxodHRwX21ldGhvZF9uYW1lAB8SbGxodHRwX3N0YXR1c19uYW1lACAabGxodHRw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AXRrQT5qIQILIAEgAjYCHCABQgA3AhAgAkECdEH01wBqIQACQEHI1QAoAgAiA0EBIAJ0IgdxRQRAIAAgATYCAEHI1QAgAyAHcjYCACABIAA2AhggASABNgIIIAEgATYCDAwBCyAEQRkgAkEBdmtBACACQR9HG3QhAiAAKAIAIQACQANAIAAiAygCBEF4cSAERg0BIAJBHXYhACACQQF0IQIgAyAAQQRxakEQaiIHKAIAIgANAAsgByABNgIAIAEgAzYCGCABIAE2AgwgASABNgIIDAELIAMoAggiACABNgIMIAMgATYCCCABQQA2AhggASADNgIMIAEgADYCCAtB5NUAQeTVACgCAEEBayIAQX8gABs2AgALCwcAIAAtACgLBwAgAC0AKgsHACAALQArCwcAIAAtACkLBwAgAC8BNAsHACAALQAwC0ABBH8gACgCGCEBIAAvAS4hAiAALQAoIQMgACgCOCEEIAAQOCAAIAQ2AjggACADOgAoIAAgAjsBLiAAIAE2AhgLhocCAwd/A34BeyABIAJqIQQCQCAAIgMoAgwiAA0AIAMoAgQEQCADIAE2AgQLIwBBEGsiCSQAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAC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DAgLQeMBDAcLQdcBDAYLQdgBDAULQdkBDAQLQdoBDAMLQdsBDAILQd0BDAELQdwBCyECA0ACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAIAMCfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAAn8CQAJAAkACfwJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAgAwJ/AkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJ/AkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQCACDuMBAAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISMkJScoKZ4DmwOaA5EDigODA4AD/QL7AvgC8gLxAu8C7QLoAucC5gLlAuQC3ALbAtoC2QLYAtcC1gLVAs8CzgLMAssCygLJAsgCxwLGAsQCwwK+ArwCugK5ArgCtwK2ArUCtAKzArICsQKwAq4CrQKpAqgCpwKmAqUCpAKjAqICoQKgAp8CmAKQAowCiwKKAoEC/gH9AfwB+wH6AfkB+AH3AfUB8wHwAesB6QHoAecB5gHlAeQB4wHiAeEB4AHfAd4B3QHcAdoB2QHYAdcB1gHVAdQB0wHSAdEB0AHPAc4BzQHMAcsBygHJAcgBxwHGAcUBxAHDAcIBwQHAAb8BvgG9AbwBuwG6AbkBuAG3AbYBtQG0AbMBsgGxAbABrwGuAa0BrAGrAaoBqQGoAacBpgGlAaQBowGiAZ8BngGZAZgBlwGWAZUBlAGTAZIBkQGQAY8BjQGMAYcBhgGFAYQBgwGCAX18e3p5dnV0UFFSU1RVCyABIARHDXJB/QEhAgy+AwsgASAERw2YAUHbASECDL0DCyABIARHDfEBQY4BIQIMvAMLIAEgBEcN/AFBhAEhAgy7AwsgASAERw2KAkH/ACECDLoDCyABIARHDZECQf0AIQIMuQMLIAEgBEcNlAJB+wAhAgy4AwsgASAERw0eQR4hAgy3AwsgASAERw0ZQRghAgy2AwsgASAERw3KAkHNACECDLUDCyABIARHDdUCQcYAIQIMtAMLIAEgBEcN1gJBwwAhAgyzAwsgASAERw3cAkE4IQIMsgMLIAMtADBBAUYNrQMMiQMLQQAhAAJAAkACQCADLQAqRQ0AIAMtACtFDQAgAy8BMiICQQJxRQ0BDAILIAMvATIiAkEBcUUNAQtBASEAIAMtAChBAUYNACADLwE0IgZB5ABrQeQASQ0AIAZBzAFGDQAgBkGwAkYNACACQcAAcQ0AQQAhACACQYgEcUGABEYNACACQShxQQBHIQALIANBADsBMiADQQA6ADECQCAARQRAIANBADoAMSADLQAuQQRxDQEMsQMLIANCADcDIAsgA0EAOgAxIANBAToANgxIC0EAIQACQCADKAI4IgJFDQAgAigCMCICRQ0AIAMgAhEAACEACyAARQ1IIABBFUcNYiADQQQ2AhwgAyABNgIUIANB0hs2AhAgA0EVNgIMQQAhAgyvAwsgASAERgRAQQYhAgyvAwsgAS0AAEEKRw0ZIAFBAWohAQwaCyADQgA3AyBBEiECDJQDCyABIARHDYoDQSMhAgysAwsgASAERgRAQQchAgysAwsCQAJAIAEtAABBCmsOBAEYGAAYCyABQQFqIQFBECECDJMDCyABQQFqIQEgA0Evai0AAEEBcQ0XQQAhAiADQQA2AhwgAyABNgIUIANBmSA2AhAgA0EZNgIMDKsDCyADIAMpAyAiDCAEIAFrrSIKfSILQgAgCyAMWBs3AyAgCiAMWg0YQQghAgyqAwsgASAERwRAIANBCTYCCCADIAE2AgRBFCECDJEDC0EJIQIMqQMLIAMpAyBQDa4CDEMLIAEgBEYEQEELIQIMqAMLIAEtAABBCkcNFiABQQFqIQEMFwsgA0Evai0AAEEBcUUNGQwmC0EAIQACQCADKAI4IgJFDQAgAigCUCICRQ0AIAMgAhEAACEACyAADRkMQgtBACEAAkAgAygCOCICRQ0AIAIoAlAiAkUNACADIAIRAAAhAAsgAA0aDCQLQQAhAAJAIAMoAjgiAkUNACACKAJQIgJFDQAgAyACEQAAIQALIAANGwwyCyADQS9qLQAAQQFxRQ0cDCILQQAhAAJAIAMoAjgiAkUNACACKAJUIgJFDQAgAyACEQAAIQALIAANHAxCC0EAIQACQCADKAI4IgJFDQAgAigCVCICRQ0AIAMgAhEAACEACyAADR0MIAsgASAERgRAQRMhAgygAwsCQCABLQAAIgBBCmsOBB8jIwAiCyABQQFqIQEMHwtBACEAAkAgAygCOCICRQ0AIAIoAlQiAkUNACADIAIRAAAhAAsgAA0iDEILIAEgBEYEQEEWIQIMngMLIAEtAABBwMEAai0AAEEBRw0jDIMDCwJAA0AgAS0AAEGwO2otAAAiAEEBRwRAAkAgAEECaw4CAwAnCyABQQFqIQFBISECDIYDCyAEIAFBAWoiAUcNAAtBGCECDJ0DCyADKAIEIQBBACECIANBADYCBCADIAAgAUEBaiIBEDQiAA0hDEELQQAhAAJAIAMoAjgiAkUNACACKAJUIgJFDQAgAyACEQAAIQALIAANIwwqCyABIARGBEBBHCECDJsDCyADQQo2AgggAyABNgIEQQAhAAJAIAMoAjgiAkUNACACKAJQIgJFDQAgAyACEQAAIQALIAANJUEkIQIMgQMLIAEgBEcEQANAIAEtAABBsD1qLQAAIgBBA0cEQCAAQQFrDgUYGiaCAyUmCyAEIAFBAWoiAUcNAAtBGyECDJoDC0EbIQIMmQMLA0AgAS0AAEGwP2otAAAiAEEDRwRAIABBAWsOBQ8RJxMmJwsgBCABQQFqIgFHDQALQR4hAgyYAwsgASAERwRAIANBCzYCCCADIAE2AgRBByECDP8CC0EfIQIMlwMLIAEgBEYEQEEgIQIMlwMLAkAgAS0AAEENaw4ULj8/Pz8/Pz8/Pz8/Pz8/Pz8/PwA/C0EAIQIgA0EANgIcIANBvws2AhAgA0ECNgIMIAMgAUEBajYCFAyWAwsgA0EvaiECA0AgASAERgRAQSEhAgyXAwsCQAJAAkAgAS0AACIAQQlrDhgCACkpASkpKSkpKSkpKSkpKSkpKSkpKQInCyABQQFqIQEgA0Evai0AAEEBcUUNCgwYCyABQQFqIQEMFwsgAUEBaiEBIAItAABBAnENAAtBACECIANBADYCHCADIAE2AhQgA0GfFTYCECADQQw2AgwMlQMLIAMtAC5BgAFxRQ0BC0EAIQACQCADKAI4IgJFDQAgAigCXCICRQ0AIAMgAhEAACEACyAARQ3mAiAAQRVGBEAgA0EkNgIcIAMgATYCFCADQZsbNgIQIANBFTYCDEEAIQIMlAMLQQAhAiADQQA2AhwgAyABNgIUIANBkA42AhAgA0EUNgIMDJMDC0EAIQIgA0EANgIcIAMgATYCFCADQb4gNgIQIANBAjYCDAySAwsgAygCBCEAQQAhAiADQQA2AgQgAyAAIAEgDKdqIgEQMiIARQ0rIANBBzYCHCADIAE2AhQgAyAANgIMDJEDCyADLQAuQcAAcUUNAQtBACEAAkAgAygCOCICRQ0AIAIoAlgiAkUNACADIAIRAAAhAAsgAEUNKyAAQRVGBEAgA0EKNgIcIAMgATYCFCADQesZNgIQIANBFTYCDEEAIQIMkAMLQQAhAiADQQA2AhwgAyABNgIUIANBkww2AhAgA0ETNgIMDI8DC0EAIQIgA0EANgIcIAMgATYCFCADQYIVNgIQIANBAjYCDAyOAwtBACECIANBADYCHCADIAE2AhQgA0HdFDYCECADQRk2AgwMjQMLQQAhAiADQQA2AhwgAyABNgIUIANB5h02AhAgA0EZNgIMDIwDCyAAQRVGDT1BACECIANBADYCHCADIAE2AhQgA0HQDzYCECADQSI2AgwMiwMLIAMoAgQhAEEAIQIgA0EANgIEIAMgACABEDMiAEUNKCADQQ02AhwgAyABNgIUIAMgADYCDAyKAwsgAEEVRg06QQAhAiADQQA2AhwgAyABNgIUIANB0A82AhAgA0EiNgIMDIkDCyADKAIEIQBBACECIANBADYCBCADIAAgARAzIgBFBEAgAUEBaiEBDCgLIANBDjYCHCADIAA2AgwgAyABQQFqNgIUDIgDCyAAQRVGDTdBACECIANBADYCHCADIAE2AhQgA0HQDzYCECADQSI2AgwMhwMLIAMoAgQhAEEAIQIgA0EANgIEIAMgACABEDMiAEUEQCABQQFqIQEMJwsgA0EPNgIcIAMgADYCDCADIAFBAWo2AhQMhgMLQQAhAiADQQA2AhwgAyABNgIUIANB4hc2AhAgA0EZNgIMDIUDCyAAQRVGDTNBACECIANBADYCHCADIAE2AhQgA0HWDDYCECADQSM2AgwMhAMLIAMoAgQhAEEAIQIgA0EANgIEIAMgACABEDQiAEUNJSADQRE2AhwgAyABNgIUIAMgADYCDAyDAwsgAEEVRg0wQQAhAiADQQA2AhwgAyABNgIUIANB1gw2AhAgA0EjNgIMDIIDCyADKAIEIQBBACECIANBADYCBCADIAAgARA0IgBFBEAgAUEBaiEBDCULIANBEjYCHCADIAA2AgwgAyABQQFqNgIUDIEDCyADQS9qLQAAQQFxRQ0BC0EXIQIM5gILQQAhAiADQQA2AhwgAyABNgIUIANB4hc2AhAgA0EZNgIMDP4CCyAAQTtHDQAgAUEBaiEBDAwLQQAhAiADQQA2AhwgAyABNgIUIANBkhg2AhAgA0ECNgIMDPwCCyAAQRVGDShBACECIANBADYCHCADIAE2AhQgA0HWDDYCECADQSM2AgwM+wILIANBFDYCHCADIAE2AhQgAyAANgIMDPoCCyADKAIEIQBBACECIANBADYCBCADIAAgARA0IgBFBEAgAUEBaiEBDPUCCyADQRU2AhwgAyAANgIMIAMgAUEBajYCFAz5AgsgAygCBCEAQQAhAiADQQA2AgQgAyAAIAEQNCIARQRAIAFBAWohAQzzAgsgA0EXNgIcIAMgADYCDCADIAFBAWo2AhQM+AILIABBFUYNI0EAIQIgA0EANgIcIAMgATYCFCADQdYMNgIQIANBIzYCDAz3AgsgAygCBCEAQQAhAiADQQA2AgQgAyAAIAEQNCIARQRAIAFBAWohAQwdCyADQRk2AhwgAyAANgIMIAMgAUEBajYCFAz2AgsgAygCBCEAQQAhAiADQQA2AgQgAyAAIAEQNCIARQRAIAFBAWohAQzvAgsgA0EaNgIcIAMgADYCDCADIAFBAWo2AhQM9QILIABBFUYNH0EAIQIgA0EANgIcIAMgATYCFCADQdAPNgIQIANBIjYCDAz0AgsgAygCBCEAIANBADYCBCADIAAgARAzIgBFBEAgAUEBaiEBDBsLIANBHDYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgzzAgsgAygCBCEAIANBADYCBCADIAAgARAzIgBFBEAgAUEBaiEBDOsCCyADQR02AhwgAyAANgIMIAMgAUEBajYCFEEAIQIM8gILIABBO0cNASABQQFqIQELQSYhAgzXAgtBACECIANBADYCHCADIAE2AhQgA0GfFTYCECADQQw2AgwM7wILIAEgBEcEQANAIAEtAABBIEcNhAIgBCABQQFqIgFHDQALQSwhAgzvAgtBLCECDO4CCyABIARGBEBBNCECDO4CCwJAAkADQAJAIAEtAABBCmsOBAIAAAMACyAEIAFBAWoiAUcNAAtBNCECDO8CCyADKAIEIQAgA0EANgIEIAMgACABEDEiAEUNnwIgA0EyNgIcIAMgATYCFCADIAA2AgxBACECDO4CCyADKAIEIQAgA0EANgIEIAMgACABEDEiAEUEQCABQQFqIQEMnwILIANBMjYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgztAgsgASAERwRAAkADQCABLQAAQTBrIgBB/wFxQQpPBEBBOiECDNcCCyADKQMgIgtCmbPmzJmz5swZVg0BIAMgC0IKfiIKNwMgIAogAK1C/wGDIgtCf4VWDQEgAyAKIAt8NwMgIAQgAUEBaiIBRw0AC0HAACECDO4CCyADKAIEIQAgA0EANgIEIAMgACABQQFqIgEQMSIADRcM4gILQcAAIQIM7AILIAEgBEYEQEHJACECDOwCCwJAA0ACQCABLQAAQQlrDhgAAqICogKpAqICogKiAqICogKiAqICogKiAqICogKiAqICogKiAqICogKiAgCiAgsgBCABQQFqIgFHDQALQckAIQIM7AILIAFBAWohASADQS9qLQAAQQFxDaUCIANBADYCHCADIAE2AhQgA0GXEDYCECADQQo2AgxBACECDOsCCyABIARHBEADQCABLQAAQSBHDRUgBCABQQFqIgFHDQALQfgAIQIM6wILQfgAIQIM6gILIANBAjoAKAw4C0EAIQIgA0EANgIcIANBvws2AhAgA0ECNgIMIAMgAUEBajYCFAzoAgtBACECDM4CC0ENIQIMzQILQRMhAgzMAgtBFSECDMsCC0EWIQIMygILQRghAgzJAgtBGSECDMgCC0EaIQIMxwILQRshAgzGAgtBHCECDMUCC0EdIQIMxAILQR4hAgzDAgtBHyECDMICC0EgIQIMwQILQSIhAgzAAgtBIyECDL8CC0ElIQIMvgILQeUAIQIMvQILIANBPTYCHCADIAE2AhQgAyAANgIMQQAhAgzVAgsgA0EbNgIcIAMgATYCFCADQaQcNgIQIANBFTYCDEEAIQIM1AILIANBIDYCHCADIAE2AhQgA0GYGjYCECADQRU2AgxBACECDNMCCyADQRM2AhwgAyABNgIUIANBmBo2AhAgA0EVNgIMQQAhAgzSAgsgA0ELNgIcIAMgATYCFCADQZgaNgIQIANBFTYCDEEAIQIM0QILIANBEDYCHCADIAE2AhQgA0GYGjYCECADQRU2AgxBACECDNACCyADQSA2AhwgAyABNgIUIANBpBw2AhAgA0EVNgIMQQAhAgzPAgsgA0ELNgIcIAMgATYCFCADQaQcNgIQIANBFTYCDEEAIQIMzgILIANBDDYCHCADIAE2AhQgA0GkHDYCECADQRU2AgxBACECDM0CC0EAIQIgA0EANgIcIAMgATYCFCADQd0ONgIQIANBEjYCDAzMAgsCQANAAkAgAS0AAEEKaw4EAAICAAILIAQgAUEBaiIBRw0AC0H9ASECDMwCCwJAAkAgAy0ANkEBRw0AQQAhAAJAIAMoAjgiAkUNACACKAJgIgJFDQAgAyACEQAAIQALIABFDQAgAEEVRw0BIANB/AE2AhwgAyABNgIUIANB3Bk2AhAgA0EVNgIMQQAhAgzNAgtB3AEhAgyzAgsgA0EANgIcIAMgATYCFCADQfkLNgIQIANBHzYCDEEAIQIMywILAkACQCADLQAoQQFrDgIEAQALQdsBIQIMsgILQdQBIQIMsQILIANBAjoAMUEAIQACQCADKAI4IgJFDQAgAigCACICRQ0AIAMgAhEAACEACyAARQRAQd0BIQIMsQILIABBFUcEQCADQQA2AhwgAyABNgIUIANBtAw2AhAgA0EQNgIMQQAhAgzKAgsgA0H7ATYCHCADIAE2AhQgA0GBGjYCECADQRU2AgxBACECDMkCCyABIARGBEBB+gEhAgzJAgsgAS0AAEHIAEYNASADQQE6ACgLQcABIQIMrgILQdoBIQIMrQILIAEgBEcEQCADQQw2AgggAyABNgIEQdkBIQIMrQILQfkBIQIMxQILIAEgBEYEQEH4ASECDMUCCyABLQAAQcgARw0EIAFBAWohAUHYASECDKsCCyABIARGBEBB9wEhAgzEAgsCQAJAIAEtAABBxQBrDhAABQUFBQUFBQUFBQUFBQUBBQsgAUEBaiEBQdYBIQIMqwILIAFBAWohAUHXASECDKoCC0H2ASECIAEgBEYNwgIgAygCACIAIAQgAWtqIQUgASAAa0ECaiEGAkADQCABLQAAIABButUAai0AAEcNAyAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAMwwILIAMoAgQhACADQgA3AwAgAyAAIAZBAWoiARAuIgBFBEBB4wEhAgyqAgsgA0H1ATYCHCADIAE2AhQgAyAANgIMQQAhAgzCAgtB9AEhAiABIARGDcECIAMoAgAiACAEIAFraiEFIAEgAGtBAWohBgJAA0AgAS0AACAAQbjVAGotAABHDQIgAEEBRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADMICCyADQYEEOwEoIAMoAgQhACADQgA3AwAgAyAAIAZBAWoiARAuIgANAwwCCyADQQA2AgALQQAhAiADQQA2AhwgAyABNgIUIANB5R82AhAgA0EINgIMDL8CC0HVASECDKUCCyADQfMBNgIcIAMgATYCFCADIAA2AgxBACECDL0CC0EAIQACQCADKAI4IgJFDQAgAigCQCICRQ0AIAMgAhEAACEACyAARQ1uIABBFUcEQCADQQA2AhwgAyABNgIUIANBgg82AhAgA0EgNgIMQQAhAgy9AgsgA0GPATYCHCADIAE2AhQgA0HsGzYCECADQRU2AgxBACECDLwCCyABIARHBEAgA0ENNgIIIAMgATYCBEHTASECDKMCC0HyASECDLsCCyABIARGBEBB8QEhAgy7AgsCQAJAAkAgAS0AAEHIAGsOCwABCAgICAgICAgCCAsgAUEBaiEBQdABIQIMowILIAFBAWohAUHRASECDKICCyABQQFqIQFB0gEhAgyhAgtB8AEhAiABIARGDbkCIAMoAgAiACAEIAFraiEGIAEgAGtBAmohBQNAIAEtAAAgAEG11QBqLQAARw0EIABBAkYNAyAAQQFqIQAgBCABQQFqIgFHDQALIAMgBjYCAAy5AgtB7wEhAiABIARGDbgCIAMoAgAiACAEIAFraiEGIAEgAGtBAWohBQNAIAEtAAAgAEGz1QBqLQAARw0DIABBAUYNAiAAQQFqIQAgBCABQQFqIgFHDQALIAMgBjYCAAy4AgtB7gEhAiABIARGDbcCIAMoAgAiACAEIAFraiEGIAEgAGtBAmohBQNAIAEtAAAgAEGw1QBqLQAARw0CIABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBjYCAAy3AgsgAygCBCEAIANCADcDACADIAAgBUEBaiIBECsiAEUNAiADQewBNgIcIAMgATYCFCADIAA2AgxBACECDLYCCyADQQA2AgALIAMoAgQhACADQQA2AgQgAyAAIAEQKyIARQ2cAiADQe0BNgIcIAMgATYCFCADIAA2AgxBACECDLQCC0HPASECDJoCC0EAIQACQCADKAI4IgJFDQAgAigCNCICRQ0AIAMgAhEAACEACwJAIAAEQCAAQRVGDQEgA0EANgIcIAMgATYCFCADQeoNNgIQIANBJjYCDEEAIQIMtAILQc4BIQIMmgILIANB6wE2AhwgAyABNgIUIANBgBs2AhAgA0EVNgIMQQAhAgyyAgsgASAERgRAQesBIQIMsgILIAEtAABBL0YEQCABQQFqIQEMAQsgA0EANgIcIAMgATYCFCADQbI4NgIQIANBCDYCDEEAIQIMsQILQc0BIQIMlwILIAEgBEcEQCADQQ42AgggAyABNgIEQcwBIQIMlwILQeoBIQIMrwILIAEgBEYEQEHpASECDK8CCyABLQAAQTBrIgBB/wFxQQpJBEAgAyAAOgAqIAFBAWohAUHLASECDJYCCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNlwIgA0HoATYCHCADIAE2AhQgAyAANgIMQQAhAgyuAgsgASAERgRAQecBIQIMrgILAkAgAS0AAEEuRgRAIAFBAWohAQwBCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNmAIgA0HmATYCHCADIAE2AhQgAyAANgIMQQAhAgyuAgtBygEhAgyUAgsgASAERgRAQeUBIQIMrQILQQAhAEEBIQVBASEHQQAhAgJAAkACQAJAAkACfwJAAkACQAJAAkACQAJAIAEtAABBMGsOCgoJAAECAwQFBggLC0ECDAYLQQMMBQtBBAwEC0EFDAMLQQYMAgtBBwwBC0EICyECQQAhBUEAIQcMAgtBCSECQQEhAEEAIQVBACEHDAELQQAhBUEBIQILIAMgAjoAKyABQQFqIQECQAJAIAMtAC5BEHENAAJAAkACQCADLQAqDgMBAAIECyAHRQ0DDAILIAANAQwCCyAFRQ0BCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNAiADQeIBNgIcIAMgATYCFCADIAA2AgxBACECDK8CCyADKAIEIQAgA0EANgIEIAMgACABEC8iAEUNmgIgA0HjATYCHCADIAE2AhQgAyAANgIMQQAhAgyuAgsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDZgCIANB5AE2AhwgAyABNgIUIAMgADYCDAytAgtByQEhAgyTAgtBACEAAkAgAygCOCICRQ0AIAIoAkQiAkUNACADIAIRAAAhAAsCQCAABEAgAEEVRg0BIANBADYCHCADIAE2AhQgA0GkDTYCECADQSE2AgxBACECDK0CC0HIASECDJMCCyADQeEBNgIcIAMgATYCFCADQdAaNgIQIANBFTYCDEEAIQIMqwILIAEgBEYEQEHhASECDKsCCwJAIAEtAABBIEYEQCADQQA7ATQgAUEBaiEBDAELIANBADYCHCADIAE2AhQgA0GZETYCECADQQk2AgxBACECDKsCC0HHASECDJECCyABIARGBEBB4AEhAgyqAgsCQCABLQAAQTBrQf8BcSICQQpJBEAgAUEBaiEBAkAgAy8BNCIAQZkzSw0AIAMgAEEKbCIAOwE0IABB/v8DcSACQf//A3NLDQAgAyAAIAJqOwE0DAILQQAhAiADQQA2AhwgAyABNgIUIANBlR42AhAgA0ENNgIMDKsCCyADQQA2AhwgAyABNgIUIANBlR42AhAgA0ENNgIMQQAhAgyqAgtBxgEhAgyQAgsgASAERgRAQd8BIQIMqQILAkAgAS0AAEEwa0H/AXEiAkEKSQRAIAFBAWohAQJAIAMvATQiAEGZM0sNACADIABBCmwiADsBNCAAQf7/A3EgAkH//wNzSw0AIAMgACACajsBNAwCC0EAIQIgA0EANgIcIAMgATYCFCADQZUeNgIQIANBDTYCDAyqAgsgA0EANgIcIAMgATYCFCADQZUeNgIQIANBDTYCDEEAIQIMqQILQcUBIQIMjwILIAEgBEYEQEHeASECDKgCCwJAIAEtAABBMGtB/wFxIgJBCkkEQCABQQFqIQECQCADLwE0IgBBmTNLDQAgAyAAQQpsIgA7ATQgAEH+/wNxIAJB//8Dc0sNACADIAAgAmo7ATQMAgtBACECIANBADYCHCADIAE2AhQgA0GVHjYCECADQQ02AgwMqQILIANBADYCHCADIAE2AhQgA0GVHjYCECADQQ02AgxBACECDKgCC0HEASECDI4CCyABIARGBEBB3QEhAgynAgsCQAJAAkACQCABLQAAQQprDhcCAwMAAwMDAwMDAwMDAwMDAwMDAwMDAQMLIAFBAWoMBQsgAUEBaiEBQcMBIQIMjwILIAFBAWohASADQS9qLQAAQQFxDQggA0EANgIcIAMgATYCFCADQY0LNgIQIANBDTYCDEEAIQIMpwILIANBADYCHCADIAE2AhQgA0GNCzYCECADQQ02AgxBACECDKYCCyABIARHBEAgA0EPNgIIIAMgATYCBEEBIQIMjQILQdwBIQIMpQILAkACQANAAkAgAS0AAEEKaw4EAgAAAwALIAQgAUEBaiIBRw0AC0HbASECDKYCCyADKAIEIQAgA0EANgIEIAMgACABEC0iAEUEQCABQQFqIQEMBAsgA0HaATYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgylAgsgAygCBCEAIANBADYCBCADIAAgARAtIgANASABQQFqCyEBQcEBIQIMigILIANB2QE2AhwgAyAANgIMIAMgAUEBajYCFEEAIQIMogILQcIBIQIMiAILIANBL2otAABBAXENASADQQA2AhwgAyABNgIUIANB5Bw2AhAgA0EZNgIMQQAhAgygAgsgASAERgRAQdkB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CyADIAU2AgAMkAILIANBADYCACAGQQFqIQFBGgw8C0HKASECIAEgBEYNjgIgAygCACIAIAQgAWtqIQUgASAAa0EDaiEGAkADQCABLQAAIABBjdUAai0AAEcNOyAAQQNGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAMjwILIANBADYCACAGQQFqIQFBIQw7CyABIARGBEBByQEhAgyOAgsCQAJAIAEtAABBwQBrDhQAPT09PT09PT09PT09PT09PT09AT0LIAFBAWohAUGtASECDPUBCyABQQFqIQFBsAEhAgz0AQsgASAERgRAQcgBIQIMjQILAkACQCABLQAAQdUAaw4LADw8PDw8PDw8PAE8CyABQQFqIQFBrgEhAgz0AQsgAUEBaiEBQa8BIQIM8wELQccBIQIgASAERg2LAiADKAIAIgAgBCABa2ohBSABIABrQQhqIQYCQANAIAEtAAAgAEGE1QBqLQAARw04IABBCEYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAyMAgsgA0EANgIAIAZBAWohAUEqDDgLIAEgBEYEQEHGASECDIsCCyABLQAAQdAARw04IAFBAWohAUElDDcLQcUBIQIgASAERg2JAiADKAIAIgAgBCABa2ohBSABIABrQQJqIQYCQANAIAEtAAAgAEGB1QBqLQAARw02IABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAyKAgsgA0EANgIAIAZBAWohAUEODDYLIAEgBEYEQEHEASECDIkCCyABLQAAQcUARw02IAFBAWohAUGrASECDO8BCyABIARGBEBBwwEhAgyIAgsCQAJAAkACQCABLQAAQcIAaw4PAAECOTk5OTk5OTk5OTkDOQsgAUEBaiEBQacBIQIM8QELIAFBAWohAUGoASECDPABCyABQQFqIQFBqQEhAgzvAQsgAUEBaiEBQaoBIQIM7gELQcIBIQIgASAERg2GAiADKAIAIgAgBCABa2ohBSABIABrQQJqIQYCQANAIAEtAAAgAEH+1ABqLQAARw0zIABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAyHAgsgA0EANgIAIAZBAWohAUEUDDMLQcEBIQIgASAERg2FAiADKAIAIgAgBCABa2ohBSABIABrQQRqIQYCQANA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BTYCAAzsAQsgA0EANgIAIAZBAWohAUEXDBgLQaYBIQIgASAERg3qASADKAIAIgAgBCABa2ohBSABIABrQQVqIQYCQANAIAEtAAAgAEHB1ABqLQAARw0XIABBBUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzrAQsgA0EANgIAIAZBAWohAUEYDBcLIAEgBEYEQEGlASECDOoBCwJAAkAgAS0AAEHJAGsOBwAZGRkZGQEZCyABQQFqIQFBiwEhAgzRAQsgAUEBaiEBQYwBIQIM0AELQaQBIQIgASAERg3oASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEGm1QBqLQAARw0VIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzpAQsgA0EANgIAIAZBAWohAUEJDBULQaMBIQIgASAERg3nASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEGk1QBqLQAARw0UIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzoAQsgA0EANgIAIAZBAWohAUEfDBQLQaIBIQIgASAERg3mASADKAIAIgAgBCABa2ohBSABIABrQQJqIQYCQANAIAEtAAAgAEG+1ABqLQAARw0TIABBAkYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAznAQsgA0EANgIAIAZBAWohAUECDBMLQaEBIQIgASAERg3lASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYDQCABLQAAIABBvNQAai0AAEcNESAAQQFGDQIgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM5QELIAEgBEYEQEGgASECDOUBC0EBIAEtAABB3wBHDREaIAFBAWohAUGHASECDMsBCyADQQA2AgAgBkEBaiEBQYgBIQIMygELQZ8BIQIgASAERg3iASADKAIAIgAgBCABa2ohBSABIABrQQhqIQYCQANAIAEtAAAgAEGE1QBqLQAARw0PIABBCEYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAzjAQsgA0EANgIAIAZBAWohAUEpDA8LQZ4BIQIgASAERg3hASADKAIAIgAgBCABa2ohBSABIABrQQNqIQYCQANAIAEtAAAgAEG41ABqLQAARw0OIABBA0YNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAziAQsgA0EANgIAIAZBAWohAUEtDA4LIAEgBEYEQEGdASECDOEBCyABLQAAQcUARw0OIAFBAWohAUGEASECDMcBCyABIARGBEBBnAEhAgzgAQsCQAJAIAEtAABBzABrDggADw8PDw8PAQ8LIAFBAWohAUGCASECDMcBCyABQQFqIQFBgwEhAgzGAQtBmwEhAiABIARGDd4BIAMoAgAiACAEIAFraiEFIAEgAGtBBGohBgJAA0AgAS0AACAAQbPUAGotAABHDQsgAEEERg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADN8BCyADQQA2AgAgBkEBaiEBQSMMCwtBmgEhAiABIARGDd0BIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQbDUAGotAABHDQogAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADN4BCyADQQA2AgAgBkEBaiEBQQAMCgsgASAERgRAQZkBIQIM3QELAkACQCABLQAAQcgAaw4IAAwMDAwMDAEMCyABQQFqIQFB/QAhAgzEAQsgAUEBaiEBQYABIQIMwwELIAEgBEYEQEGYASECDNwBCwJAAkAgAS0AAEHOAGsOAwALAQsLIAFBAWohAUH+ACECDMMBCyABQQFqIQFB/wAhAgzCAQsgASAERgRAQZcBIQIM2wELIAEtAABB2QBHDQggAUEBaiEBQQgMBwtBlgEhAiABIARGDdkBIAMoAgAiACAEIAFraiEFIAEgAGtBA2ohBgJAA0AgAS0AACAAQazUAGotAABHDQYgAEEDRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADNoBCyADQQA2AgAgBkEBaiEBQQUMBgtBlQEhAiABIARGDdgBIAMoAgAiACAEIAFraiEFIAEgAGtBBWohBgJAA0AgAS0AACAAQabUAGotAABHDQUgAEEFRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADNkBCyADQQA2AgAgBkEBaiEBQRYMBQtBlAEhAiABIARGDdcBIAMoAgAiACAEIAFraiEFIAEgAGtBAmohBgJAA0AgAS0AACAAQaHVAGotAABHDQQgAEECRg0BIABBAWohACAEIAFBAWoiAUcNAAsgAyAFNgIADNgBCyADQQA2AgAgBkEBaiEBQRAMBAsgASAERgRAQZMBIQIM1wELAkACQCABLQAAQcMAaw4MAAYGBgYGBgYGBgYBBgsgAUEBaiEBQfkAIQIMvgELIAFBAWohAUH6ACECDL0BC0GSASECIAEgBEYN1QEgAygCACIAIAQgAWtqIQUgASAAa0EFaiEGAkADQCABLQAAIABBoNQAai0AAEcNAiAAQQVGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAM1gELIANBADYCACAGQQFqIQFBJAwCCyADQQA2AgAMAgsgASAERgRAQZEBIQIM1AELIAEtAABBzABHDQEgAUEBaiEBQRMLOgApIAMoAgQhACADQQA2AgQgAyAAIAEQLiIADQIMAQtBACECIANBADYCHCADIAE2AhQgA0H+HzYCECADQQY2AgwM0QELQfgAIQIMtwELIANBkAE2AhwgAyABNgIUIAMgADYCDEEAIQIMzwELQQAhAAJAIAMoAjgiAkUNACACKAJAIgJFDQAgAyACEQAAIQALIABFDQAgAEEVRg0BIANBADYCHCADIAE2AhQgA0GCDzYCECADQSA2AgxBACECDM4BC0H3ACECDLQBCyADQY8BNgIcIAMgATYCFCADQewbNgIQIANBFTYCDEEAIQIMzAELIAEgBEYEQEGPASECDMwBCwJAIAEtAABBIEYEQCABQQFqIQEMAQsgA0EANgIcIAMgATYCFCADQZsfNgIQIANBBjYCDEEAIQIMzAELQQIhAgyyAQsDQCABLQAAQSBHDQIgBCABQQFqIgFHDQALQY4BIQIMygELIAEgBEYEQEGNASECDMoBCwJAIAEtAABBCWsOBEoAAEoAC0H1ACECDLABCyADLQApQQVGBEBB9gAhAgywAQtB9AAhAgyvAQsgASAERgRAQYwBIQIMyAELIANBEDYCCCADIAE2AgQMCgsgASAERgRAQYsBIQIMxwELAkAgAS0AAEEJaw4ERwAARwALQfMAIQIMrQELIAEgBEcEQCADQRA2AgggAyABNgIEQfEAIQIMrQELQYoBIQIMxQELAkAgASAERwRAA0AgAS0AAEGg0ABqLQAAIgBBA0cEQAJAIABBAWsOAkkABAtB8AAhAgyvAQsgBCABQQFqIgFHDQALQYgBIQIMxgELQYgBIQIMxQELIANBADYCHCADIAE2AhQgA0HbIDYCECADQQc2AgxBACECDMQBCyABIARGBEBBiQEhAgzEAQsCQAJAAkAgAS0AAEGg0gBqLQAAQQFrDgNGAgABC0HyACECDKwBCyADQQA2AhwgAyABNgIUIANBtBI2AhAgA0EHNgIMQQAhAgzEAQtB6gAhAgyqAQsgASAERwRAIAFBAWohAUHvACECDKoBC0GHASECDMIBCyAEIAEiAEYEQEGGASECDMIBCyAALQAAIgFBL0YEQCAAQQFqIQFB7gAhAgypAQsgAUEJayICQRdLDQEgACEBQQEgAnRBm4CABHENQQwBCyAEIAEiAEYEQEGFASECDMEBCyAALQAAQS9HDQAgAEEBaiEBDAMLQQAhAiADQQA2AhwgAyAANgIUIANB2yA2AhAgA0EHNgIMDL8BCwJAAkACQAJAAkADQCABLQAAQaDOAGotAAAiAEEFRwRAAkACQCAAQQFrDghHBQYHCAAEAQgLQesAIQIMrQELIAFBAWohAUHtACECDKwBCyAEIAFBAWoiAUcNAAtBhAEhAgzDAQsgAUEBagwUCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNHiADQdsANgIcIAMgATYCFCADIAA2AgxBACECDMEBCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNHiADQd0ANgIcIAMgATYCFCADIAA2AgxBACECDMABCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNHiADQfoANgIcIAMgATYCFCADIAA2AgxBACECDL8BCyADQQA2AhwgAyABNgIUIANB+Q82AhAgA0EHNgIMQQAhAgy+AQsgASAERgRAQYMBIQIMvgELAkAgAS0AAEGgzgBqLQAAQQFrDgg+BAUGAAgCAwcLIAFBAWohAQtBAyECDKMBCyABQQFqDA0LQQAhAiADQQA2AhwgA0HREjYCECADQQc2AgwgAyABQQFqNgIUDLoBCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNFiADQdsANgIcIAMgATYCFCADIAA2AgxBACECDLkBCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNFiADQd0ANgIcIAMgATYCFCADIAA2AgxBACECDLgBCyADKAIEIQAgA0EANgIEIAMgACABECwiAEUNFiADQfoANgIcIAMgATYCFCADIAA2AgxBACECDLcBCyADQQA2AhwgAyABNgIUIANB+Q82AhAgA0EHNgIMQQAhAgy2AQtB7AAhAgycAQsgASAERgRAQYIBIQIMtQELIAFBAWoMAgsgASAERgRAQYEBIQIMtAELIAFBAWoMAQsgASAERg0BIAFBAWoLIQFBBCECDJgBC0GAASECDLABCwNAIAEtAABBoMwAai0AACIAQQJHBEAgAEEBRwRAQekAIQIMmQELDDELIAQgAUEBaiIBRw0AC0H/ACECDK8BCyABIARGBEBB/gAhAgyvAQsCQCABLQAAQQlrDjcvAwYvBAYGBgYGBgYGBgYGBgYGBgYGBgUGBgIGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYABgsgAUEBagshAUEFIQIMlAELIAFBAWoMBgsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQggA0HbADYCHCADIAE2AhQgAyAANgIMQQAhAgyrAQsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQggA0HdADYCHCADIAE2AhQgAyAANgIMQQAhAgyqAQsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQggA0H6ADYCHCADIAE2AhQgAyAANgIMQQAhAgypAQsgA0EANgIcIAMgATYCFCADQY0UNgIQIANBBzYCDEEAIQIMqAELAkACQAJAAkADQCABLQAAQaDKAGotAAAiAEEFRwRAAkAgAEEBaw4GLgMEBQYABgtB6AAhAgyUAQsgBCABQQFqIgFHDQALQf0AIQIMqwELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0HIANB2wA2AhwgAyABNgIUIAMgADYCDEEAIQIMqgELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0HIANB3QA2AhwgAyABNgIUIAMgADYCDEEAIQIMqQELIAMoAgQhACADQQA2AgQgAyAAIAEQLCIARQ0HIANB+gA2AhwgAyABNgIUIAMgADYCDEEAIQIMqAELIANBADYCHCADIAE2AhQgA0HkCDYCECADQQc2AgxBACECDKcBCyABIARGDQEgAUEBagshAUEGIQIMjAELQfwAIQIMpAELAkACQAJAAkADQCABLQAAQaDIAGotAAAiAEEFRwRAIABBAWsOBCkCAwQFCyAEIAFBAWoiAUcNAAtB+wAhAgynAQsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQMgA0HbADYCHCADIAE2AhQgAyAANgIMQQAhAgymAQsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQMgA0HdADYCHCADIAE2AhQgAyAANgIMQQAhAgylAQsgAygCBCEAIANBADYCBCADIAAgARAsIgBFDQMgA0H6ADYCHCADIAE2AhQgAyAANgIMQQAhAgykAQsgA0EANgIcIAMgATYCFCADQbwKNgIQIANBBzYCDEEAIQIMowELQc8AIQIMiQELQdEAIQIMiAELQecAIQIMhwELIAEgBEYEQEH6ACECDKABCwJAIAEtAABBCWsOBCAAACAACyABQQFqIQFB5gAhAgyGAQsgASAERgRAQfkAIQIMnwELAkAgAS0AAEEJaw4EHwAAHwALQQAhAAJAIAMoAjgiAkUNACACKAI4IgJFDQAgAyACEQAAIQALIABFBEBB4gEhAgyGAQsgAEEVRwRAIANBADYCHCADIAE2AhQgA0HJDTYCECADQRo2AgxBACECDJ8BCyADQfgANgIcIAMgATYCFCADQeoaNgIQIANBFTYCDEEAIQIMngELIAEgBEcEQCADQQ02AgggAyABNgIEQeQAIQIMhQELQfcAIQIMnQELIAEgBEYEQEH2ACECDJ0BCwJAAkACQCABLQAAQcgAaw4LAAELCwsLCwsLCwILCyABQQFqIQFB3QAhAgyFAQsgAUEBaiEBQeAAIQIMhAELIAFBAWohAUHjACECDIMBC0H1ACECIAEgBEYNmwEgAygCACIAIAQgAWtqIQUgASAAa0ECaiEGAkADQCABLQAAIABBtdUAai0AAEcNCCAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAMnAELIAMoAgQhACADQgA3AwAgAyAAIAZBAWoiARArIgAEQCADQfQANgIcIAMgATYCFCADIAA2AgxBACECDJwBC0HiACECDIIBC0EAIQACQCADKAI4IgJFDQAgAigCNCICRQ0AIAMgAhEAACEACwJAIAAEQCAAQRVGDQEgA0EANgIcIAMgATYCFCADQeoNNgIQIANBJjYCDEEAIQIMnAELQeEAIQIMggELIANB8wA2AhwgAyABNgIUIANBgBs2AhAgA0EVNgIMQQAhAgyaAQsgAy0AKSIAQSNrQQtJDQkCQCAAQQZLDQBBASAAdEHKAHFFDQAMCgtBACECIANBADYCHCADIAE2AhQgA0HtCTYCECADQQg2AgwMmQELQfIAIQIgASAERg2YASADKAIAIgAgBCABa2ohBSABIABrQQFqIQYCQANAIAEtAAAgAEGz1QBqLQAARw0FIABBAUYNASAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAyZAQsgAygCBCEAIANCADcDACADIAAgBkEBaiIBECsiAARAIANB8QA2AhwgAyABNgIUIAMgADYCDEEAIQIMmQELQd8AIQIMfwtBACEAAkAgAygCOCICRQ0AIAIoAjQiAkUNACADIAIRAAAhAAsCQCAABEAgAEEVRg0BIANBADYCHCADIAE2AhQgA0HqDTYCECADQSY2AgxBACECDJkBC0HeACECDH8LIANB8AA2AhwgAyABNgIUIANBgBs2AhAgA0EVNgIMQQAhAgyXAQsgAy0AKUEhRg0GIANBADYCHCADIAE2AhQgA0GRCjYCECADQQg2AgxBACECDJYBC0HvACECIAEgBEYNlQEgAygCACIAIAQgAWtqIQUgASAAa0ECaiEGAkADQCABLQAAIABBsNUAai0AAEcNAiAAQQJGDQEgAEEBaiEAIAQgAUEBaiIBRw0ACyADIAU2AgAMlgELIAMoAgQhACADQgA3AwAgAyAAIAZBAWoiARArIgBFDQIgA0HtADYCHCADIAE2AhQgAyAANgIMQQAhAgyVAQsgA0EANgIACyADKAIEIQAgA0EANgIEIAMgACABECsiAEUNgAEgA0HuADYCHCADIAE2AhQgAyAANgIMQQAhAgyTAQtB3AAhAgx5C0EAIQACQCADKAI4IgJFDQAgAigCNCICRQ0AIAMgAhEAACEACwJAIAAEQCAAQRVGDQEgA0EANgIcIAMgATYCFCADQeoNNgIQIANBJjYCDEEAIQIMkwELQdsAIQIMeQsgA0HsADYCHCADIAE2AhQgA0GAGzYCECADQRU2AgxBACECDJEBCyADLQApIgBBI0kNACAAQS5GDQAgA0EANgIcIAMgATYCFCADQckJNgIQIANBCDYCDEEAIQIMkAELQdoAIQIMdgsgASAERgRAQesAIQIMjwELAkAgAS0AAEEvRgRAIAFBAWohAQwBCyADQQA2AhwgAyABNgIUIANBsjg2AhAgA0EINgIMQQAhAgyPAQtB2QAhAgx1CyABIARHBEAgA0EONgIIIAMgATYCBEHYACECDHULQeoAIQIMjQELIAEgBEYEQEHpACECDI0BCyABLQAAQTBrIgBB/wFxQQpJBEAgAyAAOgAqIAFBAWohAUHXACECDHQLIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ16IANB6AA2AhwgAyABNgIUIAMgADYCDEEAIQIMjAELIAEgBEYEQEHnACECDIwBCwJAIAEtAABBLkYEQCABQQFqIQEMAQsgAygCBCEAIANBADYCBCADIAAgARAvIgBFDXsgA0HmADYCHCADIAE2AhQgAyAANgIMQQAhAgyMAQtB1gAhAgxyCyABIARGBEBB5QAhAgyLAQtBACEAQQEhBUEBIQdBACECAkACQAJAAkACQAJ/AkACQAJAAkACQAJAAkAgAS0AAEEwaw4KCgkAAQIDBAUGCAsLQQIMBgtBAwwFC0EEDAQLQQUMAwtBBgwCC0EHDAELQQgLIQJBACEFQQAhBwwCC0EJIQJBASEAQQAhBUEAIQcMAQtBACEFQQEhAgsgAyACOgArIAFBAWohAQJAAkAgAy0ALkEQcQ0AAkACQAJAIAMtACoOAwEAAgQLIAdFDQMMAgsgAA0BDAILIAVFDQELIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ0CIANB4gA2AhwgAyABNgIUIAMgADYCDEEAIQIMjQELIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ19IANB4wA2AhwgAyABNgIUIAMgADYCDEEAIQIMjAELIAMoAgQhACADQQA2AgQgAyAAIAEQLyIARQ17IANB5AA2AhwgAyABNgIUIAMgADYCDAyLAQtB1AAhAgxxCyADLQApQSJGDYYBQdMAIQIMcAtBACEAAkAgAygCOCICRQ0AIAIoAkQiAkUNACADIAIRAAAhAAsgAEUEQEHVACECDHALIABBFUcEQCADQQA2AhwgAyABNgIUIANBpA02AhAgA0EhNgIMQQAhAgyJAQsgA0HhADYCHCADIAE2AhQgA0HQGjYCECADQRU2AgxBACECDIgBCyABIARGBEBB4AAhAgyIAQsCQAJAAkACQAJAIAEtAABBCmsOBAEEBAAECyABQQFqIQEMAQsgAUEBaiEBIANBL2otAABBAXFFDQELQdIAIQIMcAsgA0EANgIcIAMgATYCFCADQbYRNgIQIANBCTYCDEEAIQIMiAELIANBADYCHCADIAE2AhQgA0G2ETYCECADQQk2AgxBACECDIcBCyABIARGBEBB3wAhAgyHAQsgAS0AAEEKRgRAIAFBAWohAQwJCyADLQAuQcAAcQ0IIANBADYCHCADIAE2AhQgA0G2ETYCECADQQI2AgxBACECDIYBCyABIARGBEBB3QAhAgyGAQsgAS0AACICQQ1GBEAgAUEBaiEBQdAAIQIMbQsgASEAIAJBCWsOBAUBAQUBCyAEIAEiAEYEQEHcACECDIUBCyAALQAAQQpHDQAgAEEBagwCC0EAIQIgA0EANgIcIAMgADYCFCADQcotNgIQIANBBzYCDAyDAQsgASAERgRAQdsAIQIMgwELAkAgAS0AAEEJaw4EAwAAAwALIAFBAWoLIQFBzgAhAgxoCyABIARGBEBB2gAhAgyBAQsgAS0AAEEJaw4EAAEBAAELQQAhAiADQQA2AhwgA0GaEjYCECADQQc2AgwgAyABQQFqNgIUDH8LIANBgBI7ASpBACEAAkAgAygCOCICRQ0AIAIoAjgiAkUNACADIAIRAAAhAAsgAEUNACAAQRVHDQEgA0HZADYCHCADIAE2AhQgA0HqGjYCECADQRU2AgxBACECDH4LQc0AIQIMZAsgA0EANgIcIAMgATYCFCADQckNNgIQIANBGjYCDEEAIQIMfAsgASAERgRAQdkAIQIMfAsgAS0AAEEgRw09IAFBAWohASADLQAuQQFxDT0gA0EANgIcIAMgATYCFCADQcIcNgIQIANBHjYCDEEAIQIMewsgASAERgRAQdgAIQIMewsCQAJAAkACQAJAIAEtAAAiAEEKaw4EAgMDAAELIAFBAWohAUEsIQIMZQsgAEE6Rw0BIANBADYCHCADIAE2AhQgA0HnETYCECADQQo2AgxBACECDH0LIAFBAWohASADQS9qLQAAQQFxRQ1zIAMtADJBgAFxRQRAIANBMmohAiADEDVBACEAAkAgAygCOCIGRQ0AIAYoAigiBkUNACADIAYRAAAhAAsCQAJAIAAOFk1MSwEBAQEBAQEBAQEBAQEBAQEBAQABCyADQSk2AhwgAyABNgIUIANBrBk2AhAgA0EVNgIMQQAhAgx+CyADQQA2AhwgAyABNgIUIANB5Qs2AhAgA0ERNgIMQQAhAgx9C0EAIQACQCADKAI4IgJFDQAgAigCXCICRQ0AIAMgAhEAACEACyAARQ1ZIABBFUcNASADQQU2AhwgAyABNgIUIANBmxs2AhAgA0EVNgIMQQAhAgx8C0HLACECDGILQQAhAiADQQA2AhwgAyABNgIUIANBkA42AhAgA0EUNgIMDHoLIAMgAy8BMkGAAXI7ATIMOwsgASAERwRAIANBETYCCCADIAE2AgRBygAhAgxgC0HXACECDHgLIAEgBEYEQEHWACECDHgLAkACQAJAAkAgAS0AACIAQSByIAAgAEHBAGtB/wFxQRpJG0H/AXFB4wBrDhMAQEBAQEBAQEBAQEBAAUBAQAIDQAsgAUEBaiEBQcYAIQIMYQsgAUEBaiEBQccAIQIMYAsgAUEBaiEBQcgAIQIMXwsgAUEBaiEBQckAIQIMXgtB1QAhAiAEIAEiAEYNdiAEIAFrIAMoAgAiAWohBiAAIAFrQQVqIQcDQCABQZDIAGotAAAgAC0AACIFQSByIAUgBUHBAGtB/wFxQRpJG0H/AXFHDQhBBCABQQVGDQoaIAFBAWohASAEIABBAWoiAEcNAAsgAyAGNgIADHYLQdQAIQIgBCABIgBGDXUgBCABayADKAIAIgFqIQYgACABa0EPaiEHA0AgAUGAyABqLQAAIAAtAAAiBUEgciAFIAVBwQBrQf8BcUEaSRtB/wFxRw0HQQMgAUEPRg0JGiABQQFqIQEgBCAAQQFqIgBHDQALIAMgBjYCAAx1C0HTACECIAQgASIARg10IAQgAWsgAygCACIBaiEGIAAgAWtBDmohBwNAIAFB4scAai0AACAALQAAIgVBIHIgBSAFQcEAa0H/AXFBGkkbQf8BcUcNBiABQQ5GDQcgAUEBaiEBIAQgAEEBaiIARw0ACyADIAY2AgAMdAtB0gAhAiAEIAEiAEYNcyAEIAFrIAMoAgAiAWohBSAAIAFrQQFqIQYDQCABQeDHAGotAAAgAC0AACIHQSByIAcgB0HBAGtB/wFxQRpJG0H/AXFHDQUgAUEBRg0CIAFBAWohASAEIABBAWoiAEcNAAsgAyAFNgIADHMLIAEgBEYEQEHRACECDHMLAkACQCABLQAAIgBBIHIgACAAQcEAa0H/AXFBGkkbQf8BcUHuAGsOBwA5OTk5OQE5CyABQQFqIQFBwwAhAgxaCyABQQFqIQFBxAAhAgxZCyADQQA2AgAgBkEBaiEBQcUAIQIMWAtB0AAhAiAEIAEiAEYNcCAEIAFrIAMoAgAiAWohBiAAIAFrQQlqIQcDQCABQdbHAGotAAAgAC0AACIFQSByIAUgBUHBAGtB/wFxQRpJG0H/AXFHDQJBAiABQQlGDQQaIAFBAWohASAEIABBAWoiAEcNAAsgAyAGNgIADHALQc8AIQIgBCABIgBGDW8gBCABayADKAIAIgFqIQYgACABa0EFaiEHA0AgAUHQxwBqLQAAIAAtAAAiBUEgciAFIAVBwQBrQf8BcUEaSRtB/wFxRw0BIAFBBUYNAiABQQFqIQEgBCAAQQFqIgBHDQALIAMgBjYCAAxvCyAAIQEgA0EANgIADDMLQQELOgAsIANBADYCACAHQQFqIQELQS0hAgxSCwJAA0AgAS0AAEHQxQBqLQAAQQFHDQEgBCABQQFqIgFHDQALQc0AIQIMawtBwgAhAgxRCyABIARGBEBBzAAhAgxqCyABLQAAQTpGBEAgAygCBCEAIANBADYCBCADIAAgARAwIgBFDTMgA0HLADYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgxqCyADQQA2AhwgAyABNgIUIANB5xE2AhAgA0EKNgIMQQAhAgxpCwJAAkAgAy0ALEECaw4CAAEnCyADQTNqLQAAQQJxRQ0mIAMtAC5BAnENJiADQQA2AhwgAyABNgIUIANBphQ2AhAgA0ELNgIMQQAhAgxpCyADLQAyQSBxRQ0lIAMtAC5BAnENJSADQQA2AhwgAyABNgIUIANBvRM2AhAgA0EPNgIMQQAhAgxoC0EAIQACQCADKAI4IgJFDQAgAigCSCICRQ0AIAMgAhEAACEACyAARQRAQcEAIQIMTwsgAEEVRwRAIANBADYCHCADIAE2AhQgA0GmDzYCECADQRw2AgxBACECDGgLIANBygA2AhwgAyABNgIUIANBhRw2AhAgA0EVNgIMQQAhAgxnCyABIARHBEAgASECA0AgBCACIgFrQRBOBEAgAUEQaiEC/Qz/////////////////////IAH9AAAAIg1BB/1sIA39DODg4ODg4ODg4ODg4ODg4OD9bv0MX19fX19fX19fX19fX19fX/0mIA39DAkJCQkJCQkJCQkJCQkJCQn9I/1Q/VL9ZEF/c2giAEEQRg0BIAAgAWohAQwYCyABIARGBEBBxAAhAgxpCyABLQAAQcDBAGotAABBAUcNFyAEIAFBAWoiAkcNAAtBxAAhAgxnC0HEACECDGYLIAEgBEcEQANAAkAgAS0AACIAQSByIAAgAEHBAGtB/wFxQRpJG0H/AXEiAEEJRg0AIABBIEYNAAJAAkACQAJAIABB4wBrDhMAAwMDAwMDAwEDAwMDAwMDAwMCAwsgAUEBaiEBQTYhAgxSCyABQQFqIQFBNyECDFELIAFBAWohAUE4IQIMUAsMFQsgBCABQQFqIgFHDQALQTwhAgxmC0E8IQIMZQsgASAERgRAQcgAIQIMZQsgA0ESNgIIIAMgATYCBAJAAkACQAJAAkAgAy0ALEEBaw4EFAABAgkLIAMtADJBIHENA0HgASECDE8LAkAgAy8BMiIAQQhxRQ0AIAMtAChBAUcNACADLQAuQQhxRQ0CCyADIABB9/sDcUGABHI7ATIMCwsgAyADLwEyQRByOwEyDAQLIANBADYCBCADIAEgARAxIgAEQCADQcEANgIcIAMgADYCDCADIAFBAWo2AhRBACECDGYLIAFBAWohAQxYCyADQQA2AhwgAyABNgIUIANB9BM2AhAgA0EENgIMQQAhAgxkC0HHACECIAEgBEYNYyADKAIAIgAgBCABa2ohBSABIABrQQZqIQYCQANAIABBwMUAai0AACABLQAAQSByRw0BIABBBkYNSiAAQQFqIQAgBCABQQFqIgFHDQALIAMgBTYCAAxkCyADQQA2AgAMBQsCQCABIARHBEADQCABLQAAQcDDAGotAAAiAEEBRwRAIABBAkcNAyABQQFqIQEMBQsgBCABQQFqIgFHDQALQcUAIQIMZAtBxQAhAgxjCwsgA0EAOgAsDAELQQshAgxHC0E/IQIMRgsCQAJAA0AgAS0AACIAQSBHBEACQCAAQQprDgQDBQUDAAsgAEEsRg0DDAQLIAQgAUEBaiIBRw0AC0HGACECDGALIANBCDoALAwOCyADLQAoQQFHDQIgAy0ALkEIcQ0CIAMoAgQhACADQQA2AgQgAyAAIAEQMSIABEAgA0HCADYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgxfCyABQQFqIQEMUAtBOyECDEQLAkADQCABLQAAIgBBIEcgAEEJR3ENASAEIAFBAWoiAUcNAAtBwwAhAgxdCwtBPCECDEILAkACQCABIARHBEADQCABLQAAIgBBIEcEQCAAQQprDgQDBAQDBAsgBCABQQFqIgFHDQALQT8hAgxdC0E/IQIMXAsgAyADLwEyQSByOwEyDAoLIAMoAgQhACADQQA2AgQgAyAAIAEQMSIARQ1OIANBPjYCHCADIAE2AhQgAyAANgIMQQAhAgxaCwJAIAEgBEcEQANAIAEtAABBwMMAai0AACIAQQFHBEAgAEECRg0DDAwLIAQgAUEBaiIBRw0AC0E3IQIMWwtBNyECDFoLIAFBAWohAQwEC0E7IQIgBCABIgBGDVggBCABayADKAIAIgFqIQYgACABa0EFaiEHAkADQCABQZDIAGotAAAgAC0AACIFQSByIAUgBUHBAGtB/wFxQRpJG0H/AXFHDQEgAUEFRgRAQQchAQw/CyABQQFqIQEgBCAAQQFqIgBHDQALIAMgBjYCAAxZCyADQQA2AgAgACEBDAULQTohAiAEIAEiAEYNVyAEIAFrIAMoAgAiAWohBiAAIAFrQQhqIQcCQANAIAFBtMEAai0AACAALQAAIgVBIHIgBSAFQcEAa0H/AXFBGkkbQf8BcUcNASABQQhGBEBBBSEBDD4LIAFBAWohASAEIABBAWoiAEcNAAsgAyAGNgIADFgLIANBADYCACAAIQEMBAtBOSECIAQgASIARg1WIAQgAWsgAygCACIBaiEGIAAgAWtBA2ohBwJAA0AgAUGwwQBqLQAAIAAtAAAiBUEgciAFIAVBwQBrQf8BcUEaSRtB/wFxRw0BIAFBA0YEQEEGIQEMPQsgAUEBaiEBIAQgAEEBaiIARw0ACyADIAY2AgAMVwsgA0EANgIAIAAhAQwDCwJAA0AgAS0AACIAQSBHBEAgAEEKaw4EBwQEBwILIAQgAUEBaiIBRw0AC0E4IQIMVgsgAEEsRw0BIAFBAWohAEEBIQECQAJAAkACQAJAIAMtACxBBWsOBAMBAgQACyAAIQEMBAtBAiEBDAELQQQhAQsgA0EBOgAsIAMgAy8BMiABcjsBMiAAIQEMAQsgAyADLwEyQQhyOwEyIAAhAQtBPiECDDsLIANBADoALAtBOSECDDkLIAEgBEYEQEE2IQIMUgsCQAJAAkACQAJAIAEtAABBCmsOBAACAgECCyADKAIEIQAgA0EANgIEIAMgACABEDEiAEUNAiADQTM2AhwgAyABNgIUIAMgADYCDEEAIQIMVQsgAygCBCEAIANBADYCBCADIAAgARAxIgBFBEAgAUEBaiEBDAYLIANBMjYCHCADIAA2AgwgAyABQQFqNgIUQQAhAgxUCyADLQAuQQFxBEBB3wEhAgw7CyADKAIEIQAgA0EANgIEIAMgACABEDEiAA0BDEkLQTQhAgw5CyADQTU2AhwgAyABNgIUIAMgADYCDEEAIQIMUQtBNSECDDcLIANBL2otAABBAXENACADQQA2AhwgAyABNgIUIANB6xY2AhAgA0EZNgIMQQAhAgxPC0EzIQIMNQsgASAERgRAQTIhAgxOCwJAIAEtAABBCkYEQCABQQFqIQEMAQsgA0EANgIcIAMgATYCFCADQZIXNgIQIANBAzYCDEEAIQIMTgtBMiECDDQLIAEgBEYEQEExIQIMTQsCQCABLQAAIgBBCUYNACAAQSBGDQBBASECAkAgAy0ALEEFaw4EBgQFAA0LIAMgAy8BMkEIcjsBMgwMCyADLQAuQQFxRQ0BIAMtACxBCEcNACADQQA6ACwLQT0hAgwyCyADQQA2AhwgAyABNgIUIANBwhY2AhAgA0EKNgIMQQAhAgxKC0ECIQIMAQtBBCECCyADQQE6ACwgAyADLwEyIAJyOwEyDAYLIAEgBEYEQEEwIQIMRwsgAS0AAEEKRgRAIAFBAWohAQwBCyADLQAuQQFxDQAgA0EANgIcIAMgATYCFCADQdwoNgIQIANBAjYCDEEAIQIMRgtBMCECDCwLIAFBAWohAUExIQIMKwsgASAERgRAQS8hAgxECyABLQAAIgBBCUcgAEEgR3FFBEAgAUEBaiEBIAMtAC5BAXENASADQQA2AhwgAyABNgIUIANBlxA2AhAgA0EKNgIMQQAhAgxEC0EBIQICQAJAAkACQAJAAkAgAy0ALEECaw4HBQQEAwECAAQLIAMgAy8BMkEIcjsBMgwDC0ECIQIMAQtBBCECCyADQQE6ACwgAyADLwEyIAJyOwEyC0EvIQIMKwsgA0EANgIcIAMgATYCFCADQYQTNgIQIANBCzYCDEEAIQIMQwtB4QEhAgwpCyABIARGBEBBLiECDEILIANBADYCBCADQRI2AgggAyABIAEQMSIADQELQS4hAgwnCyADQS02AhwgAyABNgIUIAMgADYCDEEAIQIMPwtBACEAAkAgAygCOCICRQ0AIAIoAkwiAkUNACADIAIRAAAhAAsgAEUNACAAQRVHDQEgA0HYADYCHCADIAE2AhQgA0GzGzYCECADQRU2AgxBACECDD4LQcwAIQIMJAsgA0EANgIcIAMgATYCFCADQbMONgIQIANBHTYCDEEAIQIMPAsgASAERgRAQc4AIQIMPAsgAS0AACIAQSBGDQIgAEE6Rg0BCyADQQA6ACxBCSECDCELIAMoAgQhACADQQA2AgQgAyAAIAEQMCIADQEMAgsgAy0ALkEBcQRAQd4BIQIMIAsgAygCBCEAIANBADYCBCADIAAgARAwIgBFDQIgA0EqNgIcIAMgADYCDCADIAFBAWo2AhRBACECDDgLIANBywA2AhwgAyAANgIMIAMgAUEBajYCFEEAIQIMNwsgAUEBaiEBQcAAIQIMHQsgAUEBaiEBDCwLIAEgBEYEQEErIQIMNQsCQCABLQAAQQpGBEAgAUEBaiEBDAELIAMtAC5BwABxRQ0GCyADLQAyQYABcQRAQQAhAAJAIAMoAjgiAkUNACACKAJcIgJFDQAgAyACEQAAIQALIABFDRIgAEEVRgRAIANBBTYCHCADIAE2AhQgA0GbGzYCECADQRU2AgxBACECDDYLIANBADYCHCADIAE2AhQgA0GQDjYCECADQRQ2AgxBACECDDULIANBMmohAiADEDVBACEAAkAgAygCOCIGRQ0AIAYoAigiBkUNACADIAYRAAAhAAsgAA4WAgEABAQEBAQEBAQEBAQEBAQEBAQEAwQLIANBAToAMAsgAiACLwEAQcAAcjsBAAtBKyECDBgLIANBKTYCHCADIAE2AhQgA0GsGTYCECADQRU2AgxBACECDDALIANBADYCHCADIAE2AhQgA0HlCzYCECADQRE2AgxBACECDC8LIANBADYCHCADIAE2AhQgA0GlCzYCECADQQI2AgxBACECDC4LQQEhByADLwEyIgVBCHFFBEAgAykDIEIAUiEHCwJAIAMtADAEQEEBIQAgAy0AKUEFRg0BIAVBwABxRSAHcUUNAQsCQCADLQAoIgJBAkYEQEEBIQAgAy8BNCIGQeUARg0CQQAhACAFQcAAcQ0CIAZB5ABGDQIgBkHmAGtBAkkNAiAGQcwBRg0CIAZBsAJGDQIMAQtBACEAIAVBwABxDQELQQIhACAFQQhxDQAgBUGABHEEQAJAIAJBAUcNACADLQAuQQpxDQBBBSEADAILQQQhAAwBCyAFQSBxRQRAIAMQNkEAR0ECdCEADAELQQBBAyADKQMgUBshAAsgAEEBaw4FAgAHAQMEC0ERIQIMEwsgA0EBOgAxDCkLQQAhAgJAIAMoAjgiAEUNACAAKAIwIgBFDQAgAyAAEQAAIQILIAJFDSYgAkEVRgRAIANBAzYCHCADIAE2AhQgA0HSGzYCECADQRU2AgxBACECDCsLQQAhAiADQQA2AhwgAyABNgIUIANB3Q42AhAgA0ESNgIMDCoLIANBADYCHCADIAE2AhQgA0H5IDYCECADQQ82AgxBACECDCkLQQAhAAJAIAMoAjgiAkUNACACKAIwIgJFDQAgAyACEQAAIQALIAANAQtBDiECDA4LIABBFUYEQCADQQI2AhwgAyABNgIUIANB0hs2AhAgA0EVNgIMQQAhAgwnCyADQQA2AhwgAyABNgIUIANB3Q42AhAgA0ESNgIMQQAhAgwmC0EqIQIMDAsgASAERwRAIANBCTYCCCADIAE2AgRBKSECDAwLQSYhAgwkCyADIAMpAyAiDCAEIAFrrSIKfSILQgAgCyAMWBs3AyAgCiAMVARAQSUhAgwkCyADKAIEIQAgA0EANgIEIAMgACABIAynaiIBEDIiAEUNACADQQU2AhwgAyABNgIUIAMgADYCDEEAIQIMIwtBDyECDAkLQgAhCgJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQCABLQAAQTBrDjcXFgABAgMEBQYHFBQUFBQUFAgJCgsMDRQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUDg8QERITFAtCAiEKDBYLQgMhCgwVC0IEIQoMFAtCBSEKDBMLQgYhCgwSC0IHIQoMEQtCCCEKDBALQgkhCgwPC0IKIQoMDgtCCyEKDA0LQgwhCgwMC0INIQoMCwtCDiEKDAoLQg8hCgwJC0IKIQoMCAtCCyEKDAcLQgwhCgwGC0INIQoMBQtCDiEKDAQLQg8hCgwDCyADQQA2AhwgAyABNgIUIANBnxU2AhAgA0EMNgIMQQAhAgwhCyABIARGBEBBIiECDCELQgAhCgJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAgAS0AAEEwaw43FRQAAQIDBAUGBxYWFhYWFhYICQoLDA0WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg4PEBESExYLQgIhCgwUC0IDIQoMEwtCBCEKDBILQgUhCgwRC0IGIQoMEAtCByEKDA8LQgghCgwOC0IJIQoMDQtCCiEKDAwLQgshCgwLC0IMIQoMCgtCDSEKDAkLQg4hCgwIC0IPIQoMBwtCCiEKDAYLQgshCgwFC0IMIQoMBAtCDSEKDAMLQg4hCgwCC0IPIQoMAQtCASEKCyABQQFqIQEgAykDICILQv//////////D1gEQCADIAtCBIYgCoQ3AyAMAgsgA0EANgIcIAMgATYCFCADQbUJNgIQIANBDDYCDEEAIQIMHgtBJyECDAQLQSghAgwDCyADIAE6ACwgA0EANgIAIAdBAWohAUEMIQIMAgsgA0EANgIAIAZBAWohAUEKIQIMAQsgAUEBaiEBQQghAgwACwALQQAhAiADQQA2AhwgAyABNgIUIANBsjg2AhAgA0EINgIMDBcLQQAhAiADQQA2AhwgAyABNgIUIANBgxE2AhAgA0EJNgIMDBYLQQAhAiADQQA2AhwgAyABNgIUIANB3wo2AhAgA0EJNgIMDBULQQAhAiADQQA2AhwgAyABNgIUIANB7RA2AhAgA0EJNgIMDBQLQQAhAiADQQA2AhwgAyABNgIUIANB0hE2AhAgA0EJNgIMDBMLQQAhAiADQQA2AhwgAyABNgIUIANBsjg2AhAgA0EINgIMDBILQQAhAiADQQA2AhwgAyABNgIUIANBgxE2AhAgA0EJNgIMDBELQQAhAiADQQA2AhwgAyABNgIUIANB3wo2AhAgA0EJNgIMDBALQQAhAiADQQA2AhwgAyABNgIUIANB7RA2AhAgA0EJNgIMDA8LQQAhAiADQQA2AhwgAyABNgIUIANB0hE2AhAgA0EJNgIMDA4LQQAhAiADQQA2AhwgAyABNgIUIANBuRc2AhAgA0EPNgIMDA0LQQAhAiADQQA2AhwgAyABNgIUIANBuRc2AhAgA0EPNgIMDAwLQQAhAiADQQA2AhwgAyABNgIUIANBmRM2AhAgA0ELNgIMDAsLQQAhAiADQQA2AhwgAyABNgIUIANBnQk2AhAgA0ELNgIMDAoLQQAhAiADQQA2AhwgAyABNgIUIANBlxA2AhAgA0EKNgIMDAkLQQAhAiADQQA2AhwgAyABNgIUIANBsRA2AhAgA0EKNgIMDAgLQQAhAiADQQA2AhwgAyABNgIUIANBux02AhAgA0ECNgIMDAcLQQAhAiADQQA2AhwgAyABNgIUIANBlhY2AhAgA0ECNgIMDAYLQQAhAiADQQA2AhwgAyABNgIUIANB+Rg2AhAgA0ECNgIMDAULQQAhAiADQQA2AhwgAyABNgIUIANBxBg2AhAgA0ECNgIMDAQLIANBAjYCHCADIAE2AhQgA0GpHjYCECADQRY2AgxBACECDAMLQd4AIQIgASAERg0CIAlBCGohByADKAIAIQUCQAJAIAEgBEcEQCAFQZbIAGohCCAEIAVqIAFrIQYgBUF/c0EKaiIFIAFqIQADQCABLQAAIAgtAABHBEBBAiEIDAMLIAVFBEBBACEIIAAhAQwDCyAFQQFrIQUgCEEBaiEIIAQgAUEBaiIBRw0ACyAGIQUgBCEBCyAHQQE2AgAgAyAFNgIADAELIANBADYCACAHIAg2AgALIAcgATYCBCAJKAIMIQACQAJAIAkoAghBAWsOAgQBAAsgA0EANgIcIANBwh42AhAgA0EXNgIMIAMgAEEBajYCFEEAIQIMAwsgA0EANgIcIAMgADYCFCADQdceNgIQIANBCTYCDEEAIQIMAgsgASAERgRAQSghAgwCCyADQQk2AgggAyABNgIEQSchAgwBCyABIARGBEBBASECDAELA0ACQAJAAkAgAS0AAEEKaw4EAAEBAAELIAFBAWohAQwBCyABQQFqIQEgAy0ALkEgcQ0AQQAhAiADQQA2AhwgAyABNgIUIANBoSE2AhAgA0EFNgIMDAILQQEhAiABIARHDQALCyAJQRBqJAAgAkUEQCADKAIMIQAMAQsgAyACNgIcQQAhACADKAIEIgFFDQAgAyABIAQgAygCCBEBACIBRQ0AIAMgBDYCFCADIAE2AgwgASEACyAAC74CAQJ/IABBADoAACAAQeQAaiIBQQFrQQA6AAAgAEEAOgACIABBADoAASABQQNrQQA6AAAgAUECa0EAOgAAIABBADoAAyABQQRrQQA6AABBACAAa0EDcSIBIABqIgBBADYCAEHkACABa0F8cSICIABqIgFBBGtBADYCAAJAIAJBCUkNACAAQQA2AgggAEEANgIEIAFBCGtBADYCACABQQxrQQA2AgAgAkEZSQ0AIABBADYCGCAAQQA2AhQgAEEANgIQIABBADYCDCABQRBrQQA2AgAgAUEUa0EANgIAIAFBGGtBADYCACABQRxrQQA2AgAgAiAAQQRxQRhyIgJrIgFBIEkNACAAIAJqIQADQCAAQgA3AxggAEIANwMQIABCADcDCCAAQgA3AwAgAEEgaiEAIAFBIGsiAUEfSw0ACwsLVgEBfwJAIAAoAgwNAAJAAkACQAJAIAAtADEOAwEAAwILIAAoAjgiAUUNACABKAIwIgFFDQAgACABEQAAIgENAwtBAA8LAAsgAEHKGTYCEEEOIQELIAELGgAgACgCDEUEQCAAQd4fNgIQIABBFTYCDAsLFAAgACgCDEEVRgRAIABBADYCDAsLFAAgACgCDEEWRgRAIABBADYCDAsLBwAgACgCDAsHACAAKAIQCwkAIAAgATYCEAsHACAAKAIUCysAAkAgAEEnTw0AQv//////CSAArYhCAYNQDQAgAEECdEHQOGooAgAPCwALFwAgAEEvTwRAAAsgAEECdEHsOWooAgALvwkBAX9B9C0hAQJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAIABB5ABrDvQDY2IAAWFhYWFhYQIDBAVhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhBgcICQoLDA0OD2FhYWFhEGFhYWFhYWFhYWFhEWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYRITFBUWFxgZGhthYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2YTc4OTphYWFhYWFhYTthYWE8YWFhYT0+P2FhYWFhYWFhQGFhQWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYUJDREVGR0hJSktMTU5PUFFSU2FhYWFhYWFhVFVWV1hZWlthXF1hYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFeYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhX2BhC0HqLA8LQZgmDwtB7TEPC0GgNw8LQckpDwtBtCkPC0GWLQ8LQesrDwtBojUPC0HbNA8LQeApDwtB4yQPC0HVJA8LQe4kDwtB5iUPC0HKNA8LQdA3DwtBqjUPC0H1LA8LQfYmDwtBgiIPC0HyMw8LQb4oDwtB5zcPC0HNIQ8LQcAhDwtBuCUPC0HLJQ8LQZYkDwtBjzQPC0HNNQ8LQd0qDwtB7jMPC0GcNA8LQZ4xDwtB9DUPC0HlIg8LQa8lDwtBmTEPC0GyNg8LQfk2DwtBxDIPC0HdLA8LQYIxDwtBwTEPC0GNNw8LQckkDwtB7DYPC0HnKg8LQcgjDwtB4iEPC0HJNw8LQaUiDwtBlCIPC0HbNg8LQd41DwtBhiYPC0G8Kw8LQYsyDwtBoCMPC0H2MA8LQYAsDwtBiSsPC0GkJg8LQfIjDwtBgSgPC0GrMg8LQesnDwtBwjYPC0GiJA8LQc8qDwtB3CMPC0GHJw8LQeQ0DwtBtyIPC0GtMQ8LQdUiDwtBrzQPC0HeJg8LQdYyDwtB9DQPC0GBOA8LQfQ3DwtBkjYPC0GdJw8LQYIpDwtBjSMPC0HXMQ8LQb01DwtBtDcPC0HYMA8LQbYnDwtBmjgPC0GnKg8LQcQnDwtBriMPC0H1Ig8LAAtByiYhAQsgAQsXACAAIAAvAS5B/v8DcSABQQBHcjsBLgsaACAAIAAvAS5B/f8DcSABQQBHQQF0cjsBLgsaACAAIAAvAS5B+/8DcSABQQBHQQJ0cjsBLgsaACAAIAAvAS5B9/8DcSABQQBHQQN0cjsBLgsaACAAIAAvAS5B7/8DcSABQQBHQQR0cjsBLgsaACAAIAAvAS5B3/8DcSABQQBHQQV0cjsBLgsaACAAIAAvAS5Bv/8DcSABQQBHQQZ0cjsBLgsaACAAIAAvAS5B//4DcSABQQBHQQd0cjsBLgsaACAAIAAvAS5B//0DcSABQQBHQQh0cjsBLgsaACAAIAAvAS5B//sDcSABQQBHQQl0cjsBLgs+AQJ/AkAgACgCOCIDRQ0AIAMoAgQiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQeESNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAggiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQfwRNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAgwiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQewKNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAhAiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQfoeNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAhQiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQcsQNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAhgiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQbcfNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAhwiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQb8VNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAiwiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQf4INgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAiAiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQYwdNgIQQRghBAsgBAs+AQJ/AkAgACgCOCIDRQ0AIAMoAiQiA0UNACAAIAEgAiABayADEQEAIgRBf0cNACAAQeYVNgIQQRghBAsgBAs4ACAAAn8gAC8BMkEUcUEURgRAQQEgAC0AKEEBRg0BGiAALwE0QeUARgwBCyAALQApQQVGCzoAMAtZAQJ/AkAgAC0AKEEBRg0AIAAvATQiAUHkAGtB5ABJDQAgAUHMAUYNACABQbACRg0AIAAvATIiAEHAAHENAEEBIQIgAEGIBHFBgARGDQAgAEEocUUhAgsgAguMAQECfwJAAkACQCAALQAqRQ0AIAAtACtFDQAgAC8BMiIBQQJxRQ0BDAILIAAvATIiAUEBcUUNAQtBASECIAAtAChBAUYNACAALwE0IgBB5ABrQeQASQ0AIABBzAFGDQAgAEGwAkYNACABQcAAcQ0AQQAhAiABQYgEcUGABEYNACABQShxQQBHIQILIAILcwAgAEEQav0MAAAAAAAAAAAAAAAAAAAAAP0LAwAgAP0MAAAAAAAAAAAAAAAAAAAAAP0LAwAgAEEwav0MAAAAAAAAAAAAAAAAAAAAAP0LAwAgAEEgav0MAAAAAAAAAAAAAAAAAAAAAP0LAwAgAEH9ATYCHAsGACAAEDoLmi0BC38jAEEQayIKJABB3NUAKAIAIglFBEBBnNkAKAIAIgVFBEBBqNkAQn83AgBBoNkAQoCAhICAgMAANwIAQZzZACAKQQhqQXBxQdiq1aoFcyIFNgIAQbDZAEEANgIAQYDZAEEANgIAC0GE2QBBwNkENgIAQdTVAEHA2QQ2AgBB6NUAIAU2AgBB5NUAQX82AgBBiNkAQcCmAzYCAANAIAFBgNYAaiABQfTVAGoiAjYCACACIAFB7NUAaiIDNgIAIAFB+NUAaiADNgIAIAFBiNYAaiABQfzVAGoiAzYCACADIAI2AgAgAUGQ1gBqIAFBhNYAaiICNgIAIAIgAzYCACABQYzWAGogAjYCACABQSBqIgFBgAJHDQALQczZBEGBpgM2AgBB4NUAQazZACgCADYCAEHQ1QBBgKYDNgIAQdzVAEHI2QQ2AgBBzP8HQTg2AgBByNkEIQkLAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkACQAJAAkAgAEHsAU0EQEHE1QAoAgAiBkEQIABBE2pBcHEgAEELSRsiBEEDdiIAdiIBQQNxBEACQCABQQFxIAByQQFzIgJBA3QiAEHs1QBqIgEgAEH01QBqKAIAIgAoAggiA0YEQEHE1QAgBkF+IAJ3cTYCAAwBCyABIAM2AgggAyABNgIMCyAAQQhqIQEgACACQQN0IgJBA3I2AgQgACACaiIAIAAoAgRBAXI2AgQMEQtBzNUAKAIAIgggBE8NASABBEACQEECIAB0IgJBACACa3IgASAAdHFoIgBBA3QiAkHs1QBqIgEgAkH01QBqKAIAIgIoAggiA0YEQEHE1QAgBkF+IAB3cSIGNgIADAELIAEgAzYCCCADIAE2AgwLIAIgBEEDcjYCBCAAQQN0IgAgBGshBSAAIAJqIAU2AgAgAiAEaiIEIAVBAXI2AgQgCARAIAhBeHFB7NUAaiEAQdjVACgCACEDAn9BASAIQQN2dCIBIAZxRQRAQcTVACABIAZyNgIAIAAMAQsgACgCCAsiASADNgIMIAAgAzYCCCADIAA2AgwgAyABNgIICyACQQhqIQFB2NUAIAQ2AgBBzNUAIAU2AgAMEQtByNUAKAIAIgtFDQEgC2hBAnRB9NcAaigCACIAKAIEQXhxIARrIQUgACECA0ACQCACKAIQIgFFBEAgAkEUaigCACIBRQ0BCyABKAIEQXhxIARrIgMgBUkhAiADIAUgAhshBSABIAAgAhshACABIQIMAQsLIAAoAhghCSAAKAIMIgMgAEcEQEHU1QAoAgAaIAMgACgCCCIBNgIIIAEgAzYCDAwQCyAAQRRqIgIoAgAiAUUEQCAAKAIQIgFFDQMgAEEQaiECCwNAIAIhByABIgNBFGoiAigCACIBDQAgA0EQaiECIAMoAhAiAQ0ACyAHQQA2AgAMDwtBfyEEIABBv39LDQAgAEETaiIBQXBxIQRByNUAKAIAIghFDQBBACAEayEFAkACQAJAAn9BACAEQYACSQ0AGkEfIARB////B0sNABogBEEmIAFBCHZnIgBrdkEBcSAAQQF0a0E+agsiBkECdEH01wBqKAIAIgJFBEBBACEBQQAhAwwBC0EAIQEgBEEZIAZBAXZrQQAgBkEfRxt0IQBBACEDA0ACQCACKAIEQXhxIARrIgcgBU8NACACIQMgByIFDQBBACEFIAIhAQwDCyABIAJBFGooAgAiByAHIAIgAEEddkEEcWpBEGooAgAiAkYbIAEgBxshASAAQQF0IQAgAg0ACwsgASADckUEQEEAIQNBAiAGdCIAQQAgAGtyIAhxIgBFDQMgAGhBAnRB9NcAaigCACEBCyABRQ0BCwNAIAEoAgRBeHEgBGsiAiAFSSEAIAIgBSAAGyEFIAEgAyAAGyEDIAEoAhAiAAR/IAAFIAFBFGooAgALIgENAAsLIANFDQAgBUHM1QAoAgAgBGtPDQAgAygCGCEHIAMgAygCDCIARwRAQdTVACgCABogACADKAIIIgE2AgggASAANgIMDA4LIANBFGoiAigCACIBRQRAIAMoAhAiAUUNAyADQRBqIQILA0AgAiEGIAEiAEEUaiICKAIAIgENACAAQRBqIQIgACgCECIBDQALIAZBADYCAAwNC0HM1QAoAgAiAyAETwRAQdjVACgCACEBAkAgAyAEayICQRBPBEAgASAEaiIAIAJBAXI2AgQgASADaiACNgIAIAEgBEEDcjYCBAwBCyABIANBA3I2AgQgASADaiIAIAAoAgRBAXI2AgRBACEAQQAhAgtBzNUAIAI2AgBB2NUAIAA2AgAgAUEIaiEBDA8LQdDVACgCACIDIARLBEAgBCAJaiIAIAMgBGsiAUEBcjYCBEHc1QAgADYCAEHQ1QAgATYCACAJIARBA3I2AgQgCUEIaiEBDA8LQQAhASAEAn9BnNkAKAIABEBBpNkAKAIADAELQajZAEJ/NwIAQaDZAEKAgISAgIDAADcCAEGc2QAgCkEMakFwcUHYqtWqBXM2AgBBsNkAQQA2AgBBgNkAQQA2AgBBgIAECyIAIARBxwBqIgVqIgZBACAAayIHcSICTwRAQbTZAEEwNgIADA8LAkBB/NgAKAIAIgFFDQBB9NgAKAIAIgggAmohACAAIAFNIAAgCEtxDQBBACEBQbTZAEEwNgIADA8LQYDZAC0AAEEEcQ0EAkACQCAJBEBBhNkAIQEDQCABKAIAIgAgCU0EQCAAIAEoAgRqIAlLDQMLIAEoAggiAQ0ACwtBABA7IgBBf0YNBSACIQZBoNkAKAIAIgFBAWsiAyAAcQRAIAIgAGsgACADakEAIAFrcWohBgsgBCAGTw0FIAZB/v///wdLDQVB/NgAKAIAIgMEQEH02AAoAgAiByAGaiEBIAEgB00NBiABIANLDQYLIAYQOyIBIABHDQEMBwsgBiADayAHcSIGQf7///8HSw0EIAYQOyEAIAAgASgCACABKAIEakYNAyAAIQELAkAgBiAEQcgAak8NACABQX9GDQBBpNkAKAIAIgAgBSAGa2pBACAAa3EiAEH+////B0sEQCABIQAMBwsgABA7QX9HBEAgACAGaiEGIAEhAAwHC0EAIAZrEDsaDAQLIAEiAEF/Rw0FDAMLQQAhAwwMC0EAIQAMCgsgAEF/Rw0CC0GA2QBBgNkAKAIAQQRyNgIACyACQf7///8HSw0BIAIQOyEAQQAQOyEBIABBf0YNASABQX9GDQEgACABTw0BIAEgAGsiBiAEQThqTQ0BC0H02ABB9NgAKAIAIAZqIgE2AgBB+NgAKAIAIAFJBEBB+NgAIAE2AgALAkACQAJAQdzVACgCACICBEBBhNkAIQEDQCAAIAEoAgAiAyABKAIEIgVqRg0CIAEoAggiAQ0ACwwCC0HU1QAoAgAiAUEARyAAIAFPcUUEQEHU1QAgADYCAAtBACEBQYjZACAGNgIAQYTZACAANgIAQeTVAEF/NgIAQejVAEGc2QAoAgA2AgBBkNkAQQA2AgADQCABQYDWAGogAUH01QBqIgI2AgAgAiABQezVAGoiAzYCACABQfjVAGogAzYCACABQYjWAGogAUH81QBqIgM2AgAgAyACNgIAIAFBkNYAaiABQYTWAGoiAjYCACACIAM2AgAgAUGM1gBqIAI2AgAgAUEgaiIBQYACRw0AC0F4IABrQQ9xIgEgAGoiAiAGQThrIgMgAWsiAUEBcjYCBEHg1QBBrNkAKAIANgIAQdDVACABNgIAQdzVACACNgIAIAAgA2pBODYCBAwCCyAAIAJNDQAgAiADSQ0AIAEoAgxBCHENAEF4IAJrQQ9xIgAgAmoiA0HQ1QAoAgAgBmoiByAAayIAQQFyNgIEIAEgBSAGajYCBEHg1QBBrNkAKAIANgIAQdDVACAANgIAQdzVACADNgIAIAIgB2pBODYCBAwBCyAAQdTVACgCAEkEQEHU1QAgADYCAAsgACAGaiEDQYTZACEBAkACQAJAA0AgAyABKAIARwRAIAEoAggiAQ0BDAILCyABLQAMQQhxRQ0BC0GE2QAhAQNAIAEoAgAiAyACTQRAIAMgASgCBGoiBSACSw0DCyABKAIIIQEMAAsACyABIAA2AgAgASABKAIEIAZqNgIEIABBeCAAa0EPcWoiCSAEQQNyNgIEIANBeCADa0EPcWoiBiAEIAlqIgRrIQEgAiAGRgRAQdzVACAENgIAQdDVAEHQ1QAoAgAgAWoiADYCACAEIABBAXI2AgQMCAtB2NUAKAIAIAZGBEBB2NUAIAQ2AgBBzNUAQczVACgCACABaiIANgIAIAQgAEEBcjYCBCAAIARqIAA2AgAMCAsgBigCBCIFQQNxQQFHDQYgBUF4cSEIIAVB/wFNBEAgBUEDdiEDIAYoAggiACAGKAIMIgJGBEBBxNUAQcTVACgCAEF+IAN3cTYCAAwHCyACIAA2AgggACACNgIMDAYLIAYoAhghByAGIAYoAgwiAEcEQCAAIAYoAggiAjYCCCACIAA2AgwMBQsgBkEUaiICKAIAIgVFBEAgBigCECIFRQ0EIAZBEGohAgsDQCACIQMgBSIAQRRqIgIoAgAiBQ0AIABBEGohAiAAKAIQIgUNAAsgA0EANgIADAQLQXggAGtBD3EiASAAaiIHIAZBOGsiAyABayIBQQFyNgIEIAAgA2pBODYCBCACIAVBNyAFa0EPcWpBP2siAyADIAJBEGpJGyIDQSM2AgRB4NUAQazZACgCADYCAEHQ1QAgATYCAEHc1QAgBzYCACADQRBqQYzZACkCADcCACADQYTZACkCADcCCEGM2QAgA0EIajYCAEGI2QAgBjYCAEGE2QAgADYCAEGQ2QBBADYCACADQSRqIQEDQCABQQc2AgAgBSABQQRqIgFLDQALIAIgA0YNACADIAMoAgRBfnE2AgQgAyADIAJrIgU2AgAgAiAFQQFyNgIEIAVB/wFNBEAgBUF4cUHs1QBqIQACf0HE1QAoAgAiAUEBIAVBA3Z0IgNxRQRAQcTVACABIANyNgIAIAAMAQsgACgCCAsiASACNgIMIAAgAjYCCCACIAA2AgwgAiABNgIIDAELQR8hASAFQf///wdNBEAgBUEmIAVBCHZnIgBrdkEBcSAAQQF0a0E+aiEBCyACIAE2AhwgAkIANwIQIAFBAnRB9NcAaiEAQcjVACgCACIDQQEgAXQiBnFFBEAgACACNgIAQcjVACADIAZyNgIAIAIgADYCGCACIAI2AgggAiACNgIMDAELIAVBGSABQQF2a0EAIAFBH0cbdCEBIAAoAgAhAwJAA0AgAyIAKAIEQXhxIAVGDQEgAUEddiEDIAFBAXQhASAAIANBBHFqQRBqIgYoAgAiAw0ACyAGIAI2AgAgAiAANgIYIAIgAjYCDCACIAI2AggMAQsgACgCCCIBIAI2AgwgACACNgIIIAJBADYCGCACIAA2AgwgAiABNgIIC0HQ1QAoAgAiASAETQ0AQdzVACgCACIAIARqIgIgASAEayIBQQFyNgIEQdDVACABNgIAQdzVACACNgIAIAAgBEEDcjYCBCAAQQhqIQEMCAtBACEBQbTZAEEwNgIADAcLQQAhAAsgB0UNAAJAIAYoAhwiAkECdEH01wBqIgMoAgAgBkYEQCADIAA2AgAgAA0BQcjVAEHI1QAoAgBBfiACd3E2AgAMAgsgB0EQQRQgBygCECAGRhtqIAA2AgAgAEUNAQsgACAHNgIYIAYoAhAiAgRAIAAgAjYCECACIAA2AhgLIAZBFGooAgAiAkUNACAAQRRqIAI2AgAgAiAANgIYCyABIAhqIQEgBiAIaiIGKAIEIQULIAYgBUF+cTYCBCABIARqIAE2AgAgBCABQQFyNgIEIAFB/wFNBEAgAUF4cUHs1QBqIQACf0HE1QAoAgAiAkEBIAFBA3Z0IgFxRQRAQcTVACABIAJyNgIAIAAMAQsgACgCCAsiASAENgIMIAAgBDYCCCAEIAA2AgwgBCABNgIIDAELQR8hBSABQf///wdNBEAgAUEmIAFBCHZnIgBrdkEBcSAAQQF0a0E+aiEFCyAEIAU2AhwgBEIANwIQIAVBAnRB9NcAaiEAQcjVACgCACICQQEgBXQiA3FFBEAgACAENgIAQcjVACACIANyNgIAIAQgADYCGCAEIAQ2AgggBCAENgIMDAELIAFBGSAFQQF2a0EAIAVBH0cbdCEFIAAoAgAhAAJAA0AgACICKAIEQXhxIAFGDQEgBUEddiEAIAVBAXQhBSACIABBBHFqQRBqIgMoAgAiAA0ACyADIAQ2AgAgBCACNgIYIAQgBDYCDCAEIAQ2AggMAQsgAigCCCIAIAQ2AgwgAiAENgIIIARBADYCGCAEIAI2AgwgBCAANgIICyAJQQhqIQEMAgsCQCAHRQ0AAkAgAygCHCIBQQJ0QfTXAGoiAigCACADRgRAIAIgADYCACAADQFByNUAIAhBfiABd3EiCDYCAAwCCyAHQRBBFCAHKAIQIANGG2ogADYCACAARQ0BCyAAIAc2AhggAygCECIBBEAgACABNgIQIAEgADYCGAsgA0EUaigCACIBRQ0AIABBFGogATYCACABIAA2AhgLAkAgBUEPTQRAIAMgBCAFaiIAQQNyNgIEIAAgA2oiACAAKAIEQQFyNgIEDAELIAMgBGoiAiAFQQFyNgIEIAMgBEEDcjYCBCACIAVqIAU2AgAgBUH/AU0EQCAFQXhxQezVAGohAAJ/QcTVACgCACIBQQEgBUEDdnQiBXFFBEBBxNUAIAEgBXI2AgAgAAwBCyAAKAIICyIBIAI2AgwgACACNgIIIAIgADYCDCACIAE2AggMAQtBHyEBIAVB////B00EQCAFQSYgBUEIdmciAGt2QQFxIABBAXRrQT5qIQELIAIgATYCHCACQgA3AhAgAUECdEH01wBqIQBBASABdCIEIAhxRQRAIAAgAjYCAEHI1QAgBCAIcjYCACACIAA2AhggAiACNgIIIAIgAjYCDAwBCyAFQRkgAUEBdmtBACABQR9HG3QhASAAKAIAIQQCQANAIAQiACgCBEF4cSAFRg0BIAFBHXYhBCABQQF0IQEgACAEQQRxakEQaiIGKAIAIgQNAAsgBiACNgIAIAIgADYCGCACIAI2AgwgAiACNgIIDAELIAAoAggiASACNgIMIAAgAjYCCCACQQA2AhggAiAANgIMIAIgATYCCAsgA0EIaiEBDAELAkAgCUUNAAJAIAAoAhwiAUECdEH01wBqIgIoAgAgAEYEQCACIAM2AgAgAw0BQcjVACALQX4gAXdxNgIADAILIAlBEEEUIAkoAhAgAEYbaiADNgIAIANFDQELIAMgCTYCGCAAKAIQIgEEQCADIAE2AhAgASADNgIYCyAAQRRqKAIAIgFFDQAgA0EUaiABNgIAIAEgAzYCGAsCQCAFQQ9NBEAgACAEIAVqIgFBA3I2AgQgACABaiIBIAEoAgRBAXI2AgQMAQsgACAEaiIHIAVBAXI2AgQgACAEQQNyNgIEIAUgB2ogBTYCACAIBEAgCEF4cUHs1QBqIQFB2NUAKAIAIQMCf0EBIAhBA3Z0IgIgBnFFBEBBxNUAIAIgBnI2AgAgAQwBCyABKAIICyICIAM2AgwgASADNgIIIAMgATYCDCADIAI2AggLQdjVACAHNgIAQczVACAFNgIACyAAQQhqIQELIApBEGokACABC0MAIABFBEA/AEEQdA8LAkAgAEH//wNxDQAgAEEASA0AIABBEHZAACIAQX9GBEBBtNkAQTA2AgBBfw8LIABBEHQPCwALC5lCIgBBgAgLDQEAAAAAAAAAAgAAAAMAQZgICwUEAAAABQBBqAgLCQYAAAAHAAAACABB5AgLwjJJbnZhbGlkIGNoYXIgaW4gdXJsIHF1ZXJ5AFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fYm9keQBDb250ZW50LUxlbmd0aCBvdmVyZmxvdwBDaHVuayBzaXplIG92ZXJmbG93AEludmFsaWQgbWV0aG9kIGZvciBIVFRQL3gueCByZXF1ZXN0AEludmFsaWQgbWV0aG9kIGZvciBSVFNQL3gueCByZXF1ZXN0AEV4cGVjdGVkIFNPVVJDRSBtZXRob2QgZm9yIElDRS94LnggcmVxdWVzdABJbnZhbGlkIGNoYXIgaW4gdXJsIGZyYWdtZW50IHN0YXJ0AEV4cGVjdGVkIGRvdABTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3N0YXR1cwBJbnZhbGlkIHJlc3BvbnNlIHN0YXR1cwBFeHBlY3RlZCBMRiBhZnRlciBoZWFkZXJzAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMAVXNlciBjYWxsYmFjayBlcnJvcgBgb25fcmVzZXRgIGNhbGxiYWNrIGVycm9yAGBvbl9jaHVua19oZWFkZXJgIGNhbGxiYWNrIGVycm9yAGBvbl9tZXNzYWdlX2JlZ2luYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX3ZhbHVlYCBjYWxsYmFjayBlcnJvcgBgb25fc3RhdHVzX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fdmVyc2lvbl9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX3VybF9jb21wbGV0ZWAgY2FsbGJhY2sgZXJyb3IAYG9uX3Byb3RvY29sX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9oZWFkZXJfdmFsdWVfY29tcGxldGVgIGNhbGxiYWNrIGVycm9yAGBvbl9tZXNzYWdlX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fbWV0aG9kX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25faGVhZGVyX2ZpZWxkX2NvbXBsZXRlYCBjYWxsYmFjayBlcnJvcgBgb25fY2h1bmtfZXh0ZW5zaW9uX25hbWVgIGNhbGxiYWNrIGVycm9yAFVuZXhwZWN0ZWQgY2hhciBpbiB1cmwgc2VydmVyAEludmFsaWQgaGVhZGVyIHZhbHVlIGNoYXIASW52YWxpZCBoZWFkZXIgZmllbGQgY2hhcgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3ZlcnNpb24ASW52YWxpZCBtaW5vciB2ZXJzaW9uAEludmFsaWQgbWFqb3IgdmVyc2lvbgBFeHBlY3RlZCBzcGFjZSBhZnRlciB2ZXJzaW9uAEV4cGVjdGVkIENSTEYgYWZ0ZXIgdmVyc2lvbgBJbnZhbGlkIEhUVFAgdmVyc2lvbgBJbnZhbGlkIGhlYWRlciB0b2tlbgBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX3VybABJbnZhbGlkIGNoYXJhY3RlcnMgaW4gdXJsAFVuZXhwZWN0ZWQgc3RhcnQgY2hhciBpbiB1cmwARG91YmxlIEAgaW4gdXJsAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fcHJvdG9jb2wARW1wdHkgQ29udGVudC1MZW5ndGgASW52YWxpZCBjaGFyYWN0ZXIgaW4gQ29udGVudC1MZW5ndGgAVHJhbnNmZXItRW5jb2RpbmcgY2FuJ3QgYmUgcHJlc2VudCB3aXRoIENvbnRlbnQtTGVuZ3RoAER1cGxpY2F0ZSBDb250ZW50LUxlbmd0aABJbnZhbGlkIGNoYXIgaW4gdXJsIHBhdGgAQ29udGVudC1MZW5ndGggY2FuJ3QgYmUgcHJlc2VudCB3aXRoIFRyYW5zZmVyLUVuY29kaW5nAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgY2h1bmsgc2l6ZQBFeHBlY3RlZCBMRiBhZnRlciBjaHVuayBzaXplAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIHNpemUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfdmFsdWUAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9jaHVua19leHRlbnNpb25fdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyB2YWx1ZQBVbmV4cGVjdGVkIHdoaXRlc3BhY2UgYWZ0ZXIgaGVhZGVyIHZhbHVlAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgaGVhZGVyIHZhbHVlAE1pc3NpbmcgZXhwZWN0ZWQgTEYgYWZ0ZXIgaGVhZGVyIHZhbHVlAEludmFsaWQgYFRyYW5zZmVyLUVuY29kaW5nYCBoZWFkZXIgdmFsdWUATWlzc2luZyBleHBlY3RlZCBDUiBhZnRlciBjaHVuayBleHRlbnNpb24gdmFsdWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyBxdW90ZSB2YWx1ZQBJbnZhbGlkIHF1b3RlZC1wYWlyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGVkIHZhbHVlAEludmFsaWQgY2hhcmFjdGVyIGluIGNodW5rIGV4dGVuc2lvbnMgcXVvdGVkIHZhbHVlAFBhdXNlZCBieSBvbl9oZWFkZXJzX2NvbXBsZXRlAEludmFsaWQgRU9GIHN0YXRlAG9uX3Jlc2V0IHBhdXNlAG9uX2NodW5rX2hlYWRlciBwYXVzZQBvbl9tZXNzYWdlX2JlZ2luIHBhdXNlAG9uX2NodW5rX2V4dGVuc2lvbl92YWx1ZSBwYXVzZQBvbl9zdGF0dXNfY29tcGxldGUgcGF1c2UAb25fdmVyc2lvbl9jb21wbGV0ZSBwYXVzZQBvbl91cmxfY29tcGxldGUgcGF1c2UAb25fcHJvdG9jb2xfY29tcGxldGUgcGF1c2UAb25fY2h1bmtfY29tcGxldGUgcGF1c2UAb25faGVhZGVyX3ZhbHVlX2NvbXBsZXRlIHBhdXNlAG9uX21lc3NhZ2VfY29tcGxldGUgcGF1c2UAb25fbWV0aG9kX2NvbXBsZXRlIHBhdXNlAG9uX2hlYWRlcl9maWVsZF9jb21wbGV0ZSBwYXVzZQBvbl9jaHVua19leHRlbnNpb25fbmFtZSBwYXVzZQBVbmV4cGVjdGVkIHNwYWNlIGFmdGVyIHN0YXJ0IGxpbmUATWlzc2luZyBleHBlY3RlZCBDUiBhZnRlciByZXNwb25zZSBsaW5lAFNwYW4gY2FsbGJhY2sgZXJyb3IgaW4gb25fY2h1bmtfZXh0ZW5zaW9uX25hbWUASW52YWxpZCBjaGFyYWN0ZXIgaW4gY2h1bmsgZXh0ZW5zaW9ucyBuYW1lAE1pc3NpbmcgZXhwZWN0ZWQgQ1IgYWZ0ZXIgY2h1bmsgZXh0ZW5zaW9uIG5hbWUASW52YWxpZCBzdGF0dXMgY29kZQBQYXVzZSBvbiBDT05ORUNUL1VwZ3JhZGUAUGF1c2Ugb24gUFJJL1VwZ3JhZGUARXhwZWN0ZWQgSFRUUC8yIENvbm5lY3Rpb24gUHJlZmFjZQBTcGFuIGNhbGxiYWNrIGVycm9yIGluIG9uX21ldGhvZABFeHBlY3RlZCBzcGFjZSBhZnRlciBtZXRob2QAU3BhbiBjYWxsYmFjayBlcnJvciBpbiBvbl9oZWFkZXJfZmllbGQAUGF1c2VkAEludmFsaWQgd29yZCBlbmNvdW50ZXJlZABJbnZhbGlkIG1ldGhvZCBlbmNvdW50ZXJlZABNaXNzaW5nIGV4cGVjdGVkIENSIGFmdGVyIGNodW5rIGRhdGEARXhwZWN0ZWQgTEYgYWZ0ZXIgY2h1bmsgZGF0YQBVbmV4cGVjdGVkIGNoYXIgaW4gdXJsIHNjaGVtYQBSZXF1ZXN0IGhhcyBpbnZhbGlkIGBUcmFuc2Zlci1FbmNvZGluZ2AARGF0YSBhZnRlciBgQ29ubmVjdGlvbjogY2xvc2VgAFNXSVRDSF9QUk9YWQBVU0VfUFJPWFkATUtBQ1RJVklUWQBVTlBST0NFU1NBQkxFX0VOVElUWQBRVUVSWQBDT1BZAE1PVkVEX1BFUk1BTkVOVExZAFRPT19FQVJMWQBOT1RJRlkARkFJTEVEX0RFUEVOREVOQ1kAQkFEX0dBVEVXQVkAUExBWQBQVVQAQ0hFQ0tPVVQAR0FURVdBWV9USU1FT1VUAFJFUVVFU1RfVElNRU9VVABORVRXT1JLX0NPTk5FQ1RfVElNRU9VVABDT05ORUNUSU9OX1RJTUVPVVQATE9HSU5fVElNRU9VVABORVRXT1JLX1JFQURfVElNRU9VVABQT1NUAE1JU0RJUkVDVEVEX1JFUVVFU1QAQ0xJRU5UX0NMT1NFRF9SRVFVRVNUAENMSUVOVF9DTE9TRURfTE9BRF9CQUxBTkNFRF9SRVFVRVNUAEJBRF9SRVFVRVNUAEhUVFBfUkVRVUVTVF9TRU5UX1RPX0hUVFBTX1BPUlQAUkVQT1JUAElNX0FfVEVBUE9UAFJFU0VUX0NPTlRFTlQATk9fQ09OVEVOVABQQVJUSUFMX0NPTlRFTlQASFBFX0lOVkFMSURfQ09OU1RBTlQASFBFX0NCX1JFU0VUAEdFVABIUEVfU1RSSUNUAENPTkZMSUNUAFRFTVBPUkFSWV9SRURJUkVDVABQRVJNQU5FTlRfUkVESVJFQ1QAQ09OTkVDVABNVUxUSV9TVEFUVVMASFBFX0lOVkFMSURfU1RBVFVTAFRPT19NQU5ZX1JFUVVFU1RTAEVBUkxZX0hJTlRTAFVOQVZBSUxBQkxFX0ZPUl9MRUdBTF9SRUFTT05TAE9QVElPTlMAU1dJVENISU5HX1BST1RPQ09MUwBWQVJJQU5UX0FMU09fTkVHT1RJQVRFUwBNVUxUSVBMRV9DSE9JQ0VTAElOVEVSTkFMX1NFUlZFUl9FUlJPUgBXRUJfU0VSVkVSX1VOS05PV05fRVJST1IAUkFJTEdVTl9FUlJPUgBJREVOVElUWV9QUk9WSURFUl9BVVRIRU5USUNBVElPTl9FUlJPUgBTU0xfQ0VSVElGSUNBVEVfRVJST1IASU5WQUxJRF9YX0ZPUldBUkRFRF9GT1IAU0VUX1BBUkFNRVRFUgBHRVRfUEFSQU1FVEVSAEhQRV9VU0VSAFNFRV9PVEhFUgBIUEVfQ0JfQ0hVTktfSEVBREVSAEV4cGVjdGVkIExGIGFmdGVyIENSAE1LQ0FMRU5EQVIAU0VUVVAAV0VCX1NFUlZFUl9JU19ET1dOAFRFQVJET1dOAEhQRV9DTE9TRURfQ09OTkVDVElPTgBIRVVSSVNUSUNfRVhQSVJBVElPTgBESVNDT05ORUNURURfT1BFUkFUSU9OAE5PTl9BVVRIT1JJVEFUSVZFX0lORk9STUFUSU9OAEhQRV9JTlZBTElEX1ZFUlNJT04ASFBFX0NCX01FU1NBR0VfQkVHSU4AU0lURV9JU19GUk9aRU4ASFBFX0lOVkFMSURfSEVBREVSX1RPS0VOAElOVkFMSURfVE9LRU4ARk9SQklEREVOAEVOSEFOQ0VfWU9VUl9DQUxNAEhQRV9JTlZBTElEX1VSTABCTE9DS0VEX0JZX1BBUkVOVEFMX0NPTlRST0wATUtDT0wAQUNMAEhQRV9JTlRFUk5BTABSRVFVRVNUX0hFQURFUl9GSUVMRFNfVE9PX0xBUkdFX1VOT0ZGSUNJQUwASFBFX09LAFVOTElOSwBVTkxPQ0sAUFJJAFJFVFJZX1dJVEgASFBFX0lOVkFMSURfQ09OVEVOVF9MRU5HVEgASFBFX1VORVhQRUNURURfQ09OVEVOVF9MRU5HVEgARkxVU0gAUFJPUFBBVENIAE0tU0VBUkNIAFVSSV9UT09fTE9ORwBQUk9DRVNTSU5HAE1JU0NFTExBTkVPVVNfUEVSU0lTVEVOVF9XQVJOSU5HAE1JU0NFTExBTkVPVVNfV0FSTklORwBIUEVfSU5WQUxJRF9UUkFOU0ZFUl9FTkNPRElORwBFeHBlY3RlZCBDUkxGAEhQRV9JTlZBTElEX0NIVU5LX1NJWkUATU9WRQBDT05USU5VRQBIUEVfQ0JfU1RBVFVTX0NPTVBMRVRFAEhQRV9DQl9IRUFERVJTX0NPTVBMRVRFAEhQRV9DQl9WRVJTSU9OX0NPTVBMRVRFAEhQRV9DQl9VUkxfQ09NUExFVEUASFBFX0NCX1BST1RPQ09MX0NPTVBMRVRFAEhQRV9DQl9DSFVOS19DT01QTEVURQBIUEVfQ0JfSEVBREVSX1ZBTFVFX0NPTVBMRVRFAEhQRV9DQl9DSFVOS19FWFRFTlNJT05fVkFMVUVfQ09NUExFVEUASFBFX0NCX0NIVU5LX0VYVEVOU0lPTl9OQU1FX0NPTVBMRVRFAEhQRV9DQl9NRVNTQUdFX0NPTVBMRVRFAEhQRV9DQl9NRVRIT0RfQ09NUExFVEUASFBFX0NCX0hFQURFUl9GSUVMRF9DT01QTEVURQBERUxFVEUASFBFX0lOVkFMSURfRU9GX1NUQVRFAElOVkFMSURfU1NMX0NFUlRJRklDQVRFAFBBVVNFAE5PX1JFU1BPTlNFAFVOU1VQUE9SVEVEX01FRElBX1RZUEUAR09ORQBOT1RfQUNDRVBUQUJMRQBTRVJWSUNFX1VOQVZBSUxBQkxFAFJBTkdFX05PVF9TQVRJU0ZJQUJMRQBPUklHSU5fSVNfVU5SRUFDSEFCTEUAUkVTUE9OU0VfSVNfU1RBTEUAUFVSR0UATUVSR0UAUkVRVUVTVF9IRUFERVJfRklFTERTX1RPT19MQVJHRQBSRVFVRVNUX0hFQURFUl9UT09fTEFSR0UAUEFZTE9BRF9UT09fTEFSR0UASU5TVUZGSUNJRU5UX1NUT1JBR0UASFBFX1BBVVNFRF9VUEdSQURFAEhQRV9QQVVTRURfSDJfVVBHUkFERQBTT1VSQ0UAQU5OT1VOQ0UAVFJBQ0UASFBFX1VORVhQRUNURURfU1BBQ0UAREVTQ1JJQkUAVU5TVUJTQ1JJQkUAUkVDT1JEAEhQRV9JTlZBTElEX01FVEhPRABOT1RfRk9VTkQAUFJPUEZJTkQAVU5CSU5EAFJFQklORABVTkFVVEhPUklaRUQATUVUSE9EX05PVF9BTExPV0VEAEhUVFBfVkVSU0lPTl9OT1RfU1VQUE9SVEVEAEFMUkVBRFlfUkVQT1JURUQAQUNDRVBURUQATk9UX0lNUExFTUVOVEVEAExPT1BfREVURUNURUQASFBFX0NSX0VYUEVDVEVEAEhQRV9MRl9FWFBFQ1RFRABDUkVBVEVEAElNX1VTRUQASFBFX1BBVVNFRABUSU1FT1VUX09DQ1VSRUQAUEFZTUVOVF9SRVFVSVJFRABQUkVDT05ESVRJT05fUkVRVUlSRUQAUFJPWFlfQVVUSEVOVElDQVRJT05fUkVRVUlSRUQATkVUV09SS19BVVRIRU5USUNBVElPTl9SRVFVSVJFRABMRU5HVEhfUkVRVUlSRUQAU1NMX0NFUlRJRklDQVRFX1JFUVVJUkVEAFVQR1JBREVfUkVRVUlSRUQAUEFHRV9FWFBJUkVEAFBSRUNPTkRJVElPTl9GQUlMRUQARVhQRUNUQVRJT05fRkFJTEVEAFJFVkFMSURBVElPTl9GQUlMRUQAU1NMX0hBTkRTSEFLRV9GQUlMRUQATE9DS0VEAFRSQU5TRk9STUFUSU9OX0FQUExJRUQATk9UX01PRElGSUVEAE5PVF9FWFRFTkRFRABCQU5EV0lEVEhfTElNSVRfRVhDRUVERUQAU0lURV9JU19PVkVSTE9BREVEAEhFQUQARXhwZWN0ZWQgSFRUUC8sIFJUU1AvIG9yIElDRS8A5xUAAK8VAACkEgAAkhoAACYWAACeFAAA2xkAAHkVAAB+EgAA/hQAADYVAAALFgAA2BYAAPMSAABCGAAArBYAABIVAAAUFwAA7xcAAEgUAABxFwAAshoAAGsZAAB+GQAANRQAAIIaAABEFwAA/RYAAB4YAACHFwAAqhkAAJMSAAAHGAAALBcAAMoXAACkFwAA5xUAAOcVAABYFwAAOxgAAKASAAAtHAAAwxEAAEgRAADeEgAAQhMAAKQZAAD9EAAA9xUAAKUVAADvFgAA+BkAAEoWAABWFgAA9RUAAAoaAAAIGgAAARoAAKsVAABCEgAA1xAAAEwRAAAFGQAAVBYAAB4RAADKGQAAyBkAAE4WAAD/GAAAcRQAAPAVAADuFQAAlBkAAPwVAAC/GQAAmxkAAHwUAABDEQAAcBgAAJUUAAAnFAAAGRQAANUSAADUGQAARBYAAPcQAEG5OwsBAQBB0DsL4AEBAQIBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQBBuj0LBAEAAAIAQdE9C14DBAMDAwMDAAADAwADAwADAwMDAwMDAwMDAAUAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAwADAEG6PwsEAQAAAgBB0T8LXgMAAwMDAwMAAAMDAAMDAAMDAwMDAwMDAwMABAAFAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwADAAMAQbDBAAsNbG9zZWVlcC1hbGl2ZQBBycEACwEBAEHgwQAL4AEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQBBycMACwEBAEHgwwAL5wEBAQEBAQEBAQEBAQECAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAWNodW5rZWQAQfHFAAteAQABAQEBAQAAAQEAAQEAAQEBAQEBAQEBAQAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQAAAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAAEAAQBB0McACyFlY3Rpb25lbnQtbGVuZ3Rob25yb3h5LWNvbm5lY3Rpb24AQYDIAAsgcmFuc2Zlci1lbmNvZGluZ3BncmFkZQ0KDQpTTQ0KDQoAQanIAAsFAQIAAQMAQcDIAAtfBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAQanKAAsFAQIAAQMAQcDKAAtfBAUFBgUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAQanMAAsEAQAAAQBBwcwAC14CAgACAgICAgICAgICAgICAgICAgICAgICAgICAgIAAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAEGpzgALBQECAAEDAEHAzgALXwQFAAAFBQUFBQUFBQUFBQYFBQUFBQUFBQUFBQUABQAHCAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQAFAAUABQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAAAAFAEGp0AALBQEBAAEBAEHA0AALAQEAQdrQAAtBAgAAAAAAAAMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAAAAAAAAAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAQanSAAsFAQEAAQEAQcDSAAsBAQBBytIACwYCAAAAAAIAQeHSAAs6AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMAAAAAAAADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwBBoNQAC50BTk9VTkNFRUNLT1VUTkVDVEVURUNSSUJFTFVTSEVURUFEU0VBUkNIUkdFQ1RJVklUWUxFTkRBUlZFT1RJRllQVElPTlNDSFNFQVlTVEFUQ0hHRVVFUllPUkRJUkVDVE9SVFJDSFBBUkFNRVRFUlVSQ0VCU0NSSUJFQVJET1dOQUNFSU5ETktDS1VCU0NSSUJFVFRQQ0VUU1BBRFRQLw==";
@@ -50113,9 +50113,9 @@ var require_llhttp_simd_wasm = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/constants.js
+// ../../../server/node_modules/undici/lib/web/fetch/constants.js
 var require_constants4 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/constants.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/constants.js"(exports, module) {
     "use strict";
     var corsSafeListedMethods = (
       /** @type {const} */
@@ -50337,9 +50337,9 @@ var require_constants4 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/global.js
+// ../../../server/node_modules/undici/lib/web/fetch/global.js
 var require_global = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/global.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/global.js"(exports, module) {
     "use strict";
     var globalOrigin = /* @__PURE__ */ Symbol.for("undici.globalOrigin.1");
     function getGlobalOrigin() {
@@ -50373,9 +50373,9 @@ var require_global = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/encoding/index.js
+// ../../../server/node_modules/undici/lib/encoding/index.js
 var require_encoding = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/encoding/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/encoding/index.js"(exports, module) {
     "use strict";
     var textDecoder = new TextDecoder();
     function utf8DecodeBytes(buffer) {
@@ -50394,9 +50394,9 @@ var require_encoding = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/infra/index.js
+// ../../../server/node_modules/undici/lib/web/infra/index.js
 var require_infra = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/infra/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/infra/index.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { utf8DecodeBytes } = require_encoding();
@@ -50507,9 +50507,9 @@ var require_infra = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/data-url.js
+// ../../../server/node_modules/undici/lib/web/fetch/data-url.js
 var require_data_url = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/data-url.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/data-url.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { forgivingBase64, collectASequenceOfCodePoints, collectASequenceOfCodePointsFast, isomorphicDecode, removeASCIIWhitespace, removeChars } = require_infra();
@@ -50786,9 +50786,9 @@ var require_data_url = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/runtime-features.js
+// ../../../server/node_modules/undici/lib/util/runtime-features.js
 var require_runtime_features = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/runtime-features.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/runtime-features.js"(exports, module) {
     "use strict";
     var lazyLoaders = {
       __proto__: null,
@@ -50888,9 +50888,9 @@ var require_runtime_features = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/webidl/index.js
+// ../../../server/node_modules/undici/lib/web/webidl/index.js
 var require_webidl = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/webidl/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/webidl/index.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { types: types3, inspect } = __require("node:util");
@@ -51490,9 +51490,9 @@ var require_webidl = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/util.js
+// ../../../server/node_modules/undici/lib/web/fetch/util.js
 var require_util4 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/util.js"(exports, module) {
     "use strict";
     var { Transform } = __require("node:stream");
     var zlib2 = __require("node:zlib");
@@ -52257,9 +52257,9 @@ var require_util4 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/formdata.js
+// ../../../server/node_modules/undici/lib/web/fetch/formdata.js
 var require_formdata = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/formdata.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/formdata.js"(exports, module) {
     "use strict";
     var { iteratorMixin } = require_util4();
     var { kEnumerableProperty } = require_util3();
@@ -52419,9 +52419,9 @@ var require_formdata = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/formdata-parser.js
+// ../../../server/node_modules/undici/lib/web/fetch/formdata-parser.js
 var require_formdata_parser = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/formdata-parser.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/formdata-parser.js"(exports, module) {
     "use strict";
     var { bufferToLowerCasedHeaderName } = require_util3();
     var { HTTP_TOKEN_CODEPOINTS } = require_data_url();
@@ -52749,9 +52749,9 @@ var require_formdata_parser = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/promise.js
+// ../../../server/node_modules/undici/lib/util/promise.js
 var require_promise = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/promise.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/promise.js"(exports, module) {
     "use strict";
     function createDeferredPromise() {
       let res2;
@@ -52768,9 +52768,9 @@ var require_promise = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/body.js
+// ../../../server/node_modules/undici/lib/web/fetch/body.js
 var require_body = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/body.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/body.js"(exports, module) {
     "use strict";
     var util2 = require_util3();
     var {
@@ -53051,9 +53051,9 @@ Content-Type: ${value2.type || "application/octet-stream"}\r
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client-h1.js
+// ../../../server/node_modules/undici/lib/dispatcher/client-h1.js
 var require_client_h1 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client-h1.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/client-h1.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var util2 = require_util3();
@@ -54319,9 +54319,9 @@ ${len.toString(16)}\r
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client-h2.js
+// ../../../server/node_modules/undici/lib/dispatcher/client-h2.js
 var require_client_h2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client-h2.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/client-h2.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { pipeline: pipeline2 } = __require("node:stream");
@@ -55077,9 +55077,9 @@ var require_client_h2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client.js
+// ../../../server/node_modules/undici/lib/dispatcher/client.js
 var require_client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/client.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/client.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var net = __require("node:net");
@@ -55608,9 +55608,9 @@ var require_client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/fixed-queue.js
+// ../../../server/node_modules/undici/lib/dispatcher/fixed-queue.js
 var require_fixed_queue = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/fixed-queue.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/fixed-queue.js"(exports, module) {
     "use strict";
     var kSize = 2048;
     var kMask = kSize - 1;
@@ -55679,9 +55679,9 @@ var require_fixed_queue = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/pool-base.js
+// ../../../server/node_modules/undici/lib/dispatcher/pool-base.js
 var require_pool_base = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/pool-base.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/pool-base.js"(exports, module) {
     "use strict";
     var { PoolStats } = require_stats();
     var DispatcherBase = require_dispatcher_base();
@@ -55855,9 +55855,9 @@ var require_pool_base = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/pool.js
+// ../../../server/node_modules/undici/lib/dispatcher/pool.js
 var require_pool = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/pool.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/pool.js"(exports, module) {
     "use strict";
     var {
       PoolBase,
@@ -55957,9 +55957,9 @@ var require_pool = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/balanced-pool.js
+// ../../../server/node_modules/undici/lib/dispatcher/balanced-pool.js
 var require_balanced_pool = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/balanced-pool.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/balanced-pool.js"(exports, module) {
     "use strict";
     var {
       BalancedPoolMissingUpstreamError,
@@ -56107,9 +56107,9 @@ var require_balanced_pool = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/round-robin-pool.js
+// ../../../server/node_modules/undici/lib/dispatcher/round-robin-pool.js
 var require_round_robin_pool = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/round-robin-pool.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/round-robin-pool.js"(exports, module) {
     "use strict";
     var {
       PoolBase,
@@ -56224,9 +56224,9 @@ var require_round_robin_pool = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/agent.js
+// ../../../server/node_modules/undici/lib/dispatcher/agent.js
 var require_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/agent.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError, MaxOriginsReachedError } = require_errors();
     var { kClients, kRunning, kClose, kDestroy, kDispatch, kUrl } = require_symbols();
@@ -56357,9 +56357,9 @@ var require_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/socks5-utils.js
+// ../../../server/node_modules/undici/lib/core/socks5-utils.js
 var require_socks5_utils = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/socks5-utils.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/socks5-utils.js"(exports, module) {
     "use strict";
     var { Buffer: Buffer4 } = __require("node:buffer");
     var net = __require("node:net");
@@ -56518,9 +56518,9 @@ var require_socks5_utils = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/socks5-client.js
+// ../../../server/node_modules/undici/lib/core/socks5-client.js
 var require_socks5_client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/core/socks5-client.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/core/socks5-client.js"(exports, module) {
     "use strict";
     var { EventEmitter } = __require("node:events");
     var { Buffer: Buffer4 } = __require("node:buffer");
@@ -56851,9 +56851,9 @@ var require_socks5_client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/socks5-proxy-agent.js
+// ../../../server/node_modules/undici/lib/dispatcher/socks5-proxy-agent.js
 var require_socks5_proxy_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/socks5-proxy-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/socks5-proxy-agent.js"(exports, module) {
     "use strict";
     var { URL: URL2 } = __require("node:url");
     var tls;
@@ -57054,9 +57054,9 @@ var require_socks5_proxy_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/proxy-agent.js
+// ../../../server/node_modules/undici/lib/dispatcher/proxy-agent.js
 var require_proxy_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/proxy-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/proxy-agent.js"(exports, module) {
     "use strict";
     var { kProxy, kClose, kDestroy, kDispatch } = require_symbols();
     var Agent3 = require_agent();
@@ -57311,9 +57311,9 @@ var require_proxy_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/env-http-proxy-agent.js
+// ../../../server/node_modules/undici/lib/dispatcher/env-http-proxy-agent.js
 var require_env_http_proxy_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/env-http-proxy-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/env-http-proxy-agent.js"(exports, module) {
     "use strict";
     var DispatcherBase = require_dispatcher_base();
     var { kClose, kDestroy, kClosed, kDestroyed, kDispatch, kNoProxyAgent, kHttpProxyAgent, kHttpsProxyAgent } = require_symbols();
@@ -57434,9 +57434,9 @@ var require_env_http_proxy_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/retry-handler.js
+// ../../../server/node_modules/undici/lib/handler/retry-handler.js
 var require_retry_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/retry-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/retry-handler.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { kRetryHandlerDefaultRetry } = require_symbols();
@@ -57788,9 +57788,9 @@ var require_retry_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/retry-agent.js
+// ../../../server/node_modules/undici/lib/dispatcher/retry-agent.js
 var require_retry_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/retry-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/retry-agent.js"(exports, module) {
     "use strict";
     var Dispatcher = require_dispatcher();
     var RetryHandler = require_retry_handler();
@@ -57823,9 +57823,9 @@ var require_retry_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/h2c-client.js
+// ../../../server/node_modules/undici/lib/dispatcher/h2c-client.js
 var require_h2c_client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/dispatcher/h2c-client.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/dispatcher/h2c-client.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError } = require_errors();
     var Client = require_client();
@@ -57866,9 +57866,9 @@ var require_h2c_client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/readable.js
+// ../../../server/node_modules/undici/lib/api/readable.js
 var require_readable = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/readable.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/readable.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { Readable: Readable2 } = __require("node:stream");
@@ -58268,9 +58268,9 @@ var require_readable = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-request.js
+// ../../../server/node_modules/undici/lib/api/api-request.js
 var require_api_request = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-request.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/api-request.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { AsyncResource } = __require("node:async_hooks");
@@ -58446,9 +58446,9 @@ var require_api_request = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/abort-signal.js
+// ../../../server/node_modules/undici/lib/api/abort-signal.js
 var require_abort_signal = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/abort-signal.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/abort-signal.js"(exports, module) {
     "use strict";
     var { addAbortListener } = require_util3();
     var { RequestAbortedError: RequestAbortedError2 } = require_errors();
@@ -58498,9 +58498,9 @@ var require_abort_signal = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-stream.js
+// ../../../server/node_modules/undici/lib/api/api-stream.js
 var require_api_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-stream.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/api-stream.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { finished: finished2 } = __require("node:stream");
@@ -58659,9 +58659,9 @@ var require_api_stream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-pipeline.js
+// ../../../server/node_modules/undici/lib/api/api-pipeline.js
 var require_api_pipeline = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-pipeline.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/api-pipeline.js"(exports, module) {
     "use strict";
     var {
       Readable: Readable2,
@@ -58860,9 +58860,9 @@ var require_api_pipeline = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-upgrade.js
+// ../../../server/node_modules/undici/lib/api/api-upgrade.js
 var require_api_upgrade = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-upgrade.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/api-upgrade.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError, SocketError } = require_errors();
     var { AsyncResource } = __require("node:async_hooks");
@@ -58954,9 +58954,9 @@ var require_api_upgrade = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-connect.js
+// ../../../server/node_modules/undici/lib/api/api-connect.js
 var require_api_connect = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/api-connect.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/api-connect.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { AsyncResource } = __require("node:async_hooks");
@@ -59045,9 +59045,9 @@ var require_api_connect = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/index.js
+// ../../../server/node_modules/undici/lib/api/index.js
 var require_api = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/api/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/api/index.js"(exports, module) {
     "use strict";
     module.exports.request = require_api_request();
     module.exports.stream = require_api_stream();
@@ -59057,9 +59057,9 @@ var require_api = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-errors.js
+// ../../../server/node_modules/undici/lib/mock/mock-errors.js
 var require_mock_errors = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-errors.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-errors.js"(exports, module) {
     "use strict";
     var { UndiciError } = require_errors();
     var kMockNotMatchedError = /* @__PURE__ */ Symbol.for("undici.error.UND_MOCK_ERR_MOCK_NOT_MATCHED");
@@ -59083,9 +59083,9 @@ var require_mock_errors = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-symbols.js
+// ../../../server/node_modules/undici/lib/mock/mock-symbols.js
 var require_mock_symbols = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-symbols.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-symbols.js"(exports, module) {
     "use strict";
     module.exports = {
       kAgent: /* @__PURE__ */ Symbol("agent"),
@@ -59120,9 +59120,9 @@ var require_mock_symbols = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-utils.js
+// ../../../server/node_modules/undici/lib/mock/mock-utils.js
 var require_mock_utils = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-utils.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-utils.js"(exports, module) {
     "use strict";
     var { MockNotMatchedError } = require_mock_errors();
     var {
@@ -59497,9 +59497,9 @@ var require_mock_utils = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-interceptor.js
+// ../../../server/node_modules/undici/lib/mock/mock-interceptor.js
 var require_mock_interceptor = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-interceptor.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-interceptor.js"(exports, module) {
     "use strict";
     var { getResponseData, buildKey, addMockDispatch } = require_mock_utils();
     var {
@@ -59661,9 +59661,9 @@ var require_mock_interceptor = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-client.js
+// ../../../server/node_modules/undici/lib/mock/mock-client.js
 var require_mock_client = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-client.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-client.js"(exports, module) {
     "use strict";
     var { promisify: promisify10 } = __require("node:util");
     var Client = require_client();
@@ -59722,9 +59722,9 @@ var require_mock_client = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-call-history.js
+// ../../../server/node_modules/undici/lib/mock/mock-call-history.js
 var require_mock_call_history = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-call-history.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-call-history.js"(exports, module) {
     "use strict";
     var { kMockCallHistoryAddLog } = require_mock_symbols();
     var { InvalidArgumentError } = require_errors();
@@ -59922,9 +59922,9 @@ var require_mock_call_history = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-pool.js
+// ../../../server/node_modules/undici/lib/mock/mock-pool.js
 var require_mock_pool = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-pool.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-pool.js"(exports, module) {
     "use strict";
     var { promisify: promisify10 } = __require("node:util");
     var Pool = require_pool();
@@ -59983,9 +59983,9 @@ var require_mock_pool = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/pending-interceptors-formatter.js
+// ../../../server/node_modules/undici/lib/mock/pending-interceptors-formatter.js
 var require_pending_interceptors_formatter = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/pending-interceptors-formatter.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/pending-interceptors-formatter.js"(exports, module) {
     "use strict";
     var { Transform } = __require("node:stream");
     var { Console } = __require("node:console");
@@ -60024,9 +60024,9 @@ var require_pending_interceptors_formatter = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-agent.js
+// ../../../server/node_modules/undici/lib/mock/mock-agent.js
 var require_mock_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/mock-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/mock-agent.js"(exports, module) {
     "use strict";
     var { kClients } = require_symbols();
     var Agent3 = require_agent();
@@ -60208,9 +60208,9 @@ ${pendingInterceptorsFormatter.format(pending2)}`.trim()
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-utils.js
+// ../../../server/node_modules/undici/lib/mock/snapshot-utils.js
 var require_snapshot_utils = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-utils.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/snapshot-utils.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError } = require_errors();
     var { runtimeFeatures } = require_runtime_features();
@@ -60294,9 +60294,9 @@ var require_snapshot_utils = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-recorder.js
+// ../../../server/node_modules/undici/lib/mock/snapshot-recorder.js
 var require_snapshot_recorder = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/snapshot-recorder.js"(exports, module) {
     "use strict";
     var { writeFile: writeFile4, readFile: readFile3, mkdir: mkdir3 } = __require("node:fs/promises");
     var { dirname: dirname17, resolve: resolve17 } = __require("node:path");
@@ -60670,9 +60670,9 @@ var require_snapshot_recorder = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-agent.js
+// ../../../server/node_modules/undici/lib/mock/snapshot-agent.js
 var require_snapshot_agent = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/mock/snapshot-agent.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/mock/snapshot-agent.js"(exports, module) {
     "use strict";
     var Agent3 = require_agent();
     var MockAgent = require_mock_agent();
@@ -60957,9 +60957,9 @@ var require_snapshot_agent = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/global.js
+// ../../../server/node_modules/undici/lib/global.js
 var require_global2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/global.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/global.js"(exports, module) {
     "use strict";
     var globalDispatcher = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.2");
     var legacyGlobalDispatcher = /* @__PURE__ */ Symbol.for("undici.globalDispatcher.1");
@@ -61011,9 +61011,9 @@ var require_global2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/decorator-handler.js
+// ../../../server/node_modules/undici/lib/handler/decorator-handler.js
 var require_decorator_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/decorator-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/decorator-handler.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var WrapHandler = require_wrap_handler();
@@ -61067,9 +61067,9 @@ var require_decorator_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/redirect-handler.js
+// ../../../server/node_modules/undici/lib/handler/redirect-handler.js
 var require_redirect_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/redirect-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/redirect-handler.js"(exports, module) {
     "use strict";
     var util2 = require_util3();
     var { kBodyUsed } = require_symbols();
@@ -61227,9 +61227,9 @@ var require_redirect_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/redirect.js
+// ../../../server/node_modules/undici/lib/interceptor/redirect.js
 var require_redirect = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/redirect.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/redirect.js"(exports, module) {
     "use strict";
     var RedirectHandler = require_redirect_handler();
     function createRedirectInterceptor({ maxRedirections: defaultMaxRedirections } = {}) {
@@ -61249,9 +61249,9 @@ var require_redirect = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/response-error.js
+// ../../../server/node_modules/undici/lib/interceptor/response-error.js
 var require_response_error = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/response-error.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/response-error.js"(exports, module) {
     "use strict";
     var DecoratorHandler = require_decorator_handler();
     var { ResponseError } = require_errors();
@@ -61331,9 +61331,9 @@ var require_response_error = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/retry.js
+// ../../../server/node_modules/undici/lib/interceptor/retry.js
 var require_retry6 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/retry.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/retry.js"(exports, module) {
     "use strict";
     var RetryHandler = require_retry_handler();
     module.exports = (globalOpts) => {
@@ -61355,9 +61355,9 @@ var require_retry6 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/dump.js
+// ../../../server/node_modules/undici/lib/interceptor/dump.js
 var require_dump = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/dump.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/dump.js"(exports, module) {
     "use strict";
     var { InvalidArgumentError, RequestAbortedError: RequestAbortedError2 } = require_errors();
     var DecoratorHandler = require_decorator_handler();
@@ -61432,9 +61432,9 @@ var require_dump = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/dns.js
+// ../../../server/node_modules/undici/lib/interceptor/dns.js
 var require_dns = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/dns.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/dns.js"(exports, module) {
     "use strict";
     var { isIP: isIP2 } = __require("node:net");
     var { lookup } = __require("node:dns");
@@ -61871,9 +61871,9 @@ var require_dns = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/cache.js
+// ../../../server/node_modules/undici/lib/util/cache.js
 var require_cache = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/cache.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/cache.js"(exports, module) {
     "use strict";
     var {
       safeHTTPMethods,
@@ -62356,9 +62356,9 @@ var require_cache = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/date.js
+// ../../../server/node_modules/undici/lib/util/date.js
 var require_date = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/util/date.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/util/date.js"(exports, module) {
     "use strict";
     function parseHttpDate(date3) {
       switch (date3[3]) {
@@ -62856,9 +62856,9 @@ var require_date = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/cache-handler.js
+// ../../../server/node_modules/undici/lib/handler/cache-handler.js
 var require_cache_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/cache-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/cache-handler.js"(exports, module) {
     "use strict";
     var util2 = require_util3();
     var {
@@ -63379,9 +63379,9 @@ var require_cache_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/cache/memory-cache-store.js
+// ../../../server/node_modules/undici/lib/cache/memory-cache-store.js
 var require_memory_cache_store = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/cache/memory-cache-store.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/cache/memory-cache-store.js"(exports, module) {
     "use strict";
     var { Writable } = __require("node:stream");
     var { EventEmitter } = __require("node:events");
@@ -63587,9 +63587,9 @@ var require_memory_cache_store = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/cache-revalidation-handler.js
+// ../../../server/node_modules/undici/lib/handler/cache-revalidation-handler.js
 var require_cache_revalidation_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/cache-revalidation-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/cache-revalidation-handler.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var CacheRevalidationHandler = class {
@@ -63674,9 +63674,9 @@ var require_cache_revalidation_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/cache.js
+// ../../../server/node_modules/undici/lib/interceptor/cache.js
 var require_cache2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/cache.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/cache.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { Readable: Readable2 } = __require("node:stream");
@@ -64092,9 +64092,9 @@ var require_cache2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/decompress.js
+// ../../../server/node_modules/undici/lib/interceptor/decompress.js
 var require_decompress = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/decompress.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/decompress.js"(exports, module) {
     "use strict";
     var { createInflate, createGunzip, createBrotliDecompress, createZstdDecompress } = __require("node:zlib");
     var { pipeline: pipeline2, Transform: TransformStream2 } = __require("node:stream");
@@ -64411,9 +64411,9 @@ var require_decompress = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/deduplication-handler.js
+// ../../../server/node_modules/undici/lib/handler/deduplication-handler.js
 var require_deduplication_handler = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/handler/deduplication-handler.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/handler/deduplication-handler.js"(exports, module) {
     "use strict";
     var { RequestAbortedError: RequestAbortedError2 } = require_errors();
     var DEFAULT_MAX_BUFFER_SIZE = 5 * 1024 * 1024;
@@ -64770,9 +64770,9 @@ var require_deduplication_handler = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/deduplicate.js
+// ../../../server/node_modules/undici/lib/interceptor/deduplicate.js
 var require_deduplicate = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/interceptor/deduplicate.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/interceptor/deduplicate.js"(exports, module) {
     "use strict";
     var diagnosticsChannel = __require("node:diagnostics_channel");
     var util2 = require_util3();
@@ -64855,9 +64855,9 @@ var require_deduplicate = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/cache/sqlite-cache-store.js
+// ../../../server/node_modules/undici/lib/cache/sqlite-cache-store.js
 var require_sqlite_cache_store = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/cache/sqlite-cache-store.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/cache/sqlite-cache-store.js"(exports, module) {
     "use strict";
     var { Writable } = __require("node:stream");
     var { assertCacheKey, assertCacheValue } = require_cache();
@@ -65219,9 +65219,9 @@ var require_sqlite_cache_store = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/headers.js
+// ../../../server/node_modules/undici/lib/web/fetch/headers.js
 var require_headers = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/headers.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/headers.js"(exports, module) {
     "use strict";
     var { kConstruct } = require_symbols();
     var { kEnumerableProperty } = require_util3();
@@ -65680,9 +65680,9 @@ var require_headers = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/response.js
+// ../../../server/node_modules/undici/lib/web/fetch/response.js
 var require_response = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/response.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/response.js"(exports, module) {
     "use strict";
     var { Headers: Headers3, HeadersList, fill, getHeadersGuard, setHeadersGuard, setHeadersList } = require_headers();
     var { extractBody, cloneBody, mixinBody, streamRegistry, bodyUnusable } = require_body();
@@ -66102,9 +66102,9 @@ var require_response = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/request.js
+// ../../../server/node_modules/undici/lib/web/fetch/request.js
 var require_request2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/request.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/request.js"(exports, module) {
     "use strict";
     var { extractBody, mixinBody, cloneBody, bodyUnusable } = require_body();
     var { Headers: Headers3, fill: fillHeaders, HeadersList, setHeadersGuard, getHeadersGuard, setHeadersList, getHeadersList } = require_headers();
@@ -66858,9 +66858,9 @@ var require_request2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/subresource-integrity/subresource-integrity.js
+// ../../../server/node_modules/undici/lib/web/subresource-integrity/subresource-integrity.js
 var require_subresource_integrity = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/subresource-integrity/subresource-integrity.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/subresource-integrity/subresource-integrity.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { runtimeFeatures } = require_runtime_features();
@@ -66997,9 +66997,9 @@ var require_subresource_integrity = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/index.js
+// ../../../server/node_modules/undici/lib/web/fetch/index.js
 var require_fetch = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/fetch/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/fetch/index.js"(exports, module) {
     "use strict";
     var {
       makeNetworkError,
@@ -68141,9 +68141,9 @@ var require_fetch = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/util.js
+// ../../../server/node_modules/undici/lib/web/cache/util.js
 var require_util5 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cache/util.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { URLSerializer } = require_data_url();
@@ -68171,9 +68171,9 @@ var require_util5 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/cache.js
+// ../../../server/node_modules/undici/lib/web/cache/cache.js
 var require_cache3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/cache.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cache/cache.js"(exports, module) {
     "use strict";
     var assert2 = __require("node:assert");
     var { kConstruct } = require_symbols();
@@ -68720,9 +68720,9 @@ var require_cache3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/cachestorage.js
+// ../../../server/node_modules/undici/lib/web/cache/cachestorage.js
 var require_cachestorage = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cache/cachestorage.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cache/cachestorage.js"(exports, module) {
     "use strict";
     var { Cache } = require_cache3();
     var { webidl } = require_webidl();
@@ -68830,9 +68830,9 @@ var require_cachestorage = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/constants.js
+// ../../../server/node_modules/undici/lib/web/cookies/constants.js
 var require_constants5 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/constants.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cookies/constants.js"(exports, module) {
     "use strict";
     var maxAttributeValueSize = 1024;
     var maxNameValuePairSize = 4096;
@@ -68843,9 +68843,9 @@ var require_constants5 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/util.js
+// ../../../server/node_modules/undici/lib/web/cookies/util.js
 var require_util6 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cookies/util.js"(exports, module) {
     "use strict";
     function isCTLExcludingHtab(value2) {
       for (let i2 = 0; i2 < value2.length; ++i2) {
@@ -69051,9 +69051,9 @@ var require_util6 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/parse.js
+// ../../../server/node_modules/undici/lib/web/cookies/parse.js
 var require_parse2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/parse.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cookies/parse.js"(exports, module) {
     "use strict";
     var { collectASequenceOfCodePointsFast } = require_infra();
     var { maxNameValuePairSize, maxAttributeValueSize } = require_constants5();
@@ -69187,9 +69187,9 @@ var require_parse2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/index.js
+// ../../../server/node_modules/undici/lib/web/cookies/index.js
 var require_cookies = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/cookies/index.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/cookies/index.js"(exports, module) {
     "use strict";
     var { parseSetCookie } = require_parse2();
     var { stringify: stringify2 } = require_util6();
@@ -69322,9 +69322,9 @@ var require_cookies = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/events.js
+// ../../../server/node_modules/undici/lib/web/websocket/events.js
 var require_events = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/events.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/events.js"(exports, module) {
     "use strict";
     var { webidl } = require_webidl();
     var { kEnumerableProperty } = require_util3();
@@ -69590,9 +69590,9 @@ var require_events = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/constants.js
+// ../../../server/node_modules/undici/lib/web/websocket/constants.js
 var require_constants6 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/constants.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/constants.js"(exports, module) {
     "use strict";
     var uid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
     var staticPropertyDescriptors = {
@@ -69646,9 +69646,9 @@ var require_constants6 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/util.js
+// ../../../server/node_modules/undici/lib/web/websocket/util.js
 var require_util7 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/util.js"(exports, module) {
     "use strict";
     var { states, opcodes } = require_constants6();
     var { isUtf8 } = __require("node:buffer");
@@ -69823,9 +69823,9 @@ var require_util7 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/frame.js
+// ../../../server/node_modules/undici/lib/web/websocket/frame.js
 var require_frame = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/frame.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/frame.js"(exports, module) {
     "use strict";
     var { runtimeFeatures } = require_runtime_features();
     var { maxUnsigned16Bit, opcodes } = require_constants6();
@@ -69928,9 +69928,9 @@ var require_frame = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/connection.js
+// ../../../server/node_modules/undici/lib/web/websocket/connection.js
 var require_connection = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/connection.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/connection.js"(exports, module) {
     "use strict";
     var { uid, states, sentCloseFrameState, emptyBuffer, opcodes } = require_constants6();
     var { parseExtensions, isClosed, isClosing, isEstablished, isConnecting, validateCloseCodeAndReason } = require_util7();
@@ -70084,9 +70084,9 @@ var require_connection = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/permessage-deflate.js
+// ../../../server/node_modules/undici/lib/web/websocket/permessage-deflate.js
 var require_permessage_deflate2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/permessage-deflate.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/permessage-deflate.js"(exports, module) {
     "use strict";
     var { createInflateRaw, Z_DEFAULT_WINDOWBITS } = __require("node:zlib");
     var { isValidClientWindowBits } = require_util7();
@@ -70166,9 +70166,9 @@ var require_permessage_deflate2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/receiver.js
+// ../../../server/node_modules/undici/lib/web/websocket/receiver.js
 var require_receiver2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/receiver.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/receiver.js"(exports, module) {
     "use strict";
     var { Writable } = __require("node:stream");
     var assert2 = __require("node:assert");
@@ -70525,9 +70525,9 @@ var require_receiver2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/sender.js
+// ../../../server/node_modules/undici/lib/web/websocket/sender.js
 var require_sender2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/sender.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/sender.js"(exports, module) {
     "use strict";
     var { WebsocketFrameSend } = require_frame();
     var { opcodes, sendHints } = require_constants6();
@@ -70612,9 +70612,9 @@ var require_sender2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/websocket.js
+// ../../../server/node_modules/undici/lib/web/websocket/websocket.js
 var require_websocket2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/websocket.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/websocket.js"(exports, module) {
     "use strict";
     var { isArrayBuffer } = __require("node:util/types");
     var { webidl } = require_webidl();
@@ -71102,9 +71102,9 @@ var require_websocket2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/stream/websocketerror.js
+// ../../../server/node_modules/undici/lib/web/websocket/stream/websocketerror.js
 var require_websocketerror = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/stream/websocketerror.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/stream/websocketerror.js"(exports, module) {
     "use strict";
     var { webidl } = require_webidl();
     var { validateCloseCodeAndReason } = require_util7();
@@ -71182,9 +71182,9 @@ var require_websocketerror = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/stream/websocketstream.js
+// ../../../server/node_modules/undici/lib/web/websocket/stream/websocketstream.js
 var require_websocketstream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/websocket/stream/websocketstream.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/websocket/stream/websocketstream.js"(exports, module) {
     "use strict";
     var { createDeferredPromise } = require_promise();
     var { environmentSettingsObject } = require_util4();
@@ -71493,9 +71493,9 @@ var require_websocketstream = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/util.js
+// ../../../server/node_modules/undici/lib/web/eventsource/util.js
 var require_util8 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/util.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/eventsource/util.js"(exports, module) {
     "use strict";
     function isValidLastEventId(value2) {
       return value2.indexOf("\0") === -1;
@@ -71514,9 +71514,9 @@ var require_util8 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/eventsource-stream.js
+// ../../../server/node_modules/undici/lib/web/eventsource/eventsource-stream.js
 var require_eventsource_stream = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/eventsource-stream.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/eventsource/eventsource-stream.js"(exports, module) {
     "use strict";
     var { Transform } = __require("node:stream");
     var { isASCIINumber, isValidLastEventId } = require_util8();
@@ -71855,9 +71855,9 @@ ${value2}`;
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/eventsource.js
+// ../../../server/node_modules/undici/lib/web/eventsource/eventsource.js
 var require_eventsource = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/lib/web/eventsource/eventsource.js"(exports, module) {
+  "../../../server/node_modules/undici/lib/web/eventsource/eventsource.js"(exports, module) {
     "use strict";
     var { pipeline: pipeline2 } = __require("node:stream");
     var { fetching } = require_fetch();
@@ -72172,9 +72172,9 @@ var require_eventsource = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/index.js
+// ../../../server/node_modules/undici/index.js
 var require_undici = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/undici/index.js"(exports, module) {
+  "../../../server/node_modules/undici/index.js"(exports, module) {
     "use strict";
     var Client = require_client();
     var Dispatcher = require_dispatcher();
@@ -72367,9 +72367,9 @@ ${captureLines}` : capture.stack;
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/code.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -72521,9 +72521,9 @@ var require_code = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/scope.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -72666,9 +72666,9 @@ var require_scope = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/index.js
+// ../../../server/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -73386,9 +73386,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/util.js
+// ../../../server/node_modules/ajv/dist/compile/util.js
 var require_util9 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/util.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -73553,9 +73553,9 @@ var require_util9 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/names.js
+// ../../../server/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/names.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -73592,9 +73592,9 @@ var require_names = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/errors.js
+// ../../../server/node_modules/ajv/dist/compile/errors.js
 var require_errors2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -73714,9 +73714,9 @@ var require_errors2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -73765,9 +73765,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/rules.js
+// ../../../server/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -73796,9 +73796,9 @@ var require_rules = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/applicability.js
+// ../../../server/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -73819,9 +73819,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/dataType.js
+// ../../../server/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -74003,9 +74003,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/defaults.js
+// ../../../server/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -74040,9 +74040,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/code.js
+// ../../../server/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -74173,9 +74173,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/keyword.js
+// ../../../server/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -74291,9 +74291,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/subschema.js
+// ../../../server/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -74374,9 +74374,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-deep-equal/index.js
+// ../../../server/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-deep-equal/index.js"(exports, module) {
+  "../../../server/node_modules/fast-deep-equal/index.js"(exports, module) {
     "use strict";
     module.exports = function equal(a, b) {
       if (a === b) return true;
@@ -74409,9 +74409,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-schema-traverse/index.js
+// ../../../server/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/json-schema-traverse/index.js"(exports, module) {
+  "../../../server/node_modules/json-schema-traverse/index.js"(exports, module) {
     "use strict";
     var traverse = module.exports = function(schema2, opts, cb) {
       if (typeof opts == "function") {
@@ -74497,9 +74497,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/resolve.js
+// ../../../server/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -74653,9 +74653,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/index.js
+// ../../../server/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -75161,9 +75161,9 @@ var require_validate = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/validation_error.js
+// ../../../server/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -75177,9 +75177,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/ref_error.js
+// ../../../server/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -75194,9 +75194,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/index.js
+// ../../../server/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/compile/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -75418,9 +75418,9 @@ var require_compile = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/refs/data.json
+// ../../../server/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/refs/data.json"(exports, module) {
+  "../../../server/node_modules/ajv/dist/refs/data.json"(exports, module) {
     module.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -75437,9 +75437,9 @@ var require_data = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/lib/utils.js
+// ../../../server/node_modules/fast-uri/lib/utils.js
 var require_utils2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/lib/utils.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/lib/utils.js"(exports, module) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -75750,9 +75750,9 @@ var require_utils2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/lib/schemes.js
+// ../../../server/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/lib/schemes.js"(exports, module) {
     "use strict";
     var { isUUID } = require_utils2();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -75960,9 +75960,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/index.js
+// ../../../server/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/fast-uri/index.js"(exports, module) {
+  "../../../server/node_modules/fast-uri/index.js"(exports, module) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils2();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -76272,9 +76272,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/uri.js
+// ../../../server/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -76283,9 +76283,9 @@ var require_uri = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/core.js
+// ../../../server/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/core.js"(exports) {
+  "../../../server/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -76894,9 +76894,9 @@ var require_core = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/id.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -76909,9 +76909,9 @@ var require_id = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/ref.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -77031,9 +77031,9 @@ var require_ref = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -77052,9 +77052,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77084,9 +77084,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77112,9 +77112,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/ucs2length.js
+// ../../../server/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str8) {
@@ -77138,9 +77138,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77170,9 +77170,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -77207,9 +77207,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77236,9 +77236,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/required.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -77318,9 +77318,9 @@ var require_required = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77347,9 +77347,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/equal.js
+// ../../../server/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../../../server/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -77358,9 +77358,9 @@ var require_equal = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -77425,9 +77425,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/const.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77454,9 +77454,9 @@ var require_const = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77503,9 +77503,9 @@ var require_enum = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -77541,9 +77541,9 @@ var require_validation2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -77594,9 +77594,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -77651,9 +77651,9 @@ var require_items = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -77668,9 +77668,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77703,9 +77703,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77797,9 +77797,9 @@ var require_contains = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -77891,9 +77891,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -77934,9 +77934,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -78040,9 +78040,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -78098,9 +78098,9 @@ var require_properties = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -78172,9 +78172,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util9();
@@ -78203,9 +78203,9 @@ var require_not = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -78220,9 +78220,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -78278,9 +78278,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util9();
@@ -78305,9 +78305,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -78374,9 +78374,9 @@ var require_if = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util9();
@@ -78392,9 +78392,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -78440,9 +78440,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/format/format.js
+// ../../../server/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -78530,9 +78530,9 @@ var require_format = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/format/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -78541,9 +78541,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/metadata.js
+// ../../../server/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -78564,9 +78564,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/draft7.js
+// ../../../server/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -78586,9 +78586,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -78600,9 +78600,9 @@ var require_types = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../../../server/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -78705,9 +78705,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
+  "../../../server/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module) {
     module.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -78862,9 +78862,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/ajv.js
+// ../../../server/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv/dist/ajv.js"(exports, module) {
+  "../../../server/node_modules/ajv/dist/ajv.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -78932,9 +78932,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/formats.js
+// ../../../server/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../../../server/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -79135,9 +79135,9 @@ var require_formats = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/limit.js
+// ../../../server/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/limit.js"(exports) {
+  "../../../server/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -79207,9 +79207,9 @@ var require_limit = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/index.js
+// ../../../server/node_modules/ajv-formats/dist/index.js
 var require_dist3 = __commonJS({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/ajv-formats/dist/index.js"(exports, module) {
+  "../../../server/node_modules/ajv-formats/dist/index.js"(exports, module) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -79249,7 +79249,7 @@ var require_dist3 = __commonJS({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/tslib.mjs
+// ../../../server/node_modules/openai/internal/tslib.mjs
 function __classPrivateFieldSet(receiver, state, value2, kind, f3) {
   if (kind === "m")
     throw new TypeError("Private method is not writable");
@@ -79267,14 +79267,14 @@ function __classPrivateFieldGet(receiver, state, kind, f3) {
   return kind === "m" ? f3 : kind === "a" ? f3.call(receiver) : f3 ? f3.value : state.get(receiver);
 }
 var init_tslib = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/tslib.mjs"() {
+  "../../../server/node_modules/openai/internal/tslib.mjs"() {
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/uuid.mjs
+// ../../../server/node_modules/openai/internal/utils/uuid.mjs
 var uuid4;
 var init_uuid = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/uuid.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/uuid.mjs"() {
     uuid4 = function() {
       const { crypto: crypto2 } = globalThis;
       if (crypto2?.randomUUID) {
@@ -79288,7 +79288,7 @@ var init_uuid = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/errors.mjs
+// ../../../server/node_modules/openai/internal/errors.mjs
 function isAbortError2(err4) {
   return typeof err4 === "object" && err4 !== null && // Spec-compliant fetch implementations
   ("name" in err4 && err4.name === "AbortError" || // Expo fetch
@@ -79296,7 +79296,7 @@ function isAbortError2(err4) {
 }
 var castToError;
 var init_errors = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/errors.mjs"() {
+  "../../../server/node_modules/openai/internal/errors.mjs"() {
     castToError = (err4) => {
       if (err4 instanceof Error)
         return err4;
@@ -79324,10 +79324,10 @@ var init_errors = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/error.mjs
+// ../../../server/node_modules/openai/core/error.mjs
 var OpenAIError, APIError2, APIUserAbortError2, APIConnectionError2, APIConnectionTimeoutError2, BadRequestError2, AuthenticationError2, PermissionDeniedError2, NotFoundError2, ConflictError2, UnprocessableEntityError2, RateLimitError2, InternalServerError2, LengthFinishReasonError, ContentFilterFinishReasonError, InvalidWebhookSignatureError, OAuthError, SubjectTokenProviderError;
 var init_error = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/error.mjs"() {
+  "../../../server/node_modules/openai/core/error.mjs"() {
     init_errors();
     OpenAIError = class extends Error {
     };
@@ -79464,7 +79464,7 @@ var init_error = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/values.mjs
+// ../../../server/node_modules/openai/internal/utils/values.mjs
 function maybeObj(x2) {
   if (typeof x2 !== "object") {
     return {};
@@ -79486,7 +79486,7 @@ function isObj(obj2) {
 }
 var startsWithSchemeRegexp, isAbsoluteURL, isArray, isReadonlyArray, validatePositiveInteger, safeJSON;
 var init_values = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/values.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/values.mjs"() {
     init_error();
     startsWithSchemeRegexp = /^[a-z][a-z0-9+.-]*:/i;
     isAbsoluteURL = (url) => {
@@ -79513,23 +79513,23 @@ var init_values = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/sleep.mjs
+// ../../../server/node_modules/openai/internal/utils/sleep.mjs
 var sleep8;
 var init_sleep = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/sleep.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/sleep.mjs"() {
     sleep8 = (ms) => new Promise((resolve17) => setTimeout(resolve17, ms));
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/version.mjs
+// ../../../server/node_modules/openai/version.mjs
 var VERSION;
 var init_version = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/version.mjs"() {
+  "../../../server/node_modules/openai/version.mjs"() {
     VERSION = "6.49.0";
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/detect-platform.mjs
+// ../../../server/node_modules/openai/internal/detect-platform.mjs
 function getDetectedPlatform() {
   if (typeof Deno !== "undefined" && Deno.build != null) {
     return "deno";
@@ -79567,7 +79567,7 @@ function getBrowserInfo() {
 }
 var isRunningInBrowser, getPlatformProperties, normalizeArch, normalizePlatform, _platformHeaders, getPlatformHeaders;
 var init_detect_platform = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/detect-platform.mjs"() {
+  "../../../server/node_modules/openai/internal/detect-platform.mjs"() {
     init_version();
     isRunningInBrowser = () => {
       return (
@@ -79668,7 +79668,7 @@ var init_detect_platform = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/shims.mjs
+// ../../../server/node_modules/openai/internal/shims.mjs
 function getDefaultFetch() {
   if (typeof fetch !== "undefined") {
     return fetch;
@@ -79740,14 +79740,14 @@ async function CancelReadableStream(stream) {
   await cancelPromise;
 }
 var init_shims = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/shims.mjs"() {
+  "../../../server/node_modules/openai/internal/shims.mjs"() {
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/request-options.mjs
+// ../../../server/node_modules/openai/internal/request-options.mjs
 var FallbackEncoder;
 var init_request_options = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/request-options.mjs"() {
+  "../../../server/node_modules/openai/internal/request-options.mjs"() {
     FallbackEncoder = ({ headers: headers2, body }) => {
       return {
         bodyHeaders: {
@@ -79759,10 +79759,10 @@ var init_request_options = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/formats.mjs
+// ../../../server/node_modules/openai/internal/qs/formats.mjs
 var default_format, default_formatter, formatters, RFC1738;
 var init_formats = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/formats.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/formats.mjs"() {
     default_format = "RFC3986";
     default_formatter = (v) => String(v);
     formatters = {
@@ -79773,7 +79773,7 @@ var init_formats = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/utils.mjs
+// ../../../server/node_modules/openai/internal/qs/utils.mjs
 function is_buffer(obj2) {
   if (!obj2 || typeof obj2 !== "object") {
     return false;
@@ -79792,7 +79792,7 @@ function maybe_map(val, fn) {
 }
 var has, hex_table, limit, encode;
 var init_utils = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/utils.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/utils.mjs"() {
     init_formats();
     init_values();
     has = (obj2, key) => (has = Object.hasOwn ?? Function.prototype.call.bind(Object.prototype.hasOwnProperty), has(obj2, key));
@@ -79859,7 +79859,7 @@ var init_utils = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/stringify.mjs
+// ../../../server/node_modules/openai/internal/qs/stringify.mjs
 function is_non_nullish_primitive(v) {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean" || typeof v === "symbol" || typeof v === "bigint";
 }
@@ -80099,7 +80099,7 @@ function stringify(object7, opts = {}) {
 }
 var array_prefix_generators, push_to_array, toISOString, defaults, sentinel;
 var init_stringify = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/qs/stringify.mjs"() {
+  "../../../server/node_modules/openai/internal/qs/stringify.mjs"() {
     init_utils();
     init_formats();
     init_values();
@@ -80144,17 +80144,17 @@ var init_stringify = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/query.mjs
+// ../../../server/node_modules/openai/internal/utils/query.mjs
 function stringifyQuery(query) {
   return stringify(query, { arrayFormat: "brackets" });
 }
 var init_query = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/query.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/query.mjs"() {
     init_stringify();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/bytes.mjs
+// ../../../server/node_modules/openai/internal/utils/bytes.mjs
 function concatBytes(buffers) {
   let length = 0;
   for (const buffer of buffers) {
@@ -80178,11 +80178,11 @@ function decodeUTF8(bytes) {
 }
 var encodeUTF8_, decodeUTF8_;
 var init_bytes = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/bytes.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/bytes.mjs"() {
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/decoders/line.mjs
+// ../../../server/node_modules/openai/internal/decoders/line.mjs
 function findNewlineIndex(buffer, startIndex) {
   const newline = 10;
   const carriage = 13;
@@ -80214,7 +80214,7 @@ function findDoubleNewlineIndex(buffer) {
 }
 var _LineDecoder_buffer, _LineDecoder_carriageReturnIndex, LineDecoder;
 var init_line = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/decoders/line.mjs"() {
+  "../../../server/node_modules/openai/internal/decoders/line.mjs"() {
     init_tslib();
     init_bytes();
     LineDecoder = class {
@@ -80264,7 +80264,7 @@ var init_line = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/log.mjs
+// ../../../server/node_modules/openai/internal/utils/log.mjs
 function noop2() {
 }
 function makeLogFn(fnLevel, logger, logLevel) {
@@ -80295,7 +80295,7 @@ function loggerFor(client) {
 }
 var levelNumbers, parseLogLevel, noopLogger, cachedLoggers, formatRequestDetails;
 var init_log = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/log.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/log.mjs"() {
     init_values();
     levelNumbers = {
       off: 0,
@@ -80343,7 +80343,7 @@ var init_log = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/streaming.mjs
+// ../../../server/node_modules/openai/core/streaming.mjs
 async function* _iterSSEMessages(response, controller) {
   if (!response.body) {
     controller.abort();
@@ -80398,7 +80398,7 @@ function partition(str8, delimiter2) {
 }
 var _Stream_client, Stream4, SSEDecoder;
 var init_streaming = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/streaming.mjs"() {
+  "../../../server/node_modules/openai/core/streaming.mjs"() {
     init_tslib();
     init_error();
     init_shims();
@@ -80646,7 +80646,7 @@ var init_streaming = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/parse.mjs
+// ../../../server/node_modules/openai/internal/parse.mjs
 async function defaultParseResponse(client, props) {
   const { response, requestLogID, retryOfRequestLogID, startTime } = props;
   const body = await (async () => {
@@ -80696,16 +80696,16 @@ function addRequestID(value2, response) {
   });
 }
 var init_parse = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/parse.mjs"() {
+  "../../../server/node_modules/openai/internal/parse.mjs"() {
     init_streaming();
     init_log();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/api-promise.mjs
+// ../../../server/node_modules/openai/core/api-promise.mjs
 var _APIPromise_client, APIPromise2;
 var init_api_promise = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/api-promise.mjs"() {
+  "../../../server/node_modules/openai/core/api-promise.mjs"() {
     init_tslib();
     init_parse();
     APIPromise2 = class _APIPromise extends Promise {
@@ -80771,10 +80771,10 @@ var init_api_promise = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/pagination.mjs
+// ../../../server/node_modules/openai/core/pagination.mjs
 var _AbstractPage_client, AbstractPage, PagePromise, Page, CursorPage, ConversationCursorPage, NextCursorPage;
 var init_pagination = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/pagination.mjs"() {
+  "../../../server/node_modules/openai/core/pagination.mjs"() {
     init_tslib();
     init_error();
     init_parse();
@@ -80941,10 +80941,10 @@ var init_pagination = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/auth/workload-identity-auth.mjs
+// ../../../server/node_modules/openai/auth/workload-identity-auth.mjs
 var SUBJECT_TOKEN_TYPES, TOKEN_EXCHANGE_GRANT_TYPE, WorkloadIdentityAuth;
 var init_workload_identity_auth = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/auth/workload-identity-auth.mjs"() {
+  "../../../server/node_modules/openai/auth/workload-identity-auth.mjs"() {
     init_shims();
     init_error();
     SUBJECT_TOKEN_TYPES = {
@@ -81040,7 +81040,7 @@ var init_workload_identity_auth = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/headers.mjs
+// ../../../server/node_modules/openai/internal/headers.mjs
 function* iterateHeaders(headers2) {
   if (!headers2)
     return;
@@ -81081,7 +81081,7 @@ function* iterateHeaders(headers2) {
 }
 var brand_privateNullableHeaders, httpTokenHeaderName, buildHeaders;
 var init_headers2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/headers.mjs"() {
+  "../../../server/node_modules/openai/internal/headers.mjs"() {
     init_values();
     brand_privateNullableHeaders = /* @__PURE__ */ Symbol("brand.privateNullableHeaders");
     httpTokenHeaderName = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
@@ -81113,7 +81113,7 @@ var init_headers2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/uploads.mjs
+// ../../../server/node_modules/openai/internal/uploads.mjs
 function toStreamingFile(data, name2, options) {
   if (!name2) {
     throw new TypeError("toStreamingFile requires a non-empty file name");
@@ -81254,7 +81254,7 @@ function escapeHeaderValue(value2) {
 }
 var brand_privateStreamingFile, checkFileSupport, isAsyncIterable, maybeMultipartFormRequestOptions, multipartFormRequestOptions, supportsFormDataMap, createForm, isNamedBlob, isReadableStream, isStreamingFile, isUploadable, hasStreamingUploadableValue, hasUploadableValue, createStreamingFormRequestOptions, addFormValue;
 var init_uploads = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/uploads.mjs"() {
+  "../../../server/node_modules/openai/internal/uploads.mjs"() {
     init_headers2();
     init_shims();
     init_bytes();
@@ -81354,7 +81354,7 @@ var init_uploads = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/to-file.mjs
+// ../../../server/node_modules/openai/internal/to-file.mjs
 async function toFile(value2, name2, options) {
   checkFileSupport();
   value2 = await value2;
@@ -81404,7 +81404,7 @@ function propsForError(value2) {
 }
 var isBlobLike, isFileLike, isResponseLike;
 var init_to_file = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/to-file.mjs"() {
+  "../../../server/node_modules/openai/internal/to-file.mjs"() {
     init_uploads();
     init_uploads();
     isBlobLike = (value2) => value2 != null && typeof value2 === "object" && typeof value2.size === "number" && typeof value2.type === "string" && typeof value2.text === "function" && typeof value2.slice === "function" && typeof value2.arrayBuffer === "function";
@@ -81413,18 +81413,18 @@ var init_to_file = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/uploads.mjs
+// ../../../server/node_modules/openai/core/uploads.mjs
 var init_uploads2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/uploads.mjs"() {
+  "../../../server/node_modules/openai/core/uploads.mjs"() {
     init_uploads();
     init_to_file();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/resource.mjs
+// ../../../server/node_modules/openai/core/resource.mjs
 var APIResource;
 var init_resource = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/core/resource.mjs"() {
+  "../../../server/node_modules/openai/core/resource.mjs"() {
     APIResource = class {
       constructor(client) {
         this._client = client;
@@ -81433,13 +81433,13 @@ var init_resource = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/path.mjs
+// ../../../server/node_modules/openai/internal/utils/path.mjs
 function encodeURIPath(str8) {
   return str8.replace(/[^A-Za-z0-9\-._~!$&'()*+,;=:@]+/g, encodeURIComponent);
 }
 var EMPTY, createPathTagFunction, path14;
 var init_path = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/path.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/path.mjs"() {
     init_error();
     EMPTY = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.create(null));
     createPathTagFunction = (pathEncoder = encodeURIPath) => function path41(statics, ...params) {
@@ -81494,10 +81494,10 @@ ${underline}`);
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/messages.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/messages.mjs
 var Messages;
 var init_messages = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/messages.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/messages.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -81523,14 +81523,14 @@ var init_messages = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/error.mjs
+// ../../../server/node_modules/openai/error.mjs
 var init_error2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/error.mjs"() {
+  "../../../server/node_modules/openai/error.mjs"() {
     init_error();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/parser.mjs
+// ../../../server/node_modules/openai/lib/parser.mjs
 function isChatCompletionFunctionTool(tool2) {
   return tool2 !== void 0 && "function" in tool2 && tool2.function !== void 0;
 }
@@ -81637,15 +81637,15 @@ function validateInputTools(tools) {
   }
 }
 var init_parser = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/parser.mjs"() {
+  "../../../server/node_modules/openai/lib/parser.mjs"() {
     init_error2();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/chatCompletionUtils.mjs
+// ../../../server/node_modules/openai/lib/chatCompletionUtils.mjs
 var isAssistantMessage, isToolMessage;
 var init_chatCompletionUtils = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/chatCompletionUtils.mjs"() {
+  "../../../server/node_modules/openai/lib/chatCompletionUtils.mjs"() {
     isAssistantMessage = (message) => {
       return message?.role === "assistant";
     };
@@ -81655,10 +81655,10 @@ var init_chatCompletionUtils = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/EventStream.mjs
+// ../../../server/node_modules/openai/lib/EventStream.mjs
 var _EventStream_instances, _EventStream_connectedPromise, _EventStream_resolveConnectedPromise, _EventStream_rejectConnectedPromise, _EventStream_endPromise, _EventStream_resolveEndPromise, _EventStream_rejectEndPromise, _EventStream_listeners, _EventStream_abortListeners, _EventStream_ended, _EventStream_errored, _EventStream_aborted, _EventStream_catchingPromiseCreated, _EventStream_removeAbortListeners, _EventStream_handleError, EventStream;
 var init_EventStream = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/EventStream.mjs"() {
+  "../../../server/node_modules/openai/lib/EventStream.mjs"() {
     init_tslib();
     init_error2();
     EventStream = class {
@@ -81956,16 +81956,16 @@ var init_EventStream = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/RunnableFunction.mjs
+// ../../../server/node_modules/openai/lib/RunnableFunction.mjs
 function isRunnableFunctionWithParse(fn) {
   return typeof fn.parse === "function";
 }
 var init_RunnableFunction = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/RunnableFunction.mjs"() {
+  "../../../server/node_modules/openai/lib/RunnableFunction.mjs"() {
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
+// ../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs
 function normalizeToolCallIds(chatCompletion) {
   for (const choice2 of chatCompletion.choices) {
     for (const toolCall of choice2.message.tool_calls ?? []) {
@@ -82015,7 +82015,7 @@ function toRequestMessage(message) {
 }
 var _AbstractChatCompletionRunner_instances, _AbstractChatCompletionRunner_getFinalContent, _AbstractChatCompletionRunner_getFinalMessage, _AbstractChatCompletionRunner_getFinalFunctionToolCall, _AbstractChatCompletionRunner_getFinalFunctionToolCallResult, _AbstractChatCompletionRunner_calculateTotalUsage, _AbstractChatCompletionRunner_validateParams, _AbstractChatCompletionRunner_stringifyFunctionCallResult, DEFAULT_MAX_CHAT_COMPLETIONS, AbstractChatCompletionRunner;
 var init_AbstractChatCompletionRunner = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/AbstractChatCompletionRunner.mjs"() {
     init_tslib();
     init_error2();
     init_uuid();
@@ -82312,10 +82312,10 @@ var init_AbstractChatCompletionRunner = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionRunner.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs
 var ChatCompletionRunner;
 var init_ChatCompletionRunner = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionRunner.mjs"() {
     init_AbstractChatCompletionRunner();
     init_chatCompletionUtils();
     ChatCompletionRunner = class _ChatCompletionRunner extends AbstractChatCompletionRunner {
@@ -82338,7 +82338,7 @@ var init_ChatCompletionRunner = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/_vendor/partial-json-parser/parser.mjs
+// ../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs
 function parseJSON(jsonString, allowPartial = Allow.ALL) {
   if (typeof jsonString !== "string") {
     throw new TypeError(`expecting str, got ${typeof jsonString}`);
@@ -82350,7 +82350,7 @@ function parseJSON(jsonString, allowPartial = Allow.ALL) {
 }
 var STR, NUM, ARR, OBJ, NULL, BOOL, NAN, INFINITY, MINUS_INFINITY, INF, SPECIAL, ATOM, COLLECTION, ALL, Allow, PartialJSON, MalformedJSON, _parseJSON, partialParse;
 var init_parser2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
+  "../../../server/node_modules/openai/_vendor/partial-json-parser/parser.mjs"() {
     STR = 1;
     NUM = 2;
     ARR = 4;
@@ -82555,14 +82555,14 @@ var init_parser2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/streaming.mjs
+// ../../../server/node_modules/openai/streaming.mjs
 var init_streaming2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/streaming.mjs"() {
+  "../../../server/node_modules/openai/streaming.mjs"() {
     init_streaming();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionStream.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionStream.mjs
 function makeChatCompletionReadableStreamMessageChunk(chunk3, message, toolCallIds) {
   const payload = {
     type: "message",
@@ -82689,7 +82689,7 @@ function assertNever2(_x) {
 }
 var _ChatCompletionStream_instances, _ChatCompletionStream_params, _ChatCompletionStream_audioDoneChoiceIndexes, _ChatCompletionStream_choiceEventStates, _ChatCompletionStream_currentChatCompletionSnapshot, _ChatCompletionStream_beginRequest, _ChatCompletionStream_getChoiceEventState, _ChatCompletionStream_addChunk, _ChatCompletionStream_emitToolCallDoneEvent, _ChatCompletionStream_emitContentDoneEvents, _ChatCompletionStream_endRequest, _ChatCompletionStream_getAutoParseableResponseFormat, _ChatCompletionStream_accumulateChatCompletion, CHAT_COMPLETION_READABLE_STREAM_MESSAGE_PREFIX, ChatCompletionStream;
 var init_ChatCompletionStream = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionStream.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionStream.mjs"() {
     init_tslib();
     init_parser2();
     init_error2();
@@ -83111,10 +83111,10 @@ var init_ChatCompletionStream = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
+// ../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs
 var ChatCompletionStreamingRunner;
 var init_ChatCompletionStreamingRunner = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
+  "../../../server/node_modules/openai/lib/ChatCompletionStreamingRunner.mjs"() {
     init_ChatCompletionStream();
     init_error2();
     init_streaming2();
@@ -83214,10 +83214,10 @@ var init_ChatCompletionStreamingRunner = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/completions.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/completions.mjs
 var Completions;
 var init_completions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/completions.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/completions.mjs"() {
     init_resource();
     init_messages();
     init_messages();
@@ -83342,10 +83342,10 @@ var init_completions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/chat.mjs
+// ../../../server/node_modules/openai/resources/chat/chat.mjs
 var Chat2;
 var init_chat = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/chat.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/chat.mjs"() {
     init_resource();
     init_completions();
     init_completions();
@@ -83359,33 +83359,33 @@ var init_chat = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/index.mjs
+// ../../../server/node_modules/openai/resources/chat/completions/index.mjs
 var init_completions2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/completions/index.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/completions/index.mjs"() {
     init_completions();
     init_completions();
     init_messages();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/index.mjs
+// ../../../server/node_modules/openai/resources/chat/index.mjs
 var init_chat2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/chat/index.mjs"() {
+  "../../../server/node_modules/openai/resources/chat/index.mjs"() {
     init_chat();
     init_completions2();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/shared.mjs
+// ../../../server/node_modules/openai/resources/shared.mjs
 var init_shared = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/shared.mjs"() {
+  "../../../server/node_modules/openai/resources/shared.mjs"() {
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs
 var AdminAPIKeys;
 var init_admin_api_keys = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/admin-api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -83464,10 +83464,10 @@ var init_admin_api_keys = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/audit-logs.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs
 var AuditLogs;
 var init_audit_logs = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/audit-logs.mjs"() {
     init_resource();
     init_pagination();
     AuditLogs = class extends APIResource {
@@ -83493,10 +83493,10 @@ var init_audit_logs = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/certificates.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/certificates.mjs
 var Certificates;
 var init_certificates = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/certificates.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -83638,10 +83638,10 @@ var init_certificates = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/data-retention.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs
 var DataRetention;
 var init_data_retention = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/data-retention.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/data-retention.mjs"() {
     init_resource();
     DataRetention = class extends APIResource {
       /**
@@ -83681,10 +83681,10 @@ var init_data_retention = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/invites.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/invites.mjs
 var Invites;
 var init_invites = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/invites.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/invites.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -83765,10 +83765,10 @@ var init_invites = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/roles.mjs
 var Roles;
 var init_roles = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -83862,10 +83862,10 @@ var init_roles = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/spend-alerts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs
 var SpendAlerts;
 var init_spend_alerts = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -83973,10 +83973,10 @@ var init_spend_alerts = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/spend-limit.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs
 var SpendLimit;
 var init_spend_limit = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/spend-limit.mjs"() {
     init_resource();
     SpendLimit = class extends APIResource {
       /**
@@ -84033,10 +84033,10 @@ var init_spend_limit = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/usage.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/usage.mjs
 var Usage;
 var init_usage = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/usage.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/usage.mjs"() {
     init_resource();
     Usage = class extends APIResource {
       /**
@@ -84241,10 +84241,10 @@ var init_usage = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs
 var Roles2;
 var init_roles2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84326,10 +84326,10 @@ var init_roles2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs
 var Users;
 var init_users = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/users.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84411,10 +84411,10 @@ var init_users = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/groups.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs
 var Groups;
 var init_groups = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/groups/groups.mjs"() {
     init_resource();
     init_roles2();
     init_roles2();
@@ -84520,10 +84520,10 @@ var init_groups = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs
 var APIKeys;
 var init_api_keys = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/api-keys.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84589,10 +84589,10 @@ var init_api_keys = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/certificates.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs
 var Certificates2;
 var init_certificates2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/certificates.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84654,10 +84654,10 @@ var init_certificates2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs
 var DataRetention2;
 var init_data_retention2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/data-retention.mjs"() {
     init_resource();
     init_path();
     DataRetention2 = class extends APIResource {
@@ -84701,10 +84701,10 @@ var init_data_retention2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs
 var HostedToolPermissions;
 var init_hosted_tool_permissions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/hosted-tool-permissions.mjs"() {
     init_resource();
     init_path();
     HostedToolPermissions = class extends APIResource {
@@ -84747,10 +84747,10 @@ var init_hosted_tool_permissions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs
 var ModelPermissions;
 var init_model_permissions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/model-permissions.mjs"() {
     init_resource();
     init_path();
     ModelPermissions = class extends APIResource {
@@ -84811,10 +84811,10 @@ var init_model_permissions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs
 var RateLimits;
 var init_rate_limits = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/rate-limits.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84859,10 +84859,10 @@ var init_rate_limits = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs
 var Roles3;
 var init_roles3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -84968,10 +84968,10 @@ var init_roles3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs
 var SpendAlerts2;
 var init_spend_alerts2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-alerts.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -85090,10 +85090,10 @@ var init_spend_alerts2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs
 var SpendLimit2;
 var init_spend_limit2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/spend-limit.mjs"() {
     init_resource();
     init_path();
     SpendLimit2 = class extends APIResource {
@@ -85158,10 +85158,10 @@ var init_spend_limit2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs
 var Roles4;
 var init_roles4 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -85246,10 +85246,10 @@ var init_roles4 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs
 var Groups2;
 var init_groups2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/groups/groups.mjs"() {
     init_resource();
     init_roles4();
     init_roles4();
@@ -85339,10 +85339,10 @@ var init_groups2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs
 var APIKeys2;
 var init_api_keys2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/api-keys.mjs"() {
     init_resource();
     init_path();
     APIKeys2 = class extends APIResource {
@@ -85366,10 +85366,10 @@ var init_api_keys2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs
 var ServiceAccounts;
 var init_service_accounts = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/service-accounts/service-accounts.mjs"() {
     init_resource();
     init_api_keys2();
     init_api_keys2();
@@ -85475,10 +85475,10 @@ var init_service_accounts = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs
 var Roles5;
 var init_roles5 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -85563,10 +85563,10 @@ var init_roles5 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/users/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs
 var Users2;
 var init_users2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/users/users.mjs"() {
     init_resource();
     init_roles5();
     init_roles5();
@@ -85679,10 +85679,10 @@ var init_users2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/projects.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs
 var Projects;
 var init_projects = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/projects/projects.mjs"() {
     init_resource();
     init_api_keys();
     init_api_keys();
@@ -85832,10 +85832,10 @@ var init_projects = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/users/roles.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs
 var Roles6;
 var init_roles6 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/users/roles.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/users/roles.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -85917,10 +85917,10 @@ var init_roles6 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/users/users.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/users/users.mjs
 var Users3;
 var init_users3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/users/users.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/users/users.mjs"() {
     init_resource();
     init_roles6();
     init_roles6();
@@ -86001,10 +86001,10 @@ var init_users3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/organization.mjs
+// ../../../server/node_modules/openai/resources/admin/organization/organization.mjs
 var Organization;
 var init_organization = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/organization/organization.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/organization/organization.mjs"() {
     init_resource();
     init_admin_api_keys();
     init_admin_api_keys();
@@ -86062,10 +86062,10 @@ var init_organization = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/admin.mjs
+// ../../../server/node_modules/openai/resources/admin/admin.mjs
 var Admin;
 var init_admin = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/admin/admin.mjs"() {
+  "../../../server/node_modules/openai/resources/admin/admin.mjs"() {
     init_resource();
     init_organization();
     init_organization();
@@ -86079,10 +86079,10 @@ var init_admin = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/speech.mjs
+// ../../../server/node_modules/openai/resources/audio/speech.mjs
 var Speech;
 var init_speech = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/speech.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/speech.mjs"() {
     init_resource();
     init_headers2();
     Speech = class extends APIResource {
@@ -86116,10 +86116,10 @@ var init_speech = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/transcriptions.mjs
+// ../../../server/node_modules/openai/resources/audio/transcriptions.mjs
 var Transcriptions;
 var init_transcriptions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/transcriptions.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/transcriptions.mjs"() {
     init_resource();
     init_uploads();
     Transcriptions = class extends APIResource {
@@ -86136,10 +86136,10 @@ var init_transcriptions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/translations.mjs
+// ../../../server/node_modules/openai/resources/audio/translations.mjs
 var Translations;
 var init_translations = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/translations.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/translations.mjs"() {
     init_resource();
     init_uploads();
     Translations = class extends APIResource {
@@ -86150,10 +86150,10 @@ var init_translations = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/audio.mjs
+// ../../../server/node_modules/openai/resources/audio/audio.mjs
 var Audio;
 var init_audio = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/audio/audio.mjs"() {
+  "../../../server/node_modules/openai/resources/audio/audio.mjs"() {
     init_resource();
     init_speech();
     init_speech();
@@ -86175,10 +86175,10 @@ var init_audio = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/batches.mjs
+// ../../../server/node_modules/openai/resources/batches.mjs
 var Batches2;
 var init_batches = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/batches.mjs"() {
+  "../../../server/node_modules/openai/resources/batches.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -86220,10 +86220,10 @@ var init_batches = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/assistants.mjs
+// ../../../server/node_modules/openai/resources/beta/assistants.mjs
 var Assistants;
 var init_assistants = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/assistants.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/assistants.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -86296,10 +86296,10 @@ var init_assistants = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs
 var Sessions;
 var init_sessions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/sessions.mjs"() {
     init_resource();
     init_headers2();
     Sessions = class extends APIResource {
@@ -86330,10 +86330,10 @@ var init_sessions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs
 var TranscriptionSessions;
 var init_transcription_sessions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/transcription-sessions.mjs"() {
     init_resource();
     init_headers2();
     TranscriptionSessions = class extends APIResource {
@@ -86364,10 +86364,10 @@ var init_transcription_sessions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/realtime.mjs
+// ../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs
 var Realtime;
 var init_realtime = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/realtime/realtime.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/realtime/realtime.mjs"() {
     init_resource();
     init_sessions();
     init_sessions();
@@ -86385,10 +86385,10 @@ var init_realtime = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/sessions.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs
 var Sessions2;
 var init_sessions2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/sessions.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -86435,10 +86435,10 @@ var init_sessions2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/threads.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs
 var Threads;
 var init_threads = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/threads.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/threads.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -86521,10 +86521,10 @@ var init_threads = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/chatkit.mjs
+// ../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs
 var ChatKit;
 var init_chatkit = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/chatkit/chatkit.mjs"() {
     init_resource();
     init_sessions2();
     init_sessions2();
@@ -86542,10 +86542,10 @@ var init_chatkit = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/input-items.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/input-items.mjs
 var InputItems;
 var init_input_items = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/input-items.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -86580,10 +86580,10 @@ var init_input_items = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/input-tokens.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs
 var InputTokens;
 var init_input_tokens = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/input-tokens.mjs"() {
     init_resource();
     init_headers2();
     InputTokens = class extends APIResource {
@@ -86615,10 +86615,10 @@ var init_input_tokens = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/responses.mjs
+// ../../../server/node_modules/openai/resources/beta/responses/responses.mjs
 var Responses;
 var init_responses = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/responses/responses.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/responses/responses.mjs"() {
     init_resource();
     init_input_items();
     init_input_items();
@@ -86736,10 +86736,10 @@ var init_responses = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/messages.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/messages.mjs
 var Messages2;
 var init_messages2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/messages.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/messages.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -86815,10 +86815,10 @@ var init_messages2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/runs/steps.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs
 var Steps;
 var init_steps = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/runs/steps.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -86856,10 +86856,10 @@ var init_steps = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/base64.mjs
+// ../../../server/node_modules/openai/internal/utils/base64.mjs
 var toFloat32Array;
 var init_base64 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/base64.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/base64.mjs"() {
     init_error();
     init_bytes();
     toFloat32Array = (base64Str) => {
@@ -86879,10 +86879,10 @@ var init_base64 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/env.mjs
+// ../../../server/node_modules/openai/internal/utils/env.mjs
 var readEnv;
 var init_env = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils/env.mjs"() {
+  "../../../server/node_modules/openai/internal/utils/env.mjs"() {
     readEnv = (env2) => {
       if (typeof globalThis.process !== "undefined") {
         return globalThis.process.env?.[env2]?.trim() || void 0;
@@ -86895,9 +86895,9 @@ var init_env = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils.mjs
+// ../../../server/node_modules/openai/internal/utils.mjs
 var init_utils2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/utils.mjs"() {
+  "../../../server/node_modules/openai/internal/utils.mjs"() {
     init_values();
     init_base64();
     init_env();
@@ -86908,12 +86908,12 @@ var init_utils2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/AssistantStream.mjs
+// ../../../server/node_modules/openai/lib/AssistantStream.mjs
 function assertNever3(_x) {
 }
 var _AssistantStream_instances, _a2, _AssistantStream_events, _AssistantStream_runStepSnapshots, _AssistantStream_messageSnapshots, _AssistantStream_messageSnapshot, _AssistantStream_finalRun, _AssistantStream_currentContentIndex, _AssistantStream_currentContent, _AssistantStream_currentToolCallIndex, _AssistantStream_currentToolCall, _AssistantStream_currentEvent, _AssistantStream_currentRunSnapshot, _AssistantStream_currentRunStepSnapshot, _AssistantStream_addEvent, _AssistantStream_endRequest, _AssistantStream_handleMessage, _AssistantStream_handleRunStep, _AssistantStream_handleEvent, _AssistantStream_accumulateRunStep, _AssistantStream_accumulateMessage, _AssistantStream_accumulateContent, _AssistantStream_handleRun, AssistantStream;
 var init_AssistantStream = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/AssistantStream.mjs"() {
+  "../../../server/node_modules/openai/lib/AssistantStream.mjs"() {
     init_tslib();
     init_streaming2();
     init_error2();
@@ -87415,10 +87415,10 @@ var init_AssistantStream = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/runs/runs.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs
 var Runs;
 var init_runs = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/runs/runs.mjs"() {
     init_resource();
     init_steps();
     init_steps();
@@ -87601,10 +87601,10 @@ var init_runs = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/threads.mjs
+// ../../../server/node_modules/openai/resources/beta/threads/threads.mjs
 var Threads2;
 var init_threads2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/threads/threads.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/threads/threads.mjs"() {
     init_resource();
     init_messages2();
     init_messages2();
@@ -87700,10 +87700,10 @@ var init_threads2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/beta.mjs
+// ../../../server/node_modules/openai/resources/beta/beta.mjs
 var Beta;
 var init_beta = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/beta/beta.mjs"() {
+  "../../../server/node_modules/openai/resources/beta/beta.mjs"() {
     init_resource();
     init_assistants();
     init_assistants();
@@ -87733,10 +87733,10 @@ var init_beta = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/completions.mjs
+// ../../../server/node_modules/openai/resources/completions.mjs
 var Completions2;
 var init_completions3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/completions.mjs"() {
+  "../../../server/node_modules/openai/resources/completions.mjs"() {
     init_resource();
     Completions2 = class extends APIResource {
       create(body, options) {
@@ -87751,10 +87751,10 @@ var init_completions3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/files/content.mjs
+// ../../../server/node_modules/openai/resources/containers/files/content.mjs
 var Content;
 var init_content = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/files/content.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/files/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -87775,10 +87775,10 @@ var init_content = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/files/files.mjs
+// ../../../server/node_modules/openai/resources/containers/files/files.mjs
 var Files3;
 var init_files = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/files/files.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/files/files.mjs"() {
     init_resource();
     init_content();
     init_content();
@@ -87836,10 +87836,10 @@ var init_files = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/containers.mjs
+// ../../../server/node_modules/openai/resources/containers/containers.mjs
 var Containers;
 var init_containers = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/containers/containers.mjs"() {
+  "../../../server/node_modules/openai/resources/containers/containers.mjs"() {
     init_resource();
     init_files();
     init_files();
@@ -87891,10 +87891,10 @@ var init_containers = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/conversations/items.mjs
+// ../../../server/node_modules/openai/resources/conversations/items.mjs
 var Items;
 var init_items = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/conversations/items.mjs"() {
+  "../../../server/node_modules/openai/resources/conversations/items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -87942,10 +87942,10 @@ var init_items = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/conversations/conversations.mjs
+// ../../../server/node_modules/openai/resources/conversations/conversations.mjs
 var Conversations;
 var init_conversations = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/conversations/conversations.mjs"() {
+  "../../../server/node_modules/openai/resources/conversations/conversations.mjs"() {
     init_resource();
     init_items();
     init_items();
@@ -87994,10 +87994,10 @@ var init_conversations = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/embeddings.mjs
+// ../../../server/node_modules/openai/resources/embeddings.mjs
 var Embeddings;
 var init_embeddings = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/embeddings.mjs"() {
+  "../../../server/node_modules/openai/resources/embeddings.mjs"() {
     init_resource();
     init_utils2();
     Embeddings = class extends APIResource {
@@ -88045,10 +88045,10 @@ var init_embeddings = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/runs/output-items.mjs
+// ../../../server/node_modules/openai/resources/evals/runs/output-items.mjs
 var OutputItems;
 var init_output_items = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/runs/output-items.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/runs/output-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -88074,10 +88074,10 @@ var init_output_items = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/runs/runs.mjs
+// ../../../server/node_modules/openai/resources/evals/runs/runs.mjs
 var Runs2;
 var init_runs2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/runs/runs.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/runs/runs.mjs"() {
     init_resource();
     init_output_items();
     init_output_items();
@@ -88145,10 +88145,10 @@ var init_runs2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/evals.mjs
+// ../../../server/node_modules/openai/resources/evals/evals.mjs
 var Evals;
 var init_evals = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/evals/evals.mjs"() {
+  "../../../server/node_modules/openai/resources/evals/evals.mjs"() {
     init_resource();
     init_runs2();
     init_runs2();
@@ -88203,10 +88203,10 @@ var init_evals = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/files.mjs
+// ../../../server/node_modules/openai/resources/files.mjs
 var Files4;
 var init_files2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/files.mjs"() {
+  "../../../server/node_modules/openai/resources/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -88302,20 +88302,20 @@ var init_files2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/methods.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/methods.mjs
 var Methods;
 var init_methods = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/methods.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/methods.mjs"() {
     init_resource();
     Methods = class extends APIResource {
     };
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs
 var Graders;
 var init_graders = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/alpha/graders.mjs"() {
     init_resource();
     Graders = class extends APIResource {
       /**
@@ -88370,10 +88370,10 @@ var init_graders = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs
 var Alpha;
 var init_alpha = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/alpha/alpha.mjs"() {
     init_resource();
     init_graders();
     init_graders();
@@ -88387,10 +88387,10 @@ var init_alpha = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs
 var Permissions;
 var init_permissions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/permissions.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -88475,10 +88475,10 @@ var init_permissions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs
 var Checkpoints;
 var init_checkpoints = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/checkpoints/checkpoints.mjs"() {
     init_resource();
     init_permissions();
     init_permissions();
@@ -88492,10 +88492,10 @@ var init_checkpoints = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs
 var Checkpoints2;
 var init_checkpoints2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/jobs/checkpoints.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -88520,10 +88520,10 @@ var init_checkpoints2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs
 var Jobs;
 var init_jobs = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/jobs/jobs.mjs"() {
     init_resource();
     init_checkpoints2();
     init_checkpoints2();
@@ -88659,10 +88659,10 @@ var init_jobs = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
+// ../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs
 var FineTuning;
 var init_fine_tuning = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
+  "../../../server/node_modules/openai/resources/fine-tuning/fine-tuning.mjs"() {
     init_resource();
     init_methods();
     init_methods();
@@ -88688,20 +88688,20 @@ var init_fine_tuning = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/graders/grader-models.mjs
+// ../../../server/node_modules/openai/resources/graders/grader-models.mjs
 var GraderModels;
 var init_grader_models = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/graders/grader-models.mjs"() {
+  "../../../server/node_modules/openai/resources/graders/grader-models.mjs"() {
     init_resource();
     GraderModels = class extends APIResource {
     };
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/graders/graders.mjs
+// ../../../server/node_modules/openai/resources/graders/graders.mjs
 var Graders2;
 var init_graders2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/graders/graders.mjs"() {
+  "../../../server/node_modules/openai/resources/graders/graders.mjs"() {
     init_resource();
     init_grader_models();
     init_grader_models();
@@ -88715,10 +88715,10 @@ var init_graders2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/images.mjs
+// ../../../server/node_modules/openai/resources/images.mjs
 var Images;
 var init_images = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/images.mjs"() {
+  "../../../server/node_modules/openai/resources/images.mjs"() {
     init_resource();
     init_uploads();
     Images = class extends APIResource {
@@ -88750,10 +88750,10 @@ var init_images = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/models.mjs
+// ../../../server/node_modules/openai/resources/models.mjs
 var Models2;
 var init_models = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/models.mjs"() {
+  "../../../server/node_modules/openai/resources/models.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -88783,10 +88783,10 @@ var init_models = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/moderations.mjs
+// ../../../server/node_modules/openai/resources/moderations.mjs
 var Moderations;
 var init_moderations = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/moderations.mjs"() {
+  "../../../server/node_modules/openai/resources/moderations.mjs"() {
     init_resource();
     Moderations = class extends APIResource {
       /**
@@ -88800,10 +88800,10 @@ var init_moderations = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/calls.mjs
+// ../../../server/node_modules/openai/resources/realtime/calls.mjs
 var Calls;
 var init_calls = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/calls.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/calls.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -88880,10 +88880,10 @@ var init_calls = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/client-secrets.mjs
+// ../../../server/node_modules/openai/resources/realtime/client-secrets.mjs
 var ClientSecrets;
 var init_client_secrets = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/client-secrets.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/client-secrets.mjs"() {
     init_resource();
     ClientSecrets = class extends APIResource {
       /**
@@ -88920,10 +88920,10 @@ var init_client_secrets = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/realtime.mjs
+// ../../../server/node_modules/openai/resources/realtime/realtime.mjs
 var Realtime2;
 var init_realtime2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/realtime/realtime.mjs"() {
+  "../../../server/node_modules/openai/resources/realtime/realtime.mjs"() {
     init_resource();
     init_calls();
     init_calls();
@@ -88941,7 +88941,7 @@ var init_realtime2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ResponsesParser.mjs
+// ../../../server/node_modules/openai/lib/ResponsesParser.mjs
 function maybeParseResponse(response, params) {
   if (!params || !hasAutoParseableInput2(params)) {
     const parsed = {
@@ -89067,13 +89067,13 @@ function addOutputText(rsp) {
   rsp.output_text = texts.join("");
 }
 var init_ResponsesParser = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/ResponsesParser.mjs"() {
+  "../../../server/node_modules/openai/lib/ResponsesParser.mjs"() {
     init_error2();
     init_parser();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/responses/ResponseAccumulator.mjs
+// ../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs
 function accumulateResponse(event, snapshot) {
   if (!snapshot) {
     if (event.type !== "response.created") {
@@ -89462,19 +89462,19 @@ function assertNever4(value2) {
   throw new OpenAIError(`Unhandled response stream event: ${JSON.stringify(value2)}`);
 }
 var init_ResponseAccumulator = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
+  "../../../server/node_modules/openai/lib/responses/ResponseAccumulator.mjs"() {
     init_error2();
     init_ResponsesParser();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/responses/ResponseStream.mjs
+// ../../../server/node_modules/openai/lib/responses/ResponseStream.mjs
 function finalizeResponse(snapshot, params) {
   return maybeParseResponse(snapshot, params);
 }
 var _ResponseStream_instances, _ResponseStream_params, _ResponseStream_currentResponseSnapshot, _ResponseStream_finalResponse, _ResponseStream_beginRequest, _ResponseStream_addEvent, _ResponseStream_endRequest, ResponseStream;
 var init_ResponseStream = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/responses/ResponseStream.mjs"() {
+  "../../../server/node_modules/openai/lib/responses/ResponseStream.mjs"() {
     init_tslib();
     init_error2();
     init_EventStream();
@@ -89666,10 +89666,10 @@ var init_ResponseStream = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/input-items.mjs
+// ../../../server/node_modules/openai/resources/responses/input-items.mjs
 var InputItems2;
 var init_input_items2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/input-items.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/input-items.mjs"() {
     init_resource();
     init_pagination();
     init_path();
@@ -89694,10 +89694,10 @@ var init_input_items2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/input-tokens.mjs
+// ../../../server/node_modules/openai/resources/responses/input-tokens.mjs
 var InputTokens2;
 var init_input_tokens2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/input-tokens.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/input-tokens.mjs"() {
     init_resource();
     InputTokens2 = class extends APIResource {
       /**
@@ -89722,10 +89722,10 @@ var init_input_tokens2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/responses.mjs
+// ../../../server/node_modules/openai/resources/responses/responses.mjs
 var Responses2;
 var init_responses2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/responses/responses.mjs"() {
+  "../../../server/node_modules/openai/resources/responses/responses.mjs"() {
     init_ResponsesParser();
     init_ResponseStream();
     init_resource();
@@ -89835,10 +89835,10 @@ var init_responses2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/content.mjs
+// ../../../server/node_modules/openai/resources/skills/content.mjs
 var Content2;
 var init_content2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/content.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -89858,10 +89858,10 @@ var init_content2 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/versions/content.mjs
+// ../../../server/node_modules/openai/resources/skills/versions/content.mjs
 var Content3;
 var init_content3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/versions/content.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/versions/content.mjs"() {
     init_resource();
     init_headers2();
     init_path();
@@ -89882,10 +89882,10 @@ var init_content3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/versions/versions.mjs
+// ../../../server/node_modules/openai/resources/skills/versions/versions.mjs
 var Versions;
 var init_versions = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/versions/versions.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/versions/versions.mjs"() {
     init_resource();
     init_content3();
     init_content3();
@@ -89938,10 +89938,10 @@ var init_versions = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/skills.mjs
+// ../../../server/node_modules/openai/resources/skills/skills.mjs
 var Skills;
 var init_skills = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/skills/skills.mjs"() {
+  "../../../server/node_modules/openai/resources/skills/skills.mjs"() {
     init_resource();
     init_content2();
     init_content2();
@@ -90000,10 +90000,10 @@ var init_skills = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/uploads/parts.mjs
+// ../../../server/node_modules/openai/resources/uploads/parts.mjs
 var Parts;
 var init_parts = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/uploads/parts.mjs"() {
+  "../../../server/node_modules/openai/resources/uploads/parts.mjs"() {
     init_resource();
     init_uploads();
     init_path();
@@ -90028,10 +90028,10 @@ var init_parts = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/uploads/uploads.mjs
+// ../../../server/node_modules/openai/resources/uploads/uploads.mjs
 var Uploads;
 var init_uploads3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/uploads/uploads.mjs"() {
+  "../../../server/node_modules/openai/resources/uploads/uploads.mjs"() {
     init_resource();
     init_parts();
     init_parts();
@@ -90107,10 +90107,10 @@ var init_uploads3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/Util.mjs
+// ../../../server/node_modules/openai/lib/Util.mjs
 var allSettledWithThrow;
 var init_Util = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/lib/Util.mjs"() {
+  "../../../server/node_modules/openai/lib/Util.mjs"() {
     allSettledWithThrow = async (promises2) => {
       const results = await Promise.allSettled(promises2);
       const rejected = results.filter((result) => result.status === "rejected");
@@ -90131,10 +90131,10 @@ var init_Util = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/file-batches.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs
 var FileBatches;
 var init_file_batches = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/file-batches.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/file-batches.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -90267,10 +90267,10 @@ var init_file_batches = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/files.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/files.mjs
 var Files5;
 var init_files3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/files.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/files.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -90418,10 +90418,10 @@ var init_files3 = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/vector-stores.mjs
+// ../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs
 var VectorStores;
 var init_vector_stores = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
+  "../../../server/node_modules/openai/resources/vector-stores/vector-stores.mjs"() {
     init_resource();
     init_file_batches();
     init_file_batches();
@@ -90508,10 +90508,10 @@ var init_vector_stores = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/videos.mjs
+// ../../../server/node_modules/openai/resources/videos.mjs
 var Videos;
 var init_videos = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/videos.mjs"() {
+  "../../../server/node_modules/openai/resources/videos.mjs"() {
     init_resource();
     init_pagination();
     init_headers2();
@@ -90598,10 +90598,10 @@ var init_videos = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks/webhooks.mjs
+// ../../../server/node_modules/openai/resources/webhooks/webhooks.mjs
 var _Webhooks_instances, _Webhooks_validateSecret, _Webhooks_getRequiredHeader, Webhooks2;
 var init_webhooks = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks/webhooks.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks/webhooks.mjs"() {
     init_tslib();
     init_error2();
     init_resource();
@@ -90683,23 +90683,23 @@ var init_webhooks = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks/index.mjs
+// ../../../server/node_modules/openai/resources/webhooks/index.mjs
 var init_webhooks2 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks/index.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks/index.mjs"() {
     init_webhooks();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks.mjs
+// ../../../server/node_modules/openai/resources/webhooks.mjs
 var init_webhooks3 = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/webhooks.mjs"() {
+  "../../../server/node_modules/openai/resources/webhooks.mjs"() {
     init_webhooks2();
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/index.mjs
+// ../../../server/node_modules/openai/resources/index.mjs
 var init_resources = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/resources/index.mjs"() {
+  "../../../server/node_modules/openai/resources/index.mjs"() {
     init_chat2();
     init_shared();
     init_admin();
@@ -90727,7 +90727,7 @@ var init_resources = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/provider.mjs
+// ../../../server/node_modules/openai/internal/provider.mjs
 function configureProvider(provider) {
   const definition = providerDefinitions.get(provider);
   if (!definition) {
@@ -90737,7 +90737,7 @@ function configureProvider(provider) {
 }
 var providerDefinitionsKey, providerGlobal, existingProviderDefinitions, providerDefinitions;
 var init_provider = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/internal/provider.mjs"() {
+  "../../../server/node_modules/openai/internal/provider.mjs"() {
     providerDefinitionsKey = /* @__PURE__ */ Symbol.for("openai.node.providerDefinitions.v1");
     providerGlobal = globalThis;
     existingProviderDefinitions = providerGlobal[providerDefinitionsKey];
@@ -90748,7 +90748,7 @@ var init_provider = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/client.mjs
+// ../../../server/node_modules/openai/client.mjs
 function getConnectionErrorMessage(error2) {
   if (isUndiciDispatcherVersionMismatchError(error2)) {
     return `Connection error. This may be caused by passing an undici dispatcher, such as ProxyAgent, that is incompatible with the fetch implementation. If you are using undici's ProxyAgent, pass the fetch implementation from the same undici package: import { fetch, ProxyAgent } from 'undici'; new OpenAI({ fetch, fetchOptions: { dispatcher: new ProxyAgent(...) } });`;
@@ -90768,7 +90768,7 @@ function isUndiciDispatcherVersionMismatchError(error2) {
 }
 var _OpenAI_instances, _a3, _OpenAI_encoder, _OpenAI_baseURLOverridden, WORKLOAD_IDENTITY_API_KEY_PLACEHOLDER, OpenAI;
 var init_client = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/client.mjs"() {
+  "../../../server/node_modules/openai/client.mjs"() {
     init_tslib();
     init_uuid();
     init_values();
@@ -91449,10 +91449,10 @@ var init_client = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/azure.mjs
+// ../../../server/node_modules/openai/azure.mjs
 var AzureOpenAI, _deployments_endpoints;
 var init_azure = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/azure.mjs"() {
+  "../../../server/node_modules/openai/azure.mjs"() {
     init_headers2();
     init_error2();
     init_utils2();
@@ -91550,7 +91550,7 @@ var init_azure = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/bedrock.mjs
+// ../../../server/node_modules/openai/bedrock.mjs
 function deriveBedrockBaseURL(awsRegion) {
   const region2 = awsRegion?.trim();
   if (!region2) {
@@ -91584,7 +91584,7 @@ function restoreBedrockStreamOutputText(responses) {
 }
 var BedrockOpenAI;
 var init_bedrock = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/bedrock.mjs"() {
+  "../../../server/node_modules/openai/bedrock.mjs"() {
     init_error2();
     init_client();
     init_headers2();
@@ -91651,7 +91651,7 @@ var init_bedrock = __esm({
   }
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/index.mjs
+// ../../../server/node_modules/openai/index.mjs
 var openai_exports = {};
 __export(openai_exports, {
   APIConnectionError: () => APIConnectionError2,
@@ -91680,7 +91680,7 @@ __export(openai_exports, {
   toStreamingFile: () => toStreamingFile
 });
 var init_openai = __esm({
-  "../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/openai/index.mjs"() {
+  "../../../server/node_modules/openai/index.mjs"() {
     init_client();
     init_uploads2();
     init_api_promise();
@@ -93098,6 +93098,7 @@ var require_video_catalog = __commonJS({
             "seed",
             "referenceImageShortEdge",
             "numInferenceSteps",
+            "holdToMinDuration",
             "generateAudio",
             "reserveUsd",
             "outputPath",
@@ -95036,7 +95037,7 @@ var require_film_techniques = __commonJS({
           "over": { "label": { "ko": "\uC5B4\uAE68 \uB108\uBA38", "en": "Over the shoulder" }, "use": "\uC55E\uC0AC\uB78C \uC5B4\uAE68 \uB108\uBA38\uC758 \uC2DC\uC810. \uB300\uD654\uC758 \uB9AC\uBC84\uC2A4 \uCEE4\uBC84\uB9AC\uC9C0\uC640 \uB450 \uC778\uBB3C\uC758 \uC704\uCE58 \uAD00\uACC4.", "avoid": "\uC575\uAE00 \uCE78\uC5D0 over\uB97C \uB450\uBA74 \uB85C\uC6B0\xB7\uD558\uC774\uB97C \uD568\uAED8 \uC801\uC744 \uC218 \uC5C6\uB2E4. \uB192\uC774\uB294 eye\xB7low\xB7high\uB85C \uACE0\uB974\uACE0 \uC5B4\uAE68 \uB108\uBA38 \uAD6C\uC131\uC740 \uD06C\uAE30 ots\uB098 \uCE74\uBA54\uB77C framing\uC5D0 \uC801\uB294 \uD3B8\uC774 \uB0AB\uB2E4.", "specify": "\uB204\uAD6C\uC758 \uC5B4\uB290 \uC5B4\uAE68\uC778\uC9C0, \uB204\uAD6C\uB97C \uBCF4\uB294\uC9C0, \uB9AC\uBC84\uC2A4\uC5D0\uC11C\uB3C4 \uAC19\uC740 \uD3B8." }
         },
         "depth": {
-          "shallow": { "label": { "ko": "\uC595\uC740 \uC2EC\uB3C4", "en": "Shallow focus" }, "use": "\uD55C \uBA74\uB9CC \uC120\uBA85\uD558\uAC8C \uB450\uC5B4 \uC778\uBB3C\uC774\uB098 \uC0AC\uBB3C\uC744 \uBC30\uACBD\uC5D0\uC11C \uB5BC\uC5B4 \uB0B8\uB2E4.", "avoid": "\uAE30\uBCF8\uAC12\uC73C\uB85C \uAE54\uAE30(\uD750\uB9B0 \uBC30\uACBD\uC740 \uAE30\uBCF8\uAC12\uC774 \uC544\uB2C8\uB2E4). \uC77D\uC744 \uAC83\uC774 \uB458\uC774\uBA74 \uB799 \uD3EC\uCEE4\uC2A4\uB098 \uB525\uD3EC\uCEE4\uC2A4.", "specify": "\uC120\uBA85\uD55C \uB300\uC0C1(\uB204\uAD6C\uC758 \uC5B4\uB290 \uB208, \uC5B4\uB5A4 \uBB3C\uCCB4)\uACFC \uD750\uB824\uC9C8 \uAC83, \uC7A5\uCD08\uC810 \uB80C\uC988." },
+          "shallow": { "label": { "ko": "\uC595\uC740 \uC2EC\uB3C4", "en": "Shallow focus" }, "use": "\uD55C \uBA74\uB9CC \uC120\uBA85\uD558\uAC8C \uB450\uC5B4 \uC778\uBB3C\uC774\uB098 \uC0AC\uBB3C\uC744 \uBC30\uACBD\uC5D0\uC11C \uB5BC\uC5B4 \uB0B8\uB2E4.", "avoid": "\uAE30\uBCF8\uAC12\uC73C\uB85C \uAE54\uAE30(\uD750\uB9B0 \uBC30\uACBD\uC740 \uAE30\uBCF8\uAC12\uC774 \uC544\uB2C8\uB2E4). \uAC19\uC740 \uAC70\uB9AC\uC5D0 \uC788\uB294 \uB450 \uC5BC\uAD74\uC740 \uD568\uAED8 \uC120\uBA85\uD558\uAC8C \uB2F4\uC744 \uC218 \uC788\uB2E4.", "specify": "\uC120\uBA85\uD55C \uB300\uC0C1(\uB204\uAD6C\uC758 \uC5B4\uB290 \uB208, \uC5B4\uB5A4 \uBB3C\uCCB4)\uACFC \uD750\uB824\uC9C8 \uAC83, \uC7A5\uCD08\uC810 \uB80C\uC988." },
           "deep": { "label": { "ko": "\uB525\uD3EC\uCEE4\uC2A4", "en": "Deep focus" }, "use": "\uC55E\uACFC \uB4A4\uC758 \uD589\uB3D9\uC744 \uCEF7 \uC5C6\uC774 \uD55C \uD654\uBA74\uC5D0 \uB2F4\uC544 \uAD00\uAC1D\uC774 \uC7A5\uBA74\uC744 \uC77D\uAC8C \uD55C\uB2E4.", "avoid": "\uBCFC \uC21C\uC11C\uB97C \uC5F0\uCD9C\uD558\uC9C0 \uC54A\uC740 \uB525\uD3EC\uCEE4\uC2A4. \uB300\uC0AC\xB7\uC6C0\uC9C1\uC784\xB7\uBE5B\uC73C\uB85C \uC2DC\uC120 \uC21C\uC11C\uB97C \uC9E0\uB2E4.", "specify": "\uC55E\xB7\uC911\uAC04\xB7\uB4A4 \uBA74\uC744 \uD480\uC5B4 \uC4F4\uB2E4(sharp focus from A in the foreground through B to C in the background), \uBA3C\uC800 \uBCFC \uB300\uC0C1\uACFC \uADF8 \uACC4\uAE30." },
           "none": { "label": { "ko": "\uC2EC\uB3C4 \uC120\uD0DD \uC5C6\uC74C", "en": "No depth choice" }, "use": "\uD3C9\uBA74 \uB3C4\uD45C\xB7\uAE00\uC790 \uD310\uCC98\uB7FC \uCD08\uC810\uBA74\uC774 \uC5C6\uB294 \uADF8\uB9BC.", "avoid": "3D \uC624\uBE0C\uC81D\uD2B8\uB97C \uB80C\uB354\uD558\uB294 \uC2AC\uB77C\uC774\uB4DC(\uC2EC\uB3C4\uB97C \uACE0\uB97C \uC218 \uC788\uB2E4).", "specify": "\uC2EC\uB3C4 \uB0B1\uB9D0\uC744 \uB123\uC9C0 \uC54A\uB294\uB2E4." }
         },
@@ -95134,11 +95135,45 @@ var require_scene_direction = __commonJS({
         camera: ["\uCE74\uBA54\uB77C", "Camera"],
         axis: ["\uCD2C\uC601 \uCD95", "Screen axis"],
         continuity: ["\uACF5\uAC04 \uC5F0\uC18D\uC131", "Continuity"],
-        lighting: ["\uC870\uBA85", "Lighting"],
-        attention: ["\uC2DC\uC120 \uD750\uB984", "Attention"]
+        lighting: ["\uAE30\uBCF8 \uC870\uBA85", "Lighting"],
+        attention: ["\uAD00\uAC1D\uC5D0\uAC8C \uBCF4\uC5EC\uC904 \uC21C\uC11C", "Attention"],
+        cameraPolicy: ["\uCE74\uBA54\uB77C \uC5F0\uCD9C \uC6D0\uCE59", "Camera policy"],
+        depthPolicy: ["\uC2EC\uB3C4 \uC6D0\uCE59", "Depth policy"],
+        lensPolicy: ["\uB80C\uC988 \uC6D0\uCE59", "Lens policy"],
+        continuityChange: ["\uC774 \uC0F7\uC758 \uC0C1\uD0DC \uBCC0\uD654", "Continuity change"],
+        shotLight: ["\uC774 \uC0F7\uC758 \uC870\uBA85", "Shot lighting"],
+        soundPerspective: ["\uC18C\uB9AC\uC758 \uC6D0\uADFC", "Sound perspective"]
       };
       const movement = (id2) => catalogue().byId[id2]?.fields?.movement;
       const text4 = (value2) => typeof value2 === "string" ? value2.trim() : "";
+      const scales = ["els", "ls", "ws", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu"];
+      const arrangements = ["single", "two", "three", "group"];
+      const cutRoles = ["insert", "reaction", "cutaway"];
+      const legacyViews = { ots: "ots", pov: "pov", back: "rear" };
+      function framing(card) {
+        const plan2 = card.shot || {}, view = card.visual?.camera?.view || {}, size = plan2.size;
+        return {
+          size: scales.includes(size) ? size : "",
+          crop: text4(view.crop) || (size && ![...scales, ...arrangements, ...cutRoles, ...Object.keys(legacyViews)].includes(size) ? text4(size) : ""),
+          angle: plan2.angle === "over" ? "" : plan2.angle || "",
+          viewpoint: view.mode || legacyViews[size] || (plan2.angle === "over" ? "ots" : ""),
+          arrangement: plan2.arrangement || (arrangements.includes(size) ? size : ""),
+          cutRole: plan2.cutRole || (cutRoles.includes(size) ? size : "")
+        };
+      }
+      function framingTerms(card) {
+        const frame2 = framing(card);
+        const view = !card.visual?.camera?.view && { ots: "over the shoulder", pov: "subjective point of view", rear: "seen from behind" }[frame2.viewpoint];
+        const arrangement = { single: "single subject", two: "two-shot", three: "three-shot", group: "group shot" }[frame2.arrangement];
+        return [view, arrangement, frame2.cutRole && frame2.cutRole + " shot"].filter(Boolean);
+      }
+      function opticsWords(camera = {}) {
+        return [
+          camera.lensMm && camera.lensMm + " mm lens",
+          camera.fStop && "f/" + camera.fStop,
+          camera.focusDistanceM && "focus distance " + camera.focusDistanceM + " m"
+        ].filter(Boolean).join(", ");
+      }
       function actingFields(acting, includeVocal, seen, redact, accept = Boolean) {
         const words = [];
         for (const key of ["direction", "context", "intent", "emotion", "vocal", "visual"]) {
@@ -95164,6 +95199,9 @@ var require_scene_direction = __commonJS({
         }
         lines.forEach((_, index) => groups.add(index));
         return Array.from(groups, (index) => lines[index]);
+      }
+      function closingState(card) {
+        return text4(card.shot?.videoDesign?.after) || text4(card.visual?.frames?.endState) || text4(card.visual?.video?.promptSource?.end);
       }
       function notes(card, accept = Boolean, visualOnly = false, concise = false, scenePrompt = false) {
         const visual = card.visual || {}, video2 = visual.video || {}, source2 = video2.promptSource || {};
@@ -95219,21 +95257,22 @@ var require_scene_direction = __commonJS({
           if (!groups.has(i2 + 1)) addLine(line, i2 + 1, "With ");
         });
         const seen = /* @__PURE__ */ new Set();
-        const actions = [card.timeline?.action, source2.action, design.action, visual.action, design.motion?.visibleChange].map(text4).filter((cue) => {
+        const actions = [card.timeline?.action, design.action, visual.action, design.motion?.visibleChange].map(text4).filter((cue) => {
           const key = cue.toLowerCase().replace(/[.!?\s]+$/, "");
           if (!key || seen.has(key)) return false;
           seen.add(key);
           return true;
         });
-        const fallback = [card.summary, video2.prompt].map(text4).filter(Boolean);
+        if (!actions.length && text4(source2.action)) actions.push(text4(source2.action));
+        const fallback = [card.summary].map(text4).filter(Boolean);
         const motion = (design.motion?.beats || []).filter((beat) => text4(beat?.state)).map((beat) => (Number.isFinite(beat.at) ? "At " + beat.at + " s into this shot: " : "") + text4(beat.state));
         return {
           actions: actions.length ? actions : fallback.slice(0, 1),
           fallback,
           motion,
           blocking: text4(design.before),
-          sound: text4(source2.sound) || text4(design.sound),
-          end: text4(source2.end) || text4(design.after) || text4(visual.frames?.endState),
+          sound: text4(card.sound?.diegetic) || text4(design.sound) || text4(visual.audio) || text4(source2.sound),
+          end: closingState(card),
           beats
         };
       }
@@ -95261,36 +95300,35 @@ var require_scene_direction = __commonJS({
       }
       function resolve17(scene, cards) {
         const defaults2 = base(scene);
-        let crossed;
+        let crossed, layout;
         const shots = cards.map((card) => {
           const plan2 = card.shot || {}, camera = card.visual?.camera || {}, space = plan2.space || {};
           const rows2 = { ...defaults2 };
           if (text4(plan2.lineCrossing?.to)) crossed = text4(plan2.lineCrossing.to);
           const selected = catalogue().selected(card);
           const technique = selected.find((t2) => t2.entry?.fields.movement);
-          const move = camera.movement || technique?.entry.fields.movement;
+          const inherited = defaults2.camera;
+          const qualified = text4(camera.target) || text4(camera.cue) || text4(camera.speed);
+          const move = camera.movement || technique?.entry.fields.movement || qualified && inherited?.id && movement(inherited.id);
           if (move) {
             const entry2 = technique?.entry.fields.movement === move ? technique.entry : catalogue().entries.find((e2) => e2.fields.movement === move);
-            const speed = camera.speed || technique?.entry.fields.speed;
+            const speed = camera.speed || technique?.entry.fields.speed || (!camera.movement && !technique ? inherited?.speed : void 0);
             rows2.camera = { value: move, id: entry2?.id, source: "shot", ...speed ? { speed } : {} };
           }
           if (plan2.lineNeutral) rows2.axis = { value: "Camera on the axis.", source: "shot" };
           else if (text4(space.line) || crossed) rows2.axis = { value: text4(space.line) || crossed, source: space.line || plan2.lineCrossing ? "shot" : "carry" };
-          if (text4(space.light)) rows2.lighting = { value: space.light, source: "shot" };
-          if (text4(plan2.videoDesign?.continuity)) rows2.continuity = { value: plan2.videoDesign.continuity, source: "shot" };
-          if (defaults2.attention) {
-            const focus = selected.find((t2) => t2.entry?.fields.focus);
-            const from = text4(focus?.from), to = text4(focus?.to);
-            const shift = from && to ? "From " + from + " to " + to : to || from;
-            const subject2 = shift || plan2.depth?.mode === "shallow" && text4(plan2.depth.focus) || text4(camera.view?.subject);
-            if (subject2) rows2.attention = { value: subject2, source: "shot" };
-          }
+          if (text4(space.continuity)) layout = text4(space.continuity);
+          if (layout) rows2.continuity = { value: layout, source: text4(space.continuity) ? "shot" : "carry" };
+          if (text4(space.light)) rows2.shotLight = { value: space.light, source: "shot" };
+          if (text4(plan2.videoDesign?.continuity)) rows2.continuityChange = { value: plan2.videoDesign.continuity, source: "shot" };
+          const perspective = card.sound?.perspective || plan2.depth?.sound;
+          if (perspective) rows2.soundPerspective = { value: perspective, source: "shot" };
           return rows2;
         });
         const common7 = Object.fromEntries(Object.entries(defaults2).filter(([key]) => shots.every((rows2) => rows2[key]?.source === "scene")));
         return { defaults: defaults2, common: common7, shots };
       }
-      const api2 = { labels, movement, notes, base, resolve: resolve17, withCameraDefaults, actingFields, actingPauses, orderedSpeech };
+      const api2 = { labels, movement, scales, arrangements, cutRoles, framing, framingTerms, opticsWords, closingState, notes, base, resolve: resolve17, withCameraDefaults, actingFields, actingPauses, orderedSpeech };
       if (typeof module === "object" && module.exports) module.exports = api2;
       else root.SCENE_DIRECTION = api2;
     })(typeof window === "object" ? window : globalThis);
@@ -95354,14 +95392,8 @@ var require_production_mode = __commonJS({
         }
         return { selection, source: source2 };
       }
-      function sceneProductionPrompt2(direction, selection, operation) {
+      function sceneProductionPrompt2(direction) {
         if (typeof direction?.prompt === "string") return direction.prompt;
-        if (!selection || !Array.isArray(direction?.promptDrafts)) return;
-        const operations2 = selection.engine === "astra-genai" ? ["reference", "image"] : [operation || selection.operation];
-        for (const value2 of operations2) {
-          const draft = direction.promptDrafts.find((d) => d.engine === selection.engine && d.model === selection.model && d.operation === value2);
-          if (draft) return draft.prompt;
-        }
       }
       const SCENE_VIDEO_ATTEMPT_LIMIT = 5;
       const CHOICES = ["full_video", "video_80", "video_50", "video_30", "video_lt10", "no_video"];
@@ -95427,6 +95459,10 @@ var require_production_mode = __commonJS({
           preset: { type: "string", enum: Object.keys(CAMERA_PRESETS), description: "Optional shot preset. Omit on ordinary camera shots; drone-flythrough is continuous travel through a 3D location." },
           variant: { type: "string", enum: Object.keys(CAMERA_PRESETS["drone-flythrough"].variants), description: "cinematic keeps the horizon level; fpv uses authored bank at bends. Required with drone-flythrough." },
           purpose: { type: "string", description: "Shot-specific reason for this camera choice. Review context only; executable targets, focus order and timing belong in framing/end, not only here or in technique reasons." },
+          cue: { type: "string", description: "Action, sound or line that starts the shot move." },
+          lensMm: { type: "number", exclusiveMinimum: 0 },
+          fStop: { type: "number", exclusiveMinimum: 0 },
+          focusDistanceM: { type: "number", exclusiveMinimum: 0 },
           movement: { type: "string", description: "One camera move in vendor vocabulary, chosen from shot.feel (directing-grammar \xA74\u2013\xA75): static \xB7 dolly in/out \xB7 zoom in/out (lens only) \xB7 dolly zoom in/out \xB7 pan left/right \xB7 tilt up/down \xB7 whip pan \xB7 truck left/right \xB7 pedestal up/down \xB7 crane up/down \xB7 arc shot \xB7 tracking \xB7 handheld \xB7 aerial. Not push in, orbit, boom or a Korean word (storyboard_check enforces the vocabulary and the conditions below). A pan, tilt, truck, pedestal or dolly is a sentence from framing to end, so end must differ from framing. A whip pan needs the hit in sound.sfx or visual.audio. A dolly zoom needs shot.depth deep (the background that stretches), a stationary subject, with a scene-specific purpose. For drone shots copy the trajectory-derived value from drone-previz.js." },
           speed: { type: "string", description: "Movement pace as slow, steady or fast \u2014 never inside movement, never a word the viewer cannot see (very slow, subtle). Empty on static. Generated from the trajectory on drone shots." },
           backgroundView: { type: "string", enum: ["front", "back"], description: "Opening camera direction relative to the location sheet; front is the establishing view, back is the opposite view. Defaults to front." },
@@ -95485,6 +95521,10 @@ var require_production_mode = __commonJS({
       function cameraInputErrors(camera) {
         if (!camera || typeof camera !== "object" || Array.isArray(camera)) return ["camera must be an object"];
         const errors = [];
+        for (const key of ["lensMm", "fStop", "focusDistanceM"]) {
+          if (camera[key] !== void 0 && !(Number.isFinite(camera[key]) && camera[key] > 0)) errors.push(key + " must be a positive number");
+        }
+        if (camera.cue !== void 0 && (typeof camera.cue !== "string" || !camera.cue.trim())) errors.push("cue must be nonempty text");
         if (camera.backgroundView !== void 0 && !["front", "back"].includes(camera.backgroundView)) errors.push("backgroundView must be front or back");
         for (const slot2 of CAMERA_SLOTS) if (camera[slot2] !== void 0 && typeof camera[slot2] !== "string") errors.push(slot2 + " must be text");
         if (camera.preset !== void 0 && !Object.keys(CAMERA_PRESETS).includes(camera.preset)) errors.push("unknown camera preset");
@@ -95997,10 +96037,12 @@ var require_production_mode = __commonJS({
           if (v.slide || v.source && v.source !== "stock" || v.clip)
             bad("full_video needs a narrated visual.video handoff; no slide/still substitution or b-roll splice");
           if (["broll", "quote"].includes(s2.type)) bad("full_video generated cuts use ordinary narrated cards");
-          const owner = win.STRUCTURE?.scenes?.find((scene) => scene.no === s2.scene);
-          const sourceImage = v.bg || s2.referenceImage || owner?.frames?.start;
-          if (!text4(sourceImage) || !text4(v.bgPrompt) && v.source !== "stock") bad("keep a source image path and its generation prompt");
-          if (!text4(v.video?.prompt)) bad("store the motion prompt before generation" + (win.STORY?.authoring === "story-first" ? " (shot_prompt)" : ""));
+          if (v.video.prompt || v.video.path || v.video.file) {
+            const owner = win.STRUCTURE?.scenes?.find((scene) => scene.no === s2.scene);
+            const first = win.SCENES.find((member) => member.scene === s2.scene);
+            const source2 = s2.referenceImage || s2.timeline?.images?.find((image2) => image2.role === "start")?.path || v.frames?.start || v.bg || first === s2 && owner?.frames?.start;
+            if (!text4(source2)) bad("keep the source image path used for this video");
+          }
           let selected;
           try {
             selected = resolveVideoChoice(p, s2, snapshot);
@@ -96125,6 +96167,16 @@ var require_shot_view = __commonJS({
       if (!checked(view)) return "";
       return "Opening attention: " + view.subject + ". Opening crop: " + view.crop + ". Opening viewpoint: " + WORDS[view.mode] + (view.viewerId ? " (observer " + view.viewerId + ")" : "") + ".";
     }
+    function openingFraming(timeline) {
+      const opening = [];
+      for (const sentence2 of timeline.split(/[.!?;]\s*/)) {
+        const [first, later] = sentence2.split(/\b(?:then|before (?:the camera|we) (?:pull|zoom|move|push)|ending on|settling on)\b/i, 2);
+        if (/\b(?:at|by) the end(?: of (?:the|this) (?:shot|move|take))?(?=\s*(?:$|,|as\b|when\b))|\b(?:closing (?:frame|view)|end frame|later in the shot)\b/i.test(first)) break;
+        opening.push(first);
+        if (later !== void 0) break;
+      }
+      return opening.join(". ");
+    }
     function framingConflicts(size, view, scene = "", noPerson = false) {
       const aliases = { ws: "ls" }, chosen = aliases[size] || size;
       const known = ["els", "ls", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert"];
@@ -96141,10 +96193,10 @@ var require_shot_view = __commonJS({
       for (const [field2, text4] of parts) for (const sentence2 of text4.split(/[.!?;]\s*/)) {
         if (/\b(?:no|not|without|never|avoid)\b/i.test(sentence2)) continue;
         if (field2 === "scene" && !/^\s*(?:(?:a|an|the)\s+)?(?:extreme |medium |big |tight |wide |full |close[- ]up|head[- ]to[- ]toe|waist[- ]up|chest[- ]up)/i.test(sentence2)) continue;
-        const shot = sentence2.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:establishing )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
+        const shot = sentence2.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:(?:establishing|full[- ]figure) )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
         if (shot) {
           const label = shot[1].toLowerCase().replace(/-/g, " ");
-          const stated = label.startsWith("extreme wide") || label.startsWith("extreme long") ? "els" : label === "medium close up" ? "mcu" : /^medium (full|long)/.test(label) ? "mfs" : label === "extreme close up" ? "ecu" : /^(big|tight) close up$/.test(label) ? "choker" : /^(wide (establishing )?|long )shot$/.test(label) ? "ls" : label === "full shot" ? "fs" : label === "medium shot" ? "ms" : "cu";
+          const stated = label.startsWith("extreme wide") || label.startsWith("extreme long") ? "els" : label === "medium close up" ? "mcu" : /^medium (full|long)/.test(label) ? "mfs" : label === "extreme close up" ? "ecu" : /^(big|tight) close up$/.test(label) ? "choker" : /^(wide (?:(?:establishing|full[- ]figure) )?|long )shot$/.test(label) ? "ls" : label === "full shot" ? "fs" : label === "medium shot" ? "ms" : "cu";
           if (stated !== chosen && !(chosen === "insert" && ["cu", "ecu"].includes(stated))) out.push(field2 + " says " + shot[1] + " but shot.size is " + size);
         }
         if (person) for (const [pattern, allowed] of rules) {
@@ -96154,7 +96206,15 @@ var require_shot_view = __commonJS({
       }
       return out;
     }
-    module.exports = { BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions, framingConflicts };
+    function withoutPeople(card) {
+      const v = card.visual || {}, cast = v.character ?? v.characters;
+      if ((Array.isArray(cast) ? cast.length : cast) || v.bystanders?.length || String(v.extras || "").trim()) return false;
+      return cast !== void 0 || Boolean(v.camera?.view);
+    }
+    function subjectKind(view, size, noPerson, cutRole) {
+      return view?.subjectType || (noPerson ? "object" : view?.target || cutRole === "insert" || ["insert", "ecu"].includes(size) ? "detail" : "person");
+    }
+    module.exports = { openingFraming, withoutPeople, subjectKind, BEARINGS, MODES, SCHEMA, validate: validate2, checked, instructions, framingConflicts };
   }
 });
 
@@ -100781,7 +100841,7 @@ var require_structure_contract = __commonJS({
       const comparable = (a, b) => hangul(a) === hangul(b);
       const slugOf = (sc) => sc.place.trim() + " / " + sc.time.trim();
       const WIDE = ["els", "ls", "ws", "fs", "mfs"];
-      const CLOSE = ["mcu", "cu", "choker", "ecu", "insert"];
+      const CLOSE = ["mcu", "cu", "choker", "ecu"];
       const SIZE_RANK = { els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 8 };
       const SCREEN_RE = /도해|그래픽|슬라이드|차트|그래프|도표|인포그래픽|diagram|slide|chart|graph|infographic/i;
       const SUMMARY_RE = /(드러난다|드러남|밝혀진다|밝혀짐|밝힌다|알게\s?된다|알려\s?준다|설명한다|설명된다|소개한다|정리한다|정리된다|보여\s?준다|보여진다|확인한다|확인된다|알아챈다|전달한다|말해\s?준다|제시한다|비교한다|비교된다|풀린다|해석한다|재해석한다|이해한다|깨닫는다|파악한다|짚는다|나타난다|짚어\s?본다|살펴본다|다룬다|잇는다|엮는다|연결한다|연결된다|실행한다|수행한다|진행한다|마무리한다|챙긴다|던진다|따라간다|훑는다|짚어\s?간다|밟아\s?간다|쫓는다|들여다본다|담는다|담아낸다|그린다|그려낸다|풀어낸다)[.!?…]*$/;
@@ -100891,9 +100951,10 @@ var require_structure_contract = __commonJS({
         if (e2.mode === "lens" && (e2.horizontal && e2.horizontal !== "center" || e2.target && e2.target !== "camera")) errors.push("lens looks at camera, horizontally centered");
         return errors;
       }
+      const framingOf = (card) => (typeof module === "object" && module.exports ? require_scene_direction() : root.SCENE_DIRECTION).framing(card || {});
       function eyelineNeeded(s2) {
         const sh = s2 && s2.shot || {};
-        return !!(PLACED(s2) && !sh.lineNeutral && !(sh.render && ["motion_html", "data_graph", "editorial_html", "object_html"].includes(sh.render.mode)) && (sh.space && text4(sh.space.line) || ["pov", "ots", "reaction"].includes(sh.size)));
+        return !!(PLACED(s2) && !sh.lineNeutral && !(sh.render && ["motion_html", "data_graph", "editorial_html", "object_html"].includes(sh.render.mode)) && (sh.space && text4(sh.space.line) || ["pov", "ots"].includes(framingOf(s2).viewpoint) || framingOf(s2).cutRole === "reaction"));
       }
       function checkEyelines(shots, draft) {
         const out = [], add = (i2, message, level) => out.push({ level: level || (draft ? "later" : "bad"), where: "shot " + (i2 + 1), what: "shot.eyeline: " + message });
@@ -100991,7 +101052,8 @@ var require_structure_contract = __commonJS({
         const sh = s2 && s2.shot || {}, e2 = sh.eyeline;
         if (!s2 || ["motion_html", "data_graph", "editorial_html"].includes(sh.render && sh.render.mode)) return false;
         if (s2.visual && s2.visual.camera && s2.visual.camera.view) return false;
-        return !!(e2 && !["none", "pov"].includes(e2.mode) || sh.space && text4(sh.space.facing) || ["mcu", "cu", "choker", "ots", "reaction", "two", "three"].includes(sh.size));
+        const frame2 = framingOf(s2);
+        return !!(e2 && !["none", "pov"].includes(e2.mode) || sh.space && text4(sh.space.facing) || ["mcu", "cu", "choker"].includes(frame2.size) || frame2.viewpoint === "ots" || frame2.cutRole === "reaction" || ["two", "three", "group"].includes(frame2.arrangement));
       }
       function checkCompositions(shots, draft) {
         const out = [];
@@ -101032,24 +101094,24 @@ var require_structure_contract = __commonJS({
         type: "object",
         additionalProperties: false,
         required: ["mode"],
-        description: "L11 depth-of-field plan. Count the information the viewer must read in the frame at once: one \u2192 shallow, two or more \u2192 deep; a departure from that rule needs a reason. Not applicable on HTML explanation routes; legacy omissions warn.",
+        description: "Optical depth in this shot. Name the sharp plane or the subjects that remain clear across distances. Several people can share a plane.",
         properties: {
           mode: { type: "string", enum: ["shallow", "deep", "none"], description: "shallow = one plane sharp, the rest soft; deep = every named plane sharp at once; none = not applicable" },
           reads: { type: "integer", minimum: 1, description: "How many separate things the viewer must read in this frame at the same time (a face, a document, a person in the doorway)" },
-          focus: { type: "string", minLength: 1, description: "shallow: the one thing that stays sharp; on a person, the eyes" },
+          focus: { type: "string", minLength: 1, description: "shallow: the sharp subject or subjects on the same focal plane" },
           planes: { type: "array", minItems: 2, maxItems: 3, items: { type: "string", minLength: 1 }, description: "deep: what reads on each plane, listed front to back" },
-          sound: { type: "string", enum: ["near", "full"], description: "Sound perspective that pairs with the depth: near = voice forward, room behind (shallow); full = every source audible (deep)" },
-          reason: { type: "string", minLength: 1, description: "Required for none, for shallow with reads \u2265 2 and for deep with reads = 1; say why the rule is broken" }
+          sound: { type: "string", enum: ["near", "full"], description: "Historical input. Record new listening choices in sound.perspective independently of optical depth" },
+          reason: { type: "string", minLength: 1, description: "Optional visual intent. Required for none to explain why optical depth does not apply" }
         },
         allOf: [
-          { if: { properties: { mode: { const: "shallow" } } }, then: { required: ["reads", "focus"] } },
-          { if: { properties: { mode: { const: "deep" } } }, then: { required: ["reads", "planes"] } },
+          { if: { properties: { mode: { const: "shallow" } } }, then: { required: ["focus"] } },
+          { if: { properties: { mode: { const: "deep" } } }, then: { required: ["planes"] } },
           { if: { properties: { mode: { const: "none" } } }, then: { required: ["reason"] } }
         ]
       };
       const PHOTO_MODES = ["still_camera", "generated_video", "stock_video"];
       const FOCUS_EFFECTS = ["focus-in", "rack-focus"];
-      const EYES_RE = /눈|\beyes?\b/i;
+      const photoRoute = (mode) => !mode || PHOTO_MODES.includes(mode);
       function validateDepth(d) {
         if (!d || typeof d !== "object" || Array.isArray(d)) return ["depth must be an object"];
         const errors = [], required2 = new Set(DEPTH_SCHEMA.required);
@@ -101067,10 +101129,8 @@ var require_structure_contract = __commonJS({
         DEPTH_SCHEMA.allOf.forEach((b) => {
           if (b.if.properties.mode.const === d.mode) b.then.required.forEach((k) => required2.add(k));
         });
-        if (d.mode === "shallow" && posInt(d.reads) && d.reads >= 2) required2.add("reason");
-        if (d.mode === "deep" && d.reads === 1) required2.add("reason");
         required2.forEach((k) => {
-          if (d[k] === void 0) errors.push(k + " is required for " + (d.mode || "depth") + (k === "reason" && d.mode !== "none" ? " when reads disagrees with the depth (one thing \u2192 shallow, two or more \u2192 deep)" : ""));
+          if (d[k] === void 0) errors.push(k + " is required for " + (d.mode || "depth"));
         });
         if (d.mode === "none" && Object.keys(d).some((k) => !["mode", "reason"].includes(k))) errors.push("none carries only mode and reason");
         if (d.mode === "shallow" && d.planes !== void 0) errors.push("shallow names one focus, not planes");
@@ -101079,18 +101139,20 @@ var require_structure_contract = __commonJS({
       }
       function depthNeeded(s2) {
         const sh = s2 && s2.shot || {}, r2 = sh.render || {};
-        if (!PLACED(s2) || r2.mode && !PHOTO_MODES.includes(r2.mode)) return false;
+        if (!PLACED(s2) || !photoRoute(r2.mode)) return false;
         const effect = r2.mode === "still_camera" && r2.camera && r2.camera.effect;
-        return !!(FOCUS_EFFECTS.includes(effect) || ["mcu", "cu", "choker", "ecu", "insert", "two", "three", "ots"].includes(sh.size));
+        const frame2 = framingOf(s2);
+        return FOCUS_EFFECTS.includes(effect) || ["mcu", "cu", "choker", "ecu"].includes(frame2.size) || frame2.cutRole === "insert" || frame2.viewpoint === "ots" || ["two", "three", "group"].includes(frame2.arrangement);
       }
       function checkDepths(shots, draft) {
         const out = [];
         shots.forEach((s2, i2) => {
           if (!s2) return;
-          const sh = s2.shot || {}, d = sh.depth, r2 = sh.render || {}, c = sh.composition;
+          const sh = s2.shot || {}, d = sh.depth, r2 = sh.render || {};
+          if (!photoRoute(r2.mode)) return;
           const add = (msg, level) => out.push({ level: level || (draft ? "later" : "bad"), where: "shot " + (i2 + 1), what: "shot.depth: " + msg });
           if (d === void 0) {
-            if (depthNeeded(s2)) add("count what the viewer must read here and record shallow or deep, or none with a reason", s2.scene && shots.some((x2) => x2 && x2.scene === s2.scene && x2.shot && x2.shot.depth) ? void 0 : "warn");
+            if (depthNeeded(s2)) add("name the sharp subject or planes and record shallow or deep, or none with a reason", s2.scene && shots.some((x2) => x2 && x2.scene === s2.scene && x2.shot && x2.shot.depth) ? void 0 : "warn");
             return;
           }
           const errors = validateDepth(d);
@@ -101098,10 +101160,6 @@ var require_structure_contract = __commonJS({
           if (errors.length || d.mode === "none") return;
           const effect = r2.mode === "still_camera" && r2.camera && r2.camera.effect;
           if (d.mode === "deep" && FOCUS_EFFECTS.includes(effect)) add(effect + " blurs every plane but one; deep focus keeps them all sharp \u2014 choose pull, pan, push or a hold, or declare shallow");
-          if (d.mode === "shallow" && c && c.subjectKind === "face" && !EYES_RE.test(d.focus)) add("on a person the focus goes on the eyes; name them in focus", "warn");
-          if (d.mode === "shallow" && d.reads === 1 && ["two", "three", "ots"].includes(sh.size)) add("two people in frame with one plane sharp loses the partner; confirm the other person is not information here", "warn");
-          if (d.mode === "deep" && ["choker", "ecu", "insert"].includes(sh.size)) add("an extreme close-up rarely holds two readable planes; review reads", "warn");
-          if (d.sound && d.mode === "shallow" !== (d.sound === "near")) add("depth and sound perspective usually pair \u2014 voice forward with shallow, every source with deep; review the mix", "warn");
         });
         return out;
       }
@@ -101530,7 +101588,7 @@ var require_structure_contract = __commonJS({
           const placeKnown = placeKey && seenWidePlace.has(placeKey);
           const isScreen = (x2) => x2.s.shot && x2.s.shot.render && EXPLAIN_MODES.indexOf(x2.s.shot.render.mode) !== -1;
           const pics = xs.filter((x2) => !isScreen(x2));
-          const sizes = new Set(pics.map((x2) => x2.s.shot && x2.s.shot.size).filter(Boolean));
+          const sizes = new Set(pics.map((x2) => framingOf(x2.s).size).filter(Boolean));
           if (!performanceStory && xs.length === 1 && placed.length >= 5 && groups.size >= 2)
             warn(where, `one shot \u2014 coverage is two sizes per scene, a wide and a close; give it a second shot or fold it into a neighbour (scenes-schema \xA7grammar units)`);
           else if (!performanceStory && xs.length >= 2 && pics.length === 1 && placed.length >= 5)
@@ -101540,17 +101598,13 @@ var require_structure_contract = __commonJS({
               warn(where, `${pics.length} picture shots and no wide (${WIDE.join("\xB7")}) \u2014 coverage is two sizes per scene, a wide that sets the place and a close; an explanation screen's ls is not the wide (directing-grammar \xA76.1\u20132)`);
             if (!CLOSE.some((z) => sizes.has(z)))
               warn(where, `${pics.length} picture shots and no close (${CLOSE.join("\xB7")}) \u2014 coverage is two sizes per scene, a wide and a close that pays the moment (directing-grammar \xA76.1\u20133)`);
-            const tight = pics.filter((x2) => ["cu", "choker", "ecu"].indexOf(x2.s.shot && x2.s.shot.size) !== -1).length;
+            const tight = pics.filter((x2) => ["cu", "choker", "ecu"].includes(framingOf(x2.s).size)).length;
             if (tight >= 2)
               warn(where, `${tight} close-ups (cu\xB7choker\xB7ecu) in one scene \u2014 a scene pays its moment once with one close-up; the rest is the wide, the mediums and inserts (directing-grammar \xA76.3)`);
           }
           if (placeKey && WIDE.some((z) => sizes.has(z))) seenWidePlace.add(placeKey);
           pics.forEach((x2) => {
-            const sz = x2.s.shot && x2.s.shot.size, lay = x2.s.shot && x2.s.shot.space && String(x2.s.shot.space.layout || "");
-            if (["cu", "mcu", "choker"].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
-              warn("shot " + x2.no, `size "${sz}" but the layout shows no face ("${lay.trim().slice(0, 30)}\u2026") \u2014 a close-up is a face; a hand, a label or a screen filling the frame is an insert (directing-grammar \xA76)`);
-            if (["ms", "mcu"].indexOf(sz) !== -1 && lay && !(castOf(x2.s) || []).length && !PERSON_RE.test(lay.replace(NO_PERSON_RE, "")) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
-              warn("shot " + x2.no, `size "${sz}" but the layout has no person ("${lay.trim().slice(0, 30)}\u2026") \u2014 the size scale is a body (ms is the waist); a frame of objects is a wide of the place or an insert (directing-grammar \xA76)`);
+            const sz = framingOf(x2.s).size, lay = x2.s.shot?.space?.layout;
             if (["els", "ls", "ws"].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
               warn("shot " + x2.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}\u2026") \u2014 the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
           });
@@ -101617,8 +101671,17 @@ var require_structure_contract = __commonJS({
           xs.forEach((x2, i2) => {
             if (!i2 || !picture2(xs[i2 - 1]) || !picture2(x2)) return;
             const prev2 = xs[i2 - 1];
-            const prevRank = SIZE_RANK[prev2.s.shot && prev2.s.shot.size];
-            const rank = SIZE_RANK[x2.s.shot && x2.s.shot.size];
+            const prevFrame = framingOf(prev2.s), nextFrame = framingOf(x2.s);
+            const prevRank = SIZE_RANK[prevFrame.size], rank = SIZE_RANK[nextFrame.size];
+            const subjectOf = (card) => card.visual?.camera?.view?.subjectId || card.visual?.camera?.view?.subject;
+            const previousSubject = subjectOf(prev2.s), nextSubject = subjectOf(x2.s);
+            if (previousSubject && nextSubject) {
+              if (compact5(previousSubject) !== compact5(nextSubject)) return;
+            } else {
+              const firstCast = castOf(prev2.s), nextCast = castOf(x2.s);
+              if (firstCast?.length && nextCast?.length && !firstCast.some((id2) => nextCast.includes(id2))) return;
+              if (prevFrame.arrangement !== nextFrame.arrangement || prevFrame.cutRole !== nextFrame.cutRole || prevFrame.viewpoint !== nextFrame.viewpoint) return;
+            }
             if (prevRank === void 0 || rank === void 0) return;
             if (Math.abs(prevRank - rank) >= 2) return;
             if (validCrossings.has(x2.no)) return;
@@ -101882,9 +101945,9 @@ var require_structure_contract = __commonJS({
             feel: s2.shot.feel,
             info: s2.shot.info,
             infoType: s2.shot.infoType,
-            size: s2.shot.size,
-            angle: s2.shot.angle,
+            ...framingOf(s2),
             why: s2.shot.why,
+            soundPerspective: s2.sound?.perspective || s2.shot.depth?.sound,
             render: s2.shot.render && s2.shot.render.mode,
             share: s2.shot.share,
             depth: s2.shot.depth && s2.shot.depth.mode
@@ -102152,6 +102215,7 @@ var require_structure_contract = __commonJS({
       const PRODUCTION_MODES = ["full_video", "video_80", "video_50", "video_30", "video_lt10", "no_video"];
       const api2 = {
         VERSION: VERSION2,
+        photoRoute,
         episodeTitle,
         COMPOSITION_SCHEMA,
         validateComposition,
@@ -102169,6 +102233,7 @@ var require_structure_contract = __commonJS({
         eyelineNeeded,
         eyelineText,
         VOCAB: {
+          SCALES: SIZES.slice(0, SIZES.indexOf("insert")),
           SIZES,
           ANGLES,
           TYPES,
@@ -107183,7 +107248,7 @@ import * as nodeModule3 from "node:module";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { createHash as createHash3 } from "node:crypto";
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/external.js
+// ../../../server/node_modules/zod/v3/external.js
 var external_exports = {};
 __export(external_exports, {
   BRAND: () => BRAND,
@@ -107295,7 +107360,7 @@ __export(external_exports, {
   void: () => voidType
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/helpers/util.js
+// ../../../server/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -107429,7 +107494,7 @@ var getParsedType = (data) => {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/ZodError.js
+// ../../../server/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -107547,7 +107612,7 @@ ZodError.create = (issues) => {
   return error2;
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/locales/en.js
+// ../../../server/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -107650,7 +107715,7 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/errors.js
+// ../../../server/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function setErrorMap(map) {
   overrideErrorMap = map;
@@ -107659,7 +107724,7 @@ function getErrorMap() {
   return overrideErrorMap;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/helpers/parseUtil.js
+// ../../../server/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
   const { data, path: path41, errorMaps, issueData } = params;
   const fullPath = [...path41, ...issueData.path || []];
@@ -107769,14 +107834,14 @@ var isDirty = (x2) => x2.status === "dirty";
 var isValid = (x2) => x2.status === "valid";
 var isAsync = (x2) => typeof Promise !== "undefined" && x2 instanceof Promise;
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/helpers/errorUtil.js
+// ../../../server/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v3/types.js
+// ../../../server/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
   constructor(parent, value2, path41, key) {
     this._cachedPath = [];
@@ -115082,7 +115147,7 @@ async function generateStableAudio(input) {
   }
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/Options.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/Options.js
 var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
@@ -115116,7 +115181,7 @@ var getDefaultOptions = (options) => typeof options === "string" ? {
   ...options
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/Refs.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/Refs.js
 var getRefs = (options) => {
   const _options = getDefaultOptions(options);
   const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
@@ -115137,7 +115202,7 @@ var getRefs = (options) => {
   };
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
 function addErrorMessage(res2, key, errorMessage, refs) {
   if (!refs?.errorMessages)
     return;
@@ -115153,7 +115218,7 @@ function setResponseValueAndErrors(res2, key, value2, errorMessage, refs) {
   addErrorMessage(res2, key, errorMessage, refs);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
 var getRelativePath = (pathA, pathB) => {
   let i2 = 0;
   for (; i2 < pathA.length && i2 < pathB.length; i2++) {
@@ -115163,7 +115228,7 @@ var getRelativePath = (pathA, pathB) => {
   return [(pathA.length - i2).toString(), ...pathB.slice(i2)].join("/");
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
 function parseAnyDef(refs) {
   if (refs.target !== "openAi") {
     return {};
@@ -115179,7 +115244,7 @@ function parseAnyDef(refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
 function parseArrayDef(def, refs) {
   const res2 = {
     type: "array"
@@ -115203,7 +115268,7 @@ function parseArrayDef(def, refs) {
   return res2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
 function parseBigintDef(def, refs) {
   const res2 = {
     type: "integer",
@@ -115249,24 +115314,24 @@ function parseBigintDef(def, refs) {
   return res2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
 function parseBooleanDef() {
   return {
     type: "boolean"
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
 function parseBrandedDef(_def, refs) {
   return parseDef(_def.type._def, refs);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
 var parseCatchDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
 function parseDateDef(def, refs, overrideDateStrategy) {
   const strategy = overrideDateStrategy ?? refs.dateStrategy;
   if (Array.isArray(strategy)) {
@@ -115325,7 +115390,7 @@ var integerDateParser = (def, refs) => {
   return res2;
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
 function parseDefaultDef(_def, refs) {
   return {
     ...parseDef(_def.innerType._def, refs),
@@ -115333,12 +115398,12 @@ function parseDefaultDef(_def, refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
 function parseEffectsDef(_def, refs) {
   return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
 function parseEnumDef(def) {
   return {
     type: "string",
@@ -115346,7 +115411,7 @@ function parseEnumDef(def) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
 var isJsonSchema7AllOfType = (type) => {
   if ("type" in type && type.type === "string")
     return false;
@@ -115388,7 +115453,7 @@ function parseIntersectionDef(def, refs) {
   } : void 0;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
 function parseLiteralDef(def, refs) {
   const parsedType2 = typeof def.value;
   if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
@@ -115408,7 +115473,7 @@ function parseLiteralDef(def, refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var emojiRegex2 = void 0;
 var zodPatterns = {
   /**
@@ -115733,7 +115798,7 @@ function stringifyRegExpWithFlags(regex, refs) {
   return pattern;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
 function parseRecordDef(def, refs) {
   if (refs.target === "openAi") {
     console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
@@ -115785,7 +115850,7 @@ function parseRecordDef(def, refs) {
   return schema2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
 function parseMapDef(def, refs) {
   if (refs.mapStrategy === "record") {
     return parseRecordDef(def, refs);
@@ -115810,7 +115875,7 @@ function parseMapDef(def, refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object7 = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
@@ -115824,7 +115889,7 @@ function parseNativeEnumDef(def) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
 function parseNeverDef(refs) {
   return refs.target === "openAi" ? void 0 : {
     not: parseAnyDef({
@@ -115834,7 +115899,7 @@ function parseNeverDef(refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
 function parseNullDef(refs) {
   return refs.target === "openApi3" ? {
     enum: ["null"],
@@ -115844,7 +115909,7 @@ function parseNullDef(refs) {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
 var primitiveMappings = {
   ZodString: "string",
   ZodNumber: "number",
@@ -115912,7 +115977,7 @@ var asAnyOf = (def, refs) => {
   return anyOf.length ? { anyOf } : void 0;
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
 function parseNullableDef(def, refs) {
   if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
     if (refs.target === "openApi3") {
@@ -115944,7 +116009,7 @@ function parseNullableDef(def, refs) {
   return base && { anyOf: [base, { type: "null" }] };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
 function parseNumberDef(def, refs) {
   const res2 = {
     type: "number"
@@ -115993,7 +116058,7 @@ function parseNumberDef(def, refs) {
   return res2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
 function parseObjectDef(def, refs) {
   const forceOptionalIntoNullable = refs.target === "openAi";
   const result = {
@@ -116063,7 +116128,7 @@ function safeIsOptional(schema2) {
   }
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
 var parseOptionalDef = (def, refs) => {
   if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
     return parseDef(def.innerType._def, refs);
@@ -116082,7 +116147,7 @@ var parseOptionalDef = (def, refs) => {
   } : parseAnyDef(refs);
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
 var parsePipelineDef = (def, refs) => {
   if (refs.pipeStrategy === "input") {
     return parseDef(def.in._def, refs);
@@ -116102,12 +116167,12 @@ var parsePipelineDef = (def, refs) => {
   };
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
 function parsePromiseDef(def, refs) {
   return parseDef(def.type._def, refs);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
 function parseSetDef(def, refs) {
   const items = parseDef(def.valueType._def, {
     ...refs,
@@ -116127,7 +116192,7 @@ function parseSetDef(def, refs) {
   return schema2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
 function parseTupleDef(def, refs) {
   if (def.rest) {
     return {
@@ -116155,24 +116220,24 @@ function parseTupleDef(def, refs) {
   }
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
 function parseUndefinedDef(refs) {
   return {
     not: parseAnyDef(refs)
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
 function parseUnknownDef(refs) {
   return parseAnyDef(refs);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
 var parseReadonlyDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/selectParser.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/selectParser.js
 var selectParser = (def, typeName, refs) => {
   switch (typeName) {
     case ZodFirstPartyTypeKind.ZodString:
@@ -116248,7 +116313,7 @@ var selectParser = (def, typeName, refs) => {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/parseDef.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/parseDef.js
 function parseDef(def, refs, forceResolution = false) {
   const seenItem = refs.seen.get(def);
   if (refs.override) {
@@ -116304,7 +116369,7 @@ var addMeta = (def, refs, jsonSchema) => {
   return jsonSchema;
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+// ../../../server/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
 var zodToJsonSchema = (schema2, options) => {
   const refs = getRefs(options);
   let definitions2 = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name3, schema3]) => ({
@@ -116520,7 +116585,7 @@ function isManagedMusicCall(tool2, args) {
   return Object.hasOwn(MUSIC_ADAPTERS, tool2) && !!args && typeof args === "object" && "musicContext" in args;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/core.js
+// ../../../server/node_modules/zod/v4/core/core.js
 var NEVER2 = Object.freeze({
   status: "aborted"
 });
@@ -116579,7 +116644,7 @@ function config2(newConfig) {
   return globalConfig;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/util.js
+// ../../../server/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -117100,7 +117165,7 @@ var Class = class {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/errors.js
+// ../../../server/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -117175,7 +117240,7 @@ function formatError2(error2, _mapper) {
   return fieldErrors;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/parse.js
+// ../../../server/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema2, value2, _ctx, _params) => {
   const ctx = _ctx ? Object.assign(_ctx, { async: false }) : { async: false };
   const result = schema2._zod.run({ value: value2, issues: [] }, ctx);
@@ -117225,7 +117290,7 @@ var _safeParseAsync = (_Err) => async (schema2, value2, _ctx) => {
 };
 var safeParseAsync = /* @__PURE__ */ _safeParseAsync($ZodRealError);
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/regexes.js
+// ../../../server/node_modules/zod/v4/core/regexes.js
 var cuid = /^[cC][^\s-]{8,}$/;
 var cuid2 = /^[0-9a-z]+$/;
 var ulid = /^[0-9A-HJKMNP-TV-Za-hjkmnp-tv-z]{26}$/;
@@ -117283,7 +117348,7 @@ var _null = /null/i;
 var lowercase = /^[^A-Z]*$/;
 var uppercase = /^[^a-z]*$/;
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/checks.js
+// ../../../server/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a4;
   inst._zod ?? (inst._zod = {});
@@ -117668,7 +117733,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/doc.js
+// ../../../server/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -117704,14 +117769,14 @@ var Doc = class {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/versions.js
+// ../../../server/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 0,
   patch: 0
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/schemas.js
+// ../../../server/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a4;
   inst ?? (inst = {});
@@ -118949,7 +119014,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/locales/en.js
+// ../../../server/node_modules/zod/v4/locales/en.js
 var parsedType = (data) => {
   const t2 = typeof data;
   switch (t2) {
@@ -119067,7 +119132,7 @@ function en_default2() {
   };
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/registries.js
+// ../../../server/node_modules/zod/v4/core/registries.js
 var $ZodRegistry = class {
   constructor() {
     this._map = /* @__PURE__ */ new Map();
@@ -119115,7 +119180,7 @@ function registry() {
 }
 var globalRegistry = /* @__PURE__ */ registry();
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/core/api.js
+// ../../../server/node_modules/zod/v4/core/api.js
 function _string(Class2, params) {
   return new Class2({
     type: "string",
@@ -119554,7 +119619,7 @@ function _refine(Class2, fn, _params) {
   return schema2;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s2) {
   const schema2 = s2;
   return !!schema2._zod;
@@ -119617,7 +119682,7 @@ function getLiteralValue(schema2) {
   return void 0;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/classic/iso.js
+// ../../../server/node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
 __export(iso_exports, {
   ZodISODate: () => ZodISODate,
@@ -119658,7 +119723,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/classic/errors.js
+// ../../../server/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -119692,13 +119757,13 @@ var ZodRealError = $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/classic/parse.js
+// ../../../server/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
 var safeParseAsync2 = /* @__PURE__ */ _safeParseAsync(ZodRealError);
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/classic/schemas.js
+// ../../../server/node_modules/zod/v4/classic/schemas.js
 var ZodType2 = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
   inst.def = def;
@@ -120309,10 +120374,10 @@ function preprocess(fn, schema2) {
   return pipe(transform(fn), schema2);
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/zod/v4/classic/external.js
+// ../../../server/node_modules/zod/v4/classic/external.js
 config2(en_default2());
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -121831,12 +121896,12 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function getMethodLiteral(schema2) {
   const shape2 = getObjectShape(schema2);
   const methodSchema = shape2?.method;
@@ -121857,7 +121922,7 @@ function parseWithCompat(schema2, data) {
   return result.data;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -122811,7 +122876,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist3(), 1);
 function createDefaultAjvInstance() {
@@ -122879,7 +122944,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -123092,7 +123157,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -123127,7 +123192,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -123498,10 +123563,10 @@ var Server = class extends Protocol {
   }
 };
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process2 from "node:process";
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var STDIO_DEFAULT_MAX_BUFFER_SIZE = 10 * 1024 * 1024;
 var ReadBuffer = class {
   constructor(options) {
@@ -123538,7 +123603,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// ../../../../../../../Volumes/data/repository/ttalkkaklab/ttalkkak-story/social-flow/server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../../../server/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process2.stdin, _stdout = process2.stdout, options) {
     this._stdin = _stdin;
@@ -123797,11 +123862,15 @@ var sceneText = external_exports.string().trim().min(1).refine((value2) => !nonE
 var load3 = createRequire6(import.meta.url);
 var sceneDefaultsSchema = external_exports.object({
   camera: sceneText.refine((id2) => !!load3("../../skills/storyboard/references/scene-direction.js").movement(id2), "Choose a movement ID from the camera catalogue").optional(),
+  cameraPolicy: sceneText.optional(),
+  depthPolicy: sceneText.optional(),
+  lensPolicy: sceneText.optional(),
+  soundPerspective: external_exports.enum(["near", "full"]).optional(),
   axis: sceneText.optional(),
   continuity: sceneText.optional(),
   lighting: sceneText.optional(),
   attention: sceneText.optional()
-}).strict().describe("Optional defaults before shot images: camera movement ID, screen axis, persistent world relationships, lighting and attention across cuts. Shot choices override the matching default.");
+}).strict().describe("Scene rules for camera, lenses, depth, lighting, geography and narrative disclosure. Set camera for an inherited movement ID, axis for the initial screen side and soundPerspective for the default listening perspective. Local focus, framing and state changes coexist with scene rules.");
 var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
@@ -123849,7 +123918,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
   prompt: external_exports.string().min(1).max(32e3).refine((text4) => !!text4.trim(), "Enter the complete scene prompt").optional().describe("One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts."),
-  promptDrafts: scenePromptDrafts.optional().describe("Authored whole-scene prompts keyed by the selected engine, exact model and operation. Use named reference slots. Preserve edits for other selections."),
+  promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
   fps: external_exports.number().int().positive().optional().describe("Frames per second on the scene timeline; defaults to 24."),
@@ -123867,7 +123936,7 @@ var sceneVideoDirectionSchema = external_exports.object({
   emotion: sceneText.describe("The emotional change, naming each participant. For a factual scene give its visible subject and purpose."),
   action: sceneText.optional().describe("Only story-essential movement, tied to the same visible landmark as the opening position."),
   sound: sceneText.optional().describe("Room tone or sound from an essential action."),
-  camera: sceneText.optional().describe("Shared camera direction. Each shot keeps its own framing and incoming transition.")
+  camera: sceneText.optional().describe("Scene camera rule on older boards. Use directionDefaults.cameraPolicy for new work.")
 }).strict();
 function sceneCastProse(prompt, positions, speakers) {
   const aliases = /* @__PURE__ */ new Map();
@@ -125950,7 +126019,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.130.0",
+  version: "0.131.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -127641,9 +127710,12 @@ function sceneTimelineWords(timeline, scene, options = {}) {
     }
     const duration5 = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
     const hold = describeDelivery && options.cutTiming === "approximate_holds" && `Hold this view for about ${duration5} ${duration5 === 1 ? "second" : "seconds"}.`;
+    const positions = (shot.openingPositions || []).filter((person) => index !== 0 || !scene.openingPositions?.some((initial) => initial.character === person.character && initial.position === person.position));
+    const opening = positions.map((person) => person.character + ": " + person.position.replace(/[.!?]+$/, "") + ".").join(" ");
     rows2.push([
       shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : void 0),
       hold,
+      opening && "At the start of this shot, " + opening,
       ...[shot.framing, shot.blocking, shot.action].filter((value2) => value2 && !wholeTake.has(value2)),
       ...cues,
       ...guides,
@@ -127828,8 +127900,11 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
 var GENAI_SCENE_MODELS = ["ltx-2.5-22b-distilled", "minimax-h3"];
 var GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 };
 var H3_FRAMES = { min: 124, max: 345, step: 17, offset: 5 };
-function genaiSceneFrames(frames, model2) {
-  if (model2 === "minimax-h3") return H3_FRAMES.step * Math.ceil(Math.max(0, frames - H3_FRAMES.offset) / H3_FRAMES.step) + H3_FRAMES.offset;
+function genaiSceneFrames(frames, model2, holdToMinDuration = false) {
+  if (model2 === "minimax-h3") {
+    const rounded = H3_FRAMES.step * Math.ceil(Math.max(0, frames - H3_FRAMES.offset) / H3_FRAMES.step) + H3_FRAMES.offset;
+    return holdToMinDuration ? Math.max(H3_FRAMES.min, rounded) : rounded;
+  }
   return Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
 }
 var LIMITS = { subjects: 4, backgrounds: 1, voices: 2 };
@@ -127859,13 +127934,14 @@ var genaiSceneSchema = external_exports.object({
   seed: external_exports.number().int().min(0).max(2147483647).optional(),
   referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
   numInferenceSteps: h3InferenceSteps.optional(),
+  holdToMinDuration: external_exports.boolean().optional().describe("Render an extra final hold when the H3 scene is shorter than the model minimum. The delivered clip has the original storyboard frame count."),
   generateAudio: external_exports.boolean().default(true).describe("false removes the generated soundtrack from the delivered clip."),
   reserveUsd: external_exports.number().finite().nonnegative(),
   outputPath: external_exports.string().optional(),
   filename: bareFilenameSchema("video").refine((name2) => name2.endsWith(".mp4"), "Use an .mp4 filename").optional()
 }).strict().superRefine((args, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: "custom", message });
-  if ((args.referenceImageShortEdge !== void 0 || args.numInferenceSteps !== void 0) && args.model !== "minimax-h3") issue2("H3 reference image and sampling settings require MiniMax H3");
+  if ((args.referenceImageShortEdge !== void 0 || args.numInferenceSteps !== void 0 || args.holdToMinDuration) && args.model !== "minimax-h3") issue2("H3 reference image and sampling settings require MiniMax H3");
   const ids = [...args.cast.map((m2) => m2.id), ...args.references.map((r2) => r2.id), ...args.shots.map((s2) => s2.id)];
   if (new Set(ids).size !== ids.length) issue2("Cast, reference and shot IDs share one namespace and must be distinct");
   for (const member of args.cast) if (new Set(member.images.map((i2) => i2.role)).size !== member.images.length)
@@ -127878,7 +127954,7 @@ var genaiSceneSchema = external_exports.object({
     if (args.cast.filter((member) => member.voicePath).length > 3) issue2("H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue2("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
-    const frames = genaiSceneFrames(sceneFrames(args), args.model);
+    const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
     if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue2("H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.");
     if (args.shots.some((shot) => shot.strength !== void 0 && shot.strength !== 1)) issue2("H3 shot pictures are untimed references and take no strength.");
     return;
@@ -127889,7 +127965,7 @@ var genaiSceneSchema = external_exports.object({
   if (subjects < 1 || subjects > LIMITS.subjects) issue2(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
   if (args.references.filter((r2) => r2.role === "background").length > LIMITS.backgrounds) issue2("LTX scene mode takes one background");
   if (args.cast.filter((m2) => m2.voicePath).length > LIMITS.voices) issue2(`LTX scene mode takes ${LIMITS.voices} voices`);
-  if (genaiSceneFrames(sceneFrames(args), args.model) > GENAI_SCENE_FRAMES.max) issue2(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
+  if (genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration) > GENAI_SCENE_FRAMES.max) issue2(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
 var GENAI_SCENE_VOICE_SECONDS = 10;
 function checkSceneVoices(args) {
@@ -127947,6 +128023,7 @@ function resolveScenePrompt2(prompt, labels) {
 }
 function genaiSceneBody(args, uri) {
   const [width, height] = args.resolution.split("x").map(Number);
+  const tail = args.model === "minimax-h3" && args.holdToMinDuration ? Math.max(0, H3_FRAMES.min - sceneFrames(args)) : 0;
   const h3 = {
     ...args.referenceImageShortEdge === void 0 ? {} : { reference_image_short_edge: args.referenceImageShortEdge },
     ...args.numInferenceSteps === void 0 ? {} : { num_inference_steps: args.numInferenceSteps }
@@ -127963,9 +128040,9 @@ function genaiSceneBody(args, uri) {
         ...member.voicePath ? { voice: { uri: uri(member.voicePath, "audio") } } : {}
       })),
       references: args.references.map((ref) => ({ id: ref.id, role: ref.role, uri: uri(ref.imagePath, "image") })),
-      shots: args.shots.map((shot) => ({
+      shots: args.shots.map((shot, index) => ({
         id: shot.id,
-        seconds: shot.frames / args.fps,
+        seconds: (shot.frames + (index === args.shots.length - 1 ? tail : 0)) / args.fps,
         ...shot.imagePath ? { image: { uri: uri(shot.imagePath, "image"), ...shot.strength === void 0 ? {} : { strength: shot.strength } } } : {}
       }))
     },
@@ -127998,8 +128075,8 @@ function checkSceneValidation(args, result) {
     return { id: shot.id, start_frame: at };
   });
   if (resolved.prompt !== expected) throw new Error("genai_scene_labels: the gateway numbers this scene differently from the plan");
-  if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args), args.model))
-    throw new Error("genai_scene_frames: the gateway renders " + resolved.num_frames + " frames; the plan expects " + genaiSceneFrames(sceneFrames(args), args.model));
+  if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration))
+    throw new Error("genai_scene_frames: the gateway renders " + resolved.num_frames + " frames; the plan expects " + genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration));
   if (JSON.stringify(resolved.shots.map((s2) => ({ id: s2.id, start_frame: s2.start_frame }))) !== JSON.stringify(starts))
     throw new Error("genai_scene_cuts: the gateway places the shots at other frames than the plan");
   if (args.referenceImageShortEdge !== void 0 && resolved.reference_image_short_edge !== args.referenceImageShortEdge)
@@ -128438,7 +128515,7 @@ function msrOutputContract(operation, args) {
   return mediaContract.parse({ width: size[0] / scale, height: size[1] / scale, fps, frames, audio: args.generateAudio !== false });
 }
 function sceneNativeContract(args) {
-  return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model), audio: true });
+  return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration), audio: true });
 }
 function checkOutput(file3, expected, counted = false) {
   const probe5 = JSON.parse(execFileSync11(
@@ -132276,6 +132353,8 @@ var heldMove = /^(?:static|fixed|locked(?:[- ]off)?)(?: (?:camera|frame|shot))?[
 function cameraMoveWords(camera) {
   const movement = text(camera.movement), speed = text(camera.speed), target = text(camera.target);
   if (!movement) return "";
+  const cue = text(camera.cue);
+  if (cue) return sentence("On " + cue.replace(/[.!?]+$/, "") + ", " + cameraMoveWords({ ...camera, cue: void 0 }).replace(/^The camera/, "the camera"));
   if (heldMove.test(movement)) return "The camera holds a static frame.";
   const catalogue = load6("../../skills/storyboard/references/film-techniques.js");
   const move = catalogue.entries.find((entry2) => entry2.fields.movement === movement.toLowerCase())?.prompt;
@@ -132391,9 +132470,14 @@ function shotVisualDirection(shot, concise = false) {
   const words = load6("../../skills/storyboard/references/assemble-bg-prompt.js");
   const views = load6("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
-  const sizes = viewWords ? words.SIZE_WORDS_OBJECT : words.SIZE_WORDS;
   const catalogue = load6("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load6("../../skills/storyboard/references/structure-contract.js");
+  const frame2 = directions().framing(shot);
+  const timedFraming = text(object4(shot.timeline).framing);
+  if (timedFraming && frame2.size) {
+    const conflicts = views.framingConflicts(frame2.size, { subjectType: object4(camera.view).subjectType }, views.openingFraming(timedFraming), views.withoutPeople(shot));
+    if (conflicts.length) throw new Error(`shot_framing_conflict: ${shot.id || "shot"} timeline.framing conflicts with size ${frame2.size}. Revise its opening crop and keep the remaining composition notes. ${conflicts.join(". ")}`);
+  }
   const picked = (Array.isArray(plan2.techniques) ? plan2.techniques : []).map(object4).map((t2) => ({
     id: text(t2.id),
     from: text(t2.from),
@@ -132403,15 +132487,20 @@ function shotVisualDirection(shot, concise = false) {
   }));
   const movement = text(camera.movement), settle = text(camera.end), moveWords = cameraMoveWords(camera);
   const rack = picked.find((t2) => t2.entry?.fields.focus);
-  const focusWords = !rack ? "" : sentence(rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : `${rack.entry.label.en} from the near subject to the far subject`);
-  const sizeWords = sentence(sizes[text(plan2.size)] || ""), angleWords = sentence(words.ANGLE_WORDS[text(plan2.angle)] || "");
-  const size = sizes[text(plan2.size)];
-  const framing = sentence([concise ? size?.split(",")[0] : size, words.ANGLE_WORDS[text(plan2.angle)]].filter(Boolean).join(", "));
+  const focusWords = !rack ? "" : sentence((rack.from && rack.to ? `Rack focus from ${rack.from} to ${rack.to}` : rack.entry.label.en) + (rack.on ? ", cued by " + rack.on : ""));
+  const size = words.frameSizeWords(frame2.size, camera, views.withoutPeople(shot), frame2.cutRole) || !viewWords && frame2.crop || "", angle = words.ANGLE_WORDS[frame2.angle];
+  const sizeWords = sentence(size || ""), angleWords = sentence(angle || "");
+  const framing = sentence([concise ? size?.split(",")[0] : size, angle, ...directions().framingTerms(shot)].filter(Boolean).join(", "));
   const depthWords = plan2.depth ? sentence(contract2.depthText(plan2.depth)) : "";
   const other = picked.filter((t2) => t2.entry && ["camera", "framing"].includes(t2.entry.category) && !t2.entry.fields.movement && !t2.entry.fields.focus && !t2.entry.fields.size && !t2.entry.fields.angle && !(viewWords && t2.entry.fields.viewpoint));
   const accentWords = other.map((t2) => sentence(t2.entry.fields.accent && t2.entry.prompt ? t2.entry.prompt.replace("{cue}", t2.on || t2.entry.fields.cue) : t2.entry.instruction));
   const openingView = [
     viewWords || (text(camera.framing) ? sentence(concise ? text(camera.framing) : `Opening composition: ${text(camera.framing)}`) : ""),
+    directions().opticsWords(camera),
+    text(object4(plan2.space).layout),
+    text(object4(plan2.space).facing),
+    contract2.compositionText(plan2.composition),
+    contract2.eyelineText(plan2.eyeline),
     !viewWords && camera.rear && !other.some((t2) => t2.entry.fields.viewpoint === "rear") ? "View the subject from behind." : "",
     !viewWords && camera.pov && !other.some((t2) => t2.entry.fields.viewpoint === "pov") ? sentence(`Point of view: ${text(camera.pov) || "the named character"}`) : ""
   ].filter(Boolean);
@@ -132425,8 +132514,13 @@ function withSceneCamera(shot, scenes) {
   return load6("../../skills/_shared/scene-acting.js").withThoughtClock(directions().withCameraDefaults([shot], scenes)[0], scenes);
 }
 function attributeWords(key, row, camera = {}) {
+  if (key === "soundPerspective") return row.value === "near" ? "Sound perspective: close to the subject." : "Sound perspective: hear the whole room.";
+  if (key === "cameraPolicy") return sentence(row.value);
   if (key === "camera") return row.id || row.source === "shot" ? cameraMoveWords({ ...row.source === "shot" ? camera : {}, speed: row.speed, movement: row.source === "shot" ? row.value : directions().movement(row.id) }) : row.value;
   return nonEnglishOutsideQuotes(row.value) ? "" : sentence(directions().labels[key][1] + ": " + row.value);
+}
+function commonCameraWords(rows2) {
+  return [rows2.cameraPolicy?.value, rows2.camera && attributeWords("camera", rows2.camera)].filter(Boolean).join(" ");
 }
 function sceneShotNotes(card, concise = false) {
   const english2 = (s2) => s2 && !nonEnglishOutsideQuotes(s2) ? s2 : "";
@@ -132443,7 +132537,7 @@ function sceneShotNotes(card, concise = false) {
 function shotVisualParts(shot, rows2, common7, end, framing, concise = false) {
   const dir = shotVisualDirection(shot, concise), visual = object4(shot.visual), camera = object4(visual.camera);
   const expression = expressionWords(shot);
-  const rowKind = (key) => key === "camera" ? "camera" : ["lighting", "attention"].includes(key) ? "design" : "space";
+  const rowKind = (key) => key === "camera" ? "camera" : ["lighting", "shotLight", "attention"].includes(key) ? "design" : "space";
   const parts = [
     { kind: "framing", text: framing },
     { kind: "framing", text: dir.framing },
@@ -132451,7 +132545,7 @@ function shotVisualParts(shot, rows2, common7, end, framing, concise = false) {
     { kind: "focus", text: dir.focusWords },
     { kind: "depth", text: dir.depthWords },
     ...dir.accentWords.map((text4) => ({ kind: "accent", text: text4 })),
-    ...Object.entries(rows2).filter(([key]) => !common7[key]).map(([key, row]) => ({ kind: rowKind(key), text: attributeWords(key, row, camera) })),
+    ...Object.entries(rows2).filter(([key]) => key !== "soundPerspective" && !common7[key]).map(([key, row]) => ({ kind: rowKind(key), text: attributeWords(key, row, camera) })),
     { kind: "settle", text: dir.settle && sentence("Closing frame: " + dir.settle) },
     { kind: "expression", text: expression && sentence("Expressions: " + expression) },
     { kind: "end", text: end && sentence("End on " + end) }
@@ -132479,7 +132573,11 @@ function compileVideoPrompt(shot, source2, names = {}, options = {}) {
   const seen = (Array.isArray(visual.bystanders) ? visual.bystanders : []).map(text).filter(Boolean), extras = text(visual.extras);
   const plain = (value2) => text(value2).replace(/[.\s]+$/, "").toLowerCase();
   const actionInBeat = performance2.performance.some((event) => event.kind === "action" && plain(event.videoDirection || event.text) === plain(source2.action));
+  const attributes = options.sceneAttributes ?? resolvedDirection({}, [shot]).shots[0];
+  const shared5 = Object.entries(attributes).filter(([key]) => !["camera", "soundPerspective", "continuityChange"].includes(key)).map(([key, row]) => attributeWords(key, row));
+  const listening = attributes.soundPerspective && attributeWords("soundPerspective", attributes.soundPerspective);
   const parts = (step2) => [
+    ...shared5,
     msr ? framing : "Start from the given first frame.",
     msr ? depthWords : "",
     moveWords,
@@ -132498,6 +132596,7 @@ function compileVideoPrompt(shot, source2, names = {}, options = {}) {
     // The model's default face is pleasant; the authored state has to be named and held (LTX guide: physical cues, state after the action).
     worn && step2 < 3 ? sentence(`Expressions, held to the last frame unless the action changes them: ${worn}`) : "",
     frames.mode === "first_last" ? sentence(`End on the given last frame${source2.end ? ": " + source2.end : ""}`) : source2.end ? sentence(`End on ${source2.end}`) : "",
+    listening,
     sentence(`Audio: ${source2.sound ? source2.sound + (/\b(music|soundtrack|score|bgm|melody|orchestral|song)\b/i.test(source2.sound) ? "" : ", no music") : "no music"}`),
     acting.VIDEO_TEXT_POLICY
   ].filter(Boolean);
@@ -132513,9 +132612,13 @@ function compileVideoPrompt(shot, source2, names = {}, options = {}) {
     { attribute: "render", value: object4(plan2.render).mode, via: "adapter" },
     { attribute: "size", value: plan2.size, via: !sizeWords ? "unmapped" : msr ? "prompt" : "image", instruction: sizeWords },
     { attribute: "angle", value: plan2.angle, via: !angleWords ? "unmapped" : msr ? "prompt" : "image", instruction: angleWords },
+    { attribute: "arrangement", value: plan2.arrangement, via: msr ? "prompt" : "image" },
+    { attribute: "cutRole", value: plan2.cutRole, via: msr ? "prompt" : "image" },
+    { attribute: "optics", value: directions().opticsWords(camera) || void 0, via: "prompt" },
+    { attribute: "soundPerspective", value: attributes.soundPerspective?.value, via: "prompt", instruction: listening },
     { attribute: "view", value: camera.view, via: "prompt", instruction: viewWords },
     { attribute: "move", value: camera, via: movement ? "prompt" : "unmapped", instruction: moveWords },
-    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to } : void 0, via: "prompt", instruction: focusWords },
+    { attribute: "focus", value: rack ? { id: rack.id, from: rack.from, to: rack.to, ...rack.on ? { on: rack.on } : {} } : void 0, via: "prompt", instruction: focusWords },
     { attribute: "depth", value: plan2.depth, via: msr ? "prompt" : "image", instruction: depthWords },
     { attribute: "framePlan", value: frames.mode, via: "adapter" },
     ...picked.map((t2) => ({
@@ -133257,8 +133360,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
     if (endFrame <= cursor || timeline && (timeline.startFrame !== startFrame || timeline.endFrame !== endFrame) || transition === "open" !== (index === 0)) throw new Error("scene_video_timing: inconsistent frame range or transition on " + shotId);
     cursor = endFrame;
     const notes = sceneShotNotes(raw[index], concise);
-    const shotFraming = shotVisualWords(raw[index], coverage2.shots[index], coverage2.common, concise ? "" : notes.end, timeline?.framing, concise);
-    const framing = shotFraming || (coverage2.common.camera ? attributeWords("camera", coverage2.common.camera) : members.length === 1 ? "Use the opening composition." : "");
+    const shotFraming2 = shotVisualWords(raw[index], coverage2.shots[index], coverage2.common, concise ? "" : notes.end, timeline?.framing, concise);
+    const framing = shotFraming2 || (coverage2.common.camera ? attributeWords("camera", coverage2.common.camera) : members.length === 1 ? "Use the opening composition." : "");
     const action2 = [notes.action || (members.length === 1 ? scene.action || scene.emotion : ""), ...notes.beats].filter(Boolean).join(" ");
     const pins = [...timeline?.images ?? []];
     for (const pin of scene.keyframes ?? []) {
@@ -133324,7 +133427,8 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       throw new Error("scene_opening_positions: a single shot and its scene must have the same opening positions");
     let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : void 0) : void 0;
     const blocking = notes.blocking;
-    const sound = notes.sound;
+    const perspective = !coverage2.common.soundPerspective && coverage2.shots[index].soundPerspective;
+    const sound = [notes.sound, perspective && attributeWords("soundPerspective", perspective)].filter(Boolean).join(" ");
     const ordered2 = load9("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
     const lines = scoped ? ordered2(member).filter((line) => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
@@ -133392,12 +133496,14 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const fitStep = options.fitStep ?? 0;
   const fitted = fitStep ? fitSceneTimeline(timeline, members, scene, coverage2, concise, fitStep) : timeline;
   const common7 = coverage2.common;
-  const camera = sceneCameraDirection([], common7.camera && attributeWords("camera", common7.camera));
-  const staging = Object.entries(common7).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(" ");
+  const camera = sceneCameraDirection([], commonCameraWords(common7));
+  const sharedSound = [scene.sound, common7.soundPerspective && attributeWords("soundPerspective", common7.soundPerspective)].filter(Boolean).join(" ");
+  const directedScene = { ...scene, sound: sharedSound };
+  const staging = Object.entries(common7).filter(([key]) => !["camera", "cameraPolicy", "soundPerspective"].includes(key)).map(([key, row]) => attributeWords(key, row)).filter(Boolean).join(" ");
   const shared5 = [camera.instruction, staging].filter(Boolean).join(" ");
   const words = sceneTimelineWords(timeline, scene);
   const scopedDialogue = timeline.shots.some((s2) => s2.dialogue?.length);
-  const complete = scenePromptText(scene, shared5, words, dialogue, scopedDialogue);
+  const complete = scenePromptText(directedScene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value2) => [value2, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
   const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
@@ -133406,7 +133512,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     includeDialogue: !options.bindDialogue,
     describeDelivery: modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3
   });
-  const text4 = scenePromptText(scene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
+  const text4 = scenePromptText(directedScene, shared5, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
   const providerPrompt = suffix(options.bindOpening ? text4 : openingPrompt(text4, scene.openingPositions, (index) => formatReferenceLabel(options.profile?.referenceLabels ?? "indexed", "image", index)));
   const request = { sceneNo, prompt, ...timeline, ...modelPacedCuts ? { modelPacedCuts: true } : {}, ...options.sceneMode ? { sceneMode: true } : {}, sceneDirection: {
     emotion: scene.emotion,
@@ -133414,7 +133520,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
     ...camera.instruction ? { camera: camera.instruction } : {},
     ...staging ? { staging } : {},
     ...scene.oneTake ? { oneTake: true } : {},
-    ...scene.sound ? { sound: scene.sound } : {}
+    ...sharedSound ? { sound: sharedSound } : {}
   } };
   const cards = members;
   const authored = cards.flatMap((card) => card.narration ?? []);
@@ -135105,6 +135211,7 @@ function buildH3Plan(input, context2, persist) {
     resolution: external_exports.string().optional(),
     referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
     numInferenceSteps: h3InferenceSteps.optional(),
+    holdToMinDuration: external_exports.boolean().optional(),
     outputPath: external_exports.string().optional(),
     filename: external_exports.string().optional()
   }).strict().parse(input.args);
@@ -135245,7 +135352,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const silentPicture = !lines.some((line) => line.delivery === "on_screen" || line.delivery === "off_screen");
   const supportsAudioToggle = tool2 === "astra_genai_img2video" || tool2 === "minimax_img2video" || tool2 === "seedance_img2video" && SEEDANCE_MODEL_SPECS[selection.model ?? DEFAULT_SEEDANCE_MODEL]?.audio || Boolean(tool2 && HOSTED_VIDEO_ROUTES[tool2]?.soundtrack);
   const sound = context2.shot.sound;
-  const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
+  const shotNotes = sceneShotNotes(context2.shot);
+  const owners = context2.board.STRUCTURE?.scenes;
+  const cards = context2.board.SCENES?.filter((card) => card.scene === context2.shot.scene) ?? [];
+  const index = cards.findIndex((card) => card.id === context2.shot.id);
+  const sceneAttributes = !scene && resolvedDirection(
+    owners?.find((owner) => owner.no === context2.shot.scene),
+    index < 0 ? [context2.shot] : cards.slice(0, index + 1)
+  ).shots.at(-1);
+  const cardPlan = context2.shot.shot;
+  const hasDirection = shotNotes.action || shotNotes.end || shotNotes.sound || shotNotes.beats.length || lines.length || sceneAttributes && Object.keys(sceneAttributes).length || cardPlan?.size || cardPlan?.angle || cardPlan?.depth || cardPlan?.arrangement || cardPlan?.cutRole || cardPlan?.composition || cardPlan?.eyeline || cardPlan?.techniques || context2.shot.visual?.camera;
+  const writtenAudio = scene?.sound || shotNotes.sound || input.args.prompt || !scene && !hasDirection && visual?.video?.prompt;
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? "").trim());
   const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== "speech" && !requestsSilence);
   const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
@@ -135275,13 +135392,15 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const bindDialogueSeparately = (imageWithReferences || tool2 === "seedance_reference" || tool2 === "fasth3_omni_reference") && !silentPicture && input.args.generateAudio !== false;
   const silentSuffix = silentPicture ? `No speech or vocalization. All visible mouths stay closed; ${includeEffects ? "include natural ambience for the location and sound effects from the visible actions." : "perform the planned silent action."}` : "";
   const promptLimit = sceneTool ? genaiScenePromptLimit(String(selection.model)) : tool2 === "astra_genai_msr" || tool2 === "astra_genai_img2video" ? 2e3 : tool2 ? videoPromptLimit(tool2) : void 0;
-  const compileFor = (budget) => compileVideoPrompt(withSceneCamera(shot, context2.board.STRUCTURE?.scenes), video2.promptSource, names, {
+  const source2 = { action: shotNotes.action, end: shotNotes.end, sound: shotNotes.sound };
+  const compileFor = (budget) => compileVideoPrompt(withSceneCamera(shot, owners), source2, names, {
     mode,
     measureAudio,
     bindDialogueSeparately,
+    sceneAttributes: sceneAttributes || void 0,
     ...budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}
   });
-  let compiled = !scene && video2?.promptSource ? compileFor(promptLimit) : void 0;
+  let compiled = !scene && (hasDirection || !video2?.prompt) ? compileFor(promptLimit) : void 0;
   const withPrompt = (prompt) => {
     const args2 = typeof prompt === "string" ? { ...input.args, prompt } : input.args;
     return silentSuffix ? {
@@ -135327,7 +135446,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   ) : void 0;
   const sceneRequest = prepared?.request;
   const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context2.board, context2.sceneNo) : void 0;
-  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera ? attributeWords("camera", legacyCoverage.common.camera) : void 0));
+  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], commonCameraWords(legacyCoverage.common)));
   const timedImages2 = prepared?.mapped.timedImages;
   if (scene) {
     if (prepared) {
@@ -135337,22 +135456,17 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
       const coverage2 = legacyCoverage;
       const notes = sceneShotNotes(members[0]);
       const details = [
-        ...Object.entries(coverage2.common).filter(([key]) => key !== "camera").map(([key, row]) => attributeWords(key, row)),
+        ...Object.entries(coverage2.common).filter(([key]) => key !== "camera" && key !== "cameraPolicy").map(([key, row]) => attributeWords(key, row)),
         shotVisualWords(members[0], coverage2.shots[0], coverage2.common, notes.end),
         notes.blocking,
         notes.action,
         ...notes.beats,
-        notes.sound && "Sound: " + notes.sound
+        notes.sound && "Sound: " + notes.sound,
+        !coverage2.common.soundPerspective && coverage2.shots[0].soundPerspective && attributeWords("soundPerspective", coverage2.shots[0].soundPerspective)
       ].filter(Boolean);
       const sceneText2 = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(" "), lines, bindTurns, promptProfile);
-      callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions, (index) => formatReferenceLabel(promptProfile.referenceLabels, "image", index)));
+      callArgs = withPrompt(bindOpening ? sceneText2 : openingPrompt(sceneText2, scene.openingPositions, (index2) => formatReferenceLabel(promptProfile.referenceLabels, "image", index2)));
     }
-  }
-  if (scene && selection.engine === "seedance" && members.length === 1) {
-    const member = members[0].visual;
-    const stored = member?.video?.prompt?.trim();
-    const direction2 = String(callArgs.prompt ?? "");
-    if (stored && !direction2.includes(stored)) callArgs = { ...callArgs, prompt: [stored, direction2].filter(Boolean).join("\n") };
   }
   if (tool2 === "seedance_reference" && !silentPicture) {
     if (input.args.generateAudio === false) throw new Error("scene_dialogue_audio_required: this shot has native spoken dialogue");
@@ -135360,7 +135474,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   }
   if (silentPicture) checkVoiceoverDirection(String(callArgs.prompt ?? ""), lines, true);
   const replaced = input.prompt !== void 0;
-  const sourcePrompt = replaced ? input.prompt : scene ? String(callArgs.prompt) : typeof video2?.prompt === "string" ? video2.prompt : "";
+  const sourcePrompt = replaced ? input.prompt : scene ? String(callArgs.prompt) : compiled?.prompt ?? (typeof video2?.prompt === "string" ? video2.prompt : "");
   const outsidePrompt = (bindings = []) => {
     const kept = bindings.filter((binding) => binding.via !== "prompt");
     return kept.length ? { directionBindings: kept } : {};
@@ -135369,7 +135483,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const rawPrompt = input.args.prompt ?? video2?.prompt;
   const drift = !scene && !compiled && !replaced && typeof rawPrompt === "string" ? cameraDrift(rawPrompt, String(boardCamera.movement ?? "")) : null;
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
-  const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...c ? { performance: c.performance } : {} } : c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.", ...driftWarning] };
+  const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...c ? { performance: c.performance } : {} } : c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Only an archived prompt is available for this card; add structured action to recompile from current attributes.", ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
   for (const guide of (sceneRequest?.shotReferenceImages ?? []).filter((item) => !sceneTool || item.shotId === sceneRequest?.shotIds[0])) {
     if (!guide.submitted) cutWarnings.push("shot_reference_omitted: " + guide.shotId + " receives no composition image. " + guide.reason);
@@ -135507,26 +135621,26 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const mediaSlots = [];
   let videoAudioCount = 0;
   if (Array.isArray(voice.args.referenceVideoPaths)) {
-    for (const [index, file3] of voice.args.referenceVideoPaths.entries()) {
+    for (const [index2, file3] of voice.args.referenceVideoPaths.entries()) {
       const name2 = path29.parse(String(file3)).name;
-      mediaSlots.push({ name: name2, role: "motion", index: index + 1 });
+      mediaSlots.push({ name: name2, role: "motion", index: index2 + 1 });
       if (tool2 === "fasth3_omni_reference" && fasth3VideoAudioCount([path29.resolve(context2.episode, String(file3))]))
         mediaSlots.push({ name: name2, role: "soundtrack", index: ++videoAudioCount });
     }
   }
   if (tool2 === "seedance_reference") {
-    let index = mediaSlots.filter((slot2) => slot2.role === "motion").length;
+    let index2 = mediaSlots.filter((slot2) => slot2.role === "motion").length;
     for (const key of ["referenceVideoUrls", "referenceVideoTaskIds"]) {
       const files3 = voice.args[key];
       if (Array.isArray(files3)) for (const file3 of files3) {
         const name2 = key === "referenceVideoTaskIds" ? String(file3) : "clip-" + createHash23("sha256").update(String(file3)).digest("hex").slice(0, 12);
-        mediaSlots.push({ name: name2, role: "motion", index: ++index });
+        mediaSlots.push({ name: name2, role: "motion", index: ++index2 });
       }
     }
   }
   if (Array.isArray(voice.args.referenceAudioPaths)) {
-    for (const [index, file3] of voice.args.referenceAudioPaths.entries()) {
-      const slot2 = videoAudioCount + index + 1;
+    for (const [index2, file3] of voice.args.referenceAudioPaths.entries()) {
+      const slot2 = videoAudioCount + index2 + 1;
       if (!voice.voiceContinuity?.speakers.some((speaker) => speaker.audioIndex === slot2))
         mediaSlots.push({ name: path29.parse(String(file3)).name, role: "soundtrack", index: slot2 });
     }
@@ -136748,7 +136862,7 @@ var techniqueSelectionSchema = external_exports.array(external_exports.object({
   reason: external_exports.string().trim().min(1).optional().describe("Why this technique serves this shot\u2019s information or action; camera.static may go without one"),
   from: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp first, in English"),
   to: external_exports.string().trim().min(1).optional().describe("Rack focus: the subject sharp last, in English"),
-  on: external_exports.string().trim().min(1).optional().describe("Beat accent: the moment it fires on, in English")
+  on: external_exports.string().trim().min(1).optional().describe("Action, line or sound that cues a focus change or beat accent, in English")
 }).strict()).superRefine((value2, ctx) => {
   for (const message of techniqueContract().validate(value2))
     ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
@@ -136778,6 +136892,7 @@ function vocabAtLoad() {
     return contract().VOCAB;
   } catch {
     return {
+      SCALES: MISSING,
       SIZES: MISSING,
       ANGLES: MISSING,
       BEATS: MISSING,
@@ -136807,7 +136922,11 @@ var primaryHookTypeIds = (() => {
 })();
 var primaryHookTypeSchema = tuple(primaryHookTypeIds);
 var V = vocabAtLoad();
+var shotFraming = () => loadFromHere2(join14(REFERENCES_DIR, "scene-direction.js"));
 var nonEmpty = external_exports.string().trim().min(1);
+var arrangementSchema = external_exports.enum(["single", "two", "three", "group"]);
+var cutRoleSchema = external_exports.enum(["insert", "reaction", "cutaway"]);
+var perspectiveSchema = external_exports.enum(["near", "full"]);
 var STRUCTURE_VERSION = (() => {
   try {
     return contract().VERSION;
@@ -136914,6 +137033,8 @@ var shotSchema = external_exports.object({
     feel: external_exports.string().optional(),
     size: external_exports.string().optional(),
     angle: external_exports.string().optional(),
+    arrangement: arrangementSchema.optional(),
+    cutRole: cutRoleSchema.optional(),
     why: external_exports.string().optional(),
     info: external_exports.string().optional(),
     infoType: external_exports.string().optional(),
@@ -136947,6 +137068,10 @@ var shotSchema = external_exports.object({
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: external_exports.string().optional(), reason: external_exports.string().optional() }).passthrough().optional()
   }).passthrough().optional(),
   sound: external_exports.record(external_exports.unknown()).transform((sound, ctx) => {
+    if (sound.perspective !== void 0 && !perspectiveSchema.safeParse(sound.perspective).success)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["perspective"], message: "choose near or full" });
+    if (sound.diegetic !== void 0 && !nonEmpty.safeParse(sound.diegetic).success)
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: ["diegetic"], message: "name the audible room sound" });
     if (!Array.isArray(sound.effects) || !sound.effects.some((e2) => e2?.audience)) return sound;
     return { ...sound, effects: sound.effects.map((e2, i2) => {
       if (!e2?.audience) return e2;
@@ -137107,6 +137232,8 @@ function boundaryReview(win, playback, videoTiming) {
       location: text4(visual.locationId),
       camera,
       size: plan2.size ?? null,
+      arrangement: plan2.arrangement,
+      cutRole: plan2.cutRole,
       angle: plan2.angle ?? null,
       depth: plan2.depth ?? null,
       eyeline: plan2.eyeline ?? null,
@@ -137466,6 +137593,31 @@ function validateStructure(structure) {
   return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
 }
 var sameShape = (value2) => JSON.stringify(value2, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : v);
+function syncCopiedShotAttributes(previous, shot) {
+  if (!previous) return shot;
+  const lastFrame = (card) => card.visual?.frames;
+  const endDesign = (card) => card.shot?.videoDesign;
+  const beforeEnd = endDesign(previous)?.after, nextEnd = endDesign(shot)?.after, frameEnd = lastFrame(shot)?.endState;
+  if (typeof beforeEnd === "string" && beforeEnd === lastFrame(previous)?.endState) {
+    if (typeof frameEnd === "string" && frameEnd !== beforeEnd && nextEnd === beforeEnd)
+      shot = { ...shot, shot: { ...shot.shot, videoDesign: { ...endDesign(shot), after: frameEnd } } };
+    if (typeof nextEnd === "string" && nextEnd !== beforeEnd && frameEnd === beforeEnd)
+      shot = { ...shot, visual: { ...shot.visual, frames: { ...lastFrame(shot), endState: nextEnd } } };
+  }
+  const actionSlots = (card) => [card.timeline?.action, card.shot?.videoDesign?.action, card.visual?.action];
+  const before = actionSlots(previous), after = actionSlots(shot);
+  const edits = after.flatMap((value2, i2) => typeof value2 === "string" && typeof before[i2] === "string" && value2 !== before[i2] ? [i2] : []);
+  if (edits.length !== 1) return shot;
+  const changed = edits[0], old = before[changed], action2 = after[changed];
+  const copy = (i2) => i2 !== changed && before[i2] === old && after[i2] === old;
+  const design = shot.shot?.videoDesign;
+  return {
+    ...shot,
+    ...copy(0) && shot.timeline ? { timeline: { ...shot.timeline, action: action2 } } : {},
+    ...copy(1) ? { shot: { ...shot.shot, videoDesign: { ...design, action: action2 } } } : {},
+    ...copy(2) ? { visual: { ...shot.visual, action: action2 } } : {}
+  };
+}
 function applyPatch(win, patch, opts = {}) {
   const next = { ...win };
   if (patch.globals) for (const [k, v] of Object.entries(patch.globals)) {
@@ -137649,16 +137801,36 @@ function applyPatch(win, patch, opts = {}) {
     joinNotes.push({ level: "warn", where: String(shot.id), what: `the shot before it changed, so its join (${transition}) was cleared \u2014 set it again with shot_icons next on the shot that now precedes it` });
     return Object.keys(edit2).length ? { ...rest, edit: edit2 } : rest;
   });
+  shots = shots.map((shot, i2) => syncCopiedShotAttributes(priorById.get(shot.id) ?? (!originalShots[i2]?.id ? originalShots[i2] : void 0), shot));
   next.SCENES = shots.map((shot) => shot.shot?.motionGraphic && (shot.shot.motionGraphic.style.theme || next.THEME?.motionGraphicTheme) ? motionThemeContract().applyTheme({ ...shot }, next.THEME?.motionGraphicTheme) : { ...shot });
-  if (!opts.outline) {
-    const earlier = new Map(originalShots.map((shot) => [shot.id, shot]));
-    next.SCENES = next.SCENES.map((shot) => {
-      const video2 = shot.visual?.video;
-      const old = earlier.get(shot.id)?.visual?.video;
-      if (!video2?.promptBasis || video2.prompt === old?.prompt) return shot;
-      const { promptBasis: _basis, promptSource: _source, ...rest } = video2;
-      return { ...shot, visual: { ...shot.visual, video: rest } };
-    });
+  function archivedPrompts(shot) {
+    const vis = shot?.visual;
+    return [
+      vis?.prompt,
+      vis?.video?.prompt,
+      vis?.clip?.prompt,
+      vis?.video?.speechBinding?.videoPrompt,
+      ...(Array.isArray(vis?.slide?.shots) ? vis.slide.shots : []).map((part) => part?.prompt)
+    ];
+  }
+  for (const [index, shot] of next.SCENES.entries()) {
+    const original = priorById.get(shot.id) ?? (!originalShots[index]?.id ? originalShots[index] : void 0);
+    const plan2 = shot.shot;
+    if (plan2?.size && plan2.size !== original?.shot?.size && V.SIZES.includes(plan2.size) && !V.SCALES.includes(plan2.size))
+      throw new Error("shot_size: use a physical scale for size and set viewpoint, arrangement and cutRole independently");
+    if (plan2?.angle === "over" && original?.shot?.angle !== "over")
+      throw new Error("shot_angle: set an over-the-shoulder viewpoint with view.mode");
+    if (plan2?.depth?.sound && plan2.depth.sound !== original?.shot?.depth?.sound) {
+      const { sound, ...depth } = plan2.depth;
+      shot.sound = { ...shot.sound, perspective: shot.sound?.perspective ?? sound };
+      shot.shot = { ...plan2, depth };
+    }
+    const old = archivedPrompts(original);
+    if (archivedPrompts(shot).some((value2, index2) => value2 && value2 !== old[index2]))
+      throw new Error("video_prompt_deferred: save shot attributes here; video_plan compiles the prompt when video is requested");
+  }
+  for (const scene of next.STRUCTURE?.scenes ?? []) {
+    assertArchivedSceneDrafts(scene.videoDirection?.promptDrafts, win.STRUCTURE?.scenes.find((old) => old.no === scene.no)?.videoDirection?.promptDrafts);
   }
   const findings = [...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : [], ...clicheModeChanged ? [clicheModeChanged] : []];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
@@ -138149,6 +138321,12 @@ function splitStoryScene(args, win, st) {
   const sequences = st.sequences.map((q) => q.id !== sequence.id ? q : { ...q, scenes: q.scenes.flatMap((no) => no === source2.no ? [no, newSceneNo] : [no]) });
   return { shots: revised, scenes: parts, sequences };
 }
+function assertArchivedSceneDrafts(next, previous) {
+  if (!next?.length || sameShape(next) === sameShape(previous)) return;
+  if (new Set(next.map((draft) => draft.prompt)).size > 1)
+    throw new Error("scene_split_required: separate production prompts require separate storyboard scenes. Use story_scene.split and save one prompt per scene.");
+  throw new Error("video_prompt_deferred: archived promptDrafts are read-only. Save the production prompt in videoDirection.prompt.");
+}
 function writeStoryScenes(args, requireSceneCast = false) {
   const { win, st, sha256: sha2563 } = readOutline(args.path);
   requireEpisodeCast(args.path, win);
@@ -138161,9 +138339,7 @@ function writeStoryScenes(args, requireSceneCast = false) {
     const members = (split?.shots ?? win.SCENES)?.filter((shot) => shot.scene === scene.no) ?? [];
     if (scene.videoDirection?.oneTake && members.length > 1) throw new Error("scene_one_take: this scene already has multiple shot cards");
     const existing = scenes.find((old) => old.no === scene.no);
-    const drafts = scene.videoDirection?.promptDrafts;
-    if (!scene.videoDirection?.prompt && drafts && new Set(drafts.map((draft) => draft.prompt)).size > 1 && JSON.stringify(drafts) !== JSON.stringify(existing?.videoDirection?.promptDrafts))
-      throw new Error("scene_split_required: save one active videoDirection.prompt. Split the storyboard scene if both prompts are intended for production.");
+    assertArchivedSceneDrafts(scene.videoDirection?.promptDrafts, existing?.videoDirection?.promptDrafts);
     if (requireSceneCast && !existing && scene.speakers === void 0)
       throw new Error("scene_speakers_required: list the speakers when creating a scene, or use [] for a silent scene");
     const first = members[0];
@@ -138171,7 +138347,7 @@ function writeStoryScenes(args, requireSceneCast = false) {
     const opening = anchors?.start ?? first?.timeline?.images?.find((image2) => image2.role === "start")?.path ?? (anchors === void 0 ? first?.visual?.frames?.start : void 0);
     const frame2 = (scene.videoDirection || scene.frames !== void 0 && existing?.videoDirection) && opening ? resolve8(dirname9(scenesPath(args.path)), opening) : void 0;
     const pin = frame2 ? { videoOpeningSha256: createHash24("sha256").update(readFileSync30(frame2)).digest("hex") } : {};
-    const revised = { ...existing, ...scene, ...anchors ? { frames: anchors } : {}, ...pin };
+    const revised = { ...existing, ...scene, ...scene.videoDirection && existing?.videoDirection?.promptDrafts ? { videoDirection: { ...scene.videoDirection, promptDrafts: existing.videoDirection.promptDrafts } } : {}, ...scene.directionDefaults ? { directionDefaults: { ...existing?.directionDefaults, ...scene.directionDefaults } } : {}, ...anchors ? { frames: anchors } : {}, ...pin };
     if (anchors !== void 0 && !opening) delete revised.videoOpeningSha256;
     scenes = upsertBy(scenes, [revised], "no");
     sequences = sequences.map((q) => q.id === sequence ? q.scenes.includes(scene.no) ? q : { ...q, scenes: [...q.scenes, scene.no] } : { ...q, scenes: q.scenes.filter((no) => no !== scene.no) });
@@ -138232,10 +138408,11 @@ var storyMusicSchema = external_exports.object({
   path: outlinePath,
   cues: external_exports.array(external_exports.object({
     name: external_exports.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]*$/, "a cue name starts with a letter and uses letters, digits, _ and -"),
-    prompt: nonEmpty.optional().describe("What to generate for this episode, in English"),
+    direction: external_exports.object({ mood: nonEmpty.optional(), instruments: nonEmpty.optional(), tempo: nonEmpty.optional(), shape: nonEmpty.optional(), dialogueSpace: nonEmpty.optional() }).strict().refine((value2) => Object.keys(value2).length > 0, "name at least one musical choice").optional(),
+    prompt: nonEmpty.optional().describe("Historical cue text for earlier clients"),
     asset: nonEmpty.optional().describe("A channel bed id (assets/audio/bgm/<id>.wav) used as it is"),
     reason: nonEmpty.describe("What this cue does for the story, in one sentence")
-  }).strict().refine((cue) => cue.prompt === void 0 !== (cue.asset === void 0), { message: "give a prompt (generated for this episode) or an asset (a channel bed), not both" })).optional(),
+  }).strict().refine((cue) => [cue.direction, cue.prompt, cue.asset].filter((item) => item !== void 0).length === 1, { message: "choose one cue source: musical direction, an existing asset or a legacy prompt" })).optional(),
   spots: external_exports.array(external_exports.object({
     scenes: external_exports.array(external_exports.number().int().positive()).min(1).describe("One scene, or scenes that follow each other and share one unbroken span"),
     decision: external_exports.enum(["score", "none"]),
@@ -138275,7 +138452,7 @@ function writeStoryMusic(args) {
   const order = patchable ? st.sequences.flatMap((q) => q.scenes) : [];
   const music = { ...win.MUSIC && typeof win.MUSIC === "object" ? win.MUSIC : {} };
   for (const { name: name2, ...cue } of args.cues ?? []) {
-    const { prompt: _prompt, prompts: _prompts, asset: _asset, ...kept } = music[name2] ?? {};
+    const { direction: _direction, prompt: _prompt, prompts: _prompts, asset: _asset, ...kept } = music[name2] ?? {};
     music[name2] = { ...kept, ...cue };
   }
   let scenes = patchable ? st.scenes.slice() : [];
@@ -138345,10 +138522,10 @@ function writeStoryMusic(args) {
   if (report.undecided.length) notes.push({ level: "warn", where: "music", what: `${report.undecided.length} scene(s) have no music decision \u2014 ${sceneList(report, report.undecided)}: decide score or none for each` });
   if (report.mismatch.length) notes.push({ level: "warn", where: "music", what: `the timeline disagrees with the decision on scenes ${sceneList(report, report.mismatch)} \u2014 spot them again` });
   for (const [name2, cue] of cues) {
-    if (!cue?.asset && !cue?.prompt && !cue?.prompts) notes.push({ level: "warn", where: `cue ${name2}`, what: "no prompt and no asset \u2014 produce has nothing to generate or fetch" });
+    if (!cue?.direction && !cue?.asset && !cue?.prompt && !cue?.prompts) notes.push({ level: "warn", where: `cue ${name2}`, what: "no prompt and no asset \u2014 produce has nothing to generate or fetch" });
     if (!used.has(name2)) notes.push({ level: "warn", where: `cue ${name2}`, what: "no span plays this cue" });
   }
-  if (project2.saved && !project2.model && cues.some(([, cue]) => cue?.prompt || cue?.prompts))
+  if (project2.saved && !project2.model && cues.some(([, cue]) => cue?.direction || cue?.prompt || cue?.prompts))
     notes.push({ level: "warn", where: "music", what: "no music model is saved (models.music) \u2014 choose one through project_manage before these cues are generated; a file made for another episode is not a substitute" });
   return {
     ...result,
@@ -138685,7 +138862,7 @@ var isFocus = (id2) => {
 var DRIFT_WORDS = { frames: "frame plan", cast: "characters", lines: "on-screen lines", camera: "camera move", focus: "focus or beat accent", framing: "size, angle or depth", people: "bystanders or extras" };
 function promptNotes(shot) {
   const drift = contract().promptDrift(shot, isFocus);
-  return drift.length ? [{ level: "warn", where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(", ")} \u2014 rewrite it with shot_prompt` }] : [];
+  return drift.length ? [{ level: "warn", where: String(shot.id), what: `the video prompt predates a change of ${drift.map((key) => DRIFT_WORDS[key] ?? key).join(", ")} \u2014 the next video request compiles the current attributes` }] : [];
 }
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
 var VIDEO_SPEEDS = ["slow", "steady", "fast"];
@@ -138699,13 +138876,17 @@ var shotIconsSchema = external_exports.object({
   shots: external_exports.array(external_exports.object({
     id: shotIdSchema,
     render: external_exports.object({ mode: tuple(V.RENDER_MODES), purpose: nonEmpty.refine((v) => renderPurposes().includes(v), (v) => ({ message: `${v} is not a render purpose (render-routing.js PURPOSES)` })).optional(), reason: nonEmpty.optional() }).strict().optional().describe("Render route: shot.render"),
-    size: tuple(V.SIZES).optional(),
+    size: tuple(V.SCALES).optional().describe("Optical scale of the opening crop"),
+    arrangement: arrangementSchema.nullable().optional(),
+    cutRole: cutRoleSchema.nullable().optional(),
     why: nonEmpty.optional().describe("Why this size for this shot"),
-    angle: tuple(V.ANGLES).optional(),
+    angle: tuple(V.ANGLES.filter((angle) => angle !== "over")).optional().describe("Camera angle. An over-the-shoulder viewpoint belongs in view.mode."),
+    optics: external_exports.object({ lensMm: external_exports.number().positive().optional(), fStop: external_exports.number().positive().optional(), focusDistanceM: external_exports.number().positive().optional() }).strict().nullable().optional().describe("Measured or intended shot optics, only when specified"),
+    soundPerspective: perspectiveSchema.nullable().optional(),
     backgroundView: external_exports.enum(["front", "back"]).optional().describe("Opening camera direction relative to the location sheet: front is its establishing view; back is the opposite view, 180 degrees around the same space. Saved as visual.camera.backgroundView; omitted keeps the choice, initially front."),
     view: shotViewSchema.optional().describe("Content-led opening subject, crop and viewpoint; saved as visual.camera.view"),
-    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
-    focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between; null removes it"),
+    move: external_exports.object({ id: nonEmpty, reason: nonEmpty.optional(), target: nonEmpty.optional(), on: nonEmpty.optional(), speed: external_exports.enum(["very slow", "slow", "steady", "fast", "very fast"]).optional() }).strict().refine((v) => v.id === "camera.static" || !!v.reason, "a camera move carries its reason; only camera.static may go without one").nullable().optional().describe("A camera technique with a movement; on a still_camera cut, the still effect (push, pan, focus-in, hold \u2026)"),
+    focus: choice.extend({ from: nonEmpty.optional(), to: nonEmpty.optional(), on: nonEmpty.optional() }).strict().nullable().optional().describe("A camera technique with a focus field (camera.rack-focus) and the subjects it hands focus between. Set on for the action, line or sound that cues the shift. null removes it"),
     accents: external_exports.array(choice.extend({ on: nonEmpty.optional() }).strict()).optional().describe("Beat accents laid over the move (camera.speed-ramp, camera.impact-shake), each with the moment it fires on in English; [] removes them"),
     depth: depthSchema.optional(),
     frames: external_exports.object({ mode: external_exports.enum(["first", "first_last", "reference"]), reason: nonEmpty.optional(), endState: nonEmpty.optional() }).strict().optional().describe("Frame plan: reference is MSR (subject images + start image)"),
@@ -138721,12 +138902,13 @@ function writeShotIcons(args) {
   const shots = (win.SCENES ?? []).slice();
   const notes = [], unreasoned = [];
   const vertical = !/16x9/.test(String(win.FORMAT ?? ""));
-  for (const { id: id2, render, size, why, angle, view, backgroundView, move, focus, accents, depth, frames, next } of args.shots) {
+  for (const { id: id2, render, size, arrangement, cutRole, why, angle, view, backgroundView, optics, move, focus, accents, depth, soundPerspective, frames, next } of args.shots) {
     const index = shotIndex(shots, id2, "shot_icons");
     const plan2 = { ...shots[index].shot ?? {} };
     const visual = { ...shots[index].visual ?? {} };
     const framing = () => JSON.stringify([
       plan2.size,
+      plan2.arrangement,
       plan2.angle,
       plan2.depth,
       plan2.space,
@@ -138746,7 +138928,7 @@ function writeShotIcons(args) {
     if (render && previous && previous !== render.mode) {
       if (render.mode === "still_camera") {
         if (Array.isArray(plan2.techniques)) plan2.techniques = plan2.techniques.filter((t2) => !field2(t2.id, "movement") && !field2(t2.id, "focus") && !field2(t2.id, "accent"));
-        const { movement: _movement, speed: _speed, target: _target, ...camera } = visual.camera ?? {};
+        const { movement: _movement, speed: _speed, target: _target, cue: _cue, ...camera } = visual.camera ?? {};
         if (visual.camera) visual.camera = Object.keys(camera).length ? camera : void 0;
       } else if (previous === "still_camera") {
         delete routed.camera;
@@ -138755,7 +138937,27 @@ function writeShotIcons(args) {
     }
     if (render) plan2.render = routed;
     if (size && size !== plan2.size && !why) delete plan2.why;
-    if (size) plan2.size = size;
+    if (size) {
+      const prior = shotFraming().framing(shots[index]);
+      if (prior.arrangement) plan2.arrangement = prior.arrangement;
+      if (prior.cutRole) plan2.cutRole = prior.cutRole;
+      if (["pov", "ots", "back"].includes(String(plan2.size)) && !view && !visual.camera?.view)
+        throw new Error("shot_view_required: give the existing viewpoint its subject and crop in view when replacing a legacy viewpoint size");
+      plan2.size = size;
+    }
+    if (arrangement === null) delete plan2.arrangement;
+    else if (arrangement) plan2.arrangement = arrangement;
+    if (cutRole === null) delete plan2.cutRole;
+    else if (cutRole) plan2.cutRole = cutRole;
+    if (optics !== void 0) {
+      const camera = { ...visual.camera };
+      if (optics === null) {
+        delete camera.lensMm;
+        delete camera.fStop;
+        delete camera.focusDistanceM;
+      }
+      visual.camera = { ...camera, ...optics };
+    }
     if (why) plan2.why = why;
     if (angle) plan2.angle = angle;
     if (backgroundView) visual.camera = { ...visual.camera, backgroundView };
@@ -138769,15 +138971,29 @@ function writeShotIcons(args) {
       plan2.info = view.subject;
     }
     if ((size || view) && plan2.size && !plan2.why) unreasoned.push(id2);
+    const sound = { ...shots[index].sound };
+    if (depth || soundPerspective !== void 0) {
+      const previousDepth = plan2.depth;
+      const perspective = soundPerspective !== void 0 ? soundPerspective : depth?.sound ?? sound.perspective ?? previousDepth?.sound;
+      if (perspective === null) delete sound.perspective;
+      else if (perspective !== void 0) sound.perspective = perspective;
+      if (previousDepth?.sound) {
+        const { sound: legacy, ...optical } = previousDepth;
+        plan2.depth = optical;
+      }
+    }
     if (depth) {
       const errors = contract().validateDepth(depth);
       if (errors.length) throw new Error(`shot_icons ${id2}: depth \u2014 ${errors.join("; ")}`);
-      plan2.depth = depth;
+      const { sound: legacy, ...optical } = depth;
+      plan2.depth = optical;
     }
     for (const [name2, value2] of [
       ["move.target", routed.mode === "still_camera" ? void 0 : move?.target],
       ["focus.from", focus?.from],
       ["focus.to", focus?.to],
+      ["focus.on", focus?.on],
+      ["move.on", move?.on],
       ...(accents ?? []).map((accent) => ["accents.on", accent.on])
     ]) {
       const foreign = value2 ? nonEnglishOutsideQuotes(value2) : "";
@@ -138787,7 +139003,7 @@ function writeShotIcons(args) {
     if (move === null) {
       if (routed.mode === "still_camera") throw new Error("shot_icons: a still effect is authored on the shot");
       techniques = techniques.filter((t2) => !field2(t2.id, "movement"));
-      const { movement, speed, target, ...view2 } = visual.camera ?? {};
+      const { movement, speed, target, cue, ...view2 } = visual.camera ?? {};
       visual.camera = Object.keys(view2).length ? view2 : void 0;
     } else if (move && routed.mode === "still_camera") {
       if (!stillCameraEffectList().includes(move.id)) throw new Error(`shot_icons ${id2}: a still_camera move is one of ${stillCameraEffectList().join(", ")}`);
@@ -138811,13 +139027,14 @@ function writeShotIcons(args) {
       const prior = String(visual.camera?.movement ?? "").toLowerCase();
       const same2 = techniques.some((t2) => t2.id === move.id) || !techniques.some((t2) => field2(t2.id, "movement")) && prior.startsWith(movement);
       techniques = [...techniques.filter((t2) => !field2(t2.id, "movement")), { id: move.id, ...move.reason ? { reason: move.reason } : {} }];
-      const { speed: oldSpeed, target: oldTarget, ...camera } = visual.camera ?? {};
+      const { speed: oldSpeed, target: oldTarget, cue: oldCue, ...camera } = visual.camera ?? {};
       const speed = move.speed ?? field2(move.id, "speed") ?? (same2 ? oldSpeed : void 0), target = move.target ?? (same2 ? oldTarget : void 0);
       visual.camera = {
         ...camera,
         movement: String(camera.movement ?? "").toLowerCase().startsWith(movement) ? camera.movement : movement,
         ...speed !== void 0 ? { speed } : {},
-        ...target !== void 0 ? { target } : {}
+        ...target !== void 0 ? { target } : {},
+        ...move.on || same2 && oldCue ? { cue: move.on || oldCue } : {}
       };
     }
     if (focus !== void 0) {
@@ -138835,6 +139052,9 @@ function writeShotIcons(args) {
       techniques = [...techniques.filter((t2) => !field2(t2.id, "accent")), ...accents];
     }
     if (move !== void 0 && routed.mode !== "still_camera" || focus !== void 0 || accents !== void 0) plan2.techniques = techniques;
+    if (frames?.mode === "first_last" && frames.endState) {
+      plan2.videoDesign = { ...plan2.videoDesign, after: frames.endState };
+    }
     if (frames && !(routed.mode === "generated_video" && st.scenes.some((scene) => scene.no === shots[index].scene && scene.frames !== void 0))) {
       const old = visual.frames ?? {}, next2 = { ...old, ...frames };
       if (old.mode !== frames.mode && !frames.reason) delete next2.reason;
@@ -138849,7 +139069,7 @@ function writeShotIcons(args) {
     }
     if (visual.frames?.start && framing() !== framedBefore)
       notes.push({ level: "warn", where: id2, what: "the start image was made for the previous size, angle, depth, camera or focus \u2014 remake it and any end image with shot_image" });
-    shots[index] = { ...shots[index], shot: plan2, visual };
+    shots[index] = { ...shots[index], shot: plan2, visual, ...shots[index].sound || Object.keys(sound).length ? { sound } : {} };
     if (next) {
       if (index + 1 >= shots.length) throw new Error(`shot_icons ${id2}: the last shot has no next shot to join`);
       try {
@@ -138915,9 +139135,7 @@ function imageDirections(win, shot) {
 function sceneImageDirection(win, shot) {
   const spatial = imageDirections(win, shot);
   if (!spatial) return "";
-  const layout = win.STRUCTURE?.scenes.find((scene) => scene.no === shot.scene)?.directionDefaults?.continuity;
-  const sharedLayout = layout && layout !== spatial.continuity?.value ? "Shared scene layout: " + layout : "";
-  return [sharedLayout, ...["axis", "continuity", "lighting"].filter((key) => spatial[key]).map((key) => attributeWords(key, spatial[key]))].filter(Boolean).join(" ");
+  return ["axis", "continuity", "continuityChange", "lighting", "shotLight", "attention", "depthPolicy", "lensPolicy"].filter((key) => spatial[key]).map((key) => attributeWords(key, spatial[key])).join(" ");
 }
 function sceneImageOpening(win, scene) {
   const first = win.SCENES?.find((shot) => shot.scene === scene.no);
@@ -138967,6 +139185,8 @@ function startImageBasis(shot, format, imageContextWords) {
     format,
     ...imageContextWords ? { sceneStaging: imageContextWords } : {},
     size: plan2.size,
+    arrangement: plan2.arrangement,
+    cutRole: plan2.cutRole,
     angle: plan2.angle,
     space: plan2.space,
     composition: plan2.composition,
@@ -139623,13 +139843,11 @@ var shotPromptSchema = external_exports.object({
 }).strict();
 function writeShotPrompt(args) {
   const { win, st, sha256: sha2563 } = readOutline(args.path);
-  const gaps = contract().imageGaps(win);
-  if (gaps.length) throw new Error("story_order: attach every shot image and any required closing image with shot_image before shot_prompt \u2014 " + gaps.join("; "));
   const shots = (win.SCENES ?? []).slice();
   const index = shotIndex(shots, args.id, "shot_prompt");
   const shot = shots[index], plan2 = shot.shot ?? {}, visual = shot.visual ?? {};
   const mode = plan2.render?.mode;
-  if (mode !== "generated_video") throw new Error(`shot_prompt: ${args.id} is a ${mode ?? "unrouted"} cut; only a generated_video cut takes a video prompt`);
+  if (mode !== "generated_video") throw new Error(`shot_prompt: ${args.id} is a ${mode ?? "unrouted"} cut; this writer takes the action of a generated_video shot`);
   const frames = visual.frames ?? {}, msr = frames.mode === "reference";
   if (args.openingPositions) {
     const ids = new Set(args.openingPositions.map((row) => row.character));
@@ -139641,7 +139859,7 @@ function writeShotPrompt(args) {
   }
   const speakerBindings = args.speakerBindings ?? [];
   const visibleSpeakers = [...new Set((shot.narration ?? []).filter((line) => line.delivery === "on_screen" && line.tts).map((line) => line.speaker))];
-  if (msr && visibleSpeakers.length > 1 && visibleSpeakers.some((id2) => !speakerBindings.some((binding) => binding.speaker === id2)))
+  if (args.speakerBindings && msr && visibleSpeakers.length > 1 && visibleSpeakers.some((id2) => !speakerBindings.some((binding) => binding.speaker === id2)))
     throw new Error("video_speaker_binding_required: inspect the start image and pass speakerBindings for both on-screen speakers");
   if (new Set(speakerBindings.map((binding) => binding.speaker)).size !== speakerBindings.length || new Set(speakerBindings.map((binding) => binding.screenPosition)).size !== speakerBindings.length)
     throw new Error("video_speaker_binding_invalid: use one distinct screen position per speaker");
@@ -139654,26 +139872,41 @@ function writeShotPrompt(args) {
   const cues = shot.sound?.effects;
   if (Array.isArray(cues) && args.sound && cues.some((e2) => e2?.audience && e2.description && args.sound.toLowerCase().includes(String(e2.description).toLowerCase())))
     throw new Error("audience_delivery_conflict: write this cue in post and keep shot_prompt.sound diegetic");
-  const source2 = { action: args.action, ...args.end ? { end: args.end } : {}, ...args.sound ? { sound: args.sound } : {} };
-  const rawCast = win.SB_DOC?.characters;
-  const names = Object.fromEntries((Array.isArray(rawCast) ? rawCast : []).map((c) => [c.id, String(c.name ?? "")]));
-  const compiled = compileVideoPrompt(withSceneCamera(shot, st.scenes), source2, names), { prompt } = compiled;
-  const { openingPositions: oldPositions, openingImageSha256: oldHash, speakerBindings: _oldBindings, speakerBindingImageSha256: _oldImage, ...priorVideo } = visual.video ?? {};
-  const start = visual.frames?.start;
-  const positions = args.openingPositions ?? oldPositions;
-  const openingHash = args.openingPositions && start ? createHash24("sha256").update(readFileSync30(resolve8(dirname9(scenesPath(args.path)), start))).digest("hex") : oldHash;
-  shots[index] = { ...shot, visual: { ...visual, video: {
-    ...priorVideo,
-    ...positions ? { openingPositions: positions, openingImageSha256: openingHash } : {},
-    prompt,
-    promptSource: source2,
-    promptBasis: contract().promptBasis(shot, isFocus),
-    ...speakerBindings.length ? { speakerBindings, speakerBindingImageSha256: createHash24("sha256").update(readFileSync30(resolve8(dirname9(scenesPath(args.path)), start))).digest("hex") } : {}
-  } } };
-  const result = writeOutline(args.path, sha2563, win, st, shots);
-  const open3 = win.STORY?.authoring === "story-first" && musicTimeline().spottingReport(win).undecided.includes(shot.scene) ? [{ level: "warn", where: args.id, what: `scene ${shot.scene} has no music decision \u2014 record score or none with story_music` }] : [];
-  const long = prompt.length > 2e3 ? [{ level: "warn", where: args.id, what: `the prompt runs ${prompt.length} characters; video_plan fits it to the adapter's limit (2,000 on the GenAI image and MSR lanes) keeping the camera, action and lines \u2014 call video_plan without args.prompt` }] : [];
-  return { ...result, findings: [...result.findings, ...compiled.warnings.map((what) => ({ level: "warn", where: args.id, what })), ...open3, ...long], prompt };
+  for (const cue of [args.action, args.end, args.sound]) if (cue && nonEnglishOutsideQuotes(cue))
+    throw new Error("video_prompt_language: write visible action, closing state and sound in English");
+  const prior = visual.video ?? {};
+  const start = contract().shotImage(win, shot);
+  if ((args.openingPositions || speakerBindings.length) && !start) throw new Error("video_speaker_binding_required: inspect the shot opening before binding speaker positions");
+  const hash8 = (args.openingPositions || speakerBindings.length) && start ? createHash24("sha256").update(readFileSync30(resolve8(dirname9(scenesPath(args.path)), start))).digest("hex") : void 0;
+  const video2 = { ...prior };
+  if (args.openingPositions) Object.assign(video2, { openingPositions: args.openingPositions, openingImageSha256: hash8 });
+  if (args.speakerBindings) Object.assign(video2, { speakerBindings, speakerBindingImageSha256: hash8 });
+  const design = { ...plan2.videoDesign, ...args.end ? { after: args.end } : {} };
+  if (!shot.timeline || design.action !== void 0) design.action = args.action;
+  shots[index] = {
+    ...shot,
+    ...shot.timeline ? { timeline: { ...shot.timeline, action: args.action, ...args.openingPositions ? { openingPositions: args.openingPositions } : {} } } : {},
+    shot: { ...plan2, videoDesign: design },
+    visual: {
+      ...visual,
+      ...visual.action !== void 0 ? { action: args.action } : {},
+      ...args.end && frames.mode === "first_last" ? { frames: { ...frames, endState: args.end } } : {},
+      ...Object.keys(video2).length ? { video: video2 } : {}
+    },
+    ...args.sound ? { sound: { ...shot.sound, diegetic: args.sound } } : {}
+  };
+  let structure = st;
+  const members = (win.SCENES || []).filter((card) => card.scene === shot.scene);
+  const owner = st.scenes.find((scene) => scene.no === shot.scene);
+  const positions = args.openingPositions;
+  if (positions && members[0] === shot && owner?.videoDirection?.openingPositions && (!owner.frames?.start || owner.frames.start === start)) {
+    const revised = members.length === 1 ? positions : owner.videoDirection.openingPositions.map((row) => {
+      const local3 = positions.find((person) => person.character === row.character);
+      return local3 ? { ...row, position: local3.position } : row;
+    });
+    structure = { ...st, scenes: st.scenes.map((scene) => scene === owner ? { ...owner, videoDirection: { ...owner.videoDirection, openingPositions: revised } } : scene) };
+  }
+  return writeOutline(args.path, sha2563, win, structure, shots);
 }
 var scenarioCheckResultSchema = external_exports.object({
   files: external_exports.array(external_exports.string()),
@@ -144757,7 +144990,9 @@ var storyboardShotInput = {
           to: { type: "string", minLength: 1, description: "camera.rack-focus: the subject sharp last, in English" },
           on: { type: "string", minLength: 1, description: "camera.speed-ramp / camera.impact-shake: the moment the accent fires on, in English" }
         } } },
-        size: { type: "string", description: "Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose." },
+        size: { type: "string", description: "Canonical framing size: mfs=mid-thigh, ms=waist-up. Use arrangement, cutRole and visual.camera.view for other framing choices." },
+        arrangement: enumInput(["single", "two", "three", "group"], "Participant arrangement in the frame"),
+        cutRole: enumInput(["insert", "reaction", "cutaway"], "Editorial function of the shot"),
         angle: { type: "string", description: "Camera angle. Recommended vocabulary is in the directing skill." },
         infoType: { type: "string", description: "Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill." },
         feel: { type: "string", description: "What the viewer should feel before choosing framing and movement." },
@@ -144777,6 +145012,7 @@ var storyboardShotInput = {
             content: { type: "object", additionalProperties: true, description: "Type-specific source data; see motion-graphics.md. Preserve exact source values." }
           }
         },
+        space: { type: "object", additionalProperties: true, description: "Shot blocking and facing. Set continuity to establish a new layout for this and subsequent shots in the scene." },
         eyeline: eyelineInput,
         composition: compositionInput,
         depth: depthInput,
@@ -144874,11 +145110,11 @@ var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and 
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan carries the storyboard scene's complete prompt. Save edits on story_scene.videoDirection.prompt. When both prompts must render, split the storyboard at a shot boundary with story_scene.split before planning each scene. On the GenAI engine the scene is one scene-mode request to POST /v1/generations: the prompt keeps its names and the gateway numbers them without adding a sentence. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. Use the saved model's inputs. Each scene has one prompt. Save wording on the storyboard and split the scene before planning separate prompts. GenAI submits one scene-mode request and numbers the named references. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
-Storyboard: write the story first with \`story_sequence\` \u2192 \`story_scene\` \u2192 \`story_shot\` (the clich\xE9s it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` \u2192 \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: author sequences, scenes and shot stories with \`story_sequence\`, \`story_scene\` and \`story_shot\`. Record selected clich\xE9s with \`story_cliche\`. Record cast, dialogue, music decisions and shot attributes with \`shot_characters\`, \`shot_dialogue\`, \`story_music\` and \`shot_icons\`. Use \`shot_prompt\` for an action, closing state, diegetic sound or inspected speaker binding. Use \`storyboard_read\`, \`storyboard_apply\` and \`storyboard_check\` for review and edits. When an image is requested, use \`shot_image\`. When video is requested, use \`video_plan\` to compile the current scene and its shots. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
 Images: \`image_catalog\` \u2192 \`image_plan\` \u2192 \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` \u2192 \`music_plan\` \u2192 \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
@@ -148800,7 +149036,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
           speakerReferences: zodToJsonSchema(sceneSpeakerReferencesSchema, { $refStrategy: "none" }),
           speakers: zodToJsonSchema(sceneSpeakersSchema, { $refStrategy: "none" }),
           directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: "none" }),
-          videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: "none" }),
+          videoDirection: zodToJsonSchema(sceneVideoDirectionSchema.omit({ promptDrafts: true }), { $refStrategy: "none" }),
           audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: "none" }),
           out: { type: "string", description: "The line or visible action the scene goes out on \u2014 it leaves the next thing wanted" },
           charge: { type: "object", additionalProperties: false, required: ["open", "close"], description: "The value at the open and at the close; ++ or -- deepens the direction the scene opened in", properties: {
@@ -148903,9 +149139,9 @@ Returns: set \u2014 the saved decision, its decisionSha256 and warnings; render 
     name: "story_music",
     title: "Decide each scene's music (music spotting)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it once the lines are written (shot_dialogue) and before shot_prompt to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (each generated for this episode from a prompt, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
+    description: `Use it once the lines are written (shot_dialogue) to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (musical direction for an episode cue, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
 
-Do NOT leave a scene without a decision because silence is the default \u2014 a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: a prompt cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
+Do NOT leave a scene without a decision because silence is the default \u2014 a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: an original cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
 
 Returns: the file written or not, counts, findings (! violation \xB7 warning), and the spotting report \u2014 each scene's decision, cue and mismatch, the undecided scenes, the cues, and the saved direction.`,
     inputSchema: {
@@ -148915,8 +149151,9 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
         path: { type: "string", description: "The storyboard directory or its scenes.js" },
         cues: { type: "array", description: "Named cues to add or revise", items: { type: "object", additionalProperties: false, required: ["name", "reason"], properties: {
           name: { type: "string", pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$", description: 'Cue name, e.g. "tension"' },
-          prompt: { type: "string", description: "What to generate for this episode, in English: instruments, tempo, mood, how it starts and ends, room for speech. Give this or asset" },
-          asset: { type: "string", description: "A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or prompt" },
+          direction: { type: "object", additionalProperties: false, minProperties: 1, properties: Object.fromEntries(["mood", "instruments", "tempo", "shape", "dialogueSpace"].map((key) => [key, { type: "string", minLength: 1 }])) },
+          prompt: { type: "string", description: "Historical input for earlier clients" },
+          asset: { type: "string", description: "A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or direction" },
           reason: { type: "string", description: "What this cue does for the story, in one sentence" }
         } } },
         spots: { type: "array", description: "One decision per scene, or per run of scenes sharing a span", items: { type: "object", additionalProperties: false, required: ["scenes", "decision", "reason"], properties: {
@@ -148977,7 +149214,7 @@ Returns: the file written or not, counts, findings (! violation \xB7 warning), a
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it once every sequence, scene and shot story is written (story_sequence \u2192 story_scene \u2192 story_shot): set who from the episode cast is on screen in each shot, up to four principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap \u2014 a sequence without scenes, a scene without a shot or summary, a shot without its story \u2014 and for an id outside the episode cast (cast_unknown) \u2014 storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board \u2014 or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
-Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
+Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues \u2014 brows, eyes, mouth, shoulders, hands \u2014 and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and video_plan read these words when the user requests images or video, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
 A shot may carry lines from several of its characters; the selected video model limits how many pinned voices one render takes, and video_plan reports a scene over it (scene_render_voice_limit). bystanders lists cast members also in view without an on-screen line \u2014 the listener's friend at the table, the child beside the coach: up to four named cast members in the shot. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; bystanders have no separate video input unless a reference explicitly names them. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 
@@ -149041,17 +149278,15 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description: `Use it after every shot has its story and characters (story_shot \u2192 shot_characters), normally after shot_dialogue, set its render route, size, angle, opening view, move, focus, depth, frame plan and next transition. Local file only; generates no media. Do NOT generate images or video here.
 
-Read shot-view.md and storyboard_read.techniqueCatalog. Plan scene attention before icons: a speaker change need not follow their face. Compare faces with consequential details, POVs and spatial relations; preserve emotion until its cause changes. Choose evidence, not size quotas or decorative cutaways; state why this view beats one alternative.
-
-Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back.
+Read shot-view.md and storyboard_read.techniqueCatalog for the visible subject, crop, viewpoint and reason.
 
 Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view and shot.info. why is the size's reason and view.reason the viewpoint's; neither is copied into the other. The result names shots without a why and wide shots (els, ls, ws, fs) held with no reason; neither is refused. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots also needs a different viewerId, pov only viewerId (what it sees stays in subject when no id stands for it). Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Use storyboard_apply for blocking and closing camera endpoints.
 
-Size is distance (els \u2026 ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+Size is distance (els \u2026 ecu). Record single/two/three/group in arrangement and insert/reaction/cutaway in cutRole. Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
 On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. accents lays camera.speed-ramp or camera.impact-shake over the move, each with the English moment it fires on; they reach the video prompt as one sentence each, and a hero landing is camera.static + angle ground + an impact shake on the landing. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
-A reason belongs to a choice: size (why), view and a camera move take this shot's reason; a hold (camera.static), a plain cut, the episode's own route and a first or reference frame plan need none, and a new route or frame mode given without a reason drops the old one. Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+A reason belongs to a choice: size (why), view and a camera move take this shot's reason; a hold (camera.static), a plain cut, the episode's own route and a first or reference frame plan need none, and a new route or frame mode given without a reason drops the old one. Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; video_plan compiles current attributes when video is requested. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
 
 storyboard_read level:"direction" counts the plan.
 
@@ -149068,20 +149303,26 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
             purpose: enumInput(purposes, "What the viewer needs from the cut"),
             reason: { type: "string", description: "Optional. Why this cut takes this route when the route is this cut's own choice \u2014 a still, a card or a graph, or any route in a mixed-ratio episode. Leave it out for generated_video in a full_video episode: the episode already chose video, and a sentence restating that on every shot says nothing" }
           } },
-          size: enumInput(storyboardVocabulary?.SIZES, "Shot size icon: the distance (els \u2026 ecu, insert); composition labels carry no crop \u2014 techniqueCatalog guides.size"),
+          size: enumInput(storyboardVocabulary?.SCALES, "Optical shot size from extreme long shot to extreme close-up"),
+          arrangement: { type: ["string", "null"], enum: ["single", "two", "three", "group", null] },
+          cutRole: { type: ["string", "null"], enum: ["insert", "reaction", "cutaway", null] },
+          soundPerspective: { type: ["string", "null"], enum: ["near", "full", null], description: "Shot listening perspective, independent of optical depth. Null restores the scene default." },
+          optics: { type: ["object", "null"], additionalProperties: false, properties: { lensMm: { type: "number", exclusiveMinimum: 0 }, fStop: { type: "number", exclusiveMinimum: 0 }, focusDistanceM: { type: "number", exclusiveMinimum: 0 } } },
           why: { type: "string", description: "Why this size for this shot. view.reason carries the viewpoint and height and is not copied here" },
-          angle: enumInput(storyboardVocabulary?.ANGLES, "Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle"),
+          angle: enumInput(storyboardVocabulary?.ANGLES.filter((angle) => angle !== "over"), "Camera height or tilt. Set over the shoulder in view.mode."),
           view: shotViewInput,
           backgroundView: { type: "string", enum: ["front", "back"], description: "Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view." },
           move: { type: ["object", "null"], additionalProperties: false, required: ["id"], description: "Choose a shot move. On a video shot null clears the override and restores the scene camera default.", properties: {
             id: { type: "string", enum: [...cameraMoves, ...stillCameraEffects], description: "A camera.* technique with a movement, or on a still_camera cut a still effect" },
             reason: { type: "string", description: "Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one" },
+            on: { type: "string", description: "Action, sound or line that starts this camera move, in English" },
             target: { type: "string", description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above \u2014 the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
             speed: { type: "string", enum: ["very slow", "slow", "steady", "fast", "very fast"], description: "Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect" }
           } },
           focus: { type: ["object", "null"], additionalProperties: false, required: ["id", "reason"], description: "Focus technique (camera.rack-focus); null removes it", properties: {
             id: { type: "string", description: "camera.rack-focus" },
             reason: { type: "string", description: "Which subject hands focus to which, and why" },
+            on: { type: "string", description: "Action, sound or line that cues the focus change, in English" },
             from: { type: "string", description: "The subject sharp first, in English (the start image stages it in focus)" },
             to: { type: "string", description: "The subject sharp last, in English" }
           } },
@@ -149157,15 +149398,9 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
   },
   {
     name: "shot_prompt",
-    title: "Write a shot's video prompt (step 5)",
+    title: "Set shot action and cast positions",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-    description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes \u2014 camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames \u2014 plus your English action, closing picture and sound, each character's expression from shot_characters (held to the last frame unless your action changes it), and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
-
-Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its image or a first_last shot its end image, and for a cut that is not generated_video.
-
-For MSR on-screen dialogue, inspect the start image and pass speakerBindings for each on-screen speaker, at most two: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. A visible listener without a line stays silent. Purposeful off_screen speech preserves the authored detail, listener or space view; do not add a speaking face to satisfy a binding.
-
-Returns: the file written and the prompt. Stores promptSource so video_plan recompiles the current icon attributes at request time.`,
+    description: `Use it to set structured action, closing state, diegetic sound and inspected speaker positions. Action and sound can be set before images. Bind a speaker position to the owning shot\u2019s opening picture. Do NOT pass dialogue or a model prompt. video_plan composes the prompt when video is requested. Returns: updated board and findings.`,
     inputSchema: {
       type: "object",
       additionalProperties: false,
@@ -149196,9 +149431,9 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Write a storyboard's scenes.js from a sequence \u2192 scene \u2192 shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug \xB7 sequence) are written from the structure. Nothing is written when a violation is found \u2014 the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue\u2019s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence \u2192 story_scene \u2192 story_shot), then each shot's characters and lines (shot_characters \u2192 shot_dialogue), then its icon attributes (shot_icons), its structured action and sound. Image and video requests follow separately; storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard \xA74), and to change one thing later (scenes / sequences by key, shots by id \u2014 shotsById \xB7 insertShots.afterId \xB7 removeShotIds \u2014 or by position, globals for FORMAT \xB7 THEME \xB7 COMPREHENSION \xB7 STORY \xB7 PRODUCTION \xB7 MUSIC \xB7 SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril \u2014 it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue\u2019s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change \u2014 do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
-Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once \u2014 one thing \u2192 shallow with focus (a person's eyes), two or more \u2192 deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
+Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
 Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
@@ -151029,7 +151264,8 @@ async function renderCover(path41) {
   mkdirSync20(join21(stage2, "previews"), { recursive: true });
   const previous = previousOutputs(dir);
   try {
-    const template = readFileSync39(TEMPLATE_FILE, "utf8");
+    const templateBytes = readFileSync39(TEMPLATE_FILE);
+    const template = templateBytes.toString("utf8");
     const kind = landscape(ep.spec) ? "landscape" : "vertical";
     const files3 = [], previews = [], warnings = [], measurements = {};
     const sources = {}, fonts = {};
@@ -151153,7 +151389,7 @@ async function renderCover(path41) {
       version: 1,
       renderVersion: RENDER_VERSION,
       decisionSha256: decisionSha(decision),
-      templateSha256: templateSha(),
+      templateSha256: sha2562(templateBytes),
       sources,
       fonts,
       format: ep.format,
@@ -151475,14 +151711,9 @@ function speechVideoPlan(input, capabilities, sceneNo) {
     throw new Error("msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS");
   const mode = capabilities.nativeSpeech && physicalSpeech ? "native" : !onScreen ? "voiceover" : capabilities.audioConditioning ? "audio_conditioned" : null;
   if (!mode) throw new Error("Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting");
-  const saved = object6(object6(object6(scene.visual).video).promptSource);
-  const design = object6(object6(scene.shot).videoDesign);
+  const notes = sceneShotNotes(scene);
   const astra = capabilities.provider.trim().toLowerCase() === "astra";
-  const compiled = compileVideoPrompt(scene, {
-    action: typeof saved.action === "string" ? saved.action : typeof design.action === "string" ? design.action : "",
-    ...typeof saved.end === "string" ? { end: saved.end } : {},
-    ...typeof saved.sound === "string" ? { sound: saved.sound } : {}
-  }, {}, {
+  const compiled = compileVideoPrompt(scene, { action: notes.action, end: notes.end, sound: notes.sound }, {}, {
     mode,
     measureAudio: (line) => mode === "native" ? null : measuredDuration(line),
     validateLanguage: false,
@@ -159790,7 +160021,7 @@ ${styleWarnings.join("\n")}` : head;
   shot_prompt: async (args) => {
     contract();
     const r2 = writeShotPrompt(parseArgs(shotPromptSchema, args));
-    return text3(renderApply(r2) + "\n\nVideo prompt (visual.video.prompt):\n" + r2.prompt, r2.findings.some((f3) => f3.level === "bad"));
+    return text3(renderApply(r2), r2.findings.some((f3) => f3.level === "bad"));
   },
   storyboard_check: async (args) => {
     contract();
@@ -159942,7 +160173,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.130.0" },
+  { name: "social-flow", version: "0.131.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {
