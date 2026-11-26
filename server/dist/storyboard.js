@@ -794,6 +794,42 @@ export function validateStructure(structure) {
 const sameShape = (value) => JSON.stringify(value, (_key, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
 const productionEvents = (events) => loadFromHere(join(PLUGIN_ROOT, 'skills/_shared/scene-acting.js')).productionPerformance(events);
 const isStoryReference = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+function matchPriorBeats(current, previous) {
+    if (sameShape(current) === sameShape(previous))
+        return current.map((_, i) => ({ original: isStoryReference(previous[i]) ? previous[i] : undefined, ambiguous: false }));
+    const matches = current.map(() => ({ ambiguous: false }));
+    const available = new Set(previous.filter(isStoryReference));
+    const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+    // Reserve exact carried rows before matching an edited note. New beats may use an old beat's coordinates for a new shot.
+    const passes = [
+        (a, b) => sameShape(a) === sameShape(b),
+        (a, b) => (a.change !== undefined && a.change === b.change || a.necessity !== undefined && a.necessity === b.necessity)
+            && ['shot', 'start', 'end'].some(key => a[key] !== undefined && sameShape(a[key]) === sameShape(b[key])),
+        (a, b) => bounds(a) === bounds(b),
+    ];
+    for (const equal of passes) {
+        const claims = new Map();
+        const candidates = current.map((beat, i) => {
+            if (matches[i].original || !isStoryReference(beat))
+                return [];
+            const rows = [...available].filter(old => equal(beat, old));
+            for (const row of rows)
+                claims.set(row, (claims.get(row) ?? 0) + 1);
+            return rows;
+        });
+        candidates.forEach((rows, i) => {
+            if (!rows.length)
+                return;
+            if (rows.length === 1 && claims.get(rows[0]) === 1) {
+                matches[i] = { original: rows[0], ambiguous: false };
+                available.delete(rows[0]);
+            }
+            else
+                matches[i].ambiguous = true;
+        });
+    }
+    return matches;
+}
 function speechGroupIdentities(shot, transcript) {
     const recorded = !shot.narration?.length && Array.isArray(transcript?.groups);
     const lines = recorded ? transcript.groups : shot.narration ?? [];
@@ -899,25 +935,18 @@ function remapStoryReferences(next, before, shots, positionOf, carriedTimelines)
     };
     if (Array.isArray(story.beats) && Array.isArray(prior.beats)) {
         const currentBeats = story.beats;
-        const oldBeats = prior.beats.filter(isStoryReference);
-        const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+        const matches = matchPriorBeats(currentBeats, prior.beats);
         const beats = currentBeats.map((beat, i) => {
             if (!isStoryReference(beat))
                 return beat;
             const where = 'STORY.beats[' + i + ']';
             // Changing the prose keeps the old range. If an endpoint was edited, keep only the other endpoint attached.
-            let original = oldBeats.find(old => bounds(old) === bounds(beat));
+            const { original, ambiguous } = matches[i];
             if (!original) {
-                const candidates = oldBeats.filter(old => (old.change !== undefined && old.change === beat.change ||
-                    old.necessity !== undefined && old.necessity === beat.necessity) && ['start', 'end'].some(key => beat[key] !== undefined && sameShape(old[key]) === sameShape(beat[key])));
-                if (candidates.length > 1) {
-                    missing(where, { start: beat.start, end: beat.end });
-                    return beat;
-                }
-                original = candidates[0];
-            }
-            if (!original)
+                if (ambiguous)
+                    missing(where, beat);
                 return beat;
+            }
             if (beat.start === undefined && beat.end === undefined)
                 return shotNumber(beat, where);
             const carry = (key) => sameShape(beat[key]) === sameShape(original[key])

@@ -138186,6 +138186,35 @@ function validateStructure(structure) {
 var sameShape = (value2) => JSON.stringify(value2, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : v);
 var productionEvents = (events) => loadFromHere2(join14(PLUGIN_ROOT, "skills/_shared/scene-acting.js")).productionPerformance(events);
 var isStoryReference = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
+function matchPriorBeats(current, previous) {
+  if (sameShape(current) === sameShape(previous))
+    return current.map((_, i2) => ({ original: isStoryReference(previous[i2]) ? previous[i2] : void 0, ambiguous: false }));
+  const matches = current.map(() => ({ ambiguous: false }));
+  const available = new Set(previous.filter(isStoryReference));
+  const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+  const passes = [
+    (a, b) => sameShape(a) === sameShape(b),
+    (a, b) => (a.change !== void 0 && a.change === b.change || a.necessity !== void 0 && a.necessity === b.necessity) && ["shot", "start", "end"].some((key) => a[key] !== void 0 && sameShape(a[key]) === sameShape(b[key])),
+    (a, b) => bounds(a) === bounds(b)
+  ];
+  for (const equal of passes) {
+    const claims = /* @__PURE__ */ new Map();
+    const candidates = current.map((beat, i2) => {
+      if (matches[i2].original || !isStoryReference(beat)) return [];
+      const rows2 = [...available].filter((old) => equal(beat, old));
+      for (const row of rows2) claims.set(row, (claims.get(row) ?? 0) + 1);
+      return rows2;
+    });
+    candidates.forEach((rows2, i2) => {
+      if (!rows2.length) return;
+      if (rows2.length === 1 && claims.get(rows2[0]) === 1) {
+        matches[i2] = { original: rows2[0], ambiguous: false };
+        available.delete(rows2[0]);
+      } else matches[i2].ambiguous = true;
+    });
+  }
+  return matches;
+}
 function speechGroupIdentities(shot, transcript) {
   const recorded = !shot.narration?.length && Array.isArray(transcript?.groups);
   const lines = recorded ? transcript.groups : shot.narration ?? [];
@@ -138279,21 +138308,15 @@ function remapStoryReferences(next, before, shots, positionOf, carriedTimelines)
   };
   if (Array.isArray(story.beats) && Array.isArray(prior.beats)) {
     const currentBeats = story.beats;
-    const oldBeats = prior.beats.filter(isStoryReference);
-    const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+    const matches = matchPriorBeats(currentBeats, prior.beats);
     const beats = currentBeats.map((beat, i2) => {
       if (!isStoryReference(beat)) return beat;
       const where = "STORY.beats[" + i2 + "]";
-      let original = oldBeats.find((old) => bounds(old) === bounds(beat));
+      const { original, ambiguous } = matches[i2];
       if (!original) {
-        const candidates = oldBeats.filter((old) => (old.change !== void 0 && old.change === beat.change || old.necessity !== void 0 && old.necessity === beat.necessity) && ["start", "end"].some((key) => beat[key] !== void 0 && sameShape(old[key]) === sameShape(beat[key])));
-        if (candidates.length > 1) {
-          missing(where, { start: beat.start, end: beat.end });
-          return beat;
-        }
-        original = candidates[0];
+        if (ambiguous) missing(where, beat);
+        return beat;
       }
-      if (!original) return beat;
       if (beat.start === void 0 && beat.end === void 0) return shotNumber(beat, where);
       const carry = (key) => sameShape(beat[key]) === sameShape(original[key]) ? boundary(beat[key], where + "." + key) : beat[key];
       const start = carry("start"), end = carry("end");

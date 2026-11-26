@@ -167,6 +167,15 @@ describe('beat references through public shot edits', () => {
     const carried = revise(added,'s0003');
     assert.deepEqual(carried,{...added,start:event(2),end:event(2)});
     assert.deepEqual(revise({...carried,end:event(4)},'s0004'),{...added,start:event(3),end:event(4)});
+    // A new opening can legitimately use the original opening's old ordinal in the same edit.
+    const existing = {start:event(1),end:event(1),change:'An arm waves.',necessity:'She sees him.'};
+    const following = {start:event(2),end:event(2),change:'He stops.',necessity:'She can catch him.'};
+    assert.equal(apply({globals:{STORY:{...readBoard(dir).win.STORY,beats:[existing,following]}}}).written,true);
+    const opening = {...existing,change:'The train starts.',necessity:'They are running out of time.'};
+    assert.equal(apply({insertShots:[{after:0,shots:[main('s0005')]}],
+      globals:{STORY:{...readBoard(dir).win.STORY,beats:[opening,existing,following]}}}).written,true);
+    assert.deepEqual(readBoard(dir).win.STORY.beats,[opening,
+      {...existing,start:event(2),end:event(2)}, {...following,start:event(3),end:event(3)}]);
   });
 
   it('keeps quoted anchors and earlier review evidence on the speaker who delivered an identical line', () => {
