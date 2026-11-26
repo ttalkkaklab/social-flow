@@ -161,6 +161,9 @@ test('a scene displays its requested video prompt only while the saved plan matc
     assert.doesNotMatch(html, /<details/);
     assert.doesNotMatch(html, /Saved &lt;take>/);
   }
+  context.sc.videoDirection.prompt = 'Hold <here>.\nThen cut.';
+  assert.match(scene(), /<pre>Hold &lt;here>\.\nThen cut\.<\/pre>/);
+  delete context.sc.videoDirection.prompt;
   context.window.VIDEO_PRODUCTION.candidates = [plan];
   const notes = render('sceneNotesHtml(grp, "Cast and settings", "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
   assert.equal(notes.match(/role="tab"/g).length, 3);

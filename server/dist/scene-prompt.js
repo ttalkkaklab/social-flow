@@ -214,7 +214,7 @@ export function resolveScenePrompt(template, { slots, unlabeled, ambiguous }, ch
         report('error', 'prompt_too_long', `${prompt.length} UTF-16 units; this adapter takes ${checks.schemaLimit}`);
     return { prompt, body, issues };
 }
-/** The submitted prompt with its numbers turned back into names: what an author edits and sends as `prompt`. */
+/** The submitted prompt with its numbers turned back into names: the editable storyboard prompt. */
 export function scenePromptTemplate(prompt, { slots }, header = '', lines) {
     const names = new Map();
     // A character's single picture has two names; the role name is the one that stays valid when a second picture is added.
@@ -229,7 +229,7 @@ export function scenePromptTemplate(prompt, { slots }, header = '', lines) {
     return { promptTemplate, ...(headed ? { promptHeader: header } : {}) };
 }
 /** Check the ordered script before rendering the provider's numbered references. */
-export function assertSceneDialogue(template, expected, cast, composed, nativeDialogue = true) {
+export function assertSceneDialogue(template, expected, cast, composed, nativeDialogue = true, storyboardDirections = false) {
     const script = expected.flatMap(line => line.tts ? [line.tts] : []);
     const splitSentences = (text) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu, '$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
     const original = spans(composed, script);
@@ -263,7 +263,7 @@ export function assertSceneDialogue(template, expected, cast, composed, nativeDi
             clause = parts[partIndex + 1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
             for (const sentence of sentences) {
                 const text = unlabel(sentence);
-                if (!text || approvedDirections.has(text))
+                if (!text || approvedDirections.has(text) || storyboardDirections)
                     continue;
                 grammar.checkStageDirection(text, nativeDialogue);
             }

@@ -326,7 +326,7 @@ const cachedModel = (id) => catalogCache?.origin === astraGenaiBaseUrl() ? catal
 /** Does scene mode take voice samples on this model? Unknown counts as no. */
 export function genaiSceneVoices(model) { return (cachedModel(model)?.scene?.voices.max ?? 0) > 0; }
 /** The scene prompt's cap after substitution; a backend with its own cap is enforced by validation. */
-export function genaiScenePromptLimit(model) { return cachedModel(model)?.scene?.prompt.max_chars ?? 2000; }
+export function genaiScenePromptLimit(model) { return cachedModel(model)?.scene?.prompt.max_chars ?? (model === 'minimax-h3' ? 8000 : 2000); }
 /** Common `text2video` or `image2video`. Only provider fields cross the wire; local output/budget controls never do. */
 export function buildGenaiVideoBody(args, operation = 'image-to-video') {
     // Local frames travel as checked data URIs until the upload step swaps them for genai-file URIs.
@@ -373,7 +373,7 @@ export function msrOutputContract(operation, args) {
 }
 /** What scene mode renders: the next 8k+1 frames with a soundtrack, at the requested size. */
 function sceneNativeContract(args) {
-    return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args)), audio: true });
+    return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration), audio: true });
 }
 function checkOutput(file, expected, counted = false) {
     const probe = JSON.parse(execFileSync('ffprobe', ['-v', 'error', ...(expected || counted ? ['-count_frames'] : []),

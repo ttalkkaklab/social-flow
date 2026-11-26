@@ -88,3 +88,30 @@ test('a voice sample longer than scene mode takes is refused before anything is 
   assert.throws(() => checkSceneVoices({ cast: cast(sample(12)) }), /scene_voice_too_long: hero's voice sample runs 12\.0 s/);
   assert.throws(() => checkSceneVoices({ cast: cast(path.join(dir, 'missing.wav')) }), /scene_voice_unreadable/);
 });
+
+test('H3 validates its own frame grid and numbers all shot pictures separately from voices', () => {
+  const cast=['a','b'].map(id=>({id,images:[{role:'face',imagePath:id+'.png'}],voicePath:id+'.wav'}));
+  const shots=[{id:'s1',frames:78,imagePath:'wide.png'},{id:'s2',frames:90,imagePath:'reverse.png'}];
+  const input=sceneArgs({model:'minimax-h3',cast,shots,prompt:'{s1.image} then {s2.image}. {b.face} with {b.voice}.'});
+  const labels=sceneLabels(input),prompt='<Picture 3> then <Picture 4>. <Picture 2> with <Audio 2>.';
+  assert.equal(resolveScenePrompt(input.prompt,labels),prompt);
+  assert.equal(checkSceneValidation(input,{resolved:{labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]}}).numFrames,175);
+  const sized = {...input,referenceImageShortEdge:1536};
+  const wire = args => genaiSceneBody(args, file=>file);
+  assert.deepEqual(wire(sized).input, wire(input).input);
+  assert.deepEqual(wire(sized).parameters.model_options, {h3:{reference_image_short_edge:1536}});
+  assert.equal(wire(input).parameters.model_options, undefined);
+  assert.deepEqual(wire({...input,numInferenceSteps:24}).parameters.model_options,{h3:{num_inference_steps:24}});
+  const resolved={labels,prompt,num_frames:175,shots:[{id:'s1',start_frame:0},{id:'s2',start_frame:78}]};
+  assert.throws(()=>checkSceneValidation(sized,{resolved}),/genai_scene_reference_size/);
+  assert.equal(checkSceneValidation(sized,{resolved:{...resolved,reference_image_short_edge:1536}}).referenceImageShortEdge,1536);
+  assert.equal(genaiSceneSchema.safeParse({...sized,referenceImageShortEdge:2049}).success,false);
+  assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:346}]}).success,false);
+  assert.equal(genaiSceneSchema.safeParse({...input,shots:[{id:'s1',frames:60}]}).success,false);
+  const short=genaiSceneSchema.parse({...input,holdToMinDuration:true,shots:[{id:'s1',frames:78,imagePath:'wide.png'}]});
+  assert.equal(short.shots[0].frames,78);
+  assert.equal(wire(short).input.shots[0].seconds,124/24);
+  const shortLabels=sceneLabels(short), shortPrompt='{s1.image}';
+  assert.equal(checkSceneValidation({...short,prompt:shortPrompt},{resolved:{labels:shortLabels,prompt:resolveScenePrompt(shortPrompt,shortLabels),num_frames:124,shots:[{id:'s1',start_frame:0}]}}).numFrames,124);
+  assert.equal(genaiSceneSchema.safeParse({...input,cast:[...cast,{...cast[0],id:'d'}]}).success,false);
+});

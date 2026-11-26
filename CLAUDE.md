@@ -513,10 +513,10 @@ is outside it. See `skills/storyboard/SKILL.md` §3.
 The planner composed every scene prompt from the shot cards, so the session could not adjust
 its wording for a model. Every scene plan returns
 `promptTemplate`, the submitted prompt with each reference number turned into a name, and
-`video_plan` takes an edited copy as `prompt`. References are named, never numbered: `{castId.<role>}`,
+`story_scene.videoDirection.prompt` holds the edited copy. Use named references: `{castId.<role>}`,
 `{castId.image}` for a single picture, `{castId.voice}`, `{referenceId.image}`,
 `{shotId.image}` and the other names the plan lists in `promptSlots`. The planner fills in the
-numbers of the request it submits. As of 2026-11-26, storyboard authoring records attributes only. One request-time `prompt` edit belongs to its production plan. Reusable direction belongs on the scene, shot or performance beat. Archived prompt drafts remain readable.
+numbers of the request it submits. Compile the attributes on the scene, shots and performance beats when video is requested. A stored production prompt in `videoDirection.prompt` supplies the exact wording when present. Separate prompts require separate storyboard scenes. Archived model drafts remain readable.
 
 The edit is bounded where a scene has a cast or natively voiced dialogue. The planner's own
 sentences may be removed or reordered, and a new sentence must be one of the supported camera,
@@ -545,7 +545,7 @@ write one for a single call. The gateway wrote it on two paths: `shots[]` text o
 text and image adapters, and the gateway's per-shot scene route with its rendering modes. The
 adapters refuse `shots`, and the per-shot route is gone (see the next section). A scene is
 planned for one model call: the planner writes its one prompt, the plan returns it as
-`promptTemplate`, and an edited copy comes back as `prompt` under the bounded-edit rules above.
+`promptTemplate`. Save its edits on the storyboard scene under the bounded-edit rules above.
 On the GenAI engine the request carries those names and the gateway numbers them; other
 engines' adapters keep their own wire dialect. The model paces the cuts on the GenAI scene
 mode (`scene_cut_timing_model_paced`), and on the other routes the plan names each later shot
@@ -1037,3 +1037,7 @@ Each generated shot needs a composition image before video planning. The scene o
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Before generating images, save the scene's seats or standing marks, fixed landmarks, facing and camera axis in `story_scene.directionDefaults`. Compose and inspect the first shot before the other shots. `shot_image` uses the first available scene image for the physical layout of later shots in the same space. The authored shot still defines the current viewpoint, crop, expression, action phase and prop state. A built set with actor blocking takes precedence. See [scene image generation](skills/generate-cut-images/SKILL.md).
+
+## One production prompt per storyboard scene (owner directive, 2026-11-26)
+
+Each storyboard scene supplies one production prompt covering all its ordered shots. When two prompts must both render, split the storyboard at an existing shot before planning. Use `story_scene.split`, give both scenes their complete `videoDirection.prompt`, then plan each scene number separately. Number the parts consecutively and move later scenes forward in playback order. A revised take reads its current storyboard prompt. Keep previous takes in the production history.

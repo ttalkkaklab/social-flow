@@ -94,7 +94,7 @@ function assertRenderVoiceCapacity({tool, model, scene, cards, route, generateAu
     const capacity = entry?.voice.maxPinnedVoicesPerRender;
     limit = typeof capacity === 'number' ? capacity : capacity?.[model];
   }
-  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled')
+  if (!limit || ['astra_genai_img2video','astra_genai_msr','astra_genai_scene'].includes(tool) && model !== 'ltx-2.5-22b-distilled' && !(tool === 'astra_genai_scene' && model === 'minimax-h3'))
     throw new Error('scene_speech_references: the selected model cannot bind the required character voice samples');
   // One render binds the whole scene's voices. A clip the retired per-shot route made rendered each card apart (perCard).
   for (const group of perCard ? cards.map(card => [card]) : [cards]) {
@@ -111,12 +111,14 @@ const {castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceCon
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
 // `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
-function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
+function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false, model) {
   const registry = referenceOwners(board, boardDir);
   const {actors, voiceOnly, canonical, owners, registeredOwner} = registry;
   const speakers = sceneCast(scene, cards).filter(id => !voiceOnly.has(id));
   const declaredRefs = scene.speakerReferences ?? [];
-  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character)])];
+  const h3 = engine === 'astra-genai' && model === 'minimax-h3';
+  const visibleH3 = h3 && !declaredRefs.length ? cards.flatMap(card => castIds(card.visual?.character ?? card.visual?.characters)).filter(id => !voiceOnly.has(id)) : [];
+  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character), ...visibleH3])];
   if (declaredRefs.some(ref => !actors.some(actor => actor.id === ref.character)))
     throw new Error('scene_reference_owner: register the owner of every scene identity reference');
   if (scene.speakerReferences?.some(ref => voiceOnly.has(ref.character)))

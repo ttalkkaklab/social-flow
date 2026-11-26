@@ -1234,7 +1234,10 @@
       "sceneWritingGuide": "Write one present-tense scene. Establish blocking, then describe each change of view and the visible state at the cut.",
       "promptReference": "skills/generate-cut-videos/references/prompt-ltx-msr.md",
       "voice": {
-        "maxPinnedVoicesPerRender": 2,
+        "maxPinnedVoicesPerRender": {
+          "ltx-2.5-22b-distilled": 2,
+          "minimax-h3": 3
+        },
         "postLipSync": false,
         "lane": "conditional_reference",
         "dialogue": "requires_subject_references",
@@ -1252,6 +1255,9 @@
         "resolution",
         "fps",
         "seed",
+        "referenceImageShortEdge",
+        "numInferenceSteps",
+        "holdToMinDuration",
         "generateAudio",
         "reserveUsd",
         "outputPath",
@@ -1259,9 +1265,10 @@
       ],
       "modelConstraints": {
         "models": [
-          "ltx-2.5-22b-distilled"
+          "ltx-2.5-22b-distilled",
+          "minimax-h3"
         ],
-        "note": "One POST /v1/generations mode:\"scene\" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames."
+        "note": "One POST /v1/generations mode:\"scene\" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames."
       }
     },
     {

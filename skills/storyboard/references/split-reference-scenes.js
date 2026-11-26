@@ -112,6 +112,25 @@ function usesGenai(board, cards, saved) {
   });
 }
 
+function renumberSceneNotes(board, numbers) {
+  const globals = {};
+  if (board.SB_DOC) {
+    const notes = {...board.SB_DOC};
+    for (const key of ['sceneNotes', 'audioNotes', 'privacy']) {
+      const value = notes[key];
+      if (value && typeof value === 'object' && !Array.isArray(value))
+        notes[key] = Object.fromEntries(Object.entries(value).map(([id, entry]) => [numbers.get(Number(id)) ?? id, entry]));
+    }
+    if (JSON.stringify(notes) !== JSON.stringify(board.SB_DOC)) globals.SB_DOC = notes;
+  }
+  if (Array.isArray(board.CLICHES?.uses)) {
+    const uses = board.CLICHES.uses.map(use => Array.isArray(use?.scenes)
+      ? {...use, scenes:use.scenes.map(no => numbers.get(no) ?? no)} : use);
+    if (JSON.stringify(uses) !== JSON.stringify(board.CLICHES.uses)) globals.CLICHES = {...board.CLICHES, uses};
+  }
+  return globals;
+}
+
 // Called inside the storyboard's compare-and-rename transaction. Shot order and IDs never change.
 function splitReferenceScenes(board, previous, boardDir, includeExisting = false) {
   if (!board.STRUCTURE?.scenes?.length || !board.SCENES?.length) return [];
@@ -151,6 +170,12 @@ function splitReferenceScenes(board, previous, boardDir, includeExisting = false
       scenes.push(scene);
       continue;
     }
+    if (scene.videoDirection?.prompt?.trim()) {
+      findings.push({...conflict, level:'bad', code:'scene_split_prompts', where:String(conflict.shotId),
+        what:'Split before ' + conflict.splitBefore.join(', ') + ' with story_scene.split and supply a complete prompt for each part.'});
+      scenes.push(scene);
+      continue;
+    }
     require('../../_shared/scene-cast.js').sceneCast(scene, cards);
     const numbers = groups.map((_, i) => i ? nextNo++ : scene.no);
     const parts = assignGroups(scene, groups, cards, numbers);
@@ -165,8 +190,26 @@ function splitReferenceScenes(board, previous, boardDir, includeExisting = false
       what:'Split before ' + conflict.splitBefore.join(', ') + ' to keep two referenced characters per GenAI scene. Inspect each new opening.',
       groups:groups.map((group, i) => ({sceneNo:numbers[i], ...group}))});
   }
-  board.STRUCTURE = {...structure, scenes, sequences};
+  if (scenes.length === structure.scenes.length) {
+    board.STRUCTURE = {...structure, scenes, sequences};
+    return findings;
+  }
+  const order = [...new Set([...sequences.flatMap(sequence => sequence.scenes), ...scenes.map(scene => scene.no)])];
+  const numbers = new Map(order.map((no, index) => [no, index + 1]));
+  const noFor = no => numbers.get(no) ?? no;
+  board.SCENES = board.SCENES.map(card => card.scene === undefined ? card : {...card, scene:noFor(card.scene)});
+  board.STRUCTURE = {...structure,
+    scenes:scenes.map(scene => ({...scene, no:noFor(scene.no),
+      ...(scene.referenceSplitFrom ? {referenceSplitFrom:noFor(scene.referenceSplitFrom)} : {})})).sort((a,b) => a.no - b.no),
+    sequences:sequences.map(sequence => ({...sequence, scenes:sequence.scenes.map(noFor),
+      ...(sequence.payoff !== undefined ? {payoff:noFor(sequence.payoff)} : {})}))};
+  Object.assign(board, renumberSceneNotes(board, numbers));
+  for (const finding of findings) {
+    if (finding.code !== 'scene_reference_split') continue;
+    finding.groups = finding.groups.map(group => ({...group, sceneNo:noFor(group.sceneNo)}));
+    finding.where = 'scene ' + finding.groups[0].sceneNo;
+  }
   return findings;
 }
 
-module.exports = {splitReferenceScenes};
+module.exports = {splitReferenceScenes, renumberSceneNotes};

@@ -2974,8 +2974,12 @@ window.STORYBOARD_READY = (async function () {
   }
   function sceneVideoPromptHtml(sc, grp) {
     var ko = LANG === "ko", plan = currentScenePlan(grp);
-    if (!plan) return "";
-    var approved = ((window.VIDEO_APPROVALS || {}).scenes || {})[grp.scene];
+    var draft = sc && sc.videoDirection && sc.videoDirection.prompt;
+    if (!plan && !(typeof draft === "string" && draft.trim())) return "";
+    if (!plan) return '<section class="scene-note scene-video-prompt">' +
+      sceneNoteHead("prompt", ko ? "씬 영상 프롬프트" : "Scene video prompt", ko ? "스토리보드 원문" : "Storyboard prompt") +
+      '<pre>' + esc(draft) + '</pre></section>';
+    var approved = ((window.VIDEO_PRODUCTION || {}).sceneApprovals || (window.VIDEO_APPROVALS || {}).scenes || {})[grp.scene];
     var status = plan.stale === null ? (ko ? "저장한 요청 · 참조 파일 미검증" : "Saved request · inputs unverified") :
       (ko ? "저장한 요청 계획" : "Saved request plan");
     return '<section class="scene-note scene-video-prompt">' + sceneNoteHead("prompt", ko ? "씬 영상 프롬프트" : "Scene video prompt", status) +

@@ -2238,7 +2238,7 @@ What to write depends on whether the clip's own sound survives the build:
 
 ### Video prompts and generation requests
 
-The board records scene and shot attributes. When video is requested, `video_plan` reads the current board and composes the scene for the selected model and operation. Its request and approval retain the exact prompt. A matching saved request appears on the scene review. An older board can contain historical `visual.prompt`, `visual.video.prompt`, `visual.clip.prompt` or `videoDirection.promptDrafts`. Record reusable changes as attributes and put a one-off wording edit on the generation request. See [video routing](../../_shared/video-routing.md) for reference binding and model limits.
+The board records scene and shot attributes. When video is requested, `video_plan` reads the current board and composes the scene for the selected model and operation. Its request and approval retain the exact prompt. A matching saved request appears on the scene review. An older board can contain historical `visual.prompt`, `visual.video.prompt`, `visual.clip.prompt` or `videoDirection.promptDrafts`. Record reusable changes as attributes. Save an exact wording edit in `videoDirection.prompt`. Each scene supplies one production prompt. Use `story_scene.split` when two separate prompts must render.
 
 ### Music cues (`window.MUSIC` · `sound`)
 
@@ -3899,6 +3899,8 @@ Use a movement ID from the film technique catalogue. Leave a shot’s move unset
 The scene's narrative attention applies throughout. A shot separately records its sharp subject, any focus pull and its opening view. The closing-state icon and video request also read `visual.frames.endState` when the shot has no separate ending in its video direction.
 
 Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
+
+`videoDirection.prompt` holds the complete prompt for the current scene. To render two prompts, call `story_scene` with `split: {beforeShot}` and include both scene records with their complete prompts. Give the parts consecutive playback numbers. Later scenes, their shots and sequence payoff references move forward together. The moved shots retain their IDs, lines and durations. Their scene-frame intervals, image frames and dialogue cues start at the new scene origin. A new take reads the current board again.
 
 ```js
 videoDirection: {

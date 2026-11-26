@@ -316,7 +316,7 @@ const cachedModel = (id: string) => catalogCache?.origin === astraGenaiBaseUrl()
 /** Does scene mode take voice samples on this model? Unknown counts as no. */
 export function genaiSceneVoices(model: string): boolean { return (cachedModel(model)?.scene?.voices.max ?? 0) > 0; }
 /** The scene prompt's cap after substitution; a backend with its own cap is enforced by validation. */
-export function genaiScenePromptLimit(model: string): number { return cachedModel(model)?.scene?.prompt.max_chars ?? 2000; }
+export function genaiScenePromptLimit(model: string): number { return cachedModel(model)?.scene?.prompt.max_chars ?? (model === 'minimax-h3' ? 8000 : 2000); }
 
 export type GenaiVideoRequest = z.infer<typeof genaiTextToVideoSchema> & NegativeArgs & {
   imageUri?: string; imagePath?: string; lastFrameUri?: string | null; lastFramePath?: string;
@@ -373,7 +373,7 @@ export function msrOutputContract(operation: string, args: Record<string,unknown
 }
 /** What scene mode renders: the next 8k+1 frames with a soundtrack, at the requested size. */
 function sceneNativeContract(args: GenaiSceneArgs) {
-  return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args)), audio: true });
+  return mediaContract.parse({ ...sides(args.resolution), fps: args.fps, frames: genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration), audio: true });
 }
 
 function checkOutput(file:string, expected?:MediaContract, counted = false) {
