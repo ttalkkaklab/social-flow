@@ -1,7 +1,7 @@
 # Delivery preflight and continuation
 
 **Resolve the whole delivery path before generating clips.** Check the pinned TTS
-runtime, final encoder, destination and media-generation allowance. Speech uses raw TTS
+runtime, final encoder, destination and media-generation allowance. Speech uses saved TTS plans
 and provenance under shot-speech.md; no listening-review capability, paid review allowance
 or human listening approval is required. Resolve actual media spending authorization before
 calling a paid generator and continue independent work while any required answer is pending.

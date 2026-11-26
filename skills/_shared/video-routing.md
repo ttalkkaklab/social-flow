@@ -2,9 +2,9 @@
 
 Declare everyone who speaks in the story scene. Submit one scene with `video_plan {episode,sceneNo,requestId}`. The planner chooses an operation from the saved model and the authored inputs.
 
-A scene is planned for one model call. The planner writes the scene's one prompt and returns it as `promptTemplate`. On the GenAI engine the scene is one `mode:"scene"` request to the gateway's common API (`astra_genai_scene`, user directive 2026-11-25): the request carries the prompt with its `{cast.role}` names, the gateway numbers them and adds no sentence, and each shot opens on its own composition picture. `video_plan` uploads the files and compiles the scene with `POST /v1/generations/validate`; a scene the gateway numbers, times or cuts differently from the plan is refused. The model paces the cuts. On the other routes a later shot's composition image the operation cannot send is named (`shot_reference_omitted`).
+A scene is planned for one model call. Store the complete text in `videoDirection.prompt`. A second production prompt needs its own scene. Use `story_scene.split` at an existing shot and supply both complete scene prompts before planning. The planner returns the named template and the actual request text. On the GenAI engine the scene is one `mode:"scene"` request to the gateway's common API (`astra_genai_scene`, user directive 2026-11-25): the request carries the prompt with its `{cast.role}` names, the gateway numbers them and adds no sentence, and each shot opens on its own composition picture. `video_plan` uploads the files and compiles the scene with `POST /v1/generations/validate`; a scene the gateway numbers, times or cuts differently from the plan is refused. The model paces the cuts. On the other routes a later shot's composition image the operation cannot send is named (`shot_reference_omitted`).
 
-GenAI scene mode takes no supplied soundtrack and no line pinned to a frame, and it runs `ltx-2.5-22b-distilled`; such a scene is refused at planning (`scene_mode_audio_unsupported`, `scene_inputs_unsupported`, `scene_mode_model_unsupported`). An ending or timed picture inside a shot is not sent, and the plan names it (`scene_picture_omitted`). The people its shots reference become one scene cast by the sheet panel rule for that many people, more than four is refused (`scene_cast_exceeded`), and a panel a shot named that the cast leaves out is named (`scene_reference_omitted`). A scene prompt over the model's cap after numbering (2,000 characters on `ltx-2.5-22b-distilled`) is composed again with fewer optional words, the plan names what went (`scene_prompt_fitted`), and one still over at the last step is refused before any upload (`scene_prompt_too_long`). One GenAI scene binds at most two pinned voices across its cuts. A scene without a cast picture sends its opening as an `object` reference as well. The clip renders on the next 8k+1 frame count and is cut back to the storyboard's frames. Execution posts the exact validated body under an `X-Request-Id` derived from it and keeps it beside the receipt, so `video_status` with `action:"refresh"` recovers a lost response by replaying that request, which returns the first job. A plan saved under a retired rendering mode reads `video_plan_stale`.
+GenAI scene mode takes no supplied soundtrack and no line pinned to a frame, and it runs `ltx-2.5-22b-distilled`; such a scene is refused at planning (`scene_mode_audio_unsupported`, `scene_inputs_unsupported`, `scene_mode_model_unsupported`). An ending or timed picture inside a shot is not sent, and the plan names it (`scene_picture_omitted`). A production scene takes two referenced people and two character images across its shots. An over-budget board reports the shot, cast and proposed cuts (`scene_cast_exceeded`). Use `storyboard_apply {splitReferenceScenes:true,dryRun:true}` to preview an existing board, then apply the split. A panel omitted from the scene cast is named (`scene_reference_omitted`). A scene prompt over the model's cap after numbering (2,000 characters on `ltx-2.5-22b-distilled`) is composed again with fewer optional words, the plan names what went (`scene_prompt_fitted`), and one still over at the last step is refused before any upload (`scene_prompt_too_long`). One GenAI scene binds at most two pinned voices across its cuts. A scene without a cast picture sends its opening as an `object` reference as well. The clip renders on the next 8k+1 frame count and is cut back to the storyboard's frames. Execution posts the exact validated body under an `X-Request-Id` derived from it and keeps it beside the receipt, so `video_status` with `action:"refresh"` recovers a lost response by replaying that request, which returns the first job. A plan saved under a retired rendering mode reads `video_plan_stale`.
 
 A plan call may name `engine` and `model`. They are checked against the saved selection and never change it (`model_selection_mismatch`).
 
@@ -12,7 +12,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. GenAI scene mode combines each shot's opening picture, up to four subject images and one background, and its first two subjects carry voice samples for the whole scene. A scene exceeding the selected model's capacity needs an authoring decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references at most two people and two character pictures in total. One character can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third referenced person. Restage a single shot that requires three and flag a requested one-take for a decision.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request; 2.5 takes 30 and 10, 2.5 Flash 10 and 5 ([call reference](../../docs/video-models.md#seedance-byteplus-modelark)). Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Seedance 2.0 reference mode binds composition images by shot ID and numbered image within one scene request. Its image limit includes other reference images. A pinned first or last frame uses a different operation. Distilled LTX combined I2V takes its start and end frames separately from up to four scene-wide subject references and one background. A single character leaves three subject slots for other subjects or objects. These slots carry no shot index. The single-shot route may use its background slot for a composition guide when a subject is present. Inspect `sceneRequest.shotReferenceImages` for the disposition of each guide.
@@ -58,7 +58,7 @@ Write one shot per camera setup. A cut from a wide to a hand insert, or a revers
 
 `story_scene.videoDirection.fps` sets the scene clock (default 24). Each `story_shot.timeline` records `startFrame` inclusive, `endFrame` exclusive, the incoming `transition` (open, hard_cut, dissolve or fade), and English `framing` and `action`. The board assigns stable shot IDs. Each `images[]` entry has a storyboard-relative `path`, scene `frame` and `role` (start, keyframe, end, face or outfit). Face/outfit entries name their `character`. An optional English `cue` describes the action at that frame. An ending pose may begin before the last frame. In one shot, keyframes guide continuous motion. At a cut the new setup must appear at the first frame of the next shot. Describe entrances on the shot timeline, including anyone who starts off screen.
 
-`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. For per-shot generation the saved dev A2V model conditions each shot on its interval of the continuous file. Choose `audio.mode:"mix"` with distilled I2V to mix the complete file once with native dialogue and ambience. A post-production music selection alone does not request model conditioning. Omit `args.prompt`. The planner compiles the scene from every card, and an edited copy of its prompt goes in the top-level `prompt`. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
+`videoDirection.audio` names one scene-length file with any lead-in mixed in. Its `cues` pair scene frame numbers with actions. Frame 42 at 24 fps means 1.75 seconds from the beginning of the file. For per-shot generation the saved dev A2V model conditions each shot on its interval of the continuous file. Choose `audio.mode:"mix"` with distilled I2V to mix the complete file once with native dialogue and ambience. A post-production music selection alone does not request model conditioning. Omit `args.prompt`. The planner compiles the scene from every card, and reads an explicit wording edit from `story_scene.videoDirection.prompt`. The top-level `prompt` can assert that the planned wording matches. It collects existing frame pairs, intermediate pins and video references as well as explicit timeline entries. Conflicting temporal pins require a storyboard correction.
 
 Keep each spoken line in its card’s narration. To start a reply on the cut, add
 `timeline.dialogueCues:[{lineId:"s0001-l1",frame:171}]` to the incoming card.
@@ -69,6 +69,8 @@ The I2V refusal includes the deployed endpoint’s input fields when discovery
 succeeds. A refused request has no reservation or provider job.
 
 A single continuous shot with intermediate guides selects the indexed keyframe route on Desktop or direct ASTRA when the saved model leaves the operation open. An explicit operation still governs. Veo Standard and Fast accept up to three scene-wide subject pictures in an eight-second reference-only request; the Lite model has no reference route. Keep the cast’s opening positions and later entrances in the scene direction.
+
+For remote GenAI MiniMax H3, `video_plan.args.referenceImageShortEdge` sets the shorter side of the reference pictures for one scene request (256–2048 pixels, default 2048). The gateway echoes an explicit value in validation before the plan can run. `args.numInferenceSteps` sets the sampling steps for that request (8–50, default 50). Both settings travel with the stored request and leave the scene prompt, pictures, voices and output dimensions intact. For an authored scene shorter than the H3 minimum, finish the dialogue within the storyboard duration and direct a quiet final hold. Set `args.holdToMinDuration` to render the extra frames on the final shot. The delivery keeps the authored length.
 
 Set scene identity images in `story_scene.speakerReferences` and positions in `story_scene.videoDirection`. A creative revision after a terminal result takes a new request ID and names the previous one in `basedOnRequestId`.
 
@@ -124,7 +126,7 @@ Quality scores, storytelling choices and review stamps are not execution gates.
 
 `PRODUCTION.videoAuthorization.maxUsd` is the one ceiling routing enforces; when it is
 absent, routing falls back to the legacy quote — `PRODUCTION.approval` (its
-`quoteFingerprint` must still match the board), `videoBudgetUsd` and `maxAttempts`.
+`quoteFingerprint` must still match the board) and `videoBudgetUsd`.
 The channel's `video_budget_usd` and the project's `production.episodeBudgetUsd` are
 planning ceilings routing never reads; the author carries the applicable one into
 `maxUsd`. For an explicit spending instruction not represented by the legacy quote,
@@ -133,7 +135,7 @@ record its reference and limits without manufacturing approval:
 ```js
 window.PRODUCTION.videoAuthorization = {
   reference: 'The actual user instruction or standing authorization reference',
-  maxUsd: 10, maxConcurrent: 1, maxAttempts: 3
+  maxUsd: 10, maxConcurrent: 1
 };
 ```
 
@@ -148,9 +150,14 @@ reported completion tokens. Other providers retain the quoted estimate, explicit
 not measured billing. Provider price changes can exceed a pinned estimate.
 
 A stable `requestId` identifies one logical attempt. Completed requests return the
-cached result. Pending or ambiguous requests never submit again. Managed ASTRA audio requests bind
-`maxAttempts: 1`; explicit multi-generation adapter retries are rejected. Use the
-episode attempt limit for separately tracked attempts after a terminal result.
+cached result. Pending or ambiguous requests never submit again. Each episode allows
+five managed generation attempts per scene, including the first. The server counts
+jobs by the scene number in the original plan, including failed jobs. Edits keep the
+scene's count, and a shot moved to another scene carries no attempts with it.
+Historical jobs with a scene number count toward that scene; shot-only jobs still
+count toward episode spending. Old board `maxAttempts` fields are accepted for
+compatibility with saved boards and approved quotes. Managed ASTRA audio requests bind
+`maxAttempts: 1`; explicit multi-generation adapter retries are rejected.
 The retired [shot-render CLI](../produce/references/render-astra-shot.js) directs existing callers to the scene planner.
 If an adapter unexpectedly submits multiple jobs, every reported provider ID is
 retained and the request remains ambiguous even if the adapter returns an earlier clip. `video_status`
@@ -210,9 +217,9 @@ when effects and ambience will be supplied in the edit.
 settings through the same compiler as `speech_manage plan_video`. It preserves action
 order, concurrent speech/action groups and lead-in/tail-out. Attached, hash-matching
 speech can supply measured intervals; native speech stays `model_timed` until measured.
-Do not invent timestamps for unresolved speech. MSR dialogue is still added once, with
-its actual image/audio bindings. Passing `args.prompt` bypasses this compilation and
-returns a warning; prefer updating the board and omitting that argument.
+Do not invent timestamps for unresolved speech. MSR dialogue is added once with its actual image and audio bindings. Save prompt changes
+on the storyboard scene and plan again. If both prompts will render, split the scene
+at a shot boundary and give each resulting scene its own prompt.
 
 Optional `visual.references[].preserve` and `.avoid` are arrays of English instructions.
 They say what to retain and what not to copy from that reference. Image authoring keeps

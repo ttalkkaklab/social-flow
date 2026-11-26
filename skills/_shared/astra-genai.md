@@ -235,8 +235,7 @@ are its sheet panels from `panels.json`: the face close-up, the headless front a
 headless back. A slot is an input source, not a declared subject, so `video_plan` adds a
 sentence naming the panels that show one character and taking the head and hair from the
 face close-up.
-One character uses all three panels; two use each face, then each front, so the two
-speakers sit on subjects 1 and 2, where a voice sample can ride. Three or four principals use one face each in cast order. Props and clothing share the four subject slots. A cast member without a reference (`visual.bystanders`) and unnamed
+Episode scene mode selects at most two character pictures across two people. One person uses face and body; two use one face each and can bind both voice samples. The standalone shot adapter can use all three panels of one person. Props and clothing share the four subject slots. A cast member without a reference (`visual.bystanders`) and unnamed
 extras (`visual.extras`) reach the clip through the start image and the prompt, never as a
 reference (user directive 2026-11-17); how well a clip holds a bystander's look is not measured yet. The shot's start image goes last, in the background slot. A test on 2026-10-31
 (Kardum, same prompt and seed) kept one complete orc with the sheet's outfit front and back
@@ -435,8 +434,7 @@ No example grants spending permission. `capability_status` checks credentials on
   `loras:[{id,scale}]` uses registered IDs, maximum eight, scale 0–2; zero is kept.
   No masks, prompt expansion, arbitrary LoRA paths or reference dropping.
   Do not reuse DashScope step defaults: omit steps for the model's saved schedule.
-- Speech uses `tts_astra_genai` with a stable `requestId`, or `tts_route` with
-  that generator. `text` becomes `input`, `maxTokens` becomes `max_tokens` and
+- Plan speech with `tts_plan`, a stable `requestId` and generator `tts_astra_genai`. Pass the plan ID and directory to `tts_execute`. `text` becomes `input`, `maxTokens` becomes `max_tokens` and
   `outputFormat` becomes `response_format`. The plugin supports WAV/MP3; the model
   may support fewer. VoxCPM2 requires WAV and speed 1. `voice` is an operator's
   registered ID; `instructions` require voice-design support. No client reference

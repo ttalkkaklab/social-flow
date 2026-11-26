@@ -132,7 +132,7 @@ test('offline review shows the selected Veo asset slots before and after a tool 
   assert.equal(lane().slots, 0);
 });
 
-test('a scene owns one video prompt across its shots, with an ordered draft until a matching plan exists', () => {
+test('a scene displays its requested video prompt only while the saved plan matches', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const functions = template.slice(template.indexOf('  function sceneNoteHead'), template.indexOf("  /* The user's yes"));
   const first = { id: 's0001', duration: 2, timeline: { framing: 'Wide', action: 'Step left' },
@@ -157,15 +157,19 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   for (const candidate of [{ ...plan, stale: true }, { ...plan, stale: null }, { ...plan, shotIds: [second.id, first.id] }]) {
     context.window.VIDEO_PRODUCTION.candidates = [candidate];
     const html = scene();
-    assert.match(html, /Storyboard draft.*Street noise.*Shot 1 · 0–2 s.*Step left.*Shot 2 · 2–3 s.*Clap/s);
+    assert.equal(html, '');
     assert.doesNotMatch(html, /<details/);
     assert.doesNotMatch(html, /Saved &lt;take>/);
   }
+  context.sc.videoDirection.prompt = 'Hold <here>.\nThen cut.';
+  assert.match(scene(), /<pre>Hold &lt;here>\.\nThen cut\.<\/pre>/);
+  delete context.sc.videoDirection.prompt;
+  context.window.VIDEO_PRODUCTION.candidates = [plan];
   const notes = render('sceneNotesHtml(grp, "Cast and settings", "<b>Sound cues</b>", sceneVideoPromptHtml(sc, grp))');
   assert.equal(notes.match(/role="tab"/g).length, 3);
   assert.match(notes, /aria-controls="scene-notes-1-settings" aria-selected="true".*aria-controls="scene-notes-1-sound" aria-selected="false"/s);
   assert.match(notes, /role="tabpanel" id="scene-notes-1-sound"[^>]* hidden><div[^>]*><b>Sound cues<\/b>/);
-  assert.match(notes, /role="tabpanel" id="scene-notes-1-prompt"[^>]* hidden>.*Street noise/s);
+  assert.match(notes, /role="tabpanel" id="scene-notes-1-prompt"[^>]* hidden>.*Saved &lt;take>/s);
   assert.equal(render('sceneNotesHtml(grp, "Cast", "Sound only", "")').match(/role="tab"/g).length, 2);
   const card = render('shotBodyHtml(first, [], true, 1)');
   assert.match(card, /Image generation details.*Paint the plaza/s);
@@ -191,6 +195,8 @@ test('a scene owns one video prompt across its shots, with an ordered draft unti
   const laterCard = render('shotBodyHtml(second, [], true, 2)');
   assert.match(laterCard,/Shot image required/);
   assert.doesNotMatch(laterCard,/opening.png/);
+  const graphic = render("shotBodyHtml({shot:{render:{mode:'data_graph'}}}, [], true, 3)");
+  assert.doesNotMatch(graphic,/shot-frames|shot-refs/);
   first.referenceImage = 'guide.png';
   assert.match(sceneCard(),/Shot reference.*guide.png/s);
   assert.doesNotMatch(sceneCard(),/shot-refs|opening.png/);
@@ -205,7 +211,8 @@ test('offline direction icons identify inherited shots and show the middle overr
   cards[1].shot = {techniques:[{id:'camera.rack-focus',from:'the ribbon',to:'the bell'}]};
   cards[1].visual.frames = {mode:'first_last',endState:'The raven closes its claw.'};
   cards[1].timeline = {action:'Inspect the parcel.'};
-  cards[1].visual.video = {promptSource:{action:'Press the signet into the wax.'}};
+  cards[1].visual.video = {promptSource:{action:'Outdated archive.'}};
+  cards[1].visual.action = 'Press the signet into the wax.';
   cards[1].shot.videoDesign = {motion:{beats:[{at:0.8,state:'A crack opens in the wax.'}]}};
   cards[1].narration = [{id:'l1',speaker:'mina',delivery:'on_screen',tts:'Not yet.',acting:{
     intent:'Hide the broken seal.',emotion:'Her fear subsides.',leadInSeconds:1.5,tailOutSeconds:0.75}}];
@@ -231,14 +238,14 @@ test('offline direction icons identify inherited shots and show the middle overr
     }
     assert.match(html[1],/camera.dolly-in/); assert.match(html[1],/slow · the letter/);
     assert.ok(html[1].includes(lang==='ko'?'샷 예외':'Shot override'));
-    assert.ok(html[2].includes(lang==='ko'?'씬 기본':'Scene default'));
+    assert.ok(html[2].includes(lang==='ko'?'씬 설정':'Scene setting'));
     assert.match(html[1],/data-attribute="expression"/);
     assert.match(html[1],/data-attribute="end".*The raven closes its claw/);
     assert.match(html[1],/data-attribute="action".*Inspect the parcel.*Press the signet/);
     assert.match(html[1],/data-attribute="beats".*At 0.8 s into this shot: A crack/);
     assert.match(html[1],/Hide the broken seal.*Her fear subsides.*Anticipation 1.5 seconds.*reaction 0.75 seconds/);
-    assert.match(html[1],/data-attribute="attention".*From the ribbon to the bell/);
-    assert.doesNotMatch(html[1],/The clerk/);
+    assert.match(html[1],/The clerk/);
+    assert.doesNotMatch(html[1],/Outdated archive/);
     assert.match(html[2],/The clerk/);
     assert.doesNotMatch(html[1],/camera.static/);
     const still = render('directionAttributes(sc,rows.shots[0],cards[0],true,1)');
@@ -291,7 +298,7 @@ test('a background export shows the saved scene prompt when the board matches an
   }
   assert.match(exportCard(plan), /Saved request · inputs unverified.*<pre>First line\n  indentation and &lt;camera> preserved\.<\/pre>/s);
   const outdated = exportCard({ ...plan, contextRevision: 'older' });
-  assert.match(outdated, /Storyboard draft/);
+  assert.equal(outdated, '');
   assert.doesNotMatch(outdated, /First line/);
 });
 
@@ -613,4 +620,40 @@ test('review HTML never turns javascript: or data: board values into links', () 
   context.doc.locations[0].panels.back = 'javascript:alert(1)';
   assert.doesNotMatch(render(), /(?:src|href)="javascript:/);
 
+});
+
+test('exported review inserts outlined scenes in declared order before any shot exists', t => {
+  const dir = mkdtempSync(join(tmpdir(), 'outline-review-'));
+  t.after(() => rmSync(dir, {recursive:true, force:true}));
+  storyboardHtml(dir);
+  const html = readFileSync(join(dir, 'storyboard.html'), 'utf8');
+  const section = (start, end) => html.slice(html.indexOf(start), html.indexOf(end, html.indexOf(start)));
+  const source = section('  var shotGroups = [];', '  var compositionPlanFindings') +
+    section('  var ST = window.STRUCTURE || {};', '  var audienceRows =') +
+    'JSON.stringify(shotGroups.map(g => [g.scene, g.items.length]))';
+  const STRUCTURE = {scenes:[{no:1},{no:2},{no:3}], sequences:[{id:'q1',scenes:[2,1]},{id:'q2',scenes:[3]}]};
+  for (const [SCENES, counts] of [[[],[0,0,0]], [[{scene:1},{scene:1}],[0,2,0]]]) {
+    const output = runInNewContext(source, {window:{STRUCTURE}, SCENES, grammarOf:s=>s, hasSceneField:true});
+    assert.deepEqual(JSON.parse(output), [2,1,3].map((n,i)=>[n,counts[i]]));
+  }
+  assert.doesNotMatch(html, /Storyboard draft/);
+});
+
+test('the offline spatial checks use participant arrangement, viewpoint and cut role on photographic shots', () => {
+  const html = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html',import.meta.url),'utf8');
+  const source = html.slice(html.indexOf('  /* Frame space —'),html.indexOf('  /* Cast — an id'));
+  const dirs=require('../../skills/storyboard/references/scene-direction.js');
+  const contract=require('../../skills/storyboard/references/structure-contract.js');
+  const findings=(shot, camera, person=false) => {
+    const output=[];
+    runInNewContext(source,{window:{SCENE_DIRECTION:dirs,STRUCTURE_CONTRACT:contract},SCENES:[{shot,visual:{camera}}],
+      genStill:()=>true,recOf:()=>false,charsOf:()=>[],bannedSpaceHits:()=>[],spaceTextOf:()=>'',personOnScreen:()=>person,
+      T:{shotCap:()=>''},flag:(_level,_at,what)=>output.push(what)});
+    return output.join(' ');
+  };
+  assert.match(findings({size:'ms',arrangement:'two'}), /no shot.space.line/);
+  assert.match(findings({size:'ms'},{view:{mode:'ots'}}), /no shot.space.line/);
+  assert.doesNotMatch(findings({size:'cu',cutRole:'insert'}), /no shot.space.layout/);
+  assert.doesNotMatch(findings({size:'ms'},{view:{mode:'pov'}},true), /no shot.space.facing/);
+  assert.equal(findings({render:{mode:'data_graph'},size:'ms',arrangement:'two'}), '');
 });

@@ -599,6 +599,11 @@ describe('server instructions', () => {
     assert.ok(SERVER_INSTRUCTIONS.length <= 4096, `${SERVER_INSTRUCTIONS.length} chars`);
   });
 
+  it('places video prompt composition at the request boundary in the startup instructions', () => {
+    const planning = SERVER_INSTRUCTIONS.split('Storyboard:')[1].split('Speech:')[0];
+    assert.match(planning, /When video is requested, use `video_plan`/);
+    assert.doesNotMatch(planning, /video prompt with `shot_prompt`/);
+  });
   it('name only tools the server ships', () => {
     const named = [...SERVER_INSTRUCTIONS.matchAll(/`([a-z][a-z0-9]*(?:_[a-z0-9]+)+)`/g)].map((m) => m[1]);
     assert.ok(named.length > 0, 'instructions name no tools');

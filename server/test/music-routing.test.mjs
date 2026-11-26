@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { planMusic, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from '../dist/music-routing.js';
+import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from '../dist/music-routing.js';
 import { musicTransaction } from '../dist/music-state.js';
 import { config } from '../dist/config.js';
 // Suno polls every 15 s; run that clock forward instead of waiting (astra-video-client.test.mjs).
@@ -42,7 +42,9 @@ function output(args) {
 test('managed output is decoded to stereo WAV and reused without a second dispatch', async t => {
   const f = fixture(t), p = f.plan(); let calls = 0;
   const dispatch = async (_tool, args) => { calls++; assert.equal(args.modelId, 'music_v2_5'); return output(args); };
-  const result = await f.run(p, dispatch);
+  const { directory, planId, id } = musicPlanSummary(p);
+  assert.equal(planId, id);
+  const result = await executeMusic({ directory, planId }, dispatch);
   assert.equal(result.musicReceipt.output.sampleRate, 48000); assert.equal(result.musicReceipt.output.channels, 2);
   assert.equal(result.musicReceipt.review, 'not_reviewed'); assert.ok(result.musicReceipt.output.durationSeconds > 0);
   assert.deepEqual(await f.run(p, dispatch), result); assert.equal(calls, 1);
@@ -125,4 +127,23 @@ test('resume finishes an interrupted Suno request from its task ID without resub
   assert.ok(urls[0].includes('taskId=task-1')); assert.ok(urls.every(u => !u.endsWith('/api/v1/generate')));
   assert.equal(musicStatus({ directory: f.dir, requestId: 'suno-1' }).status, 'completed');
   await assert.rejects(resumeMusic({ directory: f.dir, requestId: 'suno-1', action: 'resume' }), /resume_requires/);
+});
+
+test('Stable Audio reserves zero and binds a relative inpainting source to its content', async t => {
+  const music = { engine: 'stable-audio-mlx', model: 'stabilityai/stable-audio-3-medium' };
+  const f = fixture(t, undefined, music);
+  const file = path.join(f.dir, 'input.wav');
+  fs.writeFileSync(file, wav());
+  const args = { prompt: 'guitar', durationSeconds: 1.5, initAudioPath: 'input.wav', inpaintRange: [0, 1] };
+  const request = { directory: f.dir, requestId: 'edit-1', assetId: 'intro', ...music, args };
+  const plan = planMusic(request);
+  assert.equal(plan.tool, 'music_stable_audio_generate');
+  assert.equal(plan.quote.reserveUsd, 0);
+  assert.equal(plan.args.initAudioPath, file);
+  assert.equal(plan.inputs[file].length, 64);
+  assert.throws(() => planMusic({ ...request, reserveUsd: 0.1 }), /music_quote_required/);
+  const changed = wav();
+  changed.writeInt16LE(123, 44);
+  fs.writeFileSync(file, changed);
+  await assert.rejects(f.run(plan, () => assert.fail('stale input reached generation')), /music_plan_stale/);
 });

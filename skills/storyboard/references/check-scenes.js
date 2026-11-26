@@ -943,7 +943,7 @@ function check(win, fmt, opts) {
      nothing. A warning: the reviewer weighs a written reason. */
   {
     const CLOSE_OPEN = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
-    const PAYS = ['els', 'ls', 'ws', 'mfs', 'two'];
+    const PAYS = ['els', 'ls', 'ws', 'mfs'];
     const EXPLAIN = ['motion_html', 'data_graph', 'editorial_html', 'object_html', 'character_html'];
     const isScreen = (s) => s.shot && s.shot.render && EXPLAIN.indexOf(s.shot.render.mode) !== -1;
     const byScene = new Map();
@@ -959,12 +959,16 @@ function check(win, fmt, opts) {
     const placeOf = (s) => String(s.sceneSlug || '').split('/')[0].replace(/\s+/g, '');
     const seenWide = new Set();
     byScene.forEach((rows, key) => {
-      const first = rows[0].s.shot && rows[0].s.shot.size, second = rows[1] && rows[1].s.shot && rows[1].s.shot.size;
+      const coverageSize = card => {
+        const frame = require('./scene-direction.js').framing(card);
+        return frame.size || frame.cutRole;
+      };
+      const first = coverageSize(rows[0].s), second = rows[1] && coverageSize(rows[1].s);
       const place = placeOf(rows[0].s);
       const known = place && seenWide.has(place);
       if (CLOSE_OPEN.indexOf(first) !== -1 && rows[1] && second && PAYS.indexOf(second) === -1 && !known)
-        warn('shot ' + (rows[1].i + 1), `scene ${key} opens on ${first} and the next picture shot is ${second} — the close opening owes an ls/els (mfs/two for two people) that says where this is; fs and ms show a body, not a place (directing-grammar §6 rule 2)`);
-      if (place && rows.some((r) => PAYS.indexOf(r.s.shot && r.s.shot.size) !== -1)) seenWide.add(place);
+        warn('shot ' + (rows[1].i + 1), `scene ${key} opens on ${first} and the next picture shot is ${second} — the close opening owes a frame that shows the place and the relationship that says where this is; fs and ms show a body, not a place (directing-grammar §6 rule 2)`);
+      if (place && rows.some((r) => PAYS.indexOf(coverageSize(r.s)) !== -1)) seenWide.add(place);
     });
   }
 
@@ -1149,7 +1153,7 @@ function check(win, fmt, opts) {
     if (shot.size && SIZES.indexOf(shot.size) === -1)
       bad(where, `shot.size "${shot.size}" is not a size word (directing-grammar §size)`);
     /* The frame cuts the subject somewhere on every shot. A 4b field, so a draft defers. */
-    if (s.type !== 'outro' && !shot.size)
+    if (s.type !== 'outro' && require('./structure-contract.js').photoRoute(shot.render?.mode) && !shot.size && !v.camera?.view?.crop)
       machine(where, 'no shot.size — pick where the frame cuts the subject from what shot.info has to show (directing-grammar §2.1)');
     if (shot.angle && ANGLES.indexOf(shot.angle) === -1)
       bad(where, `shot.angle "${shot.angle}" is not an angle word (directing-grammar §angle)`);
@@ -1315,31 +1319,31 @@ function check(win, fmt, opts) {
       if (!v.src) warn(where, 'b-roll has no src — the source still is what the previous scene showed');
     }
 
-    // Every shot that becomes a generated video leaves the storyboard with its prompt stored
-    // and its four camera slots filled — the storyboard is where that is still free to fix.
+    // Camera attributes can be reviewed before a video is requested.
     if (generatedVideo(s) && v.reuse === undefined) {
+      const owner = Array.isArray(win.STRUCTURE?.scenes) && win.STRUCTURE.scenes.find(scene => scene?.no === s.scene);
+      const current = owner ? require('./scene-direction.js').withCameraDefaults([s], [owner])[0] : s;
       try { scenePlan(s); } catch (e) { machine(where, e.message); }
       // The slot rule lives in production-mode.js (shared with the approval page): a static
       // camera has no speed to state, so that one slot may stay empty (§camera).
-      productionMode.missingCameraSlots(v.camera).forEach((slot) => {
+      productionMode.missingCameraSlots(current.visual?.camera).forEach((slot) => {
         machine(where, `visual.camera.${slot} is empty — a generated shot leaves here with all four filled (speed may stay empty on a static camera)`);
       });
       // A move the viewer cannot see, a provider camera lock under a written move, a move outside
       // the vendor vocabulary or one missing what it needs (production-mode.js — L13–L15 rules).
-      require('./film-techniques.js').findings(s).forEach(message => warn(where, message));
+      require('./film-techniques.js').findings(current).forEach(message => warn(where, message));
       const cameraAdvice=[];
-      productionMode.cameraErrors(s,{advice:cameraAdvice}).forEach((e) => machine(where, e));
+      productionMode.cameraErrors(current,{advice:cameraAdvice}).forEach((e) => machine(where, e));
       cameraAdvice.forEach((e) => warn(where, e));
-      productionMode.cameraWarnings(s).forEach((w) => warn(where, w));
+      productionMode.cameraWarnings(current).forEach((w) => warn(where, w));
       const prompt = v.prompt || (v.video && v.video.prompt) ||
                      (v.clip && typeof v.clip === 'object' && v.clip.prompt);
-      if (!prompt) machine(where, 'no stored clip prompt — ' + (win.STORY?.authoring === 'story-first' ? 'write it with shot_prompt; ' : '') +
-        'produce sends this verbatim (scenes-schema §clip prompt)');
-      else seedancePromptFindings(prompt, engineOf(s, win, opts && opts.snapshotVideo), s.visual?.video?.model).forEach((f) => machine(where, f));
+      if (prompt) seedancePromptFindings(prompt, engineOf(s, win, opts && opts.snapshotVideo), s.visual?.video?.model).forEach((f) => machine(where, f));
       // A clip planned silent (generateAudio:false — every full-video cut) has nothing to describe.
-      if (!v.audio && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
-        warn(where, 'no visual.audio — the engine invents a soundtrack under the narration');
-      else if (typeof v.audio === 'string') audioPromptFindings(s, v.audio).forEach((f) => warn(where, f));
+      const diegetic = s.sound?.diegetic || s.shot?.videoDesign?.sound || v.audio || owner?.videoDirection?.sound || v.video?.promptSource?.sound;
+      if (!diegetic && s.type !== 'quote' && !(v.video && v.video.generateAudio === false))
+        warn(where, 'no diegetic sound direction — record the scene ambience or silence');
+      else if (typeof diegetic === 'string') audioPromptFindings(s, diegetic).forEach((f) => warn(where, f));
     }
 
     // A still never sits frozen under the voice (owner directive 2026-09-03). The builder's
@@ -1587,6 +1591,13 @@ function check(win, fmt, opts) {
         return;
       }
       checkAudioLicense(c, at, isShort, bad, warn);
+      if (c.direction !== undefined) {
+        const choices = ['mood','instruments','tempo','shape','dialogueSpace'];
+        if (!c.direction || typeof c.direction !== 'object' || !Object.keys(c.direction).length ||
+            Object.entries(c.direction).some(([key,value]) => !choices.includes(key) || typeof value !== 'string' || !value.trim()) ||
+            c.asset || c.prompt || c.prompts) bad(at, 'give a cue musical direction with one or more named choices');
+        return;
+      }
       if (c.asset) return;
       const hasPrompt = typeof c.prompt === 'string' && c.prompt.trim().length > 0;
       const hasPrompts = Array.isArray(c.prompts) && c.prompts.length > 0;
@@ -2071,8 +2082,8 @@ function selftest() {
   const noSlots = Object.assign({}, goodShot, { visual: { video: { prompt: SEEDANCE_PROMPT }, audio: 'a' } });
   ok('a generated shot with empty camera slots is a violation',
      bads(run([cover, noSlots])).filter((f) => /visual\.camera\./.test(f.what)).length === 4);
-  ok('a generated shot with no stored prompt is a violation',
-     has(bads(run([cover, Object.assign({}, goodShot, {
+  ok('an attribute-only generated shot needs no stored prompt',
+     !has(bads(run([cover, Object.assign({}, goodShot, {
        visual: { video: {}, audio: 'a',
                  camera: { movement: 'a', speed: 'b', framing: 'c', end: 'd' } } })])),
        /no stored clip prompt/));

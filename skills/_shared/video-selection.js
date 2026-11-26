@@ -148,13 +148,14 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
       storedMembers[i] = {...storedMembers[i], narration:storedMembers[i].narration?.map(line =>
         line.delivery === 'off_screen' ? {...line,delivery:'voiceover'} : line)};
   }
+  const genaiCast = scene && savedSelection.engine === 'astra-genai';
   const sourceCards = storedMembers.map(raw => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned');
+  const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', false, savedSelection.model);
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
     const raw = shotWithRefs;
     const seedance = savedSelection.engine === 'seedance';
-    const keepCast = (selectionOnly && seedance) && !raw.visual?.characterInputs || cast && savedSelection.engine === 'astra-genai' && !raw.visual?.characterInputs?.length;
+    const keepCast = (selectionOnly && seedance) && !raw.visual?.characterInputs || genaiCast;
     let shot = keepCast ? raw : resolveShotCharacterInputs(raw, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.identities);
     if (savedSelection.engine === 'seedance' && ['quote', 'broll'].includes(shot.type)) {
       const slot = videoSlot(shot);

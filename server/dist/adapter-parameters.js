@@ -3,6 +3,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 export const COMMON_PARAMETERS = {
     video: ['prompt', 'negativePrompt', 'model', 'resolution', 'seed', 'generateAudio', 'outputPath', 'filename'],
     image: ['prompt', 'negativePrompt', 'model', 'size', 'seed', 'outputPath', 'filename'],
+    tts: ['model', 'text', 'outputPath', 'filename'],
     music: ['prompt', 'model', 'seed', 'outputPath', 'filename'],
 };
 export function adapterParameters(schema, kind) {

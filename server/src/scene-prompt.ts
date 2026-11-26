@@ -71,8 +71,12 @@ export function sceneTimelineWords(timeline: SceneTimeline, scene: Partial<Scene
     const duration = Number(((shot.endFrame - shot.startFrame) / timeline.fps).toFixed(2));
     const hold = describeDelivery && options.cutTiming === 'approximate_holds' &&
       `Hold this view for about ${duration} ${duration === 1 ? 'second' : 'seconds'}.`;
+    const positions = (shot.openingPositions || []).filter(person => index !== 0 ||
+      !scene.openingPositions?.some(initial => initial.character === person.character && initial.position === person.position));
+    const opening = positions.map(person => person.character + ': ' + person.position.replace(/[.!?]+$/, '') + '.').join(' ');
     rows.push([
       shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : undefined), hold,
+      opening && 'At the start of this shot, ' + opening,
       ...[shot.framing, shot.blocking, shot.action].filter(value => value && !wholeTake.has(value)),
       ...cues, ...guides, shot.sound && shot.sound !== scene.sound && 'Sound: ' + shot.sound,
       describeDelivery && deliveryDirection(lines), ...spoken,
@@ -212,7 +216,7 @@ export function resolveScenePrompt(template: string, {slots, unlabeled, ambiguou
   return {prompt, body, issues};
 }
 
-/** The submitted prompt with its numbers turned back into names: what an author edits and sends as `prompt`. */
+/** The submitted prompt with its numbers turned back into names: the editable storyboard prompt. */
 export function scenePromptTemplate(prompt: string, {slots}: Pick<ReturnType<typeof scenePromptSlots>, 'slots'>, header = '', lines?: readonly string[]) {
   const names = new Map<string, string>();
   // A character's single picture has two names; the role name is the one that stays valid when a second picture is added.
@@ -227,7 +231,7 @@ export function scenePromptTemplate(prompt: string, {slots}: Pick<ReturnType<typ
 
 /** Check the ordered script before rendering the provider's numbered references. */
 export function assertSceneDialogue(template: string, expected: readonly {speaker?: string; tts?: string; delivery?: string}[],
-  cast: PromptCast, composed: string, nativeDialogue = true): void {
+  cast: PromptCast, composed: string, nativeDialogue = true, storyboardDirections = false): void {
   const script = expected.flatMap(line => line.tts ? [line.tts] : []);
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed,script);
@@ -257,7 +261,7 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
       clause = parts[partIndex+1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
       for (const sentence of sentences) {
         const text = unlabel(sentence);
-        if (!text || approvedDirections.has(text)) continue;
+        if (!text || approvedDirections.has(text) || storyboardDirections) continue;
         grammar.checkStageDirection(text,nativeDialogue);
       }
       continue;

@@ -4,6 +4,7 @@ import { upscaleCatalog, startUpscale, controlUpscale } from './video-upscale.js
 import { existsSync } from 'node:fs';
 import { generateLocalVideo } from './local-video-models.js';
 import { manageWorkflow } from './production-workflow.js';
+import { generateStableAudio } from './stable-audio-mlx.js';
 import { MUSIC_ADAPTERS, musicCatalog, musicAdapterContracts } from './music-registry.js';
 import { planMusic, musicPlanSummary, executeMusic, musicStatus, resumeMusic, routeLegacyMusic } from './music-routing.js';
 import { generateLyriaSong, generateElevenMusic } from './music-song-client.js';
@@ -12,7 +13,7 @@ import { planImage, imagePlanSummary, executeImage, routeLegacyImage, imageStatu
 import { videoStatus } from './video-routing.js';
 import { planManagedVideo, executeVideo, routeLegacyVideo, approveVideo, videoPlanSchema } from './video-routing.js';
 import { VIDEO_ADAPTERS, videoCatalog, videoAdapterContracts } from './video-registry.js';
-import { routeSpeech, speechRouteSchema } from './tts-routing.js';
+import { routeSpeech, speechRouteSchema, speechCatalog, planSpeech, executeSpeechPlan, speechStatus } from './tts-routing.js';
 import { hostReview } from './host-review.js';
 import { runOpeningReview } from './opening-review.js';
 import { designGeminiVoice, voiceDesignSchema } from './voice-design.js';
@@ -925,15 +926,23 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     );
   },
 
+  music_stable_audio_generate: async args => {
+    try {
+      const output = await generateStableAudio(args);
+      return { ...text(JSON.stringify(output)), musicReceipt: output };
+    } catch (error) {
+      return { ...text(String(error), true), terminal: true };
+    }
+  },
   mlx_music_generate: async (args) => {
     const request = parseArgs(mlx.mlxMusicGenerateSchema, args);
     const result = await mlx.generateMlxMusic(request);
-    if (!result.success) return text(`MLX Core music generation failed:\n${result.error}`, true);
-    return text(
+    if (!result.success) return { ...text(`MLX Core music generation failed:\n${result.error}`, true), terminal: !result.submissionUnknown };
+    return { musicReceipt: { model: result.model, audioPath: result.path, durationSeconds: result.durationSeconds }, ...text(
       `Music generated via MLX Core.\n\nFile: ${result.path}\nModel: ${result.model}\n` +
         `Duration: ${result.durationSeconds} seconds\nInstrumental: ${request.instrumental}\n` +
         `Generation time: ${result.elapsedSeconds}s`,
-    );
+    ) };
   },
   ltx_video_generate: async (args) => {
     const result = await generateLocalVideo('ltx_video_generate', args);
@@ -1144,6 +1153,13 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
     const result = await generateCheckedSpeech(parseArgs(checkedSpeechSchema, args));
     return text(JSON.stringify(result, null, 2), result.success !== true);
   },
+  tts_catalog: async args => text(JSON.stringify(speechCatalog(args), null, 2)),
+  tts_plan: async args => text(JSON.stringify(planSpeech(args), null, 2)),
+  tts_execute: async args => {
+    const result = await executeSpeechPlan(args);
+    return text(JSON.stringify(result, null, 2), !result.success);
+  },
+  tts_status: async args => text(JSON.stringify(speechStatus(args), null, 2)),
   tts_route: async (args) => {
     const result = await routeSpeech(speechRouteSchema.parse(args));
     return text(JSON.stringify(result, null, 2), 'success' in result && result.success === false);
@@ -1406,10 +1422,10 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
         `- Combine genre + mood for more specific output (e.g., "calm jazz", "energetic techno")\n` +
         `- Specify instruments for desired sound palette\n` +
         `- Use BPM to control tempo (60=slow, 120=moderate, 180=fast)\n` +
-        `- New music follows music_plan → music_execute with the saved model; music_generate_clip is the standalone 30s Lyria clip (describe BPM/key/mood in the prompt)\n` +
-        `- For exact durations (5-300s), use music_generate (Lyria RealTime)\n` +
+        `- Check the saved model's inputs with music_catalog. Pass the directory and planId from music_plan to music_execute.\n` +
+        `- For a saved Lyria RealTime model, request 5–300 seconds with durationSeconds.\n` +
         `- For BGM under narration, ask for space in the vocal frequency range\n\n` +
-        `ADVANCED CONTROLS (music_generate_advanced):\n` +
+        `LYRIA REALTIME CONTROLS (music_plan args.config for weighted prompts):\n` +
         `- guidance (0-6): How closely to follow the prompt (higher = more faithful)\n` +
         `- density (0-1): Note density (0=sparse, 1=dense)\n` +
         `- brightness (0-1): Tonal brightness (0=dark, 1=bright)\n` +
@@ -1716,7 +1732,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   shot_prompt: async (args) => {
     storyboard.contract();
     const r = storyboard.writeShotPrompt(parseArgs(storyboard.shotPromptSchema, args));
-    return text(storyboard.renderApply(r) + '\n\nVideo prompt (visual.video.prompt):\n' + r.prompt, r.findings.some((f) => f.level === 'bad'));
+    return text(storyboard.renderApply(r), r.findings.some((f) => f.level === 'bad'));
   },
   storyboard_check: async (args) => {
     storyboard.contract();

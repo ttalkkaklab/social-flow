@@ -1,3 +1,5 @@
+import { zodToJsonSchema } from 'zod-to-json-schema';
+import { stableAudioSchema } from './stable-audio-mlx.js';
 const files = {
     outputPath: { type: 'string', description: 'Output directory, e.g. /work/episode/.work. Managed calls use it for the final WAV.' },
     filename: { type: 'string', description: 'Base filename, e.g. bgm.wav in managed calls, music.mp3 in standalone song calls.' },
@@ -10,17 +12,17 @@ const context = {
 };
 export const MUSIC_TOOLS = [
     { name: 'music_catalog', title: 'Inspect music models',
-        description: 'Read music/BGM/song adapters, exact model IDs, duration controls and provider provenance. At first setup offer a supported model or noGeneration (save engine:none for reuse or no score). Returns models, adapter fields, sources and unimplemented providers without an API call. Name an engine, and a model to narrow it, for those adapters with their parameters as JSON Schema: parameters.common holds the names that mean the same across music adapters and parameters.options the adapter\'s own.',
+        description: 'List music models and the purpose of each provider adapter. Use this to select BGM or song models, inspect duration controls, or choose engine:none to reuse existing music or leave scenes unscored. Returns exact model IDs, adapter fields and sources without a provider call. Filter by engine and optionally model to get parameters.common and parameters.options as JSON Schema. For a new track, pass the selected adapter fields to music_plan.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
-                engine: { type: 'string', enum: ['lyria', 'suno-api', 'elevenlabs', 'mlx'], description: 'Music engine as saved in models.music.engine, e.g. lyria.' },
+                engine: { type: 'string', enum: ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'stable-audio-mlx'], description: 'Music engine as saved in models.music.engine, e.g. lyria.' },
                 model: { type: 'string', description: 'One exact model of that engine, e.g. lyria-3.5. Needs engine.' }
             } }, annotations: { readOnlyHint: true, openWorldHint: false } },
     { name: 'music_plan', title: 'Plan music from saved settings',
-        description: 'Create a local music generation plan using models.music and explicit episode/shot overrides. Checks adapter fields and pins reference hashes, selection and cost reservation. No paid call. Returns plan ID, final WAV path and provenance. Do NOT use to execute — use music_execute. Use music_catalog and adapter schemas for args; omit model to inherit saved selection.',
+        description: 'Create a local music plan from the saved model and any episode or shot override. Use music_catalog to find the adapter fields for args. Checks the inputs and records reference hashes, the cost estimate and the final WAV path without a provider call. Pass the returned directory and planId to music_execute to generate the track. The id field is an alias for planId.',
         inputSchema: { type: 'object', additionalProperties: false, properties: { ...context,
                 engine: { type: 'string', description: 'Optional assertion of the saved music engine. A different saved engine refuses the plan (music_selection_mismatch); a plan never switches the selection.' },
                 model: { type: 'string', description: 'Optional assertion of the saved music model, checked the same way.' },
-                tool: { type: 'string', enum: ['music_generate_song', 'music_generate_clip', 'music_generate', 'music_generate_advanced', 'music_elevenlabs_generate', 'suno_generate', 'mlx_music_generate'], description: 'Optional adapter; must match saved model. Default comes from music_catalog.' },
+                tool: { type: 'string', enum: ['music_generate_song', 'music_generate_clip', 'music_generate', 'music_generate_advanced', 'music_elevenlabs_generate', 'suno_generate', 'mlx_music_generate', 'music_stable_audio_generate'], description: 'Optional adapter; must match saved model. Default comes from music_catalog.' },
                 args: { type: 'object', description: 'Selected adapter fields, e.g. {prompt:"Soft piano",instrumental:true,filename:"bgm.wav"} for Lyria song. Unknown fields fail.' },
             }, required: ['directory', 'assetId', 'requestId', 'args'] }, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } },
     { name: 'music_execute', title: 'Generate an authorized music plan',
@@ -36,6 +38,10 @@ export const MUSIC_TOOLS = [
                 evidence: { type: 'string', description: 'Verified terminal/billing evidence, e.g. provider task abc failed; invoice shows $0.' },
                 spentUsd: { type: 'number', minimum: 0, description: 'Verified charge for reconciliation, e.g. 0.05.' },
             }, required: ['directory', 'requestId'] }, annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
+    { name: 'music_stable_audio_generate', title: 'Generate local Stable Audio music',
+        description: 'Render a stereo 44.1 kHz WAV with the installed Medium model and SAME-L decoder. Describe the music in prompt, or edit a source clip with initAudioPath and inpaintRange. Returns the file path, measured duration and seed. Use MiniMax Music 3 for sung lyrics.',
+        inputSchema: zodToJsonSchema(stableAudioSchema, { $refStrategy: 'none' }),
+        annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false } },
     { name: 'music_generate_song', title: 'Generate a Lyria song',
         description: 'Generate music with Google Lyria Clip or 3.5. Korean lyrics belong in lyrics; musical directions belong in prompt. Clip is fixed 30s; 3.5 duration is prompted, not guaranteed. Returns local MP3, model, provider ID and generated text. Do NOT use for realtime weighted control — use music_generate_advanced. Configured production uses music_plan.',
         inputSchema: { type: 'object', additionalProperties: false, properties: { ...files,

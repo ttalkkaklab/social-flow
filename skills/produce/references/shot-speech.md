@@ -69,9 +69,7 @@ bindings from the pinned cast. Keep its voice-identity, dialogue, speaker-assign
 and lip-sync findings separate. Native reference-voice imitation does not establish
 exact synchronization with a finished WAV, so the adapter table below still applies.
 
-Use [TTS routing](../../_shared/tts-routing.md) for model capabilities, pure payload
-planning and restart-safe execution. Raw synthesis tools share the execution checks;
-only `tts_route execute` accepts a stable request ID for replay protection.
+Use [TTS routing](../../_shared/tts-routing.md) for model capabilities, saved plans and restart-safe execution. Read the receipt with `tts_status` after interruption.
 
 For new episodes, apply [directory model settings](../../_shared/model-settings.md)
 before selecting speaker voices. Use its speech engine/model for new `tts` records
@@ -81,8 +79,7 @@ user rather than silently changing engine, voice ID or model. Pass a selectable
 model explicitly to the raw tool so its own default cannot drift between episodes.
 
 Resolve speaker to character.tts. Call `speech_manage action:plan_audio` to compile
-line acting into the selected provider’s arguments; use its generator/generation
-output (`arguments` is an alias of `generation`). Do not overwrite the planned
+line acting into the selected provider’s arguments; pass its `ttsPlan` fields to `tts_plan` with an output directory and request ID. Do not overwrite the planned
 gateway `speechContext`: it binds the request to the current board and line. A selected
 sample with `voiceId:"default"` is not a cloned character voice; use the sample's
 operator-registered voice ID. A stale shared voice requires an explicit episode pin
@@ -91,8 +88,7 @@ the completed generator's `receiptPath` inside `generation`; caller-written sett
 cannot replace that receipt. Keep it available for composition and assembly.
 Do not overwrite the planned
 scene direction with the character baseline stylePrompt. Attach with clean expectedText as `generation.text` and the actual tagged
-request in `generation.voiceSettings`. Generate with the corresponding raw engine tool, not
-`tts_generate_checked`. Save a generation receipt beside each scene WAV as `.generation.json`
+request in `generation.voiceSettings`. Execute the saved plan with `tts_execute`. Save a generation receipt beside each scene WAV as `.generation.json`
 with generator, voiceSettings (the actual arguments), generationSpeed, playbackSpeed:1,
 expectedText, lineIds and audioSha256. For a single line without reaction padding the bound
 line WAV can be used directly; a combined or padded scene WAV needs this receipt bound
@@ -424,7 +420,7 @@ Per-line `acting: {direction?: string, tags?: string[]}` is separate from the pi
 identity voice and from visible/off-screen `delivery`. Use `speech_manage` to update
 acting, invalidate affected speech, and preserve unchanged takes. Follow
 [acting prompts](acting-prompts.md).
-ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_route`.
+ElevenLabs permits `eleven_v4` only; Gemini remains supported. For local VoxCPM2 choose `mlx-audio/voxcpm2` and use `tts_plan` and `tts_execute`.
 Read the [v4 API contract](../../_shared/elevenlabs-v4.md) for request limits,
 language codes, IPA, continuity and provenance before calling ElevenLabs tools.
 An explicitly requested review/improvement loop is permitted within its scope;

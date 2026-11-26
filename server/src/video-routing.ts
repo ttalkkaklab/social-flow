@@ -1,5 +1,6 @@
+import { composeH3Scene } from './h3-scene.js';
 import { bindRegisteredPanels, prepareSceneRequest, SCENE_FIT_STEPS, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
-import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, h3InferenceSteps, h3ReferenceImageShortEdge, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, checkFasth3VoiceReplay, fasth3RenderFrames, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
@@ -10,7 +11,7 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { config, disabledToolPatterns, disabledToolsFile, mlxServeConfigured, mlxServeUrl } from './config.js';
 import { resolveToolGate } from './tool-gate.js';
@@ -37,7 +38,7 @@ import { formatReferenceLabel, promptGuidance, referenceAdvice, scenePromptProfi
 import { prepareVideoVoice, sampleSeconds, type VoiceContinuity } from './video-voice.js';
 import type { ToolResult } from './handlers.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
-import { attributeWords, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
+import { attributeWords, commonCameraWords, resolvedDirection, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { assertSelection } from './adapter-parameters.js';
 import { assertSceneDialogue, resolveScenePrompt, scenePromptSlots, scenePromptTemplate, type PromptImage, type PromptIssue } from './scene-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
@@ -46,6 +47,9 @@ import { checkDesktopOffering, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.
 
 const load = createRequire(import.meta.url);
 const shared = fileURLToPath(new URL('../../skills/_shared/video-selection.js', import.meta.url));
+function sceneProductionPrompt(direction: SceneVideoDirection | undefined, selection: Selection, operation?: string): string | undefined {
+  return load('../../skills/storyboard/references/production-mode.js').sceneProductionPrompt(direction,selection,operation);
+}
 function assertNoPostLipSync(value: unknown) {
   load('../../skills/_shared/speech-contract.js').assertNoPostLipSync(value);
 }
@@ -197,7 +201,7 @@ export interface VideoPlan {
   /** The selected model's writing sentence and reference page, with a finding for each count outside the range its vendor recommends. */
   promptGuidance?: PromptGuidance & {advice: {code: string; detail: string}[]};
   mlxDeployment?: {endpoint:string; renderFrames:number; deliveryFrames:number};
-  /** The submitted prompt with reference numbers as names; an author edits it and plans again with `prompt`. */
+  /** The submitted prompt with named references. Save revisions on the storyboard scene before replanning. */
   promptTemplate?: string;
   promptSlots?: {key: string; label: string}[];
   /** Opening positions the LTX lanes state ahead of the prompt; not part of the template. */
@@ -206,7 +210,7 @@ export interface VideoPlan {
   speechRoute?: Context['speechRoute'];
   sceneNo?: number; shotIds?: string[]; sceneDurationSeconds?: number;
   /** What `POST /v1/generations/validate` compiled a GenAI scene to when it was planned. Said with the plan, outside the manifest an approval covers. */
-  sceneValidation?: {prompt: string; numFrames: number; labels: Record<string, string>; warnings: {code: string}[]};
+  sceneValidation?: {prompt: string; numFrames: number; referenceImageShortEdge?: number; labels: Record<string, string>; warnings: {code: string}[]};
   purpose?: 'draft' | 'final' | 'revision'; basedOnRequestId?: string; changeNote?: string;
   characterInputs?: CharacterVideoInput[];
   characterBindings?: SeedanceBinding[];
@@ -229,6 +233,11 @@ function canonical(file: string): string {
   const parent = path.dirname(file);
   if (parent === file) throw new Error('Cannot resolve path');
   return path.join(canonical(parent), path.basename(file));
+}
+function episodeOutputPath(episode: string, outputPath: string): string {
+  const output = canonical(path.resolve(episode, outputPath));
+  if (!within(episode, output)) throw new Error('Video output must stay inside the selected episode');
+  return output;
 }
 function inputFiles(args: Record<string, unknown>, episode: string): Record<string, string> {
   const files: Record<string, string> = {};
@@ -305,7 +314,25 @@ export function checkVideoEnvironment(tool: string): void {
     engine === 'minimax' ? Boolean(config.minimaxApiKey) : engine === 'heygen' ? Boolean(config.heygenApiKey) : engine === 'mlx' && mlxServeConfigured();
   if (!ready) throw new Error('video_provider_unconfigured: ' + engine);
 }
+/** Two concurrent candidates for an unchanged scene must describe the same performance. */
+function recordScenePrompt(plan: VideoPlan) {
+  if (!plan.sceneNo) return;
+  const file = path.join(plan.episode, '.work/video-routing/scene-prompts', String(plan.sceneNo), plan.contextRevision);
+  const digest = hash(plan.args.prompt);
+  fs.mkdirSync(path.dirname(file), {recursive:true});
+  const tmp = file + '.' + randomUUID();
+  try {
+    fs.writeFileSync(tmp, digest, {flag:'wx', mode:0o600});
+    try { fs.linkSync(tmp,file); }
+    catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err;
+      if (fs.readFileSync(file,'utf8') !== digest)
+        throw new Error('scene_prompt_mismatch: this storyboard scene already has a different prompt. Revise the scene or split it before planning both prompts.');
+    }
+  } finally { fs.rmSync(tmp,{force:true}); }
+}
 function saveVideoPlan(plan: VideoPlan) {
+  recordScenePrompt(plan);
   const file = path.join(plan.episode, '.work/video-routing/plans', plan.id + '.json');
   if (!fs.existsSync(file)) {
     // The profile describes the presentation. The signed manifest already covers the rendered wire prompt.
@@ -444,6 +471,8 @@ export function assertSpeechRenderCapacity(tool: string, model: string | undefin
 
 function resolvePlanContext(input: PlanInput) {
   assertNoPostLipSync(input);
+  if (['shots','shotIds','prompts'].some(key => Object.hasOwn(input.args,key)))
+    throw new Error('scene_split_required: video_plan takes one complete storyboard scene. Use story_scene.split for separate prompts or shot groups.');
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context = routingContext(input.episode, undefined, input.sceneNo, false);
   requireSupportedSelection(context.selection);
@@ -477,7 +506,7 @@ function resolvePlanContext(input: PlanInput) {
     if (route.mode === 'conditioned' || context.sceneDirection?.audio)
       throw new Error('scene_mode_audio_unsupported: GenAI scene mode renders its own soundtrack and takes no supplied track; keep the recording for assembly or choose another engine');
   }
-  const tool = sceneTool ? 'astra_genai_img2video' : selectedVideoTool(context.selection, route.operation);
+  const tool = sceneTool ? (context.selection.model === 'minimax-h3' ? sceneTool : 'astra_genai_img2video') : selectedVideoTool(context.selection, route.operation);
   if (!tool || !sceneTool && (input.tool && input.tool !== tool || input.operation && input.operation !== route.operation))
     throw new Error('scene_speech_route: scene ' + input.sceneNo + ' requires ' + route.operation +
       ' for ' + route.speakers.length + ' speaking characters on ' + context.selection.engine);
@@ -521,7 +550,7 @@ async function prepareManagedPlan(input: PlanInput) {
   const resolved = resolvePlanContext(input);
   const { context } = resolved;
   if (context.selection.engine === 'astra-genai') await refreshGenaiVideoCatalog();
-  let plan = buildFittedPlan(input, resolved, false);
+  let plan = storyboardPlan(input, resolved);
   if (plan.tool === 'astra_genai_scene') return saveVideoPlan({...plan, sceneValidation:await validateGenaiScenePlan(plan)});
   if (plan.characterBindings) await checkRegisteredBindings(plan.characterBindings);
   if (plan.tool === 'seedance_reference' && plan.args.referenceVideoTaskIds)
@@ -533,7 +562,7 @@ async function prepareManagedPlan(input: PlanInput) {
     const duration = await checkDesktopOffering(plan.args, minimum);
     if (minimum !== undefined && duration !== plan.args.durationSeconds) {
       const { requiredSeconds: _required, ...args } = input.args;
-      plan = buildFittedPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved, false);
+      plan = storyboardPlan({ ...input, args: { ...args, durationSeconds: duration } }, resolved);
     }
   }
   if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
@@ -542,7 +571,22 @@ async function prepareManagedPlan(input: PlanInput) {
 
 export function planVideo(raw: unknown, persist = true): VideoPlan {
   const input = videoPlanSchema.parse(raw);
-  return buildFittedPlan(input, resolvePlanContext(input), persist);
+  const resolved = resolvePlanContext(input);
+  return persist ? saveVideoPlan(storyboardPlan(input, resolved)) : buildFittedPlan(input, resolved, false);
+}
+/** Only the complete request derived from this storyboard revision can enter production. */
+function storyboardPlan(input: PlanInput, resolved: ReturnType<typeof resolvePlanContext>): VideoPlan {
+  const { prompt, ...fromBoard } = input;
+  const plan = buildFittedPlan(fromBoard, resolved, false);
+  if (prompt !== undefined && prompt !== plan.promptTemplate && prompt !== plan.args.prompt && prompt !== plan.authoredPrompt)
+    throw new Error('scene_prompt_mismatch: save the complete revised prompt on story_scene.videoDirection.prompt. If both prompts are needed, split the storyboard scene at a shot boundary before planning.');
+  assertSceneMembers(resolved.context, plan);
+  return plan;
+}
+
+function assertSceneMembers(context: Context, plan: VideoPlan) {
+  if (JSON.stringify(context.shotIds) !== JSON.stringify(plan.shotIds))
+    throw new Error('scene_split_required: the request must cover every shot in its storyboard scene, in order. Split the storyboard scene before planning separate prompts.');
 }
 /** A GenAI scene over its model's prompt cap is composed again with fewer optional words, one step at a time. An authored prompt is the author's to fit. */
 function buildFittedPlan(input: PlanInput, resolved: ReturnType<typeof resolvePlanContext>, persist: boolean): VideoPlan {
@@ -618,7 +662,41 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
     return {number, owner: guide ? undefined : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === 'start' ? firstShot : undefined), guide};
   });
 }
+function buildH3Plan(input: PlanInput, context: Context, persist: boolean): VideoPlan {
+  if (!context.sceneMembers?.length || !context.sceneDirection) throw new Error('scene_direction_required: author the storyboard scene before planning H3');
+  if (context.speechRoute?.mode === 'generated')
+    throw new Error('voice_lane_required: model-generated dialogue needs Veo or Seedance image-to-video with scene frames');
+  const selection = context.selection;
+  const options = z.object({seed:z.number().int().optional(), generateAudio:z.boolean().optional(), reserveUsd:z.number().nonnegative().optional(),
+    model:z.literal('minimax-h3').optional(), resolution:z.string().optional(), referenceImageShortEdge:h3ReferenceImageShortEdge.optional(),
+    numInferenceSteps:h3InferenceSteps.optional(), holdToMinDuration:z.boolean().optional(), outputPath:z.string().optional(), filename:z.string().optional()}).strict().parse(input.args);
+  if (options.resolution && selection.resolution && options.resolution !== selection.resolution) throw new Error('model_selection_mismatch: resolution');
+  const direction = sceneVideoDirectionSchema.parse(context.sceneDirection);
+  const saved = sceneProductionPrompt(direction,selection);
+  const outputPath = episodeOutputPath(context.episode, options.outputPath ?? 'storyboard/video');
+  const h3 = composeH3Scene(context.episode,context.board,context.sceneMembers,direction,{
+    ...options,resolution:selection.resolution ?? options.resolution, reserveUsd:options.reserveUsd ?? input.maxCostUsd,
+    outputPath,filename:options.filename ?? input.requestId + '.mp4'
+  },input.prompt ?? saved,context.speechRoute?.opening);
+  const {args,timeline,modelPrompt,labels} = h3;
+  checkSceneVoices(args);
+  verifyDistinctSamples(args.cast.flatMap(member => member.voicePath ? [{speaker:member.id,path:member.voicePath}] : []));
+  const limit = genaiScenePromptLimit('minimax-h3');
+  if (Array.from(modelPrompt).length > limit) throw new Error('scene_prompt_too_long: H3 accepts ' + limit + ' characters. Split the storyboard scene before planning separate prompts.');
+  const inputs = {...h3.inputs, ...inputFiles(args,context.episode)}, quote = quoteVideo('astra_genai_scene',args);
+  if (input.maxCostUsd !== undefined && quote.reserveUsd > input.maxCostUsd) throw new Error('video_quote_exceeded');
+  const body = {version:1 as const,episode:context.episode,sceneNo:input.sceneNo,shotId:context.shotId,shotIds:timeline.shotIds,
+    requestId:input.requestId,wholeScene:true as const,tool:'astra_genai_scene',selection,source:context.source,contextRevision:context.revision,
+    args,sourceArgs:input.args,inputs,quote,execution:'server' as const,speechRoute:context.speechRoute,sceneDurationSeconds:timeline.frameCount/timeline.fps,
+    sceneRequest:{...timeline,sceneNo:input.sceneNo,prompt:modelPrompt,sceneMode:true as const,modelPacedCuts:true as const},
+    ...(h3.warnings.length ? {directionWarnings:h3.warnings} : {}),
+    ...(input.maxCostUsd === undefined ? {} : {maxCostUsd:input.maxCostUsd}),...(input.purpose ? {purpose:input.purpose} : {}),
+    ...(input.basedOnRequestId ? {basedOnRequestId:input.basedOnRequestId} : {}),...(input.changeNote ? {changeNote:input.changeNote} : {})};
+  const plan = {...body,id:hash(body),promptTemplate:args.prompt,promptSlots:Object.entries(labels).map(([key,label])=>({key,label}))};
+  return persist ? saveVideoPlan(plan) : plan;
+}
 function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType<typeof resolvePlanContext>, persist: boolean, fitStep = 0): VideoPlan {
+  if (sceneTool && context.selection.model === 'minimax-h3') return buildH3Plan(input, context, persist);
   const sourceArgs = input.args;
   const speakers = context.speechRoute!.speakers;
   const opening = context.speechRoute!.opening;
@@ -697,11 +775,8 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     throw new Error('voice_lane_required: Veo cannot condition dialogue on a character voice. If a generated voice is acceptable, set videoDirection.dialogueVoice to model_generated for this scene.');
   if (modelVoice && input.args.generateAudio === false)
     throw new Error('scene_dialogue_audio_required: the selected model needs audio enabled to speak the authored dialogue');
-  // A GenAI scene's draft is kept under the scene adapter's operation; one saved before 2026-11-25 sits under the image lane's.
-  const draftOperations = sceneTool ? [VIDEO_ADAPTERS[sceneTool].operation, VIDEO_ADAPTERS[tool!].operation] : [tool && VIDEO_ADAPTERS[tool]?.operation || selection.operation];
-  const savedDraft = draftOperations.map(operation => scene?.promptDrafts?.find(draft => draft.engine === selection.engine &&
-    draft.model === selection.model && draft.operation === operation)).find(Boolean);
-  if (input.prompt === undefined && savedDraft) input = {...input, prompt:savedDraft.prompt};
+  const boardPrompt = sceneProductionPrompt(scene,selection,tool && VIDEO_ADAPTERS[tool]?.operation || selection.operation);
+  if (input.prompt === undefined && boardPrompt !== undefined) input = {...input, prompt:boardPrompt};
   if (input.prompt !== undefined) {
     if (!input.prompt.trim()) throw new Error('scene_prompt_empty: write the prompt, or leave it out for the composed one');
     if (input.prompt.length > 32_000) throw new Error('prompt_too_long: a prompt takes at most 32000 characters');
@@ -719,7 +794,18 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   const supportsAudioToggle = tool === 'astra_genai_img2video' || tool === 'minimax_img2video' || tool === 'seedance_img2video' && SEEDANCE_MODEL_SPECS[(selection.model ?? DEFAULT_SEEDANCE_MODEL) as SeedanceModel]?.audio || Boolean(tool && HOSTED_VIDEO_ROUTES[tool]?.soundtrack);
   // Voiceover pictures use their own timed speech track.
   const sound = context.shot.sound as { audioSource?: string } | undefined;
-  const writtenAudio = input.args.prompt ?? visual?.video?.promptSource?.sound ?? visual?.video?.prompt;
+  const shotNotes = sceneShotNotes(context.shot);
+  const owners = (context.board.STRUCTURE as {scenes?: {no:number}[]} | undefined)?.scenes;
+  const cards = (context.board.SCENES as Record<string,unknown>[] | undefined)?.filter(card => card.scene === context.shot.scene) ?? [];
+  const index = cards.findIndex(card => card.id === context.shot.id);
+  const sceneAttributes = !scene && resolvedDirection(owners?.find(owner => owner.no === context.shot.scene),
+    index < 0 ? [context.shot] : cards.slice(0,index + 1)).shots.at(-1);
+  const cardPlan = context.shot.shot as Record<string,unknown> | undefined;
+  const hasDirection = shotNotes.action || shotNotes.end || shotNotes.sound || shotNotes.beats.length || lines.length ||
+    (sceneAttributes && Object.keys(sceneAttributes).length) || cardPlan?.size || cardPlan?.angle || cardPlan?.depth ||
+    cardPlan?.arrangement || cardPlan?.cutRole || cardPlan?.composition || cardPlan?.eyeline || cardPlan?.techniques ||
+    (context.shot.visual as {camera?: unknown} | undefined)?.camera;
+  const writtenAudio = scene?.sound || shotNotes.sound || input.args.prompt || (!scene && !hasDirection && visual?.video?.prompt);
   const requestsSilence = /(?:^|\bAudio:\s*)silent\b/i.test(String(writtenAudio ?? '').trim());
   const generateAudio = input.args.generateAudio ?? (sound?.audioSource !== 'speech' && !requestsSilence);
   const includeEffects = supportsAudioToggle && lines.length === 0 && generateAudio === true;
@@ -756,9 +842,10 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   // prompts can discard a planned move, as in mochi_bo EP05 s0015.
   const promptLimit = sceneTool ? genaiScenePromptLimit(String(selection.model)) : tool === 'astra_genai_msr' || tool === 'astra_genai_img2video' ? 2000
     : tool ? videoPromptLimit(tool) : undefined;
-  const compileFor = (budget: number | undefined) => compileVideoPrompt(withSceneCamera(shot, (context.board.STRUCTURE as {scenes?: unknown})?.scenes), video!.promptSource!, names, { mode, measureAudio, bindDialogueSeparately,
+  const source = {action:shotNotes.action, end:shotNotes.end, sound:shotNotes.sound};
+  const compileFor = (budget: number | undefined) => compileVideoPrompt(withSceneCamera(shot, owners), source, names, { mode, measureAudio, bindDialogueSeparately, sceneAttributes: sceneAttributes || undefined,
     ...(budget ? { maxCharacters: budget - (silentSuffix ? silentSuffix.length + 1 : 0) } : {}) });
-  let compiled = !scene && video?.promptSource ? compileFor(promptLimit) : undefined;
+  let compiled = !scene && (hasDirection || !video?.prompt) ? compileFor(promptLimit) : undefined;
   const withPrompt = (prompt: unknown) => {
     const args = typeof prompt === 'string' ? { ...input.args, prompt } : input.args;
     return silentSuffix ? { ...args, ...(supportsAudioToggle ? { generateAudio: includeEffects } : {}),
@@ -788,8 +875,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     }, context.board) : undefined;
   const sceneRequest = prepared?.request;
   const legacyCoverage = scene && !prepared ? sceneCoverage(members, scene, context.board, context.sceneNo) : undefined;
-  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], legacyCoverage.common.camera
-    ? attributeWords('camera', legacyCoverage.common.camera) : undefined));
+  const sceneCamera = prepared?.camera ?? (legacyCoverage && sceneCameraDirection([], commonCameraWords(legacyCoverage.common)));
   const timedImages = prepared?.mapped.timedImages;
   if (scene) {
     if (prepared) {
@@ -799,20 +885,13 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     else {
       const coverage = legacyCoverage!;
       const notes = sceneShotNotes(members[0]);
-      const details = [...Object.entries(coverage.common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)),
+      const details = [...Object.entries(coverage.common).filter(([key]) => key !== 'camera' && key !== 'cameraPolicy').map(([key,row]) => attributeWords(key,row)),
         shotVisualWords(members[0], coverage.shots[0], coverage.common, notes.end), notes.blocking, notes.action, ...notes.beats,
-        notes.sound && 'Sound: ' + notes.sound].filter(Boolean);
+        notes.sound && 'Sound: ' + notes.sound,
+        !coverage.common.soundPerspective && coverage.shots[0].soundPerspective && attributeWords('soundPerspective', coverage.shots[0].soundPerspective)].filter(Boolean);
       const sceneText = scenePromptText(scene, sceneCamera?.instruction, [...new Set(details)].join(' '), lines, bindTurns, promptProfile);
       callArgs = withPrompt(bindOpening ? sceneText : openingPrompt(sceneText, scene.openingPositions, index => formatReferenceLabel(promptProfile.referenceLabels, 'image', index)));
     }
-  }
-  // Scene notes describe staging. The authored provider prompt carries reference indices
-  // and edit instructions which can be absent from the story or the scene's emotional arc.
-  if (scene && selection.engine === 'seedance' && members.length === 1) {
-    const member = members[0].visual as {video?: {prompt?: string}} | undefined;
-    const stored = member?.video?.prompt?.trim();
-    const direction = String(callArgs.prompt ?? '');
-    if (stored && !direction.includes(stored)) callArgs = { ...callArgs, prompt: [stored, direction].filter(Boolean).join('\n') };
   }
   if (tool === 'seedance_reference' && !silentPicture) {
     if (input.args.generateAudio === false) throw new Error('scene_dialogue_audio_required: this shot has native spoken dialogue');
@@ -823,7 +902,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   // and is not read for direction, so its record names the author's text, leaves out the settings the planner writes into
   // its own prompt and carries no reading or warning of a prompt this request does not send.
   const replaced = input.prompt !== undefined;
-  const sourcePrompt = replaced ? input.prompt! : scene ? String(callArgs.prompt) : typeof video?.prompt === 'string' ? video.prompt : '';
+  const sourcePrompt = replaced ? input.prompt! : scene ? String(callArgs.prompt) : compiled?.prompt ?? (typeof video?.prompt === 'string' ? video.prompt : '');
   const outsidePrompt = (bindings: DirectionBinding[] = []) => {
     const kept = bindings.filter(binding => binding.via !== 'prompt');
     return kept.length ? { directionBindings: kept } : {};
@@ -836,7 +915,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     replaced ? { sourcePrompt, directionWarnings: [] as string[], ...outsidePrompt(c?.directionBindings), ...(c ? { performance: c.performance } : {}) } :
     c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } :
     { sourcePrompt, directionWarnings: [input.args.prompt !== undefined ? 'Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons.' :
-      'Legacy prompt has no promptSource; rewrite it with shot_prompt to compile current icons at request time.', ...driftWarning] };
+      'Only an archived prompt is available for this card; add structured action to recompile from current attributes.', ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts
     ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
     : [];
@@ -850,12 +929,22 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join('; ')}`);
   // The scene sends one cast by the sheet rule for its head count, so a panel a shot named on its own can drop out.
   const sentImages = new Set(sceneRequest?.images.map(image => image.path));
-  const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: unknown; scene?: unknown; visual?: {references?: {role?: string; use?: string; path?: string}[]}}[])
+  const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: string; scene?: number;
+    visual?: {references?: {role?: string; use?: string; path?: string}[]}; timeline?: {images?: {role:string; path:string}[]}}[])
     .filter(card => card.scene === context.sceneNo) : [];
-  for (const card of boardCards) for (const ref of card.visual?.references ?? []) {
-    const file = ref.role === 'character' && ref.use !== 'image' && ref.path ? path.resolve(context.episode, 'storyboard', ref.path) : undefined;
-    if (file && fs.existsSync(file) && !sentImages.has(fs.realpathSync(file)))
-      cutWarnings.push(`scene_reference_omitted: ${String(card.id)} ${ref.path} is not sent; the scene sends one cast for everyone in it, by the panel rule for that many people`);
+  for (const card of boardCards) {
+    const member = members.find(shot => shot.id === card.id);
+    const files = new Set([
+      ...(card.visual?.references ?? []).filter(ref => ['character','bystander','face','outfit'].includes(ref.role ?? '') && ref.use !== 'image').map(ref => ref.path),
+      ...(card.timeline?.images ?? []).filter(pin => ['face','outfit'].includes(pin.role)).map(pin => pin.path),
+      ...(member ? requiredCharacters(member).flatMap(person => [person.face?.path, person.bodyPath]) : []),
+    ]);
+    for (const file of files) {
+      if (!file) continue;
+      const local = path.resolve(context.episode, 'storyboard', file);
+      if (fs.existsSync(local) && !sentImages.has(fs.realpathSync(local)))
+        cutWarnings.push(`scene_reference_omitted: ${card.id} ${file} is not sent; the scene has two character image slots`);
+    }
   }
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
     ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
@@ -1012,7 +1101,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
       ? sceneCastProse('', listed.data, voice.voiceContinuity.speakers).positions : listed.data;
     // A line or sentence the planner's own prompt carries is one this model's prompt is expected to carry.
     const carried = (text?: string) => Boolean(text && composed.includes(text));
-    const resolved = resolveScenePrompt(input.prompt!, promptSlots, {composed, strictReferences:Boolean(input.wholeScene || savedDraft), header:openingPrompt('', positions),
+    const resolved = resolveScenePrompt(input.prompt!, promptSlots, {composed, strictReferences:Boolean(input.wholeScene || boardPrompt), header:openingPrompt('', positions),
       limit:promptLimit, schemaLimit:videoPromptLimit(tool),
       lines:lines.map(line => line.tts?.trim()).filter((text): text is string => carried(text)),
       sentences:[{code:'text_policy_missing', text:videoTextPolicy()}, {code:'silent_direction_missing', text:silentSuffix}].filter(sentence => carried(sentence.text))});
@@ -1097,9 +1186,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, (context.board.STORY as { language?: unknown } | undefined)?.language) : undefined;
   const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(tool === 'fasth3_omni_reference' ? args.prompt.replace(/<d>[^<>]*<\/d>/g, '') : args.prompt, script) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
-  const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
-  if (!within(context.episode, output)) throw new Error('Video output must stay inside the selected episode');
-  args.outputPath = output;
+  args.outputPath = episodeOutputPath(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video');
   args.filename ??= `video-${input.requestId}.mp4`;
   let planTool = tool;
   // The author edits the planner's names; the scene request carries its own, keyed by the same reference numbers.
@@ -1188,12 +1275,13 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
       : typeof args.prompt === 'string' ? scenePromptTemplate(args.prompt, promptSlots, openingPrompt('', args.openingPositions as OpeningPosition[] | undefined), script) : {}) };
   return persist ? saveVideoPlan(plan) : plan;
 }
-interface Authorization { maxUsd: number; maxConcurrent: number; maxAttempts: number; openingSpendUsd?: number }
+interface Authorization { maxUsd: number; maxConcurrent: number; openingSpendUsd?: number }
 function authorization(context: Context): Authorization {
   const p = context.production;
   if (p.videoAuthorization !== undefined) {
     const auth = z.object({ reference: z.string().min(1), maxUsd: z.number().finite().nonnegative(),
-      maxConcurrent: z.number().int().min(1).max(64).default(1), maxAttempts: z.number().int().min(1).max(20).default(3),
+      maxConcurrent: z.number().int().min(1).max(64).default(1),
+      maxAttempts: z.unknown().optional(), // Accept the obsolete field on saved boards.
       // Reconciled spend before managed routing, for events whose cost the ledger cannot price.
       openingSpendUsd: z.number().finite().nonnegative().optional() }).strict().parse(p.videoAuthorization);
     return auth;
@@ -1203,8 +1291,7 @@ function authorization(context: Context): Authorization {
   const helper = fileURLToPath(new URL('../../skills/autoproduce/references/production-cost.js', import.meta.url));
   const quote = (load(helper) as { quote(board: unknown): { quoteFingerprint: string } }).quote(context.board);
   if (quote.quoteFingerprint !== approval.quoteFingerprint) throw new Error('Existing quote changed; spending authorization does not cover this plan');
-  return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1,
-    maxAttempts: z.number().int().min(1).max(5).parse(p.maxAttempts) };
+  return { maxUsd: z.number().finite().nonnegative().parse(p.videoBudgetUsd), maxConcurrent: 1 };
 }
 export type VideoDispatch = (tool: string, args: Record<string, unknown>) => Promise<ToolResult>;
 // Each shot's video waits for the user's yes to its plan, unless they approved every shot (user directive 2026-10-31).
@@ -1262,7 +1349,7 @@ export function approveVideo(raw: unknown): Approvals {
       .filter(([, value]) => typeof value === 'string')) as Shown;
     if (plan.sceneNo !== undefined) shown.prompt = String(plan.args.prompt);
     if (!fromShot || plan.sceneNo !== undefined) shown.callPrompt = true;
-    if (context.selection.engine === 'seedance') {
+    if (context.selection.engine === 'seedance' || plan.authoredPrompt !== undefined || context.sceneDirection?.prompt !== undefined) {
       const current = rebuildPlan(plan);
       if (current.id !== id) throw new Error('video_plan_stale: the approved inputs or cast bindings changed');
       if (plan.characterBindings) shown.characterBindings = plan.characterBindings;
@@ -1291,7 +1378,11 @@ function approvedContext(plan: VideoPlan) {
   // A plan saved with a sceneRendering mode had the gateway's retired per-shot route render it. Its job, if one was submitted, is still read by video_status.
   const retired = (plan as {sceneRendering?: string}).sceneRendering;
   if (retired) throw new Error('video_plan_stale: this plan used the retired ' + retired + ' rendering. Plan the scene again; it is sent as one scene-mode request');
-  try { return routingContext(plan.episode, plan.shotId, plan.sceneNo, false); }
+  try {
+    const context = routingContext(plan.episode, plan.shotId, plan.sceneNo, false);
+    assertSceneMembers(context, plan);
+    return context;
+  }
   catch (error) {
     const report = (error as {report?: Record<string, unknown>})?.report;
     if (!report) throw error;
@@ -1300,7 +1391,10 @@ function approvedContext(plan: VideoPlan) {
 }
 
 function rebuildPlan(plan: VideoPlan) {
-  return planVideo({ episode:plan.episode, wholeScene:plan.wholeScene, ...(plan.sceneNo !== undefined ? {sceneNo: plan.sceneNo} : {shotId: plan.shotId}), requestId: plan.requestId, maxCostUsd:plan.maxCostUsd, ...(plan.authoredPrompt !== undefined ? {prompt:plan.authoredPrompt} : {}), tool: plan.tool, args: plan.sourceArgs ?? plan.args, purpose: plan.purpose, basedOnRequestId: plan.basedOnRequestId, changeNote: plan.changeNote }, false);
+  const input = videoPlanSchema.parse({episode:plan.episode, sceneNo:plan.sceneNo, requestId:plan.requestId, wholeScene:plan.wholeScene,
+    maxCostUsd:plan.maxCostUsd, tool:plan.tool, args:plan.sourceArgs ?? plan.args, purpose:plan.purpose,
+    basedOnRequestId:plan.basedOnRequestId, changeNote:plan.changeNote});
+  return storyboardPlan(input, resolvePlanContext(input));
 }
 
 export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promise<ToolResult> {
@@ -1331,6 +1425,9 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
   if (plan.sceneRequest) await checkSceneDeployment(plan.sceneRequest, plan.tool, plan.args);
   checkVideoEnvironment(plan.tool);
   const auth = authorization(context);
+  const { SCENE_VIDEO_ATTEMPT_LIMIT } = load('../../skills/storyboard/references/production-mode.js') as {
+    SCENE_VIDEO_ATTEMPT_LIMIT: number;
+  };
   const cached = videoTransaction(episode, state => {
     const existing = state.jobs[plan.requestId];
     if (existing) {
@@ -1350,9 +1447,9 @@ export async function executeVideo(raw: unknown, dispatch: VideoDispatch): Promi
     if (occupied.length >= auth.maxConcurrent) throw new Error('video_concurrency_limit: pending jobs include ambiguous submissions');
     const used = jobs.reduce((sum, job) => sum + (job.settledUsd ?? job.reserveUsd), state.openingSpendUsd ?? 0);
     if (used + plan.quote.reserveUsd > auth.maxUsd + 1e-9) throw new Error('video_budget_exceeded');
-    for (const shotId of plan.shotIds ?? [plan.shotId]) {
-      const attempts = priorPlans.filter(previous => (previous.shotIds ?? [previous.shotId]).includes(shotId)).length;
-      if (attempts >= auth.maxAttempts) throw new Error('video_attempt_limit: ' + shotId);
+    const attempts = priorPlans.filter(previous => previous.sceneNo === plan.sceneNo).length;
+    if (attempts >= SCENE_VIDEO_ATTEMPT_LIMIT) {
+      throw new Error(`video_attempt_limit: scene ${plan.sceneNo} has used all ${SCENE_VIDEO_ATTEMPT_LIMIT} attempts`);
     }
     state.jobs[plan.requestId] = { planId: id, requestId: plan.requestId, shotId: plan.shotId, tool: plan.tool,
       status: 'submitting', reserveUsd: plan.quote.reserveUsd, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

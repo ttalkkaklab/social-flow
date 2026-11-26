@@ -72,8 +72,7 @@ input validation stay. Work in this order:
 
 The story tools refuse a layer whose parent is missing (`story_order`): `shot_characters`
 waits for a story with no gaps, `shot_icons` for every shot's characters, `shot_image` for
-every shot's icon attributes, and `shot_prompt` for every picture shot's image (and
-the end image a `first_last` plan needs).
+every shot's icon attributes. Action, closing state and diegetic sound can be set before images. Inspected cast positions use the owning shot's opening image. Only a video request starts prompt composition.
 
 The cast gate (user directive, 2026-11-01): `story_sequence` refuses to start a board inside an
 episode, and `story_scene`/`story_shot` refuse to continue a story-first one, until `cast.json` names at least one character (`cast_required`), each entry's `source`

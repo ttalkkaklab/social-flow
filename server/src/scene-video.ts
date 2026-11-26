@@ -7,7 +7,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { z } from 'zod';
 import { openingPrompt, shotTimelineSchema, type OpeningPosition, type SceneVideoDirection } from './msr-opening.js';
-import { resolvedDirection, attributeWords, sceneShotNotes, shotVisualParts, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection, type VisualPartKind } from './video-prompt.js';
+import { resolvedDirection, attributeWords, commonCameraWords, sceneShotNotes, shotVisualParts, shotVisualWords, sceneCameraDirection, scenePromptText, sceneVoiceDirection, type VisualPartKind } from './video-prompt.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { sceneTimelineWords } from './scene-prompt.js';
 import { formatReferenceLabel, type ScenePromptProfile } from './scene-prompt-profile.js';
@@ -142,7 +142,8 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
       throw new Error('scene_opening_positions: a single shot and its scene must have the same opening positions');
     let positions = scoped ? timeline?.openingPositions ?? visual?.video?.openingPositions ?? (index === 0 ? scene.openingPositions : undefined) : undefined;
     const blocking = notes.blocking;
-    const sound = notes.sound;
+    const perspective = !coverage.common.soundPerspective && coverage.shots[index].soundPerspective;
+    const sound = [notes.sound, perspective && attributeWords('soundPerspective', perspective)].filter(Boolean).join(' ');
     const ordered = load('../../skills/storyboard/references/scene-direction.js').orderedSpeech as (card:Member)=>NonNullable<Member['narration']>;
     const lines = scoped ? ordered(member).filter(line => line.tts?.trim()) : [];
     for (const cue of timeline?.dialogueCues ?? []) {
@@ -219,12 +220,14 @@ export function prepareSceneRequest<T>(
   const fitStep = options.fitStep ?? 0;
   const fitted = fitStep ? fitSceneTimeline(timeline, members, scene, coverage, concise, fitStep) : timeline;
   const common = coverage.common;
-  const camera = sceneCameraDirection([], common.camera && attributeWords('camera', common.camera));
-  const staging = Object.entries(common).filter(([key]) => key !== 'camera').map(([key,row]) => attributeWords(key,row)).filter(Boolean).join(' ');
+  const camera = sceneCameraDirection([], commonCameraWords(common));
+  const sharedSound = [scene.sound, common.soundPerspective && attributeWords('soundPerspective', common.soundPerspective)].filter(Boolean).join(' ');
+  const directedScene = {...scene, sound:sharedSound};
+  const staging = Object.entries(common).filter(([key]) => !['camera', 'cameraPolicy', 'soundPerspective'].includes(key)).map(([key,row]) => attributeWords(key,row)).filter(Boolean).join(' ');
   const shared = [camera.instruction, staging].filter(Boolean).join(' ');
   const words = sceneTimelineWords(timeline, scene);
   const scopedDialogue = timeline.shots.some(s => s.dialogue?.length);
-  const complete = scenePromptText(scene, shared, words, dialogue, scopedDialogue);
+  const complete = scenePromptText(directedScene, shared, words, dialogue, scopedDialogue);
   const suffix = (value: string) => [value, options.suffix].filter(Boolean).join(' ');
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
   const providerTiming = {modelFacing:true, modelPacedCuts, cutTiming, writer:options.profile?.writer};
@@ -232,10 +235,10 @@ export function prepareSceneRequest<T>(
     ...providerTiming, includeDialogue:!options.bindDialogue,
     describeDelivery:modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3,
   });
-  const text = scenePromptText(scene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
+  const text = scenePromptText(directedScene, shared, providerTimeline, dialogue, options.bindDialogue || scopedDialogue, options.profile);
   const providerPrompt = suffix(options.bindOpening ? text : openingPrompt(text, scene.openingPositions, index => formatReferenceLabel(options.profile?.referenceLabels ?? 'indexed', 'image', index)));
   const request = { sceneNo, prompt, ...timeline, ...(modelPacedCuts ? {modelPacedCuts:true} : {}), ...(options.sceneMode ? {sceneMode:true as const} : {}), sceneDirection:{emotion:scene.emotion, ...(scene.action ? {action:scene.action} : {}),
-    ...(camera.instruction ? {camera:camera.instruction} : {}), ...(staging ? {staging} : {}), ...(scene.oneTake ? {oneTake:true} : {}), ...(scene.sound ? {sound:scene.sound} : {})} };
+    ...(camera.instruction ? {camera:camera.instruction} : {}), ...(staging ? {staging} : {}), ...(scene.oneTake ? {oneTake:true} : {}), ...(sharedSound ? {sound:sharedSound} : {})} };
   const cards = members as unknown as Member[];
   const authored = cards.flatMap(card => card.narration ?? []);
   const sharedPicture = [request.sceneDirection, scene.openingPositions];
