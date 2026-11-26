@@ -1,4 +1,4 @@
-import { nativeImageSchema, nativeImageEditSchema, validateNativeImageArgs } from './astra-genai-native-image.js';
+import { GENAI_H3_IMAGE_MODEL, isNativeH3Image, nativeImageSchema, nativeImageEditSchema, validateNativeImageArgs } from './astra-genai-native-image.js';
 import { z } from 'zod';
 import { genaiImageSchema, genaiImageEditSchema } from './astra-genai-image.js';
 import { text2ImageSchema, img2ImgSchema } from './image-client.js';
@@ -32,7 +32,7 @@ export function parseImageArgs(tool: string, input: Record<string, unknown>): Re
   if (adapter.engine === 'astra-genai-native') {
     const edit = adapter.operation === 'edit';
     validateNativeImageArgs(args, edit);
-    if (!(edit && args.model === 'h3-image')) args.size ??= '1024x1024';
+    if (!(edit && isNativeH3Image(args.model))) args.size ??= '1024x1024';
   }
   if (adapter.engine === 'gpt-image') {
     assertImageModelAvailable(String(args.model));
@@ -60,9 +60,9 @@ export function imageCatalog() {
   return { version: 1, revision: '2026-10-18',
     adapters: Object.entries(IMAGE_ADAPTERS).map(([tool, entry]) => ({ tool, engine: entry.engine, operation: entry.operation, fields: fields(entry.schema) })),
     genai: { edits: ['img2img', 'inpaint'], sourceImages: 1, steps: [1, 12], promptExtend: 'Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.', note: 'Use GPT Image 2 for readable text. No multi-image fusion.' },
-    nativeH3Image: { engine: 'astra-genai-native', model: 'h3-image', profile: 'minimax-h3-image', protocol: 'mlx-serve',
-      operations: ['text', 'edit'], referenceImages: 10, fixedSteps: 6, editSize: 'source',
-      availability: 'Check astra_genai_catalog kind image for the configured gateway binding.' },
+    nativeH3Image: { engine: 'astra-genai-native', model: GENAI_H3_IMAGE_MODEL, profile: GENAI_H3_IMAGE_MODEL, protocol: 'common-generation',
+      operations: ['text', 'edit'], referenceImages: 7, fixedSteps: 6, editSize: 'source',
+      availability: 'Check astra_genai_catalog kind common for the image scene in the gateway catalog.' },
     gptModels: GPT_IMAGE_MODELS, gptContracts: GPT_IMAGE_CONTRACTS,
     mlx: { families: ['flux-klein', 'krea', 'mage', 'mage-edit', 'qwen-2.1', 'h3-image'],
       h3Image: { model: 'ddalcu/MiniMax-H3-Image-MLX-Serve-4bit', operations: ['text','edit'], referenceImages: 10, fixedSteps: 6, editSize: 'source' },

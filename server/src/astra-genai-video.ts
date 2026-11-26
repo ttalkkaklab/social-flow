@@ -11,14 +11,13 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
+import { GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, generationSchema, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, sceneFrames, type GenaiSceneArgs } from './genai-scene.js';
 
-/** The common generation API's routes. */
-export const GENERATIONS_ROUTE = '/v1/generations';
+export { GENERATIONS_ROUTE };
 const GENERATION_MODES = { 'text-to-video': 'text2video', 'image-to-video': 'image2video', 'audio-to-video': 'audio2video', msr: 'msr', scene: 'scene' } as const;
 const sides = (resolution: string) => { const [width, height] = resolution.split('x').map(Number); return { width, height }; };
 const asset = (url: string) => ({ url });
@@ -405,13 +404,6 @@ const receiptSchema = z.object({
   conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).passthrough();
 type Receipt = z.infer<typeof receiptSchema>;
-/** The common job envelope. `GET /v1/generations/{id}` also reads jobs a provider route created. */
-const generationSchema = z.object({
-  id: z.string().min(1), status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
-  outputs: z.array(z.object({ url: z.string().min(1), authentication: z.string().optional() }).passthrough()).default([]),
-  error: z.object({ code: z.string().optional(), message: z.string().optional() }).passthrough().nullish(),
-  result_expired: z.boolean().optional(),
-}).passthrough();
 const STATUS = { queued: 'pending', running: 'processing', succeeded: 'completed', failed: 'failed', cancelled: 'cancelled' } as const;
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
 

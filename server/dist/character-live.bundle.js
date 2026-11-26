@@ -33800,6 +33800,14 @@ function astraVideoBaseUrl() {
 }
 
 // src/astra-genai-client.ts
+var GENERATIONS_ROUTE = "/v1/generations";
+var generationSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
+  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
+  result_expired: external_exports.boolean().optional()
+}).passthrough();
 function desktopGatewayKey() {
   const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, "");
   if (!url) return config.astraGenaiApiKey;
@@ -33957,6 +33965,7 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
   }
   return Buffer.from(await response.arrayBuffer());
 }
+var genaiCatalogKind = external_exports.enum(["image", "speech", "common", "video", "desktop_video", "loras", "contracts"]);
 var genaiJobsSchema = external_exports.object({
   gateway: external_exports.enum(["main", "image", "speech", "desktop"]).default("main"),
   limit: external_exports.number().int().min(1).max(100).default(20)
@@ -35713,7 +35722,6 @@ function checkSceneValidation(args, result) {
 }
 
 // src/astra-genai-video.ts
-var GENERATIONS_ROUTE = "/v1/generations";
 var GENERATION_MODES = { "text-to-video": "text2video", "image-to-video": "image2video", "audio-to-video": "audio2video", msr: "msr", scene: "scene" };
 var sides = (resolution2) => {
   const [width, height] = resolution2.split("x").map(Number);
@@ -36122,13 +36130,6 @@ var receiptSchema = external_exports.object({
   sha256: external_exports.string().optional(),
   nativeSha256: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
-}).passthrough();
-var generationSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
-  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
-  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
-  result_expired: external_exports.boolean().optional()
 }).passthrough();
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();

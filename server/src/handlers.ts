@@ -58,7 +58,7 @@ import { generateDesktopVideo, desktopVideoStatus } from './astra-genai-desktop.
 import { localVoxSchema } from './local-voxcpm2.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
 import { randomUUID } from 'node:crypto';
-import { genaiCatalog, genaiJobs } from './astra-genai-client.js';
+import { genaiCatalog, genaiCatalogKind, genaiJobs } from './astra-genai-client.js';
 import { generateGenaiImage } from './astra-genai-image.js';
 import { contentFeedback } from './content-feedback.js';
 import { youtubeTopicScout } from './youtube-topic-scout.js';
@@ -980,7 +980,7 @@ export const ROUTES: Record<string, (args: unknown) => Promise<ToolResult>> = {
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(z.enum(['image','speech','video','desktop_video','loras','contracts']).parse((args as Record<string, unknown>).kind)))),
+  astra_genai_catalog: async args => text(JSON.stringify(await genaiCatalog(genaiCatalogKind.parse((args as Record<string, unknown>).kind)))),
   astra_genai_jobs: async args => text(JSON.stringify(await genaiJobs(args))),
   tts_local_voxcpm2: async args => {
     const generation = localVoxSchema.parse(args);

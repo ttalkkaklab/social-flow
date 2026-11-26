@@ -100251,17 +100251,17 @@ var require_image_catalog = __commonJS({
       },
       nativeH3Image: {
         engine: "astra-genai-native",
-        model: "h3-image",
+        model: "minimax-h3-image",
         profile: "minimax-h3-image",
-        protocol: "mlx-serve",
+        protocol: "common-generation",
         operations: [
           "text",
           "edit"
         ],
-        referenceImages: 10,
+        referenceImages: 7,
         fixedSteps: 6,
         editSize: "source",
-        availability: "Check astra_genai_catalog kind image for the configured gateway binding."
+        availability: "Check astra_genai_catalog kind common for the image scene in the gateway catalog."
       },
       gptModels: [
         "gpt-image-2",
@@ -125183,6 +125183,14 @@ var import_undici2 = __toESM(require_undici(), 1);
 import { readFileSync as readFileSync10, statSync as statSync5 } from "node:fs";
 import { extname as extname4 } from "node:path";
 import { setTimeout as sleep3 } from "node:timers/promises";
+var GENERATIONS_ROUTE = "/v1/generations";
+var generationSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
+  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
+  result_expired: external_exports.boolean().optional()
+}).passthrough();
 function desktopGatewayKey() {
   const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, "");
   if (!url) return config.astraGenaiApiKey;
@@ -125340,10 +125348,12 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
   }
   return Buffer.from(await response.arrayBuffer());
 }
+var genaiCatalogKind = external_exports.enum(["image", "speech", "common", "video", "desktop_video", "loras", "contracts"]);
 async function genaiCatalog(kind) {
   const routes = {
     image: "/v1/images/models",
     speech: "/v1/audio/models",
+    common: "/v1/models",
     video: "/v1/models",
     desktop_video: "/v1/ltx/desktop/models",
     loras: "/v1/ltx/desktop/loras",
@@ -125807,8 +125817,164 @@ var MUSIC_TOOLS = [
 ];
 
 // src/astra-genai-native-image.ts
+import * as fs10 from "node:fs";
+import { createHash as createHash12, randomUUID as randomUUID7 } from "node:crypto";
+
+// src/astra-genai-image.ts
 import * as fs9 from "node:fs";
-import { createHash as createHash11, randomUUID as randomUUID7 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
+var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
+var genaiImageSchema = external_exports.object({
+  model: external_exports.string().min(1),
+  prompt: external_exports.string().min(1).max(800),
+  size: external_exports.string().min(1).default("1024*1536"),
+  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
+  promptExtend: external_exports.boolean().default(false),
+  steps: external_exports.number().int().min(1).max(12).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((name2) => name2.endsWith(".png"), "Use a .png filename").optional()
+}).strict();
+var genaiImageEditSchema = genaiImageSchema.extend({
+  mode: external_exports.enum(["img2img", "inpaint"]),
+  size: external_exports.string().min(1).optional(),
+  imageUri: genaiImageUriSchema.optional(),
+  imagePath: external_exports.string().min(1).optional(),
+  maskUri: genaiImageUriSchema.optional(),
+  maskPath: external_exports.string().min(1).optional(),
+  strength: external_exports.number().finite().gt(0).max(1).optional()
+}).strict().superRefine((args, ctx) => {
+  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue2("Supply exactly one imageUri or imagePath");
+  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
+  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue2("Only inpaint requires exactly one maskUri or maskPath");
+});
+function buildGenaiImageBody(args) {
+  const edit2 = "mode" in args ? args : void 0;
+  const content = [{ text: args.prompt }];
+  const source2 = edit2 ? genaiSourceUri(edit2.imageUri, edit2.imagePath) : void 0;
+  const mask = edit2?.mode === "inpaint" ? genaiSourceUri(edit2.maskUri, edit2.maskPath) : void 0;
+  if (source2) content.push({ image: source2 });
+  if (source2?.startsWith("data:") && mask?.startsWith("data:")) {
+    const sourceSize = imageMetadata(Buffer.from(source2.slice(source2.indexOf(",") + 1), "base64"));
+    const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(",") + 1), "base64"));
+    if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
+      throw new Error("GenAI mask dimensions must match the source");
+  }
+  return {
+    model: args.model,
+    input: {
+      messages: [{ role: "user", content }],
+      ...mask ? { mask } : {}
+    },
+    parameters: {
+      ...args.size === void 0 ? {} : { size: args.size },
+      prompt_extend: args.promptExtend,
+      ...args.seed === void 0 ? {} : { seed: args.seed },
+      ...args.steps === void 0 ? {} : { num_inference_steps: args.steps },
+      ...edit2 ? { mode: edit2.mode, ...edit2.strength === void 0 ? {} : { strength: edit2.strength } } : {}
+    }
+  };
+}
+var responseSchema = external_exports.object({
+  request_id: external_exports.string().min(1),
+  usage: external_exports.record(external_exports.unknown()).optional(),
+  output: external_exports.object({ choices: external_exports.array(external_exports.object({
+    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
+  }).passthrough()).length(1) }).passthrough()
+}).passthrough();
+var GenaiImageOutputError = class extends Error {
+  constructor(message, requestId2, usage) {
+    super(message);
+    this.requestId = requestId2;
+    this.usage = usage;
+  }
+  requestId;
+  usage;
+};
+async function generateGenaiImage(input, operation = "text") {
+  const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
+  requireAstraGenaiKey();
+  const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
+  const receiptPath2 = imagePath + ".astra-genai.json";
+  const body = buildGenaiImageBody(args);
+  const fingerprint = createHash11("sha256").update(JSON.stringify(body)).digest("hex");
+  if (fs9.existsSync(receiptPath2) || fs9.existsSync(imagePath))
+    throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
+  fs9.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
+  let promptExtension;
+  let raw;
+  try {
+    raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers2) => {
+      const value2 = headers2.get("x-prompt-extend");
+      if (value2 === "applied" || value2 === "fallback") promptExtension = value2;
+    });
+  } catch (error2) {
+    atomicJson(receiptPath2, {
+      baseUrl: astraGenaiBaseUrl(),
+      fingerprint,
+      imagePath,
+      status: error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown",
+      error: error2 instanceof Error ? error2.message : String(error2)
+    });
+    throw error2;
+  }
+  atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
+  try {
+    return await recoverGenaiImage(receiptPath2);
+  } catch (error2) {
+    const received = responseSchema.safeParse(raw);
+    if (received.success) throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), received.data.request_id, received.data.usage);
+    throw error2;
+  }
+}
+async function recoverGenaiImage(receiptPath2) {
+  const receipt = external_exports.object({
+    baseUrl: external_exports.string(),
+    fingerprint: external_exports.string(),
+    imagePath: external_exports.string(),
+    status: external_exports.enum(["submitting", "submission_unknown", "failed", "received", "completed"]),
+    response: external_exports.unknown().optional(),
+    output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
+    requestId: external_exports.string().optional(),
+    usage: external_exports.unknown().optional(),
+    usedPrompt: external_exports.string().optional(),
+    promptExtension: external_exports.enum(["applied", "fallback"]).optional()
+  }).passthrough().parse(JSON.parse(fs9.readFileSync(receiptPath2, "utf8")));
+  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
+  const { imagePath, fingerprint } = receipt;
+  if (receipt.status === "completed") {
+    const output2 = verifyImageFile(imagePath);
+    if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
+    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
+  }
+  if (receipt.status === "failed") throw new Error("GenAI image request failed; inspect billing before a new request");
+  if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
+  const response = responseSchema.parse(receipt.response);
+  const images = response.output.choices[0].message.content.flatMap((item) => item.image ? [item.image] : []);
+  if (images.length !== 1) throw new Error("GenAI response must contain exactly one image URL; inspect the saved receipt.");
+  const bytes = await downloadGenaiResult(images[0]);
+  const temp = `${imagePath}.${process.pid}.download.png`;
+  try {
+    fs9.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    const output2 = verifyImageFile(temp);
+    if (output2.mimeType !== "image/png") throw new Error("GenAI image response is not PNG");
+    if (fs9.existsSync(imagePath)) {
+      if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
+    } else fs9.linkSync(temp, imagePath);
+    const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
+    const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
+    atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
+    return result;
+  } finally {
+    fs9.rmSync(temp, { force: true });
+  }
+}
+
+// src/astra-genai-native-image.ts
+var GENAI_H3_IMAGE_MODEL = "minimax-h3-image";
+var LEGACY_H3_IMAGE_MODEL = "h3-image";
+var NATIVE_IMAGE_ROUTE = "/v1/images/generations";
+var H3_REFERENCE_LIMIT = 7;
 var nativeImageSchema = external_exports.object({
   model: external_exports.string().trim().min(1).max(200),
   prompt: external_exports.string().trim().min(1).max(16e3),
@@ -125830,30 +125996,77 @@ var nativeImageEditSchema = nativeImageSchema.extend({
   strength: external_exports.number().finite().gt(0).max(1).optional(),
   refResolution: external_exports.number().int().min(256).max(1024).optional()
 }).strict();
-function validateNativeImageArgs(args, edit2) {
-  if (args.model !== "h3-image") return;
-  for (const key of ["steps", "guidanceScale", "negativePrompt", "transparent", "loras", "strength", "refResolution"]) {
-    if (args[key] !== void 0) throw new Error(`h3-image does not accept ${key}; its six sampling steps are fixed`);
+function isNativeH3Image(model2) {
+  return model2 === GENAI_H3_IMAGE_MODEL || model2 === LEGACY_H3_IMAGE_MODEL;
+}
+function nativeImageRoute(model2) {
+  if (model2 === GENAI_H3_IMAGE_MODEL || model2 === LEGACY_H3_IMAGE_MODEL && astraGenaiBaseUrl(NATIVE_IMAGE_ROUTE) === astraGenaiBaseUrl()) {
+    return GENERATIONS_ROUTE;
   }
-  if (edit2 && (args.mode === "variation" || args.size !== void 0))
-    throw new Error("h3-image edits use the source dimensions; omit size and use mode edit");
-  if (typeof args.size === "string" && args.size.split("x").map(Number).some((n) => n < 256 || n > 2048 || n % 16))
-    throw new Error("h3-image gateway dimensions must be 256..2048, in multiples of 16");
+  return NATIVE_IMAGE_ROUTE;
+}
+function h3Sides(size) {
+  const [width, height] = size.split("x").map(Number);
+  return { width, height };
+}
+function validateH3Size({ width, height }) {
+  if ([width, height].some((side) => side < 256 || side > 2048 || side % 16)) {
+    throw new Error("H3 image dimensions must be 256..2048, in multiples of 16");
+  }
+}
+function validateNativeImageArgs(args, edit2) {
+  if (!isNativeH3Image(args.model)) return;
+  for (const key of ["steps", "guidanceScale", "negativePrompt", "transparent", "loras", "strength", "refResolution"]) {
+    if (args[key] !== void 0) throw new Error(`H3 image does not accept ${key}; its six sampling steps are fixed`);
+  }
+  if (edit2 && args.mode === "variation") throw new Error("H3 image requires mode edit");
+  if (nativeImageRoute(args.model) === GENERATIONS_ROUTE) {
+    if (typeof args.seed === "number" && args.seed > 2147483647) throw new Error("H3 image seed must be at most 2147483647");
+    if (Array.isArray(args.refImagePaths) && args.refImagePaths.length >= H3_REFERENCE_LIMIT) {
+      throw new Error("H3 image accepts at most seven images including the source");
+    }
+  } else if (edit2 && args.size !== void 0) {
+    throw new Error("Legacy H3 image edits use the source dimensions; omit size");
+  }
+  if (typeof args.size === "string") validateH3Size(h3Sides(args.size));
+}
+function buildH3ImageBody(args, edit2) {
+  const paths3 = edit2 ? [edit2.imagePath, ...edit2.refImagePaths ?? []] : [];
+  const pictures = paths3.map(readImageMetadata);
+  const referenceCost = pictures.reduce((sum, { width: width2, height: height2 }) => sum + Math.max(width2, height2) / Math.min(width2, height2), 0);
+  if (referenceCost > H3_REFERENCE_LIMIT) throw new Error("H3 image reference aspect ratios must sum to at most seven");
+  const { width, height } = args.size ? h3Sides(args.size) : pictures[0] ?? h3Sides("1024x1024");
+  validateH3Size({ width, height });
+  const references = paths3.map((file3, index) => ({
+    id: `picture${index + 1}`,
+    role: "object",
+    uri: genaiSourceUri(void 0, file3)
+  }));
+  return {
+    kind: "image",
+    mode: "scene",
+    model: GENAI_H3_IMAGE_MODEL,
+    input: { prompt: args.prompt, ...references.length ? { references } : {} },
+    parameters: { width, height, ...args.seed !== void 0 ? { seed: args.seed } : {} }
+  };
 }
 function buildNativeImageBody(input, edit2 = false) {
-  const args = (edit2 ? nativeImageEditSchema : nativeImageSchema).parse(input);
+  const editArgs = edit2 ? nativeImageEditSchema.parse(input) : void 0;
+  const args = editArgs ?? nativeImageSchema.parse(input);
   validateNativeImageArgs(args, edit2);
+  if (nativeImageRoute(args.model) === GENERATIONS_ROUTE) {
+    return buildH3ImageBody(args, editArgs);
+  }
   const { outputPath: _output, filename: _filename, requestId: _requestId, ...fields3 } = args;
   const body = { ...fields3, n: 1, response_format: "b64_json" };
-  if (body.size === void 0 && !(edit2 && args.model === "h3-image")) body.size = "1024x1024";
+  if (body.size === void 0 && !(edit2 && isNativeH3Image(args.model))) body.size = "1024x1024";
   for (const [local3, wire] of [["guidanceScale", "guidance_scale"], ["negativePrompt", "negative_prompt"], ["refResolution", "ref_resolution"]]) {
     if (body[local3] !== void 0) {
       body[wire] = body[local3];
       delete body[local3];
     }
   }
-  if (edit2) {
-    const editArgs = nativeImageEditSchema.parse(input);
+  if (editArgs) {
     const encode2 = (file3) => genaiSourceUri(void 0, file3).split(",")[1];
     body.image = encode2(editArgs.imagePath);
     delete body.imagePath;
@@ -125863,45 +126076,83 @@ function buildNativeImageBody(input, edit2 = false) {
   return body;
 }
 var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
+var nativeReceiptSchema = external_exports.object({
+  baseUrl: external_exports.string(),
+  imagePath: external_exports.string(),
+  requestId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+});
+var legacyReceiptSchema = nativeReceiptSchema.extend({
+  protocol: external_exports.literal("gateway-image-v1"),
+  status: external_exports.string(),
+  response: external_exports.unknown().optional()
+}).passthrough();
+var h3ReceiptSchema = nativeReceiptSchema.extend({
+  protocol: external_exports.literal("gateway-image-scene-v1"),
+  model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  expected: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }),
+  createdAt: external_exports.string().optional(),
+  completedAt: external_exports.string().optional(),
+  usage: external_exports.unknown().optional()
+}).passthrough();
+var imageReceiptSchema = external_exports.discriminatedUnion("protocol", [legacyReceiptSchema, h3ReceiptSchema]);
+var h3JobSchema = generationSchema.extend({
+  id: external_exports.string().regex(/^[a-f0-9]{32}$/),
+  kind: external_exports.literal("image"),
+  model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
+  mode: external_exports.literal("scene"),
+  created_at: external_exports.string(),
+  completed_at: external_exports.string().nullish(),
+  usage: external_exports.unknown()
+});
 async function generateNativeImage(input, edit2 = false) {
-  const args = (edit2 ? nativeImageEditSchema : nativeImageSchema).parse(input);
-  requireAstraGenaiKey("/v1/images/");
-  const body = buildNativeImageBody(args, edit2);
+  const editArgs = edit2 ? nativeImageEditSchema.parse(input) : void 0;
+  const args = editArgs ?? nativeImageSchema.parse(input);
+  const route = nativeImageRoute(args.model);
+  requireAstraGenaiKey(route);
   const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
   const receiptPath2 = imagePath + ".astra-genai.json";
-  if (fs9.existsSync(receiptPath2) || fs9.existsSync(imagePath)) throw new Error("Output/receipt already exists; recover it before any new generation");
-  const fingerprint = createHash11("sha256").update(JSON.stringify(body)).digest("hex");
-  const requestId2 = args.model === "h3-image" ? randomUUID7() : void 0;
+  if (fs10.existsSync(receiptPath2) || fs10.existsSync(imagePath)) throw new Error("Output/receipt already exists; recover it before any new generation");
+  if (route === GENERATIONS_ROUTE) {
+    validateNativeImageArgs(args, edit2);
+    return generateH3Image(buildH3ImageBody(args, editArgs), args.requestId, imagePath, receiptPath2);
+  }
+  const body = buildNativeImageBody(args, edit2);
+  const fingerprint = createHash12("sha256").update(JSON.stringify(body)).digest("hex");
+  const requestId2 = isNativeH3Image(args.model) ? randomUUID7() : void 0;
   const receipt = {
     requestId: requestId2,
     clientRequestId: args.requestId,
     model: args.model,
     protocol: "gateway-image-v1",
-    baseUrl: astraGenaiBaseUrl("/v1/images/"),
+    baseUrl: astraGenaiBaseUrl(route),
     imagePath,
     fingerprint,
     status: "submitting"
   };
-  fs9.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-  const response = await requestGenai("POST", "/v1/images/generations", body, 30 * 6e4, void 0, void 0, requestId2);
+  fs10.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+  const response = await requestGenai("POST", route, body, 30 * 6e4, void 0, void 0, requestId2);
   atomicJson(receiptPath2, { ...receipt, status: "received", response });
   return recoverNativeImage(receiptPath2);
 }
 async function recoverNativeImage(receiptPath2) {
-  const receipt = external_exports.object({
-    protocol: external_exports.literal("gateway-image-v1"),
-    baseUrl: external_exports.string(),
-    imagePath: external_exports.string(),
-    requestId: external_exports.string().optional(),
-    status: external_exports.string(),
-    response: external_exports.unknown().optional(),
-    sha256: external_exports.string().optional()
-  }).passthrough().parse(JSON.parse(fs9.readFileSync(receiptPath2, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl("/v1/images/")) throw new Error("Gateway origin changed; restore configuration before recovery");
+  const receipt = imageReceiptSchema.parse(JSON.parse(fs10.readFileSync(receiptPath2, "utf8")));
+  const common7 = receipt.protocol === "gateway-image-scene-v1";
+  if (receipt.baseUrl !== astraGenaiBaseUrl(common7 ? GENERATIONS_ROUTE : NATIVE_IMAGE_ROUTE)) {
+    throw new Error("Gateway origin changed; restore configuration before recovery");
+  }
   if (receipt.status === "completed") {
-    const output2 = verifyImageFile(receipt.imagePath);
-    if (output2.sha256 !== receipt.sha256) throw new Error("Cached image changed");
-    return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: void 0, output: output2, review: "not_reviewed" };
+    const output3 = verifyImageFile(receipt.imagePath);
+    if (output3.sha256 !== receipt.sha256) throw new Error("Cached image changed");
+    if (common7) return h3ImageResult(receipt, receiptPath2, output3);
+    return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: void 0, output: output3, review: "not_reviewed" };
+  }
+  if (common7) {
+    const result = await collectH3Image(receipt, receiptPath2);
+    if (!result) throw new Error(`GenAI image job ${receipt.jobId} is queued or running; refresh its receipt again`);
+    return result;
   }
   if (receipt.status === "submitting" && receipt.requestId) {
     const existing = await requestGenai("GET", "/v1/images/requests/" + encodeURIComponent(receipt.requestId));
@@ -125914,33 +126165,112 @@ async function recoverNativeImage(receiptPath2) {
   if (receipt.status !== "received") throw new Error("Submission outcome unknown; inspect gateway usage, never resubmit automatically");
   const encoded = imageResponse.parse(receipt.response).data[0].b64_json;
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) throw new Error("Invalid image base64");
-  const temp = receipt.imagePath + `.${process.pid}.download.png`;
+  const output2 = saveNativeImage(receipt.imagePath, Buffer.from(encoded, "base64"));
+  atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: output2.sha256 });
+  return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: void 0, output: output2, review: "not_reviewed" };
+}
+async function generateH3Image(body, clientRequestId, imagePath, receiptPath2) {
+  const { width, height } = body.parameters;
+  const requestId2 = randomUUID7();
+  const receipt = {
+    protocol: "gateway-image-scene-v1",
+    model: GENAI_H3_IMAGE_MODEL,
+    baseUrl: astraGenaiBaseUrl(GENERATIONS_ROUTE),
+    imagePath,
+    requestId: requestId2,
+    clientRequestId,
+    expected: { width, height },
+    status: "submitting"
+  };
+  fs10.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+  const job = h3JobSchema.parse(await requestGenai("POST", GENERATIONS_ROUTE, body, 6e4, void 0, void 0, requestId2));
+  const submitted = { ...receipt, jobId: job.id, createdAt: job.created_at, status: "submitted" };
+  atomicJson(receiptPath2, submitted);
+  const { result } = await pollGenaiJob(async () => {
+    const result2 = await collectH3Image(submitted, receiptPath2);
+    return { downloaded: result2 !== void 0, result: result2 };
+  }, `GenAI image is still pending; recover using receiptPath ${receiptPath2}`);
+  return result;
+}
+function h3ImageResult(receipt, receiptPath2, output2) {
+  return {
+    imagePath: receipt.imagePath,
+    receiptPath: receiptPath2,
+    jobId: receipt.jobId,
+    requestId: receipt.jobId,
+    createdAt: receipt.createdAt,
+    completedAt: receipt.completedAt,
+    usage: receipt.usage,
+    output: output2,
+    review: "not_reviewed"
+  };
+}
+async function collectH3Image(receipt, receiptPath2) {
+  const { jobId } = receipt;
+  if (!jobId) throw new Error("GenAI image submission outcome unknown; check main gateway job history before retrying");
+  const job = h3JobSchema.parse(await requestGenai("GET", GENERATIONS_ROUTE + "/" + encodeURIComponent(jobId)));
+  if (job.id !== jobId) throw new Error("GenAI image status job ID mismatch");
+  if (job.status === "failed" || job.status === "cancelled") {
+    throw new GenaiRequestError(`GenAI image ${jobId} ${job.status}: ${job.error?.message ?? "No details"}`, true, 200);
+  }
+  if (job.status !== "succeeded") return void 0;
   try {
-    fs9.writeFileSync(temp, Buffer.from(encoded, "base64"), { flag: "wx", mode: 384 });
+    const [output2] = job.outputs;
+    if (job.result_expired) throw new Error("GenAI image result expired");
+    if (job.outputs.length !== 1 || output2.kind !== "image" || output2.mime_type !== "image/png" || output2.authentication !== "signed_url") throw new Error("GenAI image job did not return one signed PNG");
+    const url = new URL(output2.url, receipt.baseUrl + "/");
+    if (url.origin !== new URL(receipt.baseUrl).origin || url.pathname !== `/v1/files/${jobId}.png` || !url.searchParams.has("exp") || !url.searchParams.has("sig")) {
+      throw new Error("Invalid signed GenAI image URL");
+    }
+    const bytes = await downloadGenaiResult(url.href);
+    const verified = saveNativeImage(receipt.imagePath, bytes, receipt.expected);
+    const completed = {
+      ...receipt,
+      status: "completed",
+      sha256: verified.sha256,
+      createdAt: job.created_at,
+      completedAt: job.completed_at ?? void 0,
+      usage: job.usage
+    };
+    atomicJson(receiptPath2, completed);
+    return h3ImageResult(completed, receiptPath2, verified);
+  } catch (error2) {
+    throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), jobId, job.usage);
+  }
+}
+function saveNativeImage(imagePath, bytes, expected) {
+  const temp = imagePath + `.${randomUUID7()}.download.png`;
+  try {
+    fs10.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
     const output2 = verifyImageFile(temp);
     if (output2.mimeType !== "image/png") throw new Error("Expected PNG");
-    if (fs9.existsSync(receipt.imagePath)) {
-      if (verifyImageFile(receipt.imagePath).sha256 !== output2.sha256) throw new Error("Image output conflicts");
-    } else fs9.linkSync(temp, receipt.imagePath);
-    atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: output2.sha256 });
-    return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: void 0, output: output2, review: "not_reviewed" };
+    if (expected && (output2.width !== expected.width || output2.height !== expected.height)) {
+      throw new Error("GenAI image dimensions differ from the requested size");
+    }
+    try {
+      fs10.linkSync(temp, imagePath);
+    } catch (error2) {
+      if (error2.code !== "EEXIST") throw error2;
+      if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("Image output conflicts");
+    }
+    return output2;
   } finally {
-    fs9.rmSync(temp, { force: true });
+    fs10.rmSync(temp, { force: true });
   }
 }
 
 // src/astra-genai-desktop.ts
-import * as fs11 from "node:fs";
+import * as fs12 from "node:fs";
 import path10 from "node:path";
 import { tmpdir as tmpdir6 } from "node:os";
-import { createHash as createHash12 } from "node:crypto";
+import { createHash as createHash13 } from "node:crypto";
 import { execFileSync as execFileSync8 } from "node:child_process";
 
 // src/ltx-api-video.ts
 import { execFileSync as execFileSync7 } from "node:child_process";
 
 // src/vendor-video.ts
-import fs10 from "node:fs";
+import fs11 from "node:fs";
 import path9 from "node:path";
 import { randomUUID as randomUUID8 } from "node:crypto";
 
@@ -125994,9 +126324,9 @@ function mediaType(file3, allowed) {
 }
 function dataUri(file3, allowed, maxBytes, measure = "file") {
   const type = mediaType(file3, allowed);
-  const raw = fs10.statSync(file3).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
+  const raw = fs11.statSync(file3).size, size = measure === "encoded" ? 4 * Math.ceil(raw / 3) : raw;
   if (size > maxBytes) throw new Error(`${path9.basename(file3)} is ${(size / 1048576).toFixed(1)} MB${measure === "encoded" ? " once base64-encoded" : ""}; this vendor takes at most ${(maxBytes / 1048576).toFixed(0)} MB inline`);
-  return `data:${type};base64,${fs10.readFileSync(file3).toString("base64")}`;
+  return `data:${type};base64,${fs11.readFileSync(file3).toString("base64")}`;
 }
 var sleep5 = (ms) => new Promise((resolve17) => setTimeout(resolve17, ms));
 async function runVendorJob(job) {
@@ -126047,14 +126377,14 @@ async function saveVendorOutput(status, target, id2, verify) {
       bytes = Buffer.from(await download.arrayBuffer());
     }
     if (!bytes.length) throw new Error("empty video");
-    fs10.writeFileSync(temporary, bytes, { flag: "wx" });
+    fs11.writeFileSync(temporary, bytes, { flag: "wx" });
     if (verify) await verify(temporary);
-    fs10.renameSync(temporary, target);
+    fs11.renameSync(temporary, target);
     return { success: true, videoPath: target, providerId: id2, meta: status.meta ?? {} };
   } catch (error2) {
     return { success: false, terminal: false, providerId: id2, error: "Output download or save failed: " + String(error2) + "; recover the existing job, do not resubmit" };
   } finally {
-    fs10.rmSync(temporary, { force: true });
+    fs11.rmSync(temporary, { force: true });
   }
 }
 
@@ -126304,7 +126634,7 @@ function desktopAudioBytes(file3, args) {
   const window2 = desktopAudioWindow(args, ltxApiAudioSeconds(file3));
   const filters = [`atrim=duration=${window2.seconds}`, "asetpts=PTS-STARTPTS"];
   if (window2.uploadSeconds > window2.seconds) filters.push("apad", `atrim=duration=${window2.uploadSeconds}`);
-  const dir = fs11.mkdtempSync(path10.join(tmpdir6(), "social-flow-a2v-"));
+  const dir = fs12.mkdtempSync(path10.join(tmpdir6(), "social-flow-a2v-"));
   const target = path10.join(dir, "window.wav");
   try {
     execFileSync8(
@@ -126334,9 +126664,9 @@ function desktopAudioBytes(file3, args) {
     );
     if (Math.abs(ltxApiAudioSeconds(target) - window2.uploadSeconds) > 1e-3)
       throw new Error("Decoded audio does not cover the requested window");
-    return fs11.readFileSync(target);
+    return fs12.readFileSync(target);
   } finally {
-    fs11.rmSync(dir, { recursive: true, force: true });
+    fs12.rmSync(dir, { recursive: true, force: true });
   }
 }
 function sourceFiles(args) {
@@ -126367,11 +126697,11 @@ var receiptSchema = external_exports.object({
   resolvedParams: resolvedParamsSchema.optional()
 }).strict();
 async function desktopVideoStatus(receiptPath2, download = false) {
-  const receipt = receiptSchema.parse(JSON.parse(fs11.readFileSync(receiptPath2, "utf8")));
+  const receipt = receiptSchema.parse(JSON.parse(fs12.readFileSync(receiptPath2, "utf8")));
   if (receipt.baseUrl !== astraGenaiBaseUrl(ROOT + "/")) throw new Error("Gateway origin changed; restore it before recovery");
   if (!receipt.jobId) throw new Error("Submission outcome unknown; inspect gateway generations/usage before retrying");
   if (receipt.status === "completed") {
-    if (createHash12("sha256").update(fs11.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
+    if (createHash13("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== receipt.sha256) throw new Error("Cached video changed");
     return { jobId: receipt.jobId, ...receipt.resolvedParams && { resolvedParams: receipt.resolvedParams }, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
   const job = external_exports.object({ id: external_exports.string(), status: external_exports.string(), resolved_params: resolvedParamsSchema.optional(), outputs: external_exports.array(external_exports.object({ url: external_exports.string(), media_kind: external_exports.string() })).default([]) }).passthrough().parse(await requestGenai("GET", `${ROOT}/generations/${encodeURIComponent(receipt.jobId)}`));
@@ -126383,7 +126713,7 @@ async function desktopVideoStatus(receiptPath2, download = false) {
   const bytes = await requestGenaiMedia(video2[0].url);
   const temp = receipt.videoPath + `.${process.pid}.download.mp4`;
   try {
-    fs11.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    fs12.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
     const probe5 = JSON.parse(execFileSync8("ffprobe", ["-v", "error", "-show_entries", "stream=codec_type,width,height,nb_frames:format=duration", "-of", "json", temp], { encoding: "utf8", timeout: 3e4 }));
     const picture2 = probe5.streams?.find((s2) => s2.codec_type === "video");
     if (receipt.operation === "audio-to-video" && !probe5.streams?.some((s2) => s2.codec_type === "audio"))
@@ -126391,13 +126721,13 @@ async function desktopVideoStatus(receiptPath2, download = false) {
     if (!(picture2?.width > 0) || !(Number(probe5.format?.duration) > 0)) throw new Error("Invalid video result");
     if (receipt.expectedFrames !== void 0 && Number(picture2.nb_frames) !== receipt.expectedFrames)
       throw new Error("Desktop output frame count differs from numFrames; retain the receipt");
-    const sha2563 = createHash12("sha256").update(bytes).digest("hex");
-    if (fs11.existsSync(receipt.videoPath)) {
-      if (createHash12("sha256").update(fs11.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
-    } else fs11.linkSync(temp, receipt.videoPath);
+    const sha2563 = createHash13("sha256").update(bytes).digest("hex");
+    if (fs12.existsSync(receipt.videoPath)) {
+      if (createHash13("sha256").update(fs12.readFileSync(receipt.videoPath)).digest("hex") !== sha2563) throw new Error("Video output conflicts");
+    } else fs12.linkSync(temp, receipt.videoPath);
     atomicJson(receiptPath2, { ...receipt, status: "completed", sha256: sha2563, ...job.resolved_params && { resolvedParams: job.resolved_params } });
   } finally {
-    fs11.rmSync(temp, { force: true });
+    fs12.rmSync(temp, { force: true });
   }
   return { jobId: job.id, ...job.resolved_params && { resolvedParams: job.resolved_params }, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
@@ -126406,44 +126736,44 @@ async function generateDesktopVideo(operation, input) {
   requireAstraGenaiKey(ROOT + "/");
   const files3 = sourceFiles(args), hashes = {};
   for (const file3 of files3) {
-    const stat5 = fs11.statSync(file3);
+    const stat5 = fs12.statSync(file3);
     if (!stat5.isFile() || stat5.size === 0 || stat5.size > 100 * 1024 * 1024) throw new Error("Input must be a nonempty file up to 100 MiB");
-    hashes[file3] = createHash12("sha256").update(fs11.readFileSync(file3)).digest("hex");
+    hashes[file3] = createHash13("sha256").update(fs12.readFileSync(file3)).digest("hex");
   }
-  const fingerprint = createHash12("sha256").update(JSON.stringify({ operation, args, hashes })).digest("hex");
+  const fingerprint = createHash13("sha256").update(JSON.stringify({ operation, args, hashes })).digest("hex");
   const videoPath = resolveOutputFile(String(args.outputPath || process.cwd()), String(args.filename || `desktop-${Date.now()}.mp4`), "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
-  if (fs11.existsSync(receiptPath2)) {
-    const old = receiptSchema.parse(JSON.parse(fs11.readFileSync(receiptPath2, "utf8")));
+  if (fs12.existsSync(receiptPath2)) {
+    const old = receiptSchema.parse(JSON.parse(fs12.readFileSync(receiptPath2, "utf8")));
     if (old.baseUrl !== astraGenaiBaseUrl(ROOT + "/") || old.fingerprint !== fingerprint || old.operation !== operation || old.videoPath !== videoPath)
       throw new Error("Receipt conflicts with request");
     if (!old.jobId) throw new Error("Submission outcome unknown; inspect gateway before retrying");
     recordVideoSubmission(old.jobId);
   } else {
-    if (fs11.existsSync(videoPath)) throw new Error("Output exists");
+    if (fs12.existsSync(videoPath)) throw new Error("Output exists");
     if (operation === "keyframes") {
       const catalog2 = external_exports.object({ data: external_exports.array(external_exports.object({ id: external_exports.string() })), active_model: external_exports.string().optional() }).passthrough().parse(await requestGenai("GET", ROOT + "/models"));
       if (catalog2.active_model !== args.model) throw new Error("Keyframes require selected model to equal gateway active_model");
     }
     const assets = {};
     for (const file3 of files3) {
-      const bytes = fs11.readFileSync(file3);
-      if (createHash12("sha256").update(bytes).digest("hex") !== hashes[file3]) throw new Error("Input changed before upload");
+      const bytes = fs12.readFileSync(file3);
+      if (createHash13("sha256").update(bytes).digest("hex") !== hashes[file3]) throw new Error("Input changed before upload");
       const windowed = file3 === args.audioPath && [args.audioStartTime, args.audioMaxDuration, args.numFrames].some((v) => v !== void 0);
       const upload = windowed ? desktopAudioBytes(file3, args) : bytes;
-      if (windowed && createHash12("sha256").update(fs11.readFileSync(file3)).digest("hex") !== hashes[file3]) throw new Error("Audio changed during decoding");
+      if (windowed && createHash13("sha256").update(fs12.readFileSync(file3)).digest("hex") !== hashes[file3]) throw new Error("Audio changed during decoding");
       const form = new FormData();
       form.append("file", new Blob([new Uint8Array(upload)]), windowed ? "audio-window.wav" : path10.basename(file3));
       assets[file3] = external_exports.object({ id: external_exports.string().min(1) }).parse(JSON.parse((await requestGenaiMedia(ROOT + "/assets", form)).toString())).id;
     }
     const body = buildDesktopBody(operation, args, assets);
     const receipt = { protocol: "gateway-desktop-v1", baseUrl: astraGenaiBaseUrl(ROOT + "/"), operation, fingerprint, videoPath, ...typeof args.numFrames === "number" ? { expectedFrames: args.numFrames } : {}, status: "submitting" };
-    fs11.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    fs12.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
     let response;
     try {
       response = await requestGenai("POST", operation === "keyframes" ? ROOT + "/keyframes" : ROOT + "/generations/" + operation, body, 30 * 6e4);
     } catch (error2) {
-      if (error2 instanceof GenaiRequestError && error2.terminal) fs11.rmSync(receiptPath2, { force: true });
+      if (error2 instanceof GenaiRequestError && error2.terminal) fs12.rmSync(receiptPath2, { force: true });
       throw error2;
     }
     const accepted2 = external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response);
@@ -126461,8 +126791,8 @@ var descriptions = {
   path: "Absolute scenes.js path from plan_audio, e.g. /work/episode/storyboard/scenes.js.",
   lineId: "Stable dialogue line ID from plan_audio, e.g. s1-l1.",
   expectedRevision: "Current storyboard SHA-256 from plan_audio, e.g. 64 lowercase hexadecimal characters; re-plan after edits.",
-  kind: "Catalog to read, e.g. speech for registered voices; discovery never generates media.",
-  model: "Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.",
+  kind: "Catalog to read, e.g. common for queued H3 image models or speech for registered voices.",
+  model: "Exact public model ID from astra_genai_catalog, e.g. minimax-h3-image for queued H3 stills or qwen-image-fast for a synchronous image binding.",
   prompt: "Requested subject/action or changes, e.g. A blue ball rolls across a table.",
   promptProvenance: "Desktop rewrite policy, e.g. typed to let the app's enhancement settings rewrite the prompt. Omitted sends enhanced for a written prompt, which reaches generation without another rewrite. Does not certify quality.",
   size: "Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.",
@@ -126514,7 +126844,7 @@ var descriptions = {
   frameIndex: "Unique zero-based output frame index, e.g. 0; must lie within requested duration/fps.",
   receiptPath: "Existing local .astra-genai.json receipt, e.g. /work/shot.mp4.astra-genai.json.",
   download: "Download and verify completed output, e.g. true; never creates another generation.",
-  gateway: "Gateway that took the lost request, e.g. image. main is ASTRA_GENAI_URL: LTX video through /v1/generations, and astra_genai_text2img / astra_genai_edit, which never leave it. image (astra_genai_image_generate / astra_genai_image_edit), speech and desktop use their own URL and key when configured, else main. The result names the baseUrl that answered.",
+  gateway: "Gateway that took the lost request. Use main for /v1/generations jobs including H3 images. Use image for synchronous image bindings. image, speech and desktop use their own URL and key when configured, otherwise main. Returns the baseUrl that answered.",
   limit: "Newest jobs to return, 1-100, e.g. 20."
 };
 function describeProperties(value2) {
@@ -126546,8 +126876,8 @@ function tool(name2, description, schema2, readOnly = false) {
 var NATIVE_GENAI_TOOLS = [
   tool(
     "astra_genai_catalog",
-    "Read configured gateway models and native schemas. Use video for the common /v1/models catalog: the modes, fields by mode, limits and scene-mode numbers of each LTX model; desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.",
-    external_exports.object({ kind: external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]) }).strict(),
+    "Read configured gateway models and input contracts. Use common or video for /v1/models, which includes queued H3 images and video scenes. Use image or speech for synchronous bindings and registered voices. desktop_video, loras and contracts require a configured Desktop. Returns model IDs, modes and supported fields or limits. Do not use as an inference health check.",
+    external_exports.object({ kind: genaiCatalogKind }).strict(),
     true
   ),
   tool(
@@ -126556,8 +126886,8 @@ var NATIVE_GENAI_TOOLS = [
     genaiJobsSchema,
     true
   ),
-  tool("astra_genai_image_generate", "Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.", nativeImageSchema),
-  tool("astra_genai_image_edit", "Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.", nativeImageEditSchema),
+  tool("astra_genai_image_generate", "Create one PNG from a prompt with the configured gateway model. Use minimax-h3-image from astra_genai_catalog kind common for the queued H3 still. In production use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Returns the verified local PNG and its receipt. H3 also returns the job ID. Do not use to check or repeat an existing job; use image_status for managed receipts or astra_genai_jobs for job history. Use GPT Image 2 for readable text.", nativeImageSchema),
+  tool("astra_genai_image_edit", "Create an edited PNG from source pictures with a configured gateway model. Queued minimax-h3-image accepts seven pictures at most, including the first source, subject to the aspect-ratio limit. Refer to inputs as {picture1.image}, {picture2.image} in order. Synchronous bindings take up to ten pictures if supported. Use image_plan operation edit and engine astra-genai-native in production. Returns the verified PNG and its receipt. Do not use to check an existing job; use image_status or astra_genai_jobs.", nativeImageEditSchema),
   tool("tts_astra_genai", "Create one speech take with a gateway model and registered voice. Use for TTS, narration and character retakes. For episode lines copy speech_manage plan_audio arguments including speechContext unchanged; stale character selections, default in place of a selected sample, edited arguments and missing episode context fail before synthesis. Discover models/voices with astra_genai_catalog kind:speech. VoxCPM2 accepts WAV and speed 1; voice cloning needs an operator-registered ID, never a client sample path. Use requestId for durable replay. Returns audioPath, receiptPath and not_reviewed; pass receiptPath to attach_audio. Do NOT use to select a character sample: use character_voice_audition. No automatic retries or listening score.", genaiSpeechSchema),
   ...Object.entries(DESKTOP_SCHEMAS).map(([feature, schema2]) => tool(
     "astra_genai_desktop_" + ({ "text-to-video": "text2video", "image-to-video": "img2video", "audio-to-video": "audio2video" }[feature] || feature),
@@ -126573,8 +126903,8 @@ var NATIVE_GENAI_TOOLS = [
 
 // src/astra-video-client.ts
 import { execFileSync as execFileSync9 } from "node:child_process";
-import { createHash as createHash13, randomInt as randomInt2, randomUUID as randomUUID9 } from "node:crypto";
-import * as fs12 from "node:fs";
+import { createHash as createHash14, randomInt as randomInt2, randomUUID as randomUUID9 } from "node:crypto";
+import * as fs13 from "node:fs";
 import * as path11 from "node:path";
 
 // package.json
@@ -127391,8 +127721,8 @@ async function upscaleVideo(args) {
   if (hasAudio) {
     const muxed = `${result.videoPath}.${process.pid}.mux.mp4`;
     execFileSync9("ffmpeg", ["-v", "error", "-i", result.videoPath, "-i", source2, "-map", "0:v", "-map", "1:a", "-c", "copy", "-shortest", muxed], { timeout: 12e4 });
-    fs12.renameSync(muxed, result.videoPath);
-    result.bytes = fs12.statSync(result.videoPath).size;
+    fs13.renameSync(muxed, result.videoPath);
+    result.bytes = fs13.statSync(result.videoPath).size;
   }
   return { ...result, source: { path: source2, width: video2.width, height: video2.height, frames }, droppedFrames: frames - geometry.numFrames, audio: hasAudio ? "source_remuxed" : "none" };
 }
@@ -127618,15 +127948,15 @@ function uploadContentType(filePath) {
 }
 async function uploadFile(filePath) {
   const resolved = path11.resolve(filePath);
-  if (!fs12.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
+  if (!fs13.existsSync(resolved)) throw new Error(`File not found: ${filePath}`);
   const { contentType, kind } = uploadContentType(resolved);
-  const bytes = fs12.statSync(resolved).size;
+  const bytes = fs13.statSync(resolved).size;
   const limit2 = ASTRA_VIDEO_UPLOAD_LIMITS[kind];
   if (bytes > limit2) {
     throw new Error(`${path11.basename(resolved)} is ${bytes} bytes; the ${kind} upload ceiling is ${limit2} bytes.`);
   }
   await waitForUploadSlot();
-  const contents = fs12.readFileSync(resolved);
+  const contents = fs13.readFileSync(resolved);
   if (contents.length > limit2) throw new Error("File exceeds the upload ceiling: " + path11.basename(resolved));
   const headers2 = authHeaders2();
   const result = await withBackoff("upload", async () => {
@@ -127649,7 +127979,7 @@ async function uploadFile(filePath) {
     uploadId: parsed.upload_id,
     bytes: parsed.bytes,
     kind: parsed.kind,
-    ...contentType === "audio/wav" ? { wavSha256: createHash13("sha256").update(contents).digest("hex") } : {},
+    ...contentType === "audio/wav" ? { wavSha256: createHash14("sha256").update(contents).digest("hex") } : {},
     ...parsed.expires_at !== void 0 ? { expiresAt: parsed.expires_at } : {},
     ...parsed.duration !== void 0 ? { duration: parsed.duration } : {},
     ...parsed.width !== void 0 ? { width: parsed.width } : {},
@@ -127734,10 +128064,10 @@ async function awaitResult(jobId, signal) {
 function atomicVideoFile(file3, contents) {
   const temp = file3 + "." + randomUUID9() + ".tmp";
   try {
-    fs12.writeFileSync(temp, contents, { mode: 384 });
-    fs12.renameSync(temp, file3);
+    fs13.writeFileSync(temp, contents, { mode: 384 });
+    fs13.renameSync(temp, file3);
   } finally {
-    fs12.rmSync(temp, { force: true });
+    fs13.rmSync(temp, { force: true });
   }
 }
 async function runJob(mode, prompt, body, outputPath, filename, signal, conditioningAudioSha256) {
@@ -127765,7 +128095,7 @@ async function runJob(mode, prompt, body, outputPath, filename, signal, conditio
   });
   atomicVideoFile(videoPath, bytes);
   const response = { videoPath, jobId, mode, prompt, bytes: bytes.length, elapsedSeconds, ...request ? { request } : {} };
-  writeReceipt2({ ...submitted, ...response, sha256: createHash13("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
+  writeReceipt2({ ...submitted, ...response, sha256: createHash14("sha256").update(bytes).digest("hex"), status: "completed", completedAt: (/* @__PURE__ */ new Date()).toISOString() });
   return response;
 }
 async function generateFromText(args) {
@@ -127848,8 +128178,8 @@ async function generateFromAudio(args) {
 function annotateReceipt(videoPath, extra) {
   const receiptPath2 = `${videoPath}.astra-job.json`;
   const temp = `${receiptPath2}.${process.pid}.tmp`;
-  fs12.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs12.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
-  fs12.renameSync(temp, receiptPath2);
+  fs13.writeFileSync(temp, JSON.stringify({ ...JSON.parse(fs13.readFileSync(receiptPath2, "utf8")), ...extra }, null, 2) + "\n", { mode: 384 });
+  fs13.renameSync(temp, receiptPath2);
 }
 async function generateIcLora(args) {
   const reference2 = await uploadFile(args.referencePath);
@@ -127881,14 +128211,14 @@ async function retakeVideo(args) {
 }
 
 // src/astra-genai-video.ts
-import { createHash as createHash15, randomUUID as randomUUID10 } from "node:crypto";
-import * as fs13 from "node:fs";
+import { createHash as createHash16, randomUUID as randomUUID10 } from "node:crypto";
+import * as fs14 from "node:fs";
 import * as path13 from "node:path";
 import { execFileSync as execFileSync11 } from "node:child_process";
 import { setTimeout as sleep7 } from "node:timers/promises";
 
 // src/astra-genai-upload.ts
-import { createHash as createHash14 } from "node:crypto";
+import { createHash as createHash15 } from "node:crypto";
 var GENAI_FILE_SCHEME = "genai-file://";
 var GENAI_MSR_INLINE_MAX_BYTES = 8 * 1e3 * 1e3;
 var genaiUploadSettings = { attempts: 4, retryDelayMs: 2e3, chunkTimeoutMs: 12e4 };
@@ -127945,7 +128275,7 @@ function genaiUploadable(bytes, contentType) {
 var FALL_BACK = [404, 405, 429, 507];
 async function uploadGenaiFile(bytes, contentType) {
   if (!genaiUploadable(bytes, contentType)) return void 0;
-  const sha2563 = createHash14("sha256").update(bytes).digest("hex");
+  const sha2563 = createHash15("sha256").update(bytes).digest("hex");
   const cacheKey = `${astraGenaiBaseUrl()} ${sha2563}`, cached2 = uploaded.get(cacheKey);
   if (cached2 && cached2.expiresAt > Date.now() + 60 * 6e4) return cached2.uri;
   for (let attempt = 1; ; attempt++) {
@@ -127976,7 +128306,7 @@ async function uploadOnce(bytes, contentType, sha2563, cacheKey) {
   const route = `/v1/uploads/${encodeURIComponent(session.upload_id)}`;
   const put2 = (n) => retried(() => {
     const chunk3 = bytes.subarray(n * session.chunk_size, (n + 1) * session.chunk_size);
-    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash14("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
+    return call("PUT", `${route}/chunks/${n}`, chunk3, { "X-Chunk-SHA256": createHash15("sha256").update(chunk3).digest("hex") }, genaiUploadSettings.chunkTimeoutMs);
   });
   for (let n = 0; n < session.chunks; n++) await put2(n);
   const complete = async () => {
@@ -128710,7 +129040,6 @@ function sceneArgsFromComposed(composed) {
 }
 
 // src/astra-genai-video.ts
-var GENERATIONS_ROUTE = "/v1/generations";
 var GENERATION_MODES = { "text-to-video": "text2video", "image-to-video": "image2video", "audio-to-video": "audio2video", msr: "msr", scene: "scene" };
 var sides = (resolution3) => {
   const [width, height] = resolution3.split("x").map(Number);
@@ -129130,24 +129459,17 @@ var receiptSchema2 = external_exports.object({
   nativeSha256: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
-var generationSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
-  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
-  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
-  result_expired: external_exports.boolean().optional()
-}).passthrough();
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 var REPLAY_WINDOW_MS = 23 * 36e5;
 var accepted = (response) => external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response).id;
 async function replayScene(receipt, receiptPath2) {
-  if (!receipt.requestId || !receipt.requestPath || !fs13.existsSync(receipt.requestPath))
+  if (!receipt.requestId || !receipt.requestPath || !fs14.existsSync(receipt.requestPath))
     throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
   if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
     throw new Error("genai_replay_window_passed: the gateway may no longer tie request " + receipt.requestId + " to its job; check GET /v1/jobs before planning again");
-  const body = JSON.parse(fs13.readFileSync(receipt.requestPath, "utf8"));
+  const body = JSON.parse(fs14.readFileSync(receipt.requestPath, "utf8"));
   const jobId = accepted(await requestGenai("POST", GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS2, void 0, void 0, receipt.requestId));
   const linked = { ...receipt, jobId, status: "submitted" };
   atomicJson(receiptPath2, linked);
@@ -129183,7 +129505,7 @@ function deliverScene(native, expected, cut) {
   ], { timeout: 12e4 });
 }
 async function getGenaiVideoStatus(input, planned, binding) {
-  let receipt = receiptSchema2.parse(JSON.parse(fs13.readFileSync(input.receiptPath, "utf8")));
+  let receipt = receiptSchema2.parse(JSON.parse(fs14.readFileSync(input.receiptPath, "utf8")));
   if (binding && (path13.resolve(receipt.videoPath) !== path13.resolve(binding.target) || binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId))
     throw new Error("GenAI receipt does not belong to the approved output or job");
   if (receipt.expected && planned && JSON.stringify(receipt.expected) !== JSON.stringify(planned))
@@ -129198,8 +129520,8 @@ async function getGenaiVideoStatus(input, planned, binding) {
   const counted = Boolean(receipt.native) || receipt.operation === "msr";
   if (receipt.status === "completed") {
     input.onJobCompleted?.();
-    const bytes2 = fs13.readFileSync(receipt.videoPath);
-    if (createHash15("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    const bytes2 = fs14.readFileSync(receipt.videoPath);
+    if (createHash16("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
     if (receipt.expected || planned || counted) checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
     return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
   }
@@ -129222,7 +129544,7 @@ async function getGenaiVideoStatus(input, planned, binding) {
   const temp = `${receipt.videoPath}.${randomUUID10()}.download.mp4`, cut = `${receipt.videoPath}.${randomUUID10()}.delivery.mp4`;
   const expected = receipt.expected ?? planned;
   try {
-    fs13.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
+    fs14.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
     let delivered = temp;
     if (receipt.native) {
       checkOutput(temp, receipt.native, true);
@@ -129233,23 +129555,23 @@ async function getGenaiVideoStatus(input, planned, binding) {
         delivered = cut;
       }
     } else checkOutput(temp, expected, counted);
-    const final = fs13.readFileSync(delivered), sha2563 = createHash15("sha256").update(final).digest("hex");
+    const final = fs14.readFileSync(delivered), sha2563 = createHash16("sha256").update(final).digest("hex");
     try {
-      fs13.linkSync(delivered, receipt.videoPath);
+      fs14.linkSync(delivered, receipt.videoPath);
     } catch (error2) {
       if (error2.code !== "EEXIST") throw error2;
-      if (createHash15("sha256").update(fs13.readFileSync(receipt.videoPath)).digest("hex") !== sha2563)
+      if (createHash16("sha256").update(fs14.readFileSync(receipt.videoPath)).digest("hex") !== sha2563)
         throw new Error("GenAI video output conflicts with download");
     }
     atomicJson(input.receiptPath, {
       ...receipt,
       status: "completed",
       sha256: sha2563,
-      ...receipt.native ? { nativeSha256: createHash15("sha256").update(bytes).digest("hex") } : {}
+      ...receipt.native ? { nativeSha256: createHash16("sha256").update(bytes).digest("hex") } : {}
     });
   } finally {
-    fs13.rmSync(temp, { force: true });
-    fs13.rmSync(cut, { force: true });
+    fs14.rmSync(temp, { force: true });
+    fs14.rmSync(cut, { force: true });
   }
   return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
 }
@@ -129328,14 +129650,14 @@ async function checkGenaiVideoOptions(tool2, args) {
 function claimReceipt(receiptPath2, receipt) {
   const claim = receiptPath2 + "." + randomUUID10() + ".tmp";
   try {
-    fs13.writeFileSync(claim, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-    fs13.linkSync(claim, receiptPath2);
+    fs14.writeFileSync(claim, JSON.stringify(receipt), { flag: "wx", mode: 384 });
+    fs14.linkSync(claim, receiptPath2);
     return true;
   } catch (error2) {
     if (error2.code !== "EEXIST") throw error2;
     return false;
   } finally {
-    fs13.rmSync(claim, { force: true });
+    fs14.rmSync(claim, { force: true });
   }
 }
 async function generateGenaiVideo(operation, input, signal, polling = {}) {
@@ -129344,7 +129666,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
   const args = (operation === "msr" ? genaiMsrSchema : operation === "audio-to-video" ? genaiAudioToVideoSchema : operation === "text-to-video" ? genaiTextToVideoSchema : genaiImageToVideoSchema).parse(input);
   requireAstraGenaiKey();
   const body = operation === "msr" ? buildGenaiMsrBody(args) : operation === "audio-to-video" ? buildGenaiAudioBody(args) : buildGenaiVideoBody(args, operation);
-  const fingerprint = createHash15("sha256").update(JSON.stringify(body)).digest("hex");
+  const fingerprint = createHash16("sha256").update(JSON.stringify(body)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
   const finish = async () => {
@@ -129360,7 +129682,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
     const deadline = Date.now() + 12e4;
     for (; ; ) {
       signal?.throwIfAborted();
-      const previous = receiptSchema2.parse(JSON.parse(fs13.readFileSync(receiptPath2, "utf8")));
+      const previous = receiptSchema2.parse(JSON.parse(fs14.readFileSync(receiptPath2, "utf8")));
       if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== operation || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
         throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
       if (previous.jobId) {
@@ -129371,8 +129693,8 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
       await sleep7(250, void 0, { signal });
     }
   }
-  if (fs13.existsSync(receiptPath2)) return followSubmission();
-  if (fs13.existsSync(videoPath)) throw new Error("GenAI output already exists");
+  if (fs14.existsSync(receiptPath2)) return followSubmission();
+  if (fs14.existsSync(videoPath)) throw new Error("GenAI output already exists");
   const tools = { "text-to-video": "astra_genai_text2video", "image-to-video": "astra_genai_img2video", "audio-to-video": "astra_genai_audio2video", msr: "astra_genai_msr" };
   await checkGenaiVideoOptions(tools[operation], args);
   const submitted = await prepareGenaiSources(body);
@@ -129386,7 +129708,7 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
     videoPath,
     expected: msrOutputContract(operation, args),
     status: "submitting",
-    ...wav ? { conditioningAudioSha256: createHash15("sha256").update(wav).digest("hex") } : {}
+    ...wav ? { conditioningAudioSha256: createHash16("sha256").update(wav).digest("hex") } : {}
   };
   signal?.throwIfAborted();
   if (!claimReceipt(receiptPath2, receipt)) return followSubmission();
@@ -129401,13 +129723,13 @@ async function generateGenaiVideo(operation, input, signal, polling = {}) {
       try {
         again = await prepareGenaiSources(body);
       } catch (uploadError) {
-        fs13.rmSync(receiptPath2, { force: true });
+        fs14.rmSync(receiptPath2, { force: true });
         throw uploadError;
       }
       response = await requestGenai("POST", GENERATIONS_ROUTE, again, SUBMIT_TIMEOUT_MS2);
     }
   } catch (error2) {
-    if (error2 instanceof GenaiRequestError && error2.terminal) fs13.rmSync(receiptPath2, { force: true });
+    if (error2 instanceof GenaiRequestError && error2.terminal) fs14.rmSync(receiptPath2, { force: true });
     throw error2;
   }
   const jobId = accepted(response);
@@ -129419,7 +129741,7 @@ async function generateGenaiScene(args, signal, polling = {}) {
   requireAstraGenaiKey();
   checkSceneVoices(args);
   const local3 = genaiSceneBody(args, (file3, kind) => kind === "image" ? genaiSourceUri(void 0, file3) : genaiAudioUri(void 0, file3));
-  const fingerprint = createHash15("sha256").update(JSON.stringify(local3)).digest("hex");
+  const fingerprint = createHash16("sha256").update(JSON.stringify(local3)).digest("hex");
   const videoPath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.mp4`, "video");
   const receiptPath2 = videoPath + ".astra-genai.json";
   const expected = msrOutputContract("scene", args);
@@ -129432,13 +129754,13 @@ async function generateGenaiScene(args, signal, polling = {}) {
     );
     return { ...result, receiptPath: receiptPath2 };
   };
-  if (fs13.existsSync(receiptPath2)) {
-    const previous = receiptSchema2.parse(JSON.parse(fs13.readFileSync(receiptPath2, "utf8")));
+  if (fs14.existsSync(receiptPath2)) {
+    const previous = receiptSchema2.parse(JSON.parse(fs14.readFileSync(receiptPath2, "utf8")));
     if (previous.baseUrl !== astraGenaiBaseUrl() || previous.operation !== "scene" || previous.fingerprint !== fingerprint || previous.videoPath !== videoPath)
       throw new Error("GenAI output receipt conflicts with this request; use a distinct output path.");
     return finish();
   }
-  if (fs13.existsSync(videoPath)) throw new Error("GenAI output already exists");
+  if (fs14.existsSync(videoPath)) throw new Error("GenAI output already exists");
   let submitted;
   try {
     submitted = await prepareGenaiSources(local3);
@@ -129451,8 +129773,8 @@ async function generateGenaiScene(args, signal, polling = {}) {
     );
   }
   const requestPath = `${videoPath}.${randomUUID10()}.generation.json`;
-  fs13.writeFileSync(requestPath, JSON.stringify(submitted), { flag: "wx", mode: 384 });
-  const requestId2 = "scene-" + createHash15("sha256").update(fingerprint + "\n" + videoPath).digest("hex");
+  fs14.writeFileSync(requestPath, JSON.stringify(submitted), { flag: "wx", mode: 384 });
+  const requestId2 = "scene-" + createHash16("sha256").update(fingerprint + "\n" + videoPath).digest("hex");
   const receipt = {
     version: 1,
     baseUrl: astraGenaiBaseUrl(),
@@ -129468,7 +129790,7 @@ async function generateGenaiScene(args, signal, polling = {}) {
   };
   signal?.throwIfAborted();
   if (!claimReceipt(receiptPath2, receipt)) {
-    fs13.rmSync(requestPath, { force: true });
+    fs14.rmSync(requestPath, { force: true });
     return finish();
   }
   let jobId;
@@ -129476,8 +129798,8 @@ async function generateGenaiScene(args, signal, polling = {}) {
     jobId = accepted(await requestGenai("POST", GENERATIONS_ROUTE, submitted, SUBMIT_TIMEOUT_MS2, void 0, void 0, requestId2));
   } catch (error2) {
     if (error2 instanceof GenaiRequestError && error2.terminal) {
-      fs13.rmSync(receiptPath2, { force: true });
-      fs13.rmSync(requestPath, { force: true });
+      fs14.rmSync(receiptPath2, { force: true });
+      fs14.rmSync(requestPath, { force: true });
     }
     throw error2;
   }
@@ -129689,156 +130011,6 @@ var GENAI_TOOLS = [
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true }
   }
 ];
-
-// src/astra-genai-image.ts
-import * as fs14 from "node:fs";
-import { createHash as createHash16 } from "node:crypto";
-var GENAI_IMAGE_ROUTE = "/v1/dashscope/api/v1/services/aigc/multimodal-generation/generation";
-var genaiImageSchema = external_exports.object({
-  model: external_exports.string().min(1),
-  prompt: external_exports.string().min(1).max(800),
-  size: external_exports.string().min(1).default("1024*1536"),
-  seed: external_exports.number().int().min(0).max(2147483647).nullable().optional(),
-  promptExtend: external_exports.boolean().default(false),
-  steps: external_exports.number().int().min(1).max(12).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").refine((name2) => name2.endsWith(".png"), "Use a .png filename").optional()
-}).strict();
-var genaiImageEditSchema = genaiImageSchema.extend({
-  mode: external_exports.enum(["img2img", "inpaint"]),
-  size: external_exports.string().min(1).optional(),
-  imageUri: genaiImageUriSchema.optional(),
-  imagePath: external_exports.string().min(1).optional(),
-  maskUri: genaiImageUriSchema.optional(),
-  maskPath: external_exports.string().min(1).optional(),
-  strength: external_exports.number().finite().gt(0).max(1).optional()
-}).strict().superRefine((args, ctx) => {
-  const issue2 = (message) => ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
-  if (Number(!!args.imageUri) + Number(!!args.imagePath) !== 1) issue2("Supply exactly one imageUri or imagePath");
-  const masks = Number(!!args.maskUri) + Number(!!args.maskPath);
-  if (args.mode === "inpaint" ? masks !== 1 : masks !== 0) issue2("Only inpaint requires exactly one maskUri or maskPath");
-});
-function buildGenaiImageBody(args) {
-  const edit2 = "mode" in args ? args : void 0;
-  const content = [{ text: args.prompt }];
-  const source2 = edit2 ? genaiSourceUri(edit2.imageUri, edit2.imagePath) : void 0;
-  const mask = edit2?.mode === "inpaint" ? genaiSourceUri(edit2.maskUri, edit2.maskPath) : void 0;
-  if (source2) content.push({ image: source2 });
-  if (source2?.startsWith("data:") && mask?.startsWith("data:")) {
-    const sourceSize = imageMetadata(Buffer.from(source2.slice(source2.indexOf(",") + 1), "base64"));
-    const maskSize = imageMetadata(Buffer.from(mask.slice(mask.indexOf(",") + 1), "base64"));
-    if (sourceSize.width !== maskSize.width || sourceSize.height !== maskSize.height)
-      throw new Error("GenAI mask dimensions must match the source");
-  }
-  return {
-    model: args.model,
-    input: {
-      messages: [{ role: "user", content }],
-      ...mask ? { mask } : {}
-    },
-    parameters: {
-      ...args.size === void 0 ? {} : { size: args.size },
-      prompt_extend: args.promptExtend,
-      ...args.seed === void 0 ? {} : { seed: args.seed },
-      ...args.steps === void 0 ? {} : { num_inference_steps: args.steps },
-      ...edit2 ? { mode: edit2.mode, ...edit2.strength === void 0 ? {} : { strength: edit2.strength } } : {}
-    }
-  };
-}
-var responseSchema = external_exports.object({
-  request_id: external_exports.string().min(1),
-  usage: external_exports.record(external_exports.unknown()).optional(),
-  output: external_exports.object({ choices: external_exports.array(external_exports.object({
-    message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
-  }).passthrough()).length(1) }).passthrough()
-}).passthrough();
-var GenaiImageOutputError = class extends Error {
-  constructor(message, requestId2, usage) {
-    super(message);
-    this.requestId = requestId2;
-    this.usage = usage;
-  }
-  requestId;
-  usage;
-};
-async function generateGenaiImage(input, operation = "text") {
-  const args = (operation === "edit" ? genaiImageEditSchema : genaiImageSchema).parse(input);
-  requireAstraGenaiKey();
-  const imagePath = resolveOutputFile(args.outputPath || process.cwd(), args.filename || `genai-${Date.now()}.png`, "image");
-  const receiptPath2 = imagePath + ".astra-genai.json";
-  const body = buildGenaiImageBody(args);
-  const fingerprint = createHash16("sha256").update(JSON.stringify(body)).digest("hex");
-  if (fs14.existsSync(receiptPath2) || fs14.existsSync(imagePath))
-    throw new Error("GenAI image output/receipt already exists; inspect the receipt before any new generation.");
-  fs14.writeFileSync(receiptPath2, JSON.stringify({ baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "submitting" }), { flag: "wx", mode: 384 });
-  let promptExtension;
-  let raw;
-  try {
-    raw = await requestGenai("POST", GENAI_IMAGE_ROUTE, body, 30 * 6e4, (headers2) => {
-      const value2 = headers2.get("x-prompt-extend");
-      if (value2 === "applied" || value2 === "fallback") promptExtension = value2;
-    });
-  } catch (error2) {
-    atomicJson(receiptPath2, {
-      baseUrl: astraGenaiBaseUrl(),
-      fingerprint,
-      imagePath,
-      status: error2 instanceof GenaiRequestError && error2.terminal ? "failed" : "submission_unknown",
-      error: error2 instanceof Error ? error2.message : String(error2)
-    });
-    throw error2;
-  }
-  atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, imagePath, status: "received", response: raw, promptExtension });
-  try {
-    return await recoverGenaiImage(receiptPath2);
-  } catch (error2) {
-    const received = responseSchema.safeParse(raw);
-    if (received.success) throw new GenaiImageOutputError(error2 instanceof Error ? error2.message : String(error2), received.data.request_id, received.data.usage);
-    throw error2;
-  }
-}
-async function recoverGenaiImage(receiptPath2) {
-  const receipt = external_exports.object({
-    baseUrl: external_exports.string(),
-    fingerprint: external_exports.string(),
-    imagePath: external_exports.string(),
-    status: external_exports.enum(["submitting", "submission_unknown", "failed", "received", "completed"]),
-    response: external_exports.unknown().optional(),
-    output: external_exports.object({ sha256: external_exports.string() }).passthrough().optional(),
-    requestId: external_exports.string().optional(),
-    usage: external_exports.unknown().optional(),
-    usedPrompt: external_exports.string().optional(),
-    promptExtension: external_exports.enum(["applied", "fallback"]).optional()
-  }).passthrough().parse(JSON.parse(fs14.readFileSync(receiptPath2, "utf8")));
-  if (receipt.baseUrl !== astraGenaiBaseUrl()) throw new Error("GenAI image receipt belongs to a different server");
-  const { imagePath, fingerprint } = receipt;
-  if (receipt.status === "completed") {
-    const output2 = verifyImageFile(imagePath);
-    if (output2.sha256 !== receipt.output?.sha256) throw new Error("GenAI cached image changed");
-    return { imagePath, requestId: receipt.requestId, usage: receipt.usage, usedPrompt: receipt.usedPrompt, promptExtension: receipt.promptExtension, output: output2, review: "not_reviewed" };
-  }
-  if (receipt.status === "failed") throw new Error("GenAI image request failed; inspect billing before a new request");
-  if (receipt.status !== "received") throw new Error("GenAI image submission is ambiguous; inspect provider usage before retrying");
-  const response = responseSchema.parse(receipt.response);
-  const images = response.output.choices[0].message.content.flatMap((item) => item.image ? [item.image] : []);
-  if (images.length !== 1) throw new Error("GenAI response must contain exactly one image URL; inspect the saved receipt.");
-  const bytes = await downloadGenaiResult(images[0]);
-  const temp = `${imagePath}.${process.pid}.download.png`;
-  try {
-    fs14.writeFileSync(temp, bytes, { flag: "wx", mode: 384 });
-    const output2 = verifyImageFile(temp);
-    if (output2.mimeType !== "image/png") throw new Error("GenAI image response is not PNG");
-    if (fs14.existsSync(imagePath)) {
-      if (verifyImageFile(imagePath).sha256 !== output2.sha256) throw new Error("GenAI image output conflicts with download");
-    } else fs14.linkSync(temp, imagePath);
-    const usedPrompt = response.output.choices[0].message.content.find((item) => item.text !== void 0)?.text;
-    const result = { imagePath, usedPrompt, promptExtension: receipt.promptExtension, requestId: response.request_id, usage: response.usage, output: output2, review: "not_reviewed" };
-    atomicJson(receiptPath2, { baseUrl: astraGenaiBaseUrl(), fingerprint, ...result, status: "completed" });
-    return result;
-  } finally {
-    fs14.rmSync(temp, { force: true });
-  }
-}
 
 // src/image-client.ts
 var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
@@ -130232,7 +130404,7 @@ function parseImageArgs(tool2, input) {
   if (adapter2.engine === "astra-genai-native") {
     const edit2 = adapter2.operation === "edit";
     validateNativeImageArgs(args, edit2);
-    if (!(edit2 && args.model === "h3-image")) args.size ??= "1024x1024";
+    if (!(edit2 && isNativeH3Image(args.model))) args.size ??= "1024x1024";
   }
   if (adapter2.engine === "gpt-image") {
     assertImageModelAvailable(String(args.model));
@@ -130270,14 +130442,14 @@ function imageCatalog() {
     genai: { edits: ["img2img", "inpaint"], sourceImages: 1, steps: [1, 12], promptExtend: "Optional shared-LLM rewrite; failures use the original prompt. Keep false for precise reference instructions.", note: "Use GPT Image 2 for readable text. No multi-image fusion." },
     nativeH3Image: {
       engine: "astra-genai-native",
-      model: "h3-image",
-      profile: "minimax-h3-image",
-      protocol: "mlx-serve",
+      model: GENAI_H3_IMAGE_MODEL,
+      profile: GENAI_H3_IMAGE_MODEL,
+      protocol: "common-generation",
       operations: ["text", "edit"],
-      referenceImages: 10,
+      referenceImages: 7,
       fixedSteps: 6,
       editSize: "source",
-      availability: "Check astra_genai_catalog kind image for the configured gateway binding."
+      availability: "Check astra_genai_catalog kind common for the image scene in the gateway catalog."
     },
     gptModels: GPT_IMAGE_MODELS,
     gptContracts: GPT_IMAGE_CONTRACTS,
@@ -137082,6 +137254,7 @@ function planImage(raw) {
   let tool2 = input.tool;
   if (!tool2) tool2 = Object.keys(IMAGE_ADAPTERS).find((name2) => IMAGE_ADAPTERS[name2].engine === selection.engine && IMAGE_ADAPTERS[name2].operation === (input.operation === "variation" ? "text" : input.operation));
   let args = { ...input.args }, outputFile;
+  const nativeH3 = selection.engine === "astra-genai-native" && isNativeH3Image(selection.model);
   if (selection.engine === "host") {
     if (input.tool) throw new Error("image_selection_mismatch: host has no MCP adapter");
     tool2 = "host_external";
@@ -137090,7 +137263,7 @@ function planImage(raw) {
     gate(tool2);
     const expected = IMAGE_ADAPTERS[tool2]?.operation;
     if (input.operation && expected !== (input.operation === "variation" ? "text" : input.operation)) throw new Error("image_operation_mismatch");
-    if (selection.engine === "astra-genai-native" && selection.model === "h3-image") {
+    if (nativeH3) {
       if (args.requestId !== void 0 && args.requestId !== input.requestId) throw new Error("image_request_id_conflict");
       args.requestId = input.requestId;
     }
@@ -137116,6 +137289,7 @@ function planImage(raw) {
     buildGenaiImageBody((tool2 === "astra_genai_edit" ? genaiImageEditSchema : genaiImageSchema).parse(args));
   if (outputFile && Object.hasOwn(inputs2, outputFile)) throw new Error("image_output_overwrites_input");
   const quote = imageQuote(selection.engine, selection.model, input.reserveUsd);
+  const route = nativeH3 ? nativeImageRoute(selection.model) : void 0;
   const body = {
     version: 1,
     directory: context2.directory,
@@ -137129,7 +137303,8 @@ function planImage(raw) {
     contextRevision: context2.revision,
     inputs: inputs2,
     ...selection.engine === "mlx" && mlxImageFamily(selection.model) === "h3-image" ? { mlxEndpoint: mlxServeUrl(), mlxSize: h3ImageSize(args) } : {},
-    ...selection.engine === "astra-genai-native" && selection.model === "h3-image" ? { gateway: astraGenaiBaseUrl("/v1/images/") } : {},
+    ...route ? { gateway: astraGenaiBaseUrl(route) } : {},
+    ...route === GENERATIONS_ROUTE ? { gatewayRoute: route } : {},
     ...outputFile ? { outputFile } : {},
     quote,
     execution: selection.engine === "host" ? "host_handoff" : "server"
@@ -160026,7 +160201,7 @@ GLB. Inspect the mesh and materials, then use it in an HTML mesh slide (mesh-obj
   //    Acceptance and result are separate calls, so the client polls; these routes only
   //    parse, call, and report. Failures arrive as thrown errors carrying the server's own
   //    message — never the request headers, which is where the key lives.
-  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(external_exports.enum(["image", "speech", "video", "desktop_video", "loras", "contracts"]).parse(args.kind)))),
+  astra_genai_catalog: async (args) => text3(JSON.stringify(await genaiCatalog(genaiCatalogKind.parse(args.kind)))),
   astra_genai_jobs: async (args) => text3(JSON.stringify(await genaiJobs(args))),
   tts_local_voxcpm2: async (args) => {
     const generation2 = localVoxSchema.parse(args);

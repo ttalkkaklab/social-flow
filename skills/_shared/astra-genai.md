@@ -394,8 +394,8 @@ signed result URLs. Existing outputs are not overwritten and cached hashes must 
 
 Contract: [gateway docs](https://genai.astravision.co.kr/docs) and the gateway's
 [common generation API](https://github.com/ASTRA-TECHNOLOGY-COMPANY-LIMITED/genai-gateway/blob/main/docs/COMMON_GENERATION_API.md).
-Video responses follow the common job envelope `id/status/outputs[].url`; images keep
-DashScope `request_id/output.choices/usage`.
+Video and queued H3 images use the common job envelope `id/status/outputs[].url`.
+DashScope images use `request_id/output.choices/usage`.
 Contract tests use synthetic media and mocked transport, not live GPU generation.
 
 ## Model-bound gateway (2026-10-25)
@@ -420,9 +420,9 @@ origin they used. Production may run without MLX.
 }
 ```
 
-This is a `models` fragment, not a complete project configuration. Replace aliases
-with `astra_genai_catalog kind:image/speech/video` results. `video` reads the general
-`/v1/models` catalog, including LTX/MSR. For the Desktop engine, use `kind:desktop_video`
+This is a `models` fragment. Read model IDs from `astra_genai_catalog`.
+`kind:common` reads `/v1/models`, including H3 image scenes and LTX/MSR.
+`kind:video` also reads that catalog. For the Desktop engine, use `kind:desktop_video`
 to read `/v1/ltx/desktop/models`; `loras` and `contracts` also require Desktop. Preserve project, SNS,
 style and production fields when updating; existing episode snapshots stay fixed.
 No example grants spending permission. `capability_status` checks credentials only.
@@ -434,6 +434,18 @@ No example grants spending permission. `capability_status` checks credentials on
   `loras:[{id,scale}]` uses registered IDs, maximum eight, scale 0–2; zero is kept.
   No masks, prompt expansion, arbitrary LoRA paths or reference dropping.
   Do not reuse DashScope step defaults: omit steps for the model's saved schedule.
+- For queued H3 images, select `{engine:"astra-genai-native",model:"minimax-h3-image"}`.
+  This model submits to `POST /v1/generations` with `kind:"image"` and `mode:"scene"`
+  on `ASTRA_GENAI_URL`. The receipt records the job ID for `GET /v1/generations/{id}`.
+  Download the signed PNG from the job without sending the gateway token. Use
+  `image_status action:refresh` for a managed request with a job ID, or
+  `astra_genai_jobs gateway:main` to check history after a lost acknowledgement.
+  Edits keep the first source's dimensions by default. Specify a supported size
+  if the source falls outside the 256–2048 grid in multiples of 16. The first source
+  and ordered references must fit the seven-picture aspect-ratio budget. The prompt
+  can name them `{picture1.image}`, `{picture2.image}`, and so on.
+  Saved `h3-image` selections use this route when the image gateway is the main gateway.
+  A separate synchronous image gateway can still serve that legacy alias.
 - Plan speech with `tts_plan`, a stable `requestId` and generator `tts_astra_genai`. Pass the plan ID and directory to `tts_execute`. `text` becomes `input`, `maxTokens` becomes `max_tokens` and
   `outputFormat` becomes `response_format`. The plugin supports WAV/MP3; the model
   may support fewer. VoxCPM2 requires WAV and speed 1. `voice` is an operator's

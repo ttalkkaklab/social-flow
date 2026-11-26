@@ -51192,6 +51192,13 @@ import path4 from "node:path";
 
 // src/astra-genai-client.ts
 var import_undici = __toESM(require_undici(), 1);
+var generationSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
+  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
+  result_expired: external_exports.boolean().optional()
+}).passthrough();
 var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
   if (/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(value)) return true;
   try {
@@ -51201,6 +51208,7 @@ var genaiImageUriSchema = external_exports.string().min(1).refine((value) => {
     return false;
   }
 }, "Use a public HTTPS PNG/JPEG URL or PNG/JPEG data URI");
+var genaiCatalogKind = external_exports.enum(["image", "speech", "common", "video", "desktop_video", "loras", "contracts"]);
 var genaiJobsSchema = external_exports.object({
   gateway: external_exports.enum(["main", "image", "speech", "desktop"]).default("main"),
   limit: external_exports.number().int().min(1).max(100).default(20)
@@ -53650,13 +53658,6 @@ var receiptSchema2 = external_exports.object({
   nativeSha256: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
-var generationSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
-  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
-  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
-  result_expired: external_exports.boolean().optional()
-}).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
 var REPLAY_WINDOW_MS = 23 * 36e5;
@@ -54442,34 +54443,6 @@ var workflowSchema = external_exports.object({
   notApplicable: external_exports.string().optional()
 }).strict();
 
-// src/astra-genai-native-image.ts
-var nativeImageSchema = external_exports.object({
-  model: external_exports.string().trim().min(1).max(200),
-  prompt: external_exports.string().trim().min(1).max(16e3),
-  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).optional(),
-  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
-  steps: external_exports.number().int().min(0).max(100).optional(),
-  guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
-  negativePrompt: external_exports.string().max(16e3).optional(),
-  transparent: external_exports.boolean().optional(),
-  loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r2) => r2.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
-  requestId: external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/).optional(),
-  outputPath: external_exports.string().optional(),
-  filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
-}).strict();
-var nativeImageEditSchema = nativeImageSchema.extend({
-  imagePath: external_exports.string().min(1),
-  refImagePaths: external_exports.array(external_exports.string().min(1)).max(9).optional(),
-  mode: external_exports.enum(["edit", "variation"]).default("edit"),
-  strength: external_exports.number().finite().gt(0).max(1).optional(),
-  refResolution: external_exports.number().int().min(256).max(1024).optional()
-}).strict();
-var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
-
-// src/image-routing.ts
-import { createRequire as createRequire13 } from "node:module";
-import { fileURLToPath as fileURLToPath5 } from "node:url";
-
 // src/astra-genai-image.ts
 var genaiImageSchema = external_exports.object({
   model: external_exports.string().min(1),
@@ -54502,6 +54475,66 @@ var responseSchema = external_exports.object({
     message: external_exports.object({ content: external_exports.array(external_exports.object({ image: external_exports.string().optional(), text: external_exports.string().optional() }).passthrough()) }).passthrough()
   }).passthrough()).length(1) }).passthrough()
 }).passthrough();
+
+// src/astra-genai-native-image.ts
+var GENAI_H3_IMAGE_MODEL = "minimax-h3-image";
+var nativeImageSchema = external_exports.object({
+  model: external_exports.string().trim().min(1).max(200),
+  prompt: external_exports.string().trim().min(1).max(16e3),
+  size: external_exports.string().regex(/^[0-9]{2,4}x[0-9]{2,4}$/).optional(),
+  seed: external_exports.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+  steps: external_exports.number().int().min(0).max(100).optional(),
+  guidanceScale: external_exports.number().finite().min(0).max(20).optional(),
+  negativePrompt: external_exports.string().max(16e3).optional(),
+  transparent: external_exports.boolean().optional(),
+  loras: external_exports.array(external_exports.object({ id: external_exports.string().min(1), scale: external_exports.number().finite().min(0).max(2).default(1) }).strict()).min(1).max(8).refine((rows) => new Set(rows.map((r2) => r2.id)).size === rows.length, "Duplicate LoRA IDs").optional(),
+  requestId: external_exports.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/).optional(),
+  outputPath: external_exports.string().optional(),
+  filename: bareFilenameSchema("image").refine((n) => n.endsWith(".png")).optional()
+}).strict();
+var nativeImageEditSchema = nativeImageSchema.extend({
+  imagePath: external_exports.string().min(1),
+  refImagePaths: external_exports.array(external_exports.string().min(1)).max(9).optional(),
+  mode: external_exports.enum(["edit", "variation"]).default("edit"),
+  strength: external_exports.number().finite().gt(0).max(1).optional(),
+  refResolution: external_exports.number().int().min(256).max(1024).optional()
+}).strict();
+var imageResponse = external_exports.object({ data: external_exports.array(external_exports.object({ b64_json: external_exports.string().min(1) })).length(1) }).passthrough();
+var nativeReceiptSchema = external_exports.object({
+  baseUrl: external_exports.string(),
+  imagePath: external_exports.string(),
+  requestId: external_exports.string().optional(),
+  sha256: external_exports.string().optional()
+});
+var legacyReceiptSchema = nativeReceiptSchema.extend({
+  protocol: external_exports.literal("gateway-image-v1"),
+  status: external_exports.string(),
+  response: external_exports.unknown().optional()
+}).passthrough();
+var h3ReceiptSchema = nativeReceiptSchema.extend({
+  protocol: external_exports.literal("gateway-image-scene-v1"),
+  model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
+  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  jobId: external_exports.string().optional(),
+  expected: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }),
+  createdAt: external_exports.string().optional(),
+  completedAt: external_exports.string().optional(),
+  usage: external_exports.unknown().optional()
+}).passthrough();
+var imageReceiptSchema = external_exports.discriminatedUnion("protocol", [legacyReceiptSchema, h3ReceiptSchema]);
+var h3JobSchema = generationSchema.extend({
+  id: external_exports.string().regex(/^[a-f0-9]{32}$/),
+  kind: external_exports.literal("image"),
+  model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
+  mode: external_exports.literal("scene"),
+  created_at: external_exports.string(),
+  completed_at: external_exports.string().nullish(),
+  usage: external_exports.unknown()
+});
+
+// src/image-routing.ts
+import { createRequire as createRequire13 } from "node:module";
+import { fileURLToPath as fileURLToPath5 } from "node:url";
 
 // src/image-client.ts
 var VALID_GPT_IMAGE_MODELS = GPT_IMAGE_MODELS;
