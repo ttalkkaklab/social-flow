@@ -455,7 +455,14 @@ describe('story first, then characters and lines', () => {
     assert.equal(readBoard(dir).sha256,before);
     assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}),/scene_split_number/);
     writeStorySequences({path:dir,sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door',payoff:2}]});
-    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002'},scenes:specs}));
+    writeFileSync(join(dir, 'turn.png'), png);
+    writeFileSync(join(dir, 'close.png'), png);
+    const legacy = readBoard(dir);
+    legacy.win.SCENES[1].visual = {character:[],frames:{mode:'first',start:'turn.png',
+      storyboardKeyframes:[{file:'turn.png',startFrame:24},{file:'close.png',startFrame:36}]}};
+    writeFileSync(legacy.file, serializeBoard(legacy.win, legacy.header));
+    const split = writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002'},scenes:specs}));
+    assert.ok(split.written, JSON.stringify(split.findings));
     writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:2},scenes:specs}));
     const {win}=readBoard(dir);
     assert.deepEqual(win.STRUCTURE.sequences[0].scenes,[1,2,3]);
@@ -464,6 +471,8 @@ describe('story first, then characters and lines', () => {
     assert.deepEqual(win.SB_DOC.audioNotes,{3:'The door closes.',4:'A distant echo.'});
     assert.deepEqual(win.SCENES.map(s=>[s.id,s.scene]),[['s0001',1],['s0002',2],['s0003',3],['s0004',4]]);
     assert.deepEqual([win.SCENES[1].timeline.startFrame,win.SCENES[1].timeline.endFrame,win.SCENES[1].timeline.transition],[0,36,'open']);
+    assert.equal(win.STRUCTURE.scenes.find(s=>s.no===2).frames.start, 'turn.png');
+    assert.deepEqual(win.SCENES[1].visual.frames.storyboardKeyframes.map(pin => pin.startFrame), [0, 12]);
     assert.deepEqual([1,2].map(no=>win.STRUCTURE.scenes.find(s=>s.no===no).videoDirection.prompt),['Lift the key.','Turn the key.']);
   });
   it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {

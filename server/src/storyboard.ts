@@ -1624,20 +1624,33 @@ function splitStoryScene(args: z.infer<typeof storySceneSchema>, win: Board, st:
   const fps = source.videoDirection?.fps ?? 24;
   if ((left.videoDirection.fps ?? fps) !== fps || (right.videoDirection.fps ?? fps) !== fps)
     throw new Error('scene_split_timing: keep the frame rate of the existing shot timings');
-  const offset = first.timeline?.startFrame ?? Math.round(members.slice(0,boundary).reduce((sum,shot) => sum + (shot.duration ?? 0),0) * fps);
-  const moved = new Set(members.slice(boundary).map(shot => shot.id));
+  const {renumberSceneNotes, rebaseStoryboardKeyframes, splitOpening} = loadFromHere(join(REFERENCES_DIR, 'split-reference-scenes.js')) as {
+    renumberSceneNotes(board: Board, numbers: Map<number, number>): Record<string, unknown>;
+    rebaseStoryboardKeyframes(visual: Shot['visual'], shotStart: number, offset: number, fps: number): Shot['visual'];
+    splitOpening(shot: Shot): string | undefined;
+  };
+  const moved = new Map<Shot, number>();
+  let seconds = 0;
+  for (const [position, shot] of members.entries()) {
+    if (position >= boundary) moved.set(shot, shot.timeline?.startFrame ?? Math.round(seconds * fps));
+    seconds += shot.duration ?? 0;
+  }
+  const offset = moved.get(first)!;
   const revised = shots.map(shot => {
-    if (!moved.has(shot.id)) return shot.scene === undefined ? shot : {...shot,scene:numbers.get(shot.scene) ?? shot.scene};
+    const start = moved.get(shot);
+    if (start === undefined) return shot.scene === undefined ? shot : {...shot,scene:numbers.get(shot.scene) ?? shot.scene};
     const tl = shot.timeline;
     if (tl && tl.startFrame < offset) throw new Error('scene_split_timing: inconsistent shot timeline');
     const timeline = tl && {...tl,startFrame:tl.startFrame-offset,endFrame:tl.endFrame-offset,
       ...(shot === first ? {transition:'open' as const} : {}),
       ...(tl.images ? {images:tl.images.map(pin => ({...pin,frame:pin.frame-offset}))} : {}),
       ...(tl.dialogueCues ? {dialogueCues:tl.dialogueCues.map(cue => ({...cue,frame:cue.frame-offset}))} : {})};
-    return {...shot,scene:newSceneNo,...(shot === first ? {transition:undefined} : {}),...(timeline ? {timeline} : {})};
+    const visual = rebaseStoryboardKeyframes(shot.visual, start, offset, fps);
+    return {...shot,scene:newSceneNo,...(shot === first ? {transition:undefined} : {}),
+      ...(timeline ? {timeline} : {}),...(visual !== shot.visual ? {visual} : {})};
   });
   const keyframes = source.videoDirection?.keyframes ?? [];
-  const opening = first.timeline?.images?.find(pin => pin.role === 'start')?.path ?? first.referenceImage;
+  const opening = splitOpening(first);
   const leftFrames = left.frames ?? (source.frames ? {start:source.frames.start} : undefined);
   const rightFrames = right.frames ?? {start:opening,...(source.frames?.end ? {end:source.frames.end} : {})};
   const parts = args.scenes.map(scene => {
@@ -1655,9 +1668,6 @@ function splitStoryScene(args: z.infer<typeof storySceneSchema>, win: Board, st:
     ...(q.payoff !== undefined ? {payoff:numbers.get(q.payoff) ?? q.payoff} : {})}));
   const baseScenes = st.scenes.map(scene => ({...scene, no:numbers.get(scene.no) ?? scene.no,
     ...(scene.referenceSplitFrom ? {referenceSplitFrom:numbers.get(scene.referenceSplitFrom) ?? scene.referenceSplitFrom} : {})}));
-  const {renumberSceneNotes} = loadFromHere(join(REFERENCES_DIR, 'split-reference-scenes.js')) as {
-    renumberSceneNotes(board: Board, numbers: Map<number, number>): Record<string, unknown>;
-  };
   return {shots:revised, scenes:parts, sequences, baseScenes, globals:renumberSceneNotes(win,numbers)};
 }
 
