@@ -25,7 +25,8 @@ Achieved in iteration 1: score 97, P0 0, objective gate exit 0 (1479 tests).
 | Iter | Score | P0 | Objective gate | Verdict |
 |---|---:|---:|---|---|
 | 1 | 97 | 0 | exit 0 | PASS |
+| 2 (final tree, after the step calibration and the off-screen and per-shot gates) | 98 | 0 | exit 0 | PASS |
 
-The two P2 documentation findings were fixed after the review (see verify-1.md).
+The P2 findings of both reviews were fixed after each review (see verify-1.md and verify-2.md).
 
 Not verified by this loop: the production gateway still accepts one scene character until gateway PRs #212 and #214 reach production, so a two-speaker scene returns 422 there until then; no LTX render at 576x1024 or 736x1280 has been made; boards already split under the earlier visible-person rule are not merged back; the H3 step advice scales one production measurement linearly.

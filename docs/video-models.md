@@ -1605,7 +1605,7 @@ it is unverified. The plugin exposes no audio-to-video route. `minimax_reference
   - The planner sends the cast's sheet panels in cast order with the background picture left out.
     The shot's start image goes last.
   - It adds an "Image reference roles:" block that names each picture's role.
-  - More than two referenced characters are refused (`msr_character_limit`)
+  - The standalone MSR adapter refuses more than two referenced characters (`msr_character_limit`); a GenAI scene references only its speakers
     ([video-image-inputs.ts](../server/src/video-image-inputs.ts)).
 - **Voice:** a `reference_audio` clip is tied to a speaker only by prompt text.
   - MiniMax's API example reads "Voice timbre follows reference audio 1" [1].

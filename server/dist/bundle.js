@@ -128935,7 +128935,7 @@ function h3StepAdvice(args) {
   const scale = width * height / H3_STEP.pixels * (frames / H3_STEP.frames);
   const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS, fit = Math.floor(H3_STEP.ceiling / scale);
   if (steps <= fit) return [];
-  return [{ code: "h3_step_budget", detail: `${steps} sampling steps${args.numInferenceSteps === void 0 ? " (the model default)" : ""} at ${args.resolution} and ${frames} frames run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit. Set numInferenceSteps to ${fit} or fewer.` }];
+  return [{ code: "h3_step_budget", detail: `${steps} sampling steps${args.numInferenceSteps === void 0 ? " (the model default)" : ""} at ${args.resolution} and ${frames} frames run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit once loading and decoding are counted. Set numInferenceSteps to ${fit} or fewer.` }];
 }
 function sceneLabels(args) {
   if (args.model === "minimax-h3") {

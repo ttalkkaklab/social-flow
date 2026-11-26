@@ -127,7 +127,7 @@ export function h3StepAdvice(args: GenaiSceneArgs): { code: string; detail: stri
   if (steps <= fit) return [];
   return [{ code: 'h3_step_budget', detail: `${steps} sampling steps${args.numInferenceSteps === undefined ? ' (the model default)' : ''} at ${args.resolution} and ${frames} frames ` +
     `run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), ` +
-    `where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit. Set numInferenceSteps to ${fit} or fewer.` }];
+    `where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit once loading and decoding are counted. Set numInferenceSteps to ${fit} or fewer.` }];
 }
 
 /** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */
