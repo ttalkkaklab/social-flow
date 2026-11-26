@@ -693,7 +693,7 @@ function omittedCharacterPictures(context: Context, members: readonly Record<str
     seen.add(key);
     const owner = character ?? owners.get(full);
     return [`scene_reference_omitted: ${where} ${file} is not sent; ` + (owner && !cast.has(owner)
-      ? `${owner} has no voiced line in this scene, so the shot pictures carry their look`
+      ? `this render voices no line of ${owner}'s, so the shot pictures carry their look`
       : 'the scene sends at most two character pictures')];
   });
 }

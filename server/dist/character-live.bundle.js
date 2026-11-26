@@ -35617,7 +35617,7 @@ function checkSceneVoices(args) {
   }
 }
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
-var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66 };
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 };
 function sceneLabels(args) {
   if (args.model === "minimax-h3") {
     const labels2 = {};

@@ -97507,7 +97507,7 @@ var require_scene_cast = __commonJS({
         throw new Error("scene_reference_owner: register the owner of every scene identity reference");
       if (declaredAll.some((ref) => voiceOnly.has(ref.character)))
         throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
-      const declaredRefs = ltx2 ? declaredAll.filter((ref) => speakers.includes(ref.character)) : declaredAll;
+      const declaredRefs = ltx2 && !perShot ? declaredAll.filter((ref) => speakers.includes(ref.character)) : declaredAll;
       const identities = [.../* @__PURE__ */ new Set([...speakers, ...declaredRefs.map((ref) => ref.character)])];
       const ownerOf = (ref, card) => registry2.ownerOf(ref, card, speakers);
       const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== "mix";
@@ -128925,17 +128925,17 @@ function checkSceneVoices(args) {
   }
 }
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
-var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66 };
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 };
 var H3_JOB_SECONDS = 1800;
 var H3_DEFAULT_STEPS = 50;
 function h3StepAdvice(args) {
   if (args.model !== "minimax-h3") return [];
   const [width, height] = args.resolution.split("x").map(Number);
   const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
-  const perStep = H3_STEP.seconds * (width * height / H3_STEP.pixels) * (frames / H3_STEP.frames);
-  const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS;
-  if (steps * perStep <= H3_JOB_SECONDS) return [];
-  return [{ code: "h3_step_budget", detail: `${steps} sampling steps${args.numInferenceSteps === void 0 ? " (the model default)" : ""} at ${args.resolution} and ${frames} frames run about ${Math.round(steps * perStep)} s, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27); the backend stops a job at ${H3_JOB_SECONDS} s. Set numInferenceSteps to ${Math.floor(H3_JOB_SECONDS / perStep)} or fewer.` }];
+  const scale = width * height / H3_STEP.pixels * (frames / H3_STEP.frames);
+  const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS, fit = Math.floor(H3_STEP.ceiling / scale);
+  if (steps <= fit) return [];
+  return [{ code: "h3_step_budget", detail: `${steps} sampling steps${args.numInferenceSteps === void 0 ? " (the model default)" : ""} at ${args.resolution} and ${frames} frames run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit. Set numInferenceSteps to ${fit} or fewer.` }];
 }
 function sceneLabels(args) {
   if (args.model === "minimax-h3") {
@@ -136030,7 +136030,7 @@ function omittedCharacterPictures(context2, members, sent, cast) {
     if (!full || sent.has(full) || seen.has(key)) return [];
     seen.add(key);
     const owner = character ?? owners.get(full);
-    return [`scene_reference_omitted: ${where} ${file3} is not sent; ` + (owner && !cast.has(owner) ? `${owner} has no voiced line in this scene, so the shot pictures carry their look` : "the scene sends at most two character pictures")];
+    return [`scene_reference_omitted: ${where} ${file3} is not sent; ` + (owner && !cast.has(owner) ? `this render voices no line of ${owner}'s, so the shot pictures carry their look` : "the scene sends at most two character pictures")];
   });
 }
 function buildH3Plan(input, context2, persist) {

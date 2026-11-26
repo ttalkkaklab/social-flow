@@ -123,21 +123,22 @@ export function checkSceneVoices(args) {
 /** The frames the storyboard asks for; the clip is cut back to this after rendering. */
 export const sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
 /** One production measurement (2026-11-27): a 736x1280, 345-frame H3 scene ran about 66 s per sampling step, and the
- * backend stops a job at 1,800 s. Other sizes and lengths are scaled linearly from it, so this is an estimate. */
-const H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66 }, H3_JOB_SECONDS = 1800, H3_DEFAULT_STEPS = 50;
+ * gateway session put the ceiling at about 18 steps there, leaving the rest of the backend's 1,800 s job limit to loading
+ * and decoding. Other sizes and lengths are scaled linearly from it, so this is an estimate. */
+const H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 }, H3_JOB_SECONDS = 1800, H3_DEFAULT_STEPS = 50;
 /** Advice, never a refusal: an H3 scene whose sampling steps would likely outrun the backend's job limit. */
 export function h3StepAdvice(args) {
     if (args.model !== 'minimax-h3')
         return [];
     const [width, height] = args.resolution.split('x').map(Number);
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
-    const perStep = H3_STEP.seconds * (width * height / H3_STEP.pixels) * (frames / H3_STEP.frames);
-    const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS;
-    if (steps * perStep <= H3_JOB_SECONDS)
+    const scale = (width * height / H3_STEP.pixels) * (frames / H3_STEP.frames);
+    const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS, fit = Math.floor(H3_STEP.ceiling / scale);
+    if (steps <= fit)
         return [];
     return [{ code: 'h3_step_budget', detail: `${steps} sampling steps${args.numInferenceSteps === undefined ? ' (the model default)' : ''} at ${args.resolution} and ${frames} frames ` +
-                `run about ${Math.round(steps * perStep)} s, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27); ` +
-                `the backend stops a job at ${H3_JOB_SECONDS} s. Set numInferenceSteps to ${Math.floor(H3_JOB_SECONDS / perStep)} or fewer.` }];
+                `run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), ` +
+                `where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit. Set numInferenceSteps to ${fit} or fewer.` }];
 }
 /** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */
 export function sceneLabels(args) {

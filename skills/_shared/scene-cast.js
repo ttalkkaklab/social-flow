@@ -123,7 +123,7 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     throw new Error('scene_reference_owner: a voice-only speaker has no visual identity in this scene');
   // GenAI references only the people whose voices the scene renders: a pinned voice rides on its speaker's picture,
   // and a silent person's look comes from the shot pictures. The planner names each picture it leaves out.
-  const declaredRefs = ltx ? declaredAll.filter(ref => speakers.includes(ref.character)) : declaredAll;
+  const declaredRefs = ltx && !perShot ? declaredAll.filter(ref => speakers.includes(ref.character)) : declaredAll;
   const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character)])];
   const ownerOf = (ref, card) => registry.ownerOf(ref, card, speakers);
   const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';

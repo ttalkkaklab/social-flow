@@ -50293,7 +50293,7 @@ var genaiSceneSchema = external_exports.object({
   if (genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
-var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66 };
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 };
 var sceneValidationSchema = external_exports.object({
   resolved: external_exports.object({
     num_frames: external_exports.number().int(),

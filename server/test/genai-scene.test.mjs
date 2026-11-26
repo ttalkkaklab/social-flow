@@ -122,12 +122,13 @@ test('H3 binds two pinned voices and advises fewer sampling steps where the back
   assert.deepEqual(scene.voice.maxPinnedVoicesPerRender, {'ltx-2.5-22b-distilled':2, 'minimax-h3':2});
   const h3 = (resolution, frames, numInferenceSteps) => sceneArgs({model:'minimax-h3', resolution, shots:[{id:'s1', frames, imagePath:'/tmp/open.png'}],
     ...(numInferenceSteps === undefined ? {} : {numInferenceSteps})});
-  // 736x1280 and 345 frames ran 66 s a step on production: the default 50 steps outrun the 1,800 s job limit.
+  // 736x1280 and 345 frames ran 66 s a step on production, where about 18 steps fit the 1,800 s job limit.
   const [advice, ...more] = h3StepAdvice(h3('736x1280', 345));
   assert.equal(more.length, 0);
   assert.equal(advice.code, 'h3_step_budget');
-  assert.match(advice.detail, /50 sampling steps \(the model default\) at 736x1280 and 345 frames run about 3300 s.*Set numInferenceSteps to 27 or fewer\./);
+  assert.match(advice.detail, /50 sampling steps \(the model default\) at 736x1280 and 345 frames run about 3300 s of sampling.*Set numInferenceSteps to 18 or fewer\./);
   assert.deepEqual(h3StepAdvice(h3('736x1280', 345, 18)), []);
+  assert.equal(h3StepAdvice(h3('736x1280', 345, 19)).length, 1);
   assert.deepEqual(h3StepAdvice(h3('576x1024', 124)), []);
   assert.deepEqual(h3StepAdvice(sceneArgs()), []);
 });

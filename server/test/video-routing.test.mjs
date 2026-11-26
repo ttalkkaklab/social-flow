@@ -1973,7 +1973,7 @@ test('a silent GenAI scene sends no character pictures and names each one its ca
   assert.deepEqual(plan.args.references.map(ref => [ref.role, path.basename(ref.imagePath)]),[['background','hall.png'],['object','opening.png']]);
   assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_picture_omitted: s0001 end')));
   assert.deepEqual(omitted(plan),['scene 1 ada.png','scene 1 bo.png']);
-  assert.ok(plan.directionWarnings.some(warning => /ada\.png is not sent; ada has no voiced line in this scene/.test(warning)));
+  assert.ok(plan.directionWarnings.some(warning => /ada\.png is not sent; this render voices no line of ada's/.test(warning)));
   // A third silent face no longer splits or refuses the scene; it is named with the others.
   shot.timeline.images.push({frame:0,path:'cy.png',role:'face',character:'cy'}); f.save();
   assert.deepEqual(omitted(planVideo(input,false)),['scene 1 ada.png','scene 1 bo.png','s0001 cy.png is']);
@@ -2002,8 +2002,18 @@ test('a GenAI scene with a silent third person references its two speakers and k
     assert.deepEqual(plan.args.shots.map(shot => path.basename(shot.imagePath)), ['opening.png','shot1.png','shot2.png']);
     if (ltx) assert.deepEqual(plan.args.references.map(ref => [ref.role, path.basename(ref.imagePath)]), [['object','key.png']]);
     else assert.deepEqual(plan.promptGuidance.advice, []);
-    assert.ok(plan.directionWarnings.includes('scene_reference_omitted: s3 friend.png is not sent; friend has no voiced line in this scene, so the shot pictures carry their look'));
+    assert.ok(plan.directionWarnings.includes("scene_reference_omitted: s3 friend.png is not sent; this render voices no line of friend's, so the shot pictures carry their look"));
   });
+});
+
+test('a GenAI scene whose lines are all off screen sends no faces, since its voices ride on the soundtrack', async t => {
+  const f = await pinnedSpeakerScene(t, 'reference', ['hero','guest']);
+  for (const card of f.board.SCENES) card.narration[0].delivery = 'off_screen';
+  f.save();
+  const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'off-screen', args:{reserveUsd:0}}, false);
+  assert.deepEqual(plan.args.cast, []);
+  assert.deepEqual(plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 4).join(' ')),
+    ['scene 1 hero.png', 'scene 1 guest.png']);
 });
 
 test('a GenAI scene sends one cast for the speakers of all its shots, by the panel rule for that count', async t => {
