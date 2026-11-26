@@ -1,6 +1,6 @@
 import { composeH3Scene } from './h3-scene.js';
 import { bindRegisteredPanels, prepareSceneRequest, SCENE_FIT_STEPS, SceneInputError, bindSceneAdapter, checkSceneDeployment, compileSceneTimeline, sceneCoverage, mapSceneInputs, sceneImageBindings, sceneTimelineWords, type SceneRequest } from './scene-video.js';
-import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, h3InferenceSteps, h3ReferenceImageShortEdge, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, GENAI_SCENE_FRAMES, GENAI_SCENE_MODELS, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, h3InferenceSteps, h3StepAdvice, h3ReferenceImageShortEdge, resolveScenePrompt as resolveScenePlaceholders, sceneArgsFromComposed, sceneLabels } from './genai-scene.js';
 import { desktopGatewayKey } from './astra-genai-client.js';
 import { openingPositionsSchema, openingPrompt, sceneCastProse, sceneVideoDirectionSchema, type SceneVideoDirection, type OpeningPosition } from './msr-opening.js';
 import { buildFasth3Body, checkFasth3VoiceReplay, fasth3RenderFrames, fasth3OmniSchema, fasth3VideoAudioCount } from './fasth3-omni.js';
@@ -662,6 +662,41 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
     return {number, owner: guide ? undefined : owner, role, id: binding.id, shotId: scene.shotId ?? (binding.id === 'start' ? firstShot : undefined), guide};
   });
 }
+/** Character pictures the scene's cards and scene record name that its GenAI request leaves out, each with the reason. */
+function omittedCharacterPictures(context: Context, members: readonly Record<string, unknown>[], sent: ReadonlySet<string>, cast: ReadonlySet<string>) {
+  type Picture = {role?: string; use?: string; path?: string; character?: string};
+  const board = context.board as {SCENES?: {id?: string; scene?: number; visual?: {references?: Picture[]}; timeline?: {images?: Picture[]}}[];
+    STRUCTURE?: {scenes?: {no?: number; speakerReferences?: Picture[]}[]}; SB_DOC?: {characters?: unknown}};
+  const registry = board.SB_DOC?.characters;
+  const actors = (Array.isArray(registry) ? registry : Object.entries(registry ?? {}).map(([id, actor]) => ({...(actor as object), id}))) as
+    {id: string; imageUrl?: unknown; panels?: Record<string, unknown>}[];
+  const local = (file: string) => { const full = path.resolve(context.episode, 'storyboard', file); return fs.existsSync(full) ? fs.realpathSync(full) : undefined; };
+  const owners = new Map<string, string>();
+  for (const actor of actors) for (const file of [actor.imageUrl, ...Object.values(actor.panels ?? {})])
+    if (typeof file === 'string' && local(file)) owners.set(local(file)!, actor.id);
+  const named: {where: string; file: string; character?: string}[] = [];
+  for (const ref of board.STRUCTURE?.scenes?.find(scene => scene.no === context.sceneNo)?.speakerReferences ?? [])
+    if (ref.path) named.push({where:'scene ' + context.sceneNo, file:ref.path, character:ref.character});
+  for (const card of (board.SCENES ?? []).filter(card => card.scene === context.sceneNo)) {
+    const member = members.find(shot => shot.id === card.id);
+    for (const ref of card.visual?.references ?? [])
+      if (['character','bystander','face','outfit'].includes(ref.role ?? '') && ref.use !== 'image' && ref.path) named.push({where:String(card.id), file:ref.path, character:ref.character});
+    for (const pin of card.timeline?.images ?? [])
+      if (['face','outfit'].includes(pin.role ?? '') && pin.path) named.push({where:String(card.id), file:pin.path, character:pin.character});
+    for (const person of member ? requiredCharacters(member) : [])
+      for (const file of [person.face?.path, person.bodyPath]) if (file) named.push({where:String(card.id), file, character:person.character});
+  }
+  const seen = new Set<string>();
+  return named.flatMap(({where, file, character}) => {
+    const full = local(file), key = where + ' ' + file;
+    if (!full || sent.has(full) || seen.has(key)) return [];
+    seen.add(key);
+    const owner = character ?? owners.get(full);
+    return [`scene_reference_omitted: ${where} ${file} is not sent; ` + (owner && !cast.has(owner)
+      ? `${owner} has no voiced line in this scene, so the shot pictures carry their look`
+      : 'the scene sends at most two character pictures')];
+  });
+}
 function buildH3Plan(input: PlanInput, context: Context, persist: boolean): VideoPlan {
   if (!context.sceneMembers?.length || !context.sceneDirection) throw new Error('scene_direction_required: author the storyboard scene before planning H3');
   if (context.speechRoute?.mode === 'generated')
@@ -683,16 +718,21 @@ function buildH3Plan(input: PlanInput, context: Context, persist: boolean): Vide
   verifyDistinctSamples(args.cast.flatMap(member => member.voicePath ? [{speaker:member.id,path:member.voicePath}] : []));
   const limit = genaiScenePromptLimit('minimax-h3');
   if (Array.from(modelPrompt).length > limit) throw new Error('scene_prompt_too_long: H3 accepts ' + limit + ' characters. Split the storyboard scene before planning separate prompts.');
+  const sent = [...args.cast.flatMap(member => member.images.map(image => image.imagePath)), ...args.references.map(ref => ref.imagePath),
+    ...args.shots.flatMap(shot => shot.imagePath ? [shot.imagePath] : [])].map(file => fs.realpathSync(file));
+  const warnings = [...h3.warnings, ...omittedCharacterPictures(context, context.sceneMembers, new Set(sent), new Set(args.cast.map(member => member.id)))];
   const inputs = {...h3.inputs, ...inputFiles(args,context.episode)}, quote = quoteVideo('astra_genai_scene',args);
   if (input.maxCostUsd !== undefined && quote.reserveUsd > input.maxCostUsd) throw new Error('video_quote_exceeded');
   const body = {version:1 as const,episode:context.episode,sceneNo:input.sceneNo,shotId:context.shotId,shotIds:timeline.shotIds,
     requestId:input.requestId,wholeScene:true as const,tool:'astra_genai_scene',selection,source:context.source,contextRevision:context.revision,
     args,sourceArgs:input.args,inputs,quote,execution:'server' as const,speechRoute:context.speechRoute,sceneDurationSeconds:timeline.frameCount/timeline.fps,
     sceneRequest:{...timeline,sceneNo:input.sceneNo,prompt:modelPrompt,sceneMode:true as const,modelPacedCuts:true as const},
-    ...(h3.warnings.length ? {directionWarnings:h3.warnings} : {}),
+    ...(warnings.length ? {directionWarnings:warnings} : {}),
     ...(input.maxCostUsd === undefined ? {} : {maxCostUsd:input.maxCostUsd}),...(input.purpose ? {purpose:input.purpose} : {}),
     ...(input.basedOnRequestId ? {basedOnRequestId:input.basedOnRequestId} : {}),...(input.changeNote ? {changeNote:input.changeNote} : {})};
-  const plan = {...body,id:hash(body),promptTemplate:args.prompt,promptSlots:Object.entries(labels).map(([key,label])=>({key,label}))};
+  // Advice sits beside the plan, outside the body an approval signs.
+  const plan = {...body,id:hash(body),promptGuidance:{...promptGuidance('astra_genai_scene','minimax-h3'), advice:h3StepAdvice(args)},
+    promptTemplate:args.prompt,promptSlots:Object.entries(labels).map(([key,label])=>({key,label}))};
   return persist ? saveVideoPlan(plan) : plan;
 }
 function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType<typeof resolvePlanContext>, persist: boolean, fitStep = 0): VideoPlan {
@@ -927,25 +967,9 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   for (const pin of sceneTool ? sceneRequest?.images.filter(image => !image.reference && ['end', 'keyframe'].includes(image.role)) ?? [] : [])
     cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
   if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join('; ')}`);
-  // The scene sends one cast by the sheet rule for its head count, so a panel a shot named on its own can drop out.
-  const sentImages = new Set(sceneRequest?.images.map(image => image.path));
-  const boardCards = sceneTool && sceneRequest ? ((context.board.SCENES ?? []) as {id?: string; scene?: number;
-    visual?: {references?: {role?: string; use?: string; path?: string}[]}; timeline?: {images?: {role:string; path:string}[]}}[])
-    .filter(card => card.scene === context.sceneNo) : [];
-  for (const card of boardCards) {
-    const member = members.find(shot => shot.id === card.id);
-    const files = new Set([
-      ...(card.visual?.references ?? []).filter(ref => ['character','bystander','face','outfit'].includes(ref.role ?? '') && ref.use !== 'image').map(ref => ref.path),
-      ...(card.timeline?.images ?? []).filter(pin => ['face','outfit'].includes(pin.role)).map(pin => pin.path),
-      ...(member ? requiredCharacters(member).flatMap(person => [person.face?.path, person.bodyPath]) : []),
-    ]);
-    for (const file of files) {
-      if (!file) continue;
-      const local = path.resolve(context.episode, 'storyboard', file);
-      if (fs.existsSync(local) && !sentImages.has(fs.realpathSync(local)))
-        cutWarnings.push(`scene_reference_omitted: ${card.id} ${file} is not sent; the scene has two character image slots`);
-    }
-  }
+  // The scene sends pictures of its speakers only, by the sheet rule for that many, so a panel a shot named can drop out.
+  if (sceneTool && sceneRequest) cutWarnings.push(...omittedCharacterPictures(context, members,
+    new Set(sceneRequest.images.map(image => image.path)), new Set(sceneRequest.images.flatMap(image => image.character ? [image.character] : []))));
   let direction = sceneCamera ? { sourcePrompt, directionWarnings: [...(replaced ? [] : sceneCamera.warnings), ...cutWarnings],
     ...(replaced ? outsidePrompt(sceneCamera.bindings) : sceneCamera.bindings.length ? { directionBindings: sceneCamera.bindings } : {}) } : directionOf(compiled);
   if (selection.engine === 'host') {
@@ -1124,7 +1148,14 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     voice = {...voice, args:{...voice.args, prompt:resolved.body, ...(positions ? {openingPositions:positions} : {})}};
   }
   let args: Record<string, unknown>;
-  try { args = parseVideoArgs(tool, voice.args); }
+  // A scene with no speaker can carry only its background on the image lane; scene mode then sends the opening as its
+  // subject (sceneArgsFromComposed), so the lane's own subject rule reads that opening here and drops it again.
+  const lane = voice.args.references as {background?: boolean}[] | undefined;
+  const subjectless = Boolean(sceneTool && lane?.length && lane.every(ref => ref.background));
+  try {
+    args = parseVideoArgs(tool, subjectless ? {...voice.args, references:[...lane!, {imagePath:openingPath, nonCharacter:true}]} : voice.args);
+    if (subjectless) args.references = (args.references as unknown[]).slice(0, -1);
+  }
   catch (error) {
     // An adapter's own rule for the author's text comes back as one coded line.
     const issue = authored && error instanceof z.ZodError ? error.issues.find(issue => issue.path[0] === 'prompt') : undefined;

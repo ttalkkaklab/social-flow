@@ -111,21 +111,22 @@ const {castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceCon
 
 // A scene owns the identity sources. Each adapter still receives its own wire grammar.
 // `perShot` reads a clip the gateway's retired per-shot route made, where each card was its own render with its own cast.
-function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false, model) {
+function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = false, perShot = false) {
   const registry = referenceOwners(board, boardDir);
   const {actors, voiceOnly, canonical, owners, registeredOwner} = registry;
   const speakers = sceneCast(scene, cards).filter(id => !voiceOnly.has(id));
-  const declaredRefs = scene.speakerReferences ?? [];
-  const h3 = engine === 'astra-genai' && model === 'minimax-h3';
-  const visibleH3 = h3 && !declaredRefs.length ? cards.flatMap(card => castIds(card.visual?.character ?? card.visual?.characters)).filter(id => !voiceOnly.has(id)) : [];
-  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character), ...visibleH3])];
-  if (declaredRefs.some(ref => !actors.some(actor => actor.id === ref.character)))
+  const ltx = engine === 'astra-genai';
+  const declaredAll = scene.speakerReferences ?? [];
+  if (declaredAll.some(ref => !actors.some(actor => actor.id === ref.character)))
     throw new Error('scene_reference_owner: register the owner of every scene identity reference');
-  if (scene.speakerReferences?.some(ref => voiceOnly.has(ref.character)))
+  if (declaredAll.some(ref => voiceOnly.has(ref.character)))
     throw new Error('scene_reference_owner: a voice-only speaker has no visual identity in this scene');
+  // GenAI references only the people whose voices the scene renders: a pinned voice rides on its speaker's picture,
+  // and a silent person's look comes from the shot pictures. The planner names each picture it leaves out.
+  const declaredRefs = ltx ? declaredAll.filter(ref => speakers.includes(ref.character)) : declaredAll;
+  const identities = [...new Set([...speakers, ...declaredRefs.map(ref => ref.character)])];
   const ownerOf = (ref, card) => registry.ownerOf(ref, card, speakers);
   const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== 'mix';
-  const ltx = engine === 'astra-genai';
   const groups = ltx && !perShot && !conditioning ? sceneReferenceGroups(scene, cards, registry) : [];
   const conflict = referenceConflict(scene, groups);
   if (conflict) throw Object.assign(new Error(conflict.message), {report:conflict});
@@ -239,6 +240,8 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
       if (ref.use === 'image') return true;
       if (localRefs.some(item => canonical(item.path) === canonical(ref.path))) return false;
       if (sceneCastIds.length && personRoles.has(ref.role) && sceneCastIds.includes(ownerOf(ref, card))) return false;
+      // A silent person's own picture stays out of a GenAI scene; the planner reports it as omitted.
+      if (ltx && !perShot && personRoles.has(ref.role) && !identities.includes(ownerOf(ref, card))) return false;
       if (!ref.legacy && personRoles.has(ref.role)) return true;
       const identity = ownerOf(ref,card);
       if (identity && !speakers.includes(identity) && !declaredRefs.some(item => item.character === identity)) return !ref.legacy;

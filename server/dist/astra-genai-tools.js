@@ -153,7 +153,7 @@ export const GENAI_TOOLS = [
         description: 'Render a scene of 1..8 shots as one video through the GenAI gateway\'s scene mode (POST /v1/generations, mode scene). Configured episodes reach it through video_plan/video_execute, which compose the scene from the storyboard. ' +
             'Write one prompt for the whole scene and name each input with a placeholder ({cast.role}, {cast.image}, {cast.voice}, {reference.image}); the gateway numbers them and adds no sentence. ' +
             'Each shot has its frame count and may open on a picture: the first is the opening frame, a later one guides the model, and the model paces the cuts. ' +
-            'Production scenes take at most two people and two character pictures total. LTX takes 1..4 subject images including objects, one background and two voices (a voice rides on its cast member\'s first picture), 361 frames at most. ' +
+            'Production scenes take pictures of at most two speaking people and two character pictures total; video_plan leaves silent people to the shot pictures. H3 takes two voices. LTX takes 1..4 subject images including objects, one background and two voices (a voice rides on its cast member\'s first picture), 361 frames at most. ' +
             'The scene is checked with POST /v1/generations/validate before it is submitted, rendered on the 8k+1 grid and cut back to the shots\' frames. Requires ASTRA_GENAI_API_KEY. Returns jobId, status, videoPath and receiptPath; recover with astra_genai_video_status.',
         inputSchema: { ...zodToJsonSchema(genaiSceneSchema, { $refStrategy: 'none' }), type: 'object' }, annotations: generation },
     { name: 'astra_genai_video_status', title: 'Recover an existing GenAI video job',

@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, resolveScenePrompt, sceneArgsFromComposed, sceneLabels } from '../dist/genai-scene.js';
+import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, h3StepAdvice, resolveScenePrompt, sceneArgsFromComposed, sceneLabels } from '../dist/genai-scene.js';
+import { videoCatalog } from '../dist/video-registry.js';
 
 const sceneArgs = (overrides = {}) => genaiSceneSchema.parse({ model:'ltx-2.5-22b-distilled', resolution:'576x1024', reserveUsd:0,
   prompt:'{hero.face} waves.', cast:[{id:'hero', images:[{role:'face', imagePath:'/tmp/hero.png'}]}],
@@ -114,4 +115,19 @@ test('H3 validates its own frame grid and numbers all shot pictures separately f
   const shortLabels=sceneLabels(short), shortPrompt='{s1.image}';
   assert.equal(checkSceneValidation({...short,prompt:shortPrompt},{resolved:{labels:shortLabels,prompt:resolveScenePrompt(shortPrompt,shortLabels),num_frames:124,shots:[{id:'s1',start_frame:0}]}}).numFrames,124);
   assert.equal(genaiSceneSchema.safeParse({...input,cast:[...cast,{...cast[0],id:'d'}]}).success,false);
+});
+
+test('H3 binds two pinned voices and advises fewer sampling steps where the backend would stop the job', () => {
+  const scene = videoCatalog().adapters.find(adapter => adapter.tool === 'astra_genai_scene');
+  assert.deepEqual(scene.voice.maxPinnedVoicesPerRender, {'ltx-2.5-22b-distilled':2, 'minimax-h3':2});
+  const h3 = (resolution, frames, numInferenceSteps) => sceneArgs({model:'minimax-h3', resolution, shots:[{id:'s1', frames, imagePath:'/tmp/open.png'}],
+    ...(numInferenceSteps === undefined ? {} : {numInferenceSteps})});
+  // 736x1280 and 345 frames ran 66 s a step on production: the default 50 steps outrun the 1,800 s job limit.
+  const [advice, ...more] = h3StepAdvice(h3('736x1280', 345));
+  assert.equal(more.length, 0);
+  assert.equal(advice.code, 'h3_step_budget');
+  assert.match(advice.detail, /50 sampling steps \(the model default\) at 736x1280 and 345 frames run about 3300 s.*Set numInferenceSteps to 27 or fewer\./);
+  assert.deepEqual(h3StepAdvice(h3('736x1280', 345, 18)), []);
+  assert.deepEqual(h3StepAdvice(h3('576x1024', 124)), []);
+  assert.deepEqual(h3StepAdvice(sceneArgs()), []);
 });

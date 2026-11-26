@@ -34736,7 +34736,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.7",
+  version: "0.132.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -35551,7 +35551,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -35583,7 +35583,7 @@ var genaiSceneSchema = external_exports.object({
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
     if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 3) issue("H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
@@ -35617,6 +35617,7 @@ function checkSceneVoices(args) {
   }
 }
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66 };
 function sceneLabels(args) {
   if (args.model === "minimax-h3") {
     const labels2 = {};
