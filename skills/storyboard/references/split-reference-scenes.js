@@ -195,7 +195,7 @@ function splitReferenceScenes(board, previous, boardDir, includeExisting = false
       if (seq.payoff === scene.no) seq.payoff = numbers[numbers.length - 1];
     }
     findings.push({level:'warn', code:'scene_reference_split', where:'scene ' + scene.no,
-      what:'Split before ' + conflict.splitBefore.join(', ') + ' to keep two referenced characters per GenAI scene. Inspect each new opening.',
+      what:'Split before ' + conflict.splitBefore.join(', ') + ' to keep two speaking characters per GenAI scene. Inspect each new opening.',
       groups:groups.map((group, i) => ({sceneNo:numbers[i], ...group}))});
   }
   if (scenes.length === structure.scenes.length) {

@@ -93077,7 +93077,7 @@ var require_video_catalog = __commonJS({
           voice: {
             maxPinnedVoicesPerRender: {
               "ltx-2.5-22b-distilled": 2,
-              "minimax-h3": 3
+              "minimax-h3": 2
             },
             postLipSync: false,
             lane: "conditional_reference",
@@ -93109,7 +93109,7 @@ var require_video_catalog = __commonJS({
               "ltx-2.5-22b-distilled",
               "minimax-h3"
             ],
-            note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
+            note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: pictures of at most two speaking people and two character images total; a silent person reaches the clip through the shot pictures. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, two voices, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
           }
         },
         {
@@ -96946,6 +96946,970 @@ var require_character_voice = __commonJS({
   }
 });
 
+// ../skills/_shared/genai-scene-limits.json
+var require_genai_scene_limits = __commonJS({
+  "../skills/_shared/genai-scene-limits.json"(exports, module) {
+    module.exports = {
+      maxReferencedCharacters: 2,
+      maxCharacterImages: 2
+    };
+  }
+});
+
+// ../skills/_shared/scene-references.js
+var require_scene_references = __commonJS({
+  "../skills/_shared/scene-references.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path41 = __require("node:path");
+    var { orderedSpeech } = require_scene_direction();
+    var { maxReferencedCharacters: MAX_SCENE_CHARACTERS, maxCharacterImages: MAX_SCENE_CHARACTER_IMAGES } = require_genai_scene_limits();
+    var personRoles = /* @__PURE__ */ new Set(["character", "face", "outfit", "bystander"]);
+    var castIds = (value2) => [].concat(value2 || []).map((person) => typeof person === "string" ? person : person.id);
+    var unique = (ids) => [...new Set(ids.filter(Boolean))];
+    function referenceOwners(board, boardDir) {
+      const registry2 = board.SB_DOC?.characters ?? [];
+      const actors = Array.isArray(registry2) ? registry2 : Object.entries(registry2).map(([id2, actor2]) => ({ ...actor2, id: id2 }));
+      const voiceOnly = new Set(actors.filter((actor2) => actor2.voiceOnly).map((actor2) => actor2.id));
+      const canonical5 = (file3) => {
+        const local3 = path41.resolve(boardDir, file3);
+        return fs26.existsSync(local3) ? fs26.realpathSync(local3) : local3;
+      };
+      const owners = /* @__PURE__ */ new Map();
+      for (const actor2 of actors) for (const file3 of [actor2.imageUrl, ...Object.values(actor2.panels || {}), ...actor2.voiceReference?.imagePaths || []])
+        if (typeof file3 === "string") owners.set(canonical5(file3), actor2.id);
+      function registeredOwner(file3) {
+        if (!file3) return;
+        const source2 = canonical5(file3);
+        return owners.get(source2) || source2.match(/[/\\]assets[/\\]characters[/\\]([^/\\]+)[/\\]/)?.[1];
+      }
+      function ownerOf(ref, card, speakers = []) {
+        const registered = registeredOwner(ref.path);
+        if (registered && ref.character && registered !== ref.character)
+          throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
+        return registered || ref.character || speakers.find((id2) => ref.id === id2 || ref.id === id2 + "-face" || ref.id?.startsWith(card.id + "-" + id2 + "-"));
+      }
+      return { actors, voiceOnly, canonical: canonical5, owners, registeredOwner, ownerOf };
+    }
+    function sceneReferenceGroups(scene, cards, registry2) {
+      const hasVisibleDialogue = cards.some((card) => orderedSpeech(card).some((line) => line.tts?.trim() && line.delivery === "on_screen"));
+      const groups = [];
+      let group;
+      for (const card of cards) {
+        const shotPeople = hasVisibleDialogue ? unique(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker)).filter((id2) => !registry2.voiceOnly.has(id2)) : [];
+        const combined = unique([...group?.characters ?? [], ...shotPeople]);
+        if (!group || combined.length > MAX_SCENE_CHARACTERS) {
+          group = { shotIds: [], characters: shotPeople, firstShotCharacters: shotPeople };
+          groups.push(group);
+        } else group.characters = combined;
+        group.shotIds.push(card.id);
+      }
+      return groups;
+    }
+    function referenceConflict(scene, groups) {
+      const oversized = groups.find((group2) => group2.characters.length > MAX_SCENE_CHARACTERS);
+      if (!oversized && groups.length < 2) return;
+      const oneTake = scene.videoDirection?.oneTake;
+      const group = oversized ?? groups[1];
+      const shotId = group.shotIds[0];
+      const characters = oversized ? group.characters : unique([...groups[0].characters, ...group.firstShotCharacters]);
+      const reason = oneTake ? "The requested one-take needs a staging decision." : oversized ? "Reblock this shot into views with at most two speaking characters." : "Split before " + shotId + ".";
+      const message = "scene_cast_exceeded: scene " + scene.no + ", shot " + shotId + " references " + characters.join(", ") + ". " + reason;
+      return {
+        code: "scene_cast_exceeded",
+        sceneNo: scene.no,
+        shotId,
+        characters,
+        groups,
+        splitBefore: oneTake || oversized ? [] : groups.slice(1).map((g) => g.shotIds[0]),
+        executable: false,
+        videoSubmitted: false,
+        message
+      };
+    }
+    module.exports = { MAX_SCENE_CHARACTERS, MAX_SCENE_CHARACTER_IMAGES, castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceConflict };
+  }
+});
+
+// ../skills/channel/references/character-panels.js
+var require_character_panels = __commonJS({
+  "../skills/channel/references/character-panels.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path41 = __require("node:path");
+    var { createHash: createHash36 } = __require("node:crypto");
+    var { execFileSync: execFileSync23 } = __require("node:child_process");
+    var { identityCharacter } = require_character_identity();
+    var sha3 = (file3) => createHash36("sha256").update(fs26.readFileSync(file3)).digest("hex");
+    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
+    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
+    function localFile(folder, name2) {
+      if (typeof name2 !== "string" || !name2 || path41.isAbsolute(name2)) return null;
+      const file3 = path41.resolve(folder, name2);
+      try {
+        const relative4 = path41.relative(fs26.realpathSync(folder), fs26.realpathSync(file3));
+        return relative4 && !relative4.startsWith("..") && !path41.isAbsolute(relative4) && fs26.statSync(file3).isFile() ? file3 : null;
+      } catch {
+        return null;
+      }
+    }
+    function dimensions(file3) {
+      const data = JSON.parse(execFileSync23("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file3], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
+      const { width, height } = data.streams?.[0] || {};
+      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
+      return { width, height };
+    }
+    function inspectPanels(folder, fallback = {}) {
+      const findings = [], slots = {}, measurements = {};
+      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
+      let manifest2;
+      const manifestFile = path41.join(folder, "panels.json");
+      if (fs26.existsSync(manifestFile)) {
+        try {
+          const safe = localFile(folder, "panels.json");
+          if (!safe) throw new Error("unsafe manifest path");
+          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
+          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
+        } catch (error2) {
+          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
+          manifest2 = { panels: {} };
+        }
+      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+      for (const [slot2, spec] of Object.entries(SPECS)) {
+        const entry2 = manifest2?.panels?.[slot2];
+        const name2 = manifest2 ? entry2?.file : fallback[slot2];
+        const file3 = localFile(folder, name2);
+        if (!file3) {
+          warn("image-slot", slot2 + ": missing or unsafe shared reference", SLOT_LABELS[slot2] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot2)) {
+          warn("image-purpose", slot2 + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot2] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
+          continue;
+        }
+        slots[slot2] = path41.relative(folder, file3).split(path41.sep).join("/");
+        const hash8 = sha3(file3);
+        try {
+          const size = dimensions(file3);
+          measurements[slot2] = size;
+          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot2}: ${size.width}x${size.height}; expected ${slot2 === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot2]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot2 === "face" ? "1:1" : "2:3"}`);
+        } catch {
+          warn("image-ratio", slot2 + ": dimensions unavailable; not verified", SLOT_LABELS[slot2] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
+        }
+        const framing = entry2?.framing;
+        const box = framing?.subjectBox;
+        if (framing?.status !== "measured" || framing.sha256 !== hash8 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
+          warn("image-framing", slot2 + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot2] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
+        } else {
+          measurements[slot2] = { ...measurements[slot2], subjectHeight: box[3] };
+          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot2}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot2]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
+        }
+      }
+      const front = measurements.front, back = measurements.back;
+      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
+      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
+      return { slots, findings, measurements };
+    }
+    function boardPanelFindings(win, boardDir, channelDir) {
+      const entries = win?.SB_DOC?.characters || [];
+      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id2, c]) => ({ ...c, id: id2 }));
+      for (const id2 of Object.keys(win?.PRODUCTION?.cast || {})) {
+        if (!chars.some((c) => c?.id === id2)) chars.push({ id: id2 });
+      }
+      const findings = [];
+      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
+      const sceneHashes = new Set(sceneFiles.map((name2) => localFile(boardDir, name2)).filter(Boolean).map(sha3));
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
+        const folder = path41.join(channelDir, "assets", "characters", c.id);
+        if (!localFile(channelDir, path41.relative(channelDir, path41.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
+        let registered;
+        const manifestFile = localFile(channelDir, path41.relative(channelDir, path41.join(folder, "panels.json")));
+        if (manifestFile) {
+          try {
+            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
+          } catch {
+            registered = {};
+          }
+        }
+        for (const [slot2, entry2] of Object.entries(registered || {})) {
+          if (slot2 === "msr") continue;
+          const source2 = entry2?.purpose === "character_reference" && entry2.view === slot2 && localFile(folder, entry2.file);
+          const linked = c.panels?.[slot2] || slot2 === "front" && c.panels?.body;
+          if (source2 && !(typeof linked === "string" && linked.trim())) findings.push({
+            characterId: c.id,
+            domain: "image-reference-missing",
+            slot: slot2,
+            source: source2,
+            field: `SB_DOC.characters.${c.id}.panels.${slot2}`,
+            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot2} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source2}`,
+            message: `${c.id}: shared ${slot2} image exists at ${source2}, but storyboard panels.${slot2} is empty`
+          });
+        }
+        for (const [slot2, name2] of Object.entries(c.panels || {})) {
+          const file3 = typeof name2 === "string" ? path41.resolve(boardDir, name2) : "";
+          const shared5 = file3 && localFile(channelDir, path41.relative(channelDir, file3)) && localFile(folder, path41.relative(folder, file3));
+          const view = slot2 === "body" ? "front" : slot2;
+          const entry2 = registered?.[view];
+          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
+          if (!shared5 || !matches || sceneHashes.has(sha3(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot2}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
+        }
+      }
+      return findings;
+    }
+    function episodeCast(boardDir) {
+      const castFile = path41.join(boardDir, "cast.json");
+      if (!fs26.existsSync(castFile)) return [];
+      const value2 = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
+      return Array.isArray(value2) ? value2 : Object.entries(value2 || {}).map(([id2, entry2]) => ({ ...entry2, id: id2 }));
+    }
+    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
+      return new Map(ids.map((id2) => {
+        const entry2 = cast.find((c) => c.id === id2);
+        let folder;
+        if (entry2?.source) {
+          const identity = path41.resolve(boardDir, entry2.source);
+          folder = path41.dirname(identity);
+          if (path41.basename(identity) !== "identity.md" || path41.basename(folder) !== id2 || path41.basename(path41.dirname(folder)) !== "characters" || path41.basename(path41.dirname(path41.dirname(folder))) !== "assets")
+            throw new Error(`cast_source_missing: ${id2} needs its own assets/characters/${id2}/identity.md`);
+        } else for (let dir = boardDir; ; dir = path41.dirname(dir)) {
+          const candidate2 = path41.join(dir, "assets", "characters", id2);
+          if (fs26.existsSync(path41.join(candidate2, "panels.json"))) {
+            folder = candidate2;
+            break;
+          }
+          if (path41.dirname(dir) === dir) break;
+        }
+        if (folder && fs26.existsSync(folder) && path41.basename(fs26.realpathSync(folder)) !== id2)
+          throw new Error(`cast_source_missing: ${id2} needs its own character folder`);
+        if (!folder) throw new Error(`character_sheet_missing: ${id2} needs its shared panels.json`);
+        let manifest2;
+        try {
+          manifest2 = JSON.parse(fs26.readFileSync(path41.join(folder, "panels.json"), "utf8"));
+        } catch {
+          throw new Error(`character_sheet_missing: ${id2} has an unreadable panels.json`);
+        }
+        const panels = {};
+        for (const view of requiredViews?.get(id2) ?? ["face", "front", "back"]) {
+          const panel = manifest2.panels?.[view];
+          const file3 = localFile(folder, panel?.file);
+          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file3)
+            throw new Error(`character_panel_missing: ${id2} has no ${view} panel with a valid character-reference registration`);
+          panels[view] = path41.relative(boardDir, file3).split(path41.sep).join("/");
+        }
+        return [id2, { folder, paths: panels, entries: manifest2.panels }];
+      }));
+    }
+    function sheetPanels(boardDir, ids, views) {
+      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id2, sheet]) => [id2, sheet.paths]));
+    }
+    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
+      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
+      const sheets = readPanelSheets(boardDir, ids);
+      if (options.combined) return ids.map((id2) => {
+        const { folder, paths: sources, entries } = sheets.get(id2);
+        const entry2 = entries.msr;
+        const file3 = localFile(folder, entry2?.file);
+        if (!file3 || entry2.purpose !== "character_reference" || entry2.view !== "msr")
+          throw new Error(`character_msr_reference_missing: ${id2} needs a registered unified identity/outfit reference`);
+        if (entry2.sha256 !== sha3(file3) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha3(path41.resolve(boardDir, sources[view]))))
+          throw new Error(`character_msr_reference_stale: ${id2} unified reference or its canonical sources changed`);
+        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
+        return {
+          id: `${shotId}-${id2}-msr`,
+          path: path41.relative(boardDir, file3).split(path41.sep).join("/"),
+          role: "character",
+          use,
+          purpose: fitting ? `${id2}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id2}: ONE person, exact face, hair, physique and outfit`
+        };
+      });
+      let views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
+      if (options.maxPictures && ids.length) {
+        views = views.slice(0, Math.floor(options.maxPictures / ids.length));
+        if (ids.length === 1 && options.bodyView === "back") views[1] = "back";
+      }
+      const outfits = /* @__PURE__ */ new Map();
+      for (const [id2, { folder, entries }] of sheets) {
+        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
+        const source2 = localFile(folder, "identity.md");
+        if (!source2) continue;
+        try {
+          const outfit = identityCharacter(fs26.readFileSync(source2, "utf8"), { ready: false }).physical.outfit;
+          if (outfit?.status === "confirmed") outfits.set(id2, outfit.value);
+        } catch {
+        }
+      }
+      return views.flatMap((view) => ids.map((id2) => {
+        const { paths: paths3, entries } = sheets.get(id2);
+        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
+        return {
+          id: `${shotId}-${id2}-${view}`,
+          path: paths3[view],
+          role: "character",
+          use,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          ...fitting && outfits.has(id2) ? { defaultOutfit: outfits.get(id2) } : {},
+          purpose: view === "face" ? `${id2}'s face and hair` : fitting ? `${id2}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id2}'s body and outfit, ${view}`
+        };
+      }));
+    }
+    function missingAppearance(shot, character, role2, message) {
+      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role2 + ": " + message);
+      error2.report = {
+        stage: "character_inputs",
+        code: "character_input_required",
+        shotId: shot.id,
+        character,
+        role: role2,
+        executable: false,
+        videoSubmitted: false,
+        message: error2.message
+      };
+      return error2;
+    }
+    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
+      const visual = shot.visual || {}, view = visual.camera?.view;
+      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
+      const lines = require_scene_direction().orderedSpeech(shot);
+      const explicit = visual.characterInputs;
+      let registry2;
+      if (seedance2) {
+        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
+        if (view?.subjectId && !view.subjectType) {
+          registry2 = episodeCast(boardDir);
+          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
+          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
+        }
+        if (view?.subjectType === "person") people.push(view.subjectId);
+        if (view?.mode === "ots") people.push(view.viewerId);
+        for (const id2 of people) if (id2 && !cast.includes(id2) && (!sceneSpeakers || sceneSpeakers.includes(id2))) cast.push(id2);
+      }
+      const bodyForView = (id2) => {
+        if (view?.mode === "ots" && view.viewerId === id2) return "back";
+        if (view?.subjectId ? view.subjectId !== id2 : cast.length !== 1) return;
+        if (["detail", "object", "space"].includes(view?.subjectType)) return;
+        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
+        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
+      };
+      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
+      const specs = explicit ?? cast.map((character) => ({ character }));
+      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
+      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
+      for (const spec of specs) {
+        const id2 = spec?.character;
+        if (typeof id2 !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2) || views.has(id2) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
+          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
+        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
+          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
+        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
+          throw new Error("character_face_source_invalid: a face review must identify the selected original");
+        const body = spec.bodyView ?? bodyForView(id2);
+        if (seedance2) {
+          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
+            throw missingAppearance(shot, id2, "visibility", "select face_visible, body_only or hands_only");
+          if (spec.visibility === "hands_only") {
+            if (lines.some((line) => line.speaker === id2 && line.delivery === "on_screen" && line.tts?.trim()))
+              throw missingAppearance(shot, id2, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
+            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id2, "hands", "remove the face and body sources for this insert");
+            hands.add(id2);
+            views.set(id2, []);
+            continue;
+          }
+          if (!body) throw missingAppearance(shot, id2, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
+          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id2) === "back") {
+            if (spec.faceTaskId) throw missingAppearance(shot, id2, "body", "a body-only view cannot use a facial original");
+            views.set(id2, [body]);
+            continue;
+          }
+        }
+        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id2);
+        views.set(id2, spec.faceTaskId ? [body] : ["face", body]);
+      }
+      const omitted = cast.find((id2) => !views.has(id2));
+      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
+      if (cast.length && (cast.some((id2) => !views.has(id2)) || specs.some((spec) => !cast.includes(spec.character))))
+        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
+      let sheets;
+      try {
+        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id2) => !hands.has(id2)), views, registry2);
+      } catch (error2) {
+        if (!seedance2) throw error2;
+        const id2 = [...views.keys()].find((id3) => error2.message.includes(": " + id3 + " "));
+        if (!id2) throw error2;
+        throw missingAppearance(shot, id2, views.get(id2).includes("face") ? "face" : "body", error2.message);
+      }
+      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
+      for (const { character, faceTaskId, faceReviewPath } of specs) {
+        if (hands.has(character)) continue;
+        const sheet = sheets.get(character);
+        if (faceTaskId) {
+          for (const slot3 of ["face", "msr"]) {
+            const name2 = sheet.entries[slot3]?.file;
+            if (typeof name2 === "string") replacedFaces.add(path41.resolve(sheet.folder, name2));
+          }
+        }
+        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
+        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
+        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
+        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
+        const ref = { character, role: "character", use: "video" };
+        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
+        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
+        bodies.push({
+          ...ref,
+          id: shot.id + "-" + character + "-" + bodyView,
+          path: bodyPath,
+          ...fitting ? { wardrobe: "fitting" } : {},
+          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
+        });
+      }
+      const pending2 = new Map([...faces, ...bodies].map((ref) => [path41.resolve(boardDir, ref.path), ref]));
+      const references = [], ids = /* @__PURE__ */ new Set();
+      for (const authored of visual.references || []) {
+        const file3 = authored.path && path41.resolve(boardDir, authored.path);
+        if (replacedFaces.has(file3) && authored.use !== "image")
+          throw new Error("character_face_source_conflict: remove the superseded face from video references");
+        const selected = pending2.get(file3);
+        if (selected && authored.use !== "image") {
+          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
+          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
+          pending2.delete(file3);
+        } else references.push(authored);
+        ids.add(authored.id);
+      }
+      for (const ref of pending2.values()) {
+        let id2 = ref.id;
+        while (ids.has(id2)) id2 += "-video";
+        references.push({ ...ref, id: id2, ...seedance2 ? { resolvedPanel: true } : {} });
+        ids.add(id2);
+      }
+      if (!contracts.length) return shot;
+      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
+      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
+      const slot2 = require_production_mode().videoSlot(shot);
+      if (slot2?.referenceImagePaths !== void 0) {
+        if (JSON.stringify(slot2.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
+          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
+        const referenceImagePaths = videoPaths(references);
+        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
+        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
+        normalized.video = { ...slot2, referenceImagePaths };
+      }
+      return { ...shot, visual: normalized };
+    }
+    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
+  }
+});
+
+// ../skills/_shared/scene-cast.js
+var require_scene_cast = __commonJS({
+  "../skills/_shared/scene-cast.js"(exports, module) {
+    "use strict";
+    var path41 = __require("node:path");
+    var fs26 = __require("node:fs");
+    var { orderedSpeech } = require_scene_direction();
+    function sceneSpeech(scene, cards, planning = false) {
+      const lines = cards.flatMap((card) => orderedSpeech(card).filter((line) => line.tts?.trim()).map((line) => ({ card, line })));
+      const spoken = /* @__PURE__ */ new Set(), physical = /* @__PURE__ */ new Set();
+      const declared = scene.speakers;
+      if (declared !== void 0 && (!Array.isArray(declared) || declared.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(declared).size !== declared.length))
+        throw new Error("scene_speaker_mismatch: list each speaker once by cast ID in scene " + scene.no);
+      for (const { card, line } of lines) {
+        if (!line.speaker) {
+          if (planning || declared || line.delivery === "on_screen" || line.delivery === "off_screen")
+            throw new Error("scene_speaker_missing: identify the speaker in " + card.id + " " + (line.id || line.tts));
+          continue;
+        }
+        if (planning && !["on_screen", "off_screen", "voiceover"].includes(line.delivery))
+          throw new Error("scene_speaker_delivery: identify the delivery of " + line.speaker + " in " + card.id);
+        if (line.voiceoverKind === "inner_thought" && line.delivery !== "voiceover")
+          throw new Error("scene_speaker_delivery: inner thought " + (line.id || line.speaker) + " requires voiceover delivery");
+        spoken.add(line.speaker);
+        if (declared && !declared.includes(line.speaker)) {
+          throw new Error("scene_speaker_mismatch: scene " + scene.no + ", shot " + card.id + ", line " + (line.id || line.tts) + " names undeclared speaker " + line.speaker);
+        }
+        if (line.delivery !== "voiceover") physical.add(line.speaker);
+      }
+      if (scene.speakerReferences !== void 0 && !Array.isArray(scene.speakerReferences))
+        throw new Error("scene_reference_owner: list the scene references by cast ID");
+      if (scene.speakerReferences?.length) {
+        const staged = /* @__PURE__ */ new Set([...spoken, ...declared ?? [], ...(scene.videoDirection?.openingPositions ?? []).map((row) => row.character)]);
+        for (const card of cards) {
+          for (const id2 of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id2);
+          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.video?.openingPositions ?? [], ...card.visual?.references ?? [], ...card.visual?.characterInputs ?? []])
+            if (item.character) staged.add(item.character);
+        }
+        const castAssigned = cards.length > 0 && cards.every((card) => card.visual?.character !== void 0 || card.visual?.characters !== void 0);
+        const owners = /* @__PURE__ */ new Set();
+        for (const ref of scene.speakerReferences) {
+          if (!ref?.path || !ref.character || owners.has(ref.character))
+            throw new Error("scene_reference_owner: each scene reference needs a path and a distinct cast ID");
+          if ((planning || castAssigned) && !staged.has(ref.character))
+            throw new Error("scene_reference_owner: " + ref.character + " does not appear or speak in scene " + scene.no);
+          owners.add(ref.character);
+        }
+      }
+      if (planning && declared?.some((id2) => !spoken.has(id2)))
+        throw new Error("scene_speaker_mismatch: the declared speakers must match the lines of scene " + scene.no);
+      return { physical: (declared ?? [...spoken]).filter((id2) => physical.has(id2)), visible: lines.some(({ line }) => line.delivery === "on_screen") };
+    }
+    function sceneCast(scene, cards) {
+      return sceneSpeech(scene, cards).physical;
+    }
+    function sceneSpeechRoute(scene, cards, selection) {
+      const { physical, visible } = sceneSpeech(scene, cards, true);
+      const speakers = visible ? physical : [];
+      const direction = scene.videoDirection || {};
+      const track = direction.audio && direction.audio.mode !== "mix";
+      const distilled = selection.engine === "astra-genai" && selection.model === "ltx-2.5-22b-distilled";
+      const generated = direction.dialogueVoice === "model_generated";
+      if (track && !visible) throw new Error("scene_speech_route: an external voice or a non-speaking picture uses a mix track");
+      if (track && generated) throw new Error("scene_speech_route: choose recorded audio or generated dialogue for this render");
+      const mode = track ? "conditioned" : !speakers.length ? "picture" : generated ? "generated" : selection.operation === "audio" ? "conditioned" : "reference";
+      let operation = "image";
+      if (mode === "conditioned") operation = "audio";
+      else if (mode === "reference") operation = distilled && selection.operation !== "reference" ? "image" : "reference";
+      else if (mode === "generated" && selection.engine === "veo" && selection.operation === "reference") operation = "reference";
+      const cutVoiceover = cards.some((card) => {
+        const lines = orderedSpeech(card).filter((line) => line.tts?.trim());
+        return lines.length && lines.every((line) => line.delivery === "voiceover");
+      });
+      const mixedCuts = distilled && mode === "reference" && !direction.oneTake && cutVoiceover;
+      if (mixedCuts) operation = "image";
+      return { speakers, operation, mode, external: !visible && physical.length > 0 };
+    }
+    function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, generateAudio, limit: limit2, perCard = false }) {
+      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => orderedSpeech(card).some((line) => line.delivery !== "voiceover" && line.tts?.trim()) && require_production_mode().videoSlot(card)?.generateAudio === false)))
+        throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
+      if (route.mode !== "reference") return;
+      if (limit2 === void 0) {
+        const entry2 = require_video_catalog().adapters.find((adapter2) => adapter2.tool === tool2);
+        const capacity = entry2?.voice.maxPinnedVoicesPerRender;
+        limit2 = typeof capacity === "number" ? capacity : capacity?.[model2];
+      }
+      if (!limit2 || ["astra_genai_img2video", "astra_genai_msr", "astra_genai_scene"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled" && !(tool2 === "astra_genai_scene" && model2 === "minimax-h3"))
+        throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
+      for (const group of perCard ? cards.map((card) => [card]) : [cards]) {
+        const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
+        if (voices.size <= limit2) continue;
+        const label = group.length === 1 || scene?.no === void 0 ? group[0].id : "scene " + scene.no;
+        throw new Error("scene_render_voice_limit: " + label + " needs " + voices.size + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (scene?.videoDirection?.oneTake || cards.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
+      }
+    }
+    var { castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceConflict, MAX_SCENE_CHARACTER_IMAGES } = require_scene_references();
+    function projectSceneCast(scene, cards, board, boardDir, engine2, audioRoute = false, perShot = false) {
+      const registry2 = referenceOwners(board, boardDir);
+      const { actors, voiceOnly, canonical: canonical5, owners, registeredOwner } = registry2;
+      const speakers = sceneCast(scene, cards).filter((id2) => !voiceOnly.has(id2));
+      const ltx2 = engine2 === "astra-genai";
+      const declaredAll = scene.speakerReferences ?? [];
+      if (declaredAll.some((ref) => !actors.some((actor2) => actor2.id === ref.character)))
+        throw new Error("scene_reference_owner: register the owner of every scene identity reference");
+      if (declaredAll.some((ref) => voiceOnly.has(ref.character)))
+        throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
+      const declaredRefs = ltx2 && !perShot ? declaredAll.filter((ref) => speakers.includes(ref.character)) : declaredAll;
+      const identities = [.../* @__PURE__ */ new Set([...speakers, ...declaredRefs.map((ref) => ref.character)])];
+      const ownerOf = (ref, card) => registry2.ownerOf(ref, card, speakers);
+      const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== "mix";
+      const groups = ltx2 && !perShot && !conditioning ? sceneReferenceGroups(scene, cards, registry2) : [];
+      const conflict = referenceConflict(scene, groups);
+      if (conflict) throw Object.assign(new Error(conflict.message), { report: conflict });
+      if (ltx2 && !perShot && cards.some((card) => card.visual?.characterInputs?.length)) {
+        const { resolveShotCharacterInputs } = require_character_panels();
+        cards = cards.map((card) => card.visual?.characterInputs?.length ? resolveShotCharacterInputs(card, boardDir, false, board.SB_DOC?.characters) : card);
+      }
+      const sheets = /* @__PURE__ */ new Map();
+      for (const character of identities) {
+        try {
+          const panels2 = require_character_panels().sheetPanels(boardDir, [character], /* @__PURE__ */ new Map([[character, ["face"]]])).get(character);
+          sheets.set(character, panels2);
+          for (const file3 of Object.values(panels2)) owners.set(canonical5(file3), character);
+        } catch (error2) {
+          if (engine2 === "astra-genai" && !scene.videoDirection?.audio && !scene.speakerReferences?.some((ref) => ref.character === character) && fs26.existsSync(path41.join(boardDir, "cast.json"))) throw error2;
+        }
+      }
+      const originals = /* @__PURE__ */ new Map();
+      if (engine2 === "seedance" && (scene.frames !== void 0 || declaredRefs.length)) {
+        for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
+          if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
+          if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
+            throw new Error("scene_reference_owner: conflicting originals for " + spec.character);
+          originals.set(spec.character, spec);
+        }
+      }
+      const references = [];
+      for (const character of identities) {
+        const actor2 = actors.find((c) => c.id === character);
+        let face = sheets.get(character)?.face ?? actor2?.panels?.face;
+        const candidates = cards.flatMap((card) => [
+          ...(card.timeline?.images ?? []).filter((p) => p.role === "face" && p.character === character),
+          ...(card.visual?.references ?? []).filter((r2) => r2.role === "character" && ownerOf(r2, card) === character && !/-(?:front|back)$/.test(r2.id))
+        ]);
+        const custom3 = scene.speakerReferences?.find((ref) => ref.character === character);
+        if (ltx2 && conditioning && custom3)
+          throw new Error("scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for " + character);
+        if (originals.has(character)) {
+          if (custom3) throw new Error("scene_reference_owner: select one facial original for " + character);
+          continue;
+        }
+        if (custom3 && face && engine2 === "seedance" && canonical5(custom3.path) !== canonical5(face))
+          throw new Error("scene_reference_owner: Seedance requires the registered face for " + character);
+        face = custom3?.path ?? face ?? candidates[0]?.path;
+        if (face && !conditioning && (ltx2 || scene.frames !== void 0 || custom3)) {
+          if (registeredOwner(face) && registeredOwner(face) !== character)
+            throw new Error("scene_reference_owner: " + character + " does not own " + face);
+          if (references.some((ref) => canonical5(ref.path) === canonical5(face))) throw new Error("scene_reference_owner: two speakers share one face path");
+          references.push({ id: "scene-" + scene.no + "-" + character + "-face", character, path: face, role: "character", scope: "scene", use: "video", purpose: character + " facial identity." });
+        } else if (ltx2 && scene.speakers && !conditioning)
+          throw new Error("character_panel_missing: scene " + scene.no + " speaker " + character + " needs a registered face");
+      }
+      let sceneCastIds = [...groups[0]?.characters ?? []];
+      let panels;
+      if (sceneCastIds.length) {
+        const body = cards.flatMap((card) => card.visual?.characterInputs ?? []).find((input) => input.bodyView)?.bodyView;
+        try {
+          panels = require_character_panels().canonicalReferences(
+            boardDir,
+            "scene-" + scene.no,
+            sceneCastIds,
+            "video",
+            { maxPictures: MAX_SCENE_CHARACTER_IMAGES, bodyView: body }
+          );
+        } catch {
+        }
+      }
+      if (panels) {
+        const chosen = panels.flatMap((ref) => {
+          const character = sceneCastIds.find((id2) => ref.id === "scene-" + scene.no + "-" + id2 + "-" + ref.id.split("-").at(-1));
+          if (declaredRefs.some((entry2) => entry2.character === character))
+            return ref.id.endsWith("-face") ? references.filter((entry2) => entry2.character === character) : [];
+          return [{ ...ref, character, scope: "scene" }];
+        });
+        references.splice(0, references.length, ...chosen);
+      } else sceneCastIds = [];
+      if (scene.referenceSplitFrom && ltx2 && scene.videoDirection && cards[0]) {
+        const first = cards[0], needed = /* @__PURE__ */ new Set([
+          ...castIds(first.visual?.character ?? first.visual?.characters),
+          ...orderedSpeech(first).filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker)
+        ]);
+        const missing = [...needed].filter((id2) => !scene.videoDirection.openingPositions?.some((row) => row.character === id2));
+        if (missing.length) throw new Error("scene_split_opening_positions: inspect the opening of " + first.id + " and describe where " + missing.join(", ") + " starts with story_scene");
+      }
+      const entering = (rows2) => !sceneCastIds.length || !rows2 ? rows2 : [...rows2, ...sceneCastIds.filter((id2) => !rows2.some((row) => row.character === id2)).map((character) => ({ character, images: [], position: "Not in the opening view; appears in a later shot." }))];
+      const positions = (rows2, refs) => rows2?.map((row) => ({ ...row, images: ltx2 ? refs.flatMap((ref, i2) => ref.character === row.character ? [i2 + 1] : []) : row.images }));
+      let openingRefs = [];
+      const members = cards.map((card, index) => {
+        const visual = card.visual || {};
+        const castSpecified = visual.character !== void 0 || visual.characters !== void 0;
+        const original = castIds(visual.character ?? visual.characters);
+        const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
+        const shotMarks = [...card.timeline?.openingPositions ?? [], ...visual.video?.openingPositions ?? []];
+        const hasShotBlocking = castSpecified && shotMarks.length > 0;
+        const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => !shotMarks.some((mark) => mark.character === row.character)) : [];
+        const visibleRefs = original.filter((id2) => !shotMarks.some((mark) => mark.character === id2 && mark.images?.length === 0));
+        const localIds = /* @__PURE__ */ new Set([
+          ...active,
+          ...visibleRefs,
+          ...castIds(visual.bystanders),
+          ...shotMarks.filter((row) => row.images?.length || !hasShotBlocking && declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...inheritedMarks.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
+          ...(visual.characterInputs ?? []).map((input) => input.character),
+          ...(card.timeline?.images ?? []).map((pin) => pin.character),
+          ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
+        ]);
+        const localRefs = perShot && identities.length > 2 ? [
+          ...active.flatMap((id2) => references.filter((ref) => ref.character === id2)),
+          ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
+        ] : perShot && hasShotBlocking ? references.filter((ref) => localIds.has(ref.character)) : references;
+        const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
+        const keep2 = (ref) => {
+          const owner = registeredOwner(ref.path);
+          if (owner && ref.character && owner !== ref.character) throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
+          if (scene.frames !== void 0 && ref.legacy) return false;
+          if (ref.use === "image") return true;
+          if (localRefs.some((item) => canonical5(item.path) === canonical5(ref.path))) return false;
+          if (sceneCastIds.length && personRoles.has(ref.role) && sceneCastIds.includes(ownerOf(ref, card))) return false;
+          if (ltx2 && !perShot && personRoles.has(ref.role) && !identities.includes(ownerOf(ref, card))) return false;
+          if (!ref.legacy && personRoles.has(ref.role)) return true;
+          const identity = ownerOf(ref, card);
+          if (identity && !speakers.includes(identity) && !declaredRefs.some((item) => item.character === identity)) return !ref.legacy;
+          if (!personRoles.has(ref.role) && !owner) return true;
+          if (ltx2 || scene.frames !== void 0) return false;
+          return speakers.includes(ownerOf(ref, card));
+        };
+        const kept = (visual.references || []).filter(keep2).map((ref) => {
+          const character = ownerOf(ref, card);
+          return personRoles.has(ref.role) && character ? { ...ref, character, role: ref.role === "bystander" ? "character" : ref.role } : ref;
+        });
+        const subjectRefs = useSceneRefs ? localRefs : [];
+        const pins = card.timeline?.images?.filter((pin) => !personRoles.has(pin.role) || keep2(pin)) ?? [];
+        const slots = [
+          ...pins.filter((pin) => !["start", "end", "keyframe", "location", "background"].includes(pin.role)),
+          ...[...subjectRefs, ...kept].filter((ref) => ref.use !== "image" && !["location", "background"].includes(ref.role) && !pins.some((pin) => pin.path === ref.path))
+        ];
+        if (!index) openingRefs = slots;
+        const shotPositions = (rows2) => {
+          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows2.some((local3) => local3.character === row.character)) : [];
+          return positions(index === 0 ? entering([...rows2, ...inherited]) : [...rows2, ...inherited], slots);
+        };
+        const timeline = card.timeline && {
+          ...card.timeline,
+          ...card.timeline.images ? { images: pins } : {},
+          ...card.timeline.openingPositions ? { openingPositions: shotPositions(card.timeline.openingPositions) } : {}
+        };
+        const updated = {
+          ...visual,
+          ...ltx2 ? { sceneSpeakerReferences: true } : {},
+          ...castSpecified ? { character: original } : {},
+          ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
+          ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
+          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
+        };
+        if (originals.size && updated.character?.length) {
+          updated.characterInputs = updated.character.map((character) => {
+            const local3 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
+            const original2 = originals.get(character);
+            return original2 && local3.visibility !== "hands_only" && local3.visibility !== "body_only" ? { ...local3, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local3;
+          });
+        }
+        if (updated.characterInputs?.length === 0) delete updated.characterInputs;
+        if (scene.frames !== void 0) {
+          const start = index === 0 ? scene.frames.start : void 0;
+          const end = index === cards.length - 1 ? scene.frames.end : void 0;
+          const { keyframes: keyframes2, storyboardKeyframes } = visual.frames ?? {};
+          updated.frames = {
+            mode: end ? "first_last" : start ? "first" : "reference",
+            start,
+            end,
+            ...engine2 === "astra-genai" && keyframes2 !== void 0 ? { keyframes: keyframes2 } : {},
+            ...engine2 === "astra-genai" && storyboardKeyframes !== void 0 ? { storyboardKeyframes } : {}
+          };
+          delete updated.bg;
+          delete updated.src;
+          delete updated.imagePair;
+          delete updated.lastImagePath;
+          if (updated.video) {
+            updated.video = { ...updated.video };
+            delete updated.video.lastImagePath;
+            delete updated.video.referenceImagePaths;
+          }
+          const timed = perShot || engine2 === "astra-genai" ? [] : ["start", "end", "keyframe"];
+          if (timeline?.images?.some((pin) => timed.includes(pin.role)))
+            throw new Error("scene_image_scope: use a scene anchor or an authored shot composition image on " + card.id);
+        }
+        return { ...card, visual: updated, ...timeline ? { timeline } : {} };
+      });
+      for (const ref of declaredRefs) {
+        const used = members.some((member) => member.visual.references?.some((item) => item.use !== "image" && item.character === ref.character && canonical5(item.path) === canonical5(ref.path)));
+        if (!used) throw new Error("scene_reference_owner: no render binds the requested visual reference for " + ref.character);
+      }
+      const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(entering(scene.videoDirection.openingPositions), openingRefs) };
+      return { members, direction, speakers, identities };
+    }
+    function requiredCharacters2(shot) {
+      const inputs2 = shot?.visual?.characterInputs;
+      return Array.isArray(inputs2) ? inputs2.filter((person) => person && typeof person.bodyPath === "string") : [];
+    }
+    module.exports = { requiredCharacters: requiredCharacters2, sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast };
+  }
+});
+
+// ../skills/channel/references/character-sheet.js
+var require_character_sheet = __commonJS({
+  "../skills/channel/references/character-sheet.js"(exports, module) {
+    "use strict";
+    var fs26 = __require("node:fs");
+    var path41 = __require("node:path");
+    var { createHash: createHash36 } = __require("node:crypto");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
+    var { identityVoice, voiceErrors } = require_character_voice();
+    function episodeVoiceOverride(win, tts) {
+      const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
+      return typeof override2?.request === "string" && override2.request.trim().length > 0 && typeof override2.model === "string" && override2.model.trim().length > 0 && override2.engine === tts?.engine && override2.model === tts?.model && voiceErrors(tts).length === 0;
+    }
+    function handoff(file3, { requireSpeech = true, voiceOnly = false } = {}) {
+      const source2 = fs26.readFileSync(file3, "utf8");
+      const options = { ready: !voiceOnly };
+      const character = identityCharacter(source2, options);
+      const name2 = /^#\s+(.+)$/m.exec(source2)?.[1]?.trim();
+      if (!name2) throw new Error("identity.md needs a # Name heading");
+      const id2 = path41.basename(path41.dirname(path41.resolve(file3)));
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2)) throw new Error("Character folder needs a kebab-case id");
+      const tts = identityVoice(source2, { optional: !requireSpeech });
+      return { id: id2, name: name2, character, tts, direction: direction(character, options), identitySha256: createHash36("sha256").update(source2).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source2, tts) };
+    }
+    function selectedVoiceReference(source2, tts) {
+      if (!tts) return {};
+      const document2 = [...source2.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1])).find((v) => v?.character);
+      const selection = document2?.voiceSelection;
+      if (!selection?.auditionPath) return selection ? { voiceSelection: selection } : {};
+      try {
+        const audition = JSON.parse(fs26.readFileSync(selection.auditionPath, "utf8"));
+        const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
+        const registration = selection.registration;
+        const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
+        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path41.isAbsolute(chosen.audioPath))
+          throw new Error("Selected voice sample no longer matches the pinned character voice");
+        return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
+      } catch (error2) {
+        return { voiceSelection: selection, voiceReferenceWarning: error2.message };
+      }
+    }
+    if (__require.main === module) {
+      try {
+        const args = process.argv.slice(2);
+        const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
+        if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
+        if (view) {
+          const manifest2 = path41.join(path41.dirname(args[0]), "panels.json");
+          const front = view === "back" && fs26.existsSync(manifest2) ? JSON.parse(fs26.readFileSync(manifest2, "utf8")).panels?.front : void 0;
+          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs26.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
+          if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
+          console.log(text4);
+        } else console.log(JSON.stringify(handoff(args[0]), null, 2));
+      } catch (e2) {
+        console.error(e2.message);
+        process.exitCode = 1;
+      }
+    }
+    function sourceErrors(win, boardDir) {
+      const entries = win?.SB_DOC?.characters;
+      const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id2, c]) => ({ ...c, id: id2 }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
+      if (!chars.length) return [];
+      let channel = path41.resolve(boardDir);
+      while (!fs26.existsSync(path41.join(channel, "profile.md")) && path41.dirname(channel) !== channel) channel = path41.dirname(channel);
+      const errors = [];
+      for (const c of chars) {
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
+          errors.push("Invalid character id");
+          continue;
+        }
+        const file3 = path41.join(channel, "assets", "characters", c.id, "identity.md");
+        try {
+          const current = handoff(file3, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
+          const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
+          if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || voiceChanged && !episodeVoiceOverride(win, c.tts))
+            errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
+        } catch (error2) {
+          errors.push(`Character ${c.id}: ${error2.message}`);
+        }
+      }
+      return errors;
+    }
+    module.exports = { handoff, sourceErrors, selectedVoiceReference };
+  }
+});
+
+// ../skills/_shared/scene-voice.js
+var require_scene_voice = __commonJS({
+  "../skills/_shared/scene-voice.js"(exports, module) {
+    "use strict";
+    var path41 = __require("node:path");
+    var { createHash: createHash36 } = __require("node:crypto");
+    var { existsSync: existsSync48, readFileSync: readFileSync45, realpathSync: realpathSync16 } = __require("node:fs");
+    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
+    var { handoff } = require_character_sheet();
+    var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
+    var object7 = (value2) => value2 && typeof value2 === "object" && !Array.isArray(value2) ? value2 : {};
+    var text4 = (value2) => typeof value2 === "string" ? value2.trim() : "";
+    var fileHash2 = (file3) => createHash36("sha256").update(readFileSync45(file3)).digest("hex");
+    var sameSettings = (a, b) => isDeepStrictEqual2(JSON.parse(JSON.stringify(a ?? null)), JSON.parse(JSON.stringify(b ?? null)));
+    function channelRoot(boardDir) {
+      let channel = path41.resolve(boardDir);
+      while (!existsSync48(path41.join(channel, "profile.md")) && path41.dirname(channel) !== channel) channel = path41.dirname(channel);
+      return channel;
+    }
+    function resolveCharacterVoice2(character, boardDir, shot, warnings) {
+      const id2 = text4(character.id);
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2)) return character;
+      const channel = channelRoot(boardDir);
+      const required2 = requiredCharacters2(shot).find((person) => person.character === id2);
+      const folder = required2 ? path41.dirname(path41.resolve(boardDir, required2.bodyPath)) : path41.join(channel, "assets/characters", id2);
+      const identity = path41.join(folder, "identity.md");
+      let resolved = character;
+      const pinnedSettings = Object.keys(object7(character.tts)).length > 0;
+      if ((!pinnedSettings || !object7(character.voiceReference).path) && existsSync48(identity)) {
+        try {
+          const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
+          if (!pinnedSettings || sameSettings(current.tts, character.tts)) {
+            resolved = { ...current, ...character, tts: current.tts };
+            if (current.voiceReference && !object7(resolved.voiceReference).path)
+              resolved.voiceReference = { ...object7(resolved.voiceReference), ...current.voiceReference };
+            if (required2 && !object7(resolved.voiceReference).path) {
+              const sample = path41.join(folder, "voice.wav");
+              const selected = object7(current.voiceSelection).audioSha256;
+              if (typeof selected === "string" && existsSync48(sample) && fileHash2(sample) === selected)
+                resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
+            }
+          }
+        } catch (error2) {
+          warnings.push(`${id2}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
+          return character;
+        }
+      }
+      const reference2 = object7(resolved.voiceReference);
+      if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face?.path, required2.bodyPath].filter(Boolean) } };
+      const sceneRefs = object7(shot.visual).references;
+      const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object7) : []).filter((ref) => ref.scope === "scene" && ref.character === id2 && ref.role === "character").map((ref) => text4(ref.path));
+      if (facePaths.length) return { ...resolved, voiceReference: { ...reference2, imagePaths: facePaths } };
+      if (!Array.isArray(reference2.imagePaths) && existsSync48(folder)) {
+        const root = realpathSync16(folder) + path41.sep;
+        const refs = object7(shot.visual).references;
+        const imagePaths = (Array.isArray(refs) ? refs.map(object7) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text4(ref.use))).map((ref) => text4(ref.path)).filter(Boolean).map((file3) => path41.resolve(boardDir, file3)).filter((file3) => existsSync48(file3) && realpathSync16(file3).startsWith(root));
+        if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
+      }
+      return resolved;
+    }
+    function voiceReference2(character, boardDir, warnings) {
+      const declared = object7(character.voiceReference);
+      if (character.voiceReferenceWarning && !declared.path) {
+        warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
+        return void 0;
+      }
+      let file3 = text4(declared.path);
+      if (file3) {
+        file3 = path41.resolve(boardDir, file3);
+        if (declared.tts && !sameSettings(declared.tts, character.tts))
+          throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
+      } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text4(character.id))) {
+        const channel = channelRoot(boardDir);
+        const identity = path41.join(channel, "assets/characters", text4(character.id), "identity.md");
+        const candidate2 = path41.join(path41.dirname(identity), "voice.wav");
+        if (existsSync48(identity) && existsSync48(candidate2)) {
+          const { identityVoice } = require_character_voice();
+          if (!sameSettings(identityVoice(readFileSync45(identity, "utf8")), character.tts)) {
+            warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
+            return void 0;
+          }
+          file3 = candidate2;
+        }
+      }
+      if (!file3) return void 0;
+      if (!existsSync48(file3)) throw new Error(`voice_reference_stale: ${character.id} selected sample is missing: ${file3}`);
+      const absolute = realpathSync16(file3), sha2563 = fileHash2(absolute);
+      const selected = declared.sha256 || object7(character.voiceSelection).audioSha256;
+      if (selected && selected !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
+      const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
+      if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
+      return { path: absolute, sha256: sha2563, provenance };
+    }
+    function currentSceneVoice2(board, boardDir, shot, id2, warnings) {
+      const cast = board?.SB_DOC?.characters;
+      const matches = Array.isArray(cast) ? cast.filter((character2) => character2?.id === id2) : cast && Object.hasOwn(cast, id2) ? [{ ...cast[id2], id: id2 }] : [];
+      if (matches.length > 1) throw new Error("voice_reference_ambiguous: duplicate cast entries for " + id2);
+      if (!matches.length) return void 0;
+      const issues = [];
+      const character = resolveCharacterVoice2(matches[0], boardDir, shot, issues);
+      const ref = voiceReference2(character, boardDir, issues);
+      if (warnings) warnings.push(...issues);
+      else if (!ref && issues.length) throw new Error("voice_reference_stale: " + issues.join(" "));
+      return ref;
+    }
+    module.exports = { currentSceneVoice: currentSceneVoice2, resolveCharacterVoice: resolveCharacterVoice2, voiceReference: voiceReference2 };
+  }
+});
+
 // ../skills/storyboard/references/motion-graphics.js
 var require_motion_graphics = __commonJS({
   "../skills/storyboard/references/motion-graphics.js"(exports, module) {
@@ -97562,990 +98526,6 @@ var require_render_routing = __commonJS({
       if (typeof module === "object" && module.exports) module.exports = api2;
       else root.RENDER_ROUTING = api2;
     })(typeof window === "object" ? window : globalThis);
-  }
-});
-
-// ../skills/_shared/genai-scene-limits.json
-var require_genai_scene_limits = __commonJS({
-  "../skills/_shared/genai-scene-limits.json"(exports, module) {
-    module.exports = {
-      maxReferencedCharacters: 2,
-      maxCharacterImages: 2
-    };
-  }
-});
-
-// ../skills/_shared/scene-references.js
-var require_scene_references = __commonJS({
-  "../skills/_shared/scene-references.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path41 = __require("node:path");
-    var { orderedSpeech } = require_scene_direction();
-    var { imageReferences } = require_render_routing();
-    var { maxReferencedCharacters: MAX_SCENE_CHARACTERS, maxCharacterImages: MAX_SCENE_CHARACTER_IMAGES } = require_genai_scene_limits();
-    var personRoles = /* @__PURE__ */ new Set(["character", "face", "outfit", "bystander"]);
-    var castIds = (value2) => [].concat(value2 || []).map((person) => typeof person === "string" ? person : person.id);
-    var unique = (ids) => [...new Set(ids.filter(Boolean))];
-    function referenceOwners(board, boardDir) {
-      const registry2 = board.SB_DOC?.characters ?? [];
-      const actors = Array.isArray(registry2) ? registry2 : Object.entries(registry2).map(([id2, actor2]) => ({ ...actor2, id: id2 }));
-      const voiceOnly = new Set(actors.filter((actor2) => actor2.voiceOnly).map((actor2) => actor2.id));
-      const canonical5 = (file3) => {
-        const local3 = path41.resolve(boardDir, file3);
-        return fs26.existsSync(local3) ? fs26.realpathSync(local3) : local3;
-      };
-      const owners = /* @__PURE__ */ new Map();
-      for (const actor2 of actors) for (const file3 of [actor2.imageUrl, ...Object.values(actor2.panels || {}), ...actor2.voiceReference?.imagePaths || []])
-        if (typeof file3 === "string") owners.set(canonical5(file3), actor2.id);
-      function registeredOwner(file3) {
-        if (!file3) return;
-        const source2 = canonical5(file3);
-        return owners.get(source2) || source2.match(/[/\\]assets[/\\]characters[/\\]([^/\\]+)[/\\]/)?.[1];
-      }
-      function ownerOf(ref, card, speakers = []) {
-        const registered = registeredOwner(ref.path);
-        if (registered && ref.character && registered !== ref.character)
-          throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
-        return registered || ref.character || speakers.find((id2) => ref.id === id2 || ref.id === id2 + "-face" || ref.id?.startsWith(card.id + "-" + id2 + "-"));
-      }
-      return { actors, voiceOnly, canonical: canonical5, owners, registeredOwner, ownerOf };
-    }
-    function sceneReferenceGroups(scene, cards, registry2) {
-      const hasVisibleDialogue = cards.some((card) => orderedSpeech(card).some((line) => line.tts?.trim() && line.delivery === "on_screen"));
-      const declared = (scene.speakerReferences ?? []).map((ref) => ref.character);
-      const rows2 = cards.map((card) => {
-        const visual = card.visual ?? {};
-        const lines = orderedSpeech(card).filter((line) => line.tts?.trim());
-        const marks = [...card.timeline?.openingPositions ?? [], ...visual.video?.openingPositions ?? []];
-        const people = unique([
-          ...castIds(visual.character ?? visual.characters),
-          ...(visual.characterInputs ?? []).map((input) => input.character),
-          ...imageReferences(card).filter((ref) => ref.use !== "image" && (personRoles.has(ref.role) || ref.legacy)).map((ref) => registry2.ownerOf(ref, card, scene.speakers)),
-          ...(card.timeline?.images ?? []).filter((pin) => personRoles.has(pin.role)).map((pin) => registry2.ownerOf(pin, card)),
-          ...marks.filter((mark) => mark.images?.length).map((mark) => mark.character),
-          ...lines.filter((line) => hasVisibleDialogue && line.delivery !== "voiceover").map((line) => line.speaker)
-        ]);
-        const staged = unique([...people, ...castIds(visual.bystanders), ...marks.map((mark) => mark.character), ...lines.map((line) => line.speaker)]);
-        return { card, people: unique([...people, ...declared.filter((id2) => staged.includes(id2))]) };
-      });
-      const opening = (scene.videoDirection?.openingPositions ?? []).filter((mark) => mark.images?.length).map((mark) => mark.character);
-      if (rows2.length) rows2[0].people = unique([...rows2[0].people, ...opening]);
-      const unplaced = declared.filter((id2) => !rows2.some((row) => row.people.includes(id2)));
-      const groups = [];
-      let group;
-      for (const { card, people } of rows2) {
-        const shotPeople = unique([...people, ...unplaced]).filter((id2) => !registry2.voiceOnly.has(id2));
-        const combined = unique([...group?.characters ?? [], ...shotPeople]);
-        if (!group || combined.length > MAX_SCENE_CHARACTERS) {
-          group = { shotIds: [], characters: shotPeople, firstShotCharacters: shotPeople };
-          groups.push(group);
-        } else group.characters = combined;
-        group.shotIds.push(card.id);
-      }
-      return groups;
-    }
-    function referenceConflict(scene, groups) {
-      const oversized = groups.find((group2) => group2.characters.length > MAX_SCENE_CHARACTERS);
-      if (!oversized && groups.length < 2) return;
-      const oneTake = scene.videoDirection?.oneTake;
-      const group = oversized ?? groups[1];
-      const shotId = group.shotIds[0];
-      const characters = oversized ? group.characters : unique([...groups[0].characters, ...group.firstShotCharacters]);
-      const reason = oneTake ? "The requested one-take needs a staging decision." : oversized ? "Reblock this shot into views with at most two referenced characters." : "Split before " + shotId + ".";
-      const message = "scene_cast_exceeded: scene " + scene.no + ", shot " + shotId + " references " + characters.join(", ") + ". " + reason;
-      return {
-        code: "scene_cast_exceeded",
-        sceneNo: scene.no,
-        shotId,
-        characters,
-        groups,
-        splitBefore: oneTake || oversized ? [] : groups.slice(1).map((g) => g.shotIds[0]),
-        executable: false,
-        videoSubmitted: false,
-        message
-      };
-    }
-    module.exports = { MAX_SCENE_CHARACTERS, MAX_SCENE_CHARACTER_IMAGES, castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceConflict };
-  }
-});
-
-// ../skills/channel/references/character-panels.js
-var require_character_panels = __commonJS({
-  "../skills/channel/references/character-panels.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path41 = __require("node:path");
-    var { createHash: createHash36 } = __require("node:crypto");
-    var { execFileSync: execFileSync23 } = __require("node:child_process");
-    var { identityCharacter } = require_character_identity();
-    var sha3 = (file3) => createHash36("sha256").update(fs26.readFileSync(file3)).digest("hex");
-    var SLOT_LABELS = { front: "\uC815\uBA74", back: "\uD6C4\uBA74", face: "\uC5BC\uAD74" };
-    var SPECS = { front: { ratio: 2 / 3, min: 0.8, max: 0.9 }, back: { ratio: 2 / 3, min: 0.8, max: 0.9 }, face: { ratio: 1, min: 0.6, max: 0.75 } };
-    function localFile(folder, name2) {
-      if (typeof name2 !== "string" || !name2 || path41.isAbsolute(name2)) return null;
-      const file3 = path41.resolve(folder, name2);
-      try {
-        const relative4 = path41.relative(fs26.realpathSync(folder), fs26.realpathSync(file3));
-        return relative4 && !relative4.startsWith("..") && !path41.isAbsolute(relative4) && fs26.statSync(file3).isFile() ? file3 : null;
-      } catch {
-        return null;
-      }
-    }
-    function dimensions(file3) {
-      const data = JSON.parse(execFileSync23("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "json", file3], { encoding: "utf8", timeout: 5e3, stdio: ["ignore", "pipe", "pipe"] }));
-      const { width, height } = data.streams?.[0] || {};
-      if (!(width > 0 && height > 0)) throw new Error("Unreadable image dimensions");
-      return { width, height };
-    }
-    function inspectPanels(folder, fallback = {}) {
-      const findings = [], slots = {}, measurements = {};
-      const warn = (domain, message, messageKo) => findings.push({ domain, message, messageKo });
-      let manifest2;
-      const manifestFile = path41.join(folder, "panels.json");
-      if (fs26.existsSync(manifestFile)) {
-        try {
-          const safe = localFile(folder, "panels.json");
-          if (!safe) throw new Error("unsafe manifest path");
-          manifest2 = JSON.parse(fs26.readFileSync(safe, "utf8"));
-          if (manifest2?.schemaVersion !== 1 || !manifest2.panels || typeof manifest2.panels !== "object" || Array.isArray(manifest2.panels)) throw new Error("expected schemaVersion:1 and panels");
-        } catch (error2) {
-          warn("image-purpose", "Invalid panels.json: " + error2.message, "\uC774\uBBF8\uC9C0 \uB4F1\uB85D \uC815\uBCF4\uB97C \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uCC38\uC870 \uC6A9\uB3C4\uB97C \uD655\uC778\uD558\uC138\uC694.");
-          manifest2 = { panels: {} };
-        }
-      } else warn("image-purpose", "No panels.json: legacy filenames do not verify shared-character purpose", "\uC774\uBBF8\uC9C0\uB294 \uC788\uC9C0\uB9CC \uACF5\uC6A9 \uCE90\uB9AD\uD130 \uCC38\uC870\uB85C \uB4F1\uB85D\uB418\uC5C8\uB294\uC9C0 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-      for (const [slot2, spec] of Object.entries(SPECS)) {
-        const entry2 = manifest2?.panels?.[slot2];
-        const name2 = manifest2 ? entry2?.file : fallback[slot2];
-        const file3 = localFile(folder, name2);
-        if (!file3) {
-          warn("image-slot", slot2 + ": missing or unsafe shared reference", SLOT_LABELS[slot2] + ": \uACF5\uC6A9 \uCC38\uC870 \uC774\uBBF8\uC9C0\uAC00 \uC5C6\uAC70\uB098 \uACBD\uB85C\uAC00 \uC798\uBABB\uB418\uC5C8\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        if (manifest2 && (entry2.purpose !== "character_reference" || entry2.view !== slot2)) {
-          warn("image-purpose", slot2 + ": expected character_reference with matching view; image not assigned", SLOT_LABELS[slot2] + ": \uC774\uBBF8\uC9C0 \uC6A9\uB3C4\uB098 \uCD2C\uC601 \uBC29\uD5A5\uC774 \uB2EC\uB77C \uC774 \uCE78\uC5D0 \uD45C\uC2DC\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.");
-          continue;
-        }
-        slots[slot2] = path41.relative(folder, file3).split(path41.sep).join("/");
-        const hash8 = sha3(file3);
-        try {
-          const size = dimensions(file3);
-          measurements[slot2] = size;
-          if (Math.abs(size.width / size.height - spec.ratio) > 0.01) warn("image-ratio", `${slot2}: ${size.width}x${size.height}; expected ${slot2 === "face" ? "1:1" : "2:3"}`, `${SLOT_LABELS[slot2]}: \uC6D0\uBCF8 ${size.width}\xD7${size.height}, \uAD8C\uC7A5 \uBE44\uC728 ${slot2 === "face" ? "1:1" : "2:3"}`);
-        } catch {
-          warn("image-ratio", slot2 + ": dimensions unavailable; not verified", SLOT_LABELS[slot2] + ": \uC6D0\uBCF8 \uD06C\uAE30\uB97C \uC77D\uC9C0 \uBABB\uD574 \uBE44\uC728\uC744 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
-        }
-        const framing = entry2?.framing;
-        const box = framing?.subjectBox;
-        if (framing?.status !== "measured" || framing.sha256 !== hash8 || !Array.isArray(box) || box.length !== 4 || !box.every((v) => typeof v === "number" && Number.isFinite(v)) || box[0] < 0 || box[1] < 0 || box[2] <= 0 || box[3] <= 0 || box[0] + box[2] > 1 || box[1] + box[3] > 1) {
-          warn("image-framing", slot2 + ": subject size not reviewed or measurement stale", SLOT_LABELS[slot2] + ": \uC778\uBB3C \uD06C\uAE30\uB97C \uC544\uC9C1 \uD655\uC778\uD558\uC9C0 \uC54A\uC558\uAC70\uB098 \uD655\uC778 \uD6C4 \uC774\uBBF8\uC9C0\uAC00 \uBC14\uB00C\uC5C8\uC2B5\uB2C8\uB2E4.");
-        } else {
-          measurements[slot2] = { ...measurements[slot2], subjectHeight: box[3] };
-          if (box[3] < spec.min || box[3] > spec.max) warn("image-framing", `${slot2}: subject height ${Math.round(box[3] * 100)}%; expected ${spec.min * 100}\u2013${spec.max * 100}%`, `${SLOT_LABELS[slot2]}: \uC778\uBB3C \uB192\uC774 ${Math.round(box[3] * 100)}%, \uAD8C\uC7A5 ${spec.min * 100}~${spec.max * 100}%`);
-        }
-      }
-      const front = measurements.front, back = measurements.back;
-      if (front && back && Math.abs(front.width / front.height - back.width / back.height) > 0.01) warn("image-ratio", "Front/back aspect ratios differ", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC6D0\uBCF8 \uBE44\uC728\uC774 \uB2E4\uB985\uB2C8\uB2E4.");
-      if (front?.subjectHeight !== void 0 && back?.subjectHeight !== void 0 && Math.abs(front.subjectHeight - back.subjectHeight) > 0.03) warn("image-framing", "Front/back subject heights differ by more than 3 percentage points", "\uC815\uBA74\uACFC \uD6C4\uBA74\uC758 \uC778\uBB3C \uB192\uC774\uAC00 3%p \uB118\uAC8C \uCC28\uC774 \uB0A9\uB2C8\uB2E4.");
-      return { slots, findings, measurements };
-    }
-    function boardPanelFindings(win, boardDir, channelDir) {
-      const entries = win?.SB_DOC?.characters || [];
-      const chars = Array.isArray(entries) ? [...entries] : Object.entries(entries).map(([id2, c]) => ({ ...c, id: id2 }));
-      for (const id2 of Object.keys(win?.PRODUCTION?.cast || {})) {
-        if (!chars.some((c) => c?.id === id2)) chars.push({ id: id2 });
-      }
-      const findings = [];
-      const sceneFiles = (win?.SCENES || []).flatMap((s2) => [s2.visual?.bg, s2.visual?.source, s2.bg]).filter((s2) => typeof s2 === "string");
-      const sceneHashes = new Set(sceneFiles.map((name2) => localFile(boardDir, name2)).filter(Boolean).map(sha3));
-      for (const c of chars) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) continue;
-        const folder = path41.join(channelDir, "assets", "characters", c.id);
-        if (!localFile(channelDir, path41.relative(channelDir, path41.join(folder, "identity.md")))) findings.push({ characterId: c.id, domain: "character-source", messageKo: "\uACF5\uC6A9 \uCE90\uB9AD\uD130 \uC124\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4. \uCE90\uC2A4\uD305 \uC804\uC5D0 \uCE90\uB9AD\uD130 \uC2DC\uD2B8\uB97C \uAD6C\uC131\uD558\uC138\uC694.", message: "Shared identity.md missing; prepare the character sheet before casting" });
-        let registered;
-        const manifestFile = localFile(channelDir, path41.relative(channelDir, path41.join(folder, "panels.json")));
-        if (manifestFile) {
-          try {
-            registered = JSON.parse(fs26.readFileSync(manifestFile, "utf8")).panels || {};
-          } catch {
-            registered = {};
-          }
-        }
-        for (const [slot2, entry2] of Object.entries(registered || {})) {
-          if (slot2 === "msr") continue;
-          const source2 = entry2?.purpose === "character_reference" && entry2.view === slot2 && localFile(folder, entry2.file);
-          const linked = c.panels?.[slot2] || slot2 === "front" && c.panels?.body;
-          if (source2 && !(typeof linked === "string" && linked.trim())) findings.push({
-            characterId: c.id,
-            domain: "image-reference-missing",
-            slot: slot2,
-            source: source2,
-            field: `SB_DOC.characters.${c.id}.panels.${slot2}`,
-            messageKo: `${c.id} \uBC30\uC5ED\uC758 ${slot2} \uCC38\uC870\uAC00 \uBE44\uC5B4 \uC788\uC2B5\uB2C8\uB2E4. \uACF5\uC6A9 \uC774\uBBF8\uC9C0: ${source2}`,
-            message: `${c.id}: shared ${slot2} image exists at ${source2}, but storyboard panels.${slot2} is empty`
-          });
-        }
-        for (const [slot2, name2] of Object.entries(c.panels || {})) {
-          const file3 = typeof name2 === "string" ? path41.resolve(boardDir, name2) : "";
-          const shared5 = file3 && localFile(channelDir, path41.relative(channelDir, file3)) && localFile(folder, path41.relative(folder, file3));
-          const view = slot2 === "body" ? "front" : slot2;
-          const entry2 = registered?.[view];
-          const matches = registered === void 0 || entry2?.purpose === "character_reference" && entry2.view === view && localFile(folder, entry2.file) === shared5;
-          if (!shared5 || !matches || sceneHashes.has(sha3(shared5))) findings.push({ characterId: c.id, domain: "image-purpose", messageKo: "\uC7A5\uBA74 \uC774\uBBF8\uC9C0\uC774\uAC70\uB098 \uACF5\uC6A9 \uC2DC\uD2B8\uC5D0 \uB4F1\uB85D\uD55C \uC6A9\uB3C4\xB7\uBC29\uD5A5\uACFC \uB2E4\uB978 \uC774\uBBF8\uC9C0\uAC00 \uC5F0\uACB0\uB418\uC5B4 \uC788\uC2B5\uB2C8\uB2E4.", message: `${slot2}: episode scene, non-shared image or mismatched registered slot linked as a character reference` });
-        }
-      }
-      return findings;
-    }
-    function episodeCast(boardDir) {
-      const castFile = path41.join(boardDir, "cast.json");
-      if (!fs26.existsSync(castFile)) return [];
-      const value2 = JSON.parse(fs26.readFileSync(castFile, "utf8")).characters;
-      return Array.isArray(value2) ? value2 : Object.entries(value2 || {}).map(([id2, entry2]) => ({ ...entry2, id: id2 }));
-    }
-    function readPanelSheets(boardDir, ids, requiredViews, cast = episodeCast(boardDir)) {
-      return new Map(ids.map((id2) => {
-        const entry2 = cast.find((c) => c.id === id2);
-        let folder;
-        if (entry2?.source) {
-          const identity = path41.resolve(boardDir, entry2.source);
-          folder = path41.dirname(identity);
-          if (path41.basename(identity) !== "identity.md" || path41.basename(folder) !== id2 || path41.basename(path41.dirname(folder)) !== "characters" || path41.basename(path41.dirname(path41.dirname(folder))) !== "assets")
-            throw new Error(`cast_source_missing: ${id2} needs its own assets/characters/${id2}/identity.md`);
-        } else for (let dir = boardDir; ; dir = path41.dirname(dir)) {
-          const candidate2 = path41.join(dir, "assets", "characters", id2);
-          if (fs26.existsSync(path41.join(candidate2, "panels.json"))) {
-            folder = candidate2;
-            break;
-          }
-          if (path41.dirname(dir) === dir) break;
-        }
-        if (folder && fs26.existsSync(folder) && path41.basename(fs26.realpathSync(folder)) !== id2)
-          throw new Error(`cast_source_missing: ${id2} needs its own character folder`);
-        if (!folder) throw new Error(`character_sheet_missing: ${id2} needs its shared panels.json`);
-        let manifest2;
-        try {
-          manifest2 = JSON.parse(fs26.readFileSync(path41.join(folder, "panels.json"), "utf8"));
-        } catch {
-          throw new Error(`character_sheet_missing: ${id2} has an unreadable panels.json`);
-        }
-        const panels = {};
-        for (const view of requiredViews?.get(id2) ?? ["face", "front", "back"]) {
-          const panel = manifest2.panels?.[view];
-          const file3 = localFile(folder, panel?.file);
-          if (manifest2.schemaVersion !== void 0 && manifest2.schemaVersion !== 1 || panel?.purpose !== void 0 && panel.purpose !== "character_reference" || panel?.view !== void 0 && panel.view !== view || !file3)
-            throw new Error(`character_panel_missing: ${id2} has no ${view} panel with a valid character-reference registration`);
-          panels[view] = path41.relative(boardDir, file3).split(path41.sep).join("/");
-        }
-        return [id2, { folder, paths: panels, entries: manifest2.panels }];
-      }));
-    }
-    function sheetPanels(boardDir, ids, views) {
-      return new Map([...readPanelSheets(boardDir, ids, views)].map(([id2, sheet]) => [id2, sheet.paths]));
-    }
-    function canonicalReferences(boardDir, shotId, ids, use, options = {}) {
-      if (ids.length > 4) throw new Error("msr_subject_limit: at most four subject images");
-      const sheets = readPanelSheets(boardDir, ids);
-      if (options.combined) return ids.map((id2) => {
-        const { folder, paths: sources, entries } = sheets.get(id2);
-        const entry2 = entries.msr;
-        const file3 = localFile(folder, entry2?.file);
-        if (!file3 || entry2.purpose !== "character_reference" || entry2.view !== "msr")
-          throw new Error(`character_msr_reference_missing: ${id2} needs a registered unified identity/outfit reference`);
-        if (entry2.sha256 !== sha3(file3) || ["face", "front"].some((view) => entry2.sourceHashes?.[view] !== sha3(path41.resolve(boardDir, sources[view]))))
-          throw new Error(`character_msr_reference_stale: ${id2} unified reference or its canonical sources changed`);
-        const fitting = (entry2.wardrobe ?? entries.front.wardrobe) === "fitting";
-        return {
-          id: `${shotId}-${id2}-msr`,
-          path: path41.relative(boardDir, file3).split(path41.sep).join("/"),
-          role: "character",
-          use,
-          purpose: fitting ? `${id2}: ONE person, exact face, hair and physique. Match the scene wardrobe` : `${id2}: ONE person, exact face, hair, physique and outfit`
-        };
-      });
-      let views = ids.length > 2 ? ["face"] : ids.length === 1 ? ["face", "front", "back"] : ["face", "front"];
-      if (options.maxPictures && ids.length) {
-        views = views.slice(0, Math.floor(options.maxPictures / ids.length));
-        if (ids.length === 1 && options.bodyView === "back") views[1] = "back";
-      }
-      const outfits = /* @__PURE__ */ new Map();
-      for (const [id2, { folder, entries }] of sheets) {
-        if (!views.some((view) => entries[view].wardrobe === "fitting")) continue;
-        const source2 = localFile(folder, "identity.md");
-        if (!source2) continue;
-        try {
-          const outfit = identityCharacter(fs26.readFileSync(source2, "utf8"), { ready: false }).physical.outfit;
-          if (outfit?.status === "confirmed") outfits.set(id2, outfit.value);
-        } catch {
-        }
-      }
-      return views.flatMap((view) => ids.map((id2) => {
-        const { paths: paths3, entries } = sheets.get(id2);
-        const fitting = view !== "face" && entries[view].wardrobe === "fitting";
-        return {
-          id: `${shotId}-${id2}-${view}`,
-          path: paths3[view],
-          role: "character",
-          use,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          ...fitting && outfits.has(id2) ? { defaultOutfit: outfits.get(id2) } : {},
-          purpose: view === "face" ? `${id2}'s face and hair` : fitting ? `${id2}'s build and proportions, ${view}. Ignore the fitting clothes and use the scene wardrobe` : `${id2}'s body and outfit, ${view}`
-        };
-      }));
-    }
-    function missingAppearance(shot, character, role2, message) {
-      const error2 = new Error("character_input_required: " + shot.id + " " + character + " " + role2 + ": " + message);
-      error2.report = {
-        stage: "character_inputs",
-        code: "character_input_required",
-        shotId: shot.id,
-        character,
-        role: role2,
-        executable: false,
-        videoSubmitted: false,
-        message: error2.message
-      };
-      return error2;
-    }
-    function resolveShotCharacterInputs(shot, boardDir, seedance2 = false, characters, sceneSpeakers) {
-      const visual = shot.visual || {}, view = visual.camera?.view;
-      const cast = [].concat(visual.character || []).map((c) => typeof c === "string" ? c : c.id);
-      const lines = require_scene_direction().orderedSpeech(shot);
-      const explicit = visual.characterInputs;
-      let registry2;
-      if (seedance2) {
-        const people = lines.filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker);
-        if (view?.subjectId && !view.subjectType) {
-          registry2 = episodeCast(boardDir);
-          const named = Array.isArray(characters) ? characters.some((c) => c.id === view.subjectId) : Object.hasOwn(characters ?? {}, view.subjectId);
-          if (named || registry2.some((c) => c.id === view.subjectId)) people.push(view.subjectId);
-        }
-        if (view?.subjectType === "person") people.push(view.subjectId);
-        if (view?.mode === "ots") people.push(view.viewerId);
-        for (const id2 of people) if (id2 && !cast.includes(id2) && (!sceneSpeakers || sceneSpeakers.includes(id2))) cast.push(id2);
-      }
-      const bodyForView = (id2) => {
-        if (view?.mode === "ots" && view.viewerId === id2) return "back";
-        if (view?.subjectId ? view.subjectId !== id2 : cast.length !== 1) return;
-        if (["detail", "object", "space"].includes(view?.subjectType)) return;
-        if (view?.mode === "rear" || visual.camera?.rear === true) return "back";
-        if (["front", "three-quarter-left", "three-quarter-right", "profile-left", "profile-right"].includes(view?.mode)) return "front";
-      };
-      if (explicit === void 0 && (seedance2 ? !cast.length : visual.frames?.mode !== "reference" || !cast.some(bodyForView))) return shot;
-      const specs = explicit ?? cast.map((character) => ({ character }));
-      if (!Array.isArray(specs) || !specs.length) throw new Error("character_inputs_invalid: specify the visible cast");
-      const views = /* @__PURE__ */ new Map(), hands = /* @__PURE__ */ new Set();
-      for (const spec of specs) {
-        const id2 = spec?.character;
-        if (typeof id2 !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2) || views.has(id2) || Object.keys(spec).some((key) => !["character", "faceTaskId", "faceReviewPath", "bodyView", ...seedance2 ? ["visibility"] : []].includes(key)))
-          throw new Error("character_inputs_invalid: use distinct cast IDs and supported character input fields");
-        if (spec.faceTaskId !== void 0 && (typeof spec.faceTaskId !== "string" || !/^cgt-[A-Za-z0-9_-]{1,120}$/.test(spec.faceTaskId)))
-          throw new Error("character_face_source_invalid: specify a Seedance generation task ID");
-        if (spec.faceReviewPath !== void 0 && (!spec.faceTaskId || typeof spec.faceReviewPath !== "string"))
-          throw new Error("character_face_source_invalid: a face review must identify the selected original");
-        const body = spec.bodyView ?? bodyForView(id2);
-        if (seedance2) {
-          if (spec.visibility !== void 0 && !["face_visible", "body_only", "hands_only"].includes(spec.visibility))
-            throw missingAppearance(shot, id2, "visibility", "select face_visible, body_only or hands_only");
-          if (spec.visibility === "hands_only") {
-            if (lines.some((line) => line.speaker === id2 && line.delivery === "on_screen" && line.tts?.trim()))
-              throw missingAppearance(shot, id2, "face", "a hands-only insert with audible dialogue needs off-screen delivery");
-            if (spec.faceTaskId || spec.bodyView) throw missingAppearance(shot, id2, "hands", "remove the face and body sources for this insert");
-            hands.add(id2);
-            views.set(id2, []);
-            continue;
-          }
-          if (!body) throw missingAppearance(shot, id2, "face", "no face binding; specify this character\u2019s visibility and front/back body view");
-          if (spec.visibility === "body_only" || !spec.visibility && !spec.faceTaskId && bodyForView(id2) === "back") {
-            if (spec.faceTaskId) throw missingAppearance(shot, id2, "body", "a body-only view cannot use a facial original");
-            views.set(id2, [body]);
-            continue;
-          }
-        }
-        if (!["front", "back"].includes(body)) throw new Error("character_body_view_required: select front or back for " + id2);
-        views.set(id2, spec.faceTaskId ? [body] : ["face", body]);
-      }
-      const omitted = cast.find((id2) => !views.has(id2));
-      if (seedance2 && omitted) throw missingAppearance(shot, omitted, "face", "include the visible performer in characterInputs");
-      if (cast.length && (cast.some((id2) => !views.has(id2)) || specs.some((spec) => !cast.includes(spec.character))))
-        throw new Error("character_inputs_invalid: specify each visible principal in visual.character");
-      let sheets;
-      try {
-        sheets = readPanelSheets(boardDir, [...views.keys()].filter((id2) => !hands.has(id2)), views, registry2);
-      } catch (error2) {
-        if (!seedance2) throw error2;
-        const id2 = [...views.keys()].find((id3) => error2.message.includes(": " + id3 + " "));
-        if (!id2) throw error2;
-        throw missingAppearance(shot, id2, views.get(id2).includes("face") ? "face" : "body", error2.message);
-      }
-      const faces = [], bodies = [], contracts = [], replacedFaces = /* @__PURE__ */ new Set();
-      for (const { character, faceTaskId, faceReviewPath } of specs) {
-        if (hands.has(character)) continue;
-        const sheet = sheets.get(character);
-        if (faceTaskId) {
-          for (const slot3 of ["face", "msr"]) {
-            const name2 = sheet.entries[slot3]?.file;
-            if (typeof name2 === "string") replacedFaces.add(path41.resolve(sheet.folder, name2));
-          }
-        }
-        const bodyView = views.get(character).at(-1), bodyPath = sheet.paths[bodyView];
-        const face = faceTaskId ? { taskId: faceTaskId, ...faceReviewPath ? { reviewPath: faceReviewPath } : {} } : sheet.paths.face ? { path: sheet.paths.face } : void 0;
-        const voiceRequired = lines.some((line) => line.speaker === character && line.tts?.trim() && ["on_screen", "off_screen"].includes(line.delivery));
-        contracts.push({ character, ...face ? { face } : {}, bodyView, bodyPath, voiceRequired });
-        const ref = { character, role: "character", use: "video" };
-        if (face?.path) faces.push({ ...ref, id: shot.id + "-" + character + "-face", path: face.path, purpose: character + " facial identity and hair." });
-        const fitting = sheet.entries[bodyView].wardrobe === "fitting";
-        bodies.push({
-          ...ref,
-          id: shot.id + "-" + character + "-" + bodyView,
-          path: bodyPath,
-          ...fitting ? { wardrobe: "fitting" } : {},
-          purpose: character + " " + bodyView + " physique. " + (face ? "Show one complete person using the face reference. " : "") + (fitting ? "Use the scene wardrobe." : "Match the outfit unless the scene changes it.")
-        });
-      }
-      const pending2 = new Map([...faces, ...bodies].map((ref) => [path41.resolve(boardDir, ref.path), ref]));
-      const references = [], ids = /* @__PURE__ */ new Set();
-      for (const authored of visual.references || []) {
-        const file3 = authored.path && path41.resolve(boardDir, authored.path);
-        if (replacedFaces.has(file3) && authored.use !== "image")
-          throw new Error("character_face_source_conflict: remove the superseded face from video references");
-        const selected = pending2.get(file3);
-        if (selected && authored.use !== "image") {
-          if (authored.character && authored.character !== selected.character) throw missingAppearance(shot, selected.character, "owner", "reference is assigned to " + authored.character);
-          references.push({ ...authored, character: selected.character, role: "character", purpose: [authored.purpose, selected.purpose].filter(Boolean).join(" ") });
-          pending2.delete(file3);
-        } else references.push(authored);
-        ids.add(authored.id);
-      }
-      for (const ref of pending2.values()) {
-        let id2 = ref.id;
-        while (ids.has(id2)) id2 += "-video";
-        references.push({ ...ref, id: id2, ...seedance2 ? { resolvedPanel: true } : {} });
-        ids.add(id2);
-      }
-      if (!contracts.length) return shot;
-      const normalized = { ...visual, characterInputs: contracts, frames: visual.frames ?? { mode: "reference" }, references };
-      const videoPaths = (refs) => refs.filter((ref) => ["both", "video"].includes(ref.use)).map((ref) => ref.path);
-      const slot2 = require_production_mode().videoSlot(shot);
-      if (slot2?.referenceImagePaths !== void 0) {
-        if (JSON.stringify(slot2.referenceImagePaths) !== JSON.stringify(videoPaths(visual.references || [])))
-          throw new Error("image_plan_invalid: legacy paths disagree with authored references");
-        const referenceImagePaths = videoPaths(references);
-        if (shot.type === "quote" && visual.clip) normalized.clip = { ...visual.clip, referenceImagePaths };
-        else if (shot.type === "broll" && visual.referenceImagePaths) normalized.referenceImagePaths = referenceImagePaths;
-        normalized.video = { ...slot2, referenceImagePaths };
-      }
-      return { ...shot, visual: normalized };
-    }
-    module.exports = { resolveShotCharacterInputs, SPECS, dimensions, inspectPanels, boardPanelFindings, sheetPanels, canonicalReferences };
-  }
-});
-
-// ../skills/_shared/scene-cast.js
-var require_scene_cast = __commonJS({
-  "../skills/_shared/scene-cast.js"(exports, module) {
-    "use strict";
-    var path41 = __require("node:path");
-    var fs26 = __require("node:fs");
-    var { orderedSpeech } = require_scene_direction();
-    function sceneSpeech(scene, cards, planning = false) {
-      const lines = cards.flatMap((card) => orderedSpeech(card).filter((line) => line.tts?.trim()).map((line) => ({ card, line })));
-      const spoken = /* @__PURE__ */ new Set(), physical = /* @__PURE__ */ new Set();
-      const declared = scene.speakers;
-      if (declared !== void 0 && (!Array.isArray(declared) || declared.some((id2) => typeof id2 !== "string" || !id2.trim()) || new Set(declared).size !== declared.length))
-        throw new Error("scene_speaker_mismatch: list each speaker once by cast ID in scene " + scene.no);
-      for (const { card, line } of lines) {
-        if (!line.speaker) {
-          if (planning || declared || line.delivery === "on_screen" || line.delivery === "off_screen")
-            throw new Error("scene_speaker_missing: identify the speaker in " + card.id + " " + (line.id || line.tts));
-          continue;
-        }
-        if (planning && !["on_screen", "off_screen", "voiceover"].includes(line.delivery))
-          throw new Error("scene_speaker_delivery: identify the delivery of " + line.speaker + " in " + card.id);
-        if (line.voiceoverKind === "inner_thought" && line.delivery !== "voiceover")
-          throw new Error("scene_speaker_delivery: inner thought " + (line.id || line.speaker) + " requires voiceover delivery");
-        spoken.add(line.speaker);
-        if (declared && !declared.includes(line.speaker)) {
-          throw new Error("scene_speaker_mismatch: scene " + scene.no + ", shot " + card.id + ", line " + (line.id || line.tts) + " names undeclared speaker " + line.speaker);
-        }
-        if (line.delivery !== "voiceover") physical.add(line.speaker);
-      }
-      if (scene.speakerReferences !== void 0 && !Array.isArray(scene.speakerReferences))
-        throw new Error("scene_reference_owner: list the scene references by cast ID");
-      if (scene.speakerReferences?.length) {
-        const staged = /* @__PURE__ */ new Set([...spoken, ...declared ?? [], ...(scene.videoDirection?.openingPositions ?? []).map((row) => row.character)]);
-        for (const card of cards) {
-          for (const id2 of [...castIds(card.visual?.character ?? card.visual?.characters), ...castIds(card.visual?.bystanders)]) staged.add(id2);
-          for (const item of [...card.timeline?.images ?? [], ...card.timeline?.openingPositions ?? [], ...card.visual?.video?.openingPositions ?? [], ...card.visual?.references ?? [], ...card.visual?.characterInputs ?? []])
-            if (item.character) staged.add(item.character);
-        }
-        const castAssigned = cards.length > 0 && cards.every((card) => card.visual?.character !== void 0 || card.visual?.characters !== void 0);
-        const owners = /* @__PURE__ */ new Set();
-        for (const ref of scene.speakerReferences) {
-          if (!ref?.path || !ref.character || owners.has(ref.character))
-            throw new Error("scene_reference_owner: each scene reference needs a path and a distinct cast ID");
-          if ((planning || castAssigned) && !staged.has(ref.character))
-            throw new Error("scene_reference_owner: " + ref.character + " does not appear or speak in scene " + scene.no);
-          owners.add(ref.character);
-        }
-      }
-      if (planning && declared?.some((id2) => !spoken.has(id2)))
-        throw new Error("scene_speaker_mismatch: the declared speakers must match the lines of scene " + scene.no);
-      return { physical: (declared ?? [...spoken]).filter((id2) => physical.has(id2)), visible: lines.some(({ line }) => line.delivery === "on_screen") };
-    }
-    function sceneCast(scene, cards) {
-      return sceneSpeech(scene, cards).physical;
-    }
-    function sceneSpeechRoute(scene, cards, selection) {
-      const { physical, visible } = sceneSpeech(scene, cards, true);
-      const speakers = visible ? physical : [];
-      const direction = scene.videoDirection || {};
-      const track = direction.audio && direction.audio.mode !== "mix";
-      const distilled = selection.engine === "astra-genai" && selection.model === "ltx-2.5-22b-distilled";
-      const generated = direction.dialogueVoice === "model_generated";
-      if (track && !visible) throw new Error("scene_speech_route: an external voice or a non-speaking picture uses a mix track");
-      if (track && generated) throw new Error("scene_speech_route: choose recorded audio or generated dialogue for this render");
-      const mode = track ? "conditioned" : !speakers.length ? "picture" : generated ? "generated" : selection.operation === "audio" ? "conditioned" : "reference";
-      let operation = "image";
-      if (mode === "conditioned") operation = "audio";
-      else if (mode === "reference") operation = distilled && selection.operation !== "reference" ? "image" : "reference";
-      else if (mode === "generated" && selection.engine === "veo" && selection.operation === "reference") operation = "reference";
-      const cutVoiceover = cards.some((card) => {
-        const lines = orderedSpeech(card).filter((line) => line.tts?.trim());
-        return lines.length && lines.every((line) => line.delivery === "voiceover");
-      });
-      const mixedCuts = distilled && mode === "reference" && !direction.oneTake && cutVoiceover;
-      if (mixedCuts) operation = "image";
-      return { speakers, operation, mode, external: !visible && physical.length > 0 };
-    }
-    function assertRenderVoiceCapacity({ tool: tool2, model: model2, scene, cards, route, generateAudio, limit: limit2, perCard = false }) {
-      if (["reference", "generated"].includes(route.mode) && (generateAudio === false || cards.some((card) => orderedSpeech(card).some((line) => line.delivery !== "voiceover" && line.tts?.trim()) && require_production_mode().videoSlot(card)?.generateAudio === false)))
-        throw new Error("scene_dialogue_audio_required: the selected native dialogue render requires its original soundtrack");
-      if (route.mode !== "reference") return;
-      if (limit2 === void 0) {
-        const entry2 = require_video_catalog().adapters.find((adapter2) => adapter2.tool === tool2);
-        const capacity = entry2?.voice.maxPinnedVoicesPerRender;
-        limit2 = typeof capacity === "number" ? capacity : capacity?.[model2];
-      }
-      if (!limit2 || ["astra_genai_img2video", "astra_genai_msr", "astra_genai_scene"].includes(tool2) && model2 !== "ltx-2.5-22b-distilled" && !(tool2 === "astra_genai_scene" && model2 === "minimax-h3"))
-        throw new Error("scene_speech_references: the selected model cannot bind the required character voice samples");
-      for (const group of perCard ? cards.map((card) => [card]) : [cards]) {
-        const voices = new Set(group.flatMap(orderedSpeech).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker));
-        if (voices.size <= limit2) continue;
-        const label = group.length === 1 || scene?.no === void 0 ? group[0].id : "scene " + scene.no;
-        throw new Error("scene_render_voice_limit: " + label + " needs " + voices.size + " pinned voices; " + tool2 + " accepts " + limit2 + " per render. " + (scene?.videoDirection?.oneTake || cards.length === 1 ? "The authored one-take has no cut for a split." : "Split at an authored cut or revise this shot."));
-      }
-    }
-    var { castIds, personRoles, referenceOwners, sceneReferenceGroups, referenceConflict, MAX_SCENE_CHARACTER_IMAGES } = require_scene_references();
-    function projectSceneCast(scene, cards, board, boardDir, engine2, audioRoute = false, perShot = false, model2) {
-      const registry2 = referenceOwners(board, boardDir);
-      const { actors, voiceOnly, canonical: canonical5, owners, registeredOwner } = registry2;
-      const speakers = sceneCast(scene, cards).filter((id2) => !voiceOnly.has(id2));
-      const declaredRefs = scene.speakerReferences ?? [];
-      const h3 = engine2 === "astra-genai" && model2 === "minimax-h3";
-      const visibleH3 = h3 && !declaredRefs.length ? cards.flatMap((card) => castIds(card.visual?.character ?? card.visual?.characters)).filter((id2) => !voiceOnly.has(id2)) : [];
-      const identities = [.../* @__PURE__ */ new Set([...speakers, ...declaredRefs.map((ref) => ref.character), ...visibleH3])];
-      if (declaredRefs.some((ref) => !actors.some((actor2) => actor2.id === ref.character)))
-        throw new Error("scene_reference_owner: register the owner of every scene identity reference");
-      if (scene.speakerReferences?.some((ref) => voiceOnly.has(ref.character)))
-        throw new Error("scene_reference_owner: a voice-only speaker has no visual identity in this scene");
-      const ownerOf = (ref, card) => registry2.ownerOf(ref, card, speakers);
-      const conditioning = audioRoute || scene.videoDirection?.audio && scene.videoDirection.audio.mode !== "mix";
-      const ltx2 = engine2 === "astra-genai";
-      const groups = ltx2 && !perShot && !conditioning ? sceneReferenceGroups(scene, cards, registry2) : [];
-      const conflict = referenceConflict(scene, groups);
-      if (conflict) throw Object.assign(new Error(conflict.message), { report: conflict });
-      if (ltx2 && !perShot && cards.some((card) => card.visual?.characterInputs?.length)) {
-        const { resolveShotCharacterInputs } = require_character_panels();
-        cards = cards.map((card) => card.visual?.characterInputs?.length ? resolveShotCharacterInputs(card, boardDir, false, board.SB_DOC?.characters) : card);
-      }
-      const sheets = /* @__PURE__ */ new Map();
-      for (const character of identities) {
-        try {
-          const panels2 = require_character_panels().sheetPanels(boardDir, [character], /* @__PURE__ */ new Map([[character, ["face"]]])).get(character);
-          sheets.set(character, panels2);
-          for (const file3 of Object.values(panels2)) owners.set(canonical5(file3), character);
-        } catch (error2) {
-          if (engine2 === "astra-genai" && !scene.videoDirection?.audio && !scene.speakerReferences?.some((ref) => ref.character === character) && fs26.existsSync(path41.join(boardDir, "cast.json"))) throw error2;
-        }
-      }
-      const originals = /* @__PURE__ */ new Map();
-      if (engine2 === "seedance" && (scene.frames !== void 0 || declaredRefs.length)) {
-        for (const card of cards) for (const spec of card.visual?.characterInputs ?? []) {
-          if (!spec.faceTaskId || !identities.includes(spec.character)) continue;
-          if (originals.has(spec.character) && originals.get(spec.character).faceTaskId !== spec.faceTaskId)
-            throw new Error("scene_reference_owner: conflicting originals for " + spec.character);
-          originals.set(spec.character, spec);
-        }
-      }
-      const references = [];
-      for (const character of identities) {
-        const actor2 = actors.find((c) => c.id === character);
-        let face = sheets.get(character)?.face ?? actor2?.panels?.face;
-        const candidates = cards.flatMap((card) => [
-          ...(card.timeline?.images ?? []).filter((p) => p.role === "face" && p.character === character),
-          ...(card.visual?.references ?? []).filter((r2) => r2.role === "character" && ownerOf(r2, card) === character && !/-(?:front|back)$/.test(r2.id))
-        ]);
-        const custom3 = scene.speakerReferences?.find((ref) => ref.character === character);
-        if (ltx2 && conditioning && custom3)
-          throw new Error("scene_inputs_unsupported: the audio-conditioned operation cannot attach the requested face for " + character);
-        if (originals.has(character)) {
-          if (custom3) throw new Error("scene_reference_owner: select one facial original for " + character);
-          continue;
-        }
-        if (custom3 && face && engine2 === "seedance" && canonical5(custom3.path) !== canonical5(face))
-          throw new Error("scene_reference_owner: Seedance requires the registered face for " + character);
-        face = custom3?.path ?? face ?? candidates[0]?.path;
-        if (face && !conditioning && (ltx2 || scene.frames !== void 0 || custom3)) {
-          if (registeredOwner(face) && registeredOwner(face) !== character)
-            throw new Error("scene_reference_owner: " + character + " does not own " + face);
-          if (references.some((ref) => canonical5(ref.path) === canonical5(face))) throw new Error("scene_reference_owner: two speakers share one face path");
-          references.push({ id: "scene-" + scene.no + "-" + character + "-face", character, path: face, role: "character", scope: "scene", use: "video", purpose: character + " facial identity." });
-        } else if (ltx2 && scene.speakers && !conditioning)
-          throw new Error("character_panel_missing: scene " + scene.no + " speaker " + character + " needs a registered face");
-      }
-      let sceneCastIds = [...groups[0]?.characters ?? []];
-      let panels;
-      if (sceneCastIds.length) {
-        const body = cards.flatMap((card) => card.visual?.characterInputs ?? []).find((input) => input.bodyView)?.bodyView;
-        try {
-          panels = require_character_panels().canonicalReferences(
-            boardDir,
-            "scene-" + scene.no,
-            sceneCastIds,
-            "video",
-            { maxPictures: MAX_SCENE_CHARACTER_IMAGES, bodyView: body }
-          );
-        } catch {
-        }
-      }
-      if (panels) {
-        const chosen = panels.flatMap((ref) => {
-          const character = sceneCastIds.find((id2) => ref.id === "scene-" + scene.no + "-" + id2 + "-" + ref.id.split("-").at(-1));
-          if (declaredRefs.some((entry2) => entry2.character === character))
-            return ref.id.endsWith("-face") ? references.filter((entry2) => entry2.character === character) : [];
-          return [{ ...ref, character, scope: "scene" }];
-        });
-        references.splice(0, references.length, ...chosen);
-      } else sceneCastIds = [];
-      if (scene.referenceSplitFrom && ltx2 && scene.videoDirection && cards[0]) {
-        const first = cards[0], needed = /* @__PURE__ */ new Set([
-          ...castIds(first.visual?.character ?? first.visual?.characters),
-          ...orderedSpeech(first).filter((line) => line.delivery === "on_screen" && line.tts?.trim()).map((line) => line.speaker)
-        ]);
-        const missing = [...needed].filter((id2) => !scene.videoDirection.openingPositions?.some((row) => row.character === id2));
-        if (missing.length) throw new Error("scene_split_opening_positions: inspect the opening of " + first.id + " and describe where " + missing.join(", ") + " starts with story_scene");
-      }
-      const entering = (rows2) => !sceneCastIds.length || !rows2 ? rows2 : [...rows2, ...sceneCastIds.filter((id2) => !rows2.some((row) => row.character === id2)).map((character) => ({ character, images: [], position: "Not in the opening view; appears in a later shot." }))];
-      const positions = (rows2, refs) => rows2?.map((row) => ({ ...row, images: ltx2 ? refs.flatMap((ref, i2) => ref.character === row.character ? [i2 + 1] : []) : row.images }));
-      let openingRefs = [];
-      const members = cards.map((card, index) => {
-        const visual = card.visual || {};
-        const castSpecified = visual.character !== void 0 || visual.characters !== void 0;
-        const original = castIds(visual.character ?? visual.characters);
-        const active = [...new Set(orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover").map((line) => line.speaker))];
-        const shotMarks = [...card.timeline?.openingPositions ?? [], ...visual.video?.openingPositions ?? []];
-        const hasShotBlocking = castSpecified && shotMarks.length > 0;
-        const inheritedMarks = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => !shotMarks.some((mark) => mark.character === row.character)) : [];
-        const visibleRefs = original.filter((id2) => !shotMarks.some((mark) => mark.character === id2 && mark.images?.length === 0));
-        const localIds = /* @__PURE__ */ new Set([
-          ...active,
-          ...visibleRefs,
-          ...castIds(visual.bystanders),
-          ...shotMarks.filter((row) => row.images?.length || !hasShotBlocking && declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
-          ...inheritedMarks.filter((row) => row.images?.length || declaredRefs.some((ref) => ref.character === row.character)).map((row) => row.character),
-          ...(visual.characterInputs ?? []).map((input) => input.character),
-          ...(card.timeline?.images ?? []).map((pin) => pin.character),
-          ...(visual.references ?? []).map((ref) => ownerOf(ref, card))
-        ]);
-        const localRefs = perShot && identities.length > 2 ? [
-          ...active.flatMap((id2) => references.filter((ref) => ref.character === id2)),
-          ...references.filter((ref) => !active.includes(ref.character) && localIds.has(ref.character))
-        ] : perShot && hasShotBlocking ? references.filter((ref) => localIds.has(ref.character)) : references;
-        const useSceneRefs = (ltx2 || scene.frames !== void 0 || declaredRefs.length) && (!scene.videoDirection?.audio || scene.videoDirection.audio.mode === "mix");
-        const keep2 = (ref) => {
-          const owner = registeredOwner(ref.path);
-          if (owner && ref.character && owner !== ref.character) throw new Error("scene_reference_owner: conflicting owner for " + ref.path);
-          if (scene.frames !== void 0 && ref.legacy) return false;
-          if (ref.use === "image") return true;
-          if (localRefs.some((item) => canonical5(item.path) === canonical5(ref.path))) return false;
-          if (sceneCastIds.length && personRoles.has(ref.role) && sceneCastIds.includes(ownerOf(ref, card))) return false;
-          if (!ref.legacy && personRoles.has(ref.role)) return true;
-          const identity = ownerOf(ref, card);
-          if (identity && !speakers.includes(identity) && !declaredRefs.some((item) => item.character === identity)) return !ref.legacy;
-          if (!personRoles.has(ref.role) && !owner) return true;
-          if (ltx2 || scene.frames !== void 0) return false;
-          return speakers.includes(ownerOf(ref, card));
-        };
-        const kept = (visual.references || []).filter(keep2).map((ref) => {
-          const character = ownerOf(ref, card);
-          return personRoles.has(ref.role) && character ? { ...ref, character, role: ref.role === "bystander" ? "character" : ref.role } : ref;
-        });
-        const subjectRefs = useSceneRefs ? localRefs : [];
-        const pins = card.timeline?.images?.filter((pin) => !personRoles.has(pin.role) || keep2(pin)) ?? [];
-        const slots = [
-          ...pins.filter((pin) => !["start", "end", "keyframe", "location", "background"].includes(pin.role)),
-          ...[...subjectRefs, ...kept].filter((ref) => ref.use !== "image" && !["location", "background"].includes(ref.role) && !pins.some((pin) => pin.path === ref.path))
-        ];
-        if (!index) openingRefs = slots;
-        const shotPositions = (rows2) => {
-          const inherited = index === 0 ? (scene.videoDirection?.openingPositions ?? []).filter((row) => declaredRefs.some((ref) => ref.character === row.character) && !rows2.some((local3) => local3.character === row.character)) : [];
-          return positions(index === 0 ? entering([...rows2, ...inherited]) : [...rows2, ...inherited], slots);
-        };
-        const timeline = card.timeline && {
-          ...card.timeline,
-          ...card.timeline.images ? { images: pins } : {},
-          ...card.timeline.openingPositions ? { openingPositions: shotPositions(card.timeline.openingPositions) } : {}
-        };
-        const updated = {
-          ...visual,
-          ...ltx2 ? { sceneSpeakerReferences: true } : {},
-          ...castSpecified ? { character: original } : {},
-          ...visual.references || subjectRefs.length ? { references: [...subjectRefs, ...kept] } : {},
-          ...visual.characterInputs ? { characterInputs: visual.characterInputs } : {},
-          ...visual.video?.openingPositions ? { video: { ...visual.video, openingPositions: shotPositions(visual.video.openingPositions) } } : {}
-        };
-        if (originals.size && updated.character?.length) {
-          updated.characterInputs = updated.character.map((character) => {
-            const local3 = updated.characterInputs?.find((spec) => spec.character === character) ?? { character };
-            const original2 = originals.get(character);
-            return original2 && local3.visibility !== "hands_only" && local3.visibility !== "body_only" ? { ...local3, faceTaskId: original2.faceTaskId, faceReviewPath: original2.faceReviewPath } : local3;
-          });
-        }
-        if (updated.characterInputs?.length === 0) delete updated.characterInputs;
-        if (scene.frames !== void 0) {
-          const start = index === 0 ? scene.frames.start : void 0;
-          const end = index === cards.length - 1 ? scene.frames.end : void 0;
-          const { keyframes: keyframes2, storyboardKeyframes } = visual.frames ?? {};
-          updated.frames = {
-            mode: end ? "first_last" : start ? "first" : "reference",
-            start,
-            end,
-            ...engine2 === "astra-genai" && keyframes2 !== void 0 ? { keyframes: keyframes2 } : {},
-            ...engine2 === "astra-genai" && storyboardKeyframes !== void 0 ? { storyboardKeyframes } : {}
-          };
-          delete updated.bg;
-          delete updated.src;
-          delete updated.imagePair;
-          delete updated.lastImagePath;
-          if (updated.video) {
-            updated.video = { ...updated.video };
-            delete updated.video.lastImagePath;
-            delete updated.video.referenceImagePaths;
-          }
-          const timed = perShot || engine2 === "astra-genai" ? [] : ["start", "end", "keyframe"];
-          if (timeline?.images?.some((pin) => timed.includes(pin.role)))
-            throw new Error("scene_image_scope: use a scene anchor or an authored shot composition image on " + card.id);
-        }
-        return { ...card, visual: updated, ...timeline ? { timeline } : {} };
-      });
-      for (const ref of declaredRefs) {
-        const used = members.some((member) => member.visual.references?.some((item) => item.use !== "image" && item.character === ref.character && canonical5(item.path) === canonical5(ref.path)));
-        if (!used) throw new Error("scene_reference_owner: no render binds the requested visual reference for " + ref.character);
-      }
-      const direction = scene.videoDirection && { ...scene.videoDirection, openingPositions: positions(entering(scene.videoDirection.openingPositions), openingRefs) };
-      return { members, direction, speakers, identities };
-    }
-    function requiredCharacters2(shot) {
-      const inputs2 = shot?.visual?.characterInputs;
-      return Array.isArray(inputs2) ? inputs2.filter((person) => person && typeof person.bodyPath === "string") : [];
-    }
-    module.exports = { requiredCharacters: requiredCharacters2, sceneCast, sceneSpeechRoute, assertRenderVoiceCapacity, projectSceneCast };
-  }
-});
-
-// ../skills/channel/references/character-sheet.js
-var require_character_sheet = __commonJS({
-  "../skills/channel/references/character-sheet.js"(exports, module) {
-    "use strict";
-    var fs26 = __require("node:fs");
-    var path41 = __require("node:path");
-    var { createHash: createHash36 } = __require("node:crypto");
-    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { identityCharacter, direction, sheetPanelPrompt, requiresSpeech, isVoiceOnly } = require_character_identity();
-    var { identityVoice, voiceErrors } = require_character_voice();
-    function episodeVoiceOverride(win, tts) {
-      const override2 = win?.PRODUCTION?.modelSettings?.overrides?.speech;
-      return typeof override2?.request === "string" && override2.request.trim().length > 0 && typeof override2.model === "string" && override2.model.trim().length > 0 && override2.engine === tts?.engine && override2.model === tts?.model && voiceErrors(tts).length === 0;
-    }
-    function handoff(file3, { requireSpeech = true, voiceOnly = false } = {}) {
-      const source2 = fs26.readFileSync(file3, "utf8");
-      const options = { ready: !voiceOnly };
-      const character = identityCharacter(source2, options);
-      const name2 = /^#\s+(.+)$/m.exec(source2)?.[1]?.trim();
-      if (!name2) throw new Error("identity.md needs a # Name heading");
-      const id2 = path41.basename(path41.dirname(path41.resolve(file3)));
-      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2)) throw new Error("Character folder needs a kebab-case id");
-      const tts = identityVoice(source2, { optional: !requireSpeech });
-      return { id: id2, name: name2, character, tts, direction: direction(character, options), identitySha256: createHash36("sha256").update(source2).digest("hex"), ...voiceOnly ? { voiceOnly: true } : {}, ...selectedVoiceReference(source2, tts) };
-    }
-    function selectedVoiceReference(source2, tts) {
-      if (!tts) return {};
-      const document2 = [...source2.matchAll(/```json\s*\n([\s\S]*?)```/g)].map((m2) => JSON.parse(m2[1])).find((v) => v?.character);
-      const selection = document2?.voiceSelection;
-      if (!selection?.auditionPath) return selection ? { voiceSelection: selection } : {};
-      try {
-        const audition = JSON.parse(fs26.readFileSync(selection.auditionPath, "utf8"));
-        const chosen = audition.candidates?.find((c) => c.id === selection.candidateId);
-        const registration = selection.registration;
-        const registered = registration?.engine === "astra-genai" && registration.model === chosen?.tts?.model && chosen?.tts?.engine === "astra-genai" && typeof registration.request === "string" && registration.request.trim() && typeof registration.voiceId === "string" && registration.voiceId.trim().toLowerCase() !== "default" && registration.audioSha256 === chosen?.audioSha256 && isDeepStrictEqual2({ ...chosen.tts, voiceId: registration.voiceId }, tts);
-        if (!chosen || !isDeepStrictEqual2(chosen.tts, tts) && !registered || chosen.audioSha256 !== selection.audioSha256 || !path41.isAbsolute(chosen.audioPath))
-          throw new Error("Selected voice sample no longer matches the pinned character voice");
-        return { voiceSelection: selection, voiceReference: { path: chosen.audioPath, sha256: chosen.audioSha256, tts } };
-      } catch (error2) {
-        return { voiceSelection: selection, voiceReferenceWarning: error2.message };
-      }
-    }
-    if (__require.main === module) {
-      try {
-        const args = process.argv.slice(2);
-        const view = args[1] === "--panel" && ["face", "front", "back"].includes(args[2]) ? args[2] : void 0;
-        if (args.length !== 1 && !view) throw new Error("Usage: character-sheet.js <identity.md> [--panel face|front|back]");
-        if (view) {
-          const manifest2 = path41.join(path41.dirname(args[0]), "panels.json");
-          const front = view === "back" && fs26.existsSync(manifest2) ? JSON.parse(fs26.readFileSync(manifest2, "utf8")).panels?.front : void 0;
-          const { text: text4, skipped } = sheetPanelPrompt(identityCharacter(fs26.readFileSync(args[0], "utf8"), { ready: false }), view, void 0, front);
-          if (skipped.length) console.error(`Not English, left out: ${skipped.join(", ")}`);
-          console.log(text4);
-        } else console.log(JSON.stringify(handoff(args[0]), null, 2));
-      } catch (e2) {
-        console.error(e2.message);
-        process.exitCode = 1;
-      }
-    }
-    function sourceErrors(win, boardDir) {
-      const entries = win?.SB_DOC?.characters;
-      const chars = (Array.isArray(entries) ? entries : Object.entries(entries || {}).map(([id2, c]) => ({ ...c, id: id2 }))).filter((c) => c?.character !== void 0 || win?.SB_DOC?.characterSchemaVersion === 1);
-      if (!chars.length) return [];
-      let channel = path41.resolve(boardDir);
-      while (!fs26.existsSync(path41.join(channel, "profile.md")) && path41.dirname(channel) !== channel) channel = path41.dirname(channel);
-      const errors = [];
-      for (const c of chars) {
-        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c?.id || "")) {
-          errors.push("Invalid character id");
-          continue;
-        }
-        const file3 = path41.join(channel, "assets", "characters", c.id, "identity.md");
-        try {
-          const current = handoff(file3, { requireSpeech: requiresSpeech(win, c.id), voiceOnly: isVoiceOnly(win, c.id) });
-          const voiceChanged = JSON.stringify(current.tts) !== JSON.stringify(c.tts);
-          if (current.identitySha256 !== c.identitySha256 || JSON.stringify(current.character) !== JSON.stringify(c.character) || voiceChanged && !episodeVoiceOverride(win, c.tts))
-            errors.push(`Character ${c.id}: local identity changed; regenerate handoff and affected assets`);
-        } catch (error2) {
-          errors.push(`Character ${c.id}: ${error2.message}`);
-        }
-      }
-      return errors;
-    }
-    module.exports = { handoff, sourceErrors, selectedVoiceReference };
-  }
-});
-
-// ../skills/_shared/scene-voice.js
-var require_scene_voice = __commonJS({
-  "../skills/_shared/scene-voice.js"(exports, module) {
-    "use strict";
-    var path41 = __require("node:path");
-    var { createHash: createHash36 } = __require("node:crypto");
-    var { existsSync: existsSync48, readFileSync: readFileSync45, realpathSync: realpathSync16 } = __require("node:fs");
-    var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
-    var { handoff } = require_character_sheet();
-    var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
-    var object7 = (value2) => value2 && typeof value2 === "object" && !Array.isArray(value2) ? value2 : {};
-    var text4 = (value2) => typeof value2 === "string" ? value2.trim() : "";
-    var fileHash2 = (file3) => createHash36("sha256").update(readFileSync45(file3)).digest("hex");
-    var sameSettings = (a, b) => isDeepStrictEqual2(JSON.parse(JSON.stringify(a ?? null)), JSON.parse(JSON.stringify(b ?? null)));
-    function channelRoot(boardDir) {
-      let channel = path41.resolve(boardDir);
-      while (!existsSync48(path41.join(channel, "profile.md")) && path41.dirname(channel) !== channel) channel = path41.dirname(channel);
-      return channel;
-    }
-    function resolveCharacterVoice2(character, boardDir, shot, warnings) {
-      const id2 = text4(character.id);
-      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id2)) return character;
-      const channel = channelRoot(boardDir);
-      const required2 = requiredCharacters2(shot).find((person) => person.character === id2);
-      const folder = required2 ? path41.dirname(path41.resolve(boardDir, required2.bodyPath)) : path41.join(channel, "assets/characters", id2);
-      const identity = path41.join(folder, "identity.md");
-      let resolved = character;
-      const pinnedSettings = Object.keys(object7(character.tts)).length > 0;
-      if ((!pinnedSettings || !object7(character.voiceReference).path) && existsSync48(identity)) {
-        try {
-          const current = handoff(identity, { voiceOnly: character.voiceOnly === true });
-          if (!pinnedSettings || sameSettings(current.tts, character.tts)) {
-            resolved = { ...current, ...character, tts: current.tts };
-            if (current.voiceReference && !object7(resolved.voiceReference).path)
-              resolved.voiceReference = { ...object7(resolved.voiceReference), ...current.voiceReference };
-            if (required2 && !object7(resolved.voiceReference).path) {
-              const sample = path41.join(folder, "voice.wav");
-              const selected = object7(current.voiceSelection).audioSha256;
-              if (typeof selected === "string" && existsSync48(sample) && fileHash2(sample) === selected)
-                resolved = { ...resolved, voiceReference: { path: sample, sha256: selected, tts: current.tts } };
-            }
-          }
-        } catch (error2) {
-          warnings.push(`${id2}: cannot read the selected character voice: ${error2 instanceof Error ? error2.message : String(error2)}`);
-          return character;
-        }
-      }
-      const reference2 = object7(resolved.voiceReference);
-      if (required2) return { ...resolved, voiceReference: { ...reference2, imagePaths: [required2.face?.path, required2.bodyPath].filter(Boolean) } };
-      const sceneRefs = object7(shot.visual).references;
-      const facePaths = (Array.isArray(sceneRefs) ? sceneRefs.map(object7) : []).filter((ref) => ref.scope === "scene" && ref.character === id2 && ref.role === "character").map((ref) => text4(ref.path));
-      if (facePaths.length) return { ...resolved, voiceReference: { ...reference2, imagePaths: facePaths } };
-      if (!Array.isArray(reference2.imagePaths) && existsSync48(folder)) {
-        const root = realpathSync16(folder) + path41.sep;
-        const refs = object7(shot.visual).references;
-        const imagePaths = (Array.isArray(refs) ? refs.map(object7) : []).filter((ref) => ref.role === "character" && ["both", "video"].includes(text4(ref.use))).map((ref) => text4(ref.path)).filter(Boolean).map((file3) => path41.resolve(boardDir, file3)).filter((file3) => existsSync48(file3) && realpathSync16(file3).startsWith(root));
-        if (imagePaths.length) resolved = { ...resolved, voiceReference: { ...reference2, imagePaths } };
-      }
-      return resolved;
-    }
-    function voiceReference2(character, boardDir, warnings) {
-      const declared = object7(character.voiceReference);
-      if (character.voiceReferenceWarning && !declared.path) {
-        warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
-        return void 0;
-      }
-      let file3 = text4(declared.path);
-      if (file3) {
-        file3 = path41.resolve(boardDir, file3);
-        if (declared.tts && !sameSettings(declared.tts, character.tts))
-          throw new Error(`voice_reference_stale: ${character.id} sample uses different pinned TTS settings`);
-      } else if (/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(text4(character.id))) {
-        const channel = channelRoot(boardDir);
-        const identity = path41.join(channel, "assets/characters", text4(character.id), "identity.md");
-        const candidate2 = path41.join(path41.dirname(identity), "voice.wav");
-        if (existsSync48(identity) && existsSync48(candidate2)) {
-          const { identityVoice } = require_character_voice();
-          if (!sameSettings(identityVoice(readFileSync45(identity, "utf8")), character.tts)) {
-            warnings.push(`${character.id}: shared voice.wav belongs to different current TTS settings; attach a sample for this episode's pinned voice.`);
-            return void 0;
-          }
-          file3 = candidate2;
-        }
-      }
-      if (!file3) return void 0;
-      if (!existsSync48(file3)) throw new Error(`voice_reference_stale: ${character.id} selected sample is missing: ${file3}`);
-      const absolute = realpathSync16(file3), sha2563 = fileHash2(absolute);
-      const selected = declared.sha256 || object7(character.voiceSelection).audioSha256;
-      if (selected && selected !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
-      const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
-      if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
-      return { path: absolute, sha256: sha2563, provenance };
-    }
-    function currentSceneVoice2(board, boardDir, shot, id2, warnings) {
-      const cast = board?.SB_DOC?.characters;
-      const matches = Array.isArray(cast) ? cast.filter((character2) => character2?.id === id2) : cast && Object.hasOwn(cast, id2) ? [{ ...cast[id2], id: id2 }] : [];
-      if (matches.length > 1) throw new Error("voice_reference_ambiguous: duplicate cast entries for " + id2);
-      if (!matches.length) return void 0;
-      const issues = [];
-      const character = resolveCharacterVoice2(matches[0], boardDir, shot, issues);
-      const ref = voiceReference2(character, boardDir, issues);
-      if (warnings) warnings.push(...issues);
-      else if (!ref && issues.length) throw new Error("voice_reference_stale: " + issues.join(" "));
-      return ref;
-    }
-    module.exports = { currentSceneVoice: currentSceneVoice2, resolveCharacterVoice: resolveCharacterVoice2, voiceReference: voiceReference2 };
   }
 });
 
@@ -102538,7 +102518,7 @@ var require_video_selection = __commonJS({
       }
       const genaiCast = scene && savedSelection.engine === "astra-genai";
       const sourceCards = storedMembers.map((raw) => Object.hasOwn(operationFor, savedSelection.engine) ? withLegacyReferences(raw) : raw);
-      const cast = scene && projectSceneCast(scene, sourceCards, board, path41.join(root, "storyboard"), savedSelection.engine, speechRoute?.mode === "conditioned", false, savedSelection.model);
+      const cast = scene && projectSceneCast(scene, sourceCards, board, path41.join(root, "storyboard"), savedSelection.engine, speechRoute?.mode === "conditioned", false);
       if (cast) scene = { ...scene, videoDirection: cast.direction };
       const members = (cast?.members ?? sourceCards).map((shotWithRefs) => {
         const raw = Array.isArray(shotWithRefs.performance) ? { ...shotWithRefs, performance: productionPerformance(shotWithRefs.performance) } : shotWithRefs;
@@ -126969,7 +126949,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.7",
+  version: "0.132.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -128879,7 +128859,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file2 }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file2.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file2 }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -128911,7 +128891,7 @@ var genaiSceneSchema = external_exports.object({
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
     if (pictures < 1 || pictures > 9) issue2("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 3) issue2("H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue2("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue2("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
@@ -128945,6 +128925,18 @@ function checkSceneVoices(args) {
   }
 }
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 };
+var H3_JOB_SECONDS = 1800;
+var H3_DEFAULT_STEPS = 50;
+function h3StepAdvice(args) {
+  if (args.model !== "minimax-h3") return [];
+  const [width, height] = args.resolution.split("x").map(Number);
+  const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
+  const scale = width * height / H3_STEP.pixels * (frames / H3_STEP.frames);
+  const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS, fit = Math.floor(H3_STEP.ceiling / scale);
+  if (steps <= fit) return [];
+  return [{ code: "h3_step_budget", detail: `${steps} sampling steps${args.numInferenceSteps === void 0 ? " (the model default)" : ""} at ${args.resolution} and ${frames} frames run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit once loading and decoding are counted. Set numInferenceSteps to ${fit} or fewer.` }];
+}
 function sceneLabels(args) {
   if (args.model === "minimax-h3") {
     const labels2 = {};
@@ -130054,7 +130046,7 @@ var GENAI_TOOLS = [
   {
     name: "astra_genai_scene",
     title: "Generate one GenAI scene from its cast, shots and one prompt",
-    description: "Render a scene of 1..8 shots as one video through the GenAI gateway's scene mode (POST /v1/generations, mode scene). Configured episodes reach it through video_plan/video_execute, which compose the scene from the storyboard. Write one prompt for the whole scene and name each input with a placeholder ({cast.role}, {cast.image}, {cast.voice}, {reference.image}); the gateway numbers them and adds no sentence. Each shot has its frame count and may open on a picture: the first is the opening frame, a later one guides the model, and the model paces the cuts. Production scenes take at most two people and two character pictures total. LTX takes 1..4 subject images including objects, one background and two voices (a voice rides on its cast member's first picture), 361 frames at most. The scene is checked with POST /v1/generations/validate before it is submitted, rendered on the 8k+1 grid and cut back to the shots' frames. Requires ASTRA_GENAI_API_KEY. Returns jobId, status, videoPath and receiptPath; recover with astra_genai_video_status.",
+    description: "Render a scene of 1..8 shots as one video through the GenAI gateway's scene mode (POST /v1/generations, mode scene). Configured episodes reach it through video_plan/video_execute, which compose the scene from the storyboard. Write one prompt for the whole scene and name each input with a placeholder ({cast.role}, {cast.image}, {cast.voice}, {reference.image}); the gateway numbers them and adds no sentence. Each shot has its frame count and may open on a picture: the first is the opening frame, a later one guides the model, and the model paces the cuts. Production scenes take pictures of at most two speaking people and two character pictures total; video_plan leaves silent people to the shot pictures. H3 takes two voices. LTX takes 1..4 subject images including objects, one background and two voices (a voice rides on its cast member's first picture), 361 frames at most. The scene is checked with POST /v1/generations/validate before it is submitted, rendered on the 8k+1 grid and cut back to the shots' frames. Requires ASTRA_GENAI_API_KEY. Returns jobId, status, videoPath and receiptPath; recover with astra_genai_video_status.",
     inputSchema: { ...zodToJsonSchema(genaiSceneSchema, { $refStrategy: "none" }), type: "object" },
     annotations: generation
   },
@@ -132832,9 +132824,9 @@ var VIDEO_ADAPTERS = Object.freeze({
     }
   }),
   // A storyboard scene on the GenAI engine: one scene-mode request through the common API (user directive 2026-11-25).
-  astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: { "ltx-2.5-22b-distilled": 2, "minimax-h3": 3 }, voiceOnSubjects: true, modelConstraints: {
+  astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: { "ltx-2.5-22b-distilled": 2, "minimax-h3": 2 }, voiceOnSubjects: true, modelConstraints: {
     models: GENAI_SCENE_MODELS,
-    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
+    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: pictures of at most two speaking people and two character images total; a silent person reaches the clip through the shot pictures. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, two voices, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
   } }),
   astra_genai_msr: reference("astra-genai", "genai-generations", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
     note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
@@ -136009,6 +136001,38 @@ function numberedImages(args, bindings = [], speakers = [], cast, episode, first
     return { number: number3, owner: guide ? void 0 : owner, role: role2, id: binding.id, shotId: scene.shotId ?? (binding.id === "start" ? firstShot : void 0), guide };
   });
 }
+function omittedCharacterPictures(context2, members, sent, cast) {
+  const board = context2.board;
+  const registry2 = board.SB_DOC?.characters;
+  const actors = Array.isArray(registry2) ? registry2 : Object.entries(registry2 ?? {}).map(([id2, actor2]) => ({ ...actor2, id: id2 }));
+  const local3 = (file3) => {
+    const full = path29.resolve(context2.episode, "storyboard", file3);
+    return fs20.existsSync(full) ? fs20.realpathSync(full) : void 0;
+  };
+  const owners = /* @__PURE__ */ new Map();
+  for (const actor2 of actors) for (const file3 of [actor2.imageUrl, ...Object.values(actor2.panels ?? {})])
+    if (typeof file3 === "string" && local3(file3)) owners.set(local3(file3), actor2.id);
+  const named = [];
+  for (const ref of board.STRUCTURE?.scenes?.find((scene) => scene.no === context2.sceneNo)?.speakerReferences ?? [])
+    if (ref.path) named.push({ where: "scene " + context2.sceneNo, file: ref.path, character: ref.character });
+  for (const card of (board.SCENES ?? []).filter((card2) => card2.scene === context2.sceneNo)) {
+    const member = members.find((shot) => shot.id === card.id);
+    for (const ref of card.visual?.references ?? [])
+      if (["character", "bystander", "face", "outfit"].includes(ref.role ?? "") && ref.use !== "image" && ref.path) named.push({ where: String(card.id), file: ref.path, character: ref.character });
+    for (const pin of card.timeline?.images ?? [])
+      if (["face", "outfit"].includes(pin.role ?? "") && pin.path) named.push({ where: String(card.id), file: pin.path, character: pin.character });
+    for (const person of member ? requiredCharacters(member) : [])
+      for (const file3 of [person.face?.path, person.bodyPath]) if (file3) named.push({ where: String(card.id), file: file3, character: person.character });
+  }
+  const seen = /* @__PURE__ */ new Set();
+  return named.flatMap(({ where, file: file3, character }) => {
+    const full = local3(file3), key = where + " " + file3;
+    if (!full || sent.has(full) || seen.has(key)) return [];
+    seen.add(key);
+    const owner = character ?? owners.get(full);
+    return [`scene_reference_omitted: ${where} ${file3} is not sent; ` + (owner && !cast.has(owner) ? `this render voices no line of ${owner}'s, so the shot pictures carry their look` : "the scene sends at most two character pictures")];
+  });
+}
 function buildH3Plan(input, context2, persist) {
   if (!context2.sceneMembers?.length || !context2.sceneDirection) throw new Error("scene_direction_required: author the storyboard scene before planning H3");
   if (context2.speechRoute?.mode === "generated")
@@ -136042,6 +136066,12 @@ function buildH3Plan(input, context2, persist) {
   verifyDistinctSamples(args.cast.flatMap((member) => member.voicePath ? [{ speaker: member.id, path: member.voicePath }] : []));
   const limit2 = genaiScenePromptLimit("minimax-h3");
   if (Array.from(modelPrompt).length > limit2) throw new Error("scene_prompt_too_long: H3 accepts " + limit2 + " characters. Split the storyboard scene before planning separate prompts.");
+  const sent = [
+    ...args.cast.flatMap((member) => member.images.map((image2) => image2.imagePath)),
+    ...args.references.map((ref) => ref.imagePath),
+    ...args.shots.flatMap((shot) => shot.imagePath ? [shot.imagePath] : [])
+  ].map((file3) => fs20.realpathSync(file3));
+  const warnings = [...h3.warnings, ...omittedCharacterPictures(context2, context2.sceneMembers, new Set(sent), new Set(args.cast.map((member) => member.id)))];
   const inputs2 = { ...h3.inputs, ...inputFiles(args, context2.episode) }, quote = quoteVideo("astra_genai_scene", args);
   if (input.maxCostUsd !== void 0 && quote.reserveUsd > input.maxCostUsd) throw new Error("video_quote_exceeded");
   const body = {
@@ -136064,13 +136094,19 @@ function buildH3Plan(input, context2, persist) {
     speechRoute: context2.speechRoute,
     sceneDurationSeconds: timeline.frameCount / timeline.fps,
     sceneRequest: { ...timeline, sceneNo: input.sceneNo, prompt: modelPrompt, sceneMode: true, modelPacedCuts: true },
-    ...h3.warnings.length ? { directionWarnings: h3.warnings } : {},
+    ...warnings.length ? { directionWarnings: warnings } : {},
     ...input.maxCostUsd === void 0 ? {} : { maxCostUsd: input.maxCostUsd },
     ...input.purpose ? { purpose: input.purpose } : {},
     ...input.basedOnRequestId ? { basedOnRequestId: input.basedOnRequestId } : {},
     ...input.changeNote ? { changeNote: input.changeNote } : {}
   };
-  const plan2 = { ...body, id: hash3(body), promptTemplate: args.prompt, promptSlots: Object.entries(labels).map(([key, label]) => ({ key, label })) };
+  const plan2 = {
+    ...body,
+    id: hash3(body),
+    promptGuidance: { ...promptGuidance("astra_genai_scene", "minimax-h3"), advice: h3StepAdvice(args) },
+    promptTemplate: args.prompt,
+    promptSlots: Object.entries(labels).map(([key, label]) => ({ key, label }))
+  };
   return persist ? saveVideoPlan(plan2) : plan2;
 }
 function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, persist, fitStep = 0) {
@@ -136303,22 +136339,12 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   for (const pin of sceneTool ? sceneRequest?.images.filter((image2) => !image2.reference && ["end", "keyframe"].includes(image2.role)) ?? [] : [])
     cutWarnings.push(`scene_picture_omitted: ${pin.shotId} ${pin.role} picture at frame ${pin.frame} is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot`);
   if (sceneTool && fitStep) cutWarnings.push(`scene_prompt_fitted: to fit ${selection.model}'s ${genaiScenePromptLimit(String(selection.model))}-character prompt cap the scene leaves out ${SCENE_FIT_STEPS.slice(0, fitStep).join("; ")}`);
-  const sentImages = new Set(sceneRequest?.images.map((image2) => image2.path));
-  const boardCards = sceneTool && sceneRequest ? (context2.board.SCENES ?? []).filter((card) => card.scene === context2.sceneNo) : [];
-  for (const card of boardCards) {
-    const member = members.find((shot2) => shot2.id === card.id);
-    const files3 = /* @__PURE__ */ new Set([
-      ...(card.visual?.references ?? []).filter((ref) => ["character", "bystander", "face", "outfit"].includes(ref.role ?? "") && ref.use !== "image").map((ref) => ref.path),
-      ...(card.timeline?.images ?? []).filter((pin) => ["face", "outfit"].includes(pin.role)).map((pin) => pin.path),
-      ...member ? requiredCharacters(member).flatMap((person) => [person.face?.path, person.bodyPath]) : []
-    ]);
-    for (const file3 of files3) {
-      if (!file3) continue;
-      const local3 = path29.resolve(context2.episode, "storyboard", file3);
-      if (fs20.existsSync(local3) && !sentImages.has(fs20.realpathSync(local3)))
-        cutWarnings.push(`scene_reference_omitted: ${card.id} ${file3} is not sent; the scene has two character image slots`);
-    }
-  }
+  if (sceneTool && sceneRequest) cutWarnings.push(...omittedCharacterPictures(
+    context2,
+    members,
+    new Set(sceneRequest.images.map((image2) => image2.path)),
+    new Set(sceneRequest.images.flatMap((image2) => image2.character ? [image2.character] : []))
+  ));
   let direction = sceneCamera ? {
     sourcePrompt,
     directionWarnings: [...replaced ? [] : sceneCamera.warnings, ...cutWarnings],
@@ -136512,8 +136538,11 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     voice = { ...voice, args: { ...voice.args, prompt: resolved.body, ...positions ? { openingPositions: positions } : {} } };
   }
   let args;
+  const lane = voice.args.references;
+  const subjectless = Boolean(sceneTool && lane?.length && lane.every((ref) => ref.background));
   try {
-    args = parseVideoArgs(tool2, voice.args);
+    args = parseVideoArgs(tool2, subjectless ? { ...voice.args, references: [...lane, { imagePath: openingPath, nonCharacter: true }] } : voice.args);
+    if (subjectless) args.references = args.references.slice(0, -1);
   } catch (error2) {
     const issue2 = authored && error2 instanceof external_exports.ZodError ? error2.issues.find((issue3) => issue3.path[0] === "prompt") : void 0;
     if (sceneTool && !authored && error2 instanceof external_exports.ZodError && error2.issues.some((issue3) => issue3.path[0] === "prompt" || /exceeds \d+ characters/.test(issue3.message)))
@@ -137787,7 +137816,7 @@ var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
   external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
 ]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneFramesSchema = external_exports.object({ start: nonEmpty.optional(), end: nonEmpty.optional() }).strict().describe("Temporal anchors for the complete scene, relative to the storyboard. An empty object selects no anchors.");
-var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).describe("Optional scene-wide face images. Identify the registered cast member who owns each image, including a silent character appearing in the scene.");
+var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).describe("Optional scene-wide face images. Identify the registered cast member who owns each image. A GenAI scene sends faces only for its speakers and names any other as omitted; other engines also use the face of a silent character.");
 var sceneSpeakersSchema = external_exports.array(nonEmpty).refine((ids) => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),
@@ -149154,7 +149183,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                 model: { type: "string", description: "Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music)." },
                 ...!["speech", "music"].includes(kind) ? { host: { type: "string", description: "Host CLI when engine is host, e.g. codex." } } : {},
                 ...kind === "video" ? {
-                  resolution: { type: "string", description: "Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024." },
+                  resolution: { type: "string", description: "Supported source resolution, e.g. 720p; GenAI takes WIDTHxHEIGHT: 576x1024 or 1024x576 by default, 736x1280 or 1280x736 when the user asks for the larger canvas." },
                   operation: { type: "string", enum: ["text", "image", "audio", "reference", "extend"], description: "Default video_plan operation when a call names none. An LTX (astra-genai) project saves reference: MSR with character voice samples." }
                 } : {},
                 ...kind === "image" ? { quality: { type: "string", description: "Supported quality, e.g. high; a prompt preference on host tools without a quality parameter." } } : {}
@@ -150588,7 +150617,7 @@ storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.ne
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards split across authored cuts when a third video identity enters. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards split across authored cuts when a third speaker enters; silent people do not count. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -150646,7 +150675,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
             events: { type: "array", items: { type: "object" }, description: "Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order." }
           } }
         } },
-        splitReferenceScenes: { type: "boolean", description: "Split existing GenAI scenes before a shot introduces a third referenced character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged." },
+        splitReferenceScenes: { type: "boolean", description: "Split existing GenAI scenes before a shot introduces a third speaking character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -161326,7 +161355,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.131.7" },
+  { name: "social-flow", version: "0.132.0" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

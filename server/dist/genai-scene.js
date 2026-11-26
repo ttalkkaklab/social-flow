@@ -41,7 +41,7 @@ export const genaiSceneSchema = z.object({
     cast: z.array(z.object({
         id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
         voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
-    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two referenced people').default([]),
+    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two speaking people').default([]),
     references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
     shots: z.array(z.object({
         id, frames: z.number().int().positive(),
@@ -76,8 +76,8 @@ export const genaiSceneSchema = z.object({
         const pictures = characterImages + args.references.length + args.shots.filter(shot => shot.imagePath).length;
         if (pictures < 1 || pictures > 9)
             issue('H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.');
-        if (args.cast.filter(member => member.voicePath).length > 3)
-            issue('H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.');
+        if (args.cast.filter(member => member.voicePath).length > 2)
+            issue('H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.');
         if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
             issue('H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.');
         const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
@@ -122,6 +122,24 @@ export function checkSceneVoices(args) {
 }
 /** The frames the storyboard asks for; the clip is cut back to this after rendering. */
 export const sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+/** One production measurement (2026-11-27): a 736x1280, 345-frame H3 scene ran about 66 s per sampling step, and the
+ * gateway session put the ceiling at about 18 steps there, leaving the rest of the backend's 1,800 s job limit to loading
+ * and decoding. Other sizes and lengths are scaled linearly from it, so this is an estimate. */
+const H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 }, H3_JOB_SECONDS = 1800, H3_DEFAULT_STEPS = 50;
+/** Advice, never a refusal: an H3 scene whose sampling steps would likely outrun the backend's job limit. */
+export function h3StepAdvice(args) {
+    if (args.model !== 'minimax-h3')
+        return [];
+    const [width, height] = args.resolution.split('x').map(Number);
+    const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
+    const scale = (width * height / H3_STEP.pixels) * (frames / H3_STEP.frames);
+    const steps = args.numInferenceSteps ?? H3_DEFAULT_STEPS, fit = Math.floor(H3_STEP.ceiling / scale);
+    if (steps <= fit)
+        return [];
+    return [{ code: 'h3_step_budget', detail: `${steps} sampling steps${args.numInferenceSteps === undefined ? ' (the model default)' : ''} at ${args.resolution} and ${frames} frames ` +
+                `run about ${Math.round(steps * H3_STEP.seconds * scale)} s of sampling, scaled from 66 s per step at 736x1280 and 345 frames on production (2026-11-27), ` +
+                `where about ${H3_STEP.ceiling} steps fit the backend's ${H3_JOB_SECONDS} s job limit once loading and decoding are counted. Set numInferenceSteps to ${fit} or fewer.` }];
+}
 /** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */
 export function sceneLabels(args) {
     if (args.model === 'minimax-h3') {

@@ -155,7 +155,7 @@ function pinnedActor(dir, id, face, frequency) {
   return {id, panels:{face}, tts, voiceReference:{path:sample,tts,sha256}};
 }
 
-test('a GenAI scene counts a scene-wide silent face alongside pinned speakers', async t => {
+test('a GenAI scene counts its speakers and leaves a scene-wide silent face out', async t => {
   const f = busking(t);
   delete f.scene.audio;
   const cast = ['seorin','mai-an','tu-vi'].map((id,i)=>pinnedActor(f.dir,id,'images/'+['solo','duo','trio'][i]+'.png',400+i*150));
@@ -177,8 +177,9 @@ test('a GenAI scene counts a scene-wide silent face alongside pinned speakers', 
       '; window.STRUCTURE.scenes[0].speakerReferences='+JSON.stringify([{character:listener.id,path:listener.panels.face}])+';');
   };
   save();
-  // The silent witness also uses one of the two referenced identities.
-  assert.throws(()=>planVideo(f.input,false),e=>e.report?.code==='scene_cast_exceeded' && e.report.characters.includes('listener'));
+  // Three speakers exceed the two referenced identities; the silent witness is not one of them.
+  assert.throws(()=>planVideo(f.input,false),e=>e.report?.code==='scene_cast_exceeded' &&
+    e.report.characters.join()==='seorin,mai-an,tu-vi' && e.report.splitBefore.join()===f.members[2].id);
   f.members.splice(1);
   f.scene.oneTake = true;
   f.members[0].narration.push(line('tu-vi','third'));
@@ -261,7 +262,7 @@ test('a distilled GenAI scene keeps a prop separate from the opening image and s
  assert.throws(()=>planVideo(f.input,false), /scene_inputs_unsupported/);
 });
 
-test('a 25-frame silent one-take retains two authored faces and refuses a third', t => {
+test('a 25-frame silent one-take sends none of the faces its shot names and names each of them', t => {
   const f = busking(t), shot = f.members[0];
   delete f.scene.audio;
   f.scene.oneTake = true;
@@ -274,15 +275,14 @@ test('a 25-frame silent one-take retains two authored faces and refuses a third'
     shot.timeline.images.push({role:'face',character:owner.character,frame:0,path:'images/'+['solo','duo','trio'][i]+'.png'});
   }
   f.save();
-  assert.throws(()=>planVideo(f.input,false), e=>e.report?.code==='scene_cast_exceeded' && e.report.characters.length===3);
-  shot.timeline.images.pop();
-  f.scene.openingPositions[2].images = [];
-  f.save();
+  // Nobody speaks, so three faces neither split the one-take nor reach the gateway; the opening carries the people.
   const image = planVideo({...f.input,operation:'image'});
   assert.equal(image.tool,'astra_genai_scene');
   assert.deepEqual(image.args.shots.map(shot=>shot.frames),[25]);
-  assert.deepEqual(image.args.cast.flatMap(member=>member.images.map(picture=>path.basename(picture.imagePath))),['solo.png','duo.png']);
-  assert.ok(image.args.cast.every(member=>!member.voicePath));
+  assert.deepEqual(image.args.cast,[]);
+  assert.deepEqual(image.args.references.map(ref=>ref.role),['object']);
+  assert.deepEqual(image.directionWarnings.filter(w=>w.startsWith('scene_reference_omitted')).map(w=>w.split(' ').slice(1,3).join(' ')),
+    ['s0001 images/solo.png','s0001 images/duo.png','s0001 images/trio.png']);
   shot.timeline.images = [];
   for (const owner of f.scene.openingPositions) owner.images = [];
   f.save();

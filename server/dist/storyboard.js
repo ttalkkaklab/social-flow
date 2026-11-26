@@ -152,7 +152,7 @@ export const audienceDecisionSchema = z.discriminatedUnion('decision', [
 export const sceneFramesSchema = z.object({ start: nonEmpty.optional(), end: nonEmpty.optional() }).strict()
     .describe('Temporal anchors for the complete scene, relative to the storyboard. An empty object selects no anchors.');
 export const sceneSpeakerReferencesSchema = z.array(z.object({ character: nonEmpty, path: nonEmpty }).strict())
-    .describe('Optional scene-wide face images. Identify the registered cast member who owns each image, including a silent character appearing in the scene.');
+    .describe('Optional scene-wide face images. Identify the registered cast member who owns each image. A GenAI scene sends faces only for its speakers and names any other as omitted; other engines also use the face of a silent character.');
 export const sceneSpeakersSchema = z.array(nonEmpty).refine(ids => new Set(ids).size === ids.length, 'List each scene speaker once')
     .describe('Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.');
 export const sceneSchema = z

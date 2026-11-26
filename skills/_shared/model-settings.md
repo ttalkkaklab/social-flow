@@ -118,7 +118,16 @@ prices. A configured credential does not guarantee a successful generation.
    After Desktop restarts, refresh an expired backend credential and reconnect the MCP server. Keep secrets out of project settings.
    **LTX means MSR (2026-10-30).** When the user chooses LTX, save
    `{engine:"astra-genai", model:"ltx-2.5-22b-distilled", operation:"reference",
-   resolution:"1792x1024"}` for 16:9 (`1024x1792` for 9:16). Episode cuts then plan
+   resolution:"1024x576"}` for 16:9 (`576x1024` for 9:16); MiniMax H3 on the same gateway is
+   `{engine:"astra-genai", model:"minimax-h3", resolution:"576x1024"}`. GenAI canvas (user directive, 2026-11-27): save `576x1024` for 9:16 and `1024x576` for 16:9.
+   The larger `736x1280` / `1280x736` is an explicit choice for an episode or shot the user wants
+   sharper, recorded in `PRODUCTION.modelSettings.overrides`; a failed take never switches it.
+   H3 takes both sizes (sides in multiples of 32). LTX generates on a 64-pixel grid, so 736 is
+   not a native LTX side, and no LTX render at either size has been checked yet. At 736x1280 an
+   H3 scene of 345 frames ran about 66 s per sampling step on production (2026-11-27): keep
+   `numInferenceSteps` at about 18 or fewer to stay inside the backend's 1,800 s limit, since an
+   omitted value means the model default of 50.
+   Episode cuts then plan
    MSR with the dialogue in the prompt and each speaker's pinned voice sample when one
    exists ([GenAI MSR](astra-genai.md#msr-and-v2-video)); a speaker without a sample is
    voiced from the prompt.

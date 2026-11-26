@@ -598,9 +598,10 @@ an `object` reference. A scene saved on `ltx-2.5-22b-dev`, a scene with a suppli
 and a line pinned to a frame are refused at planning (`scene_mode_model_unsupported`,
 `scene_mode_audio_unsupported`, `scene_inputs_unsupported`), and one GenAI scene binds at most
 two pinned voices across all its cuts. The production GPU budget (2026-11-26) allows two
-referenced people and two character images per scene. The planner uses a face and body panel
-for one person or one face each for two. Storyboard writes split at the first authored cut
-that needs a third identity. Keep shot order and dialogue, inspect the new opening and
+referenced people and two character images per scene, and those people are the scene's speakers
+(2026-11-27): a silent person reaches the clip through the shot pictures. The planner uses a face
+and body panel for one speaker or one face each for two. Storyboard writes split at the first
+authored cut that needs a third speaker. Keep shot order and dialogue, inspect the new opening and
 rebase frame cues. A shot or requested one-take that needs three reports `scene_cast_exceeded`.
 An ending or timed picture inside a
 shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
@@ -650,9 +651,9 @@ with a non-Latin name by character id and report a non-English voice description
 
 ## LTX character references (user directive, 2026-11-21)
 
-The standalone MSR and distilled I2V adapters have four subject slots. Episode scenes use the two-person, two-picture production budget above. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
+The standalone MSR and distilled I2V adapters have four subject slots. Episode scenes use the two-speaker, two-picture production budget above. Each face or outfit image uses one subject slot. List unreferenced cast members in `visual.bystanders` and unnamed people in `visual.extras`.
 Choosing LTX at project setup saves `{engine:"astra-genai", operation:"reference"}`
-with `resolution:"1792x1024"` for 16:9 (`1024x1792` for 9:16), and `video_plan` plans each
+with `resolution:"1024x576"` for 16:9 (`576x1024` for 9:16), and `video_plan` plans each
 scene as one GenAI scene-mode request. GenAI submissions wait up to 15 minutes for the
 gateway's acknowledgement. See `skills/_shared/astra-genai.md`.
 
@@ -662,7 +663,7 @@ An episode came out as fifty waist-up pictures of whoever was speaking: its shot
 per line, so none showed the place, the work a character does or the person a line lands on.
 Who speaks does not decide who is seen. `shot_characters` takes
 `bystanders` — cast members seen without an on-screen line — and `extras`, unnamed people
-described in English. `visual.character` still lists those the video call references. A shot
+described in English. `visual.character` lists the people the shot shows; a GenAI scene's video call references only those with a voiced line. A shot
 shows at most four of the cast. `shot_image` draws a bystander from their face and front
 panels and extras from the words; the video call references neither, since the start image
 carries them, and the video planner carries them into the requested scene. A bystander with an on-screen line is
@@ -1031,9 +1032,9 @@ Allow up to five video generation attempts per scene in an episode, including th
 
 Each generated shot needs a composition image before video planning. The scene opening can cover its first shot. For each later shot, attach `referenceImage` or a start image at the opening frame of its per-shot timeline. The selected operation determines which images the provider receives.
 
-- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. Declare visual references for silent cast members whose appearance must carry through.
+- Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. On GenAI a silent cast member's look comes from the shot pictures `shot_image` draws from the sheet panels; the scene sends no picture of them and the plan names each one it leaves out (`scene_reference_omitted`). On other engines declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it; GenAI scene mode renders its own soundtrack and refuses such a scene. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references at most two people and two character pictures in total. One character can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third referenced person. Restage a single shot that requires three and flag a requested one-take for a decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Restage a single shot in which three speak and flag a requested one-take for a decision.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Before generating images, save the scene's seats or standing marks, fixed landmarks, facing and camera axis in `story_scene.directionDefaults`. Compose and inspect the first shot before the other shots. `shot_image` uses the first available scene image for the physical layout of later shots in the same space. The authored shot still defines the current viewpoint, crop, expression, action phase and prop state. A built set with actor blocking takes precedence. See [scene image generation](skills/generate-cut-images/SKILL.md).

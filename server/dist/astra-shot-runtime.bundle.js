@@ -50244,7 +50244,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two referenced people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -50276,7 +50276,7 @@ var genaiSceneSchema = external_exports.object({
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
     if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 3) issue("H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
@@ -50293,6 +50293,7 @@ var genaiSceneSchema = external_exports.object({
   if (genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration) > GENAI_SCENE_FRAMES.max) issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
 var sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
+var H3_STEP = { pixels: 736 * 1280, frames: 345, seconds: 66, ceiling: 18 };
 var sceneValidationSchema = external_exports.object({
   resolved: external_exports.object({
     num_frames: external_exports.number().int(),
@@ -52270,7 +52271,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.7",
+  version: "0.132.0",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -53881,9 +53882,9 @@ var VIDEO_ADAPTERS = Object.freeze({
     }
   }),
   // A storyboard scene on the GenAI engine: one scene-mode request through the common API (user directive 2026-11-25).
-  astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: { "ltx-2.5-22b-distilled": 2, "minimax-h3": 3 }, voiceOnSubjects: true, modelConstraints: {
+  astra_genai_scene: reference("astra-genai", "genai-generations", genaiSceneSchema, { pinnedVoices: { "ltx-2.5-22b-distilled": 2, "minimax-h3": 2 }, voiceOnSubjects: true, modelConstraints: {
     models: GENAI_SCENE_MODELS,
-    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: at most two people and two character images total. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
+    note: 'One POST /v1/generations mode:"scene" request per storyboard scene. The prompt names its inputs with placeholders and the gateway numbers them; /v1/generations/validate confirms the numbering, frames and cuts before approval and before submission. Production: pictures of at most two speaking people and two character images total; a silent person reaches the clip through the shot pictures. LTX: 1..4 subject images including objects, one background, two voices on the first two subjects, at most 8 shots and 361 frames. Cuts are paced by the model; the opening picture is reproduced and a later shot picture only guides. The clip is rendered on the 8k+1 grid and cut back to the storyboard frames. H3 uses up to nine pictures including shot compositions, two voices, runs at 24 fps on the 17k+5 grid, and renders 124..345 frames.'
   } }),
   astra_genai_msr: reference("astra-genai", "genai-generations", genaiMsrSchema, { pinnedVoices: 2, voiceByBackend: true, modelConstraints: {
     note: "Server-selected MSR deployment; no model parameter. 1..5 PNG/JPEG references: up to four subjects plus one background. Width/height multiples of 64; 8k+1 frames in 25..361. Speech and effects are rendered natively; an optional character voice sample on subject 1 or 2 sets the timbre of that speaker, and the dialogue goes in the prompt."
@@ -54845,7 +54846,7 @@ var audienceDecisionSchema = external_exports.discriminatedUnion("decision", [
   external_exports.object({ decision: external_exports.literal("none"), reason: nonEmpty }).strict()
 ]).describe("Whether the scene uses an audience-only sound: use or none with the dramatic reason, or undecided.");
 var sceneFramesSchema = external_exports.object({ start: nonEmpty.optional(), end: nonEmpty.optional() }).strict().describe("Temporal anchors for the complete scene, relative to the storyboard. An empty object selects no anchors.");
-var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).describe("Optional scene-wide face images. Identify the registered cast member who owns each image, including a silent character appearing in the scene.");
+var sceneSpeakerReferencesSchema = external_exports.array(external_exports.object({ character: nonEmpty, path: nonEmpty }).strict()).describe("Optional scene-wide face images. Identify the registered cast member who owns each image. A GenAI scene sends faces only for its speakers and names any other as omitted; other engines also use the face of a silent character.");
 var sceneSpeakersSchema = external_exports.array(nonEmpty).refine((ids) => new Set(ids).size === ids.length, "List each scene speaker once").describe("Ordered episode cast IDs of everyone who speaks in this scene, including off-screen dialogue and voiceover. Use [] for a silent scene.");
 var sceneSchema = external_exports.object({
   no: external_exports.number().int().positive().describe("Scene number \u2014 the value shots point at with `scene`"),

@@ -2179,7 +2179,7 @@ character: [                         // an entry may carry its jurisdiction inst
 
 `shot_characters` writes this field in the storyboard's second step, after every shot story.
 
-**Character reference slots.** `visual.character` accepts up to four cast IDs. Production GenAI scenes use two identities and two character images in total. The writer splits a third referenced person at the preceding cut. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
+**Character reference slots.** `visual.character` accepts up to four cast IDs. Production GenAI scenes reference only their speakers (a natively voiced line, not voice-over), at most two, with two character images in total; silent people listed here reach the clip through the shot pictures. The writer splits a third speaker at the preceding cut. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
 
 **People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
 `visual.bystanders` — up to two cast ids seen without an on-screen line, four of the cast in a

@@ -216,10 +216,7 @@ test('three speaking subjects exceed one distilled MSR render, including an unin
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest','friend']);
  const input={episode:f.episode,sceneNo:1,requestId:'three-voices',args:{reserveUsd:0}};
  const check=()=>planVideo(input);
- // All three faces are explicitly bound at the opening, even though the third line arrives later.
- assert.throws(check, e => e.report?.shotId === 's1' && !e.report.splitBefore.length);
- f.board.STRUCTURE.scenes[0].videoDirection.openingPositions.pop();
- f.save();
+ // A speaker counts where their line is, even when the opening already places them, so the scene splits before s3.
  assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.join() === 's3');
  const [shot]=f.board.SCENES;
  shot.narration=f.board.SCENES.flatMap(card=>card.narration);
@@ -1953,7 +1950,7 @@ test('a guide on the first shot of a silent GenAI scene leaves the request uncha
   assert.ok(plan.directionWarnings.some(message => message.startsWith('shot_reference_omitted: ' + guide.shotId)));
 });
 
-test('GenAI counts a silent bystander only when their identity is sent to video, including a timeline face', t => {
+test('a silent GenAI scene sends no character pictures and names each one its cards or scene record asked for', t => {
   const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
   const dir = path.join(f.episode, 'storyboard');
   const ids = ['ada','bo','cy'];
@@ -1969,16 +1966,57 @@ test('GenAI counts a silent bystander only when their identity is sent to video,
     timeline:{startFrame:0,endFrame:121,transition:'open',framing:'Wide shot.',action:'The visitors enter.',images:[]}};
   f.board.SCENES = [shot]; f.save();
   const input = {episode:f.episode,sceneNo:1,requestId:'silent-refs',args:{reserveUsd:0}};
+  const omitted = plan => plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 4).join(' '));
   const plan = planVideo(input,false);
-  assert.deepEqual(plan.args.cast.map(person => person.id),['ada','bo']);
-  assert.deepEqual(plan.args.references.map(ref => ref.role),['background']);
+  // Nobody speaks, so nobody is referenced: the opening carries the people and goes as an object picture.
+  assert.deepEqual(plan.args.cast,[]);
+  assert.deepEqual(plan.args.references.map(ref => [ref.role, path.basename(ref.imagePath)]),[['background','hall.png'],['object','opening.png']]);
   assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_picture_omitted: s0001 end')));
+  assert.deepEqual(omitted(plan),['scene 1 ada.png','scene 1 bo.png']);
+  assert.ok(plan.directionWarnings.some(warning => /ada\.png is not sent; this render voices no line of ada's/.test(warning)));
+  // A third silent face no longer splits or refuses the scene; it is named with the others.
   shot.timeline.images.push({frame:0,path:'cy.png',role:'face',character:'cy'}); f.save();
-  assert.throws(() => planVideo(input,false), error => error.report?.shotId === shot.id &&
-    error.report.characters.join() === 'ada,bo,cy' && !error.report.splitBefore.length);
+  assert.deepEqual(omitted(planVideo(input,false)),['scene 1 ada.png','scene 1 bo.png','s0001 cy.png is']);
 });
 
-test('a GenAI scene sends one cast for the people of all its shots, by the panel rule for that count', t => {
+test('a GenAI scene with a silent third person references its two speakers and keeps the shot pictures and a prop', async t => {
+  for (const model of ['ltx-2.5-22b-distilled', 'minimax-h3']) await t.test(model, async t => {
+    const f = await pinnedSpeakerScene(t, 'reference', ['hero','guest','friend'], {engine:'astra-genai', model, resolution:'576x1024'});
+    const dir = path.join(f.episode, 'storyboard'), [first, , third] = f.board.SCENES, scene = f.board.STRUCTURE.scenes[0];
+    // The friend walks in silent, with the face the shot named for them.
+    third.narration = [];
+    third.visual.character = ['friend'];
+    third.visual.references = [{id:'s3-friend-face', role:'character', character:'friend', path:'friend.png', use:'video', purpose:'The friend.'}];
+    scene.speakers = ['hero','guest'];
+    scene.speakerReferences.pop();
+    scene.videoDirection.openingPositions.pop();
+    for (const [i, card] of f.board.SCENES.entries()) if (i) { fs.writeFileSync(path.join(dir, 'shot' + i + '.png'), png); card.referenceImage = 'shot' + i + '.png'; }
+    const ltx = model === 'ltx-2.5-22b-distilled';
+    if (ltx) {
+      fs.writeFileSync(path.join(dir, 'key.png'), png);
+      first.visual.references = [{id:'s1-key', role:'prop', path:'key.png', use:'video', purpose:'The brass key.'}];
+    }
+    f.save();
+    const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'silent-third', args:{reserveUsd:0}}, false);
+    assert.deepEqual(plan.args.cast.map(member => [member.id, member.images.length, Boolean(member.voicePath)]), [['hero',1,true], ['guest',1,true]]);
+    assert.deepEqual(plan.args.shots.map(shot => path.basename(shot.imagePath)), ['opening.png','shot1.png','shot2.png']);
+    if (ltx) assert.deepEqual(plan.args.references.map(ref => [ref.role, path.basename(ref.imagePath)]), [['object','key.png']]);
+    else assert.deepEqual(plan.promptGuidance.advice, []);
+    assert.ok(plan.directionWarnings.includes("scene_reference_omitted: s3 friend.png is not sent; this render voices no line of friend's, so the shot pictures carry their look"));
+  });
+});
+
+test('a GenAI scene whose lines are all off screen sends no faces, since its voices ride on the soundtrack', async t => {
+  const f = await pinnedSpeakerScene(t, 'reference', ['hero','guest']);
+  for (const card of f.board.SCENES) card.narration[0].delivery = 'off_screen';
+  f.save();
+  const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'off-screen', args:{reserveUsd:0}}, false);
+  assert.deepEqual(plan.args.cast, []);
+  assert.deepEqual(plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 4).join(' ')),
+    ['scene 1 hero.png', 'scene 1 guest.png']);
+});
+
+test('a GenAI scene sends one cast for the speakers of all its shots, by the panel rule for that count', async t => {
   const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
   const directory = path.join(f.episode, 'storyboard');
   fs.writeFileSync(path.join(directory, 'opening.png'), png);
@@ -1989,11 +2027,24 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
     for (const view of ['face', 'front', 'back']) { fs.writeFileSync(panel(id, view), png); panels[view] = {file:view + '.png'}; }
     fs.writeFileSync(path.join(path.dirname(panel(id, 'face')), 'panels.json'), JSON.stringify({panels}));
   }
-  f.board.STRUCTURE = {scenes:[{no:1, speakers:[], frames:{start:'opening.png'},
+  // A speaker's pinned voice rides on their picture.
+  f.board.SB_DOC = {characters:['hero', 'guest'].map((id, i) => {
+    const tts = {engine:'gemini', voiceId:i ? 'Orus' : 'Kore', language:'en', speed:1}, wav = id + '.wav';
+    execFileSync('ffmpeg', ['-v','error','-f','lavfi','-i',`sine=frequency=${400 + 200 * i}:duration=1`,path.join(directory, wav)]);
+    const face = path.relative(directory, panel(id, 'face'));
+    return {id, tts, panels:{face}, voiceReference:{path:wav, tts, sha256:digest(fs.readFileSync(path.join(directory, wav))), imagePaths:[face]}};
+  })};
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { config.astraGenaiApiKey = key; });
+  sceneGateway(t);
+  await refreshGenaiVideoCatalog(true);
+  f.board.STRUCTURE = {scenes:[{no:1, speakers:['hero', 'guest'], frames:{start:'opening.png'},
     videoDirection:{openingPositions:[{character:'hero', images:[], position:'At the left by the door.'}], emotion:'The guest surprises the host.'}}]};
-  // Each shot named its own person with all three panels, as one-person shots do.
+  // Each shot named its own speaker with all three panels, as one-person shots do.
   for (const [i, [card, id]] of f.board.SCENES.map((card, i) => [card, i ? 'guest' : 'hero']).entries()) {
-    Object.assign(card, {id:'s' + i, scene:1, duration:[56, 57][i] / 24, transition:'cut', narration:[], shot:{size:'ms', angle:'eye'},
+    Object.assign(card, {id:'s' + i, scene:1, duration:[56, 57][i] / 24, transition:'cut', shot:{size:'ms', angle:'eye'},
+      narration:[{id:'s' + i + '-line', speaker:id, delivery:'on_screen', tts:i ? 'Surprise.' : 'Who is it?'}],
       visual:{action:i ? 'The guest steps in.' : 'The host waits.', character:[id],
         references:['face', 'front', 'back'].map(view => ({id:'s' + i + '-' + id + '-' + view, role:'character', character:id, path:panel(id, view), use:'video', purpose:id + ' ' + view + '.'}))}});
   }

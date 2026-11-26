@@ -91,7 +91,7 @@ MSR IC-LoRA on its own GPUs. Its per-model `/v1/ltx/v2/*` routes copy the names 
 hosted API [12]; the plugin calls none of them. Every GenAI video request goes through the
 gateway's common generation API: `POST /v1/generations`, `POST /v1/generations/validate`,
 `GET /v1/generations/{id}` and `GET /v1/models` (user directive, 2026-11-25). The saved selection for LTX is `{engine:"astra-genai", model:"ltx-2.5-22b-distilled",
-operation:"reference", resolution:"1792x1024"}` (`1024x1792` for 9:16)
+operation:"reference", resolution:"1024x576"}` (`576x1024` for 9:16; `1280x736` / `736x1280` as an explicit override)
 ([model-settings.md](../skills/_shared/model-settings.md)). Status: current. Credentials:
 `ASTRA_GENAI_API_KEY`, with the base URL in `ASTRA_GENAI_URL`
 ([astra-genai-client.ts](../server/src/astra-genai-client.ts)). The Desktop adapters
@@ -339,7 +339,7 @@ references.
 #### Gateway offers, plugin does not expose
 
 - **H3 scene profile** of `/v1/generations` `mode:"scene"` [12]: `<Picture N>` / `<Audio N>`, an
-  8000-character prompt, 24 fps, frames `17k+5` from 124 to 345, 3 voices of up to 15 s at 32 kHz,
+  8000-character prompt, 24 fps, frames `17k+5` from 124 to 345, 3 voices of up to 15 s at 32 kHz (the plugin binds 2 per scene),
   and 9 images.
 - **`minimax-h3`, `POST /v1/ltx/h3`** [12]:
   - Tasks: `t2va`, `fl2va` and `ref2va`.
@@ -777,7 +777,7 @@ The vendor offers this; the plugin does not expose it.
   - `generate_audio` defaults to `true` at the vendor. The plugin defaults to `false` and always sends the field.
   - The plugin does not expose `duration: null`.
   - The plugin sends images only as data URIs, so its image limit is 7 MB, not the 15 MB an upload allows [8].
-  - The plugin refuses the project default `1792x1024` / `1024x1792` because neither size is on the vendor's list.
+  - The plugin refuses the GenAI sizes (`576x1024` / `1024x576` and `736x1280` / `1280x736`) because none is on the vendor's list.
 
 #### Audio-to-video
 
@@ -1605,7 +1605,7 @@ it is unverified. The plugin exposes no audio-to-video route. `minimax_reference
   - The planner sends the cast's sheet panels in cast order with the background picture left out.
     The shot's start image goes last.
   - It adds an "Image reference roles:" block that names each picture's role.
-  - More than two referenced characters are refused (`msr_character_limit`)
+  - The standalone MSR adapter refuses more than two referenced characters (`msr_character_limit`); a GenAI scene references only its speakers
     ([video-image-inputs.ts](../server/src/video-image-inputs.ts)).
 - **Voice:** a `reference_audio` clip is tied to a speaker only by prompt text.
   - MiniMax's API example reads "Voice timbre follows reference audio 1" [1].

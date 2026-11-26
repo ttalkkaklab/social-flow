@@ -3,7 +3,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { orderedSpeech } = require('../storyboard/references/scene-direction.js');
-const { imageReferences } = require('../storyboard/references/render-routing.js');
 
 const {maxReferencedCharacters: MAX_SCENE_CHARACTERS, maxCharacterImages: MAX_SCENE_CHARACTER_IMAGES} = require('./genai-scene-limits.json');
 const personRoles = new Set(['character', 'face', 'outfit', 'bystander']);
@@ -35,35 +34,16 @@ function referenceOwners(board, boardDir) {
   return {actors, voiceOnly, canonical, owners, registeredOwner, ownerOf};
 }
 
-// Work from the authored cards, before the renderer copies the scene's references into every shot.
+// A scene references the people whose voices it renders: a pinned voice rides on its speaker's picture.
+// Silent people, bystanders, voice-over and voice-only speakers reach the clip through the shot pictures and the prompt.
 function sceneReferenceGroups(scene, cards, registry) {
   const hasVisibleDialogue = cards.some(card => orderedSpeech(card).some(line => line.tts?.trim() && line.delivery === 'on_screen'));
-  const declared = (scene.speakerReferences ?? []).map(ref => ref.character);
-  const rows = cards.map(card => {
-    const visual = card.visual ?? {};
-    const lines = orderedSpeech(card).filter(line => line.tts?.trim());
-    const marks = [...(card.timeline?.openingPositions ?? []), ...(visual.video?.openingPositions ?? [])];
-    const people = unique([
-      ...castIds(visual.character ?? visual.characters),
-      ...(visual.characterInputs ?? []).map(input => input.character),
-      ...imageReferences(card).filter(ref => ref.use !== 'image' && (personRoles.has(ref.role) || ref.legacy))
-        .map(ref => registry.ownerOf(ref, card, scene.speakers)),
-      ...(card.timeline?.images ?? []).filter(pin => personRoles.has(pin.role)).map(pin => registry.ownerOf(pin, card)),
-      ...marks.filter(mark => mark.images?.length).map(mark => mark.character),
-      ...lines.filter(line => hasVisibleDialogue && line.delivery !== 'voiceover').map(line => line.speaker),
-    ]);
-    const staged = unique([...people, ...castIds(visual.bystanders), ...marks.map(mark => mark.character), ...lines.map(line => line.speaker)]);
-    return {card, people:unique([...people, ...declared.filter(id => staged.includes(id))])};
-  });
-  const opening = (scene.videoDirection?.openingPositions ?? []).filter(mark => mark.images?.length)
-    .map(mark => mark.character);
-  if (rows.length) rows[0].people = unique([...rows[0].people, ...opening]);
-  // A scene-wide reference without any shot attribution cannot be dropped at a proposed cut.
-  const unplaced = declared.filter(id => !rows.some(row => row.people.includes(id)));
   const groups = [];
   let group;
-  for (const {card, people} of rows) {
-    const shotPeople = unique([...people, ...unplaced]).filter(id => !registry.voiceOnly.has(id));
+  for (const card of cards) {
+    const shotPeople = hasVisibleDialogue ? unique(orderedSpeech(card)
+      .filter(line => line.tts?.trim() && line.delivery !== 'voiceover').map(line => line.speaker))
+      .filter(id => !registry.voiceOnly.has(id)) : [];
     const combined = unique([...(group?.characters ?? []), ...shotPeople]);
     if (!group || combined.length > MAX_SCENE_CHARACTERS) {
       group = {shotIds:[], characters:shotPeople, firstShotCharacters:shotPeople};
@@ -82,7 +62,7 @@ function referenceConflict(scene, groups) {
   const shotId = group.shotIds[0];
   const characters = oversized ? group.characters : unique([...groups[0].characters, ...group.firstShotCharacters]);
   const reason = oneTake ? 'The requested one-take needs a staging decision.'
-    : oversized ? 'Reblock this shot into views with at most two referenced characters.' : 'Split before ' + shotId + '.';
+    : oversized ? 'Reblock this shot into views with at most two speaking characters.' : 'Split before ' + shotId + '.';
   const message = 'scene_cast_exceeded: scene ' + scene.no + ', shot ' + shotId + ' references ' + characters.join(', ') + '. ' + reason;
   return {code:'scene_cast_exceeded', sceneNo:scene.no, shotId, characters, groups, splitBefore:oneTake || oversized ? [] : groups.slice(1).map(g => g.shotIds[0]),
     executable:false, videoSubmitted:false, message};
