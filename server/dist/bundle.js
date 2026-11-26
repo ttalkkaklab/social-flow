@@ -137640,12 +137640,14 @@ async function refreshGenaiImage(directory3, requestId2) {
       replayUnknown: ["submitting", "submission_unknown"].includes(job.status)
     }) : await recoverGenaiImage(receiptPath2);
   } catch (error2) {
-    if (!(error2 instanceof GenaiRequestError && error2.terminal && error2.httpStatus === 200)) throw error2;
+    const deliveryFailure = error2 instanceof GenaiImageOutputError;
+    if (!deliveryFailure && !(error2 instanceof GenaiRequestError && error2.terminal && error2.httpStatus === 200)) throw error2;
     imageTransaction(directory3, void 0, (current) => {
       const pending2 = current.jobs[requestId2];
-      if (["submitting", "submission_unknown"].includes(pending2.status)) {
+      if (pending2.status === "completed") return;
+      if (["submitting", "submission_unknown"].includes(pending2.status))
         Object.assign(pending2, { status: "failed", evidence: error2.message, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
-      }
+      if (deliveryFailure) Object.assign(pending2, { providerId: error2.requestId, usage: error2.usage });
     });
     return readImageState(directory3).jobs[requestId2];
   }

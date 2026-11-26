@@ -360,13 +360,15 @@ async function refreshGenaiImage(directory: string, requestId: string) {
         replayUnknown: ['submitting', 'submission_unknown'].includes(job.status) })
       : await recoverGenaiImage(receiptPath);
   } catch (error) {
-    // Only a terminal job status in a successful status response settles the concurrency slot.
-    if (!(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)) throw error;
+    // Only confirmed terminal job evidence settles the concurrency slot during a refresh.
+    const deliveryFailure = error instanceof GenaiImageOutputError;
+    if (!deliveryFailure && !(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200)) throw error;
     imageTransaction(directory, undefined, current => {
       const pending = current.jobs[requestId];
-      if (['submitting', 'submission_unknown'].includes(pending.status)) {
+      if (pending.status === 'completed') return;
+      if (['submitting', 'submission_unknown'].includes(pending.status))
         Object.assign(pending, { status: 'failed', evidence: error.message, updatedAt: new Date().toISOString() });
-      }
+      if (deliveryFailure) Object.assign(pending, { providerId: error.requestId, usage: error.usage });
     });
     return readImageState(directory)!.jobs[requestId];
   }
