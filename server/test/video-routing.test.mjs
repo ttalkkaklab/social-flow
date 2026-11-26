@@ -2214,8 +2214,25 @@ test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned
  assert.ok(p.args.shots.every(s=>s.imagePath));
  assert.deepEqual(p.args.cast.map(c=>c.id),['hero','guest']);
  assert.ok(p.args.cast.every(c=>c.voicePath.endsWith('-32000.wav')));
+ assert.equal(p.args.outputPath, path.join(f.episode, 'storyboard/video'));
+ const candidate = planVideo({...input, args:{outputPath:'output/candidates'}}, false);
+ assert.equal(candidate.args.outputPath, path.join(f.episode, 'output/candidates'));
+ assert.throws(() => planVideo({...input, args:{outputPath:path.join(f.root, 'output')}}, false),
+   /Video output must stay inside the selected episode/);
  assert.equal(planVideo({...input,requestId:'second-take'}).args.prompt,p.args.prompt);
  assert.throws(()=>planVideo({...input,requestId:'suffix',prompt:'Only the second shot.'}),/scene_prompt_mismatch/);
+ const second = f.board.SCENES[1];
+ second.visual.frames = {storyboardKeyframes:[{file:'opening.png',startFrame:90}]};
+ f.save();
+ assert.throws(() => planVideo(input, false), /scene_inputs_unsupported/);
+ delete second.visual.frames;
+ direction.prompt += '\n문이 열린다.';
+ f.save();
+ assert.throws(() => planVideo(input, false), /video_prompt_language/);
+ direction.prompt = p.args.prompt;
+ direction.dialogueVoice = 'model_generated';
+ f.save();
+ assert.throws(() => planVideo(input, false), /voice_lane_required/);
 });
 
 test('a video request composes scene rules, shot choices and beat triggers from the current board', async t => {

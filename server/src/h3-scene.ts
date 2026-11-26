@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, realpathSync, renameSync, rmSync } from 'node:fs
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { genaiSceneSchema, sceneLabels, resolveScenePrompt, type GenaiSceneArgs } from './genai-scene.js';
+import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileSceneTimeline } from './scene-video.js';
 import { assertSceneDialogue } from './scene-prompt.js';
 import { currentSceneVoice } from './video-voice.js';
@@ -94,7 +95,10 @@ export function composeH3Scene(episode: string, board: Record<string, unknown>, 
     ...timeline.shots.map((shot,i) => ['Follow {' + shot.shotId + '.image} for about ' + (shots[i].frames / timeline.fps).toFixed(2) + ' seconds.',
       shot.framing,shot.action,shot.sound, ...turns[i].map(linePrompt)].filter(Boolean).join(' '))].filter(Boolean).join('\n');
   const prompt = savedPrompt ?? composed;
-  assertSceneDialogue(prompt,turns.flat(),[...cast.keys()].map(speaker=>({speaker,name:speaker})),composed,true,savedPrompt === direction.prompt);
+  const lines = turns.flat();
+  assertSceneDialogue(prompt,lines,[...cast.keys()].map(speaker=>({speaker,name:speaker})),composed,true,savedPrompt === direction.prompt);
+  const foreign = nonEnglishOutsideQuotes(prompt, lines.map(line => line.tts));
+  if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const args = genaiSceneSchema.parse({...options,model:'minimax-h3',prompt,cast:[...cast.values()],references:[...references.values()],shots,fps:timeline.fps});
   const labels = sceneLabels(args), modelPrompt = resolveScenePrompt(prompt,labels);
   return {args,timeline,modelPrompt,labels,inputs,warnings};

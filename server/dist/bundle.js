@@ -98307,7 +98307,14 @@ var require_scene_cast = __commonJS({
         if (scene.frames !== void 0) {
           const start = index === 0 ? scene.frames.start : void 0;
           const end = index === cards.length - 1 ? scene.frames.end : void 0;
-          updated.frames = { mode: end ? "first_last" : start ? "first" : "reference", start, end };
+          const { keyframes: keyframes2, storyboardKeyframes } = visual.frames ?? {};
+          updated.frames = {
+            mode: end ? "first_last" : start ? "first" : "reference",
+            start,
+            end,
+            ...engine2 === "astra-genai" && keyframes2 !== void 0 ? { keyframes: keyframes2 } : {},
+            ...engine2 === "astra-genai" && storyboardKeyframes !== void 0 ? { storyboardKeyframes } : {}
+          };
           delete updated.bg;
           delete updated.src;
           delete updated.imagePair;
@@ -134105,7 +134112,7 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
   const warnings = [];
   const orderedSpeech = load10("../../skills/storyboard/references/scene-direction.js").orderedSpeech;
   const turns = cards.map((card) => orderedSpeech(card).filter((line) => line.tts?.trim() && line.delivery !== "voiceover" && !(line.delivery === "off_screen" && external.has(line.speaker) && line.audio?.path)));
-  for (const [i2, lines] of turns.entries()) for (const line of lines) {
+  for (const [i2, lines2] of turns.entries()) for (const line of lines2) {
     const member = cast.get(line.speaker);
     if (!member) throw new Error("scene_reference_owner: H3 needs a picture of speaker " + line.speaker + " on " + String(cards[i2].id));
     if (member.voicePath) continue;
@@ -134114,7 +134121,7 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
     inputs2[voice.path] = voice.sha256;
     member.voicePath = h3VoiceSample(episode, voice);
   }
-  if (turns.some((lines) => lines.length) && options.generateAudio === false) throw new Error("scene_dialogue_audio_required: H3 must render the spoken lines");
+  if (turns.some((lines2) => lines2.length) && options.generateAudio === false) throw new Error("scene_dialogue_audio_required: H3 must render the spoken lines");
   const shots = timeline.shots.map((shot, i2) => {
     const start = timeline.images.find((pin) => pin.shotId === shot.shotId && pin.role === "start");
     const guide = cards[i2].referenceImage;
@@ -134142,7 +134149,10 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
     ].filter(Boolean).join(" "))
   ].filter(Boolean).join("\n");
   const prompt = savedPrompt ?? composed;
-  assertSceneDialogue(prompt, turns.flat(), [...cast.keys()].map((speaker) => ({ speaker, name: speaker })), composed, true, savedPrompt === direction.prompt);
+  const lines = turns.flat();
+  assertSceneDialogue(prompt, lines, [...cast.keys()].map((speaker) => ({ speaker, name: speaker })), composed, true, savedPrompt === direction.prompt);
+  const foreign = nonEnglishOutsideQuotes(prompt, lines.map((line) => line.tts));
+  if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
   const args = genaiSceneSchema.parse({ ...options, model: "minimax-h3", prompt, cast: [...cast.values()], references: [...references.values()], shots, fps: timeline.fps });
   const labels = sceneLabels(args), modelPrompt = resolveScenePrompt2(prompt, labels);
   return { args, timeline, modelPrompt, labels, inputs: inputs2, warnings };
@@ -134860,6 +134870,11 @@ function canonical3(file3) {
   if (parent === file3) throw new Error("Cannot resolve path");
   return path29.join(canonical3(parent), path29.basename(file3));
 }
+function episodeOutputPath(episode, outputPath) {
+  const output2 = canonical3(path29.resolve(episode, outputPath));
+  if (!within(episode, output2)) throw new Error("Video output must stay inside the selected episode");
+  return output2;
+}
 function inputFiles(args, episode) {
   const files3 = {};
   const visit = (value2, key) => {
@@ -135325,6 +135340,8 @@ function numberedImages(args, bindings = [], speakers = [], cast, episode, first
 }
 function buildH3Plan(input, context2, persist) {
   if (!context2.sceneMembers?.length || !context2.sceneDirection) throw new Error("scene_direction_required: author the storyboard scene before planning H3");
+  if (context2.speechRoute?.mode === "generated")
+    throw new Error("voice_lane_required: model-generated dialogue needs Veo or Seedance image-to-video with scene frames");
   const selection = context2.selection;
   const options = external_exports.object({
     seed: external_exports.number().int().optional(),
@@ -135341,11 +135358,12 @@ function buildH3Plan(input, context2, persist) {
   if (options.resolution && selection.resolution && options.resolution !== selection.resolution) throw new Error("model_selection_mismatch: resolution");
   const direction = sceneVideoDirectionSchema.parse(context2.sceneDirection);
   const saved = sceneProductionPrompt(direction, selection);
+  const outputPath = episodeOutputPath(context2.episode, options.outputPath ?? "storyboard/video");
   const h3 = composeH3Scene(context2.episode, context2.board, context2.sceneMembers, direction, {
     ...options,
     resolution: selection.resolution ?? options.resolution,
     reserveUsd: options.reserveUsd ?? input.maxCostUsd,
-    outputPath: options.outputPath ?? path29.join(context2.episode, "storyboard/video"),
+    outputPath,
     filename: options.filename ?? input.requestId + ".mp4"
   }, input.prompt ?? saved, context2.speechRoute?.opening);
   const { args, timeline, modelPrompt, labels } = h3;
@@ -135878,9 +135896,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const speechFit = durationPlan.speech && playSeconds !== void 0 && playSeconds > 0 && durationPlan.limits && lines.some((line) => line.delivery !== "voiceover") ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, context2.board.STORY?.language) : void 0;
   const foreign = typeof args.prompt === "string" ? nonEnglishOutsideQuotes(tool2 === "fasth3_omni_reference" ? args.prompt.replace(/<d>[^<>]*<\/d>/g, "") : args.prompt, script) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
-  const output2 = canonical3(path29.resolve(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video"));
-  if (!within(context2.episode, output2)) throw new Error("Video output must stay inside the selected episode");
-  args.outputPath = output2;
+  args.outputPath = episodeOutputPath(context2.episode, typeof args.outputPath === "string" ? args.outputPath : ".work/video");
   args.filename ??= `video-${input.requestId}.mp4`;
   let planTool = tool2;
   const composed = { prompt: String(args.prompt), positions: args.openingPositions };
@@ -138432,10 +138448,17 @@ function splitStoryScene(args, win, st) {
   const fps = source2.videoDirection?.fps ?? 24;
   if ((left.videoDirection.fps ?? fps) !== fps || (right.videoDirection.fps ?? fps) !== fps)
     throw new Error("scene_split_timing: keep the frame rate of the existing shot timings");
-  const offset = first.timeline?.startFrame ?? Math.round(members.slice(0, boundary).reduce((sum, shot) => sum + (shot.duration ?? 0), 0) * fps);
-  const moved = new Set(members.slice(boundary).map((shot) => shot.id));
+  const { renumberSceneNotes, rebaseStoryboardKeyframes, splitOpening } = loadFromHere2(join14(REFERENCES_DIR, "split-reference-scenes.js"));
+  const moved = /* @__PURE__ */ new Map();
+  let seconds2 = 0;
+  for (const [position, shot] of members.entries()) {
+    if (position >= boundary) moved.set(shot, shot.timeline?.startFrame ?? Math.round(seconds2 * fps));
+    seconds2 += shot.duration ?? 0;
+  }
+  const offset = moved.get(first);
   const revised = shots.map((shot) => {
-    if (!moved.has(shot.id)) return shot.scene === void 0 ? shot : { ...shot, scene: numbers.get(shot.scene) ?? shot.scene };
+    const start = moved.get(shot);
+    if (start === void 0) return shot.scene === void 0 ? shot : { ...shot, scene: numbers.get(shot.scene) ?? shot.scene };
     const tl = shot.timeline;
     if (tl && tl.startFrame < offset) throw new Error("scene_split_timing: inconsistent shot timeline");
     const timeline = tl && {
@@ -138446,10 +138469,17 @@ function splitStoryScene(args, win, st) {
       ...tl.images ? { images: tl.images.map((pin) => ({ ...pin, frame: pin.frame - offset })) } : {},
       ...tl.dialogueCues ? { dialogueCues: tl.dialogueCues.map((cue) => ({ ...cue, frame: cue.frame - offset })) } : {}
     };
-    return { ...shot, scene: newSceneNo, ...shot === first ? { transition: void 0 } : {}, ...timeline ? { timeline } : {} };
+    const visual = rebaseStoryboardKeyframes(shot.visual, start, offset, fps);
+    return {
+      ...shot,
+      scene: newSceneNo,
+      ...shot === first ? { transition: void 0 } : {},
+      ...timeline ? { timeline } : {},
+      ...visual !== shot.visual ? { visual } : {}
+    };
   });
   const keyframes2 = source2.videoDirection?.keyframes ?? [];
-  const opening = first.timeline?.images?.find((pin) => pin.role === "start")?.path ?? first.referenceImage;
+  const opening = splitOpening(first);
   const leftFrames = left.frames ?? (source2.frames ? { start: source2.frames.start } : void 0);
   const rightFrames = right.frames ?? { start: opening, ...source2.frames?.end ? { end: source2.frames.end } : {} };
   const parts = args.scenes.map((scene) => {
@@ -138474,7 +138504,6 @@ function splitStoryScene(args, win, st) {
     no: numbers.get(scene.no) ?? scene.no,
     ...scene.referenceSplitFrom ? { referenceSplitFrom: numbers.get(scene.referenceSplitFrom) ?? scene.referenceSplitFrom } : {}
   }));
-  const { renumberSceneNotes } = loadFromHere2(join14(REFERENCES_DIR, "split-reference-scenes.js"));
   return { shots: revised, scenes: parts, sequences, baseScenes, globals: renumberSceneNotes(win, numbers) };
 }
 function assertArchivedSceneDrafts(next, previous) {

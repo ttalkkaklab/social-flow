@@ -279,7 +279,10 @@ function projectSceneCast(scene, cards, board, boardDir, engine, audioRoute = fa
     if (scene.frames !== undefined) {
       const start = index === 0 ? scene.frames.start : undefined;
       const end = index === cards.length-1 ? scene.frames.end : undefined;
-      updated.frames = {mode:end ? 'first_last' : start ? 'first' : 'reference', start, end};
+      const {keyframes, storyboardKeyframes} = visual.frames ?? {};
+      updated.frames = {mode:end ? 'first_last' : start ? 'first' : 'reference', start, end,
+        ...(engine === 'astra-genai' && keyframes !== undefined ? {keyframes} : {}),
+        ...(engine === 'astra-genai' && storyboardKeyframes !== undefined ? {storyboardKeyframes} : {})};
       delete updated.bg;
       delete updated.src;
       delete updated.imagePair;

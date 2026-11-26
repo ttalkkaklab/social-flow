@@ -234,6 +234,11 @@ function canonical(file: string): string {
   if (parent === file) throw new Error('Cannot resolve path');
   return path.join(canonical(parent), path.basename(file));
 }
+function episodeOutputPath(episode: string, outputPath: string): string {
+  const output = canonical(path.resolve(episode, outputPath));
+  if (!within(episode, output)) throw new Error('Video output must stay inside the selected episode');
+  return output;
+}
 function inputFiles(args: Record<string, unknown>, episode: string): Record<string, string> {
   const files: Record<string, string> = {};
   const visit = (value: unknown, key: string): unknown => {
@@ -659,6 +664,8 @@ function numberedImages(args: Record<string, unknown>, bindings: readonly ImageB
 }
 function buildH3Plan(input: PlanInput, context: Context, persist: boolean): VideoPlan {
   if (!context.sceneMembers?.length || !context.sceneDirection) throw new Error('scene_direction_required: author the storyboard scene before planning H3');
+  if (context.speechRoute?.mode === 'generated')
+    throw new Error('voice_lane_required: model-generated dialogue needs Veo or Seedance image-to-video with scene frames');
   const selection = context.selection;
   const options = z.object({seed:z.number().int().optional(), generateAudio:z.boolean().optional(), reserveUsd:z.number().nonnegative().optional(),
     model:z.literal('minimax-h3').optional(), resolution:z.string().optional(), referenceImageShortEdge:h3ReferenceImageShortEdge.optional(),
@@ -666,9 +673,10 @@ function buildH3Plan(input: PlanInput, context: Context, persist: boolean): Vide
   if (options.resolution && selection.resolution && options.resolution !== selection.resolution) throw new Error('model_selection_mismatch: resolution');
   const direction = sceneVideoDirectionSchema.parse(context.sceneDirection);
   const saved = sceneProductionPrompt(direction,selection);
+  const outputPath = episodeOutputPath(context.episode, options.outputPath ?? 'storyboard/video');
   const h3 = composeH3Scene(context.episode,context.board,context.sceneMembers,direction,{
     ...options,resolution:selection.resolution ?? options.resolution, reserveUsd:options.reserveUsd ?? input.maxCostUsd,
-    outputPath:options.outputPath ?? path.join(context.episode,'storyboard/video'),filename:options.filename ?? input.requestId + '.mp4'
+    outputPath,filename:options.filename ?? input.requestId + '.mp4'
   },input.prompt ?? saved,context.speechRoute?.opening);
   const {args,timeline,modelPrompt,labels} = h3;
   checkSceneVoices(args);
@@ -1178,9 +1186,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
     ? nativeSpeechFit(shot, playSeconds, durationPlan.limits, (context.board.STORY as { language?: unknown } | undefined)?.language) : undefined;
   const foreign = typeof args.prompt === 'string' ? nonEnglishOutsideQuotes(tool === 'fasth3_omni_reference' ? args.prompt.replace(/<d>[^<>]*<\/d>/g, '') : args.prompt, script) : null;
   if (foreign) throw new Error(`video_prompt_language: "${foreign}" sits outside quotation marks. Write the video prompt in English; only dialogue, inside quotes, uses the video's language.`);
-  const output = canonical(path.resolve(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video'));
-  if (!within(context.episode, output)) throw new Error('Video output must stay inside the selected episode');
-  args.outputPath = output;
+  args.outputPath = episodeOutputPath(context.episode, typeof args.outputPath === 'string' ? args.outputPath : '.work/video');
   args.filename ??= `video-${input.requestId}.mp4`;
   let planTool = tool;
   // The author edits the planner's names; the scene request carries its own, keyed by the same reference numbers.

@@ -18,6 +18,23 @@ function localTimeline(timeline, offset, first) {
     ...(timeline.dialogueCues ? {dialogueCues:shift(timeline.dialogueCues)} : {})};
 }
 
+function rebaseStoryboardKeyframes(visual, shotStart, offset, fps) {
+  const frames = visual?.frames;
+  if (!frames?.storyboardKeyframes || frames.keyframes !== undefined) return visual;
+  const storyboardKeyframes = frames.storyboardKeyframes.map(pin => {
+    if (pin.startFrame === undefined) return pin;
+    const frame = pin.startFrame < shotStart && pin.startSeconds !== undefined
+      ? shotStart + Math.round(pin.startSeconds * fps) : pin.startFrame;
+    return {...pin, startFrame:frame - offset};
+  });
+  return {...visual, frames:{...frames, storyboardKeyframes}};
+}
+
+function splitOpening(card) {
+  return card.timeline?.images?.find(pin => pin.role === 'start')?.path ?? card.referenceImage ??
+    (framePlan(card).start || undefined);
+}
+
 function bindBoundaryFrame(part, card, role, pin, sceneOwnsFrames) {
   const images = card.timeline?.images ?? [];
   const sameFrame = image => image.frame === pin.frame && ['start','end','keyframe'].includes(image.role);
@@ -58,7 +75,7 @@ function assignGroups(scene, groups, cards, numbers) {
     const lines = spoken(members);
     if (scene.speakers) part.speakers = [...new Set([...scene.speakers.filter(id => lines.includes(id)), ...lines])];
     if (scene.speakerReferences) part.speakerReferences = scene.speakerReferences.filter(ref => group.characters.includes(ref.character));
-    const start = index === 0 ? scene.frames?.start : first.timeline?.images?.find(pin => pin.role === 'start')?.path ?? first.referenceImage ?? first.visual?.frames?.start;
+    const start = index === 0 ? scene.frames?.start : splitOpening(first);
     if (scene.frames !== undefined || sceneOwnsFrames && start) part.frames = {...(start ? {start} : {}), ...(last && scene.frames?.end ? {end:scene.frames.end} : {})};
     if (index) delete part.videoOpeningSha256;
     if (scene.videoDirection) {
@@ -83,17 +100,8 @@ function assignGroups(scene, groups, cards, numbers) {
       card.scene = no;
       if (!index) continue;
       if (card.timeline) card.timeline = localTimeline(card.timeline, offset, card === first);
-      const frames = card.visual?.frames;
-      if (frames?.storyboardKeyframes && frames.keyframes === undefined) {
-        const shotStart = byId.get(card.id).start;
-        const storyboardKeyframes = frames.storyboardKeyframes.map(pin => {
-          if (pin.startFrame === undefined) return pin;
-          const frame = pin.startFrame < shotStart && pin.startSeconds !== undefined
-            ? shotStart + Math.round(pin.startSeconds * fps) : pin.startFrame;
-          return {...pin, startFrame:frame - offset};
-        });
-        card.visual = {...card.visual, frames:{...frames, storyboardKeyframes}};
-      }
+      const visual = rebaseStoryboardKeyframes(card.visual, byId.get(card.id).start, offset, fps);
+      if (visual !== card.visual) card.visual = visual;
     }
     return part;
   });
@@ -212,4 +220,4 @@ function splitReferenceScenes(board, previous, boardDir, includeExisting = false
   return findings;
 }
 
-module.exports = {splitReferenceScenes, renumberSceneNotes};
+module.exports = {splitReferenceScenes, renumberSceneNotes, rebaseStoryboardKeyframes, splitOpening};
