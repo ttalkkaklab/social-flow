@@ -21,7 +21,7 @@ speaker-assignment risk; check who voices each line in the take.
 
 For an explicit one-take, keep every speaker turn on a single shot. Follow the changing attention with blocking or a continuous camera move. If the selected model cannot bind the voices, report that limitation.
 
-LTX can reference up to four visible principals. A silent cast member can have their own image slot. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. A line belongs to the shot card whose view it is spoken in. The scene is generated once. Before allocating lines, choose the visible evidence for the complete scene
+The standalone LTX adapters can reference up to four visible principals. A GenAI scene references only its speakers, at most two; a silent cast member comes from the shot pictures and has no image slot of their own. Use `bystanders` for listeners whose appearance comes from the opening picture and `extras` for unnamed people. A line belongs to the shot card whose view it is spoken in. The scene is generated once. Before allocating lines, choose the visible evidence for the complete scene
 using [shot-view](shot-view.md#plan-attention-across-the-scene). Then set size, angle and
 delivery for each unit. A reply may stay on a meaningful detail or listener reaction;
 it does not automatically need a reverse. Never ask one generated clip to invent cuts.

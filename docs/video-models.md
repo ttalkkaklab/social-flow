@@ -339,7 +339,7 @@ references.
 #### Gateway offers, plugin does not expose
 
 - **H3 scene profile** of `/v1/generations` `mode:"scene"` [12]: `<Picture N>` / `<Audio N>`, an
-  8000-character prompt, 24 fps, frames `17k+5` from 124 to 345, 3 voices of up to 15 s at 32 kHz,
+  8000-character prompt, 24 fps, frames `17k+5` from 124 to 345, 3 voices of up to 15 s at 32 kHz (the plugin binds 2 per scene),
   and 9 images.
 - **`minimax-h3`, `POST /v1/ltx/h3`** [12]:
   - Tasks: `t2va`, `fl2va` and `ref2va`.
