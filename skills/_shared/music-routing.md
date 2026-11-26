@@ -3,8 +3,9 @@
 New generated music follows `music_catalog → music_plan → music_execute`. Read
 `music_status` after interruptions. A channel bed is reused by naming it as a cue's `asset`; a file made for another episode's cue is never a substitute (user directive 2026-11-14). No provider
 fallback or quality score changes the saved choice. `music_catalog {engine, model}` returns
-that engine's adapters with their parameters as JSON Schema (`parameters.common`,
-`parameters.options`). `music_plan` takes `engine` and `model` as a check on the saved
+each matching adapter's engine and purpose, with JSON Schema for its shared inputs
+(`parameters.common`) and adapter-specific inputs (`parameters.options`).
+`music_plan` takes `engine` and `model` as a check on the saved
 selection and never switches it (`music_selection_mismatch`).
 
 ## Settings and layers
@@ -12,7 +13,7 @@ selection and never switches it (`music_selection_mismatch`).
 Save `models.music: {engine, model}` with `project_manage update` or the model
 settings helper and the user's actual selection. Valid pairs come from
 `music_catalog` / `project_manage options.musicCatalog`. Engines: `lyria`,
-`elevenlabs`, `suno-api` (sunoapi.org third party), `mlx` (exact installed pack ID).
+`elevenlabs`, `suno-api` (sunoapi.org third party), `mlx` (MLX-Serve pack ID), and `stable-audio-mlx` (Stable Audio 3 Medium).
 First setup asks for this choice directly after the video model and its credentials.
 Save `models.music:{engine:"none"}` when the user chooses existing music or no score.
 This also covers audience-only tonal cues. Requesting a new generation plan with that
@@ -67,18 +68,53 @@ state starts. No hidden zero-cost assumption.
  "outputPath":".work","filename":"bgm.wav"}}
 ```
 
-Call `music_plan` with this object and pass its `id` to `music_execute` as
-`planId` with the same directory. Omit the provider model in args to inherit it.
+Call `music_plan` with this object. Pass the returned `directory` and `planId` to
+`music_execute`. The response also carries the same value in `id` for existing callers. Omit the provider model in args to inherit it.
 For Lyria song use `prompt`, optional Korean `lyrics` and `instrumental:false` for
 singing. For Lyria RealTime use `prompts:[{text,weight}]`, `durationSeconds` and
 optional `config`. For Suno V6 use `customMode:true`, `style`, `instrumental:true`
-and optional `duration`; sung text belongs in `lyrics`. MLX uses its native
-`prompt`, `durationSeconds` and `instrumental` fields.
+and optional `duration`; sung text belongs in `lyrics`. The two local models take different arguments, described below.
 
 Configured production raw adapters require `musicContext` with `directory`,
 `assetId`, `requestId` and API `reserveUsd`; that calls the same planner/executor.
 Use the routing tools normally. Standalone calls outside configured production
 remain available and do not get the managed budget or output contract.
+
+## Local music on Apple Silicon
+
+Both models use the same `music_plan` and `music_execute` tools and reserve $0.
+Select the pair under `models.music`. The catalog lists supported models on all hosts.
+`capability_status` checks local configuration. Each generation records the measured output length.
+
+| Engine and model | Example `music_plan.args` | Native call and output |
+|---|---|---|
+| `mlx` / `ddalcu/MiniMax-Music3-MLX-Serve-8bit` | `{"prompt":"Warm folk-pop, picked guitar and a close lead voice","instrumental":false,"lyrics":"[verse]\nMorning light across the bay","durationSeconds":12,"seed":17}` | MLX-Serve 26.11.3, `POST /v1/audio/music-generations`. JSON in, 44.1 kHz stereo WAV out. |
+| `stable-audio-mlx` / `stabilityai/stable-audio-3-medium` | `{"prompt":"Fingerpicked nylon guitar and brushed snare","durationSeconds":8.5,"steps":8,"seed":17}` | Official MLX CLI, `--dit medium --decoder same-l`. Output is a 44.1 kHz stereo PCM WAV. |
+
+**MiniMax Music 3.** Put genre, vocal direction and arrangement in `prompt`.
+Supply section-tagged `lyrics` with `instrumental:false` for vocals. The plugin defaults
+to `instrumental:true`; omit lyrics for an instrumental request. This setting steers
+the model and can leave vocal texture. `durationSeconds` maps to the integer
+`duration_seconds`, a 1–360 second upper bound (plugin default 30). The installed
+server takes `steps` (4–100, default 30) and `seed` (default 42). It adds `bpm`
+(30–300) and `keyscale` to the caption as text guidance. It rejects reference audio,
+cover tasks, time signatures and vocal language fields.
+[Versioned request parser](https://github.com/ddalcu/mlx-serve/blob/v26.11.3/src/plugins/music3/plugin.zig) ·
+[Caption conditioning](https://github.com/ddalcu/mlx-serve/blob/v26.11.3/src/plugins/music3/music3.zig)
+
+**Stable Audio 3 Medium.** The adapter runs the installed
+`.venv/bin/python scripts/sa3_mlx.py` offline. Set `STABLE_AUDIO_MLX_DIR` to the
+absolute `optimized/mlx` directory, or save `{"directory":"/path/to/stable-audio-3/optimized/mlx"}`
+in `~/.config/social-flow/stable-audio-mlx.json`. The environment takes precedence. Text generation uses
+the Medium DiT, T5Gemma and SAME-L decoder. Audio editing also uses the SAME-L encoder.
+Describe music in English in `prompt`. The CLI supports fractional seconds up to
+the model's 380-second limit. Social Flow passes `durationSeconds` as `--seconds`,
+chooses a seed when omitted and returns it in the receipt.
+`negativePrompt` and `apg` require `cfg` other than 1. For variations pass
+`initAudioPath` and `initNoiseLevel` (e.g. 0.6). To regenerate seconds 2–4 of
+that clip, add `inpaintRange:[2,4]`. Managed plans hash the input recording.
+[MLX CLI and argument definitions](https://github.com/Stability-AI/stable-audio-3/blob/790793b89ddceea612be9ce42ff6830d18f6fa57/optimized/mlx/scripts/sa3_mlx.py) ·
+[Model limits](https://github.com/Stability-AI/stable-audio-3/blob/790793b89ddceea612be9ce42ff6830d18f6fa57/README.md#models)
 
 ## Interrupted requests
 

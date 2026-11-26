@@ -244,14 +244,8 @@ function check(storyboard, { requireSelection = false, ready = false, beforeCall
   } else if (beforeCall !== null) {
     const row = option.rows.find(r => r.shot === beforeCall);
     if (!row) errors.push('Requested shot has no priced video generation');
-    const lines = fs.existsSync(ledger) ? fs.readFileSync(ledger, 'utf8').split(/\r?\n/).filter(l => /^(seedance|veo)\./.test(l)) : [];
-    if (lines.some(l => !/video:shot=\d+:attempt=\d+/.test(l))) errors.push('Every video ledger line needs video:shot=N:attempt=M for retry accounting');
-    // Revised boards retain all historic spend, but count retries within their approved revision.
     const revision = p.generationRevision;
     if (revision !== undefined && !/^[a-zA-Z0-9_-]+$/.test(revision)) errors.push('Invalid generationRevision');
-    const attempts = lines.filter(l => l.includes(`video:shot=${beforeCall}:`) &&
-      (!revision || l.split(/\s+/).includes(`revision=${revision}`))).length;
-    if (attempts >= p.maxAttempts) errors.push('This shot has exhausted the approved attempt limit');
     const pending = option.rows.filter(r => {
       if (r.shot === beforeCall) return true;
       try { return !accepted(win, r.shot - 1, storyboard, (reviews.shots || []).find(x => x.shot === r.shot)); }

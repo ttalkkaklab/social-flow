@@ -59,6 +59,16 @@ function instructions(view) {
 }
 // Only explicit framing statements are checked here, not the story's artistic suitability.
 // Negative statements and incidental body parts are not crop declarations.
+function openingFraming(timeline) {
+  const opening = [];
+  for (const sentence of timeline.split(/[.!?;]\s*/)) {
+    const [first, later] = sentence.split(/\b(?:then|before (?:the camera|we) (?:pull|zoom|move|push)|ending on|settling on)\b/i, 2);
+    if (/\b(?:at|by) the end(?: of (?:the|this) (?:shot|move|take))?(?=\s*(?:$|,|as\b|when\b))|\b(?:closing (?:frame|view)|end frame|later in the shot)\b/i.test(first)) break;
+    opening.push(first);
+    if (later !== undefined) break;
+  }
+  return opening.join('. ');
+}
 function framingConflicts(size,view,scene='',noPerson=false) {
   const aliases={ws:'ls'}, chosen=aliases[size]||size;
   const known=['els','ls','fs','mfs','ms','mcu','cu','choker','ecu','insert'];
@@ -77,10 +87,10 @@ function framingConflicts(size,view,scene='',noPerson=false) {
     // In scene prose only a leading shot declaration is a second camera instruction.
     // "She examines a full-body portrait" must not be mistaken for a camera crop.
     if(field==='scene'&&!/^\s*(?:(?:a|an|the)\s+)?(?:extreme |medium |big |tight |wide |full |close[- ]up|head[- ]to[- ]toe|waist[- ]up|chest[- ]up)/i.test(sentence))continue;
-    const shot=sentence.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:establishing )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
+    const shot=sentence.match(/\b(extreme (?:wide|long) shot|medium close[- ]up|medium (?:full|long) shot|extreme close[- ]up|(?:big|tight) close[- ]up|wide (?:(?:establishing|full[- ]figure) )?shot|long shot|full shot|medium shot|close[- ]up)\b/i);
     if(shot){
       const label=shot[1].toLowerCase().replace(/-/g,' ');
-      const stated=label.startsWith('extreme wide')||label.startsWith('extreme long')?'els':label==='medium close up'?'mcu':/^medium (full|long)/.test(label)?'mfs':label==='extreme close up'?'ecu':/^(big|tight) close up$/.test(label)?'choker':/^(wide (establishing )?|long )shot$/.test(label)?'ls':label==='full shot'?'fs':label==='medium shot'?'ms':'cu';
+      const stated=label.startsWith('extreme wide')||label.startsWith('extreme long')?'els':label==='medium close up'?'mcu':/^medium (full|long)/.test(label)?'mfs':label==='extreme close up'?'ecu':/^(big|tight) close up$/.test(label)?'choker':/^(wide (?:(?:establishing|full[- ]figure) )?|long )shot$/.test(label)?'ls':label==='full shot'?'fs':label==='medium shot'?'ms':'cu';
       if(stated!==chosen&&!(chosen==='insert'&&['cu','ecu'].includes(stated)))out.push(field+' says '+shot[1]+' but shot.size is '+size);
     }
     if(person)for(const [pattern,allowed] of rules){
@@ -90,4 +100,12 @@ function framingConflicts(size,view,scene='',noPerson=false) {
   }
   return out;
 }
-module.exports={BEARINGS,MODES,SCHEMA,validate,checked,instructions,framingConflicts};
+function withoutPeople(card) {
+  const v = card.visual || {}, cast = v.character ?? v.characters;
+  if ((Array.isArray(cast) ? cast.length : cast) || v.bystanders?.length || String(v.extras || '').trim()) return false;
+  return cast !== undefined || Boolean(v.camera?.view);
+}
+function subjectKind(view, size, noPerson, cutRole) {
+  return view?.subjectType || (noPerson ? 'object' : view?.target || cutRole === 'insert' || ['insert','ecu'].includes(size) ? 'detail' : 'person');
+}
+module.exports={openingFraming,withoutPeople,subjectKind,BEARINGS,MODES,SCHEMA,validate,checked,instructions,framingConflicts};

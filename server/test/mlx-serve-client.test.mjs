@@ -235,6 +235,29 @@ describe('mlx generate — mocked fetch', () => {
     }
   });
 
+  it('routes native Music 3 controls and measures the returned WAV independently of its duration cap', async t => {
+    const model = 'ddalcu/MiniMax-Music3-MLX-Serve-8bit';
+    const dir = mkdtempSync(join(tmpdir(), 'music3-'));
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
+    const { pcmToWav } = await import('../dist/media-utils.js');
+    const wav = pcmToWav(Buffer.alloc(44100 * 4), 44100, 2);
+    let calls = 0;
+    globalThis.fetch = async (url, init) => {
+      if (url.endsWith('/health')) return jsonResponse(200, { ok: true });
+      if (url.endsWith('/v1/models')) return jsonResponse(200, { data: [{ id: model, state: 'ready', capabilities: ['music'] }] });
+      assert.ok(url.endsWith('/v1/audio/music-generations'));
+      calls++;
+      assert.deepEqual(JSON.parse(init.body), { model, prompt: 'guitar', lyrics: '[verse]\nHello', instrumental: false,
+        duration_seconds: 3, steps: 7, seed: 0, bpm: 92, keyscale: 'F minor' });
+      return bytesResponse(200, wav, 'audio/wav');
+    };
+    const args = { prompt: 'guitar', lyrics: '[verse]\nHello', instrumental: false,
+      durationSeconds: 3, steps: 7, seed: 0, bpm: 92, keyscale: 'F minor', outputPath: dir };
+    assert.equal((await generateMlxMusic({ ...args, refAudioPath: 'unsupported.wav' })).success, false);
+    assert.equal((await generateMlxMusic(args)).durationSeconds, 1);
+    assert.equal(calls, 1);
+  });
+
   it('music writes a wav and refuses a JSON error body posing as success', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'mlx-music-'));
     globalThis.fetch = async (url) => {

@@ -21,7 +21,7 @@ import { actingSchema, compileActing, type SpeechActing } from './speech-acting.
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
-import { compileVideoPrompt } from './video-prompt.js';
+import { compileVideoPrompt, sceneShotNotes } from './video-prompt.js';
 import { refreshVideoReview } from './video-review.js';
 
 const speechSpanContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/speech-span.js') as {
@@ -188,15 +188,10 @@ export function speechVideoPlan(input: Line[] | {narration?: Line[]; [key: strin
     throw new Error('msr_speech_route: split physical dialogue and inner thoughts into separate shots; thoughts use image2video with timed TTS');
   const mode = capabilities.nativeSpeech && physicalSpeech ? 'native' : !onScreen ? 'voiceover' : capabilities.audioConditioning ? 'audio_conditioned' : null;
   if (!mode) throw new Error('Selected adapter cannot synchronize on-screen dialogue. Select a capable adapter; do not silently change the scene to silent acting');
-  const saved = object(object(object(scene.visual).video).promptSource);
-  const design = object(object(scene.shot).videoDesign);
+  const notes = sceneShotNotes(scene);
   // The preview fits the ASTRA limit as video_plan does, so an over-limit flag means the authored text itself is too long.
   const astra = capabilities.provider.trim().toLowerCase() === 'astra';
-  const compiled = compileVideoPrompt(scene, {
-    action: typeof saved.action === 'string' ? saved.action : typeof design.action === 'string' ? design.action : '',
-    ...(typeof saved.end === 'string' ? { end: saved.end } : {}),
-    ...(typeof saved.sound === 'string' ? { sound: saved.sound } : {}),
-  }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line as Line), validateLanguage: false,
+  const compiled = compileVideoPrompt(scene, { action: notes.action, end: notes.end, sound: notes.sound }, {}, { mode, measureAudio: line => mode === 'native' ? null : measuredDuration(line as Line), validateLanguage: false,
     ...(astra ? { maxCharacters: ASTRA_VIDEO_MAX_PROMPT_CHARS } : {}) });
   const timeline = compiled.performance;
   const videoPrompt = compiled.prompt;
@@ -583,10 +578,12 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
   }
   const audioPlans = args.action === 'plan_audio' ? selected.map(({scene,line}) => {
     const result = speechAudioPlan(line, character(line.speaker), {boardDir: dirname(file), board: win});
+    const speechContext = {path: file, lineId: line.id, expectedRevision: revision};
     const generation = {...result.generation, ...(['tts_astra_genai','tts_local_voxcpm2'].includes(result.generator) ? {
-      speechContext: {path: file, lineId: line.id, expectedRevision: revision},
+      speechContext,
     } : {})};
-    return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation};
+    return {shotId: scene.id, lineId: line.id, ...result, generation, arguments: generation,
+      ttsPlan: {generator: result.generator, generation: result.generation, speechContext}};
   }) : undefined;
   return { revision: hash(readFileSync(file)), changed, invalidated, plan, timing, ...(soundtrack ? {soundtrack} : {}), ...(clearedTrim ? {clearedTrim} : {}), ...(voiceWarnings.length ? {voiceWarnings} : {}), ...(audioPlans ? {audioPlans} : {}), lines: selected.map(({ scene, index, line }) => ({ shot: index + 1, shotId: scene.id, ...line, characterName: character(line.speaker)?.name, voice: character(line.speaker)?.tts, generationPlan: inspectionAudioPlan(line,character(line.speaker),{boardDir: dirname(file), board: win}), audioProvenanceStatus:line.delivery !== 'voiceover' && object(object(scene.visual).video).speechStatus !== 'stale' && object(object(object(scene.visual).video).speechBinding).mode==='native'?'native_speech':audioProvenanceStatus(line,character(line.speaker)), speechRevision: speechRevision(line, character(line.speaker)), audioCurrent: currentAudio(line,character(line.speaker)) })) };
 }

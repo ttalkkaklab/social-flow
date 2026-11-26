@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync, statSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const PROVIDER = /^(ARK|ASTRA|BYTEPLUS|DATA_GO_KR|ELEVENLABS|FACEBOOK|GEMINI|GOOGLE|HEYGEN|INSTAGRAM|LTX|MEDIA_UPLOAD|MELEON|MFLUX|MINIMAX|MLX_SERVE|NAVER|OPENAI|PEXELS|PIXABAY|QWEN3|SERPAPI|SNS_TOKEN|SOCIAL_FLOW|SUNO|THREADS|TIKTOK|YOUTUBE)_/;
+const PROVIDER = /^(ARK|ASTRA|BYTEPLUS|DATA_GO_KR|ELEVENLABS|FACEBOOK|GEMINI|GOOGLE|HEYGEN|INSTAGRAM|LTX|MEDIA_UPLOAD|MELEON|MFLUX|MINIMAX|MLX_SERVE|NAVER|OPENAI|PEXELS|PIXABAY|QWEN3|SERPAPI|SNS_TOKEN|SOCIAL_FLOW|STABLE_AUDIO|SUNO|THREADS|TIKTOK|YOUTUBE)_/;
 for (const key of Object.keys(process.env)) if (PROVIDER.test(key)) delete process.env[key];
 
 // Real tools stay: a BLENDER or CHROME that is not a file (say the .app bundle) falls back to the default path,

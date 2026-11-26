@@ -53,6 +53,7 @@ import { readImageMetadata } from '../dist/image-media.js';
 import editPlan from '../../skills/produce/references/edit-plan.js';
 import { setupProject, png } from './workflow-fixture.mjs';
 import { manageProject } from '../dist/project.js';
+import { planVideo } from '../dist/video-routing.js';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 
@@ -437,6 +438,43 @@ describe('story first, then characters and lines', () => {
     assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
     assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
   });
+  it('splits a scene and writes both prompts atomically at an existing shot', () => {
+    const dir=tmp(), scene={sequence:'q1',no:1,place:'Workshop',time:'Day',event:'A handover',summary:'The key changes hands.',speakers:[]};
+    writeStorySequences({path:dir,primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door'},{id:'q2',title:'Inside',purpose:'Find the room'}]});
+    writeStoryScenes({path:dir,scenes:[scene,{...scene,no:2},{...scene,no:3,sequence:'q2'}]});
+    const timeline=(start,end)=>({startFrame:start,endFrame:end,transition:start?'hard_cut':'open',framing:'Medium shot.',action:'Turn the key.'});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'Lift the key.',timeline:timeline(0,24)},
+      {scene:1,summary:'Turn the key.',timeline:timeline(24,60)},{scene:2,summary:'Walk inside.'},{scene:3,summary:'Cross the hall.'}]});
+    applyStoryboard({path:dir,draft:true,globals:{SB_DOC:{audioNotes:{2:'The door closes.',3:'A distant echo.'}}}});
+    const specs=[{...scene,videoDirection:{emotion:'Expectant.',openingPositions:[],prompt:'Lift the key.'}},
+      {...scene,no:2,videoDirection:{emotion:'Relief.',openingPositions:[],prompt:'Turn the key.'}}];
+    const drafts=['first','second'].map(model=>({engine:'test',model,operation:'reference',prompt:model}));
+    assert.throws(()=>writeStoryScenes({path:dir,scenes:[{...scene,videoDirection:{emotion:'Concern.',openingPositions:[],promptDrafts:drafts}}]}),/scene_split_required/);
+    const before=readBoard(dir).sha256;
+    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002'},scenes:specs.slice(1)}),/scene_split_prompts/);
+    assert.equal(readBoard(dir).sha256,before);
+    assert.throws(()=>writeStoryScenes({path:dir,split:{beforeShot:'s0002',newSceneNo:3},scenes:specs}),/scene_split_number/);
+    writeStorySequences({path:dir,sequences:[{id:'q1',title:'The handover',purpose:'Unlock the door',payoff:2}]});
+    writeFileSync(join(dir, 'turn.png'), png);
+    writeFileSync(join(dir, 'close.png'), png);
+    const legacy = readBoard(dir);
+    legacy.win.SCENES[1].visual = {character:[],frames:{mode:'first',start:'turn.png',
+      storyboardKeyframes:[{file:'turn.png',startFrame:24},{file:'close.png',startFrame:36}]}};
+    writeFileSync(legacy.file, serializeBoard(legacy.win, legacy.header));
+    const split = writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002'},scenes:specs}));
+    assert.ok(split.written, JSON.stringify(split.findings));
+    writeStoryScenes(storySceneSchema.parse({path:dir,split:{beforeShot:'s0002',newSceneNo:2},scenes:specs}));
+    const {win}=readBoard(dir);
+    assert.deepEqual(win.STRUCTURE.sequences[0].scenes,[1,2,3]);
+    assert.equal(win.STRUCTURE.sequences[0].payoff,3);
+    assert.deepEqual(win.STRUCTURE.sequences[1].scenes,[4]);
+    assert.deepEqual(win.SB_DOC.audioNotes,{3:'The door closes.',4:'A distant echo.'});
+    assert.deepEqual(win.SCENES.map(s=>[s.id,s.scene]),[['s0001',1],['s0002',2],['s0003',3],['s0004',4]]);
+    assert.deepEqual([win.SCENES[1].timeline.startFrame,win.SCENES[1].timeline.endFrame,win.SCENES[1].timeline.transition],[0,36,'open']);
+    assert.equal(win.STRUCTURE.scenes.find(s=>s.no===2).frames.start, 'turn.png');
+    assert.deepEqual(win.SCENES[1].visual.frames.storyboardKeyframes.map(pin => pin.startFrame), [0, 12]);
+    assert.deepEqual([1,2].map(no=>win.STRUCTURE.scenes.find(s=>s.no===no).videoDirection.prompt),['Lift the key.','Turn the key.']);
+  });
   it('story_scene writes the scene charge and refuses a sign the contract does not read', () => {
     const dir = tmp();
     writeStorySequences({ path: dir, primaryHookType: 'in_medias_res', sequences: [{ id: 'q1', title: '발단', purpose: '만남' }] });
@@ -481,6 +519,110 @@ describe('story first, then characters and lines', () => {
     assert.equal(saved.videoOpeningSha256, createHash('sha256').update(png).digest('hex'));
     assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakers:speakers.slice(0,2)}]}), /scene_speaker_mismatch/);
     assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakerReferences:[scene.speakerReferences[0],scene.speakerReferences[0]]}]}), /scene_reference_owner/);
+  });
+  it('splits GenAI cast at an authored cut, rebases the timeline and preserves both parts on later writes', () => {
+    const root = mkdtempSync(join(tmpdir(),'sb-reference-')); dirs.push(root);
+    setupProject(root,{video:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'}});
+    const dir = join(root,'data/c/episodes/handoff/storyboard');
+    mkdirSync(dir,{recursive:true});
+    castFile(dir,['ada','bo','cy','reader'],{root,voiceOnly:['reader']});
+    writeStorySequences({path:dir, primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'A key',purpose:'Follow the key'}]});
+    const people = ['ada','bo','cy'];
+    const makeScene = no => ({sequence:'q1',no,place:'Hall',time:'Day',event:'The key changes hands',summary:'Follow the key.'});
+    writeStoryScenes({path:dir,scenes:[{...makeScene(1),speakers:['reader'],
+      speakerReferences:people.map(character => ({character,path:relative(dir,join(root,'assets/characters',character,'face.png'))})),
+      frames:{start:'first.png',end:'last.png'}},makeScene(2)]});
+    for (const name of ['first','second','last']) writeFileSync(join(dir,name+'.png'),png);
+    const timeline = (start, picture, people) => ({startFrame:start,endFrame:start+48,transition:start?'hard_cut':'open',
+      framing:'Medium shot.',action:'The key changes hands.',openingPositions:people.map(character=>({character,images:[],position:'Beside the door.'})),
+      images:[{role:'start',frame:start,path:picture}]});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'Ada hands Bo the key.',timeline:timeline(0,'first.png',['ada','bo'])},
+      {scene:1,summary:'Bo hands Cy the key.',timeline:timeline(48,'second.png',['bo','cy'])},{scene:2,summary:'The gate opens.'}]});
+    const archive = readBoard(dir);
+    const result = writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['ada','bo']},{id:'s0002',characters:['bo','cy']},{id:'s0003',characters:[]}]});
+    assert.ok(result.written,JSON.stringify(result.findings));
+    assert.deepEqual(result.findings.find(f=>f.code==='scene_reference_split').groups.map(g=>[g.sceneNo,g.shotIds,g.characters]),[
+      [1,['s0001'],['ada','bo']], [2,['s0002'],['bo','cy']]]);
+    const positions = ids => ids.map(character => ({character,images:[],position:'Beside the door.'}));
+    writeStoryScenes({path:dir,scenes:[[1,['ada','bo']],[2,['bo','cy']]].map(([no,ids]) =>
+      ({...makeScene(no),videoDirection:{openingPositions:positions(ids),emotion:'The visitors relax.'}}))});
+    const plans = [1,2].map(sceneNo=>planVideo({episode:dirname(dir),sceneNo,requestId:'paired-'+sceneNo,args:{reserveUsd:0}},false));
+    assert.deepEqual(plans.map(plan=>plan.args.cast.map(person=>[person.id,person.images.length])),[
+      [['ada',1],['bo',1]], [['bo',1],['cy',1]]]);
+    assert.deepEqual(plans.map(plan=>plan.args.shots[0].frames),[48,48]);
+    writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'ada',tts:'Here.'}]},
+      {id:'s0002',lines:[{speaker:'reader',delivery:'voiceover',tts:'At last.'},{speaker:'cy',tts:'Thanks.'}]}]});
+    const saved=readBoard(dir).win, [first,second] = saved.STRUCTURE.scenes;
+    assert.deepEqual(saved.STRUCTURE.sequences[0].scenes,[1,2,3]);
+    assert.deepEqual(saved.SCENES.map(card=>[card.id,card.scene]),[['s0001',1],['s0002',2],['s0003',3]]);
+    assert.deepEqual([first.speakers,second.speakers],[['ada'],['reader','cy']]);
+    assert.deepEqual(second.speakerReferences.map(ref=>ref.character),['bo','cy']);
+    assert.deepEqual([first.frames,second.frames],[{start:'first.png'},{start:'second.png',end:'last.png'}]);
+    const moved=saved.SCENES[1].timeline;
+    assert.deepEqual([moved.startFrame,moved.endFrame,moved.transition,moved.images[0].frame],[0,48,'open',0]);
+    assert.equal(readStoryboard({path:dir,level:'shots'}).boundaryReview.sceneBoundaries[0].reason,'scene_character_reference_limit');
+    const impossible=writeShotCharacters({path:dir,shots:[{id:'s0002',characters:people}]});
+    assert.equal(impossible.written,false);
+    assert.ok(impossible.findings.some(f=>f.code==='scene_cast_exceeded' && f.shotId==='s0002' && !f.splitBefore.length));
+    assert.deepEqual(readBoard(dir).win.SCENES,saved.SCENES);
+
+    // An older board kept both pairs in one scene. Previewing its repair preserves the original file.
+    archive.win.SCENES.forEach((card,i) => { card.visual = {...card.visual, character:saved.SCENES[i].visual.character}; });
+    archive.win.STRUCTURE.scenes[0].videoDirection = {emotion:'The visitors relax.',openingPositions:positions(['ada','bo']),
+      keyframes:[{frame:72,path:'first.png'},{frame:48,path:'second.png'},{frame:47,path:'last.png'}]};
+    archive.win.SCENES[1].visual.frames = {storyboardKeyframes:[{file:'second.png',startFrame:48},{file:'last.png',startFrame:95}]};
+    archive.win.STRUCTURE.sequences[0].payoff=2;
+    archive.win.SB_DOC={...archive.win.SB_DOC,sceneNotes:{2:'Unlock the gate.'}};
+    const explicit=structuredClone(archive.win);
+    explicit.STRUCTURE.scenes[0].videoDirection.prompt='Ada and Bo pass the key to Cy.';
+    const authored=serializeBoard(explicit,archive.header);
+    writeFileSync(join(dir,'scenes.js'),authored);
+    const missingPrompts=applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
+    assert.equal(missingPrompts.written,false);
+    assert.ok(missingPrompts.findings.some(f=>f.code==='scene_split_prompts' && f.splitBefore.includes('s0002')));
+    assert.equal(readFileSync(join(dir,'scenes.js'),'utf8'),authored);
+    const source = serializeBoard(archive.win,archive.header);
+    writeFileSync(join(dir,'scenes.js'),source);
+    assert.equal(applyStoryboard({path:dir,dryRun:true,draft:true}).scenes,2);
+    const repair = {path:dir,splitReferenceScenes:true,draft:true};
+    const preview = applyStoryboard({...repair,dryRun:true});
+    assert.equal(preview.scenes,3);
+    assert.equal(preview.written,false);
+    assert.equal(readFileSync(join(dir,'scenes.js'),'utf8'),source);
+    assert.equal(applyStoryboard(repair).written,true);
+    const repaired = readBoard(dir).win;
+    assert.equal(repaired.STRUCTURE.sequences[0].payoff,3);
+    assert.equal(repaired.SB_DOC.sceneNotes[3],'Unlock the gate.');
+    assert.equal(repaired.STRUCTURE.scenes[1].referenceSplitFrom,1);
+    assert.deepEqual(repaired.SCENES[1].visual.frames.storyboardKeyframes.map(pin=>pin.startFrame),[0,47]);
+    assert.equal(repaired.STRUCTURE.scenes[0].frames.end,'last.png');
+    assert.equal(repaired.STRUCTURE.scenes[0].videoDirection.keyframes,undefined);
+    assert.deepEqual(repaired.STRUCTURE.scenes[1].videoDirection.keyframes,[{frame:24,path:'first.png'}]);
+    for (const sceneNo of [1,2]) assert.equal(planVideo({episode:dirname(dir),sceneNo,requestId:'archived-'+sceneNo,args:{reserveUsd:0}},false).args.shots[0].frames,48);
+  });
+  it('keeps legacy per-shot artwork when splitting a GenAI scene with three shot openings', () => {
+    const root = mkdtempSync(join(tmpdir(),'sb-reference-')); dirs.push(root);
+    const video = {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'};
+    setupProject(root,{video});
+    const dir = join(root,'data/c/episodes/legacy/storyboard'); mkdirSync(dir,{recursive:true});
+    castFile(dir,['ada','bo','cy'],{root});
+    const marks = people => people.map(character => ({character,images:[],position:'By the door.'}));
+    const scene = {no:1,place:'Hall',time:'Day',event:'The key changes hands',videoDirection:{openingPositions:marks(['ada','bo']),
+      emotion:'The visitors relax.',keyframes:[{frame:48,path:'second.png'},{frame:47,path:'end.png'}]}};
+    const names = ['first.png','second.png','third.png'];
+    for (const name of [...names,'end.png']) writeFileSync(join(dir,name),png);
+    const cards = [['ada','bo'],['bo','cy'],['cy']].map((people,i) => ({...shot('points','body',1),id:'s000'+(i+1),duration:2,
+      narration:[],shot:{size:'ms',angle:'eye',render:{mode:'generated_video'}},
+      visual:{character:people,action:'They pass the key.',frames:{mode:'first',start:names[i]},video:{openingPositions:marks(people)}}}));
+    writeFileSync(join(dir,'scenes.js'),serializeBoard({PRODUCTION:{videoModel:video},STRUCTURE:structure([scene]),SCENES:cards}));
+    const update = applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
+    assert.ok(update.written, JSON.stringify(update.findings));
+    const repaired = readBoard(dir).win;
+    assert.deepEqual(repaired.STRUCTURE.scenes.map(scene=>scene.frames),[undefined,undefined]);
+    assert.deepEqual(repaired.SCENES.map(card=>contract().shotImage(repaired,card)),names);
+    assert.deepEqual(contract().imageGaps(repaired,2),[]);
+    assert.equal(repaired.SCENES[0].visual.frames.end,'end.png');
+    assert.deepEqual(planVideo({episode:dirname(dir),sceneNo:2,requestId:'legacy-part',args:{reserveUsd:0}},false).args.shots.map(s=>s.imagePath.split('/').at(-1)),names.slice(1));
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
@@ -542,7 +684,7 @@ describe('music is decided scene by scene', () => {
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a' }, { scene: 2, summary: 'b' }, { scene: 2, summary: 'c' }, { scene: 3, summary: 'd' }] });
     return dir;
   };
-  const tension = { name: 'tension', prompt: 'low strings, 76 BPM, leaves room for speech', reason: '오해가 깊어진다' };
+  const tension = { name: 'tension', direction: { instruments:'Low strings', tempo:'76 BPM', dialogueSpace:'Leave room for speech' }, reason: '오해가 깊어진다' };
 
   it('records score or none with its reason, writes the span, and lists what is still open', () => {
     const dir = outline();
@@ -561,6 +703,8 @@ describe('music is decided scene by scene', () => {
       sourceStartSeconds: 4, fadeInSeconds: 0.5, fadeOutSeconds: 1, gain: [{ atSeconds: 0, gainDb: -2 }] }]);
     assert.deepEqual(win.STRUCTURE.scenes.map((s) => s.music), [{ decision: 'none', reason: '대사만 듣게 한다' },
       { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }, { decision: 'score', reason: '오해가 풀릴 때까지', span: 'scene-2-3' }]);
+    assert.equal(win.MUSIC.tension.prompt, undefined);
+    assert.deepEqual(win.MUSIC.tension.direction,tension.direction);
     assert.deepEqual(r.spotting.undecided, []);
     assert.deepEqual(r.spotting.cues, [{ name: 'tension', source: 'generated', reason: '오해가 깊어진다' }]);
 
@@ -1038,7 +1182,8 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.match(request.prompt,/Stay on the door side/);
     make(dir, 's0002'); make(dir, 's0002', 'end');
     const authored = writeShotPrompt({path:dir, id:'s0001', action:'Press the signet into the wax.'});
-    assert.match(authored.prompt,/holds a static frame/);
+    assert.equal(authored.prompt, undefined);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.videoDesign.action, 'Press the signet into the wax.');
     assert.ok(!authored.findings.some(f=>f.what.includes('camera_move_unset')));
     assert.equal(readBoard(dir).win.SCENES[0].visual.camera?.movement,undefined);
     write({...defaults, lighting:'Cold blue moonlight.'});
@@ -1286,8 +1431,8 @@ describe('images and the video prompt follow the icon attributes', () => {
   it('content-led view survives icon writes and image planning, replaces legacy direction and invalidates saved media', () => {
     const { dir } = pictureBoard();
     icons(dir);
-    const view = { subject: 'Mina’s clenched hand', reason: 'The hand betrays the calm words', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
-    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', view }] });
+    const view = { subject: 'Mina’s clenched hand', subjectType: 'detail', reason: 'The hand betrays the calm words', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu', cutRole: 'insert', view }] });
     let shot = readBoard(dir).win.SCENES[0];
     assert.deepEqual(shot.visual.camera.view, view);
     const request = make(dir, 's0001', 'start', { location: 'room', prompt: 'The fingers tighten around the key.' });
@@ -1299,7 +1444,7 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotPrompt({ path: dir, id: 's0001', action: 'The fingers tighten around the key.' });
     const change = writeShotIcons({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'profile-right' } }] });
     assert.ok(change.findings.some(f => /remake it/.test(f.what)));
-    assert.ok(change.findings.some(f => /rewrite it with shot_prompt/.test(f.what)));
+    assert.equal(readBoard(dir).win.SCENES[0].visual.video?.prompt, undefined);
     shot = readBoard(dir).win.SCENES[0];
     assert.match(shotImageRequest({ path: dir, id: 's0001', frame: 'start', prompt: 'The fingers tighten.' }).prompt, /right profile.*facing camera-right/);
     assert.throws(() => shotIconsSchema.parse({ path: dir, shots: [{ id: 's0001', view: { ...view, mode: 'pov' } }] }), /viewerId/);
@@ -1311,11 +1456,34 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeShotIcons({ path: dir, shots: [{ id: 's0002', move: { id: 'camera.static' } }] });
     assert.equal(readBoard(dir).win.SCENES[1].visual.camera.movement, 'static');
   });
+  it('separates optical and listening choices, retains sibling edits and rejects stored prompts on every card shape', () => {
+    const {dir} = pictureBoard();
+    icons(dir);
+    const write = attrs => writeShotIcons({path:dir,shots:[{id:'s0001',...attrs}]});
+    write({size:'ms',arrangement:'two',cutRole:'reaction',optics:{lensMm:50,fStop:2},soundPerspective:'full',
+      depth:{mode:'shallow',reads:2,focus:'both faces at the same distance'},
+      move:{id:'camera.dolly-in',reason:'Follow the note',target:'the note',on:'the bell rings'},
+      focus:{id:'camera.rack-focus',reason:'Reveal the note',from:'two faces',to:'the note',on:'the seal breaks'}});
+    write({optics:{lensMm:35}});
+    const card = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([card.shot.size,card.shot.arrangement,card.shot.cutRole,card.shot.depth.sound,card.sound.perspective],
+      ['ms','two','reaction',undefined,'full']);
+    assert.deepEqual([card.visual.camera.lensMm,card.visual.camera.fStop,card.visual.camera.cue,card.shot.techniques.find(t=>t.id==='camera.rack-focus').on],
+      [35,2,'the bell rings','the seal breaks']);
+    for (const attrs of [{slide:{shots:[{group:1,prompt:'cached'}]}},{prompt:'cached'},{clip:{prompt:'cached'}},{video:{prompt:'cached'}},{video:{speechBinding:{videoPrompt:'cached'}}}]) {
+      assert.throws(()=>applyStoryboard({path:dir,shotsById:[{id:card.id,shot:{...card,visual:{...card.visual,...attrs}}}]}),/video_prompt_deferred/);
+    }
+    assert.throws(()=>applyStoryboard({path:dir,shotsById:[{id:card.id,shot:{...card,shot:{...card.shot,size:'ots'}}}]}),/shot_size/);
+    assert.equal(shotIconsSchema.safeParse({path:dir,shots:[{id:card.id,size:'insert'}]}).success,false);
+    write({soundPerspective:null,optics:null,move:null});
+    const cleared = readBoard(dir).win.SCENES[0];
+    assert.deepEqual([cleared.sound?.perspective,cleared.visual.camera?.lensMm,cleared.visual.camera?.cue],[undefined,undefined,undefined]);
+  });
   it('a shot_icons call with both why and view keeps both reasons', () => {
     const { dir } = pictureBoard();
     icons(dir);
-    const view = { subject: 'Mina’s clenched hand', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
-    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'insert', why: 'The hand is the whole beat', view }] });
+    const view = { subject: 'Mina’s clenched hand', subjectType: 'detail', reason: 'From the side the fingers show their grip', crop: 'Only the hand and key fill the frame', mode: 'profile-left', subjectId: 'mina' };
+    writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu', cutRole: 'insert', why: 'The hand is the whole beat', view }] });
     assert.equal(readBoard(dir).win.SCENES[0].shot.why, 'The hand is the whole beat');
     // Without a why the size keeps none: the view reason is not copied in, and the result names the shot.
     const bare = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'cu', view }] });
@@ -1772,43 +1940,34 @@ describe('images and the video prompt follow the icon attributes', () => {
     assert.ok(fallback.warnings.some((w) => /^the prop ledger has errors for the watch prop/.test(w.what)));
     assert.doesNotMatch(prop(fallback).purpose, /held by/);
   });
-  it('the video prompt reads the icon attributes after every picture exists', () => {
+  it('action and sound are editable before images and inspected bindings follow their own shot', () => {
     const { dir } = pictureBoard();
     icons(dir);
+    const early = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.', sound: 'Rain.' });
+    assert.ok(early.written);
+    assert.equal(early.prompt, undefined);
+    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.', speakerBindings: [{speaker:'mina',screenPosition:'left',description:'Woman in blue'}] }), /shot opening/);
     make(dir, 's0001', 'start', { location: 'room' });
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /story_order.*s0002 has no start image/);
     make(dir, 's0002', 'start', { location: 'room' });
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns.' }), /s0002 has no end image/);
     assert.throws(() => shotImageRequest({ path: dir, id: 's0002', frame: 'end', prompt: 'p', location: 'room' }), /keeps its place/);
     const ended = make(dir, 's0002', 'end', { props: ['key'] });
     assert.match(ended.inputs[0], /images\/s0002-start-v1\.png$/);
     assert.deepEqual([ended.inputs.length, readBoard(dir).win.SCENES[1].visual.frames.endProps], [5, ['key']]);
-    const prompted = writeShotPrompt({ path: dir, id: 's0001', action: 'Mina turns to the door.' }), msr = prompted.prompt;
-    // The clip is about to be made, so an open music decision on its scene is said here (warning only).
-    assert.ok(prompted.written && prompted.findings.some((f) => f.level === 'warn' && /scene 1 has no music decision/.test(f.what)));
-    assert.match(msr, /^Medium shot, waist up, at eye level\. The camera pushes in toward the subject/);
-    assert.match(msr, /Mina turns to the door\. Audio: no music\./);
-    assert.match(msr, /Keep the entire video image text-free/);
     writeShotPrompt({ path: join(dir, 'scenes.js'), id: 's0001', action: 'Mina turns to the door.', openingPositions: [{ character: 'mina', images: [1], position: 'by the door on the left' }], speakerBindings: [
       { speaker: 'mina', screenPosition: 'left', description: 'the woman in blue' }
     ] });
     const bound = readBoard(dir).win.SCENES[0].visual.video;
-    assert.deepEqual(bound.promptSource, { action: 'Mina turns to the door.' });
+    assert.equal(bound.prompt, undefined);
+    assert.equal(readBoard(dir).win.SCENES[0].shot.videoDesign.action, 'Mina turns to the door.');
     assert.equal(bound.speakerBindings[0].screenPosition, 'left');
     assert.equal(bound.openingPositions[0].position, 'by the door on the left');
     assert.equal(bound.openingImageSha256, bound.speakerBindingImageSha256);
     assert.match(bound.speakerBindingImageSha256, /^[a-f0-9]{64}$/);
-    const framed = writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' }).prompt;
-    assert.match(framed, /^Start from the given first frame\. Mina looks up\./);
-    assert.match(framed, /speaker: mina; delivery: on_screen.*physically saying "안녕"/);
-    assert.match(framed, /End on the given last frame: she smiles\. Audio: no music\./);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'rain on the window' }).prompt, /Audio: rain on the window, no music\./);
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', sound: 'a radio plays a song' }).prompt, /Audio: a radio plays a song\./);
-    writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.', end: 'she smiles' });
-    assert.equal(readBoard(dir).win.SCENES[1].visual.video.prompt, framed);
-    const relined = writeShotDialogue({ path: dir, shots: [{ id: 's0002', lines: [{ speaker: 'mina', tts: '잠깐!' }] }] });
-    assert.ok(relined.findings.some((f) => f.where === 's0002' && /video prompt predates a change of on-screen lines/.test(f.what)));
-    assert.match(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).prompt, /physically saying "잠깐!"/);
+    writeShotPrompt({path:dir,id:'s0002',action:'Mina looks up.',end:'She smiles.',sound:'Rain on the window.'});
+    const updated = readBoard(dir).win.SCENES[1];
+    assert.deepEqual([updated.shot.videoDesign.action,updated.shot.videoDesign.after,updated.sound.diegetic,updated.visual.video?.prompt],
+      ['Mina looks up.','She smiles.','Rain on the window.',undefined]);
+    writeShotDialogue({path:dir,shots:[{id:'s0002',lines:[{speaker:'mina',tts:'잠깐!'}]}]});
     assert.deepEqual(contract().promptDrift(readBoard(dir).win.SCENES[1], () => false), []);
     assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: '미나가 웃는다' }), /video_prompt_language/);
     // A new start image takes the end image edited from the old one off the shot.
@@ -1817,11 +1976,11 @@ describe('images and the video prompt follow the icon attributes', () => {
     writeFileSync(remade.file, png);
     assert.deepEqual(recordShotImage(again, remade).findings.filter((f) => f.where === 's0002' && /end image/.test(f.what)).map((f) => f.level), ['warn']);
     assert.deepEqual([readBoard(dir).win.SCENES[1].visual.frames.end, readBoard(dir).win.SCENES[1].visual.frames.endProps, readBoard(dir).win.SCENES[1].visual.endPrompt], [undefined, undefined, undefined]);
-    assert.throws(() => writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }), /s0002 has no end image/);
+    assert.ok(writeShotPrompt({ path: dir, id: 's0002', action: 'Mina looks up.' }).written);
     make(dir, 's0002', 'end');
     const replanned = writeShotIcons({ path: dir, shots: [{ id: 's0002', frames: { mode: 'reference', reason: 'MSR now' } }] });
     const msrShot = readBoard(dir).win.SCENES[1];
-    assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end', 'prompt']);
+    assert.deepEqual(replanned.findings.filter((f) => f.where === 's0002').map((f) => /end image/.test(f.what) ? 'end' : /video prompt predates a change of frame plan/.test(f.what) ? 'prompt' : f.what), ['end']);
     assert.deepEqual([msrShot.visual.frames.end, msrShot.visual.frames.endState, msrShot.visual.endPrompt], [undefined, undefined, undefined]);
     assert.deepEqual([...new Set(msrShot.visual.references.filter((r) => r.role === 'character').map((r) => r.use))], ['image']);
     // A new cast leaves the start image behind; the tool says so. A departed panel goes by its folder or its shot_image id.
@@ -1830,11 +1989,11 @@ describe('images and the video prompt follow the icon attributes', () => {
       references: moved.visual.references.map((r) => r.id === 's0002-mina-face' ? { ...r, path: 'references/mina-face.png' } : r) } } }] });
     const recast = writeShotCharacters({ path: dir, shots: [{ id: 's0002', characters: [] }] });
     assert.ok(recast.findings.some((f) => f.where === 's0002' && /start image/.test(f.what)));
-    assert.ok(recast.findings.some((f) => f.where === 's0002' && /video prompt predates a change of frame plan, characters/.test(f.what)));
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video?.prompt, undefined);
     assert.deepEqual(readBoard(dir).win.SCENES[1].visual.references.filter((r) => r.role === 'character'), []);
     const hand = readBoard(dir).win.SCENES[1];
-    applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...hand, visual: { ...hand.visual, video: { ...hand.visual.video, prompt: 'Start from the given first frame. Mina looks up slowly.' } } } }] });
-    assert.equal(readBoard(dir).win.SCENES[1].visual.video.promptBasis, undefined);
+    assert.throws(() => applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0002', shot: { ...hand, visual: { ...hand.visual, video: { ...hand.visual.video, prompt: 'Start from the given first frame. Mina looks up slowly.' } } } }] }), /video_prompt_deferred/);
+    assert.equal(readBoard(dir).win.SCENES[1].visual.video?.promptBasis, undefined);
     // A new size after the start image leaves that picture behind; the tool says so.
     const resized = writeShotIcons({ path: dir, shots: [{ id: 's0001', size: 'ecu' }] });
     assert.ok(resized.findings.some((f) => f.where === 's0001' && /start image was made for the previous size/.test(f.what)));

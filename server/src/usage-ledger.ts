@@ -327,7 +327,7 @@ export function priceOf(
   if (tool === 'suno_generate_sound') return { key: 'music.suno-sound', quantity: 1 };
   if (tool === 'suno_generate_lyrics') return { key: 'music.suno-lyrics', quantity: 1 };
 
-  if (tool === 'mlx_music_generate') {
+  if (tool === 'mlx_music_generate' || tool === 'music_stable_audio_generate') {
     return { key: 'music.mlx', quantity: num(args.durationSeconds, DEFAULT_MLX_MUSIC_SECONDS) };
   }
   if (['astra_text2video', 'astra_img2video', 'astra_keyframe_video', 'astra_audio2video'].includes(tool)) {
@@ -378,6 +378,7 @@ function charUnits(args: Record<string, unknown>): number {
 export function isBillableTool(tool: string): boolean {
   // This wrapper records each synthesis and review itself, including rejected takes.
   if (['tts_local_voxcpm2','tts_astra_genai','tts_route','tts_generate_checked','character_voice_audition','tts_review_acting'].includes(tool)) return false;
+  if (['tts_catalog', 'tts_plan', 'tts_execute', 'tts_status'].includes(tool)) return false;
   if (['music_catalog', 'music_plan', 'music_execute', 'music_status'].includes(tool)) return false;
   // Catalogue reads cost nothing and belong in no ledger.
   if (tool === 'tts_list_voices' || tool === 'tts_elevenlabs_voices' || tool === 'music_list_options') return false;

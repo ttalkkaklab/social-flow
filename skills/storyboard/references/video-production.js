@@ -10,6 +10,12 @@ const repairs = [
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 const esc = x => String(x ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safePath = x => typeof x === 'string' && x && !/^[\s/\\]|[\x00-\x1f]|^[a-z][a-z0-9+.-]*:/i.test(x) && !x.includes('\\');
+function displayStatus(job) {
+ if (!job.providerId || !job.observedAt || !['submitting','submitted','submission_unknown'].includes(job.status)) return job.status;
+ if (['pending','queued'].includes(job.providerStatus)) return 'queued';
+ if (['processing','running'].includes(job.providerStatus)) return 'running';
+ return job.status;
+}
 function changes(before, after) {
  if (!before) return [];
  return ['prompt','selection','settings','inputs','performance'].filter(key=>JSON.stringify(before[key])!==JSON.stringify(after[key]));
@@ -52,6 +58,13 @@ function read(directory, board, {verifyInputs=true} = {}) {
  }
  const win=board || (fs.existsSync(path.join(dir,'scenes.js'))?require('../../autoproduce/references/cost-preview.js').readScenes(path.join(dir,'scenes.js')):{});
  const shots=win.SCENES || [], contexts=new Map(), hashes=new Map();
+ const grouped=new Map();
+ for(const shot of shots) if(Number.isInteger(shot.scene) && shot.id) {
+  if(!grouped.has(shot.scene))grouped.set(shot.scene,[]);
+  grouped.get(shot.scene).push(shot.id);
+ }
+ const sceneNumbers=new Map([...grouped].map(([no,ids])=>[JSON.stringify(ids),no]));
+ const approvedPlans=obj(json(path.join(store,'approvals.json'))?.plans),sceneApprovals={};
  const local=file=>{
   if(typeof file!=='string'||!file||/^[a-z][a-z0-9+.-]*:/i.test(file))return null;
   const absolute=path.resolve(dir,file), relative=path.relative(dir,absolute).split(path.sep).join('/');
@@ -102,8 +115,15 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(receipt?.baseUrl) {try{const u=new URL(receipt.baseUrl);if(['http:','https:'].includes(u.protocol))endpoint=u.origin;}catch{/* Unusable endpoint is not evidence. */}}
   const settings=Object.fromEntries(['durationSeconds','duration','numFrames','frameRate','resolution','width','height','generateAudio'].filter(k=>args[k]!==undefined).map(k=>[k,args[k]]));
   const inputs=Object.entries(obj(plan.inputs)).map(([file,sha256])=>({path:path.relative(dir,file).split(path.sep).join('/'),sha256,changed:verifyInputs?hash(file)!==sha256:null}));
-  const revision=current(plan.shotId,plan.sceneNo)?.revision ?? null;
-  const boardMatches=revision===null?null:revision===plan.contextRevision;
+  // A scene number can move after a split. Its ordered shot IDs identify the same take.
+  const bound=plan.sceneNo && sceneNumbers.size>0 && Array.isArray(plan.shotIds);
+  const sceneNo=bound?sceneNumbers.get(JSON.stringify(plan.shotIds)):plan.sceneNo;
+  const historicalScene=Boolean(bound && sceneNo===undefined);
+  const approval=source.root===episode && approvedPlans[plan.id];
+  if(sceneNo && approval && (!sceneApprovals[sceneNo] || approval.at>=sceneApprovals[sceneNo].at))
+   sceneApprovals[sceneNo]={planId:plan.id,requestId:plan.requestId,at:approval.at};
+  const revision=historicalScene?null:current(plan.shotId,sceneNo)?.revision ?? null;
+  const boardMatches=historicalScene?false:revision===null?null:revision===plan.contextRevision;
   const stale=boardMatches===false||inputs.some(i=>i.changed===true)?true:boardMatches===null||inputs.some(i=>i.changed===null)?null:false;
   const attached=typeof video.clip==='string'?video.clip:typeof shot?.visual?.clip==='string'?shot.visual.clip:null;
   const selected=Boolean(clip&&attached&&path.resolve(dir,attached)===path.resolve(dir,clip)&&
@@ -111,7 +131,8 @@ function read(directory, board, {verifyInputs=true} = {}) {
     const member=shots.find(s=>s.id===id), file=member?.visual?.video?.clip || member?.visual?.clip;
     return typeof file==='string' && path.resolve(dir,file)===path.resolve(dir,clip);
    })));
-  candidates.push({...(plan.sceneNo ? {sceneNo:plan.sceneNo,shotIds:plan.shotIds} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
+  candidates.push({...(plan.sceneNo ? {sceneNo:sceneNo ?? plan.sceneNo,shotIds:plan.shotIds,
+    ...(sceneNo!==plan.sceneNo?{submittedSceneNo:plan.sceneNo}:{}),...(historicalScene?{historicalScene:true}:{})} : {}),boardMatches,planId:plan.id,requestId:plan.requestId,shotId:plan.shotId,purpose:plan.purpose||'unspecified',basedOnRequestId:plan.basedOnRequestId||null,changeNote:plan.changeNote||'',
    createdAt:fs.statSync(record).mtime.toISOString(),startedAt:job?.startedAt||null,updatedAt:job?.updatedAt||null,finishedAt:job?.finishedAt||null,
    status:job?.status||'planned',providerStatus:job?.providerStatus||null,observedAt:job?.observedAt||null,providerId:job?.providerId||receipt?.jobId||null,endpoint,
    selection:plan.selection,generationMode:generationMode(plan.selection,plan.tool,args.references,adapters),settings,prompt:typeof args.prompt==='string'?args.prompt:'',sourcePrompt:plan.sourcePrompt||'',currentPrompt:video.prompt||'',
@@ -150,9 +171,9 @@ function read(directory, board, {verifyInputs=true} = {}) {
   const mode=currentPlan(candidates,undefined,[shot.id])?.generationMode || current(shot.id)?.mode;
   if(mode)shotModes[shot.id]=mode;
  }
- return {version:1,storyboardPath:dir,sceneModes,shotModes,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
+ return {version:1,storyboardPath:dir,sceneModes,shotModes,sceneApprovals,asOf:[...candidates.flatMap(c=>[c.createdAt,c.updatedAt,c.observedAt]).filter(Boolean)].sort().at(-1)||null,
   summary:{plannedShots:unique(()=>true),completedShots:unique(c=>c.status==='completed'&&!!c.clip),attachedShots:attachedIds.size,reviewedShots:candidates.some(c=>c.review==='unverified')?null:unique(c=>c.selected&&c.review==='pass'),
-   pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>j.status==='submission_unknown').length,
+   pendingRequests:jobList.filter(j=>!['completed','failed'].includes(j.status)).length,unknownRequests:jobList.filter(j=>displayStatus(j)==='submission_unknown').length,
    reservedOrSpentUsd:jobList.reduce((n,j)=>n+(j.settledUsd??j.reserveUsd??0),state.openingSpendUsd||0)},candidates,blocked,warnings,repairs};
 }
 function write(episode) {
@@ -163,16 +184,17 @@ function write(episode) {
  try {fs.writeFileSync(tmp,'window.VIDEO_PRODUCTION = '+JSON.stringify(data).replace(/</g,'\\u003c')+';\n',{mode:0o600});fs.renameSync(tmp,file);} finally {fs.rmSync(tmp,{force:true});}
 }
 function render(report,shotId,language,sceneNo) {
- const ko=language==='ko',t=(a,b)=>ko?a:b,items=(report?.candidates||[]).filter(c=>sceneNo === undefined ? !c.sceneNo && c.shotId===shotId : c.sceneNo===sceneNo);
+ const ko=language==='ko',t=(a,b)=>ko?a:b,items=(report?.candidates||[]).filter(c=>!c.historicalScene && (sceneNo === undefined ? !c.sceneNo && c.shotId===shotId : c.sceneNo===sceneNo));
  const problems=(report?.blocked||[]).filter(p=>sceneNo===undefined?p.shotId===shotId:p.sceneNo===sceneNo)
   .map(p=>'<p class="production-review">'+esc([p.shotId,p.character,p.role,p.code].filter(Boolean).join(' · '))+'<br>'+esc(p.message)+'</p>').join('');
  if(!items.length)return problems;
- const labels={planned:t('계획만 저장','Planned'),submitting:t('제출 중','Submitting'),submitted:t('제출됨','Submitted'),submission_unknown:t('결과 확인 필요','Outcome unknown'),completed:t('생성 완료','Completed'),failed:t('실패','Failed')};
+ const labels={planned:t('계획만 저장','Planned'),submitting:t('제출 중','Submitting'),submitted:t('제출됨','Submitted'),queued:t('서버 대기 중','Queued by provider'),running:t('서버에서 생성 중','Generating on provider'),submission_unknown:t('결과 확인 필요','Outcome unknown'),completed:t('생성 완료','Completed'),failed:t('실패','Failed')};
  const purpose={draft:t('초안','Draft'),final:t('최종본','Final'),revision:t('수정본','Revision'),unspecified:t('용도 미지정','Unspecified')};
  const row=(label,value)=>'<dt>'+esc(label)+'</dt><dd>'+esc(value ?? '—')+'</dd>';
  const cards=items.map(c=>{
   const elapsed=c.startedAt?Math.round(Math.max(0,(Date.parse(c.finishedAt||c.updatedAt)-Date.parse(c.startedAt))/1000)):null;
-  let h='<article class="production-take"><h4>'+esc(purpose[c.purpose]||c.purpose)+' · '+esc(labels[c.status]||c.status)+(c.selected?' · '+t('현재 연결됨','Attached'):'')+'</h4>';
+  const status=displayStatus(c);
+  let h='<article class="production-take"><h4>'+esc(purpose[c.purpose]||c.purpose)+' · '+esc(labels[status]||status)+(c.selected?' · '+t('현재 연결됨','Attached'):'')+'</h4>';
   if(c.clip&&safePath(c.clip))h+='<video controls preload="none" src="'+esc(c.clip)+'"></video>';
   h+='<dl>'+row(t('요청','Request'),c.requestId)+row(t('모델','Model'),[c.selection?.engine,c.selection?.model,c.settings?.resolution||c.selection?.resolution].filter(Boolean).join(' / '))+
    row(t('연결 서버 기록','Recorded endpoint'),c.endpoint)+row(t('로컬 상태 갱신','Local state update'),c.updatedAt)+row(t('서버 상태 확인','Provider observation'),c.observedAt)+row(t('서버가 보고한 상태','Provider status'),c.providerStatus)+row(t('시작 시각','Started'),c.startedAt)+row(t('기록된 경과 시간(초)','Recorded elapsed seconds'),elapsed)+

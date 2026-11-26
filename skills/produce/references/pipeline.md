@@ -121,7 +121,7 @@ falls back silently and no short video loops or freezes to fill its window.
 ## Three TTS failure modes and responses (Gemini TTS, field-tested)
 
 Speech follows [shot-speech.md](shot-speech.md) (owner directive 2026-10-16): generate with
-the selected raw TTS tool, record provenance and `not_reviewed`, and continue. No speech
+`tts_plan` and `tts_execute`, record provenance and `not_reviewed`, and continue. No speech
 proof, listening pass or review gates assembly. The failures below are about the request
 itself; none of them authorizes extra takes or a change of the profile's model.
 

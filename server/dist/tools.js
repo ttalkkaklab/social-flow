@@ -37,6 +37,7 @@ import { DEFAULT_QWEN3_ASR_LANGUAGE, DEFAULT_QWEN3_ASR_MODEL, QWEN3_ASR_LANGUAGE
 import { BLENDER_INTERPOLATIONS, BLENDER_PREVIZ_ENGINES, BLENDER_PROXY_KINDS, BLENDER_RIG_BONES, BLENDER_ROOT_MOTIONS, DEFAULT_FRAME_END, DEFAULT_FRAME_START, DEFAULT_PREVIZ_ENGINE, DEFAULT_PREVIZ_FILENAME, DEFAULT_PREVIZ_HEIGHT, DEFAULT_PREVIZ_WIDTH, DEFAULT_SCENE_FPS, MAX_PREVIZ_FRAMES, } from './blender-bridge.js';
 import { DEFAULT_SUNO_MODEL, SUNO_V6_MODELS, SUNO_PERSONA_MODELS, SUNO_SOUND_KEYS, SUNO_VOCAL_GENDERS, } from './suno-client.js';
 import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FRAMES, DEFAULT_MLX_VIDEO_HEIGHT, DEFAULT_MLX_VIDEO_WIDTH, MAX_MLX_IMAGE_DIMENSION, MAX_MLX_IMAGE_REFS, MAX_MLX_MUSIC_SECONDS, MAX_MLX_VIDEO_DIMENSION, MAX_MLX_VIDEO_FRAMES, MAX_VIDEO_RGB_BYTES, MIN_MLX_IMAGE_DIMENSION, MIN_MLX_MUSIC_SECONDS, MIN_MLX_VIDEO_DIMENSION, MIN_MLX_VIDEO_FRAMES, MLX_IMAGE_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP, MLX_VIDEO_DIMENSION_STEP_ONE_STAGE, MLX_VIDEO_FRAME_STEP, MLX_VIDEO_FPS, } from './mlx-serve-client.js';
+import { speechCatalogSchema, speechPlanSchema, speechExecuteSchema, speechStatusSchema } from './tts-routing.js';
 /**
  * Tool surface definitions (83 tools) — 9 research (incl. stock_search) + 5 open-data +
  * 40 generation (5 image + 12 video + 9 voice + 1 STT + 9 music + 1 mesh +
@@ -54,10 +55,9 @@ import { DEFAULT_MLX_IMAGE_SIZE, DEFAULT_MLX_MUSIC_SECONDS, DEFAULT_MLX_VIDEO_FR
  * review gate, so a call is an immediately public post, and the descriptions
  * say never to call without user approval.
  *
- * Generation tools: image (gpt_image_*) on OPENAI_API_KEY; speech (tts_*) and
- * music (music_*) on GEMINI_API_KEY. Sung full songs are suno_generate
- * (sunoapi.org third-party REST, SUNO_API_KEY). New music runs music_plan →
- * music_execute with the saved models.music; sound effects are
+ * Generation tools use provider-specific credentials. New music runs through
+ * music_plan → music_execute with the saved models.music. The catalog identifies
+ * the Lyria, ElevenLabs, sunoapi.org and local MLX adapters. Sound effects use
  * sfx_elevenlabs_generate. Descriptions carry the short-form pipeline context
  * (channel profile voice, pinned seeds). Keys are validated at call time.
  *
@@ -812,7 +812,9 @@ const storyboardShotInput = {
                             to: { type: 'string', minLength: 1, description: 'camera.rack-focus: the subject sharp last, in English' },
                             on: { type: 'string', minLength: 1, description: 'camera.speed-ramp / camera.impact-shake: the moment the accent fires on, in English' },
                         } } },
-                size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Keep two-shot/POV roles in separate technique or framing prose.' },
+                size: { type: 'string', description: 'Canonical framing size: mfs=mid-thigh, ms=waist-up. Use arrangement, cutRole and visual.camera.view for other framing choices.' },
+                arrangement: enumInput(['single', 'two', 'three', 'group'], 'Participant arrangement in the frame'),
+                cutRole: enumInput(['insert', 'reaction', 'cutaway'], 'Editorial function of the shot'),
                 angle: { type: 'string', description: 'Camera angle. Recommended vocabulary is in the directing skill.' },
                 infoType: { type: 'string', description: 'Information carried by the shot; must agree with its purpose. Recommended vocabulary is in the directing skill.' },
                 feel: { type: 'string', description: 'What the viewer should feel before choosing framing and movement.' },
@@ -828,6 +830,7 @@ const storyboardShotInput = {
                         content: { type: 'object', additionalProperties: true, description: 'Type-specific source data; see motion-graphics.md. Preserve exact source values.' }
                     }
                 },
+                space: { type: 'object', additionalProperties: true, description: 'Shot blocking and facing. Set continuity to establish a new layout for this and subsequent shots in the scene.' },
                 eyeline: eyelineInput, composition: compositionInput, depth: depthInput,
                 render: {
                     type: 'object', additionalProperties: true, required: ['mode'],
@@ -916,13 +919,13 @@ export const SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes sh
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. The saved model and operation determine which inputs the renderer can use. A plan carries the scene's one prompt: the plugin writes it, returns it as promptTemplate and takes an edited copy as prompt. On the GenAI engine the scene is one scene-mode request to POST /v1/generations: the prompt keeps its names and the gateway numbers them without adding a sentence. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
+Episode video: \`video_catalog\` → \`video_plan\` → \`video_approve\` (the user's yes to that shot, or to every shot) → \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. Use the saved model's inputs. Each scene has one prompt. Save wording on the storyboard and split the scene before planning separate prompts. GenAI submits one scene-mode request and numbers the named references. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
-Storyboard: write the story first with \`story_sequence\` → \`story_scene\` → \`story_shot\` (the clichés it uses with \`story_cliche\`), then each shot's characters and lines with \`shot_characters\` → \`shot_dialogue\`, each scene's music decision with \`story_music\`, its icon attributes with \`shot_icons\`, its start (and first_last end) image with \`shot_image\`, its video prompt with \`shot_prompt\`; then \`storyboard_read\`, \`storyboard_apply\`, \`storyboard_check\`. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_route\` and the tts_* tools generate. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
+Storyboard: author sequences, scenes and shot stories with \`story_sequence\`, \`story_scene\` and \`story_shot\`. Record selected clichés with \`story_cliche\`. Record cast, dialogue, music decisions and shot attributes with \`shot_characters\`, \`shot_dialogue\`, \`story_music\` and \`shot_icons\`. Use \`shot_prompt\` for an action, closing state, diegetic sound or inspected speaker binding. Use \`storyboard_read\`, \`storyboard_apply\` and \`storyboard_check\` for review and edits. When an image is requested, use \`shot_image\`. When video is requested, use \`video_plan\` to compile the current scene and its shots. Speech: \`speech_manage\` owns dialogue lines and audio bindings; \`tts_plan\` and \`tts_execute\` generate. Use \`tts_catalog\` for models and \`tts_status\` for receipts. Review: \`host_review\` prepares media evidence and records the host's own observations; it never scores.
 
-Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: music_*, suno_*. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
+Images: \`image_catalog\` → \`image_plan\` → \`image_execute\`, then \`image_status\` after interruption. Preserve the saved model choice; legacy image adapters require imageContext for configured production. Host selections remain external handoffs. Music: \`music_catalog\` → \`music_plan\` → \`music_execute\` with the saved music model. Pass the returned \`planId\` to execution. Use \`music_status\` with the original \`requestId\` after an interruption. Sound effects: \`sfx_elevenlabs_generate\`. Free stock footage: \`stock_search\`. Research: serp_*, \`naver_search\`, datago_*, \`youtube_topic_scout\`.
 
 TikTok: use \`tiktok_auth\` for OAuth, \`tiktok_upload\` for inbox drafts or \`tiktok_publish\` for approved Direct Post; each upload requires post-specific consent. Start private (SELF_ONLY), edit and verify the saved cover in ego lite, then make the same post public in the browser. If cover editing is blocked, keep it private. Direct Post completion is not public verification; never call tiktok_publish again to change visibility. Track the durable requestId with \`tiktok_status\`; never resubmit an uncertain request.
 
@@ -934,12 +937,32 @@ Search words: 영상 video clip, 이미지 image, 음성 TTS narration voice, �
 export const TOOLS = [
     {
         name: 'tts_local_voxcpm2', title: 'Local VoxCPM2 speech', annotations: HINT.generate,
-        description: 'Generate one 48 kHz WAV on the configured Mac with mlx-audio VoxCPM2. Pass text and an output directory. Supply referenceAudio for timbre or continuationAudio and its transcript for continuation. Use instructions for voice design or acting. For episode lines copy speech_manage plan_audio arguments. Returns the audio path and receipt. Use tts_route execute with a stable requestId for replay.',
+        description: 'Generate one 48 kHz WAV on the configured Mac with mlx-audio VoxCPM2. Pass text and an output directory. Supply referenceAudio for timbre or continuationAudio and its transcript for continuation. Use instructions for voice design or acting. For episode lines copy speech_manage plan_audio arguments. Returns the audio path and receipt. Use tts_plan and tts_execute for restart-safe synthesis.',
         inputSchema: zodToJsonSchema(localVoxSchema, { $refStrategy: 'none' }),
     },
     {
+        name: 'tts_catalog', title: 'Inspect speech models', annotations: HINT.local,
+        description: 'List installed speech models, generators and voice controls. Use for TTS model discovery. Returns model contracts and the gateway catalog lookup. Supply engine and optional model for the adapter parameter schemas. Use tts_plan to save a synthesis request.',
+        inputSchema: zodToJsonSchema(speechCatalogSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_plan', title: 'Save a speech plan', annotations: HINT.generateLocal,
+        description: 'Create a local plan for a speech take. Pass a generator and its arguments or the ttsPlan fields from speech_manage plan_audio, plus directory and requestId. Returns planId, normalized generation and warnings. Use tts_execute to synthesize the saved take.',
+        inputSchema: zodToJsonSchema(speechPlanSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_execute', title: 'Generate a planned speech take', annotations: HINT.generate,
+        description: 'Generate speech from a saved tts_plan. Rechecks character bindings and reference audio. Hosted synthesis can incur charges. Returns audioPath and receiptPath on success. Repeated execution reuses a matching completed take. Use tts_status to inspect an interrupted request.',
+        inputSchema: zodToJsonSchema(speechExecuteSchema, { $refStrategy: 'none' }),
+    },
+    {
+        name: 'tts_status', title: 'Read a speech receipt', annotations: HINT.local,
+        description: 'Read the local synthesis status by output directory and take ID, including historical tts_route receipts. Returns status, output path or recorded error. A missing receipt returns not_found. Use tts_execute to generate audio.',
+        inputSchema: zodToJsonSchema(speechStatusSchema, { $refStrategy: 'none' }),
+    },
+    {
         name: 'tts_route', title: 'Speech model routing', annotations: HINT.generate,
-        description: 'Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Local mlx-audio VoxCPM2, Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
+        description: 'Compatibility interface. New calls use tts_catalog, tts_plan, tts_execute and tts_status. Discover implemented speech models, plan a selected generator, or execute it with durable request identity. Use capabilities without credentials; plan validates generation without network or writes. execute needs generator, generation.outputPath and requestId, reuses matching completed audio, and refuses changed or uncertain prior requests. Returns capabilities or audioPath, receiptPath, attempts and not_reviewed; no listening, model fallback or automatic retries. Use speech_manage plan_audio for pinned character/acting arguments. Local mlx-audio VoxCPM2, Gemini, ElevenLabs v4 and model-bound ASTRA GenAI adapters are available; gateway model capabilities require astra_genai_catalog kind:speech. Raw tools remain compatible and share execution checks. Plans do not quote or authorize spending.',
         inputSchema: { type: 'object', additionalProperties: false, properties: {
                 action: { type: 'string', enum: ['capabilities', 'plan', 'execute'], description: 'Read capabilities, validate a pure plan, or submit one explicitly identified take.' },
                 generator: { type: 'string', enum: [...GENERATORS], description: 'Exact implemented raw synthesis tool. Required for plan and execute.' },
@@ -3371,7 +3394,7 @@ Returns: a text block with the saved .json path, detected language, segment coun
     // ── Music generation (Google Lyria) ────────────
     {
         name: 'music_generate_clip',
-        title: 'Music generation (30s clip)',
+        title: 'Generate a 30-second Google Lyria clip',
         annotations: HINT.generate,
         description: `Generate a fixed 30-second music clip from a text prompt using Google Lyria 3 (batch, single call).
 
@@ -3401,12 +3424,12 @@ Returns: a text block with the saved .mp3 file path (44.1kHz stereo, exactly 30 
     },
     {
         name: 'music_generate',
-        title: 'Music generation (set duration)',
+        title: 'Generate a single-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music from a text prompt using Google Lyria RealTime (streaming).
 
 Use when the requested duration must be controlled (5-300s) — e.g. matching a narration length. For a fixed 30-second bed, music_generate_clip is cheaper (single call); configured production uses music_plan with the saved model. Optionally constrain genre, mood, instruments, BPM (60-200). Genre/mood/instrument values are free text — music_list_options shows suggestions, not a closed list.
-Do NOT use for vocals or lyrics — Lyria RealTime is instrumental-only. For a sung song use suno_generate. For blending multiple weighted musical ideas or tuning density/brightness/seed, use music_generate_advanced.
+Lyria RealTime generates instrumentals. For a sung track, check vocal support in music_catalog. For weighted musical ideas or density, brightness and seed controls on this model, use music_generate_advanced.
 For BGM under narration, say so in the prompt (e.g. "leaves space for a spoken voiceover, no melody in the vocal frequency range").
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and applied settings.`,
@@ -3451,12 +3474,12 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
     },
     {
         name: 'music_generate_advanced',
-        title: 'Music generation (weighted prompts · fine control)',
+        title: 'Generate a weighted-prompt Lyria RealTime instrumental',
         annotations: HINT.generate,
         description: `Generate instrumental music by blending multiple weighted prompts with fine-grained controls (Google Lyria RealTime).
 
 Use when the request needs blended musical ideas — e.g. [{"text": "jazz piano", "weight": 1.0}, {"text": "electronic beats", "weight": 0.5}] — or fine tuning of guidance, density, brightness, temperature, scale (key), seed (reproducibility), or bass/drum controls. seed is the ONLY way to regenerate the same music (Lyria 3 Clip has no seed) — record the seed of a channel's signature BGM to keep later episodes consistent.
-Do NOT use for a simple single-idea request — music_generate is sufficient and simpler. No vocals or lyrics (Lyria RealTime is instrumental-only — sung songs go to suno_generate).
+For one prompt and a duration on this model, music_generate takes both directly. For a sung track, check vocal support in music_catalog.
 
 Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), duration, and the applied prompt weights/config.`,
         inputSchema: {
@@ -3575,8 +3598,8 @@ Returns: a text block with the saved .wav file path (48kHz stereo 16-bit PCM), d
         annotations: HINT.generateLocal,
         description: `Generate music on this machine via MLX Core / mlx-serve POST /v1/audio/music-generations. Returns raw WAV. No vendor bill. This plugin never launches the app.
 
-Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
-Do NOT use in place of the saved music model — new music runs music_plan → music_execute with models.music; the legacy unattended bed still takes music_generate_clip. Vocals fight voiceover; keep instrumental true under narration.
+Use as an optional local bed when MLX Core is running with a music model. Default is instrumental:true and durationSeconds ${DEFAULT_MLX_MUSIC_SECONDS} (MiniMax Music 3: 1–360 seconds, other packs: ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}). instrumental:true cannot be sent beside lyrics — mlx-serve returns 400; set instrumental false to sing, or drop lyrics for a bed.
+Use music_plan → music_execute with the saved music model for production. Keep instrumental true under narration.
 Requires Apple Silicon, macOS 26.2+, and MLX Core.app or mlx-serve (or MLX_SERVE_URL). brew install --cask mlx-core if :11234 is down.
 
 Returns: a text block with the saved .wav path, model, duration, and generation time.`,
@@ -3603,20 +3626,23 @@ Returns: a text block with the saved .wav path, model, duration, and generation 
                     default: true,
                 },
                 durationSeconds: {
-                    type: 'number',
-                    description: `Length in seconds (default: ${DEFAULT_MLX_MUSIC_SECONDS}, ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}).`,
-                    minimum: MIN_MLX_MUSIC_SECONDS,
+                    type: 'integer',
+                    description: `Length in whole seconds. MiniMax Music 3 accepts an upper bound of 1–360; other packs accept ${MIN_MLX_MUSIC_SECONDS}–${MAX_MLX_MUSIC_SECONDS}.`,
+                    minimum: 1,
                     maximum: MAX_MLX_MUSIC_SECONDS,
                     default: DEFAULT_MLX_MUSIC_SECONDS,
                 },
                 seed: {
                     type: 'number',
-                    description: 'Random seed. Omit for a random seed.',
+                    description: 'Sampling seed. MiniMax Music 3 defaults to 42.',
                     minimum: 0,
                 },
+                steps: { type: 'integer', minimum: 4, maximum: 100, description: 'MiniMax Music 3 diffusion steps, default 30.' },
+                bpm: { type: 'integer', minimum: 30, maximum: 300, description: 'MiniMax tempo guidance appended to the caption.' },
+                keyscale: { type: 'string', description: 'MiniMax key guidance for the caption, e.g. F minor.' },
                 refAudioPath: {
                     type: 'string',
-                    description: 'Optional reference clip (absolute path, sent as base64).',
+                    description: 'Reference clip for compatible packs. MiniMax Music 3 rejects reference audio.',
                 },
                 outputPath: {
                     type: 'string',
@@ -3687,7 +3713,7 @@ Returns JSON: status, missing fields, canonical paths, config and revision; epis
                         models: { type: 'object', additionalProperties: false, description: 'On first setup choose video and check credentials, then ask for the BGM and audience tonal-cue model from music_catalog or save music:{engine:"none"} for reuse or no score. Check the selected provider, then choose image and optional TTS (speech:{engine:"none"} to skip). Reuse saved choices.', properties: Object.fromEntries(['video', 'music', 'image', 'speech'].map(kind => [kind, {
                                     type: 'object', additionalProperties: false, description: `${kind} selection; fixed engines omit model, host uses host-managed.`,
                                     properties: {
-                                        engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
+                                        engine: { type: 'string', enum: kind === 'video' ? ['host', ...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))] : kind === 'speech' ? ['none', 'gemini', 'elevenlabs', 'astra-genai', 'mlx-audio'] : kind === 'music' ? ['lyria', 'suno-api', 'elevenlabs', 'mlx', 'stable-audio-mlx', 'none'] : ['host', 'gpt-image', 'zimage', 'mlx', 'astra-genai', 'astra-genai-native'], description: 'Selected engine, e.g. host for an exposed host media tool.' },
                                         model: { type: 'string', description: 'Supported model ID, e.g. host-managed. Omit for astra, zimage and engine none (speech or music).' },
                                         ...(!['speech', 'music'].includes(kind) ? { host: { type: 'string', description: 'Host CLI when engine is host, e.g. codex.' } } : {}),
                                         ...(kind === 'video' ? { resolution: { type: 'string', description: 'Supported source resolution, e.g. 720p; MSR takes WIDTHxHEIGHT, e.g. 1792x1024.' },
@@ -3741,7 +3767,7 @@ Returns: a capability menu — video_generation, image_generation, tts, music_ge
     },
     {
         name: 'music_list_options',
-        title: 'Music option list',
+        title: 'List suggested genres, moods and instruments',
         annotations: HINT.local,
         description: `List suggested genres, moods, and instruments for music generation.
 
@@ -3842,7 +3868,7 @@ Returns: categorized text lists — 32 genres, 25 moods, 22 instruments (non-exh
     },
     {
         name: 'suno_generate_sound',
-        title: 'Suno loopable BGM',
+        title: 'Suno sound generation (unavailable)',
         annotations: HINT.generate,
         description: `Generate a loopable Suno sound/bed with optional BPM and musical key.
 
@@ -4517,9 +4543,9 @@ Returns: integer credit balance.`,
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
         description: `Update shot dialogue, line acting and local audio/video bindings.
 
-Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets and stale revisions fail. Generate visible dialogue in a fresh native or audio-conditioned video. Applying TTS lip sync to existing footage is prohibited, including historical plans. Keeps source backups.
+Use for dialogue edits, expression or intonation corrections, stable speaker routing and generation planning. list finds lines; prepare assigns stable ids; update replaces requested line fields; attach_audio returns measured timing; retime updates the complete shot clock from current speech and explicit action edits. attach_video binds generated files; reuse:tail_trim accepts only unchanged audio and performance starts with a shorter tail. plan_audio returns ttsPlan fields for tts_plan. It resolves the pinned voice and each line's scene direction into raw generator arguments, refusing unregistered selected samples and stale shared voices; gateway arguments include a revision-bound speechContext and attach_audio requires its completed receiptPath; plan_video resolves the selected adapter's capabilities (tool names the shot's video tool when it differs from the saved default operation) and carries the same acting/timing context. A native-speech shot (MSR) needs no line audio: the clip speaks its prompt's lines, attach_video binds their revisions and sets sound.audioSource video, and a line edit marks the clip stale. For such a clip attach_video refuses a missing audio stream (native_speech_missing) or a decoded silent soundtrack (native_speech_silent). Audio at the clip end warns of possible truncation; signal does not verify dialogue or voice identity. It also returns soundtrack: where the line starts and ends in the clip (loudness, not_reviewed), the silent seconds around it, and suggestedEdit {in, out} with suggestedDurationSeconds when silent acting the performance did not ask for surrounds the line. Nothing is trimmed here; apply it with storyboard_apply after listening. Attaching different footage to a trimmed native shot removes that trim and returns it as clearedTrim. Scene direction overrides baseline style without changing voice identity. Local files only: plans do not generate, listen, score or approve. Read first and pass expectedRevision for writes; unknown speakers, ambiguous targets and stale revisions fail. Generate visible dialogue in a fresh native or audio-conditioned video. Applying TTS lip sync to existing footage is prohibited, including historical plans. Keeps source backups.
 
-Do NOT use to generate media: call the planned raw TTS tool or selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
+Do NOT use to generate media: use tts_plan and tts_execute or the selected video adapter, then attach the result. Do NOT use for read-only whole-story inspection: use storyboard_read instead. Never group different emotional beats or nonconsecutive shots by shared image and slice them into unrelated reactions.
 
 Returns revision, ordered matching lines with generationPlan and voice/audio hashes, invalidated dependencies, audioPlans for plan_audio (generator, generation/arguments aliases, clean expectedText, language and speechRevision), or a video plan with videoPrompt and textPolicy:no_visible_text; performance.text preserves exact speech for verification, never copy it into the visual prompt. Direction warnings disclose unsupported engine controls; generated audio remains not_reviewed. Acting lead-in/tail-out use seconds. Plans and metadata cannot establish audible or visible quality.`,
         inputSchema: {
@@ -4681,6 +4707,9 @@ Returns: the file written or not, counts, and findings (! violation · warning).
             type: 'object', additionalProperties: false,
             properties: {
                 path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
+                split: { type: 'object', additionalProperties: false, required: ['beforeShot'], properties: {
+                        beforeShot: { type: 'string', pattern: '^s[0-9]{4,}$' }, newSceneNo: { type: 'integer', minimum: 1 }
+                    }, description: 'For separate production prompts, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs.' },
                 scenes: { type: 'array', minItems: 1, description: 'Scenes in playback order', items: { type: 'object', additionalProperties: false, required: ['sequence', 'no', 'place', 'time', 'event', 'summary'], properties: {
                             sequence: { type: 'string', description: 'The sequence id this scene belongs to' },
                             no: { type: 'integer', minimum: 1, description: 'Scene number, unique on the board' },
@@ -4693,7 +4722,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                             speakerReferences: zodToJsonSchema(sceneSpeakerReferencesSchema, { $refStrategy: 'none' }),
                             speakers: zodToJsonSchema(sceneSpeakersSchema, { $refStrategy: 'none' }),
                             directionDefaults: zodToJsonSchema(sceneDefaultsSchema, { $refStrategy: 'none' }),
-                            videoDirection: zodToJsonSchema(sceneVideoDirectionSchema, { $refStrategy: 'none' }),
+                            videoDirection: zodToJsonSchema(sceneVideoDirectionSchema.omit({ promptDrafts: true }), { $refStrategy: 'none' }),
                             audienceSound: zodToJsonSchema(audienceDecisionSchema, { $refStrategy: 'none' }),
                             out: { type: 'string', description: 'The line or visible action the scene goes out on — it leaves the next thing wanted' },
                             charge: { type: 'object', additionalProperties: false, required: ['open', 'close'], description: 'The value at the open and at the close; ++ or -- deepens the direction the scene opened in', properties: {
@@ -4777,9 +4806,9 @@ Returns: set — the saved decision, its decisionSha256 and warnings; render —
         name: 'story_music',
         title: 'Decide each scene\'s music (music spotting)',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it once the lines are written (shot_dialogue) and before shot_prompt to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (each generated for this episode from a prompt, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
+        description: `Use it once the lines are written (shot_dialogue) to decide, scene by scene, where music plays and where it stays out. Read the report's direction first: it is what the user already said about music on this channel. Then define the cues (musical direction for an episode cue, or a channel bed named as an asset) and give every scene one decision with its reason: score with a cue, or none. Scenes that follow each other can share one unbroken span. A scored scene plays from its first shot to its last unless start and end name a shot and a time inside it; sourceStartSeconds starts the cue later than its first second. Called with path alone it reports and writes nothing.
 
-Do NOT leave a scene without a decision because silence is the default — a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: a prompt cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
+Do NOT leave a scene without a decision because silence is the default — a scene nobody decided reads undecided, and the report lists payoff and turn scenes first. Do NOT name another episode's file as a cue: an original cue is generated for this episode after the user authorizes the spend. For gain curves or overlapping spans, edit window.MUSIC.$timeline through storyboard_apply afterwards.
 
 Returns: the file written or not, counts, findings (! violation · warning), and the spotting report — each scene's decision, cue and mismatch, the undecided scenes, the cues, and the saved direction.`,
         inputSchema: {
@@ -4788,8 +4817,9 @@ Returns: the file written or not, counts, findings (! violation · warning), and
                 path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
                 cues: { type: 'array', description: 'Named cues to add or revise', items: { type: 'object', additionalProperties: false, required: ['name', 'reason'], properties: {
                             name: { type: 'string', pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$', description: 'Cue name, e.g. "tension"' },
-                            prompt: { type: 'string', description: 'What to generate for this episode, in English: instruments, tempo, mood, how it starts and ends, room for speech. Give this or asset' },
-                            asset: { type: 'string', description: 'A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or prompt' },
+                            direction: { type: 'object', additionalProperties: false, minProperties: 1, properties: Object.fromEntries(['mood', 'instruments', 'tempo', 'shape', 'dialogueSpace'].map(key => [key, { type: 'string', minLength: 1 }])) },
+                            prompt: { type: 'string', description: 'Historical input for earlier clients' },
+                            asset: { type: 'string', description: 'A channel bed id (assets/audio/bgm/<id>.wav) used as it is. Give this or direction' },
                             reason: { type: 'string', description: 'What this cue does for the story, in one sentence' },
                         } } },
                 spots: { type: 'array', description: 'One decision per scene, or per run of scenes sharing a span', items: { type: 'object', additionalProperties: false, required: ['scenes', 'decision', 'reason'], properties: {
@@ -4847,7 +4877,7 @@ Returns: the file written or not, counts, findings (! violation · warning), and
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it once every sequence, scene and shot story is written (story_sequence → story_scene → story_shot): set who from the episode cast is on screen in each shot, up to four principal characters with the subject first, or [] when nobody is. It writes visual.character and keeps a kept character's scope. A character who leaves a shot keeps their lines, now off_screen, with a warning, and their sheet panels leave visual.references; a start image made for the old cast is flagged for shot_image. Refused (story_order) while the story has a gap — a sequence without scenes, a scene without a shot or summary, a shot without its story — and for an id outside the episode cast (cast_unknown) — storyboard/cast.json alone on a story-first board, which repeats story_sequence's cast check (cast_source_missing, character_panel_missing), plus SB_DOC.characters on an older board — or one marked voiceOnly there (cast_voice_only). Local file only; no image, speech or prompt.
 
-Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues — brows, eyes, mouth, shoulders, hands — and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and shot_prompt put these words into the image and video prompts, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
+Give each listed character an expression: what their face and body show in this shot, read from the scene's situation (what just happened and what is at stake), since the one-sentence shot story names an action and not a feeling. Write visible cues — brows, eyes, mouth, shoulders, hands — and no emotion label alone: "worried" leaves the face to the model, and a model with no cue draws a pleasant face. The silent listener gets one too. shot_image and video_plan read these words when the user requests images or video, and shot_image warns (expression_missing) for a face without one. English only (image_prompt_language); a character outside the shot is refused (shot_expression_unknown).
 
 A shot may carry lines from several of its characters; the selected video model limits how many pinned voices one render takes, and video_plan reports a scene over it (scene_render_voice_limit). bystanders lists cast members also in view without an on-screen line — the listener's friend at the table, the child beside the coach: up to four named cast members in the shot. extras describes unnamed people in English (how many, what they look like, what they are doing). shot_image draws bystanders from their face and front panels and extras from the words; bystanders have no separate video input unless a reference explicitly names them. Refused: a bystander who is also a character (shot_bystander_listed), more than four of the cast (character_limit), a bystander with an on-screen line (shot_bystander_speaks), non-English extras (image_prompt_language).
 
@@ -4909,17 +4939,15 @@ Returns: the file written or not, counts, and findings (! violation · warning).
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
         description: `Use it after every shot has its story and characters (story_shot → shot_characters), normally after shot_dialogue, set its render route, size, angle, opening view, move, focus, depth, frame plan and next transition. Local file only; generates no media. Do NOT generate images or video here.
 
-Read shot-view.md and storyboard_read.techniqueCatalog. Plan scene attention before icons: a speaker change need not follow their face. Compare faces with consequential details, POVs and spatial relations; preserve emotion until its cause changes. Choose evidence, not size quotas or decorative cutaways; state why this view beats one alternative.
-
-Set backgroundView to front or back relative to the location sheet layout; shot_image uses its matching panels.front or panels.back.
+Read shot-view.md and storyboard_read.techniqueCatalog for the visible subject, crop, viewpoint and reason.
 
 Set view with subject (visible evidence), reason, crop and mode. It writes visual.camera.view and shot.info. why is the size's reason and view.reason the viewpoint's; neither is copied into the other. The result names shots without a why and wide shots (els, ls, ws, fs) held with no reason; neither is refused. Subject and crop are English provider text. This view supersedes old opening framing, rear/pov flags and viewpoint/framing techniques in the image and video prompts. Left/right name the visible side of the subject; angle separately controls height. Set subjectId for a blocked actor or set object; ots also needs a different viewerId, pov only viewerId (what it sees stays in subject when no id stands for it). Built-set body inserts/ecu need target with the actual staged world point and vertical span; objects use their subjectId. Use storyboard_apply for blocking and closing camera endpoints.
 
-Size is distance (els … ecu, insert). Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
+Size is distance (els … ecu). Record single/two/three/group in arrangement and insert/reaction/cutaway in cutRole. Set size and view.crop together when changing the crop. Person shots keep anatomical size boundaries even with a view; set view.subjectType to object or detail when the subject is a prop or body detail despite a character being in the cast. Explicit contradictory crop declarations fail image planning with shot_framing_conflict. Composition labels two/three/ots/pov/back/cutaway/reaction carry no crop; new boards use a distance with view. The technique catalogue gives use, avoid, specify, neighbouring-shot and vertical guidance; these are directing conventions, not measured emotional effects. On 9:16 the result includes the chosen values' vertical advice.
 
 On still_camera, move is a still effect stored in shot.render.camera; other routes use a camera technique and synchronize visual.camera.movement. Route changes drop the old route's movement. A different move replaces its speed/target; the same move keeps them unless provided. Video moves take slow/steady/fast and an English target; rack focus takes English from/to subjects. accents lays camera.speed-ramp or camera.impact-shake over the move, each with the English moment it fires on; they reach the video prompt as one sentence each, and a hero landing is camera.static + angle ground + an impact shake on the landing. A new size without why drops the old why. A still hold is deliberate, not an unset move.
 
-A reason belongs to a choice: size (why), view and a camera move take this shot's reason; a hold (camera.static), a plain cut, the episode's own route and a first or reference frame plan need none, and a new route or frame mode given without a reason drops the old one. Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; changed inputs to a written video prompt warn to rewrite it with shot_prompt. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
+A reason belongs to a choice: size (why), view and a camera move take this shot's reason; a hold (camera.static), a plain cut, the episode's own route and a first or reference frame plan need none, and a new route or frame mode given without a reason drops the old one. Frame reference means MSR. Changing away from first_last removes the end-image binding; switching to/from reference updates panel use. Camera/view/size/depth/focus changes warn to remake existing images; video_plan compiles current attributes when video is requested. next sets the transition into the following shot, with the same checks as storyboard_apply, and is refused on the last shot. Omitted attributes stay unchanged.
 
 storyboard_read level:"direction" counts the plan.
 
@@ -4935,19 +4963,25 @@ Refused: missing story/characters (story_order), invalid attributes, incompatibl
                                     purpose: enumInput(purposes, 'What the viewer needs from the cut'),
                                     reason: { type: 'string', description: 'Optional. Why this cut takes this route when the route is this cut\'s own choice — a still, a card or a graph, or any route in a mixed-ratio episode. Leave it out for generated_video in a full_video episode: the episode already chose video, and a sentence restating that on every shot says nothing' },
                                 } },
-                            size: enumInput(storyboardVocabulary?.SIZES, 'Shot size icon: the distance (els … ecu, insert); composition labels carry no crop — techniqueCatalog guides.size'),
+                            size: enumInput(storyboardVocabulary?.SCALES, 'Optical shot size from extreme long shot to extreme close-up'),
+                            arrangement: { type: ['string', 'null'], enum: ['single', 'two', 'three', 'group', null] },
+                            cutRole: { type: ['string', 'null'], enum: ['insert', 'reaction', 'cutaway', null] },
+                            soundPerspective: { type: ['string', 'null'], enum: ['near', 'full', null], description: 'Shot listening perspective, independent of optical depth. Null restores the scene default.' },
+                            optics: { type: ['object', 'null'], additionalProperties: false, properties: { lensMm: { type: 'number', exclusiveMinimum: 0 }, fStop: { type: 'number', exclusiveMinimum: 0 }, focusDistanceM: { type: 'number', exclusiveMinimum: 0 } } },
                             why: { type: 'string', description: 'Why this size for this shot. view.reason carries the viewpoint and height and is not copied here' },
-                            angle: enumInput(storyboardVocabulary?.ANGLES, 'Camera angle icon: the camera height and tilt; ground and over have cards in techniqueCatalog guides.angle'),
+                            angle: enumInput(storyboardVocabulary?.ANGLES.filter(angle => angle !== 'over'), 'Camera height or tilt. Set over the shoulder in view.mode.'),
                             view: shotViewInput,
                             backgroundView: { type: 'string', enum: ['front', 'back'], description: 'Opening direction relative to the location sheet: front is the establishing view, back is the opposite side. Saves visual.camera.backgroundView; omitted keeps the choice, initially front. Independent of the subject view.' },
                             move: { type: ['object', 'null'], additionalProperties: false, required: ['id'], description: 'Choose a shot move. On a video shot null clears the override and restores the scene camera default.', properties: {
                                     id: { type: 'string', enum: [...cameraMoves, ...stillCameraEffects], description: 'A camera.* technique with a movement, or on a still_camera cut a still effect' },
                                     reason: { type: 'string', description: 'Why the camera moves this way in this shot. Required for every move and still effect; camera.static may go without one' },
+                                    on: { type: 'string', description: 'Action, sound or line that starts this camera move, in English' },
                                     target: { type: 'string', description: 'What the move is aimed at, in English on a video cut: what it pushes toward or pans and tilts to, or the person it follows, circles or rises above — the prompt reads "pushes in toward <target>", "follows behind <target>". A blast pushback names the source of the blast, a weapon cam what the projectile flies toward, a relay one-take the fighter it starts with' },
                                     speed: { type: 'string', enum: ['very slow', 'slow', 'steady', 'fast', 'very fast'], description: 'Pace: slow, steady or fast on a video cut; very slow (default), slow, fast or very fast on a still effect' },
                                 } },
                             focus: { type: ['object', 'null'], additionalProperties: false, required: ['id', 'reason'], description: 'Focus technique (camera.rack-focus); null removes it', properties: {
                                     id: { type: 'string', description: 'camera.rack-focus' }, reason: { type: 'string', description: 'Which subject hands focus to which, and why' },
+                                    on: { type: 'string', description: 'Action, sound or line that cues the focus change, in English' },
                                     from: { type: 'string', description: 'The subject sharp first, in English (the start image stages it in focus)' },
                                     to: { type: 'string', description: 'The subject sharp last, in English' },
                                 } },
@@ -5020,15 +5054,9 @@ Do NOT use it just to inspect a shot — use storyboard_read. Do NOT use it for 
     },
     {
         name: 'shot_prompt',
-        title: "Write a shot's video prompt (step 5)",
+        title: 'Set shot action and cast positions',
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
-        description: `Use it after every picture-route shot has its images (shot_image): write one generated_video shot's English video prompt into visual.video.prompt from its icon attributes — camera move in the video model's camera words (pushes in, pulls back, pans, tilts upward, static frame) with its speed, target and the closing composition, the rack focus subjects, and on an MSR (reference) shot its size, angle and depth, since MSR pins no frame; a first or first_last shot starts from its given frames — plus your English action, closing picture and sound, each character's expression from shot_characters (held to the last frame unless your action changes it), and the shot's on-screen lines in quotes (MSR adds its lines in video_plan with their image bindings). video_plan sends this prompt when its args name none. It records what the prompt came from (visual.video.promptBasis), so a later change of cast, lines, frame plan, camera, focus or MSR framing shows as stale. Local file only; no generation.
-
-Do NOT write Korean outside quotes: action, end and sound are English (video_prompt_language). Refused (story_order) while a picture-route shot lacks its image or a first_last shot its end image, and for a cut that is not generated_video.
-
-For MSR on-screen dialogue, inspect the start image and pass speakerBindings for each on-screen speaker, at most two: viewer-relative left/center/right and a short English appearance description. Image numbers are reference slots, not screen positions. Each generated turn repeats the binding and mapped voice. Keep dialogue in shot_dialogue; do NOT duplicate its quotes in action/end/sound (video_dialogue_embedded). Bindings are pinned to the start image; reauthor after it changes. A visible listener without a line stays silent. Purposeful off_screen speech preserves the authored detail, listener or space view; do not add a speaking face to satisfy a binding.
-
-Returns: the file written and the prompt. Stores promptSource so video_plan recompiles the current icon attributes at request time.`,
+        description: `Use it to set structured action, closing state, diegetic sound and inspected speaker positions. Action and sound can be set before images. Bind a speaker position to the owning shot’s opening picture. Do NOT pass dialogue or a model prompt. video_plan composes the prompt when video is requested. Returns: updated board and findings.`,
         inputSchema: {
             type: 'object', additionalProperties: false,
             properties: {
@@ -5055,12 +5083,12 @@ Returns: the file written and the prompt. Stores promptSource so video_plan reco
         annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
         description: `Write a storyboard's scenes.js from a sequence → scene → shot model, or patch part of it, in one call. Every shot is checked against the shot schema (type and render.mode vocabularies, transition join, stable id format and uniqueness, camera input, line-crossing and motion-graphic records), the structure against its schema (version, typed scenes and sequences) and the story order, and the derived shot labels (sceneSlug · sequence) are written from the structure. Nothing is written when a violation is found — the findings come back instead. No creative or production rule runs on a write; storyboard_check runs them on request.
 
-A new episode board starts with its story (story_sequence → story_scene → story_shot), then each shot's characters and lines (shot_characters → shot_dialogue), then its icon attributes (shot_icons), its images (shot_image) and its video prompt (shot_prompt); storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue’s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
+A new episode board starts with its story (story_sequence → story_scene → story_shot), then each shot's characters and lines (shot_characters → shot_dialogue), then its icon attributes (shot_icons), its structured action and sound. Image and video requests follow separately; storyboard_apply refuses to create a board inside an episode. Use it after those steps to add camera endpoints, blocking and visual plans (storyboard §4), and to change one thing later (scenes / sequences by key, shots by id — shotsById · insertShots.afterId · removeShotIds — or by position, globals for FORMAT · THEME · COMPREHENSION · STORY · PRODUCTION · MUSIC · SFX). Address shots by id once the board has them (every board written by this tool does): a review note names s0007, and positions shift with every insert; a patch mixes id and position addressing at its own peril — it is refused. Use transitions to change only the effect before selected shots without replacing their narration or visuals. dip fades out to black and fades the next scene in; prefer it for changes of place or time unless a specific cut calls for another effect. Use audienceEffects to plan, place or remove one audience-only post cue and sfxEntries to register its material. To generate one new cue with the saved music model on an older board, pass source:"music" in that cue’s plan. Both edits require expectedSha256. Read level shots for currentTimingBasis, or audienceEndFor for a proposed end shot. One call carries the whole change — do not write scenes.js by hand and do not call this once per shot. dryRun:true validates without writing.
 storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextShotId; preserve those ids and do not edit them by hand.
-Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth (L11): count what the viewer must read in the frame at once — one thing → shallow with focus (a person's eyes), two or more → deep with the planes listed front to back; a departure needs a reason, and a still_camera focus-in/rack-focus cut cannot be deep. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
+Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). The cast membership, voiceOnly and two-character checks run in shot_characters and storyboard_check, not here. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards split across authored cuts when a third video identity enters. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
         inputSchema: {
@@ -5113,6 +5141,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                                 events: { type: 'array', items: { type: 'object' }, description: 'Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order.' },
                             } },
                     } },
+                splitReferenceScenes: { type: 'boolean', description: 'Split existing GenAI scenes before a shot introduces a third referenced character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged.' },
                 dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
                 draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
             },
@@ -5235,10 +5264,10 @@ TOOLS.push({ name: 'video_catalog', title: 'Inspect installed video adapters', d
             engine: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.engine))], description: 'Video engine as saved in models.video.engine, e.g. astra-genai.' },
             operation: { type: 'string', enum: [...new Set(Object.values(VIDEO_ADAPTERS).map(adapter => adapter.operation))], description: 'One operation of that engine, e.g. image. Needs engine.' }
         },
-        additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan carries one provider prompt, which the plugin writes and returns as promptTemplate for editing. On the GenAI engine the scene is one scene-mode request (POST /v1/generations, mode scene): the prompt keeps its {name} placeholders, the gateway numbers them, and /v1/generations/validate confirms the numbering, frames and cuts before the plan is saved (sceneValidation). promptGuidance carries the writing sentence for the selected model, its reference page and an advice entry for each count outside the range the vendor guide recommends; advice never refuses a plan. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
+        additionalProperties: false }, annotations: { readOnlyHint: true, openWorldHint: false } }, { name: 'video_plan', title: 'Plan a video with saved model settings', description: 'Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan carries the whole scene and returns its named promptTemplate. Save an edit on story_scene.videoDirection.prompt. Split the storyboard scene before planning separate prompts. On the GenAI engine the scene is one scene-mode request (POST /v1/generations, mode scene): the prompt keeps its {name} placeholders, the gateway numbers them, and /v1/generations/validate confirms the numbering, frames and cuts before the plan is saved (sceneValidation). promptGuidance carries the writing sentence for the selected model, its reference page and an advice entry for each count outside the range the vendor guide recommends; advice never refuses a plan. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.',
     inputSchema: { ...videoContextSchema, properties: { ...videoContextSchema.properties,
             wholeScene: { type: 'boolean', enum: [true], description: 'Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it.' },
-            prompt: { type: 'string', minLength: 1, maxLength: 32000, description: 'Optional complete scene prompt. Edit the returned promptTemplate, using the names in promptSlots for cast, images, motion and soundtracks. Overrides the saved draft for this plan.' },
+            prompt: { type: 'string', minLength: 1, maxLength: 32000, description: 'Optional assertion of the complete storyboard prompt. Save revisions with story_scene.videoDirection.prompt. If two prompts must both render, split the storyboard scene at a shot boundary first.' },
             sceneNo: { type: 'integer', minimum: 1, description: 'Storyboard scene number. Plans one clip for all its ordered shots.' },
             engine: { type: 'string', description: 'Optional assertion of the saved video engine. A different saved engine refuses the plan (model_selection_mismatch); a plan never switches the selection.' },
             model: { type: 'string', description: 'Optional assertion of the saved video model, checked the same way.' },
@@ -5313,9 +5342,10 @@ const musicContextSchema = { type: 'object', description: 'Managed music context
         reserveUsd: { type: 'number', minimum: 0, description: 'Total provider cost estimate for all tracks, e.g. 0.5. Required and positive for API engines; omit or 0 for local MLX. Not an invoice cap.' },
     }, required: ['directory', 'assetId', 'requestId'] };
 for (const tool of TOOLS) {
-    if (!MUSIC_ADAPTERS[tool.name])
+    const adapter = MUSIC_ADAPTERS[tool.name];
+    if (!adapter)
         continue;
-    tool.description = 'Generate music with the selected provider. Configured production requires musicContext and routes through music_plan → music_execute. Do NOT use to inspect models — use music_catalog. ' + tool.description;
+    tool.description = adapter.purpose + ' For configured production, use music_plan → music_execute. Direct calls in that context require musicContext. ' + tool.description;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, musicContext: musicContextSchema };
     if (tool.name === 'suno_generate_sound')
         tool.description = 'Refused before submission: sunoapi.org documents no way to fetch a finished sounds task, so a billed sound could not be collected. Use music_catalog and explicitly select a supported V6 instrumental song instead. Does not automatically substitute models.';

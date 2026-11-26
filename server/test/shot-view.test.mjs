@@ -72,3 +72,13 @@ test('contradictory opening crop declarations fail before generation without tre
   const end = P.assemble(P.frameOptions({ shot: { size: 'cu' }, visual: { camera: { view, movement: 'dolly out', end: 'Full body, head to toe' } } }, 'end'));
   assert.match(end.prompt, /Full body/);
 });
+
+test('an opening view with an implicit subject type keeps the same crop in image and video requests', async () => {
+  const {shotVisualDirection} = await import('../dist/video-prompt.js');
+  const view = {subject:'Mina', reason:'Recognition', crop:'Centered against the door', mode:'front'};
+  const card = {shot:{size:'ms'}, visual:{character:['mina'],camera:{view}}};
+  assert.match(P.assemble(P.frameOptions(card)).prompt, /waist up/);
+  assert.match(shotVisualDirection(card).sizeWords, /waist up/);
+  view.subjectType = 'object';
+  for (const words of [P.assemble(P.frameOptions(card)).prompt, shotVisualDirection(card).sizeWords]) assert.doesNotMatch(words, /waist up/);
+});

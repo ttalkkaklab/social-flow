@@ -58,7 +58,7 @@ function seedanceSeries(model: unknown): '2.0' | '2.5' | undefined {
 export function promptGuidance(tool?: string, model?: unknown): PromptGuidance {
   const profile = scenePromptProfile(tool, model);
   // Distilled LTX takes MSR's subject references on its image route and in scene mode.
-  const page = tool === 'astra_genai_img2video' || tool === 'astra_genai_scene' ? pages.msr : profile.writer && pages[profile.writer];
+  const page = tool === 'astra_genai_img2video' || tool === 'astra_genai_scene' && model !== 'minimax-h3' ? pages.msr : profile.writer && pages[profile.writer];
   const series = profile.writer === 'seedance' ? seedanceSeries(model) : undefined;
   const note = series === '2.0' ? ' This series follows shot numbers and does not follow timestamps, so leave each shot\'s length to the model.'
     : series === '2.5' ? ' This series reads shot numbers and whole-second ranges.' : '';
@@ -126,6 +126,7 @@ const operations: Readonly<Partial<Record<string, ScenePromptProfile>>> = {
 };
 
 export function scenePromptProfile(tool?: string, model?: unknown): Readonly<ScenePromptProfile> {
+  if (tool === 'astra_genai_scene' && model === 'minimax-h3') return {...pictureTags, writer:'fastH3'};
   const profile = operations[tool ?? ''] ?? ordered;
   // Seedance 2.5 added the @ prefix for multimodal reference inputs.
   if (tool === 'seedance_reference' && typeof model === 'string' && model.startsWith('dreamina-seedance-2-5-'))

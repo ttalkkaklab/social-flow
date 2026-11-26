@@ -165,7 +165,7 @@ music.suno.V6_MINI	call	?	unconfirmed	suno_generate model V6_MINI — credit cos
 music.suno.V6_WILD	call	?	unconfirmed	suno_generate model V6_WILD — credit cost not confirmed (2026-10-31)
 music.suno-sound	call	?	unconfirmed	suno_generate_sound — refused before submission (2026-11-21); credit cost not on the public table
 music.suno-lyrics	call	?	unconfirmed	suno_generate_lyrics — credit cost not on the public table (2026-08-20)
-music.mlx	second	0.000	official	mlx_music_generate — MLX Core / mlx-serve on-device. Quantity is durationSeconds. Electricity only
+music.mlx	second	0.000	official	mlx_music_generate and music_stable_audio_generate on-device. Quantity is durationSeconds. Electricity only
 
 # ── Local video / 3D (MLX Core) ──────────────────────────────────
 # Same $0 ledger pattern as image.local — a missing key kills the report with exit 1.

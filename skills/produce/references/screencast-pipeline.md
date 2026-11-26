@@ -85,8 +85,11 @@ BG="#0b1020" $REF/build-screencast.sh .work   # → reel.mp4 (clean) · optional
 - After capturing overlays, confirm `window.__overflow === 0` via the `--dump-dom` capture (produce §4) or by eye
   (long titles auto-shrink through tight1–3, remainder exposed).
 - BGM is the same as produce §3 — copy the file that `resolve-asset.py data/<channel> bgm
-  default` returns, and only when there is none, generate a `music_generate` instrumental. It
-  sits under a live voice, which swings more than TTS, so the builder puts it 12 LU under the
+  default` returns to `.work/bgm.wav`. If a new bed is needed, look up the saved music model
+  with `music_catalog`, then call `music_plan` for an instrumental with `outputPath:".work"`
+  and `filename:"bgm.wav"`. Pass its `directory` and `planId` to `music_execute`. After an
+  interruption, look up the original `requestId` with `music_status`.
+  The bed sits under a live voice, which swings more than TTS, so the builder puts it 12 LU under the
   measured voice rather than the 10 a TTS episode gets (`BGM_SEP`). Cues aren't taken here — a
   screencast is one continuous take, so it gets one bed.
 - The outro is the **same shared asset** as the TTS pipeline

@@ -10,31 +10,38 @@
 import { z } from 'zod';
 import { execFileSync } from 'node:child_process';
 import { statSync } from 'node:fs';
+import sceneLimits from '../../skills/_shared/genai-scene-limits.json' with { type: 'json' };
 import path from 'node:path';
 import { bareFilenameSchema } from './media-utils.js';
 import { scenePromptTemplate } from './scene-prompt.js';
 /** Models the gateway runs in scene mode that this plugin plans for. */
-export const GENAI_SCENE_MODELS = ['ltx-2.5-22b-distilled'];
+export const GENAI_SCENE_MODELS = ['ltx-2.5-22b-distilled', 'minimax-h3'];
 /** LTX renders 8k+1 frames in 25..361. A scene renders the next count up and the extra frames belong to its last shot. */
 export const GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 };
-export const genaiSceneFrames = (frames) => Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
+const H3_FRAMES = { min: 124, max: 345, step: 17, offset: 5 };
+export function genaiSceneFrames(frames, model, holdToMinDuration = false) {
+    if (model === 'minimax-h3') {
+        const rounded = H3_FRAMES.step * Math.ceil(Math.max(0, frames - H3_FRAMES.offset) / H3_FRAMES.step) + H3_FRAMES.offset;
+        return holdToMinDuration ? Math.max(H3_FRAMES.min, rounded) : rounded;
+    }
+    return Math.max(GENAI_SCENE_FRAMES.min, GENAI_SCENE_FRAMES.step * Math.ceil((frames - 1) / GENAI_SCENE_FRAMES.step) + 1);
+}
 /** LTX MSR slots: four subjects, one background, and a voice on subjects 1 and 2. */
 const LIMITS = { subjects: 4, backgrounds: 1, voices: 2 };
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/, 'Use 1-64 characters of A-Z, a-z, 0-9, _ and -');
 const role = id.refine(value => !['voice', 'image'].includes(value), 'voice and image name other inputs');
 const file = z.string().min(1);
-const resolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/).refine(value => {
-    const [w, h] = value.split('x').map(Number), width = Math.ceil(w / 64) * 64, height = Math.ceil(h / 64) * 64;
-    return Math.min(w, h) >= 64 && w % 2 === 0 && h % 2 === 0 && Math.max(width, height) <= 1920 && width * height <= 2064384;
-}, 'Use even WIDTHxHEIGHT sides of at least 64; rounded-up /64 sides must fit 1920 and 2,064,384 pixels');
+export const h3InferenceSteps = z.number().int().min(8).max(50).describe('Number of MiniMax H3 sampling steps for this render. The gateway defaults to 50.');
+export const h3ReferenceImageShortEdge = z.number().int().min(256).max(2048).describe('Shorter side in pixels of each H3 reference picture before encoding. Omitting it keeps the model default of 2048.');
+const resolution = z.string().regex(/^[1-9]\d*x[1-9]\d*$/);
 export const genaiSceneSchema = z.object({
     model: z.enum(GENAI_SCENE_MODELS),
     prompt: z.string().min(1).max(16000).describe('The whole scene in one prompt. Name inputs with placeholders: {cast.role}, ' +
         '{cast.image} for a cast member with one picture, {cast.voice} and {reference.image}; write {{ and }} for literal braces. The gateway numbers them.'),
     cast: z.array(z.object({
-        id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(9),
+        id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
         voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
-    }).strict()).max(9).default([]),
+    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two referenced people').default([]),
     references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
     shots: z.array(z.object({
         id, frames: z.number().int().positive(),
@@ -43,31 +50,59 @@ export const genaiSceneSchema = z.object({
     }).strict()).min(1).max(8),
     resolution, fps: z.union([z.literal(24), z.literal(25), z.literal(48), z.literal(50)]).default(24),
     seed: z.number().int().min(0).max(2147483647).optional(),
+    referenceImageShortEdge: h3ReferenceImageShortEdge.optional(),
+    numInferenceSteps: h3InferenceSteps.optional(),
+    holdToMinDuration: z.boolean().optional().describe('Render an extra final hold when the H3 scene is shorter than the model minimum. The delivered clip has the original storyboard frame count.'),
     generateAudio: z.boolean().default(true).describe('false removes the generated soundtrack from the delivered clip.'),
     reserveUsd: z.number().finite().nonnegative(),
     outputPath: z.string().optional(),
     filename: bareFilenameSchema('video').refine(name => name.endsWith('.mp4'), 'Use an .mp4 filename').optional(),
 }).strict().superRefine((args, ctx) => {
     const issue = (message) => ctx.addIssue({ code: 'custom', message });
+    if ((args.referenceImageShortEdge !== undefined || args.numInferenceSteps !== undefined || args.holdToMinDuration) && args.model !== 'minimax-h3')
+        issue('H3 reference image and sampling settings require MiniMax H3');
     const ids = [...args.cast.map(m => m.id), ...args.references.map(r => r.id), ...args.shots.map(s => s.id)];
     if (new Set(ids).size !== ids.length)
         issue('Cast, reference and shot IDs share one namespace and must be distinct');
     for (const member of args.cast)
         if (new Set(member.images.map(i => i.role)).size !== member.images.length)
             issue(member.id + ': picture roles must be distinct');
-    const subjects = args.cast.reduce((n, m) => n + m.images.length, 0) + args.references.filter(r => r.role === 'object').length;
+    const characterImages = args.cast.reduce((n, m) => n + m.images.length, 0);
+    if (characterImages > sceneLimits.maxCharacterImages)
+        issue('scene_character_image_limit: select at most two character pictures across the scene; use one per person for a pair');
+    const subjects = characterImages + args.references.filter(r => r.role === 'object').length;
+    const [width, height] = args.resolution.split('x').map(Number);
+    if (args.model === 'minimax-h3') {
+        const pictures = characterImages + args.references.length + args.shots.filter(shot => shot.imagePath).length;
+        if (pictures < 1 || pictures > 9)
+            issue('H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.');
+        if (args.cast.filter(member => member.voicePath).length > 3)
+            issue('H3 scene mode takes three voices. Split the storyboard scene at a shot boundary.');
+        if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
+            issue('H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.');
+        const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
+        if (frames < H3_FRAMES.min || frames > H3_FRAMES.max)
+            issue('H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.');
+        if (args.shots.some(shot => shot.strength !== undefined && shot.strength !== 1))
+            issue('H3 shot pictures are untimed references and take no strength.');
+        return;
+    }
+    const roundedWidth = Math.ceil(width / 64) * 64, roundedHeight = Math.ceil(height / 64) * 64;
+    if (Math.min(width, height) < 64 || width % 2 || height % 2 || Math.max(roundedWidth, roundedHeight) > 1920 || roundedWidth * roundedHeight > 2064384)
+        issue('LTX needs even sides of at least 64, fitting 1920 and 2,064,384 pixels after rounding to multiples of 64.');
     if (subjects < 1 || subjects > LIMITS.subjects)
         issue(`LTX scene mode takes 1..${LIMITS.subjects} cast pictures and object references`);
     if (args.references.filter(r => r.role === 'background').length > LIMITS.backgrounds)
         issue('LTX scene mode takes one background');
     if (args.cast.filter(m => m.voicePath).length > LIMITS.voices)
         issue(`LTX scene mode takes ${LIMITS.voices} voices`);
-    if (genaiSceneFrames(sceneFrames(args)) > GENAI_SCENE_FRAMES.max)
+    if (genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration) > GENAI_SCENE_FRAMES.max)
         issue(`The scene runs past ${GENAI_SCENE_FRAMES.max} frames`);
 });
 /** LTX scene mode reads a voice sample after it reserves the job, so a sample it would refuse fails a reserved job. Check first. */
 export const GENAI_SCENE_VOICE_SECONDS = 10;
 export function checkSceneVoices(args) {
+    const limit = args.model === 'minimax-h3' ? 15 : GENAI_SCENE_VOICE_SECONDS;
     for (const member of args.cast) {
         if (!member.voicePath)
             continue;
@@ -81,14 +116,32 @@ export function checkSceneVoices(args) {
         catch { /* An unreadable sample is refused below. */ }
         if (!(seconds > 0))
             throw new Error('scene_voice_unreadable: ' + member.id + '\'s voice sample cannot be read');
-        if (seconds > GENAI_SCENE_VOICE_SECONDS)
-            throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds.toFixed(1)} s; GenAI scene mode takes at most ${GENAI_SCENE_VOICE_SECONDS} s and conditions on the first 5`);
+        if (seconds > limit)
+            throw new Error(`scene_voice_too_long: ${member.id}'s voice sample runs ${seconds.toFixed(1)} s; GenAI scene mode takes at most ${limit} s`);
     }
 }
 /** The frames the storyboard asks for; the clip is cut back to this after rendering. */
 export const sceneFrames = (args) => args.shots.reduce((sum, shot) => sum + shot.frames, 0);
 /** How the gateway numbers a scene on LTX: voiced subjects first, then the other subjects in cast order, then the background. */
 export function sceneLabels(args) {
+    if (args.model === 'minimax-h3') {
+        const labels = {};
+        let pictures = 0, voices = 0;
+        for (const member of args.cast) {
+            for (const image of member.images)
+                labels[member.id + '.' + image.role] = '<Picture ' + (++pictures) + '>';
+            if (member.images.length === 1)
+                labels[member.id + '.image'] = labels[member.id + '.' + member.images[0].role];
+            if (member.voicePath)
+                labels[member.id + '.voice'] = '<Audio ' + (++voices) + '>';
+        }
+        for (const ref of args.references)
+            labels[ref.id + '.image'] = '<Picture ' + (++pictures) + '>';
+        for (const shot of args.shots ?? [])
+            if (shot.imagePath)
+                labels[shot.id + '.image'] = '<Picture ' + (++pictures) + '>';
+        return labels;
+    }
     const subjects = [];
     for (const member of args.cast)
         member.images.forEach((image, index) => subjects.push({ key: member.id + '.' + image.role, ...(index === 0 && member.voicePath ? { voice: member.id + '.voice' } : {}) }));
@@ -121,6 +174,11 @@ export function resolveScenePrompt(prompt, labels) {
 /** The common body. `uri` turns a local file into the URI the request carries. */
 export function genaiSceneBody(args, uri) {
     const [width, height] = args.resolution.split('x').map(Number);
+    const tail = args.model === 'minimax-h3' && args.holdToMinDuration ? Math.max(0, H3_FRAMES.min - sceneFrames(args)) : 0;
+    const h3 = {
+        ...(args.referenceImageShortEdge === undefined ? {} : { reference_image_short_edge: args.referenceImageShortEdge }),
+        ...(args.numInferenceSteps === undefined ? {} : { num_inference_steps: args.numInferenceSteps }),
+    };
     return {
         kind: 'video', model: args.model, mode: 'scene',
         input: {
@@ -128,15 +186,17 @@ export function genaiSceneBody(args, uri) {
             cast: args.cast.map(member => ({ id: member.id, images: member.images.map(image => ({ role: image.role, uri: uri(image.imagePath, 'image') })),
                 ...(member.voicePath ? { voice: { uri: uri(member.voicePath, 'audio') } } : {}) })),
             references: args.references.map(ref => ({ id: ref.id, role: ref.role, uri: uri(ref.imagePath, 'image') })),
-            shots: args.shots.map(shot => ({ id: shot.id, seconds: shot.frames / args.fps,
+            shots: args.shots.map((shot, index) => ({ id: shot.id, seconds: (shot.frames + (index === args.shots.length - 1 ? tail : 0)) / args.fps,
                 ...(shot.imagePath ? { image: { uri: uri(shot.imagePath, 'image'), ...(shot.strength === undefined ? {} : { strength: shot.strength }) } } : {}) })),
         },
-        parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }) },
+        parameters: { width, height, fps: args.fps, ...(args.seed === undefined ? {} : { seed: args.seed }),
+            ...(Object.keys(h3).length ? { model_options: { h3 } } : {}) },
     };
 }
 /** `POST /v1/generations/validate`: what the gateway compiles the scene to. */
 export const sceneValidationSchema = z.object({
     resolved: z.object({ num_frames: z.number().int(), prompt: z.string(), labels: z.record(z.string()),
+        reference_image_short_edge: z.number().int().optional(),
         shots: z.array(z.object({ id: z.string(), start_frame: z.number().int() }).passthrough()) }).passthrough(),
     warnings: z.array(z.object({ code: z.string() }).passthrough()).default([]),
 });
@@ -148,11 +208,14 @@ export function checkSceneValidation(args, result) {
     const starts = args.shots.map(shot => { const at = start; start += shot.frames; return { id: shot.id, start_frame: at }; });
     if (resolved.prompt !== expected)
         throw new Error('genai_scene_labels: the gateway numbers this scene differently from the plan');
-    if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args)))
-        throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args)));
+    if (resolved.num_frames !== genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration))
+        throw new Error('genai_scene_frames: the gateway renders ' + resolved.num_frames + ' frames; the plan expects ' + genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration));
     if (JSON.stringify(resolved.shots.map(s => ({ id: s.id, start_frame: s.start_frame }))) !== JSON.stringify(starts))
         throw new Error('genai_scene_cuts: the gateway places the shots at other frames than the plan');
-    return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings };
+    if (args.referenceImageShortEdge !== undefined && resolved.reference_image_short_edge !== args.referenceImageShortEdge)
+        throw new Error('genai_scene_reference_size: the gateway did not confirm the requested H3 reference image size');
+    return { prompt: resolved.prompt, numFrames: resolved.num_frames, labels: resolved.labels, warnings,
+        ...(args.referenceImageShortEdge === undefined ? {} : { referenceImageShortEdge: args.referenceImageShortEdge }) };
 }
 /** Turn the planner's numbered request into scene arguments. The numbers become placeholders named after the
  * cast member and picture role they point at, so the request no longer depends on the order it was composed in. */

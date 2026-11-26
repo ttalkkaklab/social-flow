@@ -187,9 +187,9 @@ screen. But text left to a generative model produces typos and near-glyphs
 
 ## 7. Sonic logo — a channel asset
 
-Three beats: **rise → impact (logo hit) → tail (decay)**, 2–5s. Generate with
-`music_generate_clip` (Lyria), reflecting the concept's emotional register in
-the prompt:
+Aim for 2–5 seconds with three beats, **rise → impact (logo hit) → tail (decay)**.
+For a new sting, use `music_plan` and `music_execute` with the channel's saved
+music model. Describe the concept's mood in the prompt. For example,
 
 > "A 2.5-second sonic logo: soft rising synth swell, one warm confident
 > impact, short airy decay. Clean, modern, memorable. No vocals."

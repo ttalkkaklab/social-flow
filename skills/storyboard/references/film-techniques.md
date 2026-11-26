@@ -17,7 +17,7 @@ as one sentence ("… slows almost to a stop at the moment the kick lands …").
 `shot_icons accents`. A hero landing needs no entry of its own: `camera.static`, angle `ground` and an
 impact shake on the landing. A 360° stand-off is `camera.arc` with what changes during the turn.
 
-A camera entry with a movement also carries `prompt`, the verb phrase `shot_prompt` writes after
+A camera entry with a movement also carries `prompt`, the verb phrase `video_plan` writes after
 "The camera" in the video model's documented camera words — pushes in, pulls back, pans, tilts
 upward, static frame — with the pace and target `shot_icons` recorded ("The camera slowly pushes in
 toward Mina, settling on …").
@@ -35,7 +35,7 @@ for each beat before choosing entries. Do not copy its static choice into unrela
     "angle": "eye",
     "techniques": [
       {"id":"camera.static","reason":"Hold the spatial relationship while the witness enters."},
-      {"id":"camera.rack-focus","reason":"Reveal the witness behind the envelope without changing viewpoint.","from":"the envelope","to":"the witness"},
+      {"id":"camera.rack-focus","reason":"Reveal the witness behind the envelope without changing viewpoint.","from":"the envelope","to":"the witness","on":"the witness stops"},
       {"id":"framing.ms","reason":"Keep the envelope, hands and face visible."},
       {"id":"timing.action","reason":"Allow the witness to enter, stop and become sharp."},
       {"id":"character.face","reason":"Match the witness to the shared neutral face."}
@@ -46,15 +46,15 @@ for each beat before choosing entries. Do not copy its static choice into unrela
       "movement":"static",
       "speed":"",
       "framing":"Waist-up foreground speaker with an envelope, witness beyond the right shoulder.",
-      "end":"After the witness stops, shift focus over two seconds from the foreground envelope to the witness beyond the right shoulder. Camera stays fixed; the envelope becomes soft."
+      "end":"The witness remains beyond the speaker’s right shoulder."
     }
   }
 }
 ```
 
-This fragment belongs inside a complete shot replacement; preserve unrelated fields. The four camera fields remain executable direction. Reasons are review context and are not emitted into provider prompts. A rack focus's `from` and `to` are: `shot_image` stages both at different distances with `from` sharp in the start image and `to` sharp in the end image, and `shot_prompt` writes "Rack focus from … to …"; put the action cue or timing into `framing`/`end`. A technique ID provides precise shared meaning; it does not invent actor positions, focus endpoints, speed or the final crop. `techniqueFindings` reports contradictory choices as advice. Unknown IDs, duplicates and missing reasons are malformed inputs. Existing boards without selections remain readable.
+Set the focus pull's initial subject, destination and trigger in `focus.from`, `focus.to` and `focus.on`. Set camera travel and its landing on the camera. The board records the intention and the video request compiles these cues from the current attributes. Existing boards can still carry opening and closing prose.
 
-Select frame size separately from actor count: a two-shot can be MS, MFS or LS. MS is waist-up; MFS ends at mid-thigh; the big close-up (`choker`) runs forehead to chin. Size is the distance: `two`, `three`, `ots`, `pov`, `back`, `cutaway` and `reaction` name a composition with no crop of its own, so a new board picks the distance and carries the composition in the cast, `camera.pov`, `camera.rear` or the camera framing. End-framing changes belong in `camera.end`, not a second starting-size selection. Static plus rack focus is valid. Static plus dolly in is contradictory. Snorricam needs body mounting and a fixed face; ordinary handheld sway is different. Dolly in changes viewpoint, zoom in changes field of view, and a dolly zoom coordinates both to hold the subject's screen size.
+Select frame size separately from actor count: a two-shot can be MS, MFS or LS. MS is waist-up; MFS ends at mid-thigh; the big close-up (`choker`) runs forehead to chin. Size records the subject’s scale in frame. Legacy values `two`, `three`, `ots`, `pov`, `back`, `cutaway` and `reaction` name a composition with no crop of its own, so a new board picks the distance and carries the arrangement in `arrangement`, the viewpoint in `view.mode`, and the editorial function in `cutRole`. End-framing changes belong in `camera.end`, not a second starting-size selection. Static plus rack focus is valid. Static plus dolly in is contradictory. Snorricam needs body mounting and a fixed face; ordinary handheld sway is different. Dolly in changes viewpoint, zoom in changes field of view, and a dolly zoom coordinates both to hold the subject's screen size.
 
 Character icons identify reference intent, not proof that an image was submitted. Use headless front/back mannequin references and one neutral face close-up. Restore the complete head in scene images; keep rear-hair details as optional separate references. Check actual reference paths and source images before generation.
 

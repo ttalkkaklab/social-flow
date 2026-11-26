@@ -224,7 +224,7 @@ What the route means in the plan:
   resolution and scale onto the 1080p canvas, and the approval page shows the ceiling beside
   the slot. A cut that needs 1080p pixels, 4K, a local-file extension or a Seedance
   asset-library character writes that reason and takes the API engine.
-- One clip is one call, the same source PNG and the same stored prompt as any other engine.
+- A scene request uses the current shot attributes, the selected model’s prompt format and its accepted source media.
   The prompt reads as plain English with no timecodes and no negative directives; exclusions go in as positive description,
   the way the Seedance lock does it. A speech clip on `reference_to_video` names a preset
   voice; the channel's fixed voice still comes from TTS.
@@ -488,7 +488,7 @@ data/<channel>/assets/characters/<id>/
 
 **Reference set: the registered face, front and back panels, in that order.** One character
 sends all three; two characters send each face, then each front (`character-panels.js`
-`canonicalReferences`, the same set on the image and video lanes). The face supplies the complete
+`canonicalReferences`, the still-image layout). The face supplies the complete
 head. The headless panels supply the build. Match the wardrobe in the opening
 picture, especially when the sheet uses fitting clothes. A missing panel is reported (`character_panel_missing`), never replaced by a body-only
 picture.
@@ -520,7 +520,7 @@ trousers sew themselves back up a beat later). Generate a second sheet for the c
 the other way for a flashback: age the character, the location and the props together, or the
 flashback reads as a costume instead of a memory.
 
-**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. With ASTRA GenAI MSR, the single-character layout can use its face close-up and headless front and back panels. For three or four characters the layout uses one face per subject. The image adapter's edit tool takes the same authored panel order.
+**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. Production GenAI scenes use a face and body for one character or one face per person for a pair. Split before a third identity enters. Still-image composition keeps the sheet layout above.
 
 ---
 

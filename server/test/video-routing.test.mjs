@@ -19,6 +19,7 @@ import { manageSpeech } from '../dist/speech.js';
 import { config } from '../dist/config.js';
 import { refreshGenaiVideoCatalog } from '../dist/astra-genai-video.js';
 import { dispatchVideo, ROUTES } from '../dist/handlers.js';
+import {readBoard} from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { astraGenaiBaseUrl } from '../dist/astra-genai-client.js';
 import { genaiSceneFrames, resolveScenePrompt, sceneLabels } from '../dist/genai-scene.js';
@@ -72,7 +73,7 @@ function fixture(t, video = selection, auth = {}) {
  settings.snapshotSettings(root,episode);
  approveVideo({episode,auto:true,request:'Fixture: approve every shot'});
  fs.writeFileSync(path.join(episode,'storyboard/opening.png'),png);
- const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,maxAttempts:3,...auth}},
+ const board = {PRODUCTION:{videoAuthorization:{reference:'Explicit fixture spending instruction',maxUsd:10,maxConcurrent:3,...auth}},
    SCENES:['s1','s2'].map(id=>({id,visual:{frames:{mode:'first',start:'opening.png'},video:{...video,prompt:'A boat crosses a lake.'}}}))};
  const save = () => {
    for (const [index, card] of board.SCENES.entries()) card.scene ??= index + 1;
@@ -200,14 +201,18 @@ test('three speaking subjects exceed one distilled MSR render, including an unin
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest','friend']);
  const input={episode:f.episode,sceneNo:1,requestId:'three-voices',args:{reserveUsd:0}};
  const check=()=>planVideo(input);
- assert.throws(check,/scene_render_voice_limit:.*3 pinned voices.*accepts 2.*split/i);
+ // All three faces are explicitly bound at the opening, even though the third line arrives later.
+ assert.throws(check, e => e.report?.shotId === 's1' && !e.report.splitBefore.length);
+ f.board.STRUCTURE.scenes[0].videoDirection.openingPositions.pop();
+ f.save();
+ assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.join() === 's3');
  const [shot]=f.board.SCENES;
  shot.narration=f.board.SCENES.flatMap(card=>card.narration);
  shot.duration=169/24;
  f.board.SCENES=[shot];
  f.board.STRUCTURE.scenes[0].videoDirection.oneTake=true;
  f.save();
- assert.throws(check,/scene_render_voice_limit:.*3 pinned voices.*accepts 2.*one.take/i);
+ assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.length === 0 && /one-take/.test(e.message));
  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
 });
 test('remuxing the same recording cannot authorize a second speaker',async t=>{
@@ -241,8 +246,8 @@ test('planning compiles camera direction and refuses a caller replacing the scen
  f.board.SCENES[0].visual.video.prompt='The camera pulls back.';
  f.save();
  const legacy=planVideo({episode:f.episode,sceneNo:1,requestId:'legacy',operation:'image'});
- assert.match(legacy.directionWarnings.join(),/camera_move_contradicted/);
- assert.ok(legacy.args.prompt.startsWith('The camera pulls back.'));
+ assert.match(legacy.args.prompt,/slowly pushes in toward the boat/);
+ assert.doesNotMatch(legacy.args.prompt + legacy.sourcePrompt,/pulls back/);
  assert.deepEqual(own('own-b').directionWarnings,[]);
  f.board.SCENES[0].visual.video.promptSource={action:'A boat crosses the lake.'};
  f.board.SCENES[0].visual.camera={movement:'static'}; f.save();
@@ -250,7 +255,7 @@ test('planning compiles camera direction and refuses a caller replacing the scen
  assert.match(after.args.prompt,/holds a static frame/);
  assert.doesNotMatch(after.args.prompt,/Old camera|pushes in/);
  assert.equal(after.directionBindings.find(b=>b.attribute==='move').via,'prompt');
- assert.throws(()=>f.plan('raw-shots',{shots:[{description:'A different scene.'}]}),/Unsupported seedance_img2video argument: shots/);
+ assert.throws(()=>f.plan('raw-shots',{shots:[{description:'A different scene.'}]}),/scene_split_required/);
 });
 test('snapshot wins over current defaults; explicit shot replaces episode override', t=>{
  const f=fixture(t); const current=settings.readSettings(f.root);
@@ -321,12 +326,10 @@ test('a signed historical plan without a speaker route cannot be approved or dis
  await assert.rejects(executeVideo({episode:f.episode,planId:id},()=>assert.fail('historical plan dispatched')),/video_plan_stale/);
  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/state.json')),false);
 });
-test('budget and attempts gate before dispatch and include prior successful reservations',async t=>{
- const f=fixture(t,selection,{maxUsd:1.5,maxAttempts:2});let calls=0;
+test('budget gates before dispatch and includes prior successful reservations',async t=>{
+ const f=fixture(t,selection,{maxUsd:1.5});let calls=0;
  await f.execute(f.plan(),async()=>{calls++;return result;});
  await assert.rejects(f.execute(f.plan('b'),async()=>{calls++;return result;}),/budget/);assert.equal(calls,1);
- f.board.PRODUCTION.videoAuthorization.maxUsd=10;f.board.PRODUCTION.videoAuthorization.maxAttempts=1;f.save();
- await assert.rejects(f.execute(f.plan('c'),async()=>result),/attempt/);
 });
 test('off-screen-only Seedance dialogue keeps the supplied voice outside the picture', t => {
  const f=fixture(t,{...selection,operation:'reference'}), shot=f.board.SCENES[0];
@@ -348,22 +351,32 @@ test('off-screen-only Seedance dialogue keeps the supplied voice outside the pic
  assert.throws(()=>planVideo(input),/scene_speech_route/);
 });
 
-test('overlapping scene and shot requests share the member attempt limit', async t => {
- for (const sceneFirst of [false,true]) {
-  const f=fixture(t,selection,{maxAttempts:1});
-  f.board.STRUCTURE={scenes:[{no:1,videoDirection:{openingPositions:[],emotion:'The lake is calm.'}}]};
-  fs.writeFileSync(path.join(f.episode,'storyboard','lake.png'),png);
-  for (const shot of f.board.SCENES) {
-   shot.scene=shot.id === 's2' ? 1 : 2; shot.duration=4;
-   shot.visual.frames={mode:'first',start:'lake.png'};
-   shot.visual.video.prompt='The lake is calm.';
-  }
-  f.save();
-  const make = target => planVideo({episode:f.episode,operation:'image',args:{generateAudio:false},...target});
-  const scene=make({sceneNo:1,requestId:'lake-scene'}), shot=make({sceneNo:1,requestId:'second-scene-attempt'});
-  await f.execute(sceneFirst ? scene : shot,async()=>result);
-  await assert.rejects(f.execute(sceneFirst ? shot : scene,async()=>assert.fail('limit bypassed')),/video_attempt_limit: s2/);
+test('five attempts belong to the scene number across revisions and shot moves', async t => {
+ const f = fixture(t, selection, { maxUsd: 50, maxAttempts: 1 });
+ const first = f.plan('take-1');
+ await f.execute(first, async () => ({ isError: true, terminal: true, content: [{ type: 'text', text: 'Provider failed' }] }));
+ assert.equal(f.state().jobs['take-1'].status, 'failed');
+
+ const historical = saveHistoricalPlan(f.episode, first, plan => {
+  delete plan.sceneNo;
+  delete plan.shotIds;
+  plan.requestId = 'shot-only';
+  plan.args.filename = 'shot-only.mp4';
+ });
+ const state = f.state();
+ state.jobs['shot-only'] = { ...state.jobs['take-1'], requestId: 'shot-only', planId: historical };
+ fs.writeFileSync(path.join(f.episode, '.work/video-routing/state.json'), JSON.stringify(state));
+
+ for (let attempt = 2; attempt <= 5; attempt++) {
+  await f.execute(f.plan('take-' + attempt), async () => result);
  }
+ const [firstShot, secondShot] = f.board.SCENES;
+ [firstShot.scene, secondShot.scene] = [2, 1];
+ f.save();
+ await assert.rejects(f.execute(f.plan('sixth', {}, secondShot.id), async () => assert.fail('sixth attempt dispatched')),
+  /video_attempt_limit: scene 1/);
+ await f.execute(f.plan('other-scene', {}, firstShot.id), async () => result);
+ assert.equal(f.state().jobs['other-scene'].status, 'completed');
 });
 test('concurrent execution reserves once; duplicate in-flight call never dispatches',async t=>{
  const f=fixture(t,selection,{maxConcurrent:1});let release;const wait=new Promise(r=>release=r);let calls=0;const p=f.plan();
@@ -861,7 +874,7 @@ test('a GenAI reference project plans silent and thought shots as scenes on thei
  shot.visual.frames={mode:'reference',start:'../opening.png'};
  shot.visual.video.promptSource={action:'The character notices the open door.'};
  f.board.SB_DOC={characters:[{id:'hero',tts:{engine:'gemini',voiceId:'Kore',language:'ko',speed:1}}]};
- const plan=(generateAudio)=>planVideo({episode:f.episode,sceneNo:1,requestId:'thought',args:{duration:5,reserveUsd:0.25,generateAudio}});
+ const plan=(generateAudio)=>planVideo({episode:f.episode,sceneNo:1,requestId:'thought',args:{duration:5,reserveUsd:0.25,generateAudio}},false);
  for(const narration of [[],[{id:'l1',speaker:'hero',delivery:'voiceover',tts:'A secret thought.'}]]) {
   shot.narration=narration;
   shot.performance=narration.length ? undefined : [{kind:'action',character:'hero',text:'Glances toward the open door.',durationSeconds:1}];
@@ -1280,7 +1293,8 @@ test('Google Cloud Veo uses saved settings, model-specific budgets, voice policy
   assert.equal(plan.tool, 'veo_img2video');
   assert.equal(plan.args.aspectRatio, '9:16');
   assert.equal(plan.quote.reserveUsd, 0.8);
-  assert.equal(f.plan('quiet', { generateAudio: false }).quote.reserveUsd, 0.64);
+  assert.throws(() => f.plan('quiet', { generateAudio: false }), /scene_prompt_mismatch/);
+  assert.equal(planVideo({episode:f.episode,sceneNo:1,requestId:'estimate',args:{durationSeconds:8,generateAudio:false}},false).quote.reserveUsd,0.64);
   f.board.SCENES[0].narration = [{ speaker:'hero', delivery:'on_screen', tts:'Hello' }];
   f.save();
   assert.throws(() => f.plan('spoken'), /scene_speech_route|Unsupported Veo operation/);
@@ -1924,48 +1938,29 @@ test('a guide on the first shot of a silent GenAI scene leaves the request uncha
   assert.ok(plan.directionWarnings.some(message => message.startsWith('shot_reference_omitted: ' + guide.shotId)));
 });
 
-test('a GenAI scene sends four silent subjects and one background, names the ending it leaves out and refuses a fifth person', t => {
-  const f=fixture(t,{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'});
-  const directory=path.join(f.episode,'storyboard');
-  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','testsrc=size=64x64:rate=1',
-    '-frames:v','8',path.join(directory,'source-%d.png')]);
-  const characters=['ada','bo','cy','dan','eve'].map((id,i)=>({id,panels:{face:'source-'+(i+1)+'.png'}}));
-  const [ada,bo,cy,dan,eve]=characters;
-  const subject=actor=>({id:actor.id+'-face',role:'character',character:actor.id,path:actor.panels.face,
-    use:'video',purpose:'Preserve the face of '+actor.id+'.'});
-  const position=actor=>({character:actor.id,images:[],position:'Standing by the door.'});
-  const frames={start:'source-6.png',end:'source-7.png'}, background='source-8.png';
-  const scene={no:1,speakers:[],frames,speakerReferences:[ada,bo].map(actor=>({character:actor.id,path:actor.panels.face})),
-    videoDirection:{openingPositions:characters.slice(0,4).map(position),emotion:'The visitors relax.'}};
-  const shot={id:'s1',scene:1,duration:121/24,narration:[],visual:{character:characters.slice(0,4).map(actor=>actor.id),
-    references:[subject(cy),{id:'hall',role:'background',path:background,use:'video',purpose:'Keep the tiled hall.'}]},
-    timeline:{startFrame:0,endFrame:121,transition:'open',framing:'Wide shot.',action:'The visitors enter the hall.',
-      images:[{frame:0,path:dan.panels.face,role:'face',character:dan.id}]}};
-  f.board.SCENES=[shot];
-  f.board.STRUCTURE={scenes:[scene]};
-  f.board.SB_DOC={characters};
-  f.save();
-  const input={episode:f.episode,sceneNo:1,requestId:'crowd',args:{reserveUsd:0}};
-  // Scene mode opens the shot on one picture and has no slot for the scene's ending, so the plan names the picture it leaves out.
-  assert.ok(planVideo(input,false).directionWarnings.includes('scene_picture_omitted: s1 end picture at frame 120 is not sent; scene mode opens each shot on one picture and the model plays the rest of the shot'));
-  delete frames.end;
-  f.save();
-  const plan=planVideo(input);
-  assert.equal(plan.tool,'astra_genai_scene');
-  assert.equal(plan.args.shots[0].imagePath,path.join(directory,frames.start));
-  assert.deepEqual(plan.args.references.map(ref=>[ref.role,ref.imagePath]),[['background',path.join(directory,background)]]);
-  const labels=sceneLabels(plan.args), prompt=numbered(plan);
-  for (const actor of [ada,bo,cy,dan]) {
-    const member=plan.args.cast.find(person=>person.id===actor.id);
-    assert.deepEqual(member.images.map(image=>image.imagePath),[path.join(directory,actor.panels.face)]);
-    assert.ok(prompt.includes(actor.id+' ('+labels[actor.id+'.'+member.images[0].role]+')'),actor.id);
-  }
-  shot.visual.character.push(eve.id);
-  shot.visual.references.push(subject(eve));
-  scene.videoDirection.openingPositions.push(position(eve));
-  f.save();
-  assert.throws(()=>planVideo(input),/scene_cast_exceeded: scene 1 references ada, bo, cy, dan, eve/);
-  assert.deepEqual(fs.readdirSync(path.join(f.episode,'.work/video-routing/plans')),[plan.id+'.json']);
+test('GenAI counts a silent bystander only when their identity is sent to video, including a timeline face', t => {
+  const f = fixture(t, {engine:'astra-genai', model:'ltx-2.5-22b-distilled', resolution:'576x1024'});
+  const dir = path.join(f.episode, 'storyboard');
+  const ids = ['ada','bo','cy'];
+  for (const file of [...ids, 'end', 'hall']) fs.writeFileSync(path.join(dir,file+'.png'),png);
+  f.board.SB_DOC = {characters:ids.map(id => ({id, panels:{face:id+'.png'}}))};
+  f.board.STRUCTURE = {scenes:[{no:1, speakers:[], frames:{start:'opening.png',end:'end.png'},
+    speakerReferences:ids.slice(0,2).map(character => ({character,path:character+'.png'})),
+    videoDirection:{openingPositions:ids.map(character => ({character,images:[],position:'By the door.'})),emotion:'They relax.'}}]};
+  const shot = {id:'s0001', scene:1, duration:121/24, narration:[],
+    visual:{character:ids.slice(0,2), bystanders:['cy'], references:[
+      {id:'cy-face',character:'cy',role:'bystander',use:'image',path:'cy.png',purpose:'Draw the witness.'},
+      {id:'hall',role:'background',use:'video',path:'hall.png',purpose:'Keep the tiled hall.'}]},
+    timeline:{startFrame:0,endFrame:121,transition:'open',framing:'Wide shot.',action:'The visitors enter.',images:[]}};
+  f.board.SCENES = [shot]; f.save();
+  const input = {episode:f.episode,sceneNo:1,requestId:'silent-refs',args:{reserveUsd:0}};
+  const plan = planVideo(input,false);
+  assert.deepEqual(plan.args.cast.map(person => person.id),['ada','bo']);
+  assert.deepEqual(plan.args.references.map(ref => ref.role),['background']);
+  assert.ok(plan.directionWarnings.some(warning => warning.startsWith('scene_picture_omitted: s0001 end')));
+  shot.timeline.images.push({frame:0,path:'cy.png',role:'face',character:'cy'}); f.save();
+  assert.throws(() => planVideo(input,false), error => error.report?.shotId === shot.id &&
+    error.report.characters.join() === 'ada,bo,cy' && !error.report.splitBefore.length);
 });
 
 test('a GenAI scene sends one cast for the people of all its shots, by the panel rule for that count', t => {
@@ -1989,13 +1984,13 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
   }
   f.save();
   const plan = planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false);
-  // Two people take each face, then each front; the backs are left out and named.
+  // Each person gets one face. The plan identifies the omitted body panels.
   assert.deepEqual(plan.args.cast.map(member => [member.id, member.images.map(image => path.basename(image.imagePath))]),
-    [['hero', ['face.png', 'front.png']], ['guest', ['face.png', 'front.png']]]);
+    [['hero', ['face.png']], ['guest', ['face.png']]]);
   assert.deepEqual(plan.directionWarnings.filter(warning => warning.startsWith('scene_reference_omitted')).map(warning => warning.split(' ').slice(1, 3).join(' ')),
-    ['s0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'back')]);
+    ['s0 ' + panel('hero', 'front'), 's0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'front'), 's1 ' + panel('guest', 'back')]);
   // The person who enters later still has an opening row, so the gateway is told where they start.
-  assert.match(plan.args.prompt, /guest \(\{guest\.face\}, \{guest\.front\}\): Not in the opening view; appears in a later shot\./);
+  assert.match(plan.args.prompt, /guest \(\{guest\.(?:face|image)\}\): Not in the opening view; appears in a later shot\./);
   // Over the cap the scene is composed again with fewer optional words, in a fixed order: design notes and expressions
   // go, the action and lines stay, and the plan says what was left out.
   const host = f.board.SCENES[0].visual;
@@ -2008,7 +2003,7 @@ test('a GenAI scene sends one cast for the people of all its shots, by the panel
   assert.doesNotMatch(fitted.args.prompt, /hall lamp|brows raised/);
   assert.match(fitted.args.prompt, /The host waits\.[\s\S]*The guest steps in\./);
   // The short panel sentence keeps every reference name whole, so the gateway's numbering still reaches it.
-  assert.match(fitted.args.prompt, /\{hero\.face\} \(face\), \{hero\.front\} \(headless front body\): one person, hero\./);
+  assert.match(fitted.args.prompt, /\{hero\.(?:face|image)\}/);
   // The gateway caps the numbered prompt; a scene still longer at the last step is refused before any file is uploaded.
   f.board.SCENES[1].visual.action = 'The guest steps in. '.repeat(100).trim();
   f.save();
@@ -2151,6 +2146,10 @@ test('an authored scene prompt names its references and takes the numbers the ga
  assert.equal(numbered(compiled),compiled.sceneRequest.prompt);
  // The author's sentences go out as written after the opening positions this lane always states; only the names change.
  const own='{hero.face} waits by the left door and says with {hero.voice}, "You came." {guest.image} answers with {guest.voice}, "I stayed."';
+ assert.throws(()=>planVideo({...input,args:{...input.args,shots:[{id:'s1'}]}}),/scene_split_required/);
+ assert.throws(()=>planVideo({...input,prompt:own}),/scene_prompt_mismatch/);
+ f.board.STRUCTURE.scenes[0].videoDirection.prompt=own;
+ f.save();
  const authored=planVideo({...input,prompt:own});
  const body='Image 1 waits by the left door and says with Audio 1, "You came." Image 2 answers with Audio 2, "I stayed."';
  assert.ok(authored.sceneRequest.prompt.startsWith('Opening frame') && authored.sceneRequest.prompt.endsWith('\n\n'+body));
@@ -2169,6 +2168,8 @@ test('an authored scene prompt names its references and takes the numbers the ga
  let sent;
  await f.execute(authored,async(tool,args)=>{sent=args.prompt;return result;});
  assert.equal(sent,authored.args.prompt);
+ delete f.board.STRUCTURE.scenes[0].videoDirection.prompt;
+ f.save();
  // The author can retrieve the original edit. Scene mode sends the author's white space as written, so none is reported as normalized.
  const spaced=' \n'+own.replace(' waits','  waits\n')+'  \n';
  const normalized=planVideo({...input,prompt:spaced},false);
@@ -2200,7 +2201,69 @@ test('an authored scene prompt names its references and takes the numbers the ga
  assert.deepEqual([again.args.prompt,again.promptIssues],[compiled.args.prompt,undefined]);
 });
 
-test('storyboard edits are scoped to the selected scene model and operation', async t => {
+test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned voices', async t => {
+ const f=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'astra-genai',model:'minimax-h3',resolution:'288x512'},[72,72]);
+ f.board.SCENES[1].referenceImage='guest.png';
+ const direction=f.board.STRUCTURE.scenes[0].videoDirection;
+ direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\n{guest.face} speaks in the voice of {guest.voice}: "I stayed."';
+ f.save();
+ const input={episode:f.episode,sceneNo:1,requestId:'first-take',maxCostUsd:0};
+ const p=planVideo(input);
+ assert.equal(p.args.prompt,direction.prompt);
+ assert.deepEqual(p.args.shots.map(s=>s.id),p.shotIds);
+ assert.ok(p.args.shots.every(s=>s.imagePath));
+ assert.deepEqual(p.args.cast.map(c=>c.id),['hero','guest']);
+ assert.ok(p.args.cast.every(c=>c.voicePath.endsWith('-32000.wav')));
+ assert.equal(p.args.outputPath, path.join(f.episode, 'storyboard/video'));
+ const candidate = planVideo({...input, args:{outputPath:'output/candidates'}}, false);
+ assert.equal(candidate.args.outputPath, path.join(f.episode, 'output/candidates'));
+ assert.throws(() => planVideo({...input, args:{outputPath:path.join(f.root, 'output')}}, false),
+   /Video output must stay inside the selected episode/);
+ assert.equal(planVideo({...input,requestId:'second-take'}).args.prompt,p.args.prompt);
+ assert.throws(()=>planVideo({...input,requestId:'suffix',prompt:'Only the second shot.'}),/scene_prompt_mismatch/);
+ const second = f.board.SCENES[1];
+ second.visual.frames = {storyboardKeyframes:[{file:'opening.png',startFrame:90}]};
+ f.save();
+ assert.throws(() => planVideo(input, false), /scene_inputs_unsupported/);
+ delete second.visual.frames;
+ direction.prompt += '\n문이 열린다.';
+ f.save();
+ assert.throws(() => planVideo(input, false), /video_prompt_language/);
+ direction.prompt = p.args.prompt;
+ direction.dialogueVoice = 'model_generated';
+ f.save();
+ assert.throws(() => planVideo(input, false), /voice_lane_required/);
+});
+
+test('a video request composes scene rules, shot choices and beat triggers from the current board', async t => {
+  const f = await pinnedSpeakerScene(t, 'reference');
+  const [a, b] = f.board.SCENES, owner = f.board.STRUCTURE.scenes[0];
+  owner.directionDefaults = {camera:'camera.static',cameraPolicy:'Move only after the latch opens.',
+    lighting:'Amber window light.',axis:'Keep the door on screen left.',attention:'Withhold the seal until the reveal.',
+    continuity:'The letter stays on the table.',depthPolicy:'Keep the doorway legible.',lensPolicy:'Use spherical lenses.',soundPerspective:'full'};
+  a.shot = {...a.shot,size:'ms',angle:'eye',arrangement:'two',cutRole:'reaction',depth:{mode:'shallow',focus:'both eyes on the same plane',reads:2},
+    techniques:[{id:'camera.rack-focus',from:'the latch',to:'the seal',on:'the bell rings'}],videoDesign:{continuity:'The envelope is open.'}};
+  a.visual.camera = {...a.visual.camera,movement:'dolly in',target:'the envelope',cue:'the latch opens',lensMm:50,fStop:2,focusDistanceM:1.5};
+  a.sound = {...a.sound,perspective:'near',diegetic:'A hinge creaks.'};
+  b.visual.video = {...b.visual.video,prompt:'Obsolete rainstorm.',promptSource:{action:'Obsolete stage action.'}};
+  f.save();
+  const input = {episode:f.episode,sceneNo:1,requestId:'attributes',wholeScene:true,args:{reserveUsd:0}};
+  const request = planVideo(input,false);
+  const body = request.args.prompt, [first,second] = request.sceneRequest.shots;
+  for (const word of ['latch opens','Amber window light','door on screen left','Withhold the seal','letter stays','doorway legible',
+    'spherical lenses','two-shot','reaction shot','50 mm lens','f/2','1.5 m','bell rings','the latch to the seal','envelope is open',
+    'hinge creaks','same plane','close to the subject','whole room']) assert.ok(body.toLowerCase().includes(word.toLowerCase()),word);
+  assert.doesNotMatch(body,/Obsolete/);
+  assert.match(first.sound,/close to the subject/);
+  assert.match(second.sound,/whole room/);
+  assert.doesNotMatch(second.framing,/bell rings|envelope is open|50 mm/);
+  a.visual.camera.lensMm = 35;
+  f.save();
+  assert.match(planVideo(input,false).args.prompt,/35 mm lens/);
+  assert.doesNotMatch(planVideo(input,false).args.prompt,/50 mm lens/);
+});
+
+test('archived drafts cannot override attributes and production uses the current storyboard prompt', async t => {
   const f = await pinnedSpeakerScene(t,'reference');
   const input = {episode:f.episode, sceneNo:1, requestId:'whole-storyboard', wholeScene:true, args:{reserveUsd:0}};
   const preview = planVideo(input, false);
@@ -2213,7 +2276,10 @@ test('storyboard edits are scoped to the selected scene model and operation', as
   assert.equal(planVideo(input, false).args.prompt, preview.args.prompt);
   owner.promptDrafts.push(draft);
   f.save();
-  const saved = planVideo(input);
+  assert.equal(planVideo(input, false).args.prompt, preview.args.prompt);
+  assert.throws(() => planVideo({...input, prompt: draft.prompt}), /scene_prompt_mismatch/);
+  owner.prompt = draft.prompt; f.save();
+  const saved = planVideo({...input, prompt: draft.prompt});
   assert.equal(saved.wholeScene, true);
   assert.equal(saved.shotIds.length, 2);
   assert.equal(numbered(saved), saved.sceneRequest.prompt);
@@ -2253,6 +2319,7 @@ test('storyboard edits are scoped to the selected scene model and operation', as
   assert.ok(planVideo({...input,prompt:addressed},false).sceneRequest.prompt.includes('Hero reassures Guest, using Audio 1:'));
   const nested = 'Did he say "wait here by Image 1"?';
   f.board.SCENES[0].narration[0].tts = nested;
+  delete owner.prompt;
   delete owner.promptDrafts;
   f.save();
   const nestedPreview = planVideo(input,false);
@@ -2298,9 +2365,9 @@ test('the same authored names take picture and audio tags on the H3 reference la
  fs.copyFileSync(motion,dolly);
  clips.motionReferencePaths.push('dolly.mp4');
  const edit = shifted.promptTemplate + '\nFollow {motion-with-audio.motion}. Match {motion-with-audio.soundtrack}.';
- clips.promptDrafts = [{...compiled.selection,operation:'reference',prompt:edit}];
+ clips.prompt = edit;
  f.save();
- const options = {...input,wholeScene:true,args:{trimReferenceVideos:true}};
+ const options = {...input,wholeScene:true,prompt:edit,args:{trimReferenceVideos:true}};
  assert.match(planVideo(options,false).args.prompt,/Follow <Video 1>. Match <Audio 1>/);
  clips.motionReferencePaths.reverse();
  f.save();
@@ -2328,7 +2395,7 @@ test('the same authored names take picture and audio tags on the H3 reference la
  assert.deepEqual(submitted.referenceVideoPaths,reordered.args.referenceVideoPaths);
  assert.ok(reordered.promptSlots.some(slot => slot.key === 'dolly.motion' && slot.label === '<Video 1>'));
  assert.throws(() => planVideo({...options,prompt:edit + ' Follow <Video 1>.'},false), /label_literal/);
- delete clips.promptDrafts;
+ delete clips.prompt;
  delete f.board.STRUCTURE.scenes[0].videoDirection.motionReferencePaths;
  f.save();
  assert.equal(compiled.tool,'fasth3_omni_reference');
@@ -2395,7 +2462,7 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
   f.board.SCENES.forEach((s,i)=>{s.id='s000'+(i+1);s.summary=s.visual.action;s.type='hooking';s.visual.character=s.narration[0].speaker;});
   f.save();
   const input={episode:f.episode,sceneNo:1,wholeScene:true,args:{reserveUsd:0}};
-  const get=async id=>JSON.parse((await ROUTES.video_plan({...input,requestId:id})).content[0].text);
+  const get=async (id,prompt)=>JSON.parse((await ROUTES.video_plan({...input,requestId:id,...(prompt ? {prompt} : {})})).content[0].text);
   const original = await get('opening');
   assert.equal(numbered(original),original.sceneRequest.prompt);
   assert.deepEqual(original.args.cast.map(member => [member.id,path.basename(member.images[0].imagePath)]),[['hero','hero.png'],['guest','guest.png']]);
@@ -2408,6 +2475,11 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     const stored = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
       event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,promptDrafts:[draft]}}]});
     assert.ok(!stored.isError, stored.content[0].text);
+  }
+  async function savePrompt(prompt) {
+    const result = await ROUTES.story_scene({path:dir,scenes:[{...scene,sequence:'q1',place:'Doorway',time:'Night',
+      event:'The guest returns',summary:'The guest comes home.',videoDirection:{...scene.videoDirection,prompt}}]});
+    assert.ok(!result.isError,result.content[0].text);
   }
   const edit = text => original.promptTemplate + '\n' + text;
   for (const [invalid,reason] of [
@@ -2435,12 +2507,13 @@ test('a stored cast declaration cannot silently reverse the submitted face bindi
     [original.promptTemplate.replace('hero ({hero.face}, {hero.voice}):','Hero waits, listening to Guest, who says:')
       .replace('guest ({guest.face}, {guest.voice}):','Guest turns to Hero, who replies:'),/scene_dialogue_speaker/],
   ]) {
-    await saveDraft(invalid);
+    await savePrompt(invalid);
     await assert.rejects(get('refused'),reason);
   }
   const focus = 'Keep Hero’s face sharp as Guest steps back. Hero and Guest exchange a glance across the doorway. ' +
     'Hold on Guest after the first spoken line. Hold on Hero until Guest finishes her last line. Hero raises a hand to answer the door.';
-  await saveDraft(edit(focus + ' Hero ({hero.face}) waits by the door.')
+  await assert.rejects(saveDraft(swapped),/promptDrafts|video_prompt_deferred/);
+  await savePrompt(edit(focus + ' Hero ({hero.face}) waits by the door.')
     .replace('hero ({hero.face}, {hero.voice}):','Hero says to Guest:')
     .replace('guest ({guest.face}, {guest.voice}):','Guest replies to Hero:'));
   const accepted = await get('focus');
@@ -2454,4 +2527,100 @@ test('a Seedance 2.5 face video takes the @ label the rest of its prompt uses', 
   const bind = model => VIDEO_ADAPTERS.seedance_reference.bindCharacterSources({model, prompt:'p'}, cast).prompt;
   assert.match(bind('dreamina-seedance-2-5-260628'), /Use @Video 1 only for hero/);
   assert.match(bind('dreamina-seedance-2-0-260128'), /Use Video 1 only for hero/);
+});
+
+test('a public timed-action edit replaces copied action and sound while keeping independent performance beats', async t => {
+  const f = fixture(t);
+  const location = path.join(f.episode, 'storyboard');
+  f.board.STORY = {version:'story-v2',authoring:'story-first',hookContractVersion:1,primaryHookType:'cause_mystery',language:'en'};
+  f.board.STRUCTURE = {version:'structure-v1',sequences:[{id:'q1',title:'Door',purpose:'Who is there?',scenes:[1]}],
+    scenes:[{no:1,place:'Cabin',time:'Day',event:'A visitor waits.',summary:'At the hatch.',frames:{start:'opening.png'},
+      videoDirection:{fps:24,emotion:'Suspense.',openingPositions:[]}}]};
+  const old = 'The hatch opens.';
+  const current = 'The hatch stays closed throughout.';
+  const card = {id:'s0001',scene:1,type:'points',duration:4,summary:'At the hatch.',
+    timeline:{startFrame:0,endFrame:96,transition:'open',framing:'Frame the hatch.',action:old},
+    shot:{size:'ms',render:{mode:'generated_video',reason:'Show the knock.',purpose:'action'},videoDesign:{action:old}},
+    visual:{action:old,character:[],frames:{mode:'first',start:'opening.png'}},narration:[],
+    performance:[{kind:'action',text:'A sleeve brushes the rail.',durationSeconds:1}]};
+  f.board.SCENES = [card]; f.save();
+  const input = {episode:f.episode,sceneNo:1,requestId:'hatch-current',wholeScene:true};
+  const ask = async () => JSON.parse((await ROUTES.video_plan(input)).content[0].text).args.prompt;
+  const before = await ask();
+  assert.match(before,/The hatch opens/);
+  const wrote = await ROUTES.shot_prompt({path:location,id:card.id,action:current,sound:'Soft footsteps echo.'});
+  assert.match(wrote.content[0].text,/Wrote/);
+  const after = await ask();
+  assert.doesNotMatch(after,/The hatch opens/);
+  assert.equal(after.split(current).length-1,1);
+  assert.match(after,/A sleeve brushes the rail/);
+  assert.match(after,/Soft footsteps echo/);
+  const findings = (await ROUTES.storyboard_check({path:location})).content[0].text;
+  assert.doesNotMatch(findings,/no diegetic sound direction|no visual\.audio/);
+  const later = 'Only the upper hatch moves.';
+  const saved = readBoard(location).win.SCENES[0];
+  const changed = await ROUTES.storyboard_apply({path:location, shotsById:[{id:card.id,shot:{...saved,timeline:{...saved.timeline,action:later}}}],draft:true});
+  assert.match(changed.content[0].text,/Wrote/);
+  const revised = await ask();
+  assert.match(revised,/Only the upper hatch moves/);
+  assert.doesNotMatch(revised,/stays closed|The hatch opens/);
+});
+
+test('a legacy camera default returns after the middle dolly in the public Seedance request', async t => {
+  const f = fixture(t);
+  const legacy = 'Keep the camera locked throughout.';
+  f.board.STRUCTURE = {scenes:[{no:1,frames:{start:'opening.png'},videoDirection:{emotion:'Suspense.',camera:legacy,openingPositions:[]},
+    directionDefaults:{cameraPolicy:'Keep the horizon level.'}}]};
+  f.board.SCENES = ['She waits.','She touches the latch.','She steps away.'].map((action,i) => ({
+    id:'s000'+(i+1),scene:1,type:'points',duration:2,referenceImage:'opening.png',shot:{size:'ms',render:{mode:'generated_video'}},
+    visual:{action,frames:{mode:'first',start:'opening.png'}, ...(i===1 ? {camera:{movement:'dolly in',speed:'slow',target:'the brass latch'}} : {})}
+  }));
+  f.save();
+  const plan = JSON.parse((await ROUTES.video_plan({episode:f.episode,sceneNo:1,requestId:'historical-camera',wholeScene:true})).content[0].text);
+  assert.match(plan.tool,/seedance/);
+  assert.match(plan.sceneRequest.sceneDirection.camera, /horizon level/);
+  assert.doesNotMatch(plan.sceneRequest.sceneDirection.camera,/camera locked/);
+  const [first, middle, last] = plan.sceneRequest.shots;
+  assert.match(first.framing,/camera locked/);
+  assert.match(middle.framing,/slowly pushes in toward the brass latch/);
+  assert.doesNotMatch(middle.framing,/camera locked/);
+  assert.match(last.framing,/camera locked/);
+  assert.equal(plan.args.prompt.split(legacy).length-1,2);
+});
+
+test('timed shot positions, closing frames and opening crops agree in the actual request after public edits', async t => {
+  const f=await pinnedSpeakerScene(t, 'image', []), root=path.join(f.episode,'storyboard');
+  const position=place=>[{character:'witness',images:[],position:place}];
+  f.board.STORY={version:'story-v2',authoring:'story-first',hookContractVersion:1,primaryHookType:'cause_mystery',language:'en'};
+  f.board.STRUCTURE={version:'structure-v1',sequences:[{id:'q1',title:'Arrival',purpose:'Find the witness.',scenes:[1]}],
+    scenes:[{no:1,place:'Room',time:'Day',event:'Someone arrives.',summary:'At the hatch.',frames:{start:'opening.png'},videoDirection:{fps:24,emotion:'Alarm.',openingPositions:[]}}]};
+  f.board.SCENES=[0,1].map(i=>({id:'s000'+(i+1),type:'points',scene:1,duration:2,referenceImage:'opening.png',
+    summary:'A trace of light.',shot:{size:'ls',angle:'eye',render:{mode:'generated_video',purpose:'action',reason:'Follow the light.'}},
+    visual:{character:[],frames:{mode:'first_last',start:'opening.png',end:'opening.png',endState:'The latch is shut.'}},narration:[],
+    timeline:{startFrame:48*i,endFrame:48*(i+1),transition:i?'hard_cut':'open',framing:'Wide full-figure shot. The rail crosses the foreground.',
+      action:'A trace of light moves.',...(i?{openingPositions:position('At the old red door.')}:{})}}));
+  f.save();
+  const getPlan=async()=>JSON.parse((await ROUTES.video_plan({episode:f.episode,sceneNo:1,wholeScene:true,requestId:'edit-openings',args:{reserveUsd:0}})).content[0].text);
+  const id='s0002', positions=position('Beside the new blue window.');
+  assert.match((await ROUTES.shot_prompt({path:root,id,action:'The light dims.',openingPositions:positions,end:'The latch stands wide open.'})).content[0].text,/Wrote/);
+  const revised=await getPlan();
+  assert.deepEqual(revised.sceneRequest.shots[1].openingPositions,positions);
+  assert.ok(revised.args, JSON.stringify({keys:Object.keys(revised),code:revised.code,missing:revised.missing}));
+  assert.match(revised.args.prompt,/new blue window/);
+  assert.doesNotMatch(revised.args.prompt,/old red door|latch is shut/);
+  assert.match(revised.args.prompt,/latch stands wide open/);
+  const {assemble,frameOptions}=(await import('../../skills/storyboard/references/assemble-bg-prompt.js')).default;
+  const current=()=>readBoard(root).win.SCENES[1];
+  const endImage=()=>assemble(frameOptions(current(),'end')).prompt;
+  assert.match(endImage(),/latch stands wide open/);
+  assert.doesNotMatch(endImage(),/latch is shut/);
+  assert.match((await ROUTES.shot_icons({path:root,shots:[{id,size:'cu',frames:{mode:'first_last',endState:'The latch falls shut.'}}]})).content[0].text,/Wrote/);
+  assert.match(endImage(),/latch falls shut/);
+  await assert.rejects(getPlan,/shot_framing_conflict.*s0002.*timeline.framing/);
+  const saved=current(), framing='Close-up of the dial at first. Wide shot at the end as the camera pulls back to reveal the room.';
+  assert.match((await ROUTES.storyboard_apply({path:root,shotsById:[{id,shot:{...saved,timeline:{...saved.timeline,framing}}}],draft:true})).content[0].text,/Wrote/);
+  const fixed=await getPlan();
+  assert.ok(fixed.args.prompt.includes(framing));
+  assert.match(fixed.args.prompt,/latch falls shut/);
+  assert.doesNotMatch(fixed.args.prompt,/latch stands wide open/);
 });

@@ -68,7 +68,7 @@
      Coverage takes fs as a scene's wide (a whole body in its room still frames the place); the
      close-opening debt in check-scenes.js and the approval page is stricter and fs does not pay it. */
   const WIDE = ['els', 'ls', 'ws', 'fs', 'mfs'];
-  const CLOSE = ['mcu', 'cu', 'choker', 'ecu', 'insert'];
+  const CLOSE = ['mcu', 'cu', 'choker', 'ecu'];
   const SIZE_RANK = { els: 0, ls: 1, ws: 1, fs: 2, mfs: 3, ms: 4, mcu: 5, cu: 6, choker: 7, ecu: 8, insert: 8 };
   /* A place that names a picture — the scene is where the story is, the diagram is one of its shots. */
   const SCREEN_RE = /도해|그래픽|슬라이드|차트|그래프|도표|인포그래픽|diagram|slide|chart|graph|infographic/i;
@@ -165,10 +165,11 @@
     if (e.mode === 'lens' && ((e.horizontal && e.horizontal !== 'center') || (e.target && e.target !== 'camera'))) errors.push('lens looks at camera, horizontally centered');
     return errors;
   }
+  const framingOf = card => (typeof module === 'object' && module.exports ? require('./scene-direction.js') : root.SCENE_DIRECTION).framing(card || {});
   function eyelineNeeded(s) {
     const sh = s && s.shot || {};
     return !!(PLACED(s) && !sh.lineNeutral && !(sh.render && ['motion_html', 'data_graph', 'editorial_html', 'object_html'].includes(sh.render.mode)) &&
-      (sh.space && text(sh.space.line) || ['pov', 'ots', 'reaction'].includes(sh.size)));
+      (sh.space && text(sh.space.line) || ['pov', 'ots'].includes(framingOf(s).viewpoint) || framingOf(s).cutRole === 'reaction'));
   }
   function checkEyelines(shots, draft) {
     const out = [], add = (i, message, level) => out.push({ level: level || (draft ? 'later' : 'bad'), where: 'shot ' + (i + 1), what: 'shot.eyeline: ' + message });
@@ -260,7 +261,9 @@
     if (!s || ['motion_html', 'data_graph', 'editorial_html'].includes(sh.render && sh.render.mode)) return false;
     // A structured opening view (shot-view.md) records the subject, crop and viewpoint: the framing intent is written.
     if (s.visual && s.visual.camera && s.visual.camera.view) return false;
-    return !!(e && !['none', 'pov'].includes(e.mode) || sh.space && text(sh.space.facing) || ['mcu', 'cu', 'choker', 'ots', 'reaction', 'two', 'three'].includes(sh.size));
+    const frame = framingOf(s);
+    return !!(e && !['none', 'pov'].includes(e.mode) || sh.space && text(sh.space.facing) ||
+      ['mcu','cu','choker'].includes(frame.size) || frame.viewpoint === 'ots' || frame.cutRole === 'reaction' || ['two','three','group'].includes(frame.arrangement));
   }
   function checkCompositions(shots, draft) {
     const out = [];
@@ -303,30 +306,27 @@
       (c.reason ? '; framing intent: ' + c.reason : '') + '. Keep key facial features clear of the format subtitle and platform UI safe zones';
   }
 
-  // L11: depth of field is a decision about how many things the viewer may read at once.
-  // One readable piece of information → shallow (the director chooses for the viewer); two or
-  // more → deep (the viewer chooses). Optical simulation on the still lane is a region mask,
-  // so the record is a plan and a prompt, never proof of a focal plane.
+  // Focus describes distances. Several readable subjects can occupy the same focal plane.
   const DEPTH_SCHEMA = {
     type: 'object', additionalProperties: false, required: ['mode'],
-    description: 'L11 depth-of-field plan. Count the information the viewer must read in the frame at once: one → shallow, two or more → deep; a departure from that rule needs a reason. Not applicable on HTML explanation routes; legacy omissions warn.',
+    description: 'Optical depth in this shot. Name the sharp plane or the subjects that remain clear across distances. Several people can share a plane.',
     properties: {
       mode: { type: 'string', enum: ['shallow', 'deep', 'none'], description: 'shallow = one plane sharp, the rest soft; deep = every named plane sharp at once; none = not applicable' },
       reads: { type: 'integer', minimum: 1, description: 'How many separate things the viewer must read in this frame at the same time (a face, a document, a person in the doorway)' },
-      focus: { type: 'string', minLength: 1, description: 'shallow: the one thing that stays sharp; on a person, the eyes' },
+      focus: { type: 'string', minLength: 1, description: 'shallow: the sharp subject or subjects on the same focal plane' },
       planes: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'string', minLength: 1 }, description: 'deep: what reads on each plane, listed front to back' },
-      sound: { type: 'string', enum: ['near', 'full'], description: 'Sound perspective that pairs with the depth: near = voice forward, room behind (shallow); full = every source audible (deep)' },
-      reason: { type: 'string', minLength: 1, description: 'Required for none, for shallow with reads ≥ 2 and for deep with reads = 1; say why the rule is broken' }
+      sound: { type: 'string', enum: ['near', 'full'], description: 'Historical input. Record new listening choices in sound.perspective independently of optical depth' },
+      reason: { type: 'string', minLength: 1, description: 'Optional visual intent. Required for none to explain why optical depth does not apply' }
     },
     allOf: [
-      { if: { properties: { mode: { const: 'shallow' } } }, then: { required: ['reads', 'focus'] } },
-      { if: { properties: { mode: { const: 'deep' } } }, then: { required: ['reads', 'planes'] } },
+      { if: { properties: { mode: { const: 'shallow' } } }, then: { required: ['focus'] } },
+      { if: { properties: { mode: { const: 'deep' } } }, then: { required: ['planes'] } },
       { if: { properties: { mode: { const: 'none' } } }, then: { required: ['reason'] } }
     ]
   };
   const PHOTO_MODES = ['still_camera', 'generated_video', 'stock_video'];
   const FOCUS_EFFECTS = ['focus-in', 'rack-focus'];
-  const EYES_RE = /눈|\beyes?\b/i;
+  const photoRoute = mode => !mode || PHOTO_MODES.includes(mode);
   function validateDepth(d) {
     if (!d || typeof d !== 'object' || Array.isArray(d)) return ['depth must be an object'];
     const errors = [], required = new Set(DEPTH_SCHEMA.required);
@@ -339,9 +339,7 @@
       if (r.type === 'array' && (!Array.isArray(v) || v.length < r.minItems || v.length > r.maxItems || v.some(x => !text(x)))) errors.push(k + ' lists two or three planes, front to back, each nonempty text');
     });
     DEPTH_SCHEMA.allOf.forEach(b => { if (b.if.properties.mode.const === d.mode) b.then.required.forEach(k => required.add(k)); });
-    if (d.mode === 'shallow' && posInt(d.reads) && d.reads >= 2) required.add('reason');
-    if (d.mode === 'deep' && d.reads === 1) required.add('reason');
-    required.forEach(k => { if (d[k] === undefined) errors.push(k + ' is required for ' + (d.mode || 'depth') + (k === 'reason' && d.mode !== 'none' ? ' when reads disagrees with the depth (one thing → shallow, two or more → deep)' : '')); });
+    required.forEach(k => { if (d[k] === undefined) errors.push(k + ' is required for ' + (d.mode || 'depth')); });
     if (d.mode === 'none' && Object.keys(d).some(k => !['mode', 'reason'].includes(k))) errors.push('none carries only mode and reason');
     if (d.mode === 'shallow' && d.planes !== undefined) errors.push('shallow names one focus, not planes');
     if (d.mode === 'deep' && d.focus !== undefined) errors.push('deep names planes, not one focus');
@@ -349,18 +347,21 @@
   }
   function depthNeeded(s) {
     const sh = s && s.shot || {}, r = sh.render || {};
-    if (!PLACED(s) || (r.mode && !PHOTO_MODES.includes(r.mode))) return false;
+    if (!PLACED(s) || !photoRoute(r.mode)) return false;
     const effect = r.mode === 'still_camera' && r.camera && r.camera.effect;
-    return !!(FOCUS_EFFECTS.includes(effect) || ['mcu', 'cu', 'choker', 'ecu', 'insert', 'two', 'three', 'ots'].includes(sh.size));
+    const frame = framingOf(s);
+    return FOCUS_EFFECTS.includes(effect) || ['mcu','cu','choker','ecu'].includes(frame.size) || frame.cutRole === 'insert' ||
+      frame.viewpoint === 'ots' || ['two','three','group'].includes(frame.arrangement);
   }
   function checkDepths(shots, draft) {
     const out = [];
     shots.forEach((s, i) => {
       if (!s) return;
-      const sh = s.shot || {}, d = sh.depth, r = sh.render || {}, c = sh.composition;
+      const sh = s.shot || {}, d = sh.depth, r = sh.render || {};
+      if (!photoRoute(r.mode)) return;
       const add = (msg, level) => out.push({ level: level || (draft ? 'later' : 'bad'), where: 'shot ' + (i + 1), what: 'shot.depth: ' + msg });
       if (d === undefined) {
-        if (depthNeeded(s)) add('count what the viewer must read here and record shallow or deep, or none with a reason', s.scene && shots.some(x => x && x.scene === s.scene && x.shot && x.shot.depth) ? undefined : 'warn');
+        if (depthNeeded(s)) add('name the sharp subject or planes and record shallow or deep, or none with a reason', s.scene && shots.some(x => x && x.scene === s.scene && x.shot && x.shot.depth) ? undefined : 'warn');
         return;
       }
       const errors = validateDepth(d);
@@ -368,10 +369,7 @@
       if (errors.length || d.mode === 'none') return;
       const effect = r.mode === 'still_camera' && r.camera && r.camera.effect;
       if (d.mode === 'deep' && FOCUS_EFFECTS.includes(effect)) add(effect + ' blurs every plane but one; deep focus keeps them all sharp — choose pull, pan, push or a hold, or declare shallow');
-      if (d.mode === 'shallow' && c && c.subjectKind === 'face' && !EYES_RE.test(d.focus)) add('on a person the focus goes on the eyes; name them in focus', 'warn');
-      if (d.mode === 'shallow' && d.reads === 1 && ['two', 'three', 'ots'].includes(sh.size)) add('two people in frame with one plane sharp loses the partner; confirm the other person is not information here', 'warn');
-      if (d.mode === 'deep' && ['choker', 'ecu', 'insert'].includes(sh.size)) add('an extreme close-up rarely holds two readable planes; review reads', 'warn');
-      if (d.sound && ((d.mode === 'shallow') !== (d.sound === 'near'))) add('depth and sound perspective usually pair — voice forward with shallow, every source with deep; review the mix', 'warn');
+
     });
     return out;
   }
@@ -416,7 +414,7 @@
           else identified = false;
         });
       }
-      return { no, place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
+      return { no, ...(scene?.referenceSplitFrom ? {referenceSplitFrom:scene.referenceSplitFrom} : {}), place: scene?.place, time: scene?.time, event: scene?.event, turn: scene?.turn,
         shotIds: shots.map(shot => shot.id ?? null), speakers: [...speakers], speakersKnown: identified };
     });
     return runs.slice(1).map((right, index) => {
@@ -426,14 +424,15 @@
         return first && second ? first === second : null;
       };
       const speakers = [...new Set([...left.speakers, ...right.speakers])];
-      return { left, right, samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
+      const referenceSplit = right.referenceSplitFrom && right.referenceSplitFrom === (left.referenceSplitFrom ?? left.no);
+      return { left, right, ...(referenceSplit ? {reason:'scene_character_reference_limit'} : {}), samePlace: same(left.place, right.place), sameTime: same(left.time, right.time),
         speakers, speakersKnown: left.speakersKnown && right.speakersKnown };
     });
   }
 
   function sceneBoundaryFindings(win) {
     if (win.STORY?.authoring !== 'story-first') return [];
-    return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime).map(join => ({
+    return sceneBoundaries(win).filter(join => join.samePlace && join.sameTime && join.reason !== 'scene_character_reference_limit').map(join => ({
       level: 'warn', code: 'scene_boundary_review', where: 'scene ' + join.right.no,
       what: `scene_boundary_review: scenes ${join.left.no} and ${join.right.no} share the same place and time. ` +
         'Check whether the second event completes the first. Keep its shots together when the action continues, or retain the boundary for a distinct event.' }));
@@ -779,7 +778,7 @@
       const placeKnown = placeKey && seenWidePlace.has(placeKey);
       const isScreen = x => x.s.shot && x.s.shot.render && EXPLAIN_MODES.indexOf(x.s.shot.render.mode) !== -1;
       const pics = xs.filter(x => !isScreen(x));
-      const sizes = new Set(pics.map(x => x.s.shot && x.s.shot.size).filter(Boolean));
+      const sizes = new Set(pics.map(x => framingOf(x.s).size).filter(Boolean));
       if (!performanceStory && xs.length === 1 && placed.length >= 5 && groups.size >= 2)
         warn(where, `one shot — coverage is two sizes per scene, a wide and a close; give it a second shot or fold it into a neighbour (scenes-schema §grammar units)`);
       else if (!performanceStory && xs.length >= 2 && pics.length === 1 && placed.length >= 5)
@@ -789,18 +788,13 @@
           warn(where, `${pics.length} picture shots and no wide (${WIDE.join('·')}) — coverage is two sizes per scene, a wide that sets the place and a close; an explanation screen's ls is not the wide (directing-grammar §6.1–2)`);
         if (!CLOSE.some(z => sizes.has(z)))
           warn(where, `${pics.length} picture shots and no close (${CLOSE.join('·')}) — coverage is two sizes per scene, a wide and a close that pays the moment (directing-grammar §6.1–3)`);
-        const tight = pics.filter(x => ['cu', 'choker', 'ecu'].indexOf(x.s.shot && x.s.shot.size) !== -1).length;
+        const tight = pics.filter(x => ['cu', 'choker', 'ecu'].includes(framingOf(x.s).size)).length;
         if (tight >= 2)
           warn(where, `${tight} close-ups (cu·choker·ecu) in one scene — a scene pays its moment once with one close-up; the rest is the wide, the mediums and inserts (directing-grammar §6.3)`);
       }
       if (placeKey && WIDE.some(z => sizes.has(z))) seenWidePlace.add(placeKey);
       pics.forEach(x => {
-        const sz = x.s.shot && x.s.shot.size, lay = x.s.shot && x.s.shot.space && String(x.s.shot.space.layout || '');
-        if (['cu', 'mcu', 'choker'].indexOf(sz) !== -1 && lay && /손(?!글씨|님)|화면|라벨|딱지|바코드|스캐너/.test(lay) && !/얼굴|표정|인물|사람|점주|손님|화자|눈|입|고개|상반신|어깨|머리|로봇|딸깍맨|캐릭터|세종|최만리|백성|연구원|아이|남자|여자/.test(lay))
-          warn('shot ' + x.no, `size "${sz}" but the layout shows no face ("${lay.trim().slice(0, 30)}…") — a close-up is a face; a hand, a label or a screen filling the frame is an insert (directing-grammar §6)`);
-        // A shot that lists its characters has a person on screen, whatever language the layout is written in.
-        if (['ms', 'mcu'].indexOf(sz) !== -1 && lay && !(castOf(x.s) || []).length && !PERSON_RE.test(lay.replace(NO_PERSON_RE, '')) && !/로봇|딸깍맨|캐릭터|세종|최만리|연구원|점원|화자|점주|손님|사람|인물/.test(lay))
-          warn('shot ' + x.no, `size "${sz}" but the layout has no person ("${lay.trim().slice(0, 30)}…") — the size scale is a body (ms is the waist); a frame of objects is a wide of the place or an insert (directing-grammar §6)`);
+        const sz = framingOf(x.s).size, lay = x.s.shot?.space?.layout;
         if (['els', 'ls', 'ws'].indexOf(sz) !== -1 && lay && TIGHT_LAYOUT_RE.test(lay) && !/전신|전경|멀리|배경|풍경|넓|방\s?전체|가게\s?전체|서 있|앉아 있/.test(lay))
           warn('shot ' + x.no, `size "${sz}" but the layout is a close view ("${lay.trim().slice(0, 30)}…") — the size is what the frame shows; a wide labelled on a close-up does not set the place (rule 9)`);
       });
@@ -872,10 +866,17 @@
       xs.forEach((x, i) => {
         if (!i || !picture(xs[i - 1]) || !picture(x)) return;
         const prev = xs[i - 1];
-        const prevRank = SIZE_RANK[prev.s.shot && prev.s.shot.size];
-        const rank = SIZE_RANK[x.s.shot && x.s.shot.size];
-        // The rule re-films the same subject (directing-grammar §7): two/three/ots/pov/back/
-        // cutaway/reaction change the subject, and a declared crossing is its own escape.
+        const prevFrame = framingOf(prev.s), nextFrame = framingOf(x.s);
+        const prevRank = SIZE_RANK[prevFrame.size], rank = SIZE_RANK[nextFrame.size];
+        const subjectOf = card => card.visual?.camera?.view?.subjectId || card.visual?.camera?.view?.subject;
+        const previousSubject = subjectOf(prev.s), nextSubject = subjectOf(x.s);
+        if (previousSubject && nextSubject) {
+          if (compact(previousSubject) !== compact(nextSubject)) return;
+        } else {
+          const firstCast = castOf(prev.s), nextCast = castOf(x.s);
+          if (firstCast?.length && nextCast?.length && !firstCast.some(id => nextCast.includes(id))) return;
+          if (prevFrame.arrangement !== nextFrame.arrangement || prevFrame.cutRole !== nextFrame.cutRole || prevFrame.viewpoint !== nextFrame.viewpoint) return;
+        }
         if (prevRank === undefined || rank === undefined) return;
         if (Math.abs(prevRank - rank) >= 2) return;
         if (validCrossings.has(x.no)) return;
@@ -1142,7 +1143,8 @@
     const shotRow = (s, i) => {
       const row = { no: i + 1, id: s.id || null, type: s.type, title: s.title, summary: s.summary, beat: s.beat, duration: s.duration, after: s.after };
       if (s.shot) Object.assign(row, {
-        feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, size: s.shot.size, angle: s.shot.angle, why: s.shot.why,
+        feel: s.shot.feel, info: s.shot.info, infoType: s.shot.infoType, ...framingOf(s), why: s.shot.why,
+        soundPerspective: s.sound?.perspective || s.shot.depth?.sound,
         render: s.shot.render && s.shot.render.mode, share: s.shot.share,
         depth: s.shot.depth && s.shot.depth.mode,
       });
@@ -1357,7 +1359,7 @@
       return available(frames.end) ? [] : [id + ' has an unreadable end image (' + frames.end + ')'];
     });
   }
-  /** What shot_prompt writes a video prompt from, kept as visual.video.promptBasis: the frame plan,
+  /** The inputs identified by an archived visual.video.promptBasis: the frame plan,
       the cast, the on-screen lines (MSR adds its own), the camera move, the focus technique and, on
       MSR, the size, angle and depth. isFocus(id) names the focus techniques (film-techniques.js). */
   function promptBasis(s, isFocus) {
@@ -1380,7 +1382,7 @@
   function videoLines(s) {
     return (s && Array.isArray(s.narration) ? s.narration : []).filter(l => l && l.delivery !== 'voiceover').map(l => [l.speaker || '', l.delivery || '', l.tts || '']);
   }
-  /** The promptBasis parts that changed since shot_prompt wrote the prompt; [] when current or not written by shot_prompt. */
+  /** The recorded inputs that changed since this archived prompt was saved. */
   function promptDrift(s, isFocus) {
     const video = s && s.visual && s.visual.video, basis = video && video.promptBasis;
     if (!basis || typeof video.prompt !== 'string') return [];
@@ -1393,7 +1395,7 @@
     return blockers.concat(check(win, opts).map(f => ({...f, level: f.level === 'later' ? 'later' : 'warn'})));
   }
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
-  const api = { VERSION, episodeTitle, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
+  const api = { VERSION, photoRoute, episodeTitle, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SCALES: SIZES.slice(0, SIZES.indexOf('insert')), SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
                 check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
