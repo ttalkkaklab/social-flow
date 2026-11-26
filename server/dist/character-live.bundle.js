@@ -33801,6 +33801,7 @@ function astraVideoBaseUrl() {
 
 // src/astra-genai-client.ts
 var GENERATIONS_ROUTE = "/v1/generations";
+var GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 36e5;
 var generationSchema = external_exports.object({
   id: external_exports.string().min(1),
   status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
@@ -36134,12 +36135,11 @@ var receiptSchema = external_exports.object({
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS = 15 * 6e4;
-var REPLAY_WINDOW_MS = 23 * 36e5;
 var accepted = (response) => external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response).id;
 async function replayScene(receipt, receiptPath) {
   if (!receipt.requestId || !receipt.requestPath || !fs3.existsSync(receipt.requestPath))
     throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
-  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < GENAI_SCENE_REPLAY_WINDOW_MS))
     throw new Error("genai_replay_window_passed: the gateway may no longer tie request " + receipt.requestId + " to its job; check GET /v1/jobs before planning again");
   const body = JSON.parse(fs3.readFileSync(receipt.requestPath, "utf8"));
   const jobId = accepted(await requestGenai("POST", GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS, void 0, void 0, receipt.requestId));

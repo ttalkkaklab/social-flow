@@ -125184,6 +125184,7 @@ import { readFileSync as readFileSync10, statSync as statSync5 } from "node:fs";
 import { extname as extname4 } from "node:path";
 import { setTimeout as sleep3 } from "node:timers/promises";
 var GENERATIONS_ROUTE = "/v1/generations";
+var GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 36e5;
 var generationSchema = external_exports.object({
   id: external_exports.string().min(1),
   status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
@@ -126090,12 +126091,18 @@ var legacyReceiptSchema = nativeReceiptSchema.extend({
 var h3ReceiptSchema = nativeReceiptSchema.extend({
   protocol: external_exports.literal("gateway-image-scene-v1"),
   model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  status: external_exports.enum(["submitting", "submitted", "completed", "rejected"]),
   jobId: external_exports.string().optional(),
   expected: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }),
   createdAt: external_exports.string().optional(),
   completedAt: external_exports.string().optional(),
-  usage: external_exports.unknown().optional()
+  usage: external_exports.unknown().optional(),
+  clientRequestId: external_exports.string().optional(),
+  submittedAt: external_exports.string().optional(),
+  requestBody: external_exports.string().optional(),
+  requestSha256: external_exports.string().optional(),
+  credentialSha256: external_exports.string().optional(),
+  rejection: external_exports.string().optional()
 }).passthrough();
 var imageReceiptSchema = external_exports.discriminatedUnion("protocol", [legacyReceiptSchema, h3ReceiptSchema]);
 var h3JobSchema = generationSchema.extend({
@@ -126137,22 +126144,28 @@ async function generateNativeImage(input, edit2 = false) {
   atomicJson(receiptPath2, { ...receipt, status: "received", response });
   return recoverNativeImage(receiptPath2);
 }
-async function recoverNativeImage(receiptPath2) {
+async function recoverNativeImage(receiptPath2, binding) {
   const receipt = imageReceiptSchema.parse(JSON.parse(fs10.readFileSync(receiptPath2, "utf8")));
   const common7 = receipt.protocol === "gateway-image-scene-v1";
+  if (binding && (receipt.imagePath !== binding.imagePath || common7 && receipt.clientRequestId !== binding.requestId)) {
+    throw new Error("GenAI image receipt does not belong to the approved request or output");
+  }
   if (receipt.baseUrl !== astraGenaiBaseUrl(common7 ? GENERATIONS_ROUTE : NATIVE_IMAGE_ROUTE)) {
     throw new Error("Gateway origin changed; restore configuration before recovery");
+  }
+  if (common7) {
+    if (!receipt.jobId && binding?.replayUnknown === false) {
+      throw new Error("GenAI image request is closed; check main gateway job history");
+    }
+    const linked = receipt.jobId ? receipt : await replayH3Image(receipt, receiptPath2);
+    const result = await collectH3Image(linked, receiptPath2);
+    if (!result) throw new Error(`GenAI image job ${linked.jobId} is queued or running; refresh its receipt again`);
+    return result;
   }
   if (receipt.status === "completed") {
     const output3 = verifyImageFile(receipt.imagePath);
     if (output3.sha256 !== receipt.sha256) throw new Error("Cached image changed");
-    if (common7) return h3ImageResult(receipt, receiptPath2, output3);
     return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: void 0, output: output3, review: "not_reviewed" };
-  }
-  if (common7) {
-    const result = await collectH3Image(receipt, receiptPath2);
-    if (!result) throw new Error(`GenAI image job ${receipt.jobId} is queued or running; refresh its receipt again`);
-    return result;
   }
   if (receipt.status === "submitting" && receipt.requestId) {
     const existing = await requestGenai("GET", "/v1/images/requests/" + encodeURIComponent(receipt.requestId));
@@ -126171,26 +126184,67 @@ async function recoverNativeImage(receiptPath2) {
 }
 async function generateH3Image(body, clientRequestId, imagePath, receiptPath2) {
   const { width, height } = body.parameters;
-  const requestId2 = randomUUID7();
+  const requestBody = JSON.stringify(body);
   const receipt = {
     protocol: "gateway-image-scene-v1",
     model: GENAI_H3_IMAGE_MODEL,
     baseUrl: astraGenaiBaseUrl(GENERATIONS_ROUTE),
     imagePath,
-    requestId: requestId2,
+    requestId: randomUUID7(),
     clientRequestId,
     expected: { width, height },
-    status: "submitting"
+    status: "submitting",
+    submittedAt: (/* @__PURE__ */ new Date()).toISOString(),
+    requestBody,
+    requestSha256: hashText(requestBody),
+    credentialSha256: hashText(requireAstraGenaiKey(GENERATIONS_ROUTE))
   };
   fs10.writeFileSync(receiptPath2, JSON.stringify(receipt), { flag: "wx", mode: 384 });
-  const job = h3JobSchema.parse(await requestGenai("POST", GENERATIONS_ROUTE, body, 6e4, void 0, void 0, requestId2));
-  const submitted = { ...receipt, jobId: job.id, createdAt: job.created_at, status: "submitted" };
-  atomicJson(receiptPath2, submitted);
+  const submitted = await submitH3Image(receipt, receiptPath2, body);
   const { result } = await pollGenaiJob(async () => {
     const result2 = await collectH3Image(submitted, receiptPath2);
     return { downloaded: result2 !== void 0, result: result2 };
   }, `GenAI image is still pending; recover using receiptPath ${receiptPath2}`);
   return result;
+}
+var hashText = (value2) => createHash12("sha256").update(value2).digest("hex");
+async function submitH3Image(receipt, receiptPath2, body) {
+  const { requestBody: _body, credentialSha256: _credential, ...metadata } = receipt;
+  let response;
+  try {
+    response = await requestGenai("POST", GENERATIONS_ROUTE, body, 6e4, void 0, void 0, receipt.requestId);
+  } catch (error2) {
+    if (error2 instanceof GenaiRequestError && error2.terminal) {
+      const current2 = h3ReceiptSchema.parse(JSON.parse(fs10.readFileSync(receiptPath2, "utf8")));
+      if (current2.jobId) return current2;
+      atomicJson(receiptPath2, { ...metadata, status: "rejected", rejection: error2.message });
+    }
+    throw error2;
+  }
+  const job = h3JobSchema.parse(response);
+  const current = h3ReceiptSchema.parse(JSON.parse(fs10.readFileSync(receiptPath2, "utf8")));
+  if (current.jobId) {
+    if (current.jobId !== job.id) throw new Error("GenAI image recovery job ID mismatch");
+    return current;
+  }
+  const linked = { ...metadata, jobId: job.id, createdAt: job.created_at, status: "submitted" };
+  atomicJson(receiptPath2, linked);
+  return linked;
+}
+function replayH3Image(receipt, receiptPath2) {
+  if (receipt.status === "rejected") throw new Error(receipt.rejection ?? "GenAI image submission was rejected");
+  const { requestId: requestId2, requestBody, requestSha256, submittedAt, credentialSha256 } = receipt;
+  if (!requestId2 || !requestBody || !submittedAt || hashText(requestBody) !== requestSha256) {
+    throw new Error("GenAI image submission identity is unknown; check main gateway job history");
+  }
+  const age = Date.now() - Date.parse(submittedAt);
+  if (!(age >= 0 && age < GENAI_SCENE_REPLAY_WINDOW_MS)) {
+    throw new Error("GenAI image replay window has passed; check main gateway job history");
+  }
+  if (hashText(requireAstraGenaiKey(GENERATIONS_ROUTE)) !== credentialSha256) {
+    throw new Error("GenAI image gateway credential changed; restore it before recovery");
+  }
+  return submitH3Image(receipt, receiptPath2, JSON.parse(requestBody));
 }
 function h3ImageResult(receipt, receiptPath2, output2) {
   return {
@@ -126206,6 +126260,11 @@ function h3ImageResult(receipt, receiptPath2, output2) {
   };
 }
 async function collectH3Image(receipt, receiptPath2) {
+  if (receipt.status === "completed") {
+    const output2 = verifyImageFile(receipt.imagePath);
+    if (output2.sha256 !== receipt.sha256) throw new Error("Cached image changed");
+    return h3ImageResult(receipt, receiptPath2, output2);
+  }
   const { jobId } = receipt;
   if (!jobId) throw new Error("GenAI image submission outcome unknown; check main gateway job history before retrying");
   const job = h3JobSchema.parse(await requestGenai("GET", GENERATIONS_ROUTE + "/" + encodeURIComponent(jobId)));
@@ -129462,12 +129521,11 @@ var receiptSchema2 = external_exports.object({
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-var REPLAY_WINDOW_MS = 23 * 36e5;
 var accepted = (response) => external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response).id;
 async function replayScene(receipt, receiptPath2) {
   if (!receipt.requestId || !receipt.requestPath || !fs14.existsSync(receipt.requestPath))
     throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
-  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < GENAI_SCENE_REPLAY_WINDOW_MS))
     throw new Error("genai_replay_window_passed: the gateway may no longer tie request " + receipt.requestId + " to its job; check GET /v1/jobs before planning again");
   const body = JSON.parse(fs14.readFileSync(receipt.requestPath, "utf8"));
   const jobId = accepted(await requestGenai("POST", GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS2, void 0, void 0, receipt.requestId));
@@ -137573,7 +137631,24 @@ async function refreshGenaiImage(directory3, requestId2) {
     deliverMlxImage(plan2);
     return readImageState(directory3).jobs[requestId2];
   }
-  const receipt = await (job.tool.startsWith("astra_genai_image_") ? recoverNativeImage : recoverGenaiImage)(job.outputFile + ".astra-genai.json");
+  const receiptPath2 = job.outputFile + ".astra-genai.json";
+  let receipt;
+  try {
+    receipt = job.tool.startsWith("astra_genai_image_") ? await recoverNativeImage(receiptPath2, {
+      imagePath: job.outputFile,
+      requestId: requestId2,
+      replayUnknown: ["submitting", "submission_unknown"].includes(job.status)
+    }) : await recoverGenaiImage(receiptPath2);
+  } catch (error2) {
+    if (!(error2 instanceof GenaiRequestError && error2.terminal && error2.httpStatus === 200)) throw error2;
+    imageTransaction(directory3, void 0, (current) => {
+      const pending2 = current.jobs[requestId2];
+      if (["submitting", "submission_unknown"].includes(pending2.status)) {
+        Object.assign(pending2, { status: "failed", evidence: error2.message, updatedAt: (/* @__PURE__ */ new Date()).toISOString() });
+      }
+    });
+    return readImageState(directory3).jobs[requestId2];
+  }
   if (receipt.imagePath !== job.outputFile) throw new Error("image_recovery_output_mismatch");
   const result = {
     content: [{ type: "text", text: JSON.stringify(receipt) }],
@@ -150832,8 +150907,8 @@ TOOLS.push(
   {
     name: "image_status",
     title: "Inspect or reconcile an image receipt",
-    description: "Read a local image receipt without contacting providers. action:reconcile settles a failed request or closes a submission_unknown or interrupted submitting request as failed only after the caller supplies terminal/billing evidence and spentUsd. action:refresh recovers a GenAI image download from its saved provider response and updates the managed receipt; it never regenerates. Completed requests are immutable. Do not reconcile a request still running at the provider.",
-    inputSchema: { type: "object", additionalProperties: false, properties: { directory: { type: "string", description: "Absolute directory." }, requestId: { type: "string", description: "Original request ID." }, action: { type: "string", enum: ["read", "reconcile", "refresh"], description: "Defaults to local read. refresh recovers a GenAI image download from its saved response without regeneration." }, executorStopped: { type: "boolean", description: "Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected." }, evidence: { type: "string", description: "For reconcile: actual terminal status and billing evidence reference." }, spentUsd: { type: "number", minimum: 0, description: "For reconcile: verified total charge, including failed generation." } }, required: ["directory", "requestId"] },
+    description: "Read, refresh or reconcile a managed image receipt. Read is local. Refresh recovers the existing provider result and updates the receipt. A lost H3 acknowledgement can be recovered within 23 hours with the exact body and idempotency key. The gateway returns the existing job or accepts the first submission if it never arrived. Reconcile requires terminal and billing evidence plus spentUsd. Use image_plan and image_execute for a distinct attempt. Do not reconcile a request still running at the provider.",
+    inputSchema: { type: "object", additionalProperties: false, properties: { directory: { type: "string", description: "Absolute directory." }, requestId: { type: "string", description: "Original request ID." }, action: { type: "string", enum: ["read", "reconcile", "refresh"], description: "Defaults to local read. Refresh recovers an existing GenAI image request. An unacknowledged H3 request can replay the exact submission under the same key." }, executorStopped: { type: "boolean", description: "Required true to reconcile submitting: verify the executor has exited and provider is terminal. A live local owner is rejected." }, evidence: { type: "string", description: "For reconcile: actual terminal status and billing evidence reference." }, spentUsd: { type: "number", minimum: 0, description: "For reconcile: verified total charge, including failed generation." } }, required: ["directory", "requestId"] },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true }
   }
 );

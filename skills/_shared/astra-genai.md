@@ -438,8 +438,10 @@ No example grants spending permission. `capability_status` checks credentials on
   This model submits to `POST /v1/generations` with `kind:"image"` and `mode:"scene"`
   on `ASTRA_GENAI_URL`. The receipt records the job ID for `GET /v1/generations/{id}`.
   Download the signed PNG from the job without sending the gateway token. Use
-  `image_status action:refresh` for a managed request with a job ID, or
-  `astra_genai_jobs gateway:main` to check history after a lost acknowledgement.
+  `image_status action:refresh` to recover a managed request. If its acknowledgement
+  was lost, an explicit refresh uses the original idempotency key and unchanged body
+  within 23 hours. The gateway returns the existing job or accepts the first submission
+  if the request never arrived. After that window, check `astra_genai_jobs gateway:main`.
   Edits keep the first source's dimensions by default. Specify a supported size
   if the source falls outside the 256–2048 grid in multiples of 16. The first source
   and ordered references must fit the seven-picture aspect-ratio budget. The prompt

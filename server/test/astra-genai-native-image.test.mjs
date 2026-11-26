@@ -166,3 +166,46 @@ test('queued H3 submits to the main gateway and recovers a verified signed PNG w
   assert.deepEqual(calls, [[base + '/v1/generations', 'POST'], [base + jobPath, 'GET'],
     [base + jobPath, 'GET'], [signed, undefined]]);
 });
+
+test('lost H3 acknowledgement replays only the exact request while its key is retained', async t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'h3-replay-image-'));
+  const original = globalThis.fetch;
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => {
+    globalThis.fetch = original; config.astraGenaiApiKey = key;
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  const model = 'minimax-h3-image';
+  const job = { id: 'b'.repeat(32), kind: 'image', mode: 'scene', model,
+    status: 'queued', created_at: '2026-11-26T10:00:00Z', outputs: [] };
+  const receiptPath = path.join(dir, 'a.png.astra-genai.json');
+  const submissions = [];
+  globalThis.fetch = async (url, opts) => {
+    if (opts.method === 'POST') {
+      assert.ok(url.endsWith('/v1/generations'));
+      submissions.push([opts.headers['X-Request-ID'], opts.body]);
+      if (submissions.length === 1) throw new Error('lost acknowledgement');
+      assert.deepEqual(submissions[1], submissions[0]);
+      return Response.json(job, { status: 202 });
+    }
+    assert.ok(url.endsWith('/v1/generations/' + job.id));
+    return Response.json(job);
+  };
+  await assert.rejects(generateNativeImage({ model, prompt: 'yellow mug', outputPath: dir, filename: 'a.png' }), /lost acknowledgement/);
+  const saved = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+  const put = receipt => fs.writeFileSync(receiptPath, JSON.stringify(receipt));
+  put({ ...saved, submittedAt: new Date(Date.now() - 24 * 3600_000).toISOString() });
+  await assert.rejects(recoverNativeImage(receiptPath), /replay window/);
+  put(saved);
+  config.astraGenaiApiKey = 'other-key';
+  await assert.rejects(recoverNativeImage(receiptPath), /credential changed/);
+  config.astraGenaiApiKey = 'fixture';
+  assert.equal(submissions.length, 1);
+  await assert.rejects(recoverNativeImage(receiptPath), /queued or running/);
+  await assert.rejects(recoverNativeImage(receiptPath), /queued or running/);
+  const linked = JSON.parse(fs.readFileSync(receiptPath, 'utf8'));
+  assert.equal(linked.jobId, job.id);
+  assert.equal(linked.requestBody, undefined);
+  assert.equal(submissions.length, 2);
+});

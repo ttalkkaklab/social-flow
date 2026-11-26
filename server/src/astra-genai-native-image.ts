@@ -4,7 +4,7 @@ import * as fs from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
 import {
-  GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult,
+  GENAI_SCENE_REPLAY_WINDOW_MS, GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult,
   genaiSourceUri, generationSchema, pollGenaiJob, requestGenai, requireAstraGenaiKey,
 } from './astra-genai-client.js';
 import { GenaiImageOutputError } from './astra-genai-image.js';
@@ -128,9 +128,11 @@ const legacyReceiptSchema = nativeReceiptSchema.extend({
 }).passthrough();
 const h3ReceiptSchema = nativeReceiptSchema.extend({
   protocol: z.literal('gateway-image-scene-v1'), model: z.literal(GENAI_H3_IMAGE_MODEL),
-  status: z.enum(['submitting', 'submitted', 'completed']), jobId: z.string().optional(),
+  status: z.enum(['submitting', 'submitted', 'completed', 'rejected']), jobId: z.string().optional(),
   expected: z.object({ width: z.number().int().positive(), height: z.number().int().positive() }),
   createdAt: z.string().optional(), completedAt: z.string().optional(), usage: z.unknown().optional(),
+  clientRequestId: z.string().optional(), submittedAt: z.string().optional(), requestBody: z.string().optional(),
+  requestSha256: z.string().optional(), credentialSha256: z.string().optional(), rejection: z.string().optional(),
 }).passthrough();
 const imageReceiptSchema = z.discriminatedUnion('protocol', [legacyReceiptSchema, h3ReceiptSchema]);
 type H3Receipt = z.infer<typeof h3ReceiptSchema>;
@@ -162,22 +164,28 @@ export async function generateNativeImage(input: unknown, edit = false) {
   atomicJson(receiptPath, { ...receipt, status: 'received', response });
   return recoverNativeImage(receiptPath);
 }
-export async function recoverNativeImage(receiptPath: string) {
+export async function recoverNativeImage(receiptPath: string, binding?: { imagePath: string; requestId: string; replayUnknown: boolean }) {
   const receipt = imageReceiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
   const common = receipt.protocol === 'gateway-image-scene-v1';
+  if (binding && (receipt.imagePath !== binding.imagePath || (common && receipt.clientRequestId !== binding.requestId))) {
+    throw new Error('GenAI image receipt does not belong to the approved request or output');
+  }
   if (receipt.baseUrl !== astraGenaiBaseUrl(common ? GENERATIONS_ROUTE : NATIVE_IMAGE_ROUTE)) {
     throw new Error('Gateway origin changed; restore configuration before recovery');
+  }
+  if (common) {
+    if (!receipt.jobId && binding?.replayUnknown === false) {
+      throw new Error('GenAI image request is closed; check main gateway job history');
+    }
+    const linked = receipt.jobId ? receipt : await replayH3Image(receipt, receiptPath);
+    const result = await collectH3Image(linked, receiptPath);
+    if (!result) throw new Error(`GenAI image job ${linked.jobId} is queued or running; refresh its receipt again`);
+    return result;
   }
   if (receipt.status === 'completed') {
     const output = verifyImageFile(receipt.imagePath);
     if (output.sha256 !== receipt.sha256) throw new Error('Cached image changed');
-    if (common) return h3ImageResult(receipt, receiptPath, output);
     return { imagePath: receipt.imagePath, requestId: receipt.requestId, usage: undefined, output, review: 'not_reviewed' };
-  }
-  if (common) {
-    const result = await collectH3Image(receipt, receiptPath);
-    if (!result) throw new Error(`GenAI image job ${receipt.jobId} is queued or running; refresh its receipt again`);
-    return result;
   }
   if (receipt.status === 'submitting' && receipt.requestId) {
     const existing = await requestGenai('GET', '/v1/images/requests/' + encodeURIComponent(receipt.requestId));
@@ -196,20 +204,63 @@ export async function recoverNativeImage(receiptPath: string) {
 
 async function generateH3Image(body: ReturnType<typeof buildH3ImageBody>, clientRequestId: string | undefined, imagePath: string, receiptPath: string) {
   const { width, height } = body.parameters;
-  const requestId = randomUUID();
+  const requestBody = JSON.stringify(body);
   const receipt: H3Receipt = {
     protocol: 'gateway-image-scene-v1', model: GENAI_H3_IMAGE_MODEL, baseUrl: astraGenaiBaseUrl(GENERATIONS_ROUTE),
-    imagePath, requestId, clientRequestId, expected: { width, height }, status: 'submitting',
+    imagePath, requestId: randomUUID(), clientRequestId, expected: { width, height }, status: 'submitting',
+    submittedAt: new Date().toISOString(), requestBody, requestSha256: hashText(requestBody),
+    credentialSha256: hashText(requireAstraGenaiKey(GENERATIONS_ROUTE)),
   };
   fs.writeFileSync(receiptPath, JSON.stringify(receipt), { flag: 'wx', mode: 0o600 });
-  const job = h3JobSchema.parse(await requestGenai('POST', GENERATIONS_ROUTE, body, 60_000, undefined, undefined, requestId));
-  const submitted: H3Receipt = { ...receipt, jobId: job.id, createdAt: job.created_at, status: 'submitted' };
-  atomicJson(receiptPath, submitted);
+  const submitted = await submitH3Image(receipt, receiptPath, body);
   const { result } = await pollGenaiJob(async () => {
     const result = await collectH3Image(submitted, receiptPath);
     return { downloaded: result !== undefined, result };
   }, `GenAI image is still pending; recover using receiptPath ${receiptPath}`);
   return result!;
+}
+
+const hashText = (value: string) => createHash('sha256').update(value).digest('hex');
+
+async function submitH3Image(receipt: H3Receipt, receiptPath: string, body: unknown) {
+  const { requestBody: _body, credentialSha256: _credential, ...metadata } = receipt;
+  let response: unknown;
+  try {
+    response = await requestGenai('POST', GENERATIONS_ROUTE, body, 60_000, undefined, undefined, receipt.requestId);
+  } catch (error) {
+    if (error instanceof GenaiRequestError && error.terminal) {
+      const current = h3ReceiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
+      if (current.jobId) return current;
+      atomicJson(receiptPath, { ...metadata, status: 'rejected', rejection: error.message });
+    }
+    throw error;
+  }
+  const job = h3JobSchema.parse(response);
+  const current = h3ReceiptSchema.parse(JSON.parse(fs.readFileSync(receiptPath, 'utf8')));
+  if (current.jobId) {
+    if (current.jobId !== job.id) throw new Error('GenAI image recovery job ID mismatch');
+    return current;
+  }
+  const linked: H3Receipt = { ...metadata, jobId: job.id, createdAt: job.created_at, status: 'submitted' };
+  atomicJson(receiptPath, linked);
+  return linked;
+}
+
+/** An explicit refresh can reattach a lost acknowledgement using the original idempotency key. */
+function replayH3Image(receipt: H3Receipt, receiptPath: string) {
+  if (receipt.status === 'rejected') throw new Error(receipt.rejection ?? 'GenAI image submission was rejected');
+  const { requestId, requestBody, requestSha256, submittedAt, credentialSha256 } = receipt;
+  if (!requestId || !requestBody || !submittedAt || hashText(requestBody) !== requestSha256) {
+    throw new Error('GenAI image submission identity is unknown; check main gateway job history');
+  }
+  const age = Date.now() - Date.parse(submittedAt);
+  if (!(age >= 0 && age < GENAI_SCENE_REPLAY_WINDOW_MS)) {
+    throw new Error('GenAI image replay window has passed; check main gateway job history');
+  }
+  if (hashText(requireAstraGenaiKey(GENERATIONS_ROUTE)) !== credentialSha256) {
+    throw new Error('GenAI image gateway credential changed; restore it before recovery');
+  }
+  return submitH3Image(receipt, receiptPath, JSON.parse(requestBody));
 }
 
 function h3ImageResult(receipt: H3Receipt, receiptPath: string, output: ReturnType<typeof verifyImageFile>) {
@@ -220,6 +271,11 @@ function h3ImageResult(receipt: H3Receipt, receiptPath: string, output: ReturnTy
 }
 
 async function collectH3Image(receipt: H3Receipt, receiptPath: string) {
+  if (receipt.status === 'completed') {
+    const output = verifyImageFile(receipt.imagePath);
+    if (output.sha256 !== receipt.sha256) throw new Error('Cached image changed');
+    return h3ImageResult(receipt, receiptPath, output);
+  }
   const { jobId } = receipt;
   if (!jobId) throw new Error('GenAI image submission outcome unknown; check main gateway job history before retrying');
   const job = h3JobSchema.parse(await requestGenai('GET', GENERATIONS_ROUTE + '/' + encodeURIComponent(jobId)));

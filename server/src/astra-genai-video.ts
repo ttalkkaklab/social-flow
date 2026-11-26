@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, generationSchema, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
+import { GENAI_SCENE_REPLAY_WINDOW_MS, GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, generationSchema, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
@@ -409,8 +409,6 @@ export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1),
 
 // A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
 const SUBMIT_TIMEOUT_MS = 15 * 60_000;
-/** The gateway binds a scene's X-Request-Id to its job until 24 hours after that job ends; a later replay could render again. */
-const REPLAY_WINDOW_MS = 23 * 3600_000;
 const accepted = (response: unknown) => z.object({ id: z.string().min(1) }).passthrough().parse(response).id;
 
 /** Find the job of a scene whose response was lost: the same X-Request-Id with the same body returns the job the first
@@ -418,7 +416,7 @@ const accepted = (response: unknown) => z.object({ id: z.string().min(1) }).pass
 async function replayScene(receipt: Receipt, receiptPath: string) {
   if (!receipt.requestId || !receipt.requestPath || !fs.existsSync(receipt.requestPath))
     throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
-  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < GENAI_SCENE_REPLAY_WINDOW_MS))
     throw new Error('genai_replay_window_passed: the gateway may no longer tie request ' + receipt.requestId + ' to its job; check GET /v1/jobs before planning again');
   const body = JSON.parse(fs.readFileSync(receipt.requestPath, 'utf8'));
   const jobId = accepted(await requestGenai('POST', GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS, undefined, undefined, receipt.requestId));

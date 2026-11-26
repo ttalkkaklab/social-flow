@@ -411,7 +411,26 @@ async function refreshGenaiImage(directory, requestId) {
         deliverMlxImage(plan);
         return readImageState(directory).jobs[requestId];
     }
-    const receipt = await (job.tool.startsWith('astra_genai_image_') ? recoverNativeImage : recoverGenaiImage)(job.outputFile + '.astra-genai.json');
+    const receiptPath = job.outputFile + '.astra-genai.json';
+    let receipt;
+    try {
+        receipt = job.tool.startsWith('astra_genai_image_')
+            ? await recoverNativeImage(receiptPath, { imagePath: job.outputFile, requestId,
+                replayUnknown: ['submitting', 'submission_unknown'].includes(job.status) })
+            : await recoverGenaiImage(receiptPath);
+    }
+    catch (error) {
+        // Only a terminal job status in a successful status response settles the concurrency slot.
+        if (!(error instanceof GenaiRequestError && error.terminal && error.httpStatus === 200))
+            throw error;
+        imageTransaction(directory, undefined, current => {
+            const pending = current.jobs[requestId];
+            if (['submitting', 'submission_unknown'].includes(pending.status)) {
+                Object.assign(pending, { status: 'failed', evidence: error.message, updatedAt: new Date().toISOString() });
+            }
+        });
+        return readImageState(directory).jobs[requestId];
+    }
     if (receipt.imagePath !== job.outputFile)
         throw new Error('image_recovery_output_mismatch');
     const result = { content: [{ type: 'text', text: JSON.stringify(receipt) }], imageReceipt: receipt,

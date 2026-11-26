@@ -192,6 +192,39 @@ test('native gateway selection routes model-bound edits with hashed references a
   await f.run(p,async(tool,args)=>{assert.equal(tool,p.tool);assert.equal(args.refImagePaths[0],path.join(f.dir,'source.png'));return output(args);});
 });
 
+test('refresh of an interrupted H3 request records a terminal job failure and releases concurrency', async t => {
+  const { generateNativeImage } = await import('../dist/astra-genai-native-image.js');
+  const model = 'minimax-h3-image';
+  const f = fixture(t, { engine: 'astra-genai-native', model }, { reference: 'test', maxUsd: 1 });
+  const originalFetch = globalThis.fetch;
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { globalThis.fetch = originalFetch; config.astraGenaiApiKey = key; });
+  const job = { id: 'c'.repeat(32), kind: 'image', model, mode: 'scene',
+    status: 'queued', created_at: '2026-11-26T10:00:00Z', outputs: [] };
+  let available = false;
+  let submissions = 0;
+  globalThis.fetch = async (_url, options) => {
+    if (options.method === 'POST') {
+      submissions++;
+      return Response.json(job, { status: 202 });
+    }
+    if (!available) throw new Error('interrupted before status');
+    return Response.json({ ...job, status: 'failed', error: { code: 'generation_failed', message: 'worker failed' } });
+  };
+  const plan = f.plan('h3', {}, { reserveUsd: 0.1 });
+  assert.equal(plan.gatewayRoute, '/v1/generations');
+  const result = await f.run(plan, async (_tool, args) => generateNativeImage(args));
+  assert.equal(result.structuredContent.status, 'submission_unknown');
+  available = true;
+  const refreshed = await imageStatus({ directory: f.dir, requestId: plan.requestId, action: 'refresh' });
+  assert.equal(refreshed.status, 'failed');
+  assert.equal(refreshed.reserveUsd, 0.1);
+  assert.equal(refreshed.spentUsd, undefined);
+  assert.equal(submissions, 1);
+  assert.equal((await f.run(f.plan('next', {}, { reserveUsd: 0.1 }), async (_tool, args) => output(args))).structuredContent.status, 'completed');
+});
+
 test('a billed image whose save failed is kept from the returned bytes', async t => {
   const f = fixture(t); const p = f.plan();
   const result = await f.run(p, async () => ({ content: [{ type: 'text', text: 'File save failed' }, { type: 'image', data: png.toString('base64'), mimeType: 'image/png' }] }));

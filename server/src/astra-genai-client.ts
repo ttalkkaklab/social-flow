@@ -8,6 +8,8 @@ import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
 
 export const GENERATIONS_ROUTE = '/v1/generations';
+/** The gateway retains scene request IDs for 24 hours after the job ends. */
+export const GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 3600_000;
 /** The common job envelope also covers jobs started through provider-specific routes. */
 export const generationSchema = z.object({
   id: z.string().min(1),

@@ -51192,6 +51192,7 @@ import path4 from "node:path";
 
 // src/astra-genai-client.ts
 var import_undici = __toESM(require_undici(), 1);
+var GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 36e5;
 var generationSchema = external_exports.object({
   id: external_exports.string().min(1),
   status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
@@ -53660,7 +53661,6 @@ var receiptSchema2 = external_exports.object({
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS2 = 15 * 6e4;
-var REPLAY_WINDOW_MS = 23 * 36e5;
 
 // src/video-duration.ts
 var import_video_duration = __toESM(require_video_duration(), 1);
@@ -54514,12 +54514,18 @@ var legacyReceiptSchema = nativeReceiptSchema.extend({
 var h3ReceiptSchema = nativeReceiptSchema.extend({
   protocol: external_exports.literal("gateway-image-scene-v1"),
   model: external_exports.literal(GENAI_H3_IMAGE_MODEL),
-  status: external_exports.enum(["submitting", "submitted", "completed"]),
+  status: external_exports.enum(["submitting", "submitted", "completed", "rejected"]),
   jobId: external_exports.string().optional(),
   expected: external_exports.object({ width: external_exports.number().int().positive(), height: external_exports.number().int().positive() }),
   createdAt: external_exports.string().optional(),
   completedAt: external_exports.string().optional(),
-  usage: external_exports.unknown().optional()
+  usage: external_exports.unknown().optional(),
+  clientRequestId: external_exports.string().optional(),
+  submittedAt: external_exports.string().optional(),
+  requestBody: external_exports.string().optional(),
+  requestSha256: external_exports.string().optional(),
+  credentialSha256: external_exports.string().optional(),
+  rejection: external_exports.string().optional()
 }).passthrough();
 var imageReceiptSchema = external_exports.discriminatedUnion("protocol", [legacyReceiptSchema, h3ReceiptSchema]);
 var h3JobSchema = generationSchema.extend({
