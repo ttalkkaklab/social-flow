@@ -96309,13 +96309,21 @@ var require_scene_acting = __commonJS({
       if (!hasCuedThought(scene)) return scene;
       return { ...scene, timelineFps: owners?.find((owner) => owner.no === scene.scene)?.videoDirection?.fps ?? scene.timelineFps ?? 24 };
     }
+    function productionPerformance(events) {
+      if (!Array.isArray(events)) return events;
+      return events.map((event) => {
+        if (!event || !Object.hasOwn(event, "audience")) return event;
+        const { audience, ...production } = event;
+        return production;
+      });
+    }
     function planScenePerformance(input, measureAudio = () => null) {
       const scene = Array.isArray(input) ? { narration: input } : input;
       const lines = scene.narration || [], warnings = [];
       const timedThought = hasCuedThought(scene);
       const fps = scene.timelineFps ?? 24;
       const explicit = Array.isArray(scene.performance) && scene.performance.length > 0;
-      const events = explicit ? scene.performance.map((event) => ({ ...event })) : lines.map((line, index) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 }));
+      const events = explicit ? productionPerformance(scene.performance) : lines.map((line, index) => ({ kind: line.delivery === "voiceover" ? "narration" : "dialogue", character: line.speaker, group: index + 1 }));
       const groups = /* @__PURE__ */ new Set();
       for (const event of events) {
         if (event.videoDirection !== void 0 && (typeof event.videoDirection !== "string" || !event.videoDirection.trim())) throw new Error("performance.videoDirection must be non-empty text");
@@ -96393,7 +96401,7 @@ var require_scene_acting = __commonJS({
     }
     function scenePerformancePayload(scene) {
       return {
-        performance: scene.performance,
+        performance: productionPerformance(scene.performance),
         narration: (scene.narration || []).map((line) => ({ id: line.id, speaker: line.speaker, tts: line.tts, delivery: line.delivery, acting: line.acting })),
         ...hasCuedThought(scene) && { externalVoiceTiming: { fps: scene.timelineFps ?? 24, start: scene.timeline.startFrame, end: scene.timeline.endFrame, cues: scene.timeline.dialogueCues } },
         videoDesign: scene.shot?.videoDesign,
@@ -96474,7 +96482,7 @@ var require_scene_acting = __commonJS({
       const visualDirection = (value2) => performance2.filter((line) => line.kind !== "action" && line.text).reduce((text4, line) => text4.split(line.text).join("the supplied speech"), String(value2));
       return ["A clean cinematic image with an unobstructed scene and text-free surfaces.", route, visualDirection(sceneDirection(scene, performance2)), ...beats, VIDEO_TEXT_POLICY].join("\n");
     }
-    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats, hasCuedThought, withThoughtClock };
+    module.exports = { estimateSpeechSeconds, estimateSpeech, speechLanguage, actingErrors, resolvedStyle, directionSupport, speechRevisionPayload, VIDEO_TEXT_POLICY, sceneVideoPrompt, planScenePerformance, sceneDirection, scenePerformancePayload, cameraLock, performanceBeats, hasCuedThought, withThoughtClock, productionPerformance };
   }
 });
 
@@ -101422,7 +101430,7 @@ var require_structure_contract = __commonJS({
           else {
             if (CHARGES_OPEN.indexOf(ch.open) === -1) bad(where, 'scene.charge.open is "+" or "-"');
             if (CHARGES_CLOSE.indexOf(ch.close) === -1) bad(where, 'scene.charge.close is "+", "-", "++" (deeper into +) or "--" (deeper into \u2212)');
-            else if (ch.open === ch.close)
+            else if (!performanceStory && ch.open === ch.close)
               warn(where, `charge ${ch.open} \u2192 ${ch.close}: the same value at both ends is a nonevent \u2014 flip it, deepen it ("${ch.open}${ch.open}"), or fold this scene into another (scenario-craft \xA72)`);
           }
           if (!text4(sc.turn)) bad(where, "scene.turn is empty \u2014 say what flipped between the open and the close");
@@ -101438,7 +101446,7 @@ var require_structure_contract = __commonJS({
           else if (text4(sc.turn) && SUMMARY_RE.test(sc.turn.trim()))
             warn(where, `turn "${sc.turn.trim()}" ends on an awareness verb \u2014 name the value that flipped, not that something was revealed`);
         });
-        if (st.scenes.length >= 3 && st.scenes.every((sc) => sc && sc.charge && typeof sc.charge === "object")) {
+        if (!performanceStory && st.scenes.length >= 3 && st.scenes.every((sc) => sc && sc.charge && typeof sc.charge === "object")) {
           const tally = /* @__PURE__ */ new Map();
           st.scenes.forEach((sc) => {
             const k = sc.charge.open + "\u2192" + sc.charge.close;
@@ -101476,7 +101484,7 @@ var require_structure_contract = __commonJS({
           else if (PAIR_OBJ_RE.test(q.purpose))
             warn(where, `purpose "${q.purpose.trim()}" binds two objects with \uC640/\uACFC \u2014 two things to deliver are two purposes; write the one value the stretch moves (rule 8, P0-4)`);
           if (q.question !== void 0 && !text4(q.question)) bad(where, "sequence.question, when written, is the dramatic question this stretch opens");
-          else if (text4(q.question) && ((q.question.match(ASK_RE) || []).length >= 2 || CHAIN_RE.test(q.question) || PARALLEL_RE.test(q.question)))
+          else if (!performanceStory && text4(q.question) && ((q.question.match(ASK_RE) || []).length >= 2 || CHAIN_RE.test(q.question) || PARALLEL_RE.test(q.question)))
             warn(where, `question "${q.question.trim()}" asks two things \u2014 a sequence holds one question open and pays one; the other half is a second sequence's question, or a shot's info`);
           if (!Array.isArray(q.scenes) || !q.scenes.length) {
             bad(where, "sequence.scenes lists the scene numbers it binds, in playback order");
@@ -101923,7 +101931,7 @@ var require_structure_contract = __commonJS({
             warn(where, `space.line is written on a later shot but not on shot ${peopled[0].no}, the first picture shot with a person \u2014 the line is fixed on the first shot that has them and kept (rule 10)`);
           if (gazes.length && !locked2.length && pictured.length >= 2)
             warn(where, `shot ${gazes[0].no}'s facing has someone looking at something ("${String(gazes[0].s.shot.space.facing).trim()}") but no shot of the scene writes space.line \u2014 two people, or a person and what they look at, fix the 180\xB0 line on the scene's first shot (rule 10)`);
-          if (sc && sc.charge && feels.length) {
+          if (!performanceStory && sc && sc.charge && feels.length) {
             const first = signOf(feels[0]);
             if (first && first !== sc.charge.open)
               warn(where, `charge.open "${sc.charge.open}" but the first shot's feel reads "${feels[0]}" (${first}) \u2014 open is the value the scene's first shot says and feels, not the reverse of the last scene's close`);
@@ -102022,6 +102030,7 @@ var require_structure_contract = __commonJS({
           warn("structure", `${groups.size} scenes on a long-form board \u2014 a 10-minute long-form holds 8\u201315; a stretch that is one scene per chapter has not been cut at its turns (rule 9)`);
         if (!performanceStory && total && total <= 90 && groups.size >= 5)
           warn("structure", `${groups.size} scenes in ${Math.round(total)}s \u2014 a 45\u201375s short holds two to four; when places outnumber the band, the band wins: room moves inside one stretch of time are shot moves, and place is where the stretch lives (rule 9)`);
+        if (performanceStory) return out;
         let run2 = 0, prev = "";
         placed.forEach(({ s: s2, no }) => {
           const f3 = compact5(s2.shot && s2.shot.feel);
@@ -102405,6 +102414,7 @@ var require_video_selection = __commonJS({
     var { videoSlot, resolveVideoChoice } = require_production_mode();
     var { videoLines } = require_structure_contract();
     var { projectSceneCast, sceneSpeechRoute } = require_scene_cast();
+    var { productionPerformance } = require_scene_acting();
     var { framePlan, imageReferences, previzHandoff } = require_render_routing();
     function storyboardInputs(members, scene) {
       const images = members.flatMap((shot) => shot.timeline?.images ?? []);
@@ -102531,7 +102541,7 @@ var require_video_selection = __commonJS({
       const cast = scene && projectSceneCast(scene, sourceCards, board, path41.join(root, "storyboard"), savedSelection.engine, speechRoute?.mode === "conditioned", false, savedSelection.model);
       if (cast) scene = { ...scene, videoDirection: cast.direction };
       const members = (cast?.members ?? sourceCards).map((shotWithRefs) => {
-        const raw = shotWithRefs;
+        const raw = Array.isArray(shotWithRefs.performance) ? { ...shotWithRefs, performance: productionPerformance(shotWithRefs.performance) } : shotWithRefs;
         const seedance2 = savedSelection.engine === "seedance";
         const keepCast = selectionOnly && seedance2 && !raw.visual?.characterInputs || genaiCast;
         let shot2 = keepCast ? raw : resolveShotCharacterInputs(raw, path41.join(root, "storyboard"), seedance2, board.SB_DOC?.characters, cast?.identities);
@@ -106561,149 +106571,580 @@ var require_prepare_source_audio = __commonJS({
   }
 });
 
+// ../skills/storyboard/references/shot-direction.js
+var require_shot_direction = __commonJS({
+  "../skills/storyboard/references/shot-direction.js"(exports, module) {
+    (function(root) {
+      "use strict";
+      const esc2 = (value2) => String(value2 == null ? "" : value2).replace(
+        /[&<>"']/g,
+        (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
+      );
+      const word2 = (lang, ko, en) => lang === "ko" ? ko : en;
+      const normalized = (value2) => typeof value2 === "string" ? value2.trim().toLowerCase().replace(/[-_]+/g, " ") : "";
+      const MOVES = [
+        ["helix", /\bhelix\b|\bhelical\b/, "\uB098\uC120 \uC774\uB3D9", "Helix"],
+        ["crash", /\bcrash zoom\b/, "\uD06C\uB798\uC2DC \uC90C", "Crash zoom"],
+        ["dolly-zoom", /\bdolly zoom\b/, "\uB3CC\uB9AC \uC90C", "Dolly zoom"],
+        ["whip", /\bwhip pan\b/, "\uD729 \uD32C", "Whip pan"],
+        ["crane", /\b(crane|pedestal)\b/, "\uC218\uC9C1 \uC774\uB3D9", "Crane / pedestal"],
+        ["dolly", /\bdolly\b/, "\uB3CC\uB9AC", "Dolly"],
+        ["zoom", /\bzoom\b/, "\uC90C", "Zoom"],
+        ["handheld", /\bhandheld\b/, "\uD578\uB4DC\uD5EC\uB4DC", "Handheld"],
+        ["arc", /\barc shot\b|\borbit\b/, "\uD68C\uC804 \uC774\uB3D9", "Arc"],
+        ["pan", /\bpan\b/, "\uD32C", "Pan"],
+        ["tilt", /\btilt\b/, "\uD2F8\uD2B8", "Tilt"],
+        ["tracking", /\b(tracking|truck)\b/, "\uB530\uB77C\uAC00\uAE30", "Tracking / truck"],
+        ["aerial", /\baerial\b|\bdrone\b/, "\uD56D\uACF5 \uC774\uB3D9", "Aerial"],
+        ["static", /^(static|fixed|locked)\b/, "\uACE0\uC815", "Static"]
+      ];
+      const PATHS = {
+        dolly: "M4 7h9v10H4zM13 10l5-3v10l-5-3M4 22h21m-4-4 4 4-4 4",
+        zoom: "M4 4h24v24H4zM10 10h12v12H10zM6 6l4 4m16-4-4 4M6 26l4-4m16 4-4-4",
+        crane: "M6 23h16M14 23V9m-4 4 4-4 4 4M4 3h12v6H4z",
+        arc: "M6 22C-2 5 30 5 26 22m-6-3 6 3 3-6M13 13h6v9h-6z",
+        helix: "M8 26c-12-7 26-8 16-15S0 6 10 2m0 0H4m6-0 1 6",
+        handheld: "M5 8l20-2 2 17-20 2zM12 13l9 4-8 4zM2 3l2-2m24 27 2 2",
+        pan: "M4 16h24m-5-5 5 5-5 5M9 11l-5 5 5 5",
+        tilt: "M16 4v24m-5-5 5 5 5-5M11 9l5-5 5 5",
+        focus: "M3 16a7 7 0 1 0 14 0a7 7 0 1 0-14 0M20 16h9m-3-3 3 3-3 3",
+        static: "M5 5h15v12H5zM20 9l7-4v12l-7-4M12 17v9m-5 3 5-12 5 12",
+        other: "M4 7h24v18H4zM12 12l8 4-8 4z",
+        // Still effects, one picture each: push arrows point in, pull arrows point out, approach
+        // heads for an off-centre target, focus-in closes on one point, rack hands it near → far.
+        "still-push": "M4 4h24v24H4zM11 11h10v10H11zM5 5l5 5M10 7v3H7M27 5l-5 5M22 7v3h3M5 27l5-5M10 25v-3H7M27 27l-5-5M22 25v-3h3",
+        "still-pull": "M4 4h24v24H4zM11 11h10v10H11zM10 10 5 5M5 8V5h3M22 10l5-5M27 8V5h-3M10 22l-5 5M5 24v3h3M22 22l5 5M27 24v3h-3",
+        "still-approach": "M4 4h24v24H4zM17 11a4 4 0 1 0 8 0a4 4 0 1 0-8 0M8 24l9-9M17 19v-4h-4",
+        "still-focus-in": "M9 16a7 7 0 1 0 14 0a7 7 0 1 0-14 0M15 16a1 1 0 1 0 2 0a1 1 0 1 0-2 0M16 2v4M16 26v4M2 16h4M26 16h4",
+        "still-rack": "M4 21a6 6 0 1 0 12 0a6 6 0 1 0-12 0M21 9a3 3 0 1 0 6 0a3 3 0 1 0-6 0M15 16l5-4M17 12h3v3",
+        "still-reveal": "M4 6h24v20H4zM12 6v20M10 16H6M8 14l-2 2 2 2M17 16a3 3 0 1 0 6 0a3 3 0 1 0-6 0",
+        "still-parallax": "M3 4h26v24H3zM7 11h8m-2-2 2 2-2 2M7 21h16m-2-2 2 2-2 2",
+        "still-hold": "M4 6h24v20H4zM13 11v10M19 11v10"
+      };
+      const ROLES = {
+        action: ["\uD589\uB3D9", "Action"],
+        reaction: ["\uBC18\uC751", "Reaction"],
+        insert: ["\uC778\uC11C\uD2B8", "Insert"],
+        scenery: ["\uACF5\uAC04", "Setting"],
+        document: ["\uBB38\uC11C", "Document"],
+        map: ["\uC9C0\uB3C4", "Map"]
+      };
+      const JOINS = {
+        cut: ["\uD558\uB4DC\uCEF7", "Hard cut"],
+        jcut: ["J\uCEF7", "J-cut"],
+        dip: ["\uC554\uC804 \uC804\uD658", "Dip"],
+        dissolve: ["\uB514\uC878\uBE0C", "Dissolve"],
+        whip: ["\uD729 \uC804\uD658", "Whip"],
+        zoom: ["\uC90C \uC804\uD658", "Zoom"],
+        push: ["\uBC00\uAE30", "Push"],
+        iris: ["\uC544\uC774\uB9AC\uC2A4", "Iris"],
+        blur: ["\uBE14\uB7EC", "Blur"]
+      };
+      const directions2 = () => typeof module === "object" && module.exports ? require_scene_direction() : root.SCENE_DIRECTION;
+      const crop = (shot) => {
+        const f3 = directions2().framing(shot);
+        return f3.size || f3.crop || "-";
+      };
+      function catalogue() {
+        return typeof module === "object" && module.exports ? require_film_techniques() : root.FILM_TECHNIQUES;
+      }
+      function cameraOf(scene, lang) {
+        const still = scene.shot?.render?.mode === "still_camera";
+        const camera = still ? scene.shot.render.camera : scene.visual?.camera;
+        const raw = still ? camera?.effect : camera?.movement;
+        const value2 = normalized(raw);
+        let row = MOVES.find((item) => item[1].test(value2));
+        if (still) {
+          const effects = {
+            "focus in": ["still-focus-in", "\uCD08\uC810 \uBAA8\uC73C\uAE30", "Focus in"],
+            "rack focus": ["still-rack", "\uCD08\uC810 \uC774\uB3D9", "Rack focus"],
+            approach: ["still-approach", "\uB2E4\uAC00\uAC00\uAE30", "Approach"],
+            push: ["still-push", "\uD655\uB300", "Push"],
+            pull: ["still-pull", "\uCD95\uC18C", "Pull"],
+            pan: ["pan", "\uC88C\uC6B0 \uC774\uB3D9", "Pan"],
+            tilt: ["tilt", "\uC0C1\uD558 \uC774\uB3D9", "Tilt"],
+            reveal: ["still-reveal", "\uAC00\uB824\uC9C4 \uACF3 \uACF5\uAC1C", "Reveal"],
+            parallax: ["still-parallax", "\uC2DC\uCC28 \uC774\uB3D9", "Parallax"],
+            hold: ["still-hold", "\uC815\uC9C0", "Hold"]
+          };
+          const effect = effects[value2];
+          row = effect ? [effect[0], null, effect[1], effect[2]] : null;
+        }
+        const authored = !still && catalogue()?.selected(scene).filter((item) => item.entry?.category === "camera");
+        const specific = authored && (authored.find((item) => item.entry.fields.focus) || authored.find((item) => item.entry.fields.movement && item.id !== "camera.static") || authored.find((item) => item.entry.fields.viewpoint) || authored.find((item) => item.entry.fields.movement));
+        if (specific) row = [specific.id, null, specific.entry.label.ko, specific.entry.label.en];
+        const label = row ? word2(lang, row[2], row[3]) : value2 ? word2(lang, "\uAE30\uD0C0 \uC774\uB3D9", "Custom move") : word2(lang, "\uC774\uB3D9 \uBBF8\uC124\uC815", "Move not planned");
+        return {
+          key: row?.[0] || "other",
+          label,
+          raw: typeof raw === "string" ? raw : "",
+          medium: still ? word2(lang, "\uC2A4\uD2F8 \uD6A8\uACFC", "Still effect") : word2(lang, "\uCE74\uBA54\uB77C \uACC4\uD68D", "Camera plan"),
+          camera: camera || {},
+          still
+        };
+      }
+      function secondsOf(scene, doc) {
+        const duration5 = scene.type === "outro" && doc?.outro?.seconds !== void 0 ? doc.outro.seconds : scene.duration;
+        return typeof duration5 === "number" && Number.isFinite(duration5) && duration5 > 0 ? duration5 : null;
+      }
+      const seconds2 = (value2) => value2 === null ? "?" : String(Math.round(value2 * 100) / 100);
+      function icon(key) {
+        const entry2 = catalogue()?.byId[key];
+        if (entry2) return catalogue().icon(entry2);
+        const family = { crash: "zoom", "dolly-zoom": "zoom", whip: "pan", tracking: "dolly", aerial: "arc" }[key] || key;
+        return '<svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="' + (PATHS[family] || PATHS.other) + '"/></svg>';
+      }
+      function changedAxes(previous, scene, lang) {
+        if (!previous) return [];
+        const pairs = [
+          [crop(previous), crop(scene), "\uD06C\uAE30", "Size"],
+          [previous.shot?.angle, scene.shot?.angle, "\uC575\uAE00", "Angle"],
+          [cameraOf(previous, lang).raw, cameraOf(scene, lang).raw, "\uC774\uB3D9", "Move"]
+        ];
+        return pairs.filter(([a, b]) => a && b && normalized(a) !== normalized(b)).map(([, , ko, en]) => word2(lang, ko, en));
+      }
+      function summary2(scene, index, previous, lang, doc) {
+        const camera = cameraOf(scene, lang), role2 = ROLES[scene.shot?.cutType];
+        const target = "#direction-shot-" + (index + 1);
+        const duration5 = secondsOf(scene, doc);
+        let html = '<div class="direction-summary" aria-label="' + word2(lang, "\uC0F7 \uC5F0\uCD9C \uACC4\uD68D", "Shot direction plan") + '">';
+        html += '<a class="direction-camera" href="' + target + '">' + icon(camera.key) + "<span>" + esc2(camera.label) + "</span><small>" + esc2([camera.medium, camera.raw, camera.camera.speed].filter(Boolean).join(" \xB7 ")) + "</small></a>";
+        html += "<span>" + word2(lang, "\uACC4\uD68D ", "Planned ") + seconds2(duration5) + "s</span>";
+        if (role2) html += "<span>" + esc2(word2(lang, ...role2)) + "</span>";
+        html += "</div>";
+        const join27 = typeof scene.transition === "string" ? scene.transition : "";
+        const label = JOINS[join27.split(":")[0]];
+        const special = ["broll", "outro"].includes(scene.type);
+        const incoming = special ? word2(lang, "\uC870\uB9BD \uC2DC \uC5F0\uACB0", "Assembly join") : label ? word2(lang, ...label) + (join27.includes(":") ? " \xB7 " + join27.split(":")[1] : "") : !previous ? word2(lang, "\uC2DC\uC791", "Opening") : join27 || word2(lang, "\uC804\uD658 \uBBF8\uC124\uC815", "Join not planned");
+        const changes = changedAxes(previous, scene, lang);
+        html += '<div class="direction-join"><a href="' + target + '">' + esc2(incoming) + "</a>";
+        if (previous && !special && changes.length) html += "<span>" + esc2(changes.join(" \xB7 ")) + word2(lang, " \uBCC0\uACBD", " changed") + "</span>";
+        if (previous && !special && scene.edit?.continuity) html += "<span>" + esc2(scene.edit.continuity) + "</span>";
+        return html + "</div>";
+      }
+      function playbackEntries(scenes) {
+        const entries = scenes.flatMap((s2, i2) => s2 && typeof s2 === "object" ? [{ s: s2, i: i2 }] : []);
+        const inserts = /* @__PURE__ */ new Map(), unplaced = [];
+        for (const entry2 of entries.filter(({ s: s2 }) => s2.type === "broll")) {
+          const host2 = entry2.s.after;
+          if (!Number.isInteger(host2) || !scenes[host2] || ["broll", "outro"].includes(scenes[host2].type)) {
+            unplaced.push({ ...entry2, unscheduled: true });
+            continue;
+          }
+          if (!inserts.has(host2)) inserts.set(host2, []);
+          inserts.get(host2).push(entry2);
+        }
+        const main2 = entries.filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type));
+        return main2.flatMap((row) => [row, ...inserts.get(row.i) || []]).concat(unplaced, entries.filter(({ s: s2 }) => s2.type === "outro"));
+      }
+      function timeline(scenes, lang, doc) {
+        if (!scenes.length) return "";
+        const entries = playbackEntries(scenes);
+        const lengths = entries.map(({ s: s2 }) => secondsOf(s2, doc)), known = lengths.filter((value2) => value2 !== null);
+        const total = known.reduce((sum, n) => sum + n, 0);
+        const complete = known.length === scenes.length;
+        let html = '<section class="direction-rhythm" aria-label="' + word2(lang, "\uACC4\uD68D \uAE38\uC774 \uD750\uB984", "Planned shot lengths") + '"><p><b>' + word2(lang, "\uCEF7 \uAE38\uC774", "Shot lengths") + "</b> ";
+        html += complete ? word2(lang, "\uACC4\uD68D \uD569\uACC4 ", "Planned total ") + seconds2(total) + "s" : word2(lang, "\uBBF8\uC815 ", "Unknown ") + (scenes.length - known.length);
+        html += " <small>" + word2(lang, "\uCD5C\uC885 \uC601\uC0C1 \uAE38\uC774\uC640 \uB2E4\uB97C \uC218 \uC788\uC2B5\uB2C8\uB2E4.", "Final timing may differ.") + '</small></p><div class="direction-rhythm-track">';
+        entries.forEach(({ s: scene, i: index }, position) => {
+          const length = lengths[position];
+          html += '<a href="#shot-' + (index + 1) + '" class="direction-rhythm-shot" aria-label="' + esc2(word2(lang, "\uC0F7 ", "Shot ") + (index + 1) + ": " + (length === null ? word2(lang, "\uAE38\uC774 \uBBF8\uC815", "length unknown") : seconds2(length) + "s")) + '"><span>' + (index + 1) + '</span><i style="width:' + (length === null ? 0 : Math.max(2, length / Math.max(...known) * 100)) + '%"></i><span>' + seconds2(length) + "s</span></a>";
+        });
+        return html + "</div></section>";
+      }
+      const text4 = (value2) => typeof value2 === "string" && !!value2.trim();
+      const REASONS = [
+        ["shot.why", (s2) => [s2.shot?.why]],
+        ["view.reason", (s2) => [s2.visual?.camera?.view?.reason]],
+        ["techniques.reason", (s2) => (s2.shot?.techniques || []).map((t2) => t2?.reason)],
+        ["depth.reason", (s2) => [s2.shot?.depth?.reason]],
+        ["composition.reason", (s2) => [s2.shot?.composition?.reason]],
+        ["eyeline.reason", (s2) => [s2.shot?.eyeline?.reason]],
+        ["render.reason", (s2) => [s2.shot?.render?.reason]],
+        ["frames.reason", (s2) => [s2.visual?.frames?.reason]],
+        ["edit.reason", (s2) => [s2.edit?.reason]],
+        ["visual.why", (s2) => [s2.visual?.why]],
+        ["deliveryReason", (s2) => (s2.narration || []).map((n) => n?.deliveryReason)]
+      ];
+      function copiedReasons(scenes, least) {
+        const seen = /* @__PURE__ */ new Map();
+        (scenes || []).forEach((s2, i2) => REASONS.forEach(([field2, read4]) => read4(s2).filter(text4).forEach((value2) => {
+          const sentence2 = value2.trim().replace(/\s+/g, " "), key = field2 + "\0" + sentence2, id2 = s2.id || String(i2 + 1);
+          const row = seen.get(key) || { field: field2, text: sentence2, shots: [] };
+          if (!row.shots.includes(id2)) row.shots.push(id2);
+          seen.set(key, row);
+        })));
+        return [...seen.values()].filter((row) => row.shots.length >= (least || 3)).sort((a, b) => b.shots.length - a.shots.length);
+      }
+      const SIZE_ORDER = ["els", "ls", "ws", "fs", "mfs", "ms", "mcu", "cu", "choker", "ecu", "insert"];
+      const idsOf = (value2) => [].concat(value2 || []).map((x2) => typeof x2 === "string" ? x2 : x2 && x2.id).filter(text4);
+      const WIDE = ["els", "ls", "ws", "fs"];
+      function held(scenes) {
+        const sizes = {}, wideWithoutReason = [];
+        (scenes || []).forEach((s2, i2) => {
+          if (["broll", "outro"].includes(s2.type) || !["static", "still-hold"].includes(String(cameraOf(s2, "en").key).replace(/^camera\./, ""))) return;
+          const size = crop(s2);
+          sizes[size] = (sizes[size] || 0) + 1;
+          const reasons = [...(s2.shot?.techniques || []).filter((t2) => t2?.id === "camera.static").map((t2) => t2.reason), s2.shot?.render?.camera?.reason, s2.visual?.camera?.purpose];
+          if (WIDE.includes(size) && !reasons.some(text4)) wideWithoutReason.push(s2.id || String(i2 + 1));
+        });
+        return { sizes, wideWithoutReason };
+      }
+      function facts(win) {
+        const resolver = typeof module === "object" && module.exports ? require_scene_direction() : root.SCENE_DIRECTION;
+        const scenes = resolver ? resolver.withCameraDefaults(win.SCENES || [], win.STRUCTURE?.scenes) : win.SCENES || [];
+        const shots = playbackEntries(scenes).filter(({ s: s2 }) => !["broll", "outro"].includes(s2.type)).map(({ s: s2, i: i2 }) => {
+          const camera = cameraOf(s2, "en");
+          return {
+            id: s2.id || String(i2 + 1),
+            scene: s2.scene === void 0 ? null : s2.scene,
+            size: crop(s2),
+            ...Object.fromEntries(Object.entries(directions2().framing(s2)).filter(([key, value2]) => !["size", "angle"].includes(key) && value2)),
+            angle: directions2().framing(s2).angle || "-",
+            // A card or HTML cut has no camera to leave unchosen; a cut with no route yet still counts.
+            move: !camera.raw ? !s2.shot?.render?.mode || s2.shot.render.mode === "generated_video" ? "unset" : "-" : camera.key === "other" ? camera.raw : String(camera.key).replace(/^camera\./, ""),
+            seconds: secondsOf(s2),
+            lines: (s2.narration || []).length,
+            cast: idsOf(s2.visual?.character),
+            bystanders: idsOf(s2.visual?.bystanders),
+            extras: !!text4(s2.visual?.extras),
+            actions: (Array.isArray(s2.performance) ? s2.performance : []).filter((event) => event?.kind === "action").length
+          };
+        });
+        const tally = (key) => shots.reduce((m2, x2) => {
+          m2[x2[key]] = (m2[x2[key]] || 0) + 1;
+          return m2;
+        }, {});
+        const round2 = (value2) => Math.round(value2 * 10) / 10;
+        const median3 = (values) => {
+          const v = values.slice().sort((a, b) => a - b), mid = v.length >> 1;
+          return v.length ? round2(v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2) : null;
+        };
+        const runs = (value2) => {
+          const out = [];
+          let run2 = [];
+          const flush = () => {
+            if (run2.length > 1) out.push({ value: value2(run2[0]), shots: run2.length, from: run2[0].id, to: run2[run2.length - 1].id });
+            run2 = [];
+          };
+          for (const x2 of shots) {
+            if (run2.length && (run2[0].scene !== x2.scene || value2(run2[0]) !== value2(x2))) flush();
+            if (value2(x2) !== null) run2.push(x2);
+          }
+          flush();
+          return out.sort((a, b) => b.shots - a.shots).slice(0, 3);
+        };
+        const timed = shots.filter((x2) => x2.seconds !== null), counts = {};
+        timed.forEach((x2) => {
+          counts[x2.seconds] = (counts[x2.seconds] || 0) + 1;
+        });
+        const sizes = [...new Set(timed.map((x2) => x2.size))].sort((a, b) => (SIZE_ORDER.indexOf(a) + 1 || 99) - (SIZE_ORDER.indexOf(b) + 1 || 99));
+        return {
+          note: "Counts of the plan as written, for one reading of the whole board. Nothing here is a target.",
+          shots: shots.length,
+          seconds: round2(timed.reduce((sum, x2) => sum + x2.seconds, 0)),
+          sizes: tally("size"),
+          angles: tally("angle"),
+          moves: tally("move"),
+          people: {
+            onScreen: shots.reduce((m2, x2) => {
+              const n = x2.cast.length + x2.bystanders.length;
+              m2[n] = (m2[n] || 0) + 1;
+              return m2;
+            }, {}),
+            extras: shots.filter((x2) => x2.extras).length,
+            withLine: shots.filter((x2) => x2.lines).length,
+            withoutLine: shots.filter((x2) => !x2.lines).length
+          },
+          scenes: [...new Set(shots.map((x2) => x2.scene))].map((no) => {
+            const own = shots.filter((x2) => x2.scene === no);
+            const present = [...new Set(own.flatMap((x2) => x2.cast.concat(x2.bystanders)))];
+            const widest = own.map((x2) => SIZE_ORDER.indexOf(x2.size)).filter((at) => at !== -1 && SIZE_ORDER[at] !== "insert").sort((a, b) => a - b)[0];
+            return {
+              scene: no,
+              seconds: round2(own.reduce((sum, x2) => sum + (x2.seconds || 0), 0)),
+              widest: widest === void 0 ? null : SIZE_ORDER[widest],
+              present,
+              alone: present.length > 1 ? own.filter((x2) => x2.cast.length + x2.bystanders.length === 1).length : 0,
+              shots: own.map((x2) => [x2.id, x2.size, x2.angle, x2.move, x2.seconds === null ? "?" : x2.seconds + "s", x2.lines ? "line" : ""].filter(Boolean).join(" "))
+            };
+          }),
+          runs: { size: runs((x2) => x2.size === "-" ? null : x2.size), held: runs((x2) => ["static", "still-hold"].includes(x2.move) ? "held" : null) },
+          lengths: {
+            bySize: sizes.map((size) => {
+              const own = timed.filter((x2) => x2.size === size);
+              return { size, shots: own.length, median: median3(own.map((x2) => x2.seconds)) };
+            }),
+            common: Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([seconds3, n]) => ({ seconds: Number(seconds3), shots: n })),
+            longest: timed.slice().sort((a, b) => b.seconds - a.seconds).slice(0, 5).map((x2) => ({ id: x2.id, seconds: x2.seconds, actions: x2.actions, lines: x2.lines }))
+          },
+          held: held(scenes),
+          reasons: {
+            copied: copiedReasons(scenes, 2),
+            sizeWithoutWhy: scenes.filter((s2) => s2.shot?.size && !text4(s2.shot?.why)).map((s2, i2) => s2.id || String(i2 + 1)),
+            whyEqualsViewReason: scenes.filter((s2) => text4(s2.shot?.why) && s2.shot.why === s2.visual?.camera?.view?.reason).map((s2, i2) => s2.id || String(i2 + 1))
+          }
+        };
+      }
+      function digest6(win) {
+        const f3 = facts(win), lines = [];
+        const list = (tallied) => Object.entries(tallied).filter(([key]) => key !== "-" && key !== "unset").sort((a, b) => b[1] - a[1]).map(([key, n]) => key + " " + n).join(" \xB7 ");
+        const placed = Object.keys(f3.people.onScreen).some((n) => n !== "0");
+        if (placed || f3.people.withLine) lines.push(`${f3.shots} shots \u2014 on screen: ` + ["nobody", "one", "two", "three"].map((word3, n) => f3.people.onScreen[n] ? word3 + " " + f3.people.onScreen[n] : "").filter(Boolean).join(" \xB7 ") + ` \xB7 with extras ${f3.people.extras} \u2014 a line in ${f3.people.withLine}, none in ${f3.people.withoutLine}`);
+        const alone = f3.scenes.filter((sc) => sc.alone);
+        if (alone.length) lines.push("one person framed where the scene has several: " + alone.map((sc) => `scene ${sc.scene} ${sc.alone}/${sc.shots.length}`).join(" \xB7 "));
+        if (list(f3.sizes)) {
+          const moves = list(f3.moves) + (f3.moves.unset ? `${list(f3.moves) ? " \xB7 " : ""}not chosen ${f3.moves.unset}` : "");
+          lines.push([["sizes", list(f3.sizes)], ["angles", list(f3.angles)], ["moves", moves]].filter(([, words]) => words).map(([word3, words]) => word3 + " " + words).join(" \u2014 "));
+          const byWidest = {};
+          f3.scenes.forEach((sc) => {
+            if (sc.widest) (byWidest[sc.widest] = byWidest[sc.widest] || []).push(sc.scene);
+          });
+          lines.push("widest shot of each scene: " + SIZE_ORDER.filter((size) => byWidest[size]).map((size) => `${size} in ${byWidest[size].sort((a, b) => a - b).join(", ")}`).join(" \xB7 "));
+          const run2 = f3.runs.size[0];
+          if (run2 && run2.shots > 2) lines.push(`longest run of one size: ${run2.value} \xD7 ${run2.shots} (${run2.from}\u2013${run2.to})`);
+        }
+        const copied = f3.reasons.copied.filter((row) => row.shots.length > 2).slice(0, 3);
+        if (copied.length) lines.push("one sentence as the reason on several shots: " + copied.map((row) => `${row.field} \xD7 ${row.shots.length}`).join(" \xB7 "));
+        return lines;
+      }
+      const api2 = { cameraOf, secondsOf, changedAxes, playbackEntries, summary: summary2, timeline, copiedReasons, held, facts, digest: digest6 };
+      if (typeof module === "object" && module.exports) module.exports = api2;
+      else root.SHOT_DIRECTION = api2;
+    })(typeof window === "object" ? window : globalThis);
+  }
+});
+
 // ../skills/storyboard/references/story-performance.js
 var require_story_performance = __commonJS({
   "../skills/storyboard/references/story-performance.js"(exports, module) {
-    "use strict";
-    var text4 = (x2) => typeof x2 === "string" && !!x2.trim();
-    var object7 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
-    function storyPerformance(win) {
-      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
-      const order = [];
-      scenes.forEach((s2, i2) => {
-        if (!object7(s2) || s2.type === "outro" || s2.type === "broll") return;
-        order.push(i2);
-        scenes.forEach((b, j) => {
-          if (object7(b) && b.type === "broll" && b.after === i2) order.push(j);
+    (function(root) {
+      "use strict";
+      const text4 = (x2) => typeof x2 === "string" && !!x2.trim();
+      const object7 = (x2) => x2 !== null && typeof x2 === "object" && !Array.isArray(x2);
+      const cueText = (value2) => text4(value2) ? value2.trim().replace(/\s+/g, " ") : "";
+      function orderedPerformance(raw) {
+        const groups = /* @__PURE__ */ new Map();
+        raw.forEach((e2, j) => {
+          if (["dialogue", "narration"].includes(e2?.kind) && Number.isInteger(e2.group) && e2.group > 0)
+            groups.set(e2.group, groups.has(e2.group) ? null : j);
         });
-      });
-      return order.flatMap((i2) => (Array.isArray(scenes[i2].performance) ? scenes[i2].performance : []).map((e2, j) => {
-        const s2 = scenes[i2], validGroup = Number.isInteger(e2?.group) && e2.group > 0;
-        const n = validGroup && Array.isArray(s2.narration) ? s2.narration[e2.group - 1] : void 0;
-        const transcriptGroups = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find((t2) => t2?.shot === i2 + 1)?.groups;
-        const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e2.group - 1] : void 0;
-        const quote = e2?.kind === "action" ? text4(e2.text) ? e2.text : "" : ["dialogue", "narration"].includes(e2?.kind) ? [n?.sub, n?.tts, transcript?.text].find(text4) || "" : "";
-        return {
-          shot: i2 + 1,
-          ...text4(s2.id) ? { shotId: s2.id } : {},
-          event: j + 1,
-          ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.id) ? { lineId: n.id } : {},
-          ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.delivery) ? { delivery: n.delivery } : {},
-          kind: e2?.kind,
-          character: e2?.character,
-          to: e2?.to,
-          group: e2?.group,
-          quote,
-          ...!quote ? { unresolved: true } : {}
-        };
-      }));
-    }
-    function checkPerformanceStory(win, { requireReview = false, hash: hash8 } = {}) {
-      const errors = [], fail6 = (s2) => errors.push(s2), story = win.STORY;
-      const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
-      if (!["evidence", "fiction", "adapted"].includes(story.kind)) fail6("STORY.kind must be evidence, fiction or adapted");
-      if (!["narration", "dialogue", "visual", "mixed"].includes(story.expression)) fail6("STORY.expression is required");
-      for (const key of ["viewerNeed", "thesis", "basis", "endingReason"]) if (!text4(story[key])) fail6("STORY." + key + " is required");
-      if (story.kind === "adapted" && !text4(story.adaptationBoundary)) fail6("STORY.adaptationBoundary is required");
-      const cast = Array.isArray(story.cast) ? story.cast : [], ids = /* @__PURE__ */ new Set();
-      for (const c of cast) {
-        if (!object7(c) || !text4(c.id) || ids.has(c.id)) {
-          fail6("STORY.cast requires unique character IDs");
-          continue;
-        }
-        ids.add(c.id);
-        for (const key of ["role", "want", "voice", "source"]) if (!text4(c[key])) fail6("STORY.cast " + c.id + " requires " + key);
+        const linked = new Set(raw.filter((e2) => e2?.kind === "action" && groups.get(e2.withGroup) != null).map((e2) => groups.get(e2.withGroup)));
+        return raw.map((e2, j) => {
+          const anchor = e2?.kind === "action" ? groups.get(e2.withGroup) : void 0;
+          const moment = anchor ?? j;
+          return {
+            e: e2,
+            j,
+            moment,
+            ...linked.has(moment) ? { together: moment + 1 } : {},
+            ...e2?.withGroup !== void 0 && anchor == null ? { unresolvedTiming: true } : {}
+          };
+        }).sort((a, b) => a.moment - b.moment || a.j - b.j);
       }
-      if (!cast.length) fail6("STORY.cast is required");
-      if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail6("STORY.transcripts must be an array");
-      for (const t2 of Array.isArray(story.transcripts) ? story.transcripts : [])
-        if (!Number.isInteger(t2?.shot) || !scenes[t2.shot - 1] || scenes[t2.shot - 1].type === "outro") fail6("transcript references an invalid shot");
-      const used = /* @__PURE__ */ new Set();
-      scenes.forEach((s2, i2) => {
-        if (!object7(s2)) {
-          fail6("shot " + (i2 + 1) + " must be an object");
+      function storyPerformance(win, { audienceOnly = false } = {}) {
+        const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+        const direction = typeof module === "object" && module.exports ? require_shot_direction() : root.SHOT_DIRECTION;
+        const order = direction.playbackEntries(scenes).filter((row) => !row.unscheduled && row.s.type !== "outro");
+        return order.flatMap(({ i: i2 }) => {
+          const raw = Array.isArray(scenes[i2].performance) ? scenes[i2].performance : [];
+          return orderedPerformance(raw).map(({ e: e2, j, together, unresolvedTiming }) => {
+            const s2 = scenes[i2], validGroup = Number.isInteger(e2?.group) && e2.group > 0;
+            const n = validGroup && Array.isArray(s2.narration) ? s2.narration[e2.group - 1] : void 0;
+            const transcriptGroups = (Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : []).find((t2) => t2?.shot === i2 + 1)?.groups;
+            const transcript = validGroup && Array.isArray(transcriptGroups) ? transcriptGroups[e2.group - 1] : void 0;
+            const speech = [n?.tts, transcript?.text];
+            const quote = e2?.kind === "action" ? text4(e2.text) ? e2.text : "" : ["dialogue", "narration"].includes(e2?.kind) ? speech.find(text4) || "" : "";
+            const visual = ["dialogue", "narration"].includes(e2?.kind) && cueText(e2.videoDirection || n?.acting?.visual);
+            const unresolvedVisual = visual && !raw.some((action2) => action2?.kind === "action" && action2.withGroup === e2.group && text4(action2.text) && [cueText(action2.text), cueText(action2.videoDirection)].includes(visual));
+            if (audienceOnly) {
+              if (unresolvedTiming) return { shot: i2 + 1, event: j + 1, kind: e2?.kind, quote: "", unresolvedTiming: true };
+              return {
+                shot: i2 + 1,
+                event: j + 1,
+                kind: e2?.kind,
+                quote,
+                ...together ? { together } : {},
+                ...unresolvedVisual ? { unresolvedVisual: true } : {},
+                ...text4(e2?.audience?.speaker) ? { character: e2.audience.speaker } : {},
+                ...text4(e2?.audience?.listener) ? { to: e2.audience.listener } : {},
+                ...["on_screen", "off_screen", "voiceover"].includes(n?.delivery) ? { delivery: n.delivery } : {}
+              };
+            }
+            return {
+              shot: i2 + 1,
+              ...text4(s2.id) ? { shotId: s2.id } : {},
+              event: j + 1,
+              ...together ? { together } : {},
+              ...unresolvedTiming ? { unresolvedTiming: true } : {},
+              ...unresolvedVisual ? { unresolvedVisual: true } : {},
+              ...text4(n?.sub) && n.sub !== quote ? { displayText: n.sub } : {},
+              ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.id) ? { lineId: n.id } : {},
+              ...["dialogue", "narration"].includes(e2?.kind) && text4(n?.delivery) ? { delivery: n.delivery } : {},
+              kind: e2?.kind,
+              character: e2?.character,
+              to: e2?.to,
+              group: e2?.group,
+              quote,
+              ...!quote ? { unresolved: true } : {}
+            };
+          });
+        });
+      }
+      function sameMoment(a, b) {
+        return !!a && !!b && a.shot === b.shot && (a.together ?? a.event) === (b.together ?? b.event);
+      }
+      function beatRange(beat, events) {
+        function position(ref) {
+          if (!object7(ref) || !Number.isInteger(ref.event) || ref.event < 1) return -1;
+          if (text4(ref.shotId) === Number.isInteger(ref.shot)) return -1;
+          return events.findIndex((e2) => e2.event === ref.event && (text4(ref.shotId) ? e2.shotId === ref.shotId : e2.shot === ref.shot));
+        }
+        if (!object7(beat)) return [-1, -1];
+        if (beat.start !== void 0 || beat.end !== void 0) return [position(beat.start), position(beat.end)];
+        return [events.findIndex((e2) => e2.shot === beat.shot), events.findLastIndex((e2) => e2.shot === beat.shot)];
+      }
+      function checkBeatRanges(beats, events, publicEvents, fail6) {
+        if (!Array.isArray(beats) || !beats.length) {
+          if (events.length) fail6("STORY.beats has no authored change to review");
           return;
         }
-        if (s2.type === "outro") return;
-        const events2 = Array.isArray(s2.performance) ? s2.performance : [];
-        if (!events2.length) fail6("shot " + (i2 + 1) + " requires performance events");
-        const groups = Array.isArray(s2.narration) ? s2.narration : [];
-        const live = (Array.isArray(story.transcripts) ? story.transcripts : []).filter((t2) => t2?.shot === i2 + 1);
-        if (live.length > 1) fail6("duplicate transcript for shot " + (i2 + 1));
-        const transcript = live[0];
-        if (transcript && (groups.length || !text4(transcript.source) || transcript.source !== (s2.visual?.reuse?.clip || s2.visual?.clip) || !(s2.visual?.reuse || s2.visual?.source === "recording") || !Array.isArray(transcript.groups))) fail6("transcript requires matching live recording and no generated speech");
-        let end = 0;
-        for (const g of Array.isArray(transcript?.groups) ? transcript.groups : []) {
-          if (!text4(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6("transcript requires ordered timed speech within the reused clip");
-          end = g?.end;
+        let previousEnd = -1, previousEvidence = "";
+        const indexed = beats.map((beat, i2) => ({ i: i2, beat, bounds: beatRange(beat, events) }));
+        if (beats.every((b) => b && b.start === void 0 && b.end === void 0))
+          indexed.sort((a, b) => a.bounds[0] - b.bounds[0]);
+        for (const { i: i2, beat, bounds } of indexed) {
+          const where = "STORY.beats[" + i2 + "]";
+          if (!object7(beat) || !text4(beat.change) || !text4(beat.necessity)) {
+            fail6(where + " needs change and necessity");
+            continue;
+          }
+          const [start, end] = bounds;
+          if (start < 0 || end < start || start <= previousEnd) {
+            fail6(where + " needs existing event bounds in playback order without overlap");
+            continue;
+          }
+          if (sameMoment(events[start - 1], events[start]) || sameMoment(events[end], events[end + 1]))
+            fail6(where + " splits simultaneous evidence. Put the beat boundary before or after the whole moment.");
+          const evidence = JSON.stringify(publicEvents.slice(start, end + 1).map((e2, i3, rows2) => [e2.kind, e2.character, e2.to, e2.delivery, e2.quote.trim().replace(/\s+/g, " "), i3 > 0 && sameMoment(rows2[i3 - 1], e2)]));
+          if (start === previousEnd + 1 && evidence === previousEvidence)
+            fail6(where + " repeats the preceding performed evidence exactly; inspect the change from the viewer\u2019s position");
+          previousEnd = end;
+          previousEvidence = evidence;
         }
-        const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = /* @__PURE__ */ new Set();
-        let lastGroup = 0;
-        events2.forEach((e2) => {
-          if (!object7(e2) || !["action", "dialogue", "narration"].includes(e2.kind)) {
-            fail6("invalid performance event");
+      }
+      function checkPerformanceStory(win, { requireReview = false, hash: hash8 } = {}) {
+        const errors = [], fail6 = (s2) => errors.push(s2), story = win.STORY;
+        const scenes = Array.isArray(win.SCENES) ? win.SCENES : [];
+        if (!["evidence", "fiction", "adapted"].includes(story.kind)) fail6("STORY.kind must be evidence, fiction or adapted");
+        if (!["narration", "dialogue", "visual", "mixed"].includes(story.expression)) fail6("STORY.expression is required");
+        for (const key of ["viewerNeed", "thesis", "basis", "endingReason"]) if (!text4(story[key])) fail6("STORY." + key + " is required");
+        if (story.kind === "adapted" && !text4(story.adaptationBoundary)) fail6("STORY.adaptationBoundary is required");
+        const cast = Array.isArray(story.cast) ? story.cast : [], ids = /* @__PURE__ */ new Set();
+        for (const c of cast) {
+          if (!object7(c) || !text4(c.id) || ids.has(c.id)) {
+            fail6("STORY.cast requires unique character IDs");
+            continue;
+          }
+          ids.add(c.id);
+          for (const key of ["role", "want", "voice", "source"]) if (!text4(c[key])) fail6("STORY.cast " + c.id + " requires " + key);
+        }
+        if (!cast.length) fail6("STORY.cast is required");
+        if (story.transcripts !== void 0 && !Array.isArray(story.transcripts)) fail6("STORY.transcripts must be an array");
+        for (const t2 of Array.isArray(story.transcripts) ? story.transcripts : [])
+          if (!Number.isInteger(t2?.shot) || !scenes[t2.shot - 1] || scenes[t2.shot - 1].type === "outro") fail6("transcript references an invalid shot");
+        const used = /* @__PURE__ */ new Set();
+        scenes.forEach((s2, i2) => {
+          if (!object7(s2)) {
+            fail6("shot " + (i2 + 1) + " must be an object");
             return;
           }
-          const worldEvent = e2.kind === "action" && e2.character === void 0;
-          if (!worldEvent && !ids.has(e2.character)) fail6("performance character is not cast: " + e2.character);
-          if (!worldEvent) used.add(e2.character);
-          if (e2.kind === "action") {
-            if (!text4(e2.text) || e2.group !== void 0) fail6("action requires visible text and no speech group");
-          } else {
-            const n = spoken[e2.group - 1];
-            if (!Number.isInteger(e2.group) || !n || seen.has(e2.group) || e2.group <= lastGroup) fail6("speech events require ordered unique narration groups");
-            seen.add(e2.group);
-            lastGroup = e2.group;
-            if (!text4(n?.tts) && !text4(n?.sub) && !text4(n?.text)) fail6("speech group is empty");
-            if (n?.speaker !== e2.character) fail6("speech speaker must equal performance character");
-            if (e2.text !== void 0) fail6("speech event must reference a group, not duplicate text");
-            if (e2.kind === "dialogue" && !ids.has(e2.to) && !["self", "audience", "unidentified"].includes(e2.to)) fail6("dialogue requires a known addressee or unidentified in-world listener");
+          if (s2.type === "outro") return;
+          const events2 = Array.isArray(s2.performance) ? s2.performance : [];
+          if (!events2.length) fail6("shot " + (i2 + 1) + " requires performance events");
+          for (const row of orderedPerformance(events2)) if (row.unresolvedTiming)
+            fail6("shot " + (i2 + 1) + " event " + (row.j + 1) + " withGroup must identify one performed speech group in this shot");
+          const groups = Array.isArray(s2.narration) ? s2.narration : [];
+          const live = (Array.isArray(story.transcripts) ? story.transcripts : []).filter((t2) => t2?.shot === i2 + 1);
+          if (live.length > 1) fail6("duplicate transcript for shot " + (i2 + 1));
+          const transcript = live[0];
+          if (transcript && (groups.length || !text4(transcript.source) || transcript.source !== (s2.visual?.reuse?.clip || s2.visual?.clip) || !(s2.visual?.reuse || s2.visual?.source === "recording") || !Array.isArray(transcript.groups))) fail6("transcript requires matching live recording and no generated speech");
+          let end = 0;
+          for (const g of Array.isArray(transcript?.groups) ? transcript.groups : []) {
+            if (!text4(g?.text) || !Number.isFinite(g.start) || !Number.isFinite(g.end) || g.start < end || g.end <= g.start || s2.visual?.reuse && g.end > s2.duration) fail6("transcript requires ordered timed speech within the reused clip");
+            end = g?.end;
           }
+          const spoken = groups.length ? groups : Array.isArray(transcript?.groups) ? transcript.groups : [], seen = /* @__PURE__ */ new Set();
+          let lastGroup = 0;
+          events2.forEach((e2) => {
+            if (!object7(e2) || !["action", "dialogue", "narration"].includes(e2.kind)) {
+              fail6("invalid performance event");
+              return;
+            }
+            const worldEvent = e2.kind === "action" && e2.character === void 0;
+            if (!worldEvent && !ids.has(e2.character)) fail6("performance character is not cast: " + e2.character);
+            if (!worldEvent) used.add(e2.character);
+            if (e2.kind === "action") {
+              if (!text4(e2.text) || e2.group !== void 0) fail6("action requires visible text and no speech group");
+            } else {
+              const n = spoken[e2.group - 1];
+              if (!Number.isInteger(e2.group) || !n || seen.has(e2.group) || e2.group <= lastGroup) fail6("speech events require ordered unique narration groups");
+              seen.add(e2.group);
+              lastGroup = e2.group;
+              if (!text4(n?.tts) && !text4(n?.sub) && !text4(n?.text)) fail6("speech group is empty");
+              if (n?.speaker !== e2.character) fail6("speech speaker must equal performance character");
+              if (e2.text !== void 0) fail6("speech event must reference a group, not duplicate text");
+              if (e2.kind === "dialogue" && !ids.has(e2.to) && !["self", "audience", "unidentified"].includes(e2.to)) fail6("dialogue requires a known addressee or unidentified in-world listener");
+            }
+          });
+          if (seen.size !== spoken.length) fail6("performance must include every speech group exactly once");
         });
-        if (seen.size !== spoken.length) fail6("performance must include every speech group exactly once");
-      });
-      for (const id2 of ids) if (!used.has(id2)) fail6("unused STORY.cast member: " + id2);
-      const events = storyPerformance(win);
-      const speech = events.filter((e2) => e2.kind !== "action");
-      if (story.expression === "visual" && speech.length) fail6("visual expression must not contain speech");
-      if (story.expression === "dialogue" && speech.some((e2) => e2.kind === "narration")) fail6("dialogue expression cannot include narrator speech");
-      if (story.expression === "narration" && speech.some((e2) => e2.kind === "dialogue")) fail6("narration expression cannot include dialogue");
-      scenes.forEach((s2, i2) => {
-        if (s2.type !== "outro" && !(s2.narration || []).length && !(Array.isArray(story.transcripts) && story.transcripts.some((t2) => t2?.shot === i2 + 1)) && (!Number.isFinite(s2.duration) || s2.duration <= 0)) fail6("silent performance shot requires a positive duration");
-      });
-      function ref(r2, label) {
-        const index = events.findIndex((e3) => e3.shot === r2?.shot && e3.event === r2?.event);
-        const e2 = events[index];
-        if (!object7(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.event) || !text4(r2.quote) || !e2 || !text4(e2.quote) || !e2.quote.includes(r2.quote) || r2.quote.trim().length < Math.min(12, Math.ceil(e2.quote.trim().length / 2))) {
-          fail6(label + " requires an exact observable event quote with 1-based shot/event");
-          return -1;
+        for (const id2 of ids) if (!used.has(id2)) fail6("unused STORY.cast member: " + id2);
+        const events = storyPerformance(win), publicEvents = storyPerformance(win, { audienceOnly: true });
+        for (const e2 of events) if (e2.unresolvedVisual)
+          fail6("shot " + e2.shot + " event " + e2.event + " describes a concurrent visual in its speech direction but has no matching audience action. Link it with withGroup or move an earlier action to its actual moment.");
+        const speech = events.filter((e2) => e2.kind !== "action");
+        if (story.expression === "visual" && speech.length) fail6("visual expression must not contain speech");
+        if (story.expression === "dialogue" && speech.some((e2) => e2.kind === "narration")) fail6("dialogue expression cannot include narrator speech");
+        if (story.expression === "narration" && speech.some((e2) => e2.kind === "dialogue")) fail6("narration expression cannot include dialogue");
+        scenes.forEach((s2, i2) => {
+          if (s2 && s2.type !== "outro" && !(s2.narration || []).length && !(Array.isArray(story.transcripts) && story.transcripts.some((t2) => t2?.shot === i2 + 1)) && (!Number.isFinite(s2.duration) || s2.duration <= 0)) fail6("silent performance shot requires a positive duration");
+        });
+        function ref(r2, label) {
+          const index = events.findIndex((e3) => e3.shot === r2?.shot && e3.event === r2?.event);
+          const e2 = publicEvents[index];
+          if (!object7(r2) || !Number.isInteger(r2.shot) || !Number.isInteger(r2.event) || !text4(r2.quote) || !e2 || !text4(e2.quote) || !e2.quote.includes(r2.quote) || r2.quote.trim().length < Math.min(12, Math.ceil(e2.quote.trim().length / 2))) {
+            fail6(label + " requires an exact observable event quote with 1-based shot/event");
+            return -1;
+          }
+          return index;
         }
-        return index;
-      }
-      const opening = ref(story.opening, "STORY.opening"), payoff = ref(story.payoff, "STORY.payoff"), ending = ref(story.ending, "STORY.ending");
-      if (opening !== 0) fail6("STORY.opening must reference the first event");
-      if (ending !== events.length - 1) fail6("STORY.ending must reference the last event");
-      if (payoff >= 0 && (payoff < opening || payoff > ending)) fail6("STORY.payoff must fall between opening and ending");
-      if (payoff === opening && story.reveal !== "upfront") fail6("opening payoff requires reveal upfront");
-      if (!["held", "upfront", "none"].includes(story.reveal)) fail6("STORY.reveal is required");
-      const shots = [...new Set(events.map((e2) => e2.shot))], beats = Array.isArray(story.beats) ? story.beats : [];
-      if (beats.length !== shots.length || new Set(beats.map((b) => b?.shot)).size !== shots.length || beats.some((b) => !shots.includes(b?.shot) || !text4(b.change) || !text4(b.necessity))) fail6("STORY.beats must cover every performance shot with change and necessity");
-      if (!requireReview) return errors;
-      const review2 = story.review;
-      if (!object7(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
-      if (review2.hash !== hash8) fail6("STORY.review is stale; reread the current performance");
-      if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length) fail6("STORY.review reports an unresolved or non-pass result");
-      for (const key of ["meaning", "progression", "payoff", "grounding", "character"]) {
-        const item = review2[key];
-        if (!object7(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
-          fail6("STORY.review." + key + " needs reasoning and event evidence");
-          continue;
+        const opening = ref(story.opening, "STORY.opening"), payoff = ref(story.payoff, "STORY.payoff"), ending = ref(story.ending, "STORY.ending");
+        if (!sameMoment(events[opening], events[0])) fail6("STORY.opening must reference the first event");
+        if (!sameMoment(events[ending], events.at(-1))) fail6("STORY.ending must reference the last event");
+        if (payoff >= 0 && (payoff < opening && !sameMoment(events[payoff], events[opening]) || payoff > ending && !sameMoment(events[payoff], events[ending]))) fail6("STORY.payoff must fall between opening and ending");
+        if (sameMoment(events[payoff], events[opening]) && story.reveal !== "upfront") fail6("opening payoff requires reveal upfront");
+        if (!["held", "upfront", "none"].includes(story.reveal)) fail6("STORY.reveal is required");
+        checkBeatRanges(story.beats, events, publicEvents, fail6);
+        if (!requireReview) return errors;
+        const review2 = story.review;
+        if (!object7(review2)) return [...errors, "STORY.review is absent; no prior review evidence is available"];
+        if (review2.hash !== hash8) fail6("STORY.review is stale; reread the current performance");
+        if (review2.verdict !== "pass" || !Array.isArray(review2.unresolved) || review2.unresolved.length) fail6("STORY.review reports an unresolved or non-pass result");
+        for (const key of ["meaning", "progression", "payoff", "grounding", "character"]) {
+          const item = review2[key];
+          if (!object7(item) || !text4(item.reason) || !Array.isArray(item.refs) || !item.refs.length) {
+            fail6("STORY.review." + key + " needs reasoning and event evidence");
+            continue;
+          }
+          item.refs.forEach((r2, i2) => ref(r2, "STORY.review." + key + ".refs[" + i2 + "]"));
         }
-        item.refs.forEach((r2, i2) => ref(r2, "STORY.review." + key + ".refs[" + i2 + "]"));
+        return errors;
       }
-      return errors;
-    }
-    module.exports = { storyPerformance, checkPerformanceStory };
+      const api2 = { orderedPerformance, storyPerformance, beatRange, sameMoment, checkPerformanceStory };
+      if (typeof module === "object" && module.exports) module.exports = api2;
+      else root.StoryPerformance = api2;
+    })(typeof window === "object" ? window : globalThis);
   }
 });
 
@@ -126139,7 +126580,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.1",
+  version: "0.131.6",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -137743,6 +138184,128 @@ function validateStructure(structure) {
   return parsed.error.issues.map((issue2) => ({ level: "bad", where: "structure", what: `${issue2.path.join(".") || "(root)"}: ${issue2.message}` }));
 }
 var sameShape = (value2) => JSON.stringify(value2, (_key, v) => v && typeof v === "object" && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) : v);
+var productionEvents = (events) => loadFromHere2(join14(PLUGIN_ROOT, "skills/_shared/scene-acting.js")).productionPerformance(events);
+var isStoryReference = (value2) => !!value2 && typeof value2 === "object" && !Array.isArray(value2);
+function speechGroupIdentities(shot, transcript) {
+  const recorded = !shot.narration?.length && Array.isArray(transcript?.groups);
+  const lines = recorded ? transcript.groups : shot.narration ?? [];
+  return lines.map((line) => {
+    const words = JSON.stringify([line?.speaker, line?.tts || line?.text || line?.sub, line?.voiceoverKind, ...recorded ? [line?.start, line?.end] : []]);
+    const key = JSON.stringify(line?.id ? ["id", line.id] : [words, line?.delivery]);
+    return { id: line?.id, words, delivery: line?.delivery, key };
+  });
+}
+function matchingSpeechGroupKeys(old, current, oldTranscript, newTranscript) {
+  const from = speechGroupIdentities(old, oldTranscript), to = speechGroupIdentities(current, newTranscript);
+  const oldKeys = from.map((line) => {
+    if (line.id) return line.key;
+    const matches = (other) => other.words === line.words && (line.delivery === void 0 || other.delivery === line.delivery);
+    const candidates = to.filter(matches), candidate2 = candidates[0];
+    return candidates.length === 1 && candidate2.id && from.filter(matches).length === 1 && !from.some((entry2) => entry2.id === candidate2.id) ? candidate2.key : line.key;
+  });
+  return { oldKeys, newKeys: to.map((line) => line.key) };
+}
+function beatEventKeys(shot, groups) {
+  const groupKey = (group) => groups[group - 1] ?? ["group", group];
+  return (Array.isArray(shot.performance) ? shot.performance : []).map((event) => {
+    if (event?.id) return JSON.stringify([event.kind, "id", event.id]);
+    if (event?.kind === "action") return JSON.stringify([
+      "action",
+      event.character,
+      event.to,
+      event.text,
+      event.withGroup === void 0 ? null : groupKey(event.withGroup)
+    ]);
+    return JSON.stringify([event?.kind, event?.character, groupKey(event?.group)]);
+  });
+}
+function remapStoryReferences(next, before, shots, positionOf, carriedTimelines) {
+  const story = next.STORY, prior = before.STORY, previous = before.SCENES;
+  if (!isStoryReference(story) || !isStoryReference(prior) || !previous?.length) return [];
+  const updates = {}, findings = [];
+  const missing = (where, ref) => {
+    const code = where.startsWith("STORY.beats[") ? "edit_beat_reference" : "edit_story_reference";
+    findings.push({ level: "warn", code, where, what: `${code}: no unique match for the original ${JSON.stringify(ref)}. Choose the shot or event that supplies this evidence.` });
+  };
+  const remapCarried = (rows2, old, map) => {
+    if (!Array.isArray(rows2) || !Array.isArray(old)) return rows2;
+    const supplied = rows2 === old ? null : new Set(old.map(sameShape));
+    const revised = rows2.map((row, i2) => isStoryReference(row) && (!supplied || supplied.has(sameShape(row))) ? map(row, i2) : row);
+    return revised.some((row, i2) => row !== rows2[i2]) ? revised : rows2;
+  };
+  const shotNumber = (row, where) => {
+    if (!Number.isInteger(row.shot)) return row;
+    const at = positionOf(Number(row.shot) - 1);
+    if (at < 0) missing(where, { shot: row.shot });
+    return at + 1 === row.shot ? row : { ...row, shot: at + 1 };
+  };
+  const transcripts = remapCarried(
+    story.transcripts,
+    prior.transcripts,
+    (row, i2) => shotNumber(row, "STORY.transcripts[" + i2 + "]")
+  );
+  if (transcripts !== story.transcripts) updates.transcripts = transcripts;
+  const transcriptAt = (rows2, index) => Array.isArray(rows2) ? rows2.find((row) => row?.shot === index + 1) : void 0;
+  const boundary = (ref, where) => {
+    if (!isStoryReference(ref) || typeof ref.shotId === "string" === Number.isInteger(ref.shot)) return ref;
+    const field2 = Number.isInteger(ref.event) ? "event" : Number.isInteger(ref.group) ? "group" : void 0;
+    if (!field2) return ref;
+    const index = typeof ref.shotId === "string" ? previous.findIndex((shot) => shot.id === ref.shotId) : Number(ref.shot) - 1;
+    const old = previous[index], at = positionOf(index);
+    if (!old || at < 0) {
+      missing(where, ref);
+      if (typeof ref.shotId === "string") return shots.some((shot) => shot.id === ref.shotId) ? { ...ref, [field2]: 0 } : ref;
+      const { shot: _shot, ...rest } = ref;
+      return old?.id ? { ...rest, shotId: old.id, ...shots.some((shot) => shot.id === old.id) ? { [field2]: 0 } : {} } : { ...ref, shot: 0 };
+    }
+    const current = shots[at], n = Number(ref[field2]) - 1;
+    const oldTranscript = transcriptAt(prior.transcripts, index), newTranscript = transcriptAt(transcripts, at);
+    const { oldKeys: oldLines, newKeys: newLines } = matchingSpeechGroupKeys(old, current, oldTranscript, newTranscript);
+    const from = field2 === "group" ? oldLines : beatEventKeys(old, oldLines);
+    const to = field2 === "group" ? newLines : beatEventKeys(current, newLines);
+    let target = 0;
+    const key = from[n];
+    if (key !== void 0) {
+      const candidate2 = to.indexOf(key);
+      if (candidate2 >= 0 && from.indexOf(key) === from.lastIndexOf(key) && candidate2 === to.lastIndexOf(key)) target = candidate2 + 1;
+      else {
+        const sameLines = sameShape(old.narration) === sameShape(current.narration) && sameShape(oldTranscript?.groups) === sameShape(newTranscript?.groups);
+        const untouched = sameLines && (field2 === "group" || sameShape(old.performance) === sameShape(current.performance)) || old.id && carriedTimelines?.has(old.id) && sameShape(oldTranscript?.groups) === sameShape(newTranscript?.groups);
+        if (untouched && to[n] === key) target = n + 1;
+      }
+    }
+    if (!target) missing(where, ref);
+    return ref[field2] === target && (ref.shotId !== void 0 || ref.shot === at + 1) ? ref : { ...ref, ...ref.shotId === void 0 ? { shot: at + 1 } : {}, [field2]: target };
+  };
+  const beats = remapCarried(story.beats, prior.beats, (beat, i2) => {
+    const where = "STORY.beats[" + i2 + "]";
+    if (beat.start === void 0 && beat.end === void 0) return shotNumber(beat, where);
+    const start = boundary(beat.start, where + ".start"), end = boundary(beat.end, where + ".end");
+    return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
+  });
+  if (beats !== story.beats) updates.beats = beats;
+  for (const key of ["opening", "payoff", "ending", "themeStated", "ask"]) {
+    if (sameShape(story[key]) !== sameShape(prior[key])) continue;
+    const ref = boundary(story[key], "STORY." + key);
+    if (ref !== story[key]) updates[key] = ref;
+  }
+  if (isStoryReference(story.review) && isStoryReference(prior.review) && story.review.hash === prior.review.hash) {
+    const review2 = {};
+    for (const [key, value2] of Object.entries(story.review)) {
+      const old = prior.review[key];
+      if (!isStoryReference(value2) || !isStoryReference(old)) continue;
+      const refs = remapCarried(
+        value2.refs,
+        old.refs,
+        (ref, i2) => boundary(ref, "STORY.review." + key + ".refs[" + i2 + "]")
+      );
+      if (refs !== value2.refs) review2[key] = { ...value2, refs };
+    }
+    if (Object.keys(review2).length) updates.review = { ...story.review, ...review2 };
+  }
+  if (Object.keys(updates).length) next.STORY = { ...story, ...updates };
+  return findings;
+}
 function syncCopiedShotAttributes(previous, shot) {
   if (!previous) return shot;
   const lastFrame = (card) => card.visual?.frames;
@@ -137940,6 +138503,40 @@ function applyPatch(win, patch, opts = {}) {
     return { id: id2, ...shot };
   });
   if (next.STRUCTURE) next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
+  const referenceNotes = [];
+  if (patch.set || patch.shots || patch.shotsById || reordered) {
+    const positionOfOriginal = (index) => {
+      const old = originalShots[index];
+      if (!old) return -1;
+      if (old.id) {
+        const matches2 = shots.flatMap((shot, i2) => shot.id === old.id ? [i2] : []);
+        return matches2.length === 1 && originalShots.filter((shot) => shot.id === old.id).length === 1 ? matches2[0] : -1;
+      }
+      if (!patch.set) return finalOrder.indexOf(beforeReorder[index]);
+      const retained = finalOrder.indexOf(old);
+      if (retained >= 0 && finalOrder.lastIndexOf(old) === retained) return retained;
+      const shape2 = sameShape(old), matches = finalOrder.flatMap((shot, i2) => sameShape(shot) === shape2 ? [i2] : []);
+      return matches.length === 1 && originalShots.filter((shot) => sameShape(shot) === shape2).length === 1 ? matches[0] : -1;
+    };
+    const inserted = new Set(patch.insertShots?.flatMap((entry2) => entry2.shots));
+    originalShots.forEach((old, index) => {
+      if (old.type !== "broll" || old.after === void 0) return;
+      const at = positionOfOriginal(index), splice = shots[at];
+      if (splice?.type !== "broll" || inserted.has(finalOrder[at]) || splice.after !== old.after) return;
+      const host2 = positionOfOriginal(old.after);
+      if (!shots[host2] || ["broll", "outro"].includes(shots[host2].type)) {
+        referenceNotes.push({
+          level: "bad",
+          code: "broll_host_missing",
+          where: String(splice.id),
+          what: "broll_host_missing: the main shot for this insert was removed or became ambiguous. Set its new after position or remove the insert in this edit."
+        });
+        const { after: _after, ...unattached } = splice;
+        shots[at] = unattached;
+      } else if (splice.after !== host2) shots[at] = { ...splice, after: host2 };
+    });
+    referenceNotes.push(...remapStoryReferences(next, win, shots, positionOfOriginal, opts.carriedTimelines));
+  }
   const joinNotes = [];
   const previousOf = (list) => new Map(list.map((shot, i2) => [shot.id, i2 ? list[i2 - 1].id : void 0]));
   const before = previousOf(originalShots), after = previousOf(shots);
@@ -137983,7 +138580,7 @@ function applyPatch(win, patch, opts = {}) {
   for (const scene of next.STRUCTURE?.scenes ?? []) {
     assertArchivedSceneDrafts(scene.videoDirection?.promptDrafts, win.STRUCTURE?.scenes.find((old) => old.no === scene.no)?.videoDirection?.promptDrafts);
   }
-  const findings = [...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : [], ...clicheModeChanged ? [clicheModeChanged] : []];
+  const findings = [...referenceNotes, ...joinNotes, ...editImpact(win, next), ...clicheChoiceKept ? [clicheChoiceKept] : [], ...clicheModeChanged ? [clicheModeChanged] : []];
   if (!shots.length && !opts.outline) findings.push({ level: "bad", where: "board", what: "the board has no shots" });
   if (win.STORY?.authoring === "story-first" && next.STORY?.authoring !== "story-first")
     findings.push({ level: "bad", where: "STORY", what: 'story_order: STORY.authoring "story-first" stays on a board started with story_sequence' });
@@ -138387,6 +138984,11 @@ function writeOutline(path41, sha2563, win, structure, shots, language, opening,
     // (cliche-use.md). Boards written before this record, and other types, get one when a use is recorded.
     ...win.CLICHES === void 0 && !written ? clicheStamp(win.PRODUCTION ?? handoff?.PRODUCTION) : {}
   };
+  const oldCards = new Map((win.SCENES ?? []).map((card) => [card.id, card]));
+  const carriedTimelines = new Set(shots?.flatMap((card) => {
+    const old = oldCards.get(card.id);
+    return card.id && old && old.performance === card.performance && old.narration === card.narration ? [card.id] : [];
+  }));
   const result = applyStoryboard({
     path: path41,
     expectedSha256: sha2563,
@@ -138395,7 +138997,7 @@ function writeOutline(path41, sha2563, win, structure, shots, language, opening,
     structure,
     ...shots?.length ? { set: { structure, shots } } : {},
     ...globals || sceneGlobals ? { globals: { ...globals, ...sceneGlobals } } : {}
-  }, { outline: true, cliches: true, hookChange });
+  }, { outline: true, cliches: true, hookChange, carriedTimelines });
   const kept = !language || !story ? void 0 : story.language !== void 0 ? story.language !== language ? `this board is written in "${String(story.language)}"` : void 0 : written ? "this board has shots and no recorded language, so its language is the one they are written in" : void 0;
   return kept ? { ...result, findings: [...result.findings, { level: "warn", where: "STORY", what: `story_language: ${kept}; "${language}" was not applied \u2014 a board keeps its language` }] } : result;
 }
@@ -139008,6 +139610,67 @@ function writeShotCharacters(args) {
   const result = writeOutline(args.path, sha2563, win, st, shots);
   return { ...result, findings: [...result.findings, ...notes] };
 }
+function dialoguePerformance(shot, lines, notes) {
+  const events = shot.performance;
+  if (!Array.isArray(events) || !events.length) return events;
+  const old = shot.narration ?? [];
+  const { oldKeys, newKeys } = matchingSpeechGroupKeys(shot, { ...shot, narration: lines });
+  const groups = oldKeys.map((key) => {
+    const at = newKeys.indexOf(key);
+    return oldKeys.indexOf(key) === oldKeys.lastIndexOf(key) && at === newKeys.lastIndexOf(key) ? at + 1 : 0;
+  });
+  const spoken = (event) => event?.kind === "dialogue" || event?.kind === "narration";
+  const slots = [], directed = /* @__PURE__ */ new Map();
+  for (const [i2, event] of events.entries()) {
+    const group = groups[event?.group - 1];
+    if (spoken(event) && group && !directed.has(group)) {
+      directed.set(group, event);
+      slots.push(i2);
+    }
+  }
+  const bySlot = /* @__PURE__ */ new Map();
+  let pending2 = [], slot2 = 0;
+  for (const [i2, line] of lines.entries()) {
+    const group = i2 + 1, prior = directed.get(group);
+    const oldLine = prior && old[Number(prior.group) - 1];
+    const kind = prior && oldLine?.delivery === "voiceover" === (line.delivery === "voiceover") ? prior.kind : line.delivery === "voiceover" ? "narration" : "dialogue";
+    const cue = { ...prior, kind, character: line.speaker, group };
+    if (prior && oldLine && (oldLine.speaker !== line.speaker || oldLine.delivery !== line.delivery || oldLine.voiceoverKind !== line.voiceoverKind)) {
+      delete cue.audience;
+      delete cue.to;
+      if (prior.audience || prior.to) notes.push({
+        level: "warn",
+        code: "edit_speech_roles",
+        where: String(shot.id),
+        what: `edit_speech_roles: speaker or delivery changed on line ${line.id}. Recheck the addressee and record only the roles the audience can now recognize.`
+      });
+    }
+    if (kind === "dialogue" && !cue.to) cue.to = "unidentified";
+    pending2.push(cue);
+    if (prior) {
+      bySlot.set(slots[slot2++], pending2);
+      pending2 = [];
+    }
+  }
+  const firstSpeech = events.findIndex(spoken);
+  if (pending2.length) {
+    const at = slots.at(-1) ?? (firstSpeech >= 0 ? firstSpeech : events.length);
+    bySlot.set(at, [...bySlot.get(at) ?? [], ...pending2]);
+  }
+  const updated = events.flatMap((event, i2) => {
+    if (spoken(event)) return bySlot.get(i2) ?? [];
+    if (event?.kind !== "action" || event.withGroup === void 0) return [event];
+    const group = groups[event.withGroup - 1] ?? 0;
+    if (!group) notes.push({
+      level: "warn",
+      code: "edit_speech_group_reference",
+      where: String(shot.id),
+      what: `edit_speech_group_reference: action ${i2 + 1} lost speech group ${event.withGroup}. Choose the line it accompanies or make the action sequential.`
+    });
+    return [group === event.withGroup ? event : { ...event, withGroup: group }];
+  });
+  return updated.concat(bySlot.get(events.length) ?? []);
+}
 function writeShotDialogue(args) {
   const { win, st, sha256: sha2563 } = readOutline(args.path);
   const known = castRegistry(args.path, win);
@@ -139019,6 +139682,7 @@ function writeShotDialogue(args) {
     const cast = contract().castOf(shots[index]);
     if (!cast) throw new Error(`story_order: set ${id2}'s characters with shot_characters before its lines`);
     const old = shots[index].narration ?? [];
+    const reserved2 = new Set([...old, ...lines].map((line) => line.id).filter(Boolean));
     for (const line of old) if (line.id) used.delete(line.id);
     const next = lines.map((line, n) => {
       if (!known.ids.has(line.speaker)) throw new Error(`cast_unknown: speaker ${line.speaker} is not in the episode cast`);
@@ -139026,11 +139690,11 @@ function writeShotDialogue(args) {
       if (line.voiceoverKind && line.delivery && line.delivery !== "voiceover")
         throw new Error("An inner thought requires voiceover delivery");
       const kind = line.voiceoverKind === void 0 ? previous?.voiceoverKind : line.voiceoverKind;
-      const delivery2 = line.delivery ?? (kind || previous?.voiceoverKind ? "voiceover" : cast.includes(line.speaker) ? "on_screen" : "voiceover");
+      const delivery2 = line.delivery ?? (kind || previous?.voiceoverKind ? "voiceover" : previous?.speaker === line.speaker && previous.delivery ? previous.delivery : cast.includes(line.speaker) ? "on_screen" : "voiceover");
       if (delivery2 === "on_screen" && !cast.includes(line.speaker))
         throw new Error(`story_order: ${line.speaker} speaks on screen in ${id2} but is not among its characters \u2014 add them with shot_characters`);
       let lineId = line.id;
-      for (let k = n + 1; !lineId; k++) if (!used.has(`${id2}-l${k}`)) lineId = `${id2}-l${k}`;
+      for (let k = n + 1; !lineId; k++) if (!used.has(`${id2}-l${k}`) && !reserved2.has(`${id2}-l${k}`)) lineId = `${id2}-l${k}`;
       if (used.has(lineId)) throw new Error(`shot_dialogue: line id ${lineId} is already used`);
       used.add(lineId);
       const updated = { ...previous, id: lineId, speaker: line.speaker, delivery: delivery2, tts: line.tts, sub: line.sub };
@@ -139038,7 +139702,8 @@ function writeShotDialogue(args) {
       else delete updated.voiceoverKind;
       return updated;
     });
-    shots[index] = { ...shots[index], narration: next };
+    const performance2 = dialoguePerformance(shots[index], next, notes);
+    shots[index] = { ...shots[index], narration: next, ...performance2 !== void 0 ? { performance: performance2 } : {} };
     notes.push(...promptNotes(shots[index]));
   }
   const result = writeOutline(args.path, sha2563, win, st, shots);
@@ -139394,7 +140059,7 @@ function startImageBasis(shot, format, imageContextWords) {
     action: visual.action,
     videoDesign: plan2.videoDesign,
     ...visual.expression ? { expression: visual.expression } : {},
-    performance: shot.performance,
+    performance: productionEvents(shot.performance),
     acting: shot.narration?.map((line) => line.acting?.visual)
   })).digest("hex");
 }
@@ -160363,7 +161028,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.131.1" },
+  { name: "social-flow", version: "0.131.6" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

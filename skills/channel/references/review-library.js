@@ -197,7 +197,7 @@ function safeOutput(root, target) {
   }
 }
 
-function exportChannel(channelDirectory, { check = false } = {}) {
+function exportChannel(channelDirectory, { check = false, onlyBoard } = {}) {
   const dir = path.resolve(channelDirectory);
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('Missing channel directory: ' + dir);
   const root = path.dirname(dir), slug = path.basename(dir);
@@ -453,8 +453,12 @@ function exportChannel(channelDirectory, { check = false } = {}) {
   render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured +
     `<div class="review-shortcuts">${shortcuts.map(([icon, ko, en, target, total]) => `<a class="review-card ds-card" href="${rel(home, target)}"><span class="ds-tile">${characterIcon(icon)}</span><h2>${t(ko, en)}</h2><span class="review-total">${total}</span></a>`).join('')}</div>`);
   const changed = [];
+  const selected = onlyBoard === undefined ? undefined : path.join(dir, 'storyboards', onlyBoard, 'index.html');
+  if (selected && (path.basename(onlyBoard) !== onlyBoard || !boardAliases.has(selected)))
+    throw new Error('Unknown storyboard library entry: ' + onlyBoard);
   // Preflight every target before any write. Preserve unowned files even on refresh.
   for (const [file, content] of outputs) {
+    if (selected && file !== selected) continue;
     safeOutput(dir, file);
     if (fs.existsSync(file)) {
       const old = fs.readFileSync(file);

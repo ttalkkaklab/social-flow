@@ -1552,6 +1552,9 @@ describe('scene direction', () => {
   const plan=speechVideoPlan(scene,caps);
   assert.match(plan.videoPrompt,/Places the parcel down/);assert.match(plan.videoPrompt,/Looks toward the door/);
   assert.doesNotMatch(plan.videoPrompt,/소포|문 쪽/);assert.equal(plan.performance[0].text,'소포를 내려놓는다.');
+  scene.performance[0].audience={speaker:'The visitor'};
+  scene.performance[1].audience={speaker:'A muffled voice',listener:'Someone unseen'};
+  assert.deepEqual(speechVideoPlan(scene,caps),plan);
   scene.performance[0].videoDirection='Sets the parcel on the floor.';
   assert.notEqual(speechVideoPlan(scene,caps).performanceRevision,plan.performanceRevision);
   scene.performance[0].videoDirection=' ';assert.throws(()=>speechVideoPlan(scene,caps),/non-empty text/);

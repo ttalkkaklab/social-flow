@@ -19,9 +19,11 @@ Create an audience-only export with stable beat/cut IDs, in presentation order. 
 only visible action, audible dialogue and narration. Exclude synopsis, hidden motives,
 character biographies, necessity arguments, intended meaning and prior scores. At this
 stage a cut ID names a required presentation unit, not a finished camera specification.
-Use the bundled check-story.js --text and --map exports. Preserve stable shot/line IDs,
-event order, speakers, actual addressees and delivery. A listener is observable staging,
-not hidden motivation. Do not replace this with an action-first, speech-second summary.
+Give the initial reader the bundled check-story.js --text export in performance order.
+Use --through=N to reveal the next event after a guess is recorded. Public labels can
+identify a recognizable speaker or listener at this instant; a masked caller stays
+anonymous. Keep --map with production identities and stable shot/line IDs for the
+second pass. Include the listener when the staging or speech lets the viewer see who it is.
 
 Give a fresh independent host reviewer only that export and the frozen rubric. First ask
 them to reconstruct what happened without explaining the author's intention. For every

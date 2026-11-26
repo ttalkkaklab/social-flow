@@ -12,6 +12,20 @@ Create or refresh the review with the bundled script:
 node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/storyboard-html.js" "<episodeDir>/storyboard"
 ```
 
+When revising an existing board, apply the scene changes with `storyboard_apply` and read the
+saved SHA with `storyboard_read`. Use the installed plugin's [document revision command](revise-story-documents.js)
+before refreshing the HTML. Run `node "$CLAUDE_PLUGIN_ROOT/skills/storyboard/references/revise-story-documents.js" "<episodeDir>/storyboard" request.json`.
+The request has an `expectedStoryboardSha256` and a `documents` array. Each entry takes a `name`
+(`scenario.md`, `storyboard.md`, `script.md` or `review-localization.json`), its current
+`expectedSha256` (or `null` for a new document), and the full authored UTF-8 `content` as a string.
+Pass `-` for standard input or append `--dry-run` to preview. The receipt records the plugin version,
+board SHA and each file's before and after hashes. Repeating the same request preserves completed edits.
+
+When a companion document cites a still as the evidence for a reveal or response, resolve
+the active frame from its shot or scene and open that same image from the exported page.
+Check the visible cue in the chosen version. Label a previous take explicitly when showing
+it for comparison. A newer attachment can leave an older, working image link in the prose.
+
 Refresh preserves the title and metadata and copies the current runtime, CSS and
 bundled fonts and licenses. Fill the metadata after first creation, then refresh the library copy.
 To see whether a copy drifted from the bundled template, run:

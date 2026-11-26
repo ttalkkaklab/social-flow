@@ -11,7 +11,7 @@ const HELPERS = ['video-production.js', 'source-context.js', 'render-routing.js'
 const REVIEW_ASSETS = path.join(__dirname, '..', '..', 'channel', 'references', 'review-assets');
 const { FONT_ASSETS } = require('../../channel/references/review-fonts.js');
 const ASSETS = ['design-system.css', 'review.css', 'ttalkkak-story.svg', ...FONT_ASSETS];
-HELPERS.push('review-localization.js', 'audience-spotting.js', 'score-player.js');
+HELPERS.push('review-localization.js', 'audience-spotting.js', 'score-player.js', 'story-performance.js');
 const TITLE = /<title>[^]*?<\/title>/g;
 const METADATA = /\/\* ✎ SB_DOC BEGIN[^]*?\/\* ✎ SB_DOC END \*\//g;
 
@@ -126,10 +126,10 @@ function storyboardHtml(directory, check = false) {
 if (require.main === module) {
   const args = process.argv.slice(2);
   try {
-    if (!args[0] || args[0].startsWith('--') || args.length > 2 || (args[1] && args[1] !== '--check')) {
-      throw new Error('Usage: storyboard-html.js <storyboard directory> [--check]');
+    if (!args[0] || args[0].startsWith('--') || args.slice(1).some(a => !['--check','--episode-only'].includes(a))) {
+      throw new Error('Usage: storyboard-html.js <storyboard directory> [--check] [--episode-only]');
     }
-    const check = args[1] === '--check';
+    const check = args.includes('--check');
     const changed = storyboardHtml(args[0], check);
     console.log(check
       ? changed.length ? `FAIL — refresh shared design: ${changed.join(', ')}` : 'PASS — shared storyboard template and helpers match'
@@ -138,7 +138,8 @@ if (require.main === module) {
     const directory = path.resolve(args[0]);
     if (path.basename(directory) === 'storyboard' && path.basename(path.dirname(path.dirname(directory))) === 'episodes') {
       const { exportChannel } = require('../../channel/references/review-library.js');
-      const result = exportChannel(path.resolve(directory, '../../..'), { check });
+      const onlyBoard = args.includes('--episode-only') ? path.basename(path.dirname(directory)) : undefined;
+      const result = exportChannel(path.resolve(directory, '../../..'), { check, onlyBoard });
       console.log(`Library: ${result.characters} characters, ${result.episodes} episodes, ${result.changed.length} changed files`);
       for (const warning of result.structuralWarnings) console.warn('Library structure: ' + warning);
       for (const warning of result.contentWarnings) console.warn('Content readiness [' + warning.domain + ']: ' + warning.message);

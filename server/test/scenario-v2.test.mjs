@@ -17,7 +17,7 @@ function candidate() {
     cta: 'none', setups: [], cast: pool.map(c => ({ id: c.id, role: c.id, want: 'Protect the other', voice: 'Reserved', reason: 'The relationship changes' })),
     beats: ['훅', '전개 #1', '전개 #2', '전개 #3', '마무리', 'CTA'].map((item, i) => ({ item,
       expectation: 'The parent has eaten', change: 'The child notices', necessity: 'Build recognition',
-      events: i === 5 ? [] : [{ kind: 'action', character: i % 2 ? 'child' : 'father', text: 'Shares the last bowl of rice.', basis: 'invented' }] })) };
+      events: i === 5 ? [] : [{ kind: 'action', character: i % 2 ? 'child' : 'father', text: i % 2 ? 'The child passes a bowl.' : 'The father shares the rice.', basis: 'invented' }] })) };
 }
 const body = c => '```scenario-json\n' + JSON.stringify(c) + '\n```\n';
 const run = (c, research) => checkScenarioV2(meta, body(c), research, { pool }).findings;
@@ -28,6 +28,46 @@ test('a scenario in another language names the suggested beats in English', () =
   const c = candidate();
   ['Hook', 'development #1', 'development #2', 'development #3', 'ending'].forEach((item, i) => { c.beats[i].item = item; });
   assert.deepEqual(run(c), []);
+});
+test('payoffs use actual narrative beat positions and repeated performance survives renamed intent', () => {
+  const c = candidate();
+  c.beats.splice(5, 0, {...c.beats[1], item:'The reply'});
+  c.setups = [{ open:1, pay:6, detail:'empty pot', reinterpretation:'there was no supper' }];
+  assert.deepEqual(run(c), []);
+  c.beats[2] = {...c.beats[1], item:'Another name', change:'A different author explanation'};
+  assert.match(JSON.stringify(run(c)), /Beat 3 repeats the preceding observable events/);
+  c.setups[0].pay = 7;
+  assert.match(JSON.stringify(run(c)), /existing narrative beats/); // CTA
+  c.beats.length = 4; c.setups[0].pay = 5;
+  assert.match(JSON.stringify(run(c)), /existing narrative beats/);
+});
+test('blind scenario prefix excludes private cast, evidence and author questions', t => {
+  const d=mkdtempSync(path.join(tmpdir(),'scenario-prefix-'));
+  t.after(() => rmSync(d,{recursive:true,force:true}));
+  const c=candidate(), f=path.join(d,'scenario.md');
+  c.beats[0].events=[{kind:'dialogue',character:'secret-father',to:'secret-child',basis:'invented',text:'Wait.',audience:{speaker:'Muffled voice'}}];
+  writeFileSync(f,body(c));
+  const r=spawnSync(process.execPath,[path.join(root,'check-scenario.js'),f,'--text','--through=1'],{encoding:'utf8'});
+  assert.equal(r.status,0,r.stderr);
+  assert.equal(r.stdout.trim(),'[beat-1/e1 · dialogue · Muffled voice] Wait.');
+  c.beats[0].events = [
+    {kind:'action', withGroup:2, text:'The second lock clicks.', basis:'invented'},
+    {kind:'dialogue',character:'father',to:'child',group:1,text:'Wait.',basis:'invented'},
+    {kind:'dialogue',character:'child',to:'father',group:2,delivery:'off_screen',text:'It is open.',basis:'invented'},
+  ];
+  assert.deepEqual(run(c), []);
+  writeFileSync(f, body(c));
+  const read = n => spawnSync(process.execPath,[path.join(root,'check-scenario.js'),f,'--text','--through='+n],{encoding:'utf8'}).stdout;
+  assert.doesNotMatch(read(1), /second lock|It is open/);
+  assert.match(read(2), /second lock clicks[\s\S]*off_screen[\s\S]*It is open/);
+  c.beats[0].events[0].withGroup=3;
+  assert.match(JSON.stringify(run(c)), /withGroup must identify speech/);
+  writeFileSync(f, body(c));
+  const broken = spawnSync(process.execPath,[path.join(root,'check-scenario.js'),f,'--text','--through=1'],{encoding:'utf8'});
+  assert.equal(broken.status,3); assert.equal(broken.stdout,'');
+  c.beats[0].events = [{kind:'dialogue',character:'father',to:'child',delivery:'off_screen',text:'Open it.',basis:'invented'}];
+  c.beats[1].events = [{...c.beats[0].events[0], delivery:'on_screen'}];
+  assert.doesNotMatch(JSON.stringify(run(c)),/repeats the preceding observable/);
 });
 test('factual and adapted claims cannot bypass evidence; inventions stay explicitly marked', () => {
   const c = candidate(); c.kind = 'evidence';

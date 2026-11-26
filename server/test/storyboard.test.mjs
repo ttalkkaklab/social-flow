@@ -94,6 +94,307 @@ const board = () => [
 ];
 const comprehension = { mode: 'informational', question: '무엇이 달라졌나요?', answer: '한 가지가 달라졌어요.', takeaway: '한 가지만 기억하면 돼요.', branches: [], terms: [] };
 
+describe('beat references through public shot edits', () => {
+  it('keeps ranges attached to moved events and concurrent actions and flags a removed or ambiguous boundary', () => {
+    const dir = tmp();
+    const apply = patch => {
+      const result = applyStoryboard(storyboardApplySchema.parse({path:dir, draft:true, ...patch}));
+      assert.equal(result.written, true, JSON.stringify(result.findings));
+      return result;
+    };
+    const read = () => readBoard(dir).win;
+    const line = (id, tts) => ({id, speaker:'ada', tts});
+    const dialogue = group => ({kind:'dialogue', character:'ada', group});
+    const nod = withGroup => ({kind:'action', character:'ada', text:'She nods.', withGroup});
+    const signal = {kind:'action', text:'The light goes out.'};
+    const first = {id:'s0001', type:'points', scene:1, narration:[line('a','Hello.'),line('b','Bye.')],
+      performance:[dialogue(1), nod(1), signal, dialogue(2), nod(2)]};
+    const other = {id:'s0002', type:'points', scene:1, performance:[signal]};
+    const notes = [{start:{shot:1,event:2}, end:{shotId:first.id,event:5}}, {shot:2}];
+    apply({set:{structure:structure([scene(1)]), shots:[first,other]}, globals:{STORY:{primaryHookType:'in_medias_res',beats:notes}}});
+    apply({insertShots:[{after:0, shots:[{type:'points',scene:1}]}]});
+    assert.deepEqual(read().STORY.beats,[{start:{shot:2,event:2},end:{shotId:first.id,event:5}}, {shot:3}]);
+    const [inserted, card, last] = read().SCENES;
+    card.narration.reverse();
+    card.performance = [{kind:'action',text:'A bell rings.'}, dialogue(2), signal, nod(2), nod(1), dialogue(1)];
+    apply({set:{shots:[card, inserted, last]}, globals:{STORY:read().STORY}});
+    assert.deepEqual(read().STORY.beats,[{start:{shot:1,event:4},end:{shotId:first.id,event:5}}, {shot:3}]);
+    card.performance.splice(3, 1);
+    card.performance.push(nod(1));
+    const removed = apply({shotsById:[{id:card.id,shot:card}], removeShotIds:[last.id]});
+    assert.equal(removed.written,true);
+    assert.deepEqual(removed.findings.filter(f => f.code === 'edit_beat_reference').map(f => f.where),
+      ['STORY.beats[0].start','STORY.beats[0].end','STORY.beats[1]']);
+    assert.deepEqual(read().STORY.beats,[{start:{shot:1,event:0},end:{shotId:card.id,event:0}}, {shot:0}]);
+    const explicit = [{start:{shotId:card.id,event:2},end:{shot:1,event:2}}];
+    card.performance.unshift(signal);
+    apply({shotsById:[{id:card.id,shot:card}], globals:{STORY:{...read().STORY, beats:explicit}}});
+    assert.deepEqual(read().STORY.beats, explicit);
+    const dropped = apply({removeShotIds:[card.id]});
+    assert.equal(dropped.written,true);
+    assert.deepEqual(read().STORY.beats,[{start:{shotId:card.id,event:2},end:{shotId:card.id,event:2}}]);
+  });
+
+  it('follows anonymous legacy cards through an insert and leaves ambiguous replacement copies unresolved', () => {
+    const dir = tmp(), card = {type:'points',scene:1,performance:[{kind:'action',text:'Ada leaves.'}]};
+    const original = {STRUCTURE:structure([scene(1)]), SCENES:[card,card],
+      STORY:{primaryHookType:'in_medias_res',hookContractVersion:1,beats:[{shot:2}]}};
+    const save = () => writeFileSync(join(dir,'scenes.js'), serializeBoard(original));
+    save();
+    applyStoryboard({path:dir,draft:true,insertShots:[{after:0,shots:[{type:'points',scene:1}]}]});
+    assert.equal(readBoard(dir).win.STORY.beats[0].shot,3);
+    save();
+    const replaced = applyStoryboard({path:dir,draft:true,set:{shots:[card]}});
+    assert.equal(replaced.written,true);
+    assert.ok(replaced.findings.some(f => f.code === 'edit_beat_reference'));
+    assert.equal(readBoard(dir).win.STORY.beats[0].shot,0);
+  });
+
+  it('keeps quoted anchors and earlier review evidence on the speaker who delivered an identical line', () => {
+    const dir = tmp(), admission = 'I signed the release.';
+    const read = () => readBoard(dir).win;
+    const apply = patch => {
+      const result = applyStoryboard(storyboardApplySchema.parse({path:dir, draft:true, ...patch}));
+      assert.equal(result.written, true, JSON.stringify(result.findings));
+      return result;
+    };
+    const ref = (shot, event, quote) => ({shot,event,quote});
+    const line = (speaker, id) => ({speaker, id, tts:admission});
+    const says = (character, group) => ({kind:'dialogue', character, to:'audience', group});
+    const action = (id, text) => ({id, scene:1, type:'points', duration:2, performance:[{kind:'action',text}]});
+    const opening = ref(1,1,'The door opens.'), payoff = ref(2,1,admission), ending = ref(3,1,'The door closes.');
+    const original = {id:'s0002',scene:1,type:'points',duration:2,narration:[line('guard','signature')],performance:[says('guard',1)]};
+    const cards = [action('s0001',opening.quote), original, action('s0003',ending.quote)];
+    const story = {primaryHookType:'in_medias_res', opening, payoff, ending,
+      review:{hash:'the previous read', payoff:{reason:'The guard admitted it.', refs:[payoff]}}};
+    apply({globals:{STORY:story}, set:{structure:structure([scene(1)]), shots:cards}});
+    let guard = read().SCENES[1];
+    guard.narration.unshift(line('courier','readback'));
+    guard.performance = [says('courier',1), says('guard',2)];
+    apply({shotsById:[{id:guard.id,shot:guard}]});
+    const afterLines = read().STORY;
+    assert.deepEqual(afterLines.payoff, ref(2,2,admission));
+    assert.deepEqual(afterLines.review.payoff.refs,[afterLines.payoff]);
+    apply({insertShots:[{after:0,shots:[action('s0004','A key turns.')] }], globals:{STORY:afterLines}});
+    let board = read();
+    assert.deepEqual([board.STORY.opening,board.STORY.payoff,board.STORY.ending], [
+      ref(2,1,opening.quote),ref(3,2,admission),ref(4,1,ending.quote)]);
+    assert.deepEqual(board.STORY.review.payoff.refs,[board.STORY.payoff]);
+    assert.equal(board.STORY.review.hash,'the previous read');
+    // Changing the earlier evidence to the courier in the same patch explicitly names the new ordinal.
+    const explicit = ref(2,1,admission);
+    const review = {...board.STORY.review,payoff:{reason:'The courier read it back.',refs:[explicit]}};
+    apply({removeShotIds:['s0004'], globals:{STORY:{...board.STORY,payoff:explicit, review}}});
+    board = read();
+    assert.deepEqual(board.STORY.payoff,explicit);
+    assert.deepEqual(board.STORY.review.payoff.refs,[explicit]);
+    assert.deepEqual(board.STORY.ending,ending);
+    guard = board.SCENES[1];
+    guard.narration.shift();
+    guard.performance = [says('guard',1)];
+    const result = apply({shotsById:[{id:guard.id,shot:guard}],removeShotIds:['s0003']});
+    assert.deepEqual(result.findings.filter(f => f.code === 'edit_story_reference').map(f => f.where),
+      ['STORY.payoff','STORY.ending','STORY.review.payoff.refs[0]']);
+    assert.deepEqual(read().STORY.payoff,ref(2,0,admission));
+    assert.deepEqual(read().STORY.review.payoff.refs,[ref(2,0,admission)]);
+    assert.deepEqual(read().STORY.ending,{event:1,quote:ending.quote,shotId:'s0003'});
+  });
+
+  it('keeps group-based evidence with legacy speech and its source transcript', () => {
+    const dir = tmp(), read = () => readBoard(dir).win;
+    const apply = patch => applyStoryboard({path:dir,draft:true,...patch});
+    const speech = {type:'points',scene:1,id:'s0001',narration:[{id:'keeper',speaker:'guard',tts:'I did.'}]};
+    const source = {type:'points',scene:1,id:'s0002',visual:{source:'recording',clip:'admission.wav'}};
+    const live = {shot:2,source:'admission.wav',groups:[{speaker:'guard',text:'I did.',start:0,end:1}]};
+    const payoff = {shot:1,group:1,quote:'I did.'}, ending = {shot:2,group:1,quote:'I did.'};
+    assert.equal(apply({set:{structure:structure([scene(1)]),shots:[speech,source]},
+      globals:{STORY:{primaryHookType:'in_medias_res',payoff,ending,transcripts:[live]}}}).written,true);
+    const old = read(), spoken = old.SCENES[0];
+    spoken.narration.unshift({id:'courier',speaker:'courier',tts:'I did.'});
+    const edited = apply({set:{shots:[old.SCENES[1],spoken]},globals:{STORY:old.STORY}});
+    assert.equal(edited.written,true,JSON.stringify(edited.findings));
+    const after = read().STORY;
+    assert.deepEqual(after.payoff,{...payoff,shot:2,group:2});
+    assert.deepEqual(after.ending,{...ending,shot:1});
+    assert.deepEqual(after.transcripts,[{...live,shot:1}]);
+  });
+
+  it('keeps repeated action ordinals on an intact card moved by a JSON full-board edit', () => {
+    const dir = tmp(), write = patch => applyStoryboard(storyboardApplySchema.parse({path:dir,draft:true,...patch}));
+    const card = {id:'s0001',scene:1,type:'points',narration:[],performance:[]};
+    const waiting = {...card,id:'s0002',performance:['Tap.','Hiss.','Tap.'].map(text=>({kind:'action',text}))};
+    const beat = {start:{shot:2,event:1},end:{shot:2,event:3},change:'The second tap goes unanswered.',necessity:'The clerk is still waiting.'};
+    assert.equal(write({set:{structure:structure([scene(1)]),shots:[card,waiting]},
+      globals:{STORY:{primaryHookType:'in_medias_res',beats:[beat]}}}).written,true);
+    const copies = JSON.parse(JSON.stringify(readBoard(dir).win.SCENES));
+    const result = write({set:{shots:[copies[1],copies[0]]}});
+    assert.equal(result.written,true,JSON.stringify(result.findings));
+    assert.equal(result.findings.some(f=>f.code === 'edit_beat_reference'),false);
+    assert.deepEqual(readBoard(dir).win.STORY.beats,[{...beat,start:{shot:1,event:1},end:{shot:1,event:3}}]);
+  });
+
+  it('uses delivery to follow ID-less repeated words and leaves indistinguishable replacements unresolved', () => {
+    const quote = 'I agreed.';
+    for (const field of ['event','group']) for (const [first, second] of [
+      [{delivery:'off_screen'}, {delivery:'on_screen'}], [{delivery:'voiceover'}, {delivery:'voiceover',voiceoverKind:'inner_thought'}],
+    ]) {
+      const dir = tmp(), read = () => readBoard(dir).win;
+      const apply = patch => {
+        const result = applyStoryboard(storyboardApplySchema.parse({path:dir,draft:true,...patch}));
+        assert.equal(result.written,true,JSON.stringify(result.findings));
+        return result;
+      };
+      const line = delivery => ({speaker:'guard',tts:quote,...delivery});
+      const ref = n => ({shot:1,[field]:n,quote});
+      const card = {id:'s0001', scene:1, type:'points', narration:[line(first),line(second)],
+        performance:[1,2].map(group => ({kind:'dialogue',character:'guard',to:'self',group}))};
+      apply({set:{structure:structure([scene(1)]),shots:[card]}, globals:{STORY:{primaryHookType:'in_medias_res',payoff:ref(2)}}});
+      const reverse = read().SCENES[0]; reverse.narration.reverse();
+      const replace = shot => field === 'event' ? {shotsById:[{id:shot.id,shot}]} : {set:{shots:[shot]}};
+      apply(replace(reverse));
+      assert.deepEqual(read().STORY.payoff,ref(1));
+      assert.deepEqual(read().SCENES[0].narration[0],line(second));
+      const identical = read().SCENES[0]; identical.narration = [line(second),line(second)];
+      apply({...replace(identical), globals:{STORY:{...read().STORY,payoff:ref(2)}}});
+      assert.deepEqual(read().STORY.payoff,ref(2));
+      const repeated = read().SCENES[0]; repeated.narration.reverse();
+      apply(replace(repeated));
+      assert.deepEqual(read().STORY.payoff,ref(2)); // Serializing two equal rows preserves the performed timeline.
+      repeated.narration.unshift(line(second));
+      repeated.performance.push({kind:'dialogue',character:'guard',to:'self',group:3});
+      const result = apply(replace(repeated));
+      assert.ok(result.findings.some(f => f.code === 'edit_story_reference' && f.where === 'STORY.payoff'));
+      assert.deepEqual(read().STORY.payoff,ref(0));
+    }
+  });
+
+  it('keeps legacy b-roll with its main shot through inserts and full reorders, and requires a new host after removal', () => {
+    const dir = tmp(), read = () => readBoard(dir);
+    const apply = patch => applyStoryboard(storyboardApplySchema.parse({path:dir,draft:true,...patch}));
+    const main = id => ({id,scene:1,type:'points',duration:2,performance:[{kind:'action',text:'Main ' + id}]});
+    const broll = (id,after) => ({...main(id),type:'broll',after});
+    const ids = ['s0001','s0002','s0003','s0004','s0005','s0006'];
+    const [one, host, three, cut, extra, secondCut] = ids;
+    const hostOf = id => {
+      const cards = read().win.SCENES;
+      return cards[cards.find(card => card.id === id).after]?.id;
+    };
+    const cards = [main(one),main(host),main(three),broll(cut,1)];
+    assert.equal(apply({set:{structure:structure([scene(1)]),shots:cards},globals:{STORY:{primaryHookType:'in_medias_res'}}}).written,true);
+    assert.equal(apply({insertShots:[{after:0,shots:[main(extra)]},{after:4,shots:[broll(secondCut,0)]}]}).written,true);
+    assert.equal(hostOf(cut),host);
+    assert.equal(hostOf(secondCut),extra);
+    const [newMain,first,owner,third,insert,otherInsert] = read().win.SCENES;
+    assert.equal(apply({set:{shots:[third,newMain,first,insert,owner,otherInsert]}}).written,true);
+    assert.equal(hostOf(cut),host);
+    assert.equal(hostOf(secondCut),extra);
+    const archive = read(), orphaned = apply({removeShotIds:[host]});
+    assert.equal(orphaned.written,false);
+    assert.ok(orphaned.findings.some(f => f.code === 'broll_host_missing' && f.where === cut));
+    assert.equal(read().sha256,archive.sha256);
+    const splice = archive.win.SCENES.find(card => card.id === cut);
+    assert.equal(apply({removeShotIds:[host],shotsById:[{id:cut,shot:{...splice,after:0}}]}).written,true);
+    assert.equal(hostOf(cut),three);
+    assert.equal(apply({removeShotIds:[three,cut]}).written,true);
+    assert.equal(hostOf(secondCut),extra);
+  });
+
+  it('keeps a simultaneous action and its beat with the same line through the shot_dialogue MCP handler', async () => {
+    const dir = tmp(), read = () => readBoard(dir).win;
+    writeStorySequences({path:dir,primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'The gate',purpose:'Identify the signer.'}]});
+    writeStoryScenes({path:dir,scenes:[{sequence:'q1',no:1,place:'Gate',time:'Dusk',event:'The guard checks a signature.',summary:'The form changes hands.'}]});
+    writeStoryShots({path:dir,shots:[{scene:1,summary:'A guard signs the release.'},{scene:1,summary:'A witness waits.'}]});
+    castFile(dir,['guard']);
+    writeShotCharacters({path:dir,shots:['s0001','s0002'].map(id => ({id,characters:['guard']}))});
+    const line = (id, tts) => ({id,speaker:'guard',tts});
+    const probe = line('s0001-l1','Where is the form?'), admitted = line('s0001-l2','I signed the release.');
+    writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[probe,admitted]},{id:'s0002',lines:[line('a','Hold.'),line('b','Wait.')]}]});
+    const before = read(), [first,second] = before.SCENES;
+    const speech = group => ({kind:'dialogue',character:'guard',group,to:'self'});
+    const lamp = {kind:'action',character:'guard',text:'The guard switches off the lamp.',withGroup:2};
+    const same = {kind:'action',text:'The gate rattles.'};
+    first.performance = [{...speech(1),audience:{speaker:'A clerk'}},{...speech(2),audience:{speaker:'The guard'}},lamp];
+    second.performance = [same,speech(1),speech(2),same];
+    const ref = (shot,event,quote) => ({shot,event,quote});
+    const ending = ref(2,4,same.text), secondBeat = {start:{shot:2,event:1},end:{shot:2,event:4}};
+    const story = {...before.STORY,payoff:ref(1,2,admitted.tts),ending,beats:[
+      {start:{shot:1,event:3},end:{shot:1,event:3}},secondBeat]};
+    assert.equal(applyStoryboard({path:dir,globals:{STORY:story},shotsById:[first,second].map(shot=>({id:shot.id,shot}))}).written,true);
+    const edit = async lines => {
+      const result = await ROUTES.shot_dialogue({path:dir,shots:[{id:first.id,lines}]});
+      assert.ok(!result.isError, JSON.stringify(result.content));
+      return read();
+    };
+    const opening = {speaker:'guard',tts:'Check the time.'};
+    let board = await edit([opening,probe,admitted]);
+    const inserted = board.SCENES[0].narration[0].id;
+    assert.equal(inserted,'s0001-l3');
+    assert.deepEqual(board.SCENES[0].performance.map(e=>e.group ?? e.withGroup),[1,2,3,3]);
+    assert.equal(board.SCENES[0].performance[2].audience.speaker,'The guard');
+    assert.deepEqual(board.STORY.payoff,ref(1,3,admitted.tts));
+    assert.deepEqual(board.STORY.beats[0],{start:{shot:1,event:4},end:{shot:1,event:4}});
+    assert.deepEqual(board.STORY.ending,ending);
+    assert.deepEqual(board.STORY.beats[1],secondBeat);
+    assert.deepEqual(board.SCENES[1].performance,second.performance);
+    board = await edit([admitted,{...opening,id:inserted},probe]);
+    assert.deepEqual(board.STORY.payoff,ref(1,1,admitted.tts));
+    assert.equal(board.SCENES[0].performance[3].withGroup,1);
+    assert.deepEqual(board.SCENES[0].performance[0].audience,{speaker:'The guard'});
+    assert.deepEqual(board.STORY.beats[0].start,{shot:1,event:4});
+    board = await edit([{...opening,id:inserted},probe]);
+    assert.equal(board.SCENES[0].performance.at(-1).withGroup,0);
+    assert.equal(board.STORY.beats[0].start.event,0);
+    assert.equal(board.STORY.payoff.event,0);
+    assert.deepEqual(board.STORY.ending,ending);
+    // A replacement performance can explicitly bind the old action to the probe.
+    const repaired = board.SCENES[0];
+    repaired.performance.at(-1).withGroup = 2;
+    assert.equal(applyStoryboard({path:dir,shotsById:[{id:repaired.id,shot:repaired}]}).written,true);
+    board = await edit([probe,{...opening,id:inserted}]);
+    assert.equal(board.SCENES[0].performance.at(-1).withGroup,1);
+    const archived = board.SCENES[0];
+    archived.narration = archived.narration.map(({id,delivery,...rest}) => rest);
+    const legacyStory = {...board.STORY,payoff:ref(1,1,probe.tts),beats:[{start:{shot:1,event:3},end:{shot:1,event:3}},secondBeat]};
+    assert.equal(applyStoryboard({path:dir,globals:{STORY:legacyStory},shotsById:[{id:archived.id,shot:archived}]}).written,true);
+    board = await edit([opening,{speaker:'guard',tts:probe.tts}]);
+    assert.ok(board.SCENES[0].narration.every(line => line.id));
+    assert.deepEqual(board.STORY.payoff,ref(1,2,probe.tts));
+    assert.equal(board.SCENES[0].performance.at(-1).withGroup,2);
+    assert.deepEqual(board.STORY.beats[0].start,{shot:1,event:3});
+  });
+
+  it('clears previous public roles and addressees when shot_dialogue changes the performer or delivery', async () => {
+    const dir = tmp(), quote = 'I signed the release.';
+    castFile(dir,['claimant','clerk']);
+    const caller = {id:'admission',speaker:'claimant',delivery:'off_screen',tts:quote};
+    const reply = {id:'reply',speaker:'clerk',delivery:'on_screen',tts:'I heard you.'};
+    const card = {id:'s0001',type:'points',scene:1,visual:{character:['clerk']},narration:[caller,reply],performance:[
+      {kind:'dialogue',group:1,character:'claimant',to:'clerk',audience:{speaker:'Voice on the intercom',listener:'The clerk'}},
+      {kind:'dialogue',group:2,character:'clerk',to:'claimant',audience:{speaker:'The clerk',listener:'Voice on the intercom'}},
+    ]};
+    const setup = applyStoryboard({path:dir,set:{structure:structure([scene(1)]),shots:[card]},globals:{STORY:{primaryHookType:'in_medias_res'}}});
+    assert.equal(setup.written,true,JSON.stringify(setup.findings));
+    const edit = async lines => {
+      const result = await ROUTES.shot_dialogue({path:dir,shots:[{id:card.id,lines}]});
+      assert.ok(!result.isError,JSON.stringify(result.content));
+      assert.match(JSON.stringify(result.content),/edit_speech_roles/);
+      return readBoard(dir).win;
+    };
+    const recast = {...caller,speaker:'clerk',delivery:'on_screen'};
+    let board = await edit([recast,reply]);
+    assert.deepEqual(board.SCENES[0].performance[0],{kind:'dialogue',group:1,character:'clerk',to:'unidentified'});
+    assert.deepEqual(board.SCENES[0].performance[1],card.performance[1]);
+    const {storyPerformance} = createRequire(import.meta.url)('../../skills/storyboard/references/story-performance.js');
+    const publicRows = storyPerformance(board,{audienceOnly:true});
+    assert.equal(publicRows[0].quote,quote);
+    assert.equal(publicRows[0].character,undefined);
+    assert.equal(publicRows[0].to,undefined);
+    assert.equal(publicRows[1].character,'The clerk');
+    board = await edit([recast,{...reply,delivery:'voiceover',voiceoverKind:'inner_thought'}]);
+    assert.deepEqual(board.SCENES[0].performance[1],{kind:'narration',group:2,character:'clerk'});
+  });
+});
+
 describe('storyboard schemas', () => {
   it('shot adapter values stay typed while creative vocabulary passes through', () => {
     assert.ok(shotSchema.safeParse(board()[1]).success);
@@ -429,12 +730,20 @@ describe('story first, then characters and lines', () => {
     assert.deepEqual(outside.findings.filter((f) => /payoff/.test(f.what)).map((f) => f.level), ['warn']);
     writeStorySequences({ path: dir, sequences: [{ id: 'q1', title: '발단', purpose: '만남', question: '누가 오나', payoff: 2 }] });
     assert.deepEqual([readBoard(dir).win.STRUCTURE.sequences[0].payoff, readBoard(dir).win.STRUCTURE.sequences[0].scenes], [2, [1, 2]]);
+    const third = win.SCENES[2];
+    applyStoryboard({ path:dir, globals:{ STORY:{...win.STORY, beats:[
+      {shot:1, change:'A choice', necessity:'It sends her to the station.'},
+      {start:{shot:3,event:1}, end:{shotId:third.id,event:1}, change:'The train leaves', necessity:'She must walk.'},
+    ]}}, shotsById:[{id:third.id, shot:{...third, performance:[{kind:'action', text:'The doors close.'}]}}] });
     writeStoryShots({ path: dir, shots: [{ id: 's0001', scene: 2, summary: 'a1 moved' }] });
     assert.deepEqual(readBoard(dir).win.SCENES.map((s) => [s.id, s.scene]), [['s0002', 1], ['s0003', 2], ['s0001', 2]]);
     // s0001 looks at s0003 (position 2); a shot added to scene 1 pushes s0003 to position 3.
     applyStoryboard({ path: dir, draft: true, shotsById: [{ id: 's0001', shot: { ...readBoard(dir).win.SCENES[2], shot: { eyeline: { matchShot: 2 } } } }] });
     writeStoryShots({ path: dir, shots: [{ scene: 1, summary: 'a3' }] });
     const moved = readBoard(dir).win.SCENES;
+    const [whole, range] = readBoard(dir).win.STORY.beats;
+    assert.equal(whole.shot, 4);
+    assert.deepEqual([range.start, range.end], [{shot:3,event:1}, {shotId:third.id,event:1}]);
     assert.equal(moved.find((s) => s.id === 's0001').shot.eyeline.matchShot, moved.findIndex((s) => s.id === 's0003') + 1);
     assert.deepEqual(readStoryboard(storyboardReadSchema.parse({ path: dir })).playback.map((row) => row.summary), ['a2', 'a3', 'b', 'a1 moved']);
   });
@@ -1267,6 +1576,11 @@ describe('images and the video prompt follow the icon attributes', () => {
       make(dir, 's0001'); assert.equal(status().status, 'current');
     }
     const s = readBoard(dir).win.SCENES[0];
+    s.performance[0].audience = { speaker:'The caller', listener:'A guard' };
+    const labels = applyStoryboard({ path:dir, shotsById:[{id:s.id, shot:s}] });
+    assert.equal(status().status, 'current');
+    assert.ok(!labels.findings.some(f => ['edit_staging_changed','edit_image_inherited'].includes(f.code)));
+    assert.equal(readBoard(dir).win.SCENES[0].performance[0].audience.speaker, 'The caller');
     delete s.visual.frames.startPromptSha256;
     applyStoryboard({ path: dir, shotsById: [{ id: s.id, shot: s }] });
     assert.equal(status().status, 'unknown');

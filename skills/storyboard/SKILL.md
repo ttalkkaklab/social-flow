@@ -76,6 +76,10 @@ For every new or substantially revised synopsis and board, apply
 [episode anticipation](references/episode-anticipation.md). Build a specific opening promise,
 changing expectations, an earned payoff and an observable response into the actual story.
 Do this while authoring, even when no separate interest review is requested.
+Read the synopsis up to each consequential event before looking ahead. Name a
+specific question or plausible guess the preceding cue supports. Remove that cue:
+if the inference or next choice still works exactly as before, inspect the repetition.
+Carry overlapping questions and partial answers as long as new evidence sustains them.
 Read the channel's chosen opening format. When it calls for a provocative opening and
 rewind, follow the reference's opening procedure: consequential event, recipient reaction,
 clear earlier-time cue, enacted context and one catch-up into new action. Preserve held
@@ -501,6 +505,9 @@ see and the new evidence that changed that expectation. Preserve necessary react
 quiet relief; do not demand a new question at every camera cut. Carry each clue, discovery
 and response into the planned shots in the same disclosure order. Fix the performed event
 when the progression exists only in notes. This author pass is not an independent review.
+Anchor dramatic changes to inclusive event ranges in `STORY.beats`. A held take may have
+several such changes, and several cuts can deliver one. Inspect the scene with the
+next event hidden; changing the coverage or renaming a feeling does not add a clue.
 
 Read the scene sequence as an audience member before detailing shots. For an independent
 review, hand a fresh reviewer only the ordered actions and actual words first. Withhold
@@ -734,8 +741,10 @@ node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-story.js" storybo
 node "${CLAUDE_PLUGIN_ROOT}/skills/storyboard/references/check-scenes.js" storyboard/ --draft
 ```
 
-`--text` exports every observable action and spoken line, including silent generated shots,
-for the blind audience read; `--map` retains shot/line IDs, event order and addressees for
+`--text` exports performed action and audible speech for the blind read. Use
+`--text --through=N` to stop after audience event N. It shows numeric references and
+only the speaker/listener labels disclosed to the audience. After recording the first
+read, `--map` supplies production shot/line IDs, event order and addressees for
 findings. Use these exports rather than flattening all actions before all speech or dropping
 listeners. Unknown addressees stay unknown; do not infer them from the author's intention.
 `make-script.js` serves

@@ -98,6 +98,21 @@ test('a plan checks a named engine and model against the saved selection and nev
   assert.deepEqual(f.plan('other').selection,plain.selection);
 });
 
+test('viewer-only names preserve an existing video plan and a changed performance invalidates it', t => {
+  const f = fixture(t);
+  const event = {kind:'action', character:'the-deckhand', text:'The deckhand pulls the rope.', durationSeconds:1};
+  f.board.SCENES[0].performance = [event]; f.save();
+  const original = f.plan('before');
+  event.audience = {speaker:'A stranger', listener:'The passenger'}; f.save();
+  const revised = f.plan('after');
+  assert.equal(revised.contextRevision, original.contextRevision);
+  assert.equal(revised.args.prompt, original.args.prompt);
+  assert.deepEqual(revised.performance, original.performance);
+  approveVideo({episode:f.episode, planIds:[original.id], request:'Approve this take.'});
+  event.text = 'The deckhand lets go.'; f.save();
+  assert.throws(() => approveVideo({episode:f.episode, planIds:[original.id], request:'Approve this take.'}), /video_plan_stale/);
+});
+
 function singleSpeakerScene(f, seconds, trackSeconds = seconds) {
  const dir = path.join(f.episode, 'storyboard');
  const audio = path.join(dir, 'dialogue.wav');

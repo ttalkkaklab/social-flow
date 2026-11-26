@@ -25,6 +25,9 @@ test('playback links keep original shot numbers when an outro precedes an interl
   const scenes = [{ type: 'cover', duration: 3 }, { type: 'outro' }, { type: 'points' }, { type: 'broll', after: 2 }];
   assert.deepEqual(direction.playbackEntries(scenes).map(entry => entry.i), [0, 2, 3, 1]);
   assert.deepEqual([...direction.timeline(scenes, 'en').matchAll(/href="#shot-(\d+)"/g)].map(m => +m[1]), [1, 3, 4, 2]);
+  scenes.push({type:'broll', after:2}, {type:'broll', after:100});
+  assert.deepEqual(direction.playbackEntries(scenes).map(e=>e.i), [0,2,3,4,5,1]);
+  assert.deepEqual(direction.playbackEntries(scenes).filter(e=>e.unscheduled).map(e=>e.i), [5]);
 });
 test('summary is read-only, escaped, visibly labeled and links to keyboard-accessible details', () => {
   const scene = Object.freeze({ duration: 4, transition: 'cut',

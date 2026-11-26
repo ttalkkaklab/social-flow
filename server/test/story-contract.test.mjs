@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const root = path.resolve(import.meta.dirname, '../../skills/storyboard/references');
 const { checkStory: inspectStory, storyHash, storySpeech } = require(path.join(root, 'story-contract.js'));
@@ -97,6 +100,78 @@ test('unknown speakers, duplicate/missing speech, fabricated action quotes and m
   assert.match(checkStory(w).join(), /exact observable/);
   w = board(); w.SCENES[2].performance[0].text = 12;
   assert.match(checkStory(w).join(), /action requires|exact observable/);
+});
+test('audience text hides production identities, uses audible words and preserves disclosed listeners', () => {
+  const w = board(), s = w.SCENES[1];
+  s.id = 'the-thief'; Object.assign(s.narration[0], {id:'father-confesses', sub:'The father confesses.', tts:'Stop.', delivery:'off_screen'});
+  const read = () => storyPerformance(w, {audienceOnly:true})[1];
+  assert.deepEqual(read(), { shot:2, event:1, kind:'dialogue', delivery:'off_screen', quote:'Stop.' });
+  s.performance[0].audience = {speaker:'Distorted voice', listener:'Girl at the phone'};
+  assert.equal(read().character, 'Distorted voice');
+  assert.equal(read().to, 'Girl at the phone');
+  assert.equal(storyPerformance(w)[1].character, 'father');
+  assert.equal(storyPerformance(w)[1].quote, 'Stop.');
+  assert.equal(storyPerformance(w)[1].displayText, 'The father confesses.');
+});
+test('events in one take and across cuts can carry independent non-overlapping dramatic beats', () => {
+  const w = board();
+  w.SCENES[1].id = 's0002';
+  const beat = (start, end) => ({start, end, change:'She can see the empty pot.', necessity:'It gives her a reason to share.'});
+  w.STORY.beats = [beat({shot:1,event:1},{shotId:'s0002',event:1}), beat({shotId:'s0002',event:2},{shot:3,event:1})];
+  assert.deepEqual(inspectStory(w), []);
+  w.STORY.beats[1].start.event = 1;
+  assert.match(inspectStory(w).join(), /without overlap/);
+  w.STORY.beats[1].start = {shotId:'missing',event:1};
+  assert.match(inspectStory(w).join(), /existing event bounds/);
+});
+test('a reveal staged on a line needs a concurrent audience action before a blind prefix can pass it', t => {
+  const dir = mkdtempSync(path.join(tmpdir(),'spoken-visual-'));
+  t.after(() => rmSync(dir,{recursive:true,force:true}));
+  const w = board(), file = path.join(dir,'scenes.js'), s = w.SCENES[1];
+  const direction = 'Show the stolen ring in the reflected hand.';
+  s.narration[0].acting = {visual:direction};
+  const read = n => {
+    writeFileSync(file, 'window.STORY = ' + JSON.stringify(w.STORY) + ';\nwindow.SCENES = ' + JSON.stringify(w.SCENES));
+    return execFileSync(process.execPath,[path.join(root,'check-story.js'),file,'--text','--through='+n],{encoding:'utf8'});
+  };
+  assert.match(inspectStory(w).join(), /no matching audience action/);
+  assert.doesNotMatch(read(1), /ring/);
+  assert.throws(() => read(2), /unrepresented visual cue/);
+  s.performance.push({kind:'action',withGroup:1,text:'A ring glints in the mirror.',videoDirection:direction});
+  assert.doesNotMatch(inspectStory(w).join(), /no matching audience action/);
+  assert.match(read(2), /A ring glints in the mirror/);
+  assert.doesNotMatch(read(2), /stolen ring/);
+});
+test('a public prefix keeps simultaneous action and speech together without disclosing a later group', t => {
+  const dir = mkdtempSync(path.join(tmpdir(),'audience-prefix-'));
+  t.after(() => rmSync(dir,{recursive:true,force:true}));
+  const w = board(), shot = w.SCENES[0];
+  shot.narration.push({id:'the-thief', speaker:'father', tts:'Here I am.', sub:'The culprit speaks.'});
+  shot.performance.unshift({kind:'action', character:'father', withGroup:2, text:'The caller removes the mask.'});
+  shot.performance.push({kind:'dialogue', character:'father', to:'child', group:2});
+  const file = path.join(dir,'scenes.js');
+  writeFileSync(file, 'window.STORY = ' + JSON.stringify(w.STORY) + ';\nwindow.SCENES = ' + JSON.stringify(w.SCENES));
+  const read = n => execFileSync(process.execPath,[path.join(root,'check-story.js'),file,'--text','--through='+n],{encoding:'utf8'});
+  assert.match(read(1), /Have you eaten/);
+  assert.doesNotMatch(read(1), /mask|Here I am|culprit|the-thief/);
+  assert.match(read(2), /removes the mask/);
+  assert.match(read(2), /Here I am/);
+  assert.doesNotMatch(read(2), /culprit|the-thief|I ate earlier/);
+  w.STORY.beats = [{start:{shot:1,event:2},end:{shot:1,event:1},change:'A voice becomes familiar.',necessity:'The child can ask about the mask.'}];
+  assert.match(inspectStory(w).join(), /splits simultaneous evidence/);
+  w.STORY.beats[0].end.event = 3;
+  assert.doesNotMatch(inspectStory(w).join(), /splits simultaneous evidence/);
+  shot.performance[0].withGroup = 9;
+  assert.match(inspectStory(w).join(), /withGroup must identify/);
+  writeFileSync(file, 'window.STORY = ' + JSON.stringify(w.STORY) + ';\nwindow.SCENES = ' + JSON.stringify(w.SCENES));
+  assert.throws(() => read(1), /Repair its withGroup/);
+  assert.doesNotMatch(JSON.stringify(storyPerformance(w,{audienceOnly:true})), /removes the mask/);
+});
+test('legacy whole-shot notes can be stored in array order when an insert plays earlier', () => {
+  const w = board();
+  w.SCENES.push({type:'broll',after:0,duration:1,performance:[{kind:'action',text:'An empty plate.'}]});
+  w.STORY.beats.push({shot:4,change:'There is no food.',necessity:'Sets up the offer.'});
+  assert.deepEqual(inspectStory(w),[]);
 });
 test('an action nobody performs is a world event, while a mistyped actor still fails', () => {
   const w = board(); w.SCENES[1].performance.push({ kind: 'action', text: 'The lid of the empty pot rattles.' });

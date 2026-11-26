@@ -170,17 +170,18 @@ function analyse(src, research, opts = {}) {
   }
   return { meta:m, findings };
 }
-function checkPath(target, { authoring = false } = {}) {
-  if (!fs.existsSync(target)) throw Error('path not found: ' + target);
-  const directory = fs.statSync(target).isDirectory();
+function checkPath(target, { authoring = false, source } = {}) {
+  if (typeof source !== 'string' && !fs.existsSync(target)) throw Error('path not found: ' + target);
+  const directory = fs.existsSync(target) && fs.statSync(target).isDirectory();
+  if (directory && source !== undefined) throw Error('A proposed scenario source requires a single file path');
   const files = directory ? fs.readdirSync(target).filter(f => /^d\d+\.md$/.test(f)).sort((a,b) => Number(a.slice(1,-3))-Number(b.slice(1,-3))).map(f => path.join(target, f)) : [target];
   if (!files.length) throw Error('No candidate Markdown files found: ' + target);
   const findings = [], engines = [], directions = [], stories = [], openings = new Map();
   for (const file of files) {
-    if (!fs.existsSync(file)) { findings.push({level:'bad', where:file, what:'S7 missing candidate'}); continue; }
+    if (source === undefined && !fs.existsSync(file)) { findings.push({level:'bad', where:file, what:'S7 missing candidate'}); continue; }
     const research = researchAt(file), dir = research ? path.dirname(research) : path.dirname(file);
     const fmt = formatOf(dir);
-    const src = fs.readFileSync(file, 'utf8'), m = parseScenario(src).meta;
+    const src = source ?? fs.readFileSync(file, 'utf8'), m = parseScenario(src).meta;
     const directory = path.basename(path.dirname(file)) === 'candidates' ? path.dirname(path.dirname(file)) : path.dirname(file);
     let pool;
     if (m.version === 'scenario-v2') {
@@ -204,7 +205,8 @@ function checkPath(target, { authoring = false } = {}) {
     const parseErrors = parseScenario(src).errors;
     findings.push(...result.findings.map(f => {
       if (f.level !== 'bad' || f.code?.startsWith('hook_type_') || (authoring && parseErrors.some(e => f.what === 'S1 ' + e))) return f;
-      const keep = m.version === 'scenario-v2' ? structuralV2.test(f.what)
+      const keep = m.version === 'scenario-v2' ? structuralV2.test(f.what) || (authoring &&
+        /missing character identity source|character identity source is not a file|character pool needs unique IDs/.test(f.what))
         : parseErrors.some(message => f.what === 'S1 ' + message);
       return keep ? f : {...f, level:'warn'};
     })); engines.push(result.meta.engine_primary); directions.push(result.meta.direction);
@@ -213,7 +215,7 @@ function checkPath(target, { authoring = false } = {}) {
   if (directory && stories.length > 1 && new Set(stories).size !== stories.length) findings.push({level:'warn',where:target,what:'V2 duplicate story candidates — consider changing the situation, choice or payoff'});
   if (directory) for (const names of openings.values()) {
     if (names.length > 1) findings.push({level:'warn',where:target,
-      what:'V2 shared causal opening: ' + names.join(', ') + ' have identical observable event sequences in hook and developments 1–3; compare their situation, decisive choice, consequence and payoff before selecting. This warning does not establish semantic equivalence or reject shared cast/settings.'});
+      what:'V2 shared causal opening: ' + names.join(', ') + ' have identical observable events in their first four narrative beats; compare their situation, decisive choice, consequence and payoff before selecting.'});
   }
   if (directory && directions.some((d,i) => d !== path.basename(files[i], '.md').toUpperCase())) findings.push({level:'warn',where:target,what:'S7 candidate direction differs from its filename; reconcile the labels when useful'});
   return { files, violations:findings.filter(f => f.level === 'bad').length, warnings:findings.filter(f => f.level === 'warn').length, findings };
@@ -304,7 +306,34 @@ function main() {
   try {
     if (argv.includes('--selftest')) return selftest();
     const targets = argv.filter(a => !a.startsWith('--'));
-    if (targets.length !== 1 || argv.some(a => a.startsWith('--') && a !== '--json' && a !== '--authoring')) throw Error('usage: check-scenario.js <candidates/|scenario.md> [--json] [--authoring] | --selftest');
+    if (targets.length === 1 && argv.includes('--text')) {
+      const through = argv.find(a => a.startsWith('--through='));
+      if (argv.some(a => a.startsWith('--') && a !== '--text' && !/^--through=[1-9]\d*$/.test(a))) throw Error('Use --text [--through=N] for a blind scenario read');
+      const {readContract, observableBeat} = require('./scenario-v2.js');
+      const {orderedPerformance} = require('./story-performance.js');
+      const draft = readContract(fs.readFileSync(targets[0], 'utf8'));
+      if (!Array.isArray(draft.beats)) throw Error('scenario beats must be an array');
+      const rows = draft.beats.flatMap((beat, i) => {
+        if (beat?.item === 'CTA' && !beat.events?.length) return [];
+        const events = observableBeat(beat, true);
+        if (!events) throw Error('No readable performance at beat ' + (i + 1));
+        return orderedPerformance(beat.events).map(({e, j, together, unresolvedTiming}) => {
+          const [kind, speaker, listener, words] = events[j];
+          return {beat:i + 1, together, unresolvedTiming, line:'[beat-' + (i + 1) + '/e' + (j + 1) + ' · ' + kind +
+            (speaker ? ' · ' + speaker : '') + (listener ? ' → ' + listener : '') +
+            (kind !== 'action' && ['on_screen','off_screen','voiceover'].includes(e.delivery) ? ' · ' + e.delivery : '') +
+            (together ? ' · simultaneous e' + together : '') + '] ' + words};
+        });
+      });
+      let end = through ? Math.min(rows.length, Number(through.slice(10))) : rows.length;
+      while (rows[end]?.together && rows[end].beat === rows[end - 1].beat && rows[end].together === rows[end - 1].together) end++;
+      const prefix = rows.slice(0, end);
+      if (rows.some(row => row.unresolvedTiming && prefix.some(item => item.beat === row.beat)))
+        throw new Error('Cannot place every cue in the requested beat. Repair its withGroup link before reading this prefix.');
+      process.stdout.write(prefix.map(row => row.line).join('\n') + '\n');
+      return;
+    }
+    if (targets.length !== 1 || argv.some(a => a.startsWith('--') && a !== '--json' && a !== '--authoring')) throw Error('usage: check-scenario.js <candidates/|scenario.md> [--json] [--authoring] | <scenario.md> --text [--through=N] | --selftest');
     const result = checkPath(targets[0], { authoring: argv.includes('--authoring') });
     if (argv.includes('--json')) process.stdout.write(JSON.stringify(result,null,2) + '\n');
     else {

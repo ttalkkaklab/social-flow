@@ -792,6 +792,145 @@ export function validateStructure(structure) {
 }
 /** A value as JSON with its object keys sorted, so two copies of one block compare equal whatever order they were written in. */
 const sameShape = (value) => JSON.stringify(value, (_key, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) : v);
+const productionEvents = (events) => loadFromHere(join(PLUGIN_ROOT, 'skills/_shared/scene-acting.js')).productionPerformance(events);
+const isStoryReference = (value) => !!value && typeof value === 'object' && !Array.isArray(value);
+function speechGroupIdentities(shot, transcript) {
+    const recorded = !shot.narration?.length && Array.isArray(transcript?.groups);
+    const lines = recorded ? transcript.groups : shot.narration ?? [];
+    return lines.map(line => {
+        const words = JSON.stringify([line?.speaker, line?.tts || line?.text || line?.sub, line?.voiceoverKind, ...(recorded ? [line?.start, line?.end] : [])]);
+        const key = JSON.stringify(line?.id ? ['id', line.id] : [words, line?.delivery]);
+        return { id: line?.id, words, delivery: line?.delivery, key };
+    });
+}
+function matchingSpeechGroupKeys(old, current, oldTranscript, newTranscript) {
+    const from = speechGroupIdentities(old, oldTranscript), to = speechGroupIdentities(current, newTranscript);
+    // An archived line acquires its first id through shot_dialogue. Carry it only when its observed line is unique.
+    const oldKeys = from.map(line => {
+        if (line.id)
+            return line.key;
+        const matches = (other) => other.words === line.words && (line.delivery === undefined || other.delivery === line.delivery);
+        const candidates = to.filter(matches), candidate = candidates[0];
+        return candidates.length === 1 && candidate.id && from.filter(matches).length === 1 && !from.some(entry => entry.id === candidate.id)
+            ? candidate.key : line.key;
+    });
+    return { oldKeys, newKeys: to.map(line => line.key) };
+}
+/** Event ordinals address stored performance, including actions performed during a speech group. */
+function beatEventKeys(shot, groups) {
+    const groupKey = (group) => groups[group - 1] ?? ['group', group];
+    return (Array.isArray(shot.performance) ? shot.performance : []).map(event => {
+        if (event?.id)
+            return JSON.stringify([event.kind, 'id', event.id]);
+        if (event?.kind === 'action')
+            return JSON.stringify(['action', event.character, event.to, event.text,
+                event.withGroup === undefined ? null : groupKey(event.withGroup)]);
+        return JSON.stringify([event?.kind, event?.character, groupKey(event?.group)]);
+    });
+}
+// Newly supplied references address the finished edit. Carried ones follow the shot, line or performed event.
+function remapStoryReferences(next, before, shots, positionOf, carriedTimelines) {
+    const story = next.STORY, prior = before.STORY, previous = before.SCENES;
+    if (!isStoryReference(story) || !isStoryReference(prior) || !previous?.length)
+        return [];
+    const updates = {}, findings = [];
+    const missing = (where, ref) => {
+        const code = where.startsWith('STORY.beats[') ? 'edit_beat_reference' : 'edit_story_reference';
+        findings.push({ level: 'warn', code, where, what: `${code}: no unique match for the original ${JSON.stringify(ref)}. Choose the shot or event that supplies this evidence.` });
+    };
+    const remapCarried = (rows, old, map) => {
+        if (!Array.isArray(rows) || !Array.isArray(old))
+            return rows;
+        const supplied = rows === old ? null : new Set(old.map(sameShape));
+        const revised = rows.map((row, i) => isStoryReference(row) && (!supplied || supplied.has(sameShape(row))) ? map(row, i) : row);
+        return revised.some((row, i) => row !== rows[i]) ? revised : rows;
+    };
+    const shotNumber = (row, where) => {
+        if (!Number.isInteger(row.shot))
+            return row;
+        const at = positionOf(Number(row.shot) - 1);
+        if (at < 0)
+            missing(where, { shot: row.shot });
+        return at + 1 === row.shot ? row : { ...row, shot: at + 1 };
+    };
+    const transcripts = remapCarried(story.transcripts, prior.transcripts, (row, i) => shotNumber(row, 'STORY.transcripts[' + i + ']'));
+    if (transcripts !== story.transcripts)
+        updates.transcripts = transcripts;
+    const transcriptAt = (rows, index) => Array.isArray(rows) ? rows.find(row => row?.shot === index + 1) : undefined;
+    const boundary = (ref, where) => {
+        if (!isStoryReference(ref) || (typeof ref.shotId === 'string') === Number.isInteger(ref.shot))
+            return ref;
+        const field = Number.isInteger(ref.event) ? 'event' : Number.isInteger(ref.group) ? 'group' : undefined;
+        if (!field)
+            return ref;
+        const index = typeof ref.shotId === 'string' ? previous.findIndex(shot => shot.id === ref.shotId) : Number(ref.shot) - 1;
+        const old = previous[index], at = positionOf(index);
+        if (!old || at < 0) {
+            missing(where, ref);
+            if (typeof ref.shotId === 'string')
+                return shots.some(shot => shot.id === ref.shotId) ? { ...ref, [field]: 0 } : ref;
+            const { shot: _shot, ...rest } = ref;
+            return old?.id ? { ...rest, shotId: old.id, ...(shots.some(shot => shot.id === old.id) ? { [field]: 0 } : {}) } : { ...ref, shot: 0 };
+        }
+        const current = shots[at], n = Number(ref[field]) - 1;
+        const oldTranscript = transcriptAt(prior.transcripts, index), newTranscript = transcriptAt(transcripts, at);
+        const { oldKeys: oldLines, newKeys: newLines } = matchingSpeechGroupKeys(old, current, oldTranscript, newTranscript);
+        const from = field === 'group' ? oldLines : beatEventKeys(old, oldLines);
+        const to = field === 'group' ? newLines : beatEventKeys(current, newLines);
+        let target = 0;
+        const key = from[n];
+        if (key !== undefined) {
+            const candidate = to.indexOf(key);
+            if (candidate >= 0 && from.indexOf(key) === from.lastIndexOf(key) && candidate === to.lastIndexOf(key))
+                target = candidate + 1;
+            else {
+                // A full JSON board edit can move an intact timeline without preserving array identity.
+                const sameLines = sameShape(old.narration) === sameShape(current.narration) && sameShape(oldTranscript?.groups) === sameShape(newTranscript?.groups);
+                const untouched = sameLines && (field === 'group' || sameShape(old.performance) === sameShape(current.performance))
+                    || (old.id && carriedTimelines?.has(old.id) && sameShape(oldTranscript?.groups) === sameShape(newTranscript?.groups));
+                if (untouched && to[n] === key)
+                    target = n + 1;
+            }
+        }
+        if (!target)
+            missing(where, ref);
+        return ref[field] === target && (ref.shotId !== undefined || ref.shot === at + 1) ? ref
+            : { ...ref, ...(ref.shotId === undefined ? { shot: at + 1 } : {}), [field]: target };
+    };
+    const beats = remapCarried(story.beats, prior.beats, (beat, i) => {
+        const where = 'STORY.beats[' + i + ']';
+        if (beat.start === undefined && beat.end === undefined)
+            return shotNumber(beat, where);
+        const start = boundary(beat.start, where + '.start'), end = boundary(beat.end, where + '.end');
+        return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
+    });
+    if (beats !== story.beats)
+        updates.beats = beats;
+    for (const key of ['opening', 'payoff', 'ending', 'themeStated', 'ask']) {
+        if (sameShape(story[key]) !== sameShape(prior[key]))
+            continue;
+        const ref = boundary(story[key], 'STORY.' + key);
+        if (ref !== story[key])
+            updates[key] = ref;
+    }
+    if (isStoryReference(story.review) && isStoryReference(prior.review) && story.review.hash === prior.review.hash) {
+        const review = {};
+        for (const [key, value] of Object.entries(story.review)) {
+            const old = prior.review[key];
+            if (!isStoryReference(value) || !isStoryReference(old))
+                continue;
+            const refs = remapCarried(value.refs, old.refs, (ref, i) => boundary(ref, 'STORY.review.' + key + '.refs[' + i + ']'));
+            if (refs !== value.refs)
+                review[key] = { ...value, refs };
+        }
+        // A new hash records a new editorial review. Remapping old evidence never certifies an edit.
+        if (Object.keys(review).length)
+            updates.review = { ...story.review, ...review };
+    }
+    if (Object.keys(updates).length)
+        next.STORY = { ...story, ...updates };
+    return findings;
+}
 // Historical tools copied the same action into several slots. An edit to one copy should
 // update its unchanged twins while separately authored performance and timed beats stay intact.
 function syncCopiedShotAttributes(previous, shot) {
@@ -1026,6 +1165,45 @@ export function applyPatch(win, patch, opts = {}) {
     });
     if (next.STRUCTURE)
         next.STRUCTURE = { ...next.STRUCTURE, nextShotId };
+    const referenceNotes = [];
+    if (patch.set || patch.shots || patch.shotsById || reordered) {
+        const positionOfOriginal = (index) => {
+            const old = originalShots[index];
+            if (!old)
+                return -1;
+            if (old.id) {
+                const matches = shots.flatMap((shot, i) => shot.id === old.id ? [i] : []);
+                return matches.length === 1 && originalShots.filter(shot => shot.id === old.id).length === 1 ? matches[0] : -1;
+            }
+            if (!patch.set)
+                return finalOrder.indexOf(beforeReorder[index]);
+            // A full replacement can contain copies of legacy cards without ids. An exact unique copy is still identifiable.
+            const retained = finalOrder.indexOf(old);
+            if (retained >= 0 && finalOrder.lastIndexOf(old) === retained)
+                return retained;
+            const shape = sameShape(old), matches = finalOrder.flatMap((shot, i) => sameShape(shot) === shape ? [i] : []);
+            return matches.length === 1 && originalShots.filter(shot => sameShape(shot) === shape).length === 1 ? matches[0] : -1;
+        };
+        const inserted = new Set(patch.insertShots?.flatMap(entry => entry.shots));
+        originalShots.forEach((old, index) => {
+            if (old.type !== 'broll' || old.after === undefined)
+                return;
+            const at = positionOfOriginal(index), splice = shots[at];
+            if (splice?.type !== 'broll' || inserted.has(finalOrder[at]) || splice.after !== old.after)
+                return;
+            // An existing splice names its original main card. A new or explicitly changed splice uses final positions.
+            const host = positionOfOriginal(old.after);
+            if (!shots[host] || ['broll', 'outro'].includes(shots[host].type)) {
+                referenceNotes.push({ level: 'bad', code: 'broll_host_missing', where: String(splice.id),
+                    what: 'broll_host_missing: the main shot for this insert was removed or became ambiguous. Set its new after position or remove the insert in this edit.' });
+                const { after: _after, ...unattached } = splice;
+                shots[at] = unattached;
+            }
+            else if (splice.after !== host)
+                shots[at] = { ...splice, after: host };
+        });
+        referenceNotes.push(...remapStoryReferences(next, win, shots, positionOfOriginal, opts.carriedTimelines));
+    }
     // A shot's transition is the join from the shot before it. When an insert, remove or move gives
     // it a different predecessor, the stored join describes a cut that no longer exists: clear it.
     const joinNotes = [];
@@ -1069,7 +1247,7 @@ export function applyPatch(win, patch, opts = {}) {
     for (const scene of next.STRUCTURE?.scenes ?? []) {
         assertArchivedSceneDrafts(scene.videoDirection?.promptDrafts, win.STRUCTURE?.scenes.find(old => old.no === scene.no)?.videoDirection?.promptDrafts);
     }
-    const findings = [...joinNotes, ...editImpact(win, next), ...(clicheChoiceKept ? [clicheChoiceKept] : []), ...(clicheModeChanged ? [clicheModeChanged] : [])];
+    const findings = [...referenceNotes, ...joinNotes, ...editImpact(win, next), ...(clicheChoiceKept ? [clicheChoiceKept] : []), ...(clicheModeChanged ? [clicheModeChanged] : [])];
     if (!shots.length && !opts.outline)
         findings.push({ level: 'bad', where: 'board', what: 'the board has no shots' });
     if (win.STORY?.authoring === 'story-first' && next.STORY?.authoring !== 'story-first')
@@ -1535,11 +1713,17 @@ function writeOutline(path, sha256, win, structure, shots, language, opening, ho
         // (cliche-use.md). Boards written before this record, and other types, get one when a use is recorded.
         ...(win.CLICHES === undefined && !written ? clicheStamp(win.PRODUCTION ?? handoff?.PRODUCTION) : {}),
     };
+    // The saved board will be read again for its guarded write. Preserve the identity of timelines this writer carried intact.
+    const oldCards = new Map((win.SCENES ?? []).map(card => [card.id, card]));
+    const carriedTimelines = new Set(shots?.flatMap(card => {
+        const old = oldCards.get(card.id);
+        return card.id && old && old.performance === card.performance && old.narration === card.narration ? [card.id] : [];
+    }));
     const result = applyStoryboard({
         path, expectedSha256: sha256, draft: true, dryRun: false, structure,
         ...(shots?.length ? { set: { structure, shots } } : {}),
         ...(globals || sceneGlobals ? { globals: { ...globals, ...sceneGlobals } } : {}),
-    }, { outline: true, cliches: true, hookChange });
+    }, { outline: true, cliches: true, hookChange, carriedTimelines });
     const kept = !language || !story ? undefined
         : story.language !== undefined ? (story.language !== language ? `this board is written in "${String(story.language)}"` : undefined)
             : written ? 'this board has shots and no recorded language, so its language is the one they are written in' : undefined;
@@ -2217,6 +2401,69 @@ export function writeShotCharacters(args) {
     const result = writeOutline(args.path, sha256, win, st, shots);
     return { ...result, findings: [...result.findings, ...notes] };
 }
+/** Keep direction and simultaneous actions with their lines while independent actions keep their slots. */
+function dialoguePerformance(shot, lines, notes) {
+    const events = shot.performance;
+    if (!Array.isArray(events) || !events.length)
+        return events;
+    const old = shot.narration ?? [];
+    const { oldKeys, newKeys } = matchingSpeechGroupKeys(shot, { ...shot, narration: lines });
+    const groups = oldKeys.map(key => {
+        const at = newKeys.indexOf(key);
+        return oldKeys.indexOf(key) === oldKeys.lastIndexOf(key) && at === newKeys.lastIndexOf(key) ? at + 1 : 0;
+    });
+    const spoken = (event) => event?.kind === 'dialogue' || event?.kind === 'narration';
+    const slots = [], directed = new Map();
+    for (const [i, event] of events.entries()) {
+        const group = groups[event?.group - 1];
+        if (spoken(event) && group && !directed.has(group)) {
+            directed.set(group, event);
+            slots.push(i);
+        }
+    }
+    // A front insert belongs just before the next retained line. A trailing insert follows the last speech slot.
+    const bySlot = new Map();
+    let pending = [], slot = 0;
+    for (const [i, line] of lines.entries()) {
+        const group = i + 1, prior = directed.get(group);
+        const oldLine = prior && old[Number(prior.group) - 1];
+        const kind = prior && (oldLine?.delivery === 'voiceover') === (line.delivery === 'voiceover') ? prior.kind
+            : line.delivery === 'voiceover' ? 'narration' : 'dialogue';
+        const cue = { ...prior, kind, character: line.speaker, group };
+        if (prior && oldLine && (oldLine.speaker !== line.speaker || oldLine.delivery !== line.delivery || oldLine.voiceoverKind !== line.voiceoverKind)) {
+            // A stable line can pass to another person or become an inner thought. Its old public roles no longer identify this performance.
+            delete cue.audience;
+            delete cue.to;
+            if (prior.audience || prior.to)
+                notes.push({ level: 'warn', code: 'edit_speech_roles', where: String(shot.id),
+                    what: `edit_speech_roles: speaker or delivery changed on line ${line.id}. Recheck the addressee and record only the roles the audience can now recognize.` });
+        }
+        if (kind === 'dialogue' && !cue.to)
+            cue.to = 'unidentified';
+        pending.push(cue);
+        if (prior) {
+            bySlot.set(slots[slot++], pending);
+            pending = [];
+        }
+    }
+    const firstSpeech = events.findIndex(spoken);
+    if (pending.length) {
+        const at = slots.at(-1) ?? (firstSpeech >= 0 ? firstSpeech : events.length);
+        bySlot.set(at, [...(bySlot.get(at) ?? []), ...pending]);
+    }
+    const updated = events.flatMap((event, i) => {
+        if (spoken(event))
+            return bySlot.get(i) ?? [];
+        if (event?.kind !== 'action' || event.withGroup === undefined)
+            return [event];
+        const group = groups[event.withGroup - 1] ?? 0;
+        if (!group)
+            notes.push({ level: 'warn', code: 'edit_speech_group_reference', where: String(shot.id),
+                what: `edit_speech_group_reference: action ${i + 1} lost speech group ${event.withGroup}. Choose the line it accompanies or make the action sequential.` });
+        return [group === event.withGroup ? event : { ...event, withGroup: group }];
+    });
+    return updated.concat(bySlot.get(events.length) ?? []);
+}
 export function writeShotDialogue(args) {
     const { win, st, sha256 } = readOutline(args.path);
     const known = castRegistry(args.path, win);
@@ -2229,6 +2476,7 @@ export function writeShotDialogue(args) {
         if (!cast)
             throw new Error(`story_order: set ${id}'s characters with shot_characters before its lines`);
         const old = shots[index].narration ?? [];
+        const reserved = new Set([...old, ...lines].map(line => line.id).filter(Boolean));
         for (const line of old)
             if (line.id)
                 used.delete(line.id);
@@ -2239,12 +2487,12 @@ export function writeShotDialogue(args) {
             if (line.voiceoverKind && line.delivery && line.delivery !== 'voiceover')
                 throw new Error('An inner thought requires voiceover delivery');
             const kind = line.voiceoverKind === undefined ? previous?.voiceoverKind : line.voiceoverKind;
-            const delivery = line.delivery ?? (kind || previous?.voiceoverKind ? 'voiceover' : cast.includes(line.speaker) ? 'on_screen' : 'voiceover');
+            const delivery = line.delivery ?? (kind || previous?.voiceoverKind ? 'voiceover' : previous?.speaker === line.speaker && previous.delivery ? previous.delivery : cast.includes(line.speaker) ? 'on_screen' : 'voiceover');
             if (delivery === 'on_screen' && !cast.includes(line.speaker))
                 throw new Error(`story_order: ${line.speaker} speaks on screen in ${id} but is not among its characters — add them with shot_characters`);
             let lineId = line.id;
             for (let k = n + 1; !lineId; k++)
-                if (!used.has(`${id}-l${k}`))
+                if (!used.has(`${id}-l${k}`) && !reserved.has(`${id}-l${k}`))
                     lineId = `${id}-l${k}`;
             if (used.has(lineId))
                 throw new Error(`shot_dialogue: line id ${lineId} is already used`);
@@ -2257,7 +2505,8 @@ export function writeShotDialogue(args) {
                 delete updated.voiceoverKind;
             return updated;
         });
-        shots[index] = { ...shots[index], narration: next };
+        const performance = dialoguePerformance(shots[index], next, notes);
+        shots[index] = { ...shots[index], narration: next, ...(performance !== undefined ? { performance } : {}) };
         notes.push(...promptNotes(shots[index]));
     }
     const result = writeOutline(args.path, sha256, win, st, shots);
@@ -2651,7 +2900,7 @@ function startImageBasis(shot, format, imageContextWords) {
         // Joined only when set, so a basis recorded before they existed still matches.
         ...(bystandersOf(shot).length ? { bystanders: bystandersOf(shot) } : {}), ...(visual.extras ? { extras: visual.extras } : {}),
         action: visual.action, videoDesign: plan.videoDesign, ...(visual.expression ? { expression: visual.expression } : {}),
-        performance: shot.performance,
+        performance: productionEvents(shot.performance),
         acting: shot.narration?.map(line => line.acting?.visual),
     })).digest('hex');
 }

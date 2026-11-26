@@ -227,13 +227,24 @@ order are warnings too. The rest below is recommended:
 - `premise`, `viewerExperience`, `message` (intended meaning, not a mandatory closing line),
   `endingReason`, `difference`; optional `cta` can describe a desired ask.
 - `cast: [{id, role, want, voice, reason}]` from cast.json.
-- `beats: [{item, expectation, change, necessity, events}]`, with suggested items
-  `훅`, `전개 #1`, `전개 #2`, `전개 #3`, `마무리` (`hook`, `development #1`–`#3`, `ending` in a
-  scenario that is not Korean). A CTA row is optional and may be empty
+- `beats: [{item, expectation, change, necessity, events}]`. Name and count the beats
+  from the performed changes. Existing hook/development/ending labels remain readable.
+  A CTA row is optional and may be empty
   or appear where it serves the story; no CTA reason or prescribed position is required.
-- `events: [{kind, character, text, basis, to?, claims?}]`: kind is action, dialogue or
-  narration; character is a cast ID; dialogue `to` is another ID, self, audience or unidentified. `text`
-  describes observable action or actual spoken words. `basis` is fact, interpretation or
+- `events: [{kind, character?, text, basis, to?, claims?}]`: kind is action, dialogue or
+  narration. Give the performer's cast ID when known. An environmental action such as a
+  light going out can leave the actor undisclosed. Dialogue `to` names another ID,
+  self, audience or unidentified. `text`
+  describes observable action or actual spoken words. An optional event `audience` label
+  can identify a speaker or listener the viewer knows by this point. Use
+  `check-scenario.js scenario.md --text --through=N` for the first read.
+  Include `delivery` on speech when hearing an off-screen voice, on-screen speaker
+  or voiceover changes what the viewer can infer. Use the same delivery on the board.
+  If an action changes what a line means while it is spoken, give the line a positive
+  `group` within that beat and the action a matching `withGroup`. A prefix read
+  then presents both together, including when the action is stored earlier in the list.
+  Keep that moment together when placing a beat boundary on the board.
+  `basis` is fact, interpretation or
   invented; fact/interpretation requires `claims: [N]` pointing to Verified rows.
 - `setups: [{open, pay, detail, reinterpretation}]`, 1-based beat indices, open before pay
   (use the actual beat positions). Empty is valid without a held reveal.
@@ -322,7 +333,11 @@ scene. `shot.videoDesign` before/action/after/motion and camera directions must 
 the performance; a text field alone is not proof of an executable or rendered action.
 
 Estimate shot time only after laying out words and actions. Per-line `acting.visual`
-happens with speech; an independent action or response may need its own interval. Do not
+happens with speech. Write the concurrent observable cue as a `performance` action
+with the matching `withGroup`. If technical staging differs from the public wording,
+put the matching staging sentence in the action's `videoDirection` and its public
+description in `text`. Keep an earlier action in its original interval and remove
+a duplicate instruction on the later line. An independent action or response may need its own interval. Do not
 use a universal speech-plus-padding formula. Match later measured audio and clip timing to
 this plan. After writing all lines, revisit provisional shot boundaries: merge a continuing
 performance before comparing its total source coverage with `storyboard_read.videoTiming`.
@@ -346,7 +361,15 @@ and unsupported event plans still need correction. Action metadata describes a p
 proof that an image or animation renders it; preserve the production-plan and media checks.
 
 Set STORY.version to story-v2. Keep viewerNeed, thesis, basis, endingReason, kind, expression,
-reveal, cta, cast and beats (one change/necessity per performance shot). Opening, payoff, ending,
+reveal, cta, cast and beats. Give a meaningful change its inclusive `start` and `end` event
+references in playback order. Each endpoint uses a stable `shotId` or a 1-based `shot`, plus
+a 1-based `event`. Several beats may share a shot, and reaction shots can belong to one beat.
+Existing `{shot, change, necessity}` rows describe the whole shot. Leave room for holds.
+An optional `question` records what the writer expects the viewer to wonder after a beat.
+Use `performance[].audience.speaker` and `listener` only for identities the viewer can
+recognize at that moment. Keep an unidentified caller anonymous until the disclosure.
+Write only perceivable material in action text; the initial reader sees it verbatim.
+Opening, payoff, ending,
 optional ask, and review refs use `{shot, event, quote}` against the actual performance event.
 The thesis is author intent and need not occur verbatim in speech. Adapted adds adaptationBoundary.
 
@@ -375,8 +398,9 @@ window.STORY = {
   ending:  { shot: 5, event: 1, quote: "leaves the coin on the counter" },
   cta: "none",                     // optional: ask: { shot, event, quote }
   beats: [
-    { shot: 1, change: "The viewer expects a refusal", necessity: "Without it the key means nothing" }
-    // one row per performance shot
+    { start: { shot: 1, event: 1 }, end: { shot: 2, event: 1 },
+      change: "She locks the till but leaves the key on the stranger's side.",
+      question: "Will he risk taking it?", necessity: "He can now act without her permission." }
   ],
   review: {                        // written only after an actual read
     hash: "<node check-story.js storyboard/ --hash>",
