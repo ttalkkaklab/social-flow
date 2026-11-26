@@ -11,13 +11,12 @@ import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { bareFilenameSchema, resolveOutputFile } from './media-utils.js';
-import { GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
+import { GENAI_SCENE_REPLAY_WINDOW_MS, GENERATIONS_ROUTE, GenaiRequestError, astraGenaiBaseUrl, downloadGenaiResult, generationSchema, pollGenaiJob, requestGenai, requireAstraGenaiKey, requestGenaiMedia, genaiImageUriSchema, genaiSourceUri, genaiAudioUri } from './astra-genai-client.js';
 import { atomicJson } from './routing-files.js';
 import { GENAI_MSR_INLINE_MAX_BYTES, GENAI_FILE_GONE, GENAI_FILE_SCHEME, forgetGenaiUploads, genaiUploadable, uploadGenaiFile } from './astra-genai-upload.js';
 import { recordVideoSubmission } from './video-events.js';
 import { checkSceneValidation, checkSceneVoices, genaiSceneBody, genaiSceneFrames, genaiSceneSchema, sceneFrames } from './genai-scene.js';
-/** The common generation API's routes. */
-export const GENERATIONS_ROUTE = '/v1/generations';
+export { GENERATIONS_ROUTE };
 const GENERATION_MODES = { 'text-to-video': 'text2video', 'image-to-video': 'image2video', 'audio-to-video': 'audio2video', msr: 'msr', scene: 'scene' };
 const sides = (resolution) => { const [width, height] = resolution.split('x').map(Number); return { width, height }; };
 const asset = (url) => ({ url });
@@ -403,26 +402,17 @@ const receiptSchema = z.object({
     status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(), nativeSha256: z.string().optional(),
     conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).passthrough();
-/** The common job envelope. `GET /v1/generations/{id}` also reads jobs a provider route created. */
-const generationSchema = z.object({
-    id: z.string().min(1), status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
-    outputs: z.array(z.object({ url: z.string().min(1), authentication: z.string().optional() }).passthrough()).default([]),
-    error: z.object({ code: z.string().optional(), message: z.string().optional() }).passthrough().nullish(),
-    result_expired: z.boolean().optional(),
-}).passthrough();
 const STATUS = { queued: 'pending', running: 'processing', succeeded: 'completed', failed: 'failed', cancelled: 'cancelled' };
 export const genaiVideoStatusSchema = z.object({ receiptPath: z.string().min(1), download: z.boolean().default(false) }).strict();
 // A busy MSR backend acknowledged a submission after 480 s (2026-10-30); 60 s orphaned jobs.
 const SUBMIT_TIMEOUT_MS = 15 * 60_000;
-/** The gateway binds a scene's X-Request-Id to its job until 24 hours after that job ends; a later replay could render again. */
-const REPLAY_WINDOW_MS = 23 * 3600_000;
 const accepted = (response) => z.object({ id: z.string().min(1) }).passthrough().parse(response).id;
 /** Find the job of a scene whose response was lost: the same X-Request-Id with the same body returns the job the first
  * request made, or makes it if that request never arrived. Either way one render exists. */
 async function replayScene(receipt, receiptPath) {
     if (!receipt.requestId || !receipt.requestPath || !fs.existsSync(receipt.requestPath))
         throw new Error('GenAI submission identity is unknown; inspect server usage before retrying.');
-    if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+    if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < GENAI_SCENE_REPLAY_WINDOW_MS))
         throw new Error('genai_replay_window_passed: the gateway may no longer tie request ' + receipt.requestId + ' to its job; check GET /v1/jobs before planning again');
     const body = JSON.parse(fs.readFileSync(receipt.requestPath, 'utf8'));
     const jobId = accepted(await requestGenai('POST', GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS, undefined, undefined, receipt.requestId));

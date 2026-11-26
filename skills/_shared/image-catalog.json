@@ -180,17 +180,17 @@
   },
   "nativeH3Image": {
     "engine": "astra-genai-native",
-    "model": "h3-image",
+    "model": "minimax-h3-image",
     "profile": "minimax-h3-image",
-    "protocol": "mlx-serve",
+    "protocol": "common-generation",
     "operations": [
       "text",
       "edit"
     ],
-    "referenceImages": 10,
+    "referenceImages": 7,
     "fixedSteps": 6,
     "editSize": "source",
-    "availability": "Check astra_genai_catalog kind image for the configured gateway binding."
+    "availability": "Check astra_genai_catalog kind common for the image scene in the gateway catalog."
   },
   "gptModels": [
     "gpt-image-2",

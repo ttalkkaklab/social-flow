@@ -33800,6 +33800,15 @@ function astraVideoBaseUrl() {
 }
 
 // src/astra-genai-client.ts
+var GENERATIONS_ROUTE = "/v1/generations";
+var GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 36e5;
+var generationSchema = external_exports.object({
+  id: external_exports.string().min(1),
+  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
+  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
+  result_expired: external_exports.boolean().optional()
+}).passthrough();
 function desktopGatewayKey() {
   const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, "");
   if (!url) return config.astraGenaiApiKey;
@@ -33957,6 +33966,7 @@ async function requestGenaiMedia(route, body, credentialRoute = route, signal) {
   }
   return Buffer.from(await response.arrayBuffer());
 }
+var genaiCatalogKind = external_exports.enum(["image", "speech", "common", "video", "desktop_video", "loras", "contracts"]);
 var genaiJobsSchema = external_exports.object({
   gateway: external_exports.enum(["main", "image", "speech", "desktop"]).default("main"),
   limit: external_exports.number().int().min(1).max(100).default(20)
@@ -35713,7 +35723,6 @@ function checkSceneValidation(args, result) {
 }
 
 // src/astra-genai-video.ts
-var GENERATIONS_ROUTE = "/v1/generations";
 var GENERATION_MODES = { "text-to-video": "text2video", "image-to-video": "image2video", "audio-to-video": "audio2video", msr: "msr", scene: "scene" };
 var sides = (resolution2) => {
   const [width, height] = resolution2.split("x").map(Number);
@@ -36123,22 +36132,14 @@ var receiptSchema = external_exports.object({
   nativeSha256: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
-var generationSchema = external_exports.object({
-  id: external_exports.string().min(1),
-  status: external_exports.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
-  outputs: external_exports.array(external_exports.object({ url: external_exports.string().min(1), authentication: external_exports.string().optional() }).passthrough()).default([]),
-  error: external_exports.object({ code: external_exports.string().optional(), message: external_exports.string().optional() }).passthrough().nullish(),
-  result_expired: external_exports.boolean().optional()
-}).passthrough();
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
 var SUBMIT_TIMEOUT_MS = 15 * 6e4;
-var REPLAY_WINDOW_MS = 23 * 36e5;
 var accepted = (response) => external_exports.object({ id: external_exports.string().min(1) }).passthrough().parse(response).id;
 async function replayScene(receipt, receiptPath) {
   if (!receipt.requestId || !receipt.requestPath || !fs3.existsSync(receipt.requestPath))
     throw new Error("GenAI submission identity is unknown; inspect server usage before retrying.");
-  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < REPLAY_WINDOW_MS))
+  if (!receipt.submittedAt || !(Date.now() - Date.parse(receipt.submittedAt) < GENAI_SCENE_REPLAY_WINDOW_MS))
     throw new Error("genai_replay_window_passed: the gateway may no longer tie request " + receipt.requestId + " to its job; check GET /v1/jobs before planning again");
   const body = JSON.parse(fs3.readFileSync(receipt.requestPath, "utf8"));
   const jobId = accepted(await requestGenai("POST", GENERATIONS_ROUTE, body, SUBMIT_TIMEOUT_MS, void 0, void 0, receipt.requestId));

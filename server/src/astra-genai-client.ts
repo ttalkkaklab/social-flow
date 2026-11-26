@@ -7,6 +7,18 @@ import { z } from 'zod';
 import { imageMetadata } from './image-media.js';
 import { config } from './config.js';
 
+export const GENERATIONS_ROUTE = '/v1/generations';
+/** The gateway retains scene request IDs for 24 hours after the job ends. */
+export const GENAI_SCENE_REPLAY_WINDOW_MS = 23 * 3600_000;
+/** The common job envelope also covers jobs started through provider-specific routes. */
+export const generationSchema = z.object({
+  id: z.string().min(1),
+  status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
+  outputs: z.array(z.object({ url: z.string().min(1), authentication: z.string().optional() }).passthrough()).default([]),
+  error: z.object({ code: z.string().optional(), message: z.string().optional() }).passthrough().nullish(),
+  result_expired: z.boolean().optional(),
+}).passthrough();
+
 export function desktopGatewayKey(): string | undefined {
   const url = process.env.ASTRA_GENAI_DESKTOP_URL?.replace(/\/+$/, '');
   if (!url) return config.astraGenaiApiKey;
@@ -168,8 +180,9 @@ export async function requestGenaiMedia(route: string, body?: FormData | Record<
 }
 
 /** Read deployment configuration without performing inference. */
-export async function genaiCatalog(kind: 'image' | 'speech' | 'video' | 'desktop_video' | 'loras' | 'contracts') {
-  const routes = { image: '/v1/images/models', speech: '/v1/audio/models', video: '/v1/models',
+export const genaiCatalogKind = z.enum(['image', 'speech', 'common', 'video', 'desktop_video', 'loras', 'contracts']);
+export async function genaiCatalog(kind: z.infer<typeof genaiCatalogKind>) {
+  const routes = { image: '/v1/images/models', speech: '/v1/audio/models', common: '/v1/models', video: '/v1/models',
     desktop_video: '/v1/ltx/desktop/models',
     loras: '/v1/ltx/desktop/loras', contracts: '/v1/ltx/desktop/contracts' };
   return requestGenai('GET', routes[kind]);

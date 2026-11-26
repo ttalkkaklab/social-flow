@@ -5,7 +5,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema';
 import { nativeImageSchema, nativeImageEditSchema } from './astra-genai-native-image.js';
 import { DESKTOP_SCHEMAS } from './astra-genai-desktop.js';
 import { genaiSpeechSchema } from './astra-genai-speech.js';
-import { genaiJobsSchema } from './astra-genai-client.js';
+import { genaiCatalogKind, genaiJobsSchema } from './astra-genai-client.js';
 
 const descriptions: Record<string, string> = {
   requestId: 'Stable local speech request ID, e.g. shot1-line1-v1; repeat unchanged to reuse the recorded result without another synthesis.',
@@ -13,8 +13,8 @@ const descriptions: Record<string, string> = {
   path: 'Absolute scenes.js path from plan_audio, e.g. /work/episode/storyboard/scenes.js.',
   lineId: 'Stable dialogue line ID from plan_audio, e.g. s1-l1.',
   expectedRevision: 'Current storyboard SHA-256 from plan_audio, e.g. 64 lowercase hexadecimal characters; re-plan after edits.',
-  kind: 'Catalog to read, e.g. speech for registered voices; discovery never generates media.',
-  model: 'Exact public model alias from astra_genai_catalog, e.g. qwen-image-fast or ltx-2.5-fast.',
+  kind: 'Catalog to read, e.g. common for queued H3 image models or speech for registered voices.',
+  model: 'Exact public model ID from astra_genai_catalog, e.g. minimax-h3-image for queued H3 stills or qwen-image-fast for a synchronous image binding.',
   prompt: 'Requested subject/action or changes, e.g. A blue ball rolls across a table.',
   promptProvenance: "Desktop rewrite policy, e.g. typed to let the app's enhancement settings rewrite the prompt. Omitted sends enhanced for a written prompt, which reaches generation without another rewrite. Does not certify quality.",
   size: 'Image width x height, e.g. 1024x1024. Supported grid depends on the selected model.',
@@ -66,7 +66,7 @@ const descriptions: Record<string, string> = {
   frameIndex: 'Unique zero-based output frame index, e.g. 0; must lie within requested duration/fps.',
   receiptPath: 'Existing local .astra-genai.json receipt, e.g. /work/shot.mp4.astra-genai.json.',
   download: 'Download and verify completed output, e.g. true; never creates another generation.',
-  gateway: 'Gateway that took the lost request, e.g. image. main is ASTRA_GENAI_URL: LTX video through /v1/generations, and astra_genai_text2img / astra_genai_edit, which never leave it. image (astra_genai_image_generate / astra_genai_image_edit), speech and desktop use their own URL and key when configured, else main. The result names the baseUrl that answered.',
+  gateway: 'Gateway that took the lost request. Use main for /v1/generations jobs including H3 images. Use image for synchronous image bindings. image, speech and desktop use their own URL and key when configured, otherwise main. Returns the baseUrl that answered.',
   limit: 'Newest jobs to return, 1-100, e.g. 20.',
 };
 function describeProperties(value: unknown): void {
@@ -90,12 +90,12 @@ function tool(name: string, description: string, schema: z.ZodTypeAny, readOnly 
     annotations: readOnly ? { readOnlyHint: true, openWorldHint: true } : { readOnlyHint: false, destructiveHint: false, idempotentHint: name.endsWith('_status'), openWorldHint: true } };
 }
 export const NATIVE_GENAI_TOOLS: Tool[] = [
-  tool('astra_genai_catalog', 'Read configured gateway models and native schemas. Use video for the common /v1/models catalog: the modes, fields by mode, limits and scene-mode numbers of each LTX model; desktop_video for Desktop models, which requires a configured Desktop. image/speech read their respective models, loras/contracts are Desktop-only. Desktop can use ASTRA_GENAI_DESKTOP_URL with its gateway credential. Configuration discovery is not an inference health check. Select the returned model alias; never infer a runtime or fall back to a different engine.',
-    z.object({ kind: z.enum(['image','speech','video','desktop_video','loras','contracts']) }).strict(), true),
+  tool('astra_genai_catalog', 'Read configured gateway models and input contracts. Use common or video for /v1/models, which includes queued H3 images and video scenes. Use image or speech for synchronous bindings and registered voices. desktop_video, loras and contracts require a configured Desktop. Returns model IDs, modes and supported fields or limits. Do not use as an inference health check.',
+    z.object({ kind: genaiCatalogKind }).strict(), true),
   tool('astra_genai_jobs', 'List this token\'s recent gateway jobs, newest first, when a response was lost and no job ID or result came back. Use to tell whether an interrupted image, speech or video request is still queued or running, succeeded, failed or was cancelled before deciding anything else. Read-only: it never submits, downloads or changes a receipt or reservation. Returns gateway, baseUrl, history and jobs. Each job has id, api, endpoint, model, status, created_at, started_at, completed_at, error {code,message}, submission_status (uncertain means a local video submission was cut while sending and needs operator recovery) and status_url; prompts are never returned, so match the lost request by endpoint, model and created_at and treat the match as evidence, not identity. queued or running means wait and read again, never resubmit. history:false means the gateway is older than GET /v1/jobs and only active jobs are listed, so a missing job is finished or failed, not known. The gateway keeps finished jobs for 24 hours; chat calls are not jobs. Do NOT use to download or reconcile: use image_status or video_status action:refresh, astra_genai_video_status or astra_genai_desktop_status with the receipt.',
     genaiJobsSchema, true),
-  tool('astra_genai_image_generate', 'Generate one PNG with the configured gateway model alias. Use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Optional registered LoRA IDs/scales; consult image catalog for model constraints. No reference images on text requests. Returns verified local output; retain the receipt after errors. Use GPT Image 2 for readable text.', nativeImageSchema),
-  tool('astra_genai_image_edit', 'Edit or vary a source PNG/JPEG with a configured gateway alias; up to nine additional local references, ten total in order. Use image_plan operation edit and engine astra-genai-native. Model catalog determines edit/variation, guidance, transparency and registered LoRA support. No arbitrary LoRA paths, masks or silent reference dropping. Returns local PNG and durable receipt; no automatic generation retries.', nativeImageEditSchema),
+  tool('astra_genai_image_generate', 'Create one PNG from a prompt with the configured gateway model. Use minimax-h3-image from astra_genai_catalog kind common for the queued H3 still. In production use image_plan/image_execute with engine astra-genai-native and explicit reserveUsd. Returns the verified local PNG and its receipt. H3 also returns the job ID. Do not use to check or repeat an existing job; use image_status for managed receipts or astra_genai_jobs for job history. Use GPT Image 2 for readable text.', nativeImageSchema),
+  tool('astra_genai_image_edit', 'Create an edited PNG from source pictures with a configured gateway model. Queued minimax-h3-image accepts seven pictures at most, including the first source, subject to the aspect-ratio limit. Refer to inputs as {picture1.image}, {picture2.image} in order. Synchronous bindings take up to ten pictures if supported. Use image_plan operation edit and engine astra-genai-native in production. Returns the verified PNG and its receipt. Do not use to check an existing job; use image_status or astra_genai_jobs.', nativeImageEditSchema),
   tool('tts_astra_genai', 'Create one speech take with a gateway model and registered voice. Use for TTS, narration and character retakes. For episode lines copy speech_manage plan_audio arguments including speechContext unchanged; stale character selections, default in place of a selected sample, edited arguments and missing episode context fail before synthesis. Discover models/voices with astra_genai_catalog kind:speech. VoxCPM2 accepts WAV and speed 1; voice cloning needs an operator-registered ID, never a client sample path. Use requestId for durable replay. Returns audioPath, receiptPath and not_reviewed; pass receiptPath to attach_audio. Do NOT use to select a character sample: use character_voice_audition. No automatic retries or listening score.', genaiSpeechSchema),
   ...Object.entries(DESKTOP_SCHEMAS).map(([feature, schema]) => tool(
     'astra_genai_desktop_' + ({ 'text-to-video': 'text2video', 'image-to-video': 'img2video', 'audio-to-video': 'audio2video' }[feature] || feature),

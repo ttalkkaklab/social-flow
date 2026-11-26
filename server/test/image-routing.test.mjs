@@ -192,6 +192,54 @@ test('native gateway selection routes model-bound edits with hashed references a
   await f.run(p,async(tool,args)=>{assert.equal(tool,p.tool);assert.equal(args.refImagePaths[0],path.join(f.dir,'source.png'));return output(args);});
 });
 
+test('refresh of an interrupted H3 request releases concurrency on terminal worker or delivery failure', async t => {
+  const { generateNativeImage } = await import('../dist/astra-genai-native-image.js');
+  const model = 'minimax-h3-image';
+  const f = fixture(t, { engine: 'astra-genai-native', model }, { reference: 'test', maxUsd: 1 });
+  const originalFetch = globalThis.fetch;
+  const key = config.astraGenaiApiKey;
+  config.astraGenaiApiKey = 'fixture';
+  t.after(() => { globalThis.fetch = originalFetch; config.astraGenaiApiKey = key; });
+  const job = { id: 'c'.repeat(32), kind: 'image', model, mode: 'scene',
+    status: 'queued', created_at: '2026-11-26T10:00:00Z', outputs: [] };
+  let terminal;
+  let submissions = 0;
+  globalThis.fetch = async (url, options) => {
+    if (options.method === 'POST') {
+      submissions++;
+      return Response.json(job, { status: 202 });
+    }
+    if (!terminal) throw new Error('interrupted before status');
+    if (String(url).includes('/v1/files/')) throw new Error('interrupted during download');
+    return Response.json({ ...job, ...terminal });
+  };
+  const plan = f.plan('h3', {}, { reserveUsd: 0.1 });
+  assert.equal(plan.gatewayRoute, '/v1/generations');
+  const result = await f.run(plan, async (_tool, args) => generateNativeImage(args));
+  assert.equal(result.structuredContent.status, 'submission_unknown');
+  terminal = { status: 'failed', error: { code: 'generation_failed', message: 'worker failed' } };
+  const refreshed = await imageStatus({ directory: f.dir, requestId: plan.requestId, action: 'refresh' });
+  assert.equal(refreshed.status, 'failed');
+  assert.equal(refreshed.reserveUsd, 0.1);
+  assert.equal(refreshed.spentUsd, undefined);
+  assert.equal(submissions, 1);
+
+  terminal = undefined;
+  const next = f.plan('h3-delivery', {}, { reserveUsd: 0.1 });
+  const interrupted = await f.run(next, async (_tool, args) => generateNativeImage(args));
+  assert.equal(interrupted.structuredContent.status, 'submission_unknown');
+  terminal = { status: 'succeeded', outputs: [{ kind: 'image', mime_type: 'image/png',
+    authentication: 'signed_url', url: '/v1/files/' + job.id + '.png?exp=12&sig=signed' }],
+    usage: { quantity: 1, unit: 'image' } };
+  const undelivered = await imageStatus({ directory: f.dir, requestId: next.requestId, action: 'refresh' });
+  assert.equal(undelivered.status, 'failed');
+  assert.equal(undelivered.providerId, job.id);
+  assert.deepEqual(undelivered.usage, terminal.usage);
+  assert.equal(undelivered.reserveUsd, 0.1);
+  assert.equal(submissions, 2);
+  assert.equal((await f.run(f.plan('next', {}, { reserveUsd: 0.1 }), async (_tool, args) => output(args))).structuredContent.status, 'completed');
+});
+
 test('a billed image whose save failed is kept from the returned bytes', async t => {
   const f = fixture(t); const p = f.plan();
   const result = await f.run(p, async () => ({ content: [{ type: 'text', text: 'File save failed' }, { type: 'image', data: png.toString('base64'), mimeType: 'image/png' }] }));
