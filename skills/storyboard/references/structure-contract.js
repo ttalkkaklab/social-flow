@@ -496,7 +496,7 @@
       else {
         if (CHARGES_OPEN.indexOf(ch.open) === -1) bad(where, 'scene.charge.open is "+" or "-"');
         if (CHARGES_CLOSE.indexOf(ch.close) === -1) bad(where, 'scene.charge.close is "+", "-", "++" (deeper into +) or "--" (deeper into −)');
-        else if (ch.open === ch.close)
+        else if (!performanceStory && ch.open === ch.close)
           warn(where, `charge ${ch.open} → ${ch.close}: the same value at both ends is a nonevent — flip it, deepen it ("${ch.open}${ch.open}"), or fold this scene into another (scenario-craft §2)`);
       }
       if (!text(sc.turn)) bad(where, 'scene.turn is empty — say what flipped between the open and the close');
@@ -512,7 +512,7 @@
       else if (text(sc.turn) && SUMMARY_RE.test(sc.turn.trim()))
         warn(where, `turn "${sc.turn.trim()}" ends on an awareness verb — name the value that flipped, not that something was revealed`);
     });
-    if (st.scenes.length >= 3 && st.scenes.every(sc => sc && sc.charge && typeof sc.charge === 'object')) {
+    if (!performanceStory && st.scenes.length >= 3 && st.scenes.every(sc => sc && sc.charge && typeof sc.charge === 'object')) {
       const tally = new Map();
       st.scenes.forEach(sc => { const k = sc.charge.open + '→' + sc.charge.close; tally.set(k, (tally.get(k) || 0) + 1); });
       const [topK, topN] = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
@@ -546,7 +546,7 @@
       else if (PAIR_OBJ_RE.test(q.purpose))
         warn(where, `purpose "${q.purpose.trim()}" binds two objects with 와/과 — two things to deliver are two purposes; write the one value the stretch moves (rule 8, P0-4)`);
       if (q.question !== undefined && !text(q.question)) bad(where, 'sequence.question, when written, is the dramatic question this stretch opens');
-      else if (text(q.question) && ((q.question.match(ASK_RE) || []).length >= 2 || CHAIN_RE.test(q.question) || PARALLEL_RE.test(q.question)))
+      else if (!performanceStory && text(q.question) && ((q.question.match(ASK_RE) || []).length >= 2 || CHAIN_RE.test(q.question) || PARALLEL_RE.test(q.question)))
         warn(where, `question "${q.question.trim()}" asks two things — a sequence holds one question open and pays one; the other half is a second sequence's question, or a shot's info`);
       if (!Array.isArray(q.scenes) || !q.scenes.length) { bad(where, 'sequence.scenes lists the scene numbers it binds, in playback order'); return; }
       q.scenes.forEach(no => {
@@ -997,7 +997,7 @@
         warn(where, `space.line is written on a later shot but not on shot ${peopled[0].no}, the first picture shot with a person — the line is fixed on the first shot that has them and kept (rule 10)`);
       if (gazes.length && !locked.length && pictured.length >= 2)
         warn(where, `shot ${gazes[0].no}'s facing has someone looking at something ("${String(gazes[0].s.shot.space.facing).trim()}") but no shot of the scene writes space.line — two people, or a person and what they look at, fix the 180° line on the scene's first shot (rule 10)`);
-      if (sc && sc.charge && feels.length) {
+      if (!performanceStory && sc && sc.charge && feels.length) {
         const first = signOf(feels[0]);
         if (first && first !== sc.charge.open)
           warn(where, `charge.open "${sc.charge.open}" but the first shot's feel reads "${feels[0]}" (${first}) — open is the value the scene's first shot says and feels, not the reverse of the last scene's close`);
@@ -1098,7 +1098,8 @@
       warn('structure', `${groups.size} scenes on a long-form board — a 10-minute long-form holds 8–15; a stretch that is one scene per chapter has not been cut at its turns (rule 9)`);
     if (!performanceStory && total && total <= 90 && groups.size >= 5)
       warn('structure', `${groups.size} scenes in ${Math.round(total)}s — a 45–75s short holds two to four; when places outnumber the band, the band wins: room moves inside one stretch of time are shot moves, and place is where the stretch lives (rule 9)`);
-    // Three shots on one feel is a flat stretch (scenario-craft §2).
+    // Legacy narrated boards use a feel curve. On a performed board the same mood can carry new evidence.
+    if (performanceStory) return out;
     let run = 0, prev = '';
     placed.forEach(({ s, no }) => {
       const f = compact(s.shot && s.shot.feel);

@@ -93,6 +93,13 @@ progress on their own. Give a partial answer, earned closeness, a useful clue, a
 prediction or a consequence before asking for more patience. Small rewards need not settle
 the central question.
 
+In a synopsis, remove the proposed clue or choice and read the next action again.
+What plausible guess, cost, remaining opportunity or reason to act goes missing?
+Name the first change the audience could notice. A second camera angle on the same
+evidence should preserve that reading. A quiet response may belong to the same beat.
+Carry the actual event, partial answer and any outstanding question into the scenario.
+An unanswered secondary question can cross scenes while the evidence keeps changing.
+
 If the audience already knows the outcome, ask how the characters will reach it and show
 what makes that route uncertain or worth seeing. Knowing both people are in love is valid;
 watching them repeat the same avoidance without a changing choice is weak. Do not add a
@@ -195,7 +202,21 @@ check whether uncertainty, progress or emotional investment has changed. If neit
 compress the repetition or change the choice and consequence. Do not solve it by merely
 speeding up speech, shortening cuts or decorating the same exchange.
 
+On the board, a dramatic beat can cross several shots or end halfway through a take.
+Read the public performance in order with the next event hidden. At each change, log
+what you want to find out, your best guess, and the cue that supports it. Record
+"nothing yet" or "same question, higher cost" when appropriate. Compare the first
+read against the author's intended question afterwards. A question about an absent
+object or a character's unspoken knowledge needs a performed cue.
+Keep a simultaneous action with its speech. A first-read prefix shows both if the
+requested stop falls inside that group. Read the production cast map afterwards.
+
 Check that the ending answers the opening promise and includes the consequential response.
+Identify the exact first event that rules out a plausible alternative. A clue may
+establish a condition without explaining its cause. Point the main payoff at the
+evidence that answers the original question, then show what the recipient does with
+that knowledge. Check that the same clue survives the intended framing, sound and
+language; a prompt excluding all lettering can erase an essential in-world message.
 For a hook-and-rewind draft, also read the opening through the catch-up without author notes:
 can the viewer locate the time jump, see why the earlier behavior makes the opening unusual,
 and get a new development after catching up? Identify a missing reaction, a mismatched elapsed

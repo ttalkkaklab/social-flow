@@ -873,6 +873,9 @@
     font-size: var(--t-cap); color: var(--faint);
   }
   .shot-story { margin: 0; font-size: 15px; line-height: 1.7; color: var(--text); }
+  .beat-notes, .beat-events { margin: 8px 0; padding: 8px 12px; color: var(--text); font-size: var(--t-aux); }
+  .beat-notes summary, .beat-events summary { cursor: pointer; font-weight: 600; }
+  .beat-notes li, .beat-events li { margin: .45em 0; line-height: 1.55; }
   .shot-setting { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
   .shot-frame-plan { margin: var(--s2) 0 0; font-size: var(--t-aux); color: var(--muted); }
   .shot-frame-plan b { color: var(--text); font-weight: 600; }
@@ -1536,6 +1539,7 @@
 <script src="./production-mode.js"></script>
 <script src="./style-samples.js"></script>
 <script src="./structure-contract.js"></script>
+<script src="./story-performance.js"></script>
 <script src="./film-techniques.js"></script>
 <script src="./shot-direction.js"></script>
 <script src="./scene-direction.js"></script>
@@ -3719,16 +3723,6 @@ window.STORYBOARD_READY = (async function () {
     if (SEQ_RE.turn.test(seq)) return "turn";
     return "";
   }
-  function playbackOrder(list) {
-    var order = [];
-    list.forEach(function (s, i) { if (s.type !== "broll") order.push({ s: s, i: i }); });
-    list.forEach(function (s, i) {
-      if (s.type !== "broll") return;
-      var at = order.findIndex(function (o) { return o.i === (s.after || 0); });
-      order.splice(at < 0 ? order.length : at + 1, 0, { s: s, i: i });
-    });
-    return order;
-  }
   var hasSceneField = SCENES.some(function (s) { return s.scene != null; }) || !!window.STRUCTURE?.scenes?.length;
 
   /* Whether a scene is a shooting scene is decided **one scene at a time**. In long-form,
@@ -4275,7 +4269,12 @@ window.STORYBOARD_READY = (async function () {
        (DOC.series && DOC.series !== channelName ? " · " + esc(DOC.series) : "") + "</div>";
   var numberedTitle = window.STRUCTURE_CONTRACT && window.STRUCTURE_CONTRACT.episodeTitle && window.STRUCTURE_CONTRACT.episodeTitle(window);
   var titlePlan = numberedTitle && window.STORY.titlePlan;
-  h += '<h1 class="doc-title">' + (numberedTitle ? esc(numberedTitle) : copy(DOC.displayTitle || DOC.topic || "")) + "</h1>";
+  var visibleTitle = CONTENT.text(numberedTitle || DOC.displayTitle || DOC.topic || "");
+  if (numberedTitle && visibleTitle === numberedTitle) {
+    var headline = titlePlan.headline.trim();
+    visibleTitle = numberedTitle.slice(0, -headline.length) + CONTENT.text(headline);
+  }
+  h += '<h1 class="doc-title">' + esc(visibleTitle) + "</h1>";
   if (titlePlan) {
     var typeLabels = LANG === 'ko' ? {scene:'장면형', reason:'이유형', choice:'선택형', empathy:'공감형'} : {scene:'Scene', reason:'Reason', choice:'Choice', empathy:'Empathy'};
     h += '<p class="review-video-type">' + esc(typeLabels[titlePlan.type]) + ' · ' +
@@ -5464,8 +5463,12 @@ window.STORYBOARD_READY = (async function () {
   h += clicheStrip();
 
   var shotGroups = [];
-  SCENES.forEach(function (s, i) {
-    var g = grammarOf(s, i);
+  directionOrder.forEach(function (entry) {
+    var s = entry.s, i = entry.i, g = grammarOf(s, i);
+    if (s.type === 'broll' && !entry.unscheduled) {
+      var host = grammarOf(SCENES[s.after], s.after);
+      g.scene = host.scene; g.slug = host.slug; g.sequence = host.sequence;
+    }
     var last = shotGroups[shotGroups.length - 1];
     if (hasSceneField && last && last.scene === g.scene) last.items.push({ s: s, i: i, g: g });
     else shotGroups.push({ scene: g.scene, slug: g.slug, sequence: g.sequence, items: [{ s: s, i: i, g: g }] });
@@ -5678,6 +5681,26 @@ window.STORYBOARD_READY = (async function () {
     return '<section class="scene-note scene-score">' + sceneNoteHead("music", T.cMusic, status) + body + '</section>';
   }
   if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.renderSummary(window.VIDEO_PRODUCTION, LANG, CONTENT.language, generationIcon);
+  var beatReader = window.StoryPerformance;
+  var authoredBeats = STORY_V2 && Array.isArray(window.STORY.beats) ? window.STORY.beats : [];
+  var sourceEvents = beatReader && authoredBeats.length ? beatReader.storyPerformance(window) : [];
+  var publicEvents = sourceEvents.length ? beatReader.storyPerformance(window, {audienceOnly:true}) : [];
+  function beatNotes(group) {
+    function link(p) {
+      return '<a href="#beat-event-' + p.shot + '-' + p.event + '">' + p.shot + '.' + p.event + '</a>';
+    }
+    var rows = [];
+    authoredBeats.forEach(function (beat) {
+      if (!beatReader || !beat || !beat.change) return;
+      var bounds = beatReader.beatRange(beat, sourceEvents), start = sourceEvents[bounds[0]], end = sourceEvents[bounds[1]];
+      if (!start || !end || bounds[1] < bounds[0] || !group.items.some(function (item) { return item.i + 1 === end.shot; })) return;
+      var refs = link(start) + (start === end ? "" : " – " + link(end));
+      rows.push('<li><small>' + refs + '</small> ' + copy(beat.change) +
+        (beat.question ? ' <strong>' + copy(beat.question) + '</strong>' : '') + '</li>');
+    });
+    return rows.length ? '<details class="beat-notes"><summary>' + (LANG === "ko" ? "비트와 관객의 질문" : "Beats and viewer questions") +
+      '</summary><ol>' + rows.join('') + '</ol></details>' : "";
+  }
   var seqNo = 0, seqOpen = false;
   var seqHead = function (title, q, groups) {
     var shotsIn = groups.reduce(function (n, g) { return n + g.items.length; }, 0);
@@ -5726,6 +5749,7 @@ window.STORYBOARD_READY = (async function () {
         musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow) + (DOC.audioNotes && DOC.audioNotes[grp.scene] ? '<div class="note">' + copy(DOC.audioNotes[grp.scene]) + '</div>' : ''), sceneVideoPromptHtml(sc, grp));
       if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene, CONTENT.language);
     }
+    h += beatNotes(grp);
     grp.items.forEach(function (item, memberIndex) {
     var s = item.s, i = item.i, g = item.g, no = i + 1;
     // sceneNotes · audioNotes · privacy are keyed by scene number, not shot number.
@@ -5945,6 +5969,19 @@ window.STORYBOARD_READY = (async function () {
 
     }
 
+    var cues = publicEvents.filter(function (cue) { return cue.shot === no; });
+    if (cues.length) h += '<details class="beat-events"><summary>' + (LANG === "ko" ? "관객이 보고 듣는 순서" : "What the viewer sees and hears") +
+      '</summary><ol>' + cues.map(function (cue) {
+        if (cue.unresolvedTiming) return '<li id="beat-event-' + no + '-' + cue.event + '">' +
+          (LANG === 'ko' ? '이 단서가 나오는 시점을 지정해 주세요.' : 'Assign a time to this cue to see it in playback order.') + '</li>';
+        var who = cue.character ? copy(cue.character) : '';
+        if (cue.to) who += (who ? ' → ' : '→ ') + copy(cue.to);
+        var context = [who, cue.delivery && esc(T.speechDelivery[cue.delivery]),
+          cue.together && (LANG === 'ko' ? '동시 동작 ' : 'Simultaneous with ') + no + '.' + cue.together].filter(Boolean);
+        return '<li id="beat-event-' + no + '-' + cue.event + '">' +
+          (context.length ? '<small>' + context.join(' · ') + '</small> ' : '') + copy(cue.quote) +
+          (cue.unresolvedVisual ? '<small> · ' + (LANG === 'ko' ? '대사와 함께 보이는 행동을 적어 주세요.' : 'The visual action during this line needs a viewer cue.') + '</small>' : '') + '</li>';
+      }).join('') + '</ol></details>';
     if (!hasSceneField && firstOfScene) h += sceneDesignNotes(sceneKey);
     h += "</article>";
     });
@@ -6422,7 +6459,7 @@ window.STORYBOARD_READY = (async function () {
 
 
   window.ReviewTypography.apply(DOC, SCENES);
-  if (CONTENT.language) app.querySelectorAll('.speech-text, .speech-subtitle, .shot-story, .scene-band-synopsis, .seq-title, .seq-purpose, .seq-question, .doc-title').forEach(function (node) {
+  if (CONTENT.language) app.querySelectorAll('.speech-text, .speech-subtitle, .shot-story, .scene-band-synopsis, .beat-notes li, .seq-title, .seq-purpose, .seq-question, .doc-title').forEach(function (node) {
     node.setAttribute('lang', CONTENT.language);
   });
   if (fontFailures.length) {
@@ -6432,7 +6469,7 @@ window.STORYBOARD_READY = (async function () {
     app.prepend(notice);
   }
   var who = DOC.channelName || DOC.channel || THEME.brand || "";
-  document.title = (numberedTitle || CONTENT.text(DOC.displayTitle || DOC.topic || "Storyboard")) + (who ? " — Storyboard · " + who : " — Storyboard");
+  document.title = (visibleTitle || "Storyboard") + (who ? " — Storyboard · " + who : " — Storyboard");
 })();
 </script>
 <link rel="stylesheet" href="./location-review.css">
@@ -6513,7 +6550,7 @@ window.STORYBOARD_READY = window.STORYBOARD_READY.then(async function () {
     nav.addEventListener('click', scheduleCurrent);
   }
   document.documentElement.dataset.reviewReady = 'true';
-  if (/^#(?:shot|scene)-\d+$/.test(location.hash)) {
+  if (/^#(?:(?:shot|scene)-\d+|beat-event-\d+-\d+)$/.test(location.hash)) {
     const target = document.getElementById(location.hash.slice(1));
     for (let d = target?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true;
     if (target && typeof target.scrollIntoView === 'function') target.scrollIntoView({block:'start'});

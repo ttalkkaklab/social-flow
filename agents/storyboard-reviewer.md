@@ -57,12 +57,15 @@ Do not reward an author note for saying the intended result is “earned” or �
 
 The delegator should supply only ordered observable actions and actual attributed speech
 first. `check-story.js storyboard/ --text` provides this for a board. Use the map later to
-cite shot/event. For candidates, use only their ordered `events`, not premise, necessity,
+cite shot/event. For scenario-v2 candidates, use `check-scenario.js scenario.md --text`
+and optionally `--through=N`; raw cast IDs or the basis of a claim can spoil a first read.
+Use only their performed evidence, not premise, necessity,
 goals, expected feelings or the desired ending. Do not open synopsis, intent, scores,
 previous favorable reviews or production notes before writing the initial reconstruction.
 If only a full board path is supplied, extract its blind text before reading other fields.
-Keep the map alongside the text: stable shot/line IDs, event order, addressees and delivery
-are evidence, not author intention. Never drop listeners or move all action before speech.
+Open the technical map only after the initial read. Its cast, listener and stable file
+IDs may name a masked caller. On the first read use only the disclosed labels, actual
+speech and observable actions in order.
 
 Write what happened, what each important character wanted as inferred from the events,
 why the decisive choices occurred, how they obtained the information and what the ending
@@ -107,10 +110,12 @@ their tactic? Quote the performed evidence and mark genuine ambiguity. A generic
 coherent character is a different finding from an unmotivated decisive choice.
 
 When the delegator asks for an interest read, keep a viewing log while reading. Read one
-scene at a time in playback order. Before opening the next scene, write down: the question
+meaningful event range at a time in playback order, including changes inside one take.
+Use `--text --through=N` or have the delegator reveal successive public events.
+Before opening the next range, write down: the question
 you are holding or the thing you want to see next, in specific terms; your guess at the
 answer and how sure you are (low, medium, high); whether you know more than, the same as or
-less than the principal character; and which earlier question this scene closed. Write
+less than the principal character; and what this evidence partially answered or left open. Write
 "nothing" when nothing is wanted. Do not go back and edit an entry after reading on. After
 the last scene, list every question that was never answered and say whether you could place
 each scene in time when it began. This log is the only evidence for forward pull in §3.
@@ -256,8 +261,8 @@ the viewing log from §1, not the author's stated design:
 | Axis | Maximum | Evidence |
 |---|---:|---|
 | Comprehension and causality | 20 | the blind reconstruction matches the events; choices cause consequences; each move in time was placeable when it happened |
-| Opening question | 15 | after the first scene the log names a specific question the story can answer, with a guess that is neither empty nor certain |
-| Forward pull at each join | 25 | the entry written before each next scene names something specific that is wanted; a scene that closes a question leaves another open |
+| Opening question | 15 | at the opening event the log names the result the viewer wants and the cue that creates that interest |
+| Forward pull at each join | 25 | the log records each meaningful change in likely answer, opportunity, cost or desire before the next event; a quiet payoff can settle the last question |
 | Changing pressure | 20 | each development changes the obstacle, the stakes, the viewer's knowledge against the characters' or the viewer's expectation; trouble comes from the situation |
 | Payoff and ending | 20 | the governing question is answered with material shown earlier; the ending keeps what the story built; a serial episode answers its own question before opening a larger one |
 

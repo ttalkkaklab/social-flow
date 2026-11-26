@@ -55,6 +55,9 @@ ends are chosen on purpose. An unattended run records those choices in `scenario
 Apply [episode anticipation](../storyboard/references/episode-anticipation.md) during synopsis
 and storyboard authoring on every run: a concrete promise, evolving expectations, an earned
 payoff and a performed response. Repair inert joins in the scenes, not just the notes.
+Follow the viewer's question through changes inside a scene as well as between scenes.
+Use the performed event ranges and audience-only forward read in storyboard; keep
+production identities for the later source check.
 This author pass adds no automatic review or score gate and does not force a serial ending.
 
 Run the storyboard's [pressure and payoff pass](../storyboard/SKILL.md#pressure-and-payoff)

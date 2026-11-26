@@ -7,6 +7,7 @@ const { evaluateWindowScript } = require('./scenes-vm.js');
 const { videoSlot, resolveVideoChoice } = require('../storyboard/references/production-mode.js');
 const { videoLines } = require('../storyboard/references/structure-contract.js');
 const { projectSceneCast, sceneSpeechRoute } = require('./scene-cast.js');
+const { productionPerformance } = require('./scene-acting.js');
 const { framePlan, imageReferences, previzHandoff } = require('../storyboard/references/render-routing.js');
 
 // Read image and performance intent before choosing any provider parameter names.
@@ -153,7 +154,7 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   const cast = scene && projectSceneCast(scene, sourceCards, board, path.join(root,'storyboard'), savedSelection.engine, speechRoute?.mode === 'conditioned', false, savedSelection.model);
   if (cast) scene = {...scene, videoDirection:cast.direction};
   const members = (cast?.members ?? sourceCards).map(shotWithRefs => {
-    const raw = shotWithRefs;
+    const raw = Array.isArray(shotWithRefs.performance) ? {...shotWithRefs, performance:productionPerformance(shotWithRefs.performance)} : shotWithRefs;
     const seedance = savedSelection.engine === 'seedance';
     const keepCast = (selectionOnly && seedance) && !raw.visual?.characterInputs || genaiCast;
     let shot = keepCast ? raw : resolveShotCharacterInputs(raw, path.join(root, 'storyboard'), seedance, board.SB_DOC?.characters, cast?.identities);

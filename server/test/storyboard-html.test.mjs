@@ -13,6 +13,37 @@ const { FONT_ASSETS } = require('../../skills/channel/references/review-fonts.js
 const review = require('../../skills/storyboard/references/video-production.js');
 const { storyboardHtml } = require('../../skills/storyboard/references/storyboard-html.js');
 
+test('a beat crossing scenes links both performed events and appears once at its result', () => {
+  const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
+  const window = {
+    StoryPerformance: require('../../skills/storyboard/references/story-performance.js'),
+    SCENES: [
+      {id: 'door', performance: [{kind: 'action', text: 'The latch lifts.'}]},
+      {id: 'visit', performance: [{kind: 'action', text: 'A child holds out the key.'}]},
+    ],
+    STORY: {beats: [{start: {shotId: 'door', event: 1}, end: {shot: 2, event: 1},
+      change: 'The owner hands over the key.', question: 'Will the child stay?'}]},
+  };
+  const setup = template.slice(template.indexOf('  var beatReader'), template.indexOf('  var seqNo'));
+  const context = {window, STORY_V2: true, LANG: 'en', copy: String, esc: String};
+  const notes = runInNewContext(setup + '\nbeatNotes', context);
+  assert.equal(notes({items: [{i: 0}]}), '');
+  const html = notes({items: [{i: 1}]});
+  assert.match(html, /href="#beat-event-1-1"/);
+  assert.match(html, /href="#beat-event-2-1"/);
+  assert.match(html, /Will the child stay\?/);
+  const eventRow = template.slice(template.indexOf('    var cues = publicEvents.filter'), template.indexOf('    if (!hasSceneField && firstOfScene) h += sceneDesignNotes'));
+  const target = runInNewContext('var h = "", no = 2;\n' + eventRow + '\nh', context);
+  assert.match(target, /id="beat-event-2-1">A child holds out the key\./);
+  window.SCENES[1].narration = [{tts:'Come in.', sub:'The accomplice calls.', delivery:'off_screen'}];
+  window.SCENES[1].performance[0].withGroup = 1;
+  window.SCENES[1].performance.push({kind:'dialogue',group:1,character:'accomplice',audience:{speaker:'Voice',listener:'Visitor'}});
+  context.T = {speechDelivery:{off_screen:'Off-screen dialogue'}};
+  const simultaneous = runInNewContext(setup + '\nvar h = "", no = 2;\n' + eventRow + '\nh', context);
+  assert.match(simultaneous, /Voice → Visitor · Off-screen dialogue · Simultaneous with 2\.2/);
+  assert.doesNotMatch(simultaneous, /accomplice/);
+});
+
 test('the offline opening review labels the selected hook and suppresses a verdict after the board changes', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'opening-board-'));
   t.after(() => rmSync(dir, {recursive: true, force: true}));
@@ -84,11 +115,14 @@ test('the offline header shows a numbered headline and its cue while legacy boar
   const html = readFileSync(join(dir, 'storyboard.html'), 'utf8');
   const header = html.slice(html.indexOf('  var numberedTitle'), html.indexOf('  if (THEME.motionGraphicTheme)', html.indexOf('  var numberedTitle')));
   const escape = value => String(value).replaceAll('<', '&lt;');
-  const render = () => runInNewContext(header + '\nh', { window, LANG: 'en', h: '', copy: escape, esc: escape, DOC: { displayTitle: 'Old title' } });
+  const render = (translations={}) => runInNewContext(header + '\nh', { window, LANG: 'en', h: '', copy: escape, esc: escape,
+    CONTENT:{text:s => translations[s] || s}, DOC: { displayTitle: 'Old title' } });
   assert.match(render(), />Old title</);
   window.STORY = { titlePlan: { episodeNumber: 11, headline: 'Ba Mochi?', type: 'reason', thumbnailCue: 'Show <Mochi>', searchTerm: 'phỏng vấn' } };
   const output = render();
   for (const text of ['EP11 · Ba Mochi?', 'Reason', 'Show &lt;Mochi>', 'phỏng vấn']) assert.ok(output.includes(text));
+  assert.match(render({'EP11 · Ba Mochi?':'EP11 · Is that Mochi?'}), />EP11 · Is that Mochi\?</);
+  assert.match(render({'Ba Mochi?':'Is that Mochi?'}), />EP11 · Is that Mochi\?</);
 });
 
 test('cast cards show the episode wardrobe and continuity when reusing a character sheet', () => {
@@ -372,7 +406,7 @@ test('bound video displays before assembly, while explicit edit cuts retain thei
 test('music lanes show one anchored span across scenes and label the score-free opening', () => {
   const template = readFileSync(new URL('../../skills/storyboard/references/storyboard-html-template.html', import.meta.url), 'utf8');
   const start = template.indexOf('  var cueAt = []');
-  const source = template.slice(start, template.indexOf('  var seqNo =', start));
+  const source = template.slice(start, template.indexOf('  var beatReader', start));
   const SCENES = [1, 2, 3].map(i => ({ id: 's000' + i }));
   const context = { SCENES, copy: String, sceneNoteHead: (kind, title, status) => status || '', MUSIC: { $timeline: [{ cue: 'piano', start: { shotId: 's0002', atSeconds: 0.8 }, end: { shotId: 's0003', atSeconds: 'end' } }] },
     LANG: 'en', esc: value => String(value), T: {}, window: { STORY: { authoring: 'story-first' } } };
@@ -557,7 +591,8 @@ test('HTML creation and refresh keep one design while preserving episode metadat
   const dir = mkdtempSync(join(tmpdir(), 'sf-board-html-'));
   try {
     // No scenes, credentials, or network are required to create the review shell.
-    assert.equal(storyboardHtml(dir).length, 28 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir).length, 29 + FONT_ASSETS.length);
+    assert.ok(existsSync(join(dir, 'story-performance.js')));
     assert.ok(existsSync(join(dir,'audience-review-data.js')));
     assert.ok(existsSync(join(dir, 'ttalkkak-story.svg')));
     const file = join(dir, 'storyboard.html');
@@ -587,7 +622,7 @@ test('check is read-only and malformed existing metadata is preserved for repair
   const root = mkdtempSync(join(tmpdir(), 'sf-board-html-check-'));
   try {
     const dir = join(root, 'storyboard');
-    assert.equal(storyboardHtml(dir, true).length, 28 + FONT_ASSETS.length);
+    assert.equal(storyboardHtml(dir, true).length, 29 + FONT_ASSETS.length);
     assert.equal(existsSync(dir), false);
     storyboardHtml(dir);
     const file = join(dir, 'storyboard.html');
@@ -633,10 +668,17 @@ test('exported review inserts outlined scenes in declared order before any shot 
     'JSON.stringify(shotGroups.map(g => [g.scene, g.items.length]))';
   const STRUCTURE = {scenes:[{no:1},{no:2},{no:3}], sequences:[{id:'q1',scenes:[2,1]},{id:'q2',scenes:[3]}]};
   for (const [SCENES, counts] of [[[],[0,0,0]], [[{scene:1},{scene:1}],[0,2,0]]]) {
-    const output = runInNewContext(source, {window:{STRUCTURE}, SCENES, grammarOf:s=>s, hasSceneField:true});
+    const directionOrder = require('../../skills/storyboard/references/shot-direction.js').playbackEntries(SCENES);
+    const output = runInNewContext(source, {window:{STRUCTURE}, SCENES, directionOrder, grammarOf:s=>s, hasSceneField:true});
     assert.deepEqual(JSON.parse(output), [2,1,3].map((n,i)=>[n,counts[i]]));
   }
   assert.doesNotMatch(html, /Storyboard draft/);
+  const SCENES=[{scene:1}, {scene:2}, {type:'broll',after:0}, {type:'broll',after:0}];
+  const directionOrder = require('../../skills/storyboard/references/shot-direction.js').playbackEntries(SCENES);
+  const groups = runInNewContext(section('  var shotGroups = [];','  var compositionPlanFindings') +
+    '\nJSON.stringify(shotGroups.map(g => [g.scene, g.items.map(item => item.i + 1)]))',
+    {SCENES, directionOrder, grammarOf:s=>({...s}), hasSceneField:true});
+  assert.deepEqual(JSON.parse(groups), [[1,[1,3,4]], [2,[2]]]);
 });
 
 test('the offline spatial checks use participant arrangement, viewpoint and cut role on photographic shots', () => {

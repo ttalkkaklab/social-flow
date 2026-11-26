@@ -4,6 +4,16 @@ import { applyPatch, storyboardApplySchema } from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import structure from '../../skills/storyboard/references/structure-contract.js';
 
+test('performed evidence can advance within a sustained mood and sustain overlapping audience questions', () => {
+  const actions = ['A phone buzzes.', 'She uncovers a bare finger.', 'She stops the pen.'];
+  const win = {STORY:{version:'story-v2'}, FORMAT:'shorts-9x16',
+    STRUCTURE:{version:'structure-v1', sequences:[{id:'q1', title:'Letter', purpose:'Find its sender', scenes:[1], payoff:1, question:'누구나 본 편지를 숨긴 사람은 누구인가?'}],
+      scenes:[{no:1, place:'Hall', time:'Day', event:actions[2], summary:actions.join(' '), turn:'Checks the hand', charge:{open:'-',close:'-'}}]},
+    SCENES:actions.map(text => ({type:'points',scene:1,shot:{feel:'Anxious'},performance:[{kind:'action',text}]}))};
+  const wording = structure.guidedCheck(win, {draft:true}).map(f => f.what).join('\n');
+  assert.doesNotMatch(wording,/flat stretch|a nonevent|asks two things/);
+});
+
 describe('eyeline', () => {
   const eye = (extra = {}) => ({ mode: 'exchange', subject: 'A', target: 'B', horizontal: 'right', vertical: 'up', targetDistance: 'near', matchShot: 2, ...extra });
   const shot = (eyeline) => ({ type: 'points', scene: 1, shot: { size: 'mcu', space: { line: 'A left, B right' }, ...(eyeline === undefined ? {} : { eyeline }) } });

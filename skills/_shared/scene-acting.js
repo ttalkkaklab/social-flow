@@ -102,6 +102,15 @@ function withThoughtClock(scene, owners) {
   if (!hasCuedThought(scene)) return scene;
   return {...scene,timelineFps:owners?.find(owner => owner.no === scene.scene)?.videoDirection?.fps ?? scene.timelineFps ?? 24};
 }
+// Viewer-facing names describe what the audience knows. Production uses the actual cast and action.
+function productionPerformance(events) {
+  if (!Array.isArray(events)) return events;
+  return events.map(event => {
+    if (!event || !Object.hasOwn(event, 'audience')) return event;
+    const {audience, ...production} = event;
+    return production;
+  });
+}
 // One performance timeline serves video prompts and audio composition. Drafts retain
 // unknown durations; production must supply measured speech and authored action timing.
 function planScenePerformance(input, measureAudio = () => null) {
@@ -110,7 +119,7 @@ function planScenePerformance(input, measureAudio = () => null) {
   const timedThought = hasCuedThought(scene);
   const fps = scene.timelineFps ?? 24;
   const explicit = Array.isArray(scene.performance) && scene.performance.length > 0;
-  const events = explicit ? scene.performance.map(event => ({...event}))
+  const events = explicit ? productionPerformance(scene.performance)
     : lines.map((line, index) => ({kind:line.delivery === 'voiceover' ? 'narration' : 'dialogue', character:line.speaker, group:index + 1}));
   const groups = new Set();
   for (const event of events) {
@@ -188,7 +197,7 @@ function planScenePerformance(input, measureAudio = () => null) {
   return {performance,durationSeconds:cursor,timing,warnings};
 }
 function scenePerformancePayload(scene) {
-  return {performance:scene.performance, narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})),
+  return {performance:productionPerformance(scene.performance), narration:(scene.narration || []).map(line => ({id:line.id,speaker:line.speaker,tts:line.tts,delivery:line.delivery,acting:line.acting})),
     ...(hasCuedThought(scene) && {externalVoiceTiming:{fps:scene.timelineFps ?? 24,start:scene.timeline.startFrame,end:scene.timeline.endFrame,cues:scene.timeline.dialogueCues}}),
     videoDesign:scene.shot?.videoDesign,techniques:scene.shot?.techniques,camera:scene.visual?.camera,source:{bg:scene.visual?.bg,character:scene.visual?.character,location:scene.shot?.location}};
 }
@@ -282,4 +291,4 @@ function sceneVideoPrompt(performance, mode, scene = {}) {
   const visualDirection = value => performance.filter(line => line.kind !== 'action' && line.text).reduce((text,line) => text.split(line.text).join('the supplied speech'), String(value));
   return ['A clean cinematic image with an unobstructed scene and text-free surfaces.', route, visualDirection(sceneDirection(scene, performance)), ...beats, VIDEO_TEXT_POLICY].join('\n');
 }
-module.exports={estimateSpeechSeconds,estimateSpeech,speechLanguage,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats,hasCuedThought,withThoughtClock};
+module.exports={estimateSpeechSeconds,estimateSpeech,speechLanguage,actingErrors,resolvedStyle,directionSupport,speechRevisionPayload,VIDEO_TEXT_POLICY,sceneVideoPrompt,planScenePerformance,sceneDirection,scenePerformancePayload,cameraLock,performanceBeats,hasCuedThought,withThoughtClock,productionPerformance};

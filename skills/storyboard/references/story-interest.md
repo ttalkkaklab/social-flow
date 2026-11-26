@@ -36,8 +36,9 @@ dramatic irony, rising conflict and an episode ending are all entries in that on
 - **One governing question per sequence.** It is specific and the story can answer it: who,
   why, how, or whether. Write it in `sequence.question` and name the scene that answers it in
   `sequence.payoff`. A short usually holds one; a long episode holds one per sequence.
-- **Small questions close fast.** A question a scene raises is answered in that scene or by
-  the next join. Only the governing question stays open across scenes.
+- **Track the questions that coexist.** A cue may settle one doubt, change the likely
+  answer to another and leave a motive unresolved over several scenes. Keep a thread
+  while the viewer receives evidence or a choice that matters. A scene break sets no deadline.
 - **The viewer can half-guess.** A puzzle with no context gives nothing to guess and a result
   shown whole leaves nothing to find out. Show enough that the viewer forms a guess and is
   not sure of it.
@@ -55,8 +56,8 @@ dramatic irony, rising conflict and an episode ending are all entries in that on
   question that stays open. A question nobody answers costs trust in the next episode.
 - **An answer hands over the next question.** When a scene closes a question, the answer
   itself raises the next one: the box is opened, and what is inside belongs to someone else.
-  Close one question at a time; two answers in one short stretch leave the next join with
-  little to want.
+  One discovery can pay several threads. Record what is settled, what can still be
+  reasonably guessed, and why the next choice matters. Let a completed ending land.
 
 **Read the ledger off the screen.** For every question counted as open or closed, every
 cost and every clock, point to the event that carries it. `time`, `turn`, notes and identity

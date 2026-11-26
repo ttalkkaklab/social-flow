@@ -118,13 +118,18 @@
     return html + '</div>';
   }
   function playbackEntries(scenes) {
-    const entries = scenes.map((s, i) => ({ s, i }));
-    const order = entries.filter(({ s }) => !['broll', 'outro'].includes(s.type));
+    const entries = scenes.flatMap((s, i) => s && typeof s === 'object' ? [{ s, i }] : []);
+    const inserts = new Map(), unplaced = [];
     for (const entry of entries.filter(({ s }) => s.type === 'broll')) {
-      const after = order.findIndex(item => item.i === (entry.s.after || 0));
-      order.splice(after < 0 ? order.length : after + 1, 0, entry);
+      const host = entry.s.after;
+      if (!Number.isInteger(host) || !scenes[host] || ['broll','outro'].includes(scenes[host].type)) {
+        unplaced.push({...entry, unscheduled:true}); continue;
+      }
+      if (!inserts.has(host)) inserts.set(host, []);
+      inserts.get(host).push(entry);
     }
-    return order.concat(entries.filter(({ s }) => s.type === 'outro'));
+    const main = entries.filter(({s}) => !['broll','outro'].includes(s.type));
+    return main.flatMap(row => [row, ...(inserts.get(row.i) || [])]).concat(unplaced, entries.filter(({s}) => s.type === 'outro'));
   }
   function timeline(scenes, lang, doc) {
     if (!scenes.length) return '';
