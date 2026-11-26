@@ -126580,7 +126580,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.131.6",
+  version: "0.131.7",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -138277,13 +138277,30 @@ function remapStoryReferences(next, before, shots, positionOf, carriedTimelines)
     if (!target) missing(where, ref);
     return ref[field2] === target && (ref.shotId !== void 0 || ref.shot === at + 1) ? ref : { ...ref, ...ref.shotId === void 0 ? { shot: at + 1 } : {}, [field2]: target };
   };
-  const beats = remapCarried(story.beats, prior.beats, (beat, i2) => {
-    const where = "STORY.beats[" + i2 + "]";
-    if (beat.start === void 0 && beat.end === void 0) return shotNumber(beat, where);
-    const start = boundary(beat.start, where + ".start"), end = boundary(beat.end, where + ".end");
-    return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
-  });
-  if (beats !== story.beats) updates.beats = beats;
+  if (Array.isArray(story.beats) && Array.isArray(prior.beats)) {
+    const currentBeats = story.beats;
+    const oldBeats = prior.beats.filter(isStoryReference);
+    const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+    const beats = currentBeats.map((beat, i2) => {
+      if (!isStoryReference(beat)) return beat;
+      const where = "STORY.beats[" + i2 + "]";
+      let original = oldBeats.find((old) => bounds(old) === bounds(beat));
+      if (!original) {
+        const candidates = oldBeats.filter((old) => (old.change !== void 0 && old.change === beat.change || old.necessity !== void 0 && old.necessity === beat.necessity) && ["start", "end"].some((key) => beat[key] !== void 0 && sameShape(old[key]) === sameShape(beat[key])));
+        if (candidates.length > 1) {
+          missing(where, { start: beat.start, end: beat.end });
+          return beat;
+        }
+        original = candidates[0];
+      }
+      if (!original) return beat;
+      if (beat.start === void 0 && beat.end === void 0) return shotNumber(beat, where);
+      const carry = (key) => sameShape(beat[key]) === sameShape(original[key]) ? boundary(beat[key], where + "." + key) : beat[key];
+      const start = carry("start"), end = carry("end");
+      return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
+    });
+    if (beats.some((beat, i2) => beat !== currentBeats[i2])) updates.beats = beats;
+  }
   for (const key of ["opening", "payoff", "ending", "themeStated", "ask"]) {
     if (sameShape(story[key]) !== sameShape(prior[key])) continue;
     const ref = boundary(story[key], "STORY." + key);
@@ -138519,12 +138536,18 @@ function applyPatch(win, patch, opts = {}) {
       return matches.length === 1 && originalShots.filter((shot) => sameShape(shot) === shape2).length === 1 ? matches[0] : -1;
     };
     const inserted = new Set(patch.insertShots?.flatMap((entry2) => entry2.shots));
+    const upserted = /* @__PURE__ */ new Set([
+      ...(patch.shots ?? []).map(({ no }) => beforeReorder[no - 1]),
+      ...(patch.shotsById ?? []).map(({ id: id2 }) => beforeReorder.find((shot) => shot.id === id2))
+    ]);
     originalShots.forEach((old, index) => {
       if (old.type !== "broll" || old.after === void 0) return;
       const at = positionOfOriginal(index), splice = shots[at];
       if (splice?.type !== "broll" || inserted.has(finalOrder[at]) || splice.after !== old.after) return;
       const host2 = positionOfOriginal(old.after);
       if (!shots[host2] || ["broll", "outro"].includes(shots[host2].type)) {
+        const replacement = shots[old.after];
+        if (upserted.has(finalOrder[at]) && replacement && !["broll", "outro"].includes(replacement.type)) return;
         referenceNotes.push({
           level: "bad",
           code: "broll_host_missing",
@@ -161028,7 +161051,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.131.6" },
+  { name: "social-flow", version: "0.131.7" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

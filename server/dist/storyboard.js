@@ -897,15 +897,37 @@ function remapStoryReferences(next, before, shots, positionOf, carriedTimelines)
         return ref[field] === target && (ref.shotId !== undefined || ref.shot === at + 1) ? ref
             : { ...ref, ...(ref.shotId === undefined ? { shot: at + 1 } : {}), [field]: target };
     };
-    const beats = remapCarried(story.beats, prior.beats, (beat, i) => {
-        const where = 'STORY.beats[' + i + ']';
-        if (beat.start === undefined && beat.end === undefined)
-            return shotNumber(beat, where);
-        const start = boundary(beat.start, where + '.start'), end = boundary(beat.end, where + '.end');
-        return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
-    });
-    if (beats !== story.beats)
-        updates.beats = beats;
+    if (Array.isArray(story.beats) && Array.isArray(prior.beats)) {
+        const currentBeats = story.beats;
+        const oldBeats = prior.beats.filter(isStoryReference);
+        const bounds = (beat) => sameShape([beat.shot, beat.start, beat.end]);
+        const beats = currentBeats.map((beat, i) => {
+            if (!isStoryReference(beat))
+                return beat;
+            const where = 'STORY.beats[' + i + ']';
+            // Changing the prose keeps the old range. If an endpoint was edited, keep only the other endpoint attached.
+            let original = oldBeats.find(old => bounds(old) === bounds(beat));
+            if (!original) {
+                const candidates = oldBeats.filter(old => (old.change !== undefined && old.change === beat.change ||
+                    old.necessity !== undefined && old.necessity === beat.necessity) && ['start', 'end'].some(key => beat[key] !== undefined && sameShape(old[key]) === sameShape(beat[key])));
+                if (candidates.length > 1) {
+                    missing(where, { start: beat.start, end: beat.end });
+                    return beat;
+                }
+                original = candidates[0];
+            }
+            if (!original)
+                return beat;
+            if (beat.start === undefined && beat.end === undefined)
+                return shotNumber(beat, where);
+            const carry = (key) => sameShape(beat[key]) === sameShape(original[key])
+                ? boundary(beat[key], where + '.' + key) : beat[key];
+            const start = carry('start'), end = carry('end');
+            return start === beat.start && end === beat.end ? beat : { ...beat, start, end };
+        });
+        if (beats.some((beat, i) => beat !== currentBeats[i]))
+            updates.beats = beats;
+    }
     for (const key of ['opening', 'payoff', 'ending', 'themeStated', 'ask']) {
         if (sameShape(story[key]) !== sameShape(prior[key]))
             continue;
@@ -1185,6 +1207,10 @@ export function applyPatch(win, patch, opts = {}) {
             return matches.length === 1 && originalShots.filter(shot => sameShape(shot) === shape).length === 1 ? matches[0] : -1;
         };
         const inserted = new Set(patch.insertShots?.flatMap(entry => entry.shots));
+        const upserted = new Set([
+            ...(patch.shots ?? []).map(({ no }) => beforeReorder[no - 1]),
+            ...(patch.shotsById ?? []).map(({ id }) => beforeReorder.find(shot => shot.id === id)),
+        ]);
         originalShots.forEach((old, index) => {
             if (old.type !== 'broll' || old.after === undefined)
                 return;
@@ -1194,6 +1220,10 @@ export function applyPatch(win, patch, opts = {}) {
             // An existing splice names its original main card. A new or explicitly changed splice uses final positions.
             const host = positionOfOriginal(old.after);
             if (!shots[host] || ['broll', 'outro'].includes(shots[host].type)) {
+                // After removing the old host, a shot upsert can explicitly select the new occupant of the same slot.
+                const replacement = shots[old.after];
+                if (upserted.has(finalOrder[at]) && replacement && !['broll', 'outro'].includes(replacement.type))
+                    return;
                 referenceNotes.push({ level: 'bad', code: 'broll_host_missing', where: String(splice.id),
                     what: 'broll_host_missing: the main shot for this insert was removed or became ambiguous. Set its new after position or remove the insert in this edit.' });
                 const { after: _after, ...unattached } = splice;

@@ -313,19 +313,22 @@ function main() {
       const {orderedPerformance} = require('./story-performance.js');
       const draft = readContract(fs.readFileSync(targets[0], 'utf8'));
       if (!Array.isArray(draft.beats)) throw Error('scenario beats must be an array');
-      const rows = draft.beats.flatMap((beat, i) => {
-        if (beat?.item === 'CTA' && !beat.events?.length) return [];
+      const limit = through ? Number(through.slice(10)) : Infinity;
+      const rows = [];
+      for (const [i, beat] of draft.beats.entries()) {
+        if (rows.length >= limit) break;
+        if (beat?.item === 'CTA' && !beat.events?.length) continue;
         const events = observableBeat(beat, true);
         if (!events) throw Error('No readable performance at beat ' + (i + 1));
-        return orderedPerformance(beat.events).map(({e, j, together, unresolvedTiming}) => {
+        for (const {e, j, together, unresolvedTiming} of orderedPerformance(beat.events)) {
           const [kind, speaker, listener, words] = events[j];
-          return {beat:i + 1, together, unresolvedTiming, line:'[beat-' + (i + 1) + '/e' + (j + 1) + ' · ' + kind +
+          rows.push({beat:i + 1, together, unresolvedTiming, line:'[beat-' + (i + 1) + '/e' + (j + 1) + ' · ' + kind +
             (speaker ? ' · ' + speaker : '') + (listener ? ' → ' + listener : '') +
             (kind !== 'action' && ['on_screen','off_screen','voiceover'].includes(e.delivery) ? ' · ' + e.delivery : '') +
-            (together ? ' · simultaneous e' + together : '') + '] ' + words};
-        });
-      });
-      let end = through ? Math.min(rows.length, Number(through.slice(10))) : rows.length;
+            (together ? ' · simultaneous e' + together : '') + '] ' + words});
+        }
+      }
+      let end = Math.min(rows.length, limit);
       while (rows[end]?.together && rows[end].beat === rows[end - 1].beat && rows[end].together === rows[end - 1].together) end++;
       const prefix = rows.slice(0, end);
       if (rows.some(row => row.unresolvedTiming && prefix.some(item => item.beat === row.beat)))

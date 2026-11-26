@@ -75,6 +75,22 @@ test('preflight refuses unowned HTML and symlinked outputs before writing anythi
   } finally { f.clean(); }
 });
 
+test('an episode-only export and check ignore a sibling draft without a review page', () => {
+  const f = fixture();
+  try {
+    f.write('episodes/two/storyboard/storyboard.md', '# Another draft');
+    f.write('episodes/two/storyboard/scenes.js', 'window.SCENES = [];');
+    const alias = join(f.dir,'storyboards/one/index.html');
+    assert.deepEqual(exportChannel(f.dir,{onlyBoard:'one'}).changed,[alias]);
+    const scoped = exportChannel(f.dir,{onlyBoard:'one',check:true});
+    assert.deepEqual(scoped.changed,[]);
+    assert.deepEqual(scoped.structuralWarnings,[]);
+    assert.equal(existsSync(join(f.dir,'storyboards/index.html')),false);
+    assert.ok(exportChannel(f.dir,{check:true}).structuralWarnings.some(message=>message.includes('two:')));
+    assert.throws(()=>exportChannel(f.dir,{onlyBoard:'two',check:true}),/missing\/unsupported storyboard/);
+  } finally { f.clean(); }
+});
+
 test('a legacy storyboard copy can be refreshed only when the base tag is its sole change', () => {
   const f = fixture();
   try {

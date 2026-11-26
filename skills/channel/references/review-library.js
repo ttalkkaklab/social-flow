@@ -216,6 +216,7 @@ function exportChannel(channelDirectory, { check = false, onlyBoard } = {}) {
   };
   const boardWindows = new Map();
   for (const board of boards) {
+    if (onlyBoard !== undefined && board.topic !== onlyBoard) continue;
     const folder = path.join(dir, 'episodes', board.topic, 'storyboard');
     const scenes = path.join(folder, 'scenes.js');
     if (!regular(dir, scenes)) continue;
@@ -226,6 +227,58 @@ function exportChannel(channelDirectory, { check = false, onlyBoard } = {}) {
     } catch (error) { contentWarning(board.topic, 'character-source', error.message); }
   }
   const put = (file, body) => outputs.set(file, Buffer.from(body));
+  function queueStoryboard(topic) {
+    const folder = path.join(dir, 'episodes', topic, 'storyboard');
+    const sourceFile = path.join(folder, 'storyboard.html');
+    const file = path.join(dir, 'storyboards', topic, 'index.html');
+    const source = read(dir, sourceFile);
+    const available = source && /<head[\s>]/i.test(source) && !/<base\b/i.test(source);
+    if (available) {
+      // One renderer: copy the canonical shell, using a relative base for its unchanged
+      // scenes.js, helper files and media. Works with both file:// and HTTP.
+      const base = rel(file, path.join(folder, 'index.html')).replace(/index\.html$/, '');
+      const baseTag = `<base href="${esc(base)}">`;
+      boardAliases.set(file, { source, baseTag });
+      put(file, source.replace(/<head([^>]*)>/i, `<head$1>\n${MARKER}\n${baseTag}`));
+      return file;
+    } else {
+      const message = topic + ': missing/unsupported storyboard.html; run storyboard-html.js first';
+      warnings.push(message); structuralWarnings.push(message);
+    }
+    return undefined;
+  }
+  function finishExport() {
+    const changed = [];
+    // Preflight every target before any write. Preserve unowned files even on refresh.
+    for (const [file, content] of outputs) {
+      safeOutput(dir, file);
+      if (fs.existsSync(file)) {
+        const old = fs.readFileSync(file);
+        if (file.endsWith('.html')) {
+          const html = old.toString('utf8');
+          if (!html.includes(MARKER)) {
+            // Older storyboard copies added just the relative base, sometimes at the end of the head.
+            const alias = boardAliases.get(file);
+            if (!alias || !html.includes(alias.baseTag + '\n') || html.replace(alias.baseTag + '\n', '') !== alias.source)
+              throw new Error('Refusing to replace hand-authored HTML: ' + file);
+          }
+        }
+        if (old.equals(content)) continue;
+      }
+      changed.push(file);
+    }
+    if (!check) for (const file of changed) {
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, outputs.get(file));
+    }
+    return { checkScope: 'template freshness and media diagnostics; visual identity and framing require inspection', visualReview: 'not_reviewed', changed, warnings, contentWarnings, structuralWarnings, characters: chars.length, episodes: boards.length };
+  }
+  if (onlyBoard !== undefined) {
+    if (!boards.some(board => board.topic === onlyBoard) || path.basename(onlyBoard) !== onlyBoard)
+      throw new Error('Unknown storyboard library entry: ' + onlyBoard);
+    if (!queueStoryboard(onlyBoard)) throw new Error(structuralWarnings[0]);
+    return finishExport();
+  }
   const render = (file, title, section, body) => put(file, shell({ file, channelDir: dir, channel: channel.name, title, section, body }));
   for (const name of ASSET_NAMES) put(path.join(dir, 'assets', 'review', name), fs.readFileSync(path.join(ASSETS, name)));
   const charIndex = path.join(dir, 'assets', 'characters', 'index.html');
@@ -413,22 +466,8 @@ function exportChannel(channelDirectory, { check = false, onlyBoard } = {}) {
   const boardIndex = path.join(dir, 'storyboards', 'index.html');
   cards = '';
   for (const board of boards) {
-    const folder = path.join(dir, 'episodes', board.topic, 'storyboard');
-    const sourceFile = path.join(folder, 'storyboard.html');
-    const file = path.join(dir, 'storyboards', board.topic, 'index.html');
-    const source = read(dir, sourceFile);
-    const available = source && /<head[\s>]/i.test(source) && !/<base\b/i.test(source);
-    if (available) {
-      // One renderer: copy the canonical shell, using a relative base for its unchanged
-      // scenes.js, helper files and media. Works with both file:// and HTTP.
-      const base = rel(file, path.join(folder, 'index.html')).replace(/index\.html$/, '');
-      const baseTag = `<base href="${esc(base)}">`;
-      boardAliases.set(file, { source, baseTag });
-      put(file, source.replace(/<head([^>]*)>/i, `<head$1>\n${MARKER}\n${baseTag}`));
-    } else {
-      const message = board.topic + ': missing/unsupported storyboard.html; run storyboard-html.js first';
-      warnings.push(message); structuralWarnings.push(message);
-    }
+    const file = queueStoryboard(board.topic);
+    const available = Boolean(file);
     cards += `<article class="review-card ds-card" data-card data-series="${esc(board.series || '')}" data-search="${esc((board.title + ' ' + board.topic + ' ' + (board.series || '')).toLocaleLowerCase())}">${available ? `<a href="${rel(boardIndex, file)}">` : '<div>'}${boardCover(boardIndex, dir, board)}<div class="review-card-body"><h2>${esc(board.title)}</h2>${board.series ? `<p>${esc(board.series)}</p>` : ''}${boardMeta(board)}${available ? '' : `<p>${t('검토 HTML을 먼저 생성하세요.', 'Generate the review HTML first.')}</p>`}</div>${available ? '</a>' : '</div>'}</article>`;
   }
   const series = [...new Set(boards.map(b => b.series).filter(Boolean))];
@@ -452,34 +491,7 @@ function exportChannel(channelDirectory, { check = false, onlyBoard } = {}) {
     ['continuity', '배경 시트', 'Background sheets', path.join(dir, 'assets', 'locations', 'index.html'), sheetCounts.locations || 0]];
   render(home, channel.name, '', heading(esc(channel.name), t('캐릭터와 에피소드를 한곳에서 검토합니다.', 'Review characters and episodes in one place.')) + featured +
     `<div class="review-shortcuts">${shortcuts.map(([icon, ko, en, target, total]) => `<a class="review-card ds-card" href="${rel(home, target)}"><span class="ds-tile">${characterIcon(icon)}</span><h2>${t(ko, en)}</h2><span class="review-total">${total}</span></a>`).join('')}</div>`);
-  const changed = [];
-  const selected = onlyBoard === undefined ? undefined : path.join(dir, 'storyboards', onlyBoard, 'index.html');
-  if (selected && (path.basename(onlyBoard) !== onlyBoard || !boardAliases.has(selected)))
-    throw new Error('Unknown storyboard library entry: ' + onlyBoard);
-  // Preflight every target before any write. Preserve unowned files even on refresh.
-  for (const [file, content] of outputs) {
-    if (selected && file !== selected) continue;
-    safeOutput(dir, file);
-    if (fs.existsSync(file)) {
-      const old = fs.readFileSync(file);
-      if (file.endsWith('.html')) {
-        const html = old.toString('utf8');
-        if (!html.includes(MARKER)) {
-          // Older storyboard copies added just the relative base, sometimes at the end of the head.
-          const alias = boardAliases.get(file);
-          if (!alias || !html.includes(alias.baseTag + '\n') || html.replace(alias.baseTag + '\n', '') !== alias.source)
-            throw new Error('Refusing to replace hand-authored HTML: ' + file);
-        }
-      }
-      if (old.equals(content)) continue;
-    }
-    changed.push(file);
-  }
-  if (!check) for (const file of changed) {
-    fs.mkdirSync(path.dirname(file), { recursive: true });
-    fs.writeFileSync(file, outputs.get(file));
-  }
-  return { checkScope: 'template freshness and media diagnostics; visual identity and framing require inspection', visualReview: 'not_reviewed', changed, warnings, contentWarnings, structuralWarnings, characters: chars.length, episodes: boards.length };
+  return finishExport();
 }
 
 if (require.main === module) {

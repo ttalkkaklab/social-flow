@@ -150,6 +150,25 @@ describe('beat references through public shot edits', () => {
     assert.equal(readBoard(dir).win.STORY.beats[0].shot,0);
   });
 
+  it('keeps a revised beat question on its evidence, including an individually reauthored endpoint', () => {
+    const dir = tmp();
+    const apply = patch => applyStoryboard(storyboardApplySchema.parse({path:dir,draft:true,...patch}));
+    const main = id => ({id,scene:1,type:'points',performance:[{kind:'action',text:'Light ' + id}]});
+    const event = shot => ({shot,event:1});
+    const note = {start:event(1),end:event(1),change:'The light goes out.',necessity:'It hides the exit.'};
+    apply({set:{structure:structure([scene(1)]),shots:[main('s0001'),main('s0002')]},
+      globals:{STORY:{primaryHookType:'in_medias_res',beats:[note]}}});
+    const revise = (beat, id) => {
+      const story = readBoard(dir).win.STORY;
+      assert.equal(apply({insertShots:[{after:0,shots:[main(id)]}],globals:{STORY:{...story,beats:[beat]}}}).written,true);
+      return readBoard(dir).win.STORY.beats[0];
+    };
+    const added = {...note,question:'Who turned it off?'};
+    const carried = revise(added,'s0003');
+    assert.deepEqual(carried,{...added,start:event(2),end:event(2)});
+    assert.deepEqual(revise({...carried,end:event(4)},'s0004'),{...added,start:event(3),end:event(4)});
+  });
+
   it('keeps quoted anchors and earlier review evidence on the speaker who delivered an identical line', () => {
     const dir = tmp(), admission = 'I signed the release.';
     const read = () => readBoard(dir).win;
@@ -297,6 +316,15 @@ describe('beat references through public shot edits', () => {
     assert.equal(hostOf(cut),three);
     assert.equal(apply({removeShotIds:[three,cut]}).written,true);
     assert.equal(hostOf(secondCut),extra);
+    const remaining = read().win.SCENES;
+    const spliceNo = remaining.findIndex(card => card.id === secondCut) + 1;
+    const sameSlot = remaining[spliceNo - 1];
+    const replacement = remaining[sameSlot.after + 1].id;
+    const removeShots = [remaining.findIndex(card => card.id === extra) + 1];
+    assert.equal(apply({removeShots}).written,false);
+    assert.equal(apply({dryRun:true,removeShotIds:[extra],shotsById:[{id:secondCut,shot:sameSlot}]}).findings.some(f=>f.code==='broll_host_missing'),false);
+    assert.equal(apply({removeShots,shots:[{no:spliceNo,shot:sameSlot}]}).written,true);
+    assert.equal(hostOf(secondCut),replacement);
   });
 
   it('keeps a simultaneous action and its beat with the same line through the shot_dialogue MCP handler', async () => {

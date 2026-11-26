@@ -50,6 +50,12 @@ test('blind scenario prefix excludes private cast, evidence and author questions
   const r=spawnSync(process.execPath,[path.join(root,'check-scenario.js'),f,'--text','--through=1'],{encoding:'utf8'});
   assert.equal(r.status,0,r.stderr);
   assert.equal(r.stdout.trim(),'[beat-1/e1 · dialogue · Muffled voice] Wait.');
+  const unfinished = structuredClone(c);
+  unfinished.beats.splice(1,0,{events:[]});
+  writeFileSync(f,body(unfinished));
+  const partialRead = n => spawnSync(process.execPath,[path.join(root,'check-scenario.js'),f,'--text','--through='+n],{encoding:'utf8'});
+  assert.equal(partialRead(1).stdout,r.stdout);
+  assert.equal(partialRead(2).status,3);
   c.beats[0].events = [
     {kind:'action', withGroup:2, text:'The second lock clicks.', basis:'invented'},
     {kind:'dialogue',character:'father',to:'child',group:1,text:'Wait.',basis:'invented'},
