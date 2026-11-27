@@ -22,7 +22,8 @@ export type SceneDefaults = z.infer<typeof sceneDefaultsSchema>;
 const frame = z.number().int().nonnegative();
 export const shotTimelineSchema = z.object({
   startFrame: frame, endFrame: frame.describe('Exclusive end, in zero-based scene frames.'),
-  transition: z.enum(['open', 'hard_cut', 'dissolve', 'fade']),
+  transition: z.enum(['open', 'hard_cut', 'dissolve', 'fade', 'whip_pan', 'foreground_wipe']),
+  transitionCue: sceneText.optional().describe('For a whip pan, name the direction and what the camera lands on. For a foreground wipe, name what fills the frame and what it reveals. Required for both transitions.'),
   framing: sceneText, action: sceneText,
   openingPositions: openingPositionsSchema.optional().describe('Positions at this shot opening. Image numbers refer to this shot’s subject references.'),
   dialogueCues: z.array(z.object({
@@ -36,6 +37,9 @@ export const shotTimelineSchema = z.object({
 }).strict().superRefine((shot, ctx) => {
   const issue = (message: string) => ctx.addIssue({ code: 'custom', message });
   if (shot.startFrame >= shot.endFrame) issue('Shot needs a positive frame interval');
+  if (['whip_pan', 'foreground_wipe'].includes(shot.transition) && !shot.transitionCue)
+    issue('Write a transitionCue for ' + shot.transition);
+  if (shot.transition === 'open' && shot.transitionCue) issue('An opening shot has no incoming transition');
   const lines = new Set<string>();
   for (const cue of shot.dialogueCues ?? []) {
     if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue('Dialogue cue outside its shot: ' + cue.lineId);

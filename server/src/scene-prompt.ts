@@ -14,26 +14,81 @@ interface TimelineOptions {
   describeDelivery?: boolean;
   cutTiming?: ScenePromptProfile['cutTiming'];
   writer?: ScenePromptProfile['writer'];
+  wholeSecondShotRanges?: boolean;
 }
 
 const transitions: Record<string, string> = {
   hard_cut:'cut directly', dissolve:'dissolve to the next view', fade:'fade to the next view',
+  whip_pan:'whip-pan into the next view', foreground_wipe:'cut to the next view while the foreground fills the frame',
+  dip:'dip to black before the next view', 'dip:white':'dip to white before the next view',
+  jcut:'bring in sound from the next shot before cutting to its picture',
+  iris:'reveal the next view through a circular iris', blur:'blur into the next view', zoom:'zoom into the next view',
 };
+const transitionDirections: Record<string,string> = {l2r:'left to right', r2l:'right to left', u2d:'top to bottom', d2u:'bottom to top'};
+const numberedHeadings = (stage: string) => [...stage.matchAll(/^Shot (\d+):[ \t]*(\[\d+[–-]\d+s\])?[ \t]*/gmu)];
+const stageText = (prompt: string, lines?: readonly string[]) =>
+  spans(prompt, lines).map(span => span.quoted ? '\u0000' : span.text).join('');
+
+export function sceneTransitionWords(shot: Pick<SceneShot,'transition'|'transitionCue'>, prefix = ''): string {
+  if (shot.transition === 'open') return '';
+  const [kind, side] = shot.transition.split(':');
+  const direction = transitionDirections[side];
+  const directional = direction && (kind === 'whip' || kind === 'push') &&
+    `${kind === 'whip' ? 'whip-pan' : 'push the frame'} ${direction} into the next view`;
+  const cut = transitions[shot.transition] ?? (directional || shot.transition.replaceAll('_', ' '));
+  const sentence = prefix ? prefix + cut : cut[0].toUpperCase() + cut.slice(1);
+  return sentence + '.' + (shot.transitionCue ? ' ' + shot.transitionCue.replace(/[.!?]+$/, '') + '.' : '');
+}
+
+/** A saved prompt owns its wording. Surface a storyboard cue the author should check after an override. */
+export function sceneTransitionWarnings(cuts: SceneTimeline['cuts'], authoredPrompt: string | undefined, lines?: readonly string[]): string[] {
+  if (authoredPrompt === undefined) return [];
+  const sentences = (value: string) => value.split(/(?:[.!?](?=\s|$)|\n)\s*/u)
+    .map(part => part.trim().toLowerCase().replace(/\s+/g, ' ').replace(/^(?:then |at [\d.]+ seconds, )/, ''))
+    .filter(Boolean);
+  const stage = stageText(authoredPrompt, lines);
+  const headings = numberedHeadings(stage);
+  const numbered = headings.length === cuts.length + 1 && headings.every((match, i) => !i || Number(match[1]) > Number(headings[i-1][1]));
+  const shotRows = stage.split('\n').flatMap(row => [...row.matchAll(/\bFollow \{([^{}.]+)\.image\}/gu)]
+    .map(match => ({id:match[1], row})));
+  const unnumbered = headings.length || shotRows.length ? [] : sentences(stage);
+  let next = 0;
+  return cuts.flatMap((cut, i) => {
+    if (cut.transition === 'hard_cut' && !cut.transitionCue) return [];
+    const words = sceneTransitionWords(cut);
+    const expected = sentences(words);
+    const heading = headings[i+1];
+    const h3Rows = shotRows.filter(row => row.id === cut.to);
+    const scoped = numbered || shotRows.length > 0;
+    const parts = numbered ? sentences(stage.slice(heading.index + heading[0].length, headings[i+2]?.index))
+      : h3Rows.length === 1 ? sentences(h3Rows[0].row) : unnumbered;
+    const at = parts.findIndex((_, index) => index >= (scoped ? 0 : next) &&
+      expected.every((sentence, offset) => sentence === parts[index+offset]));
+    if (at >= 0) {
+      next = at + expected.length;
+      return [];
+    }
+    return [`scene_transition_cue_unconfirmed: ${cut.to} (${cut.transition}) uses an authored prompt. Verify that it describes this storyboard direction: ${words}`];
+  });
+}
 
 // The numbered label of a storyboard shot. Where the planner numbers shots, an author may keep, drop or renumber it.
 const shotLabel = /^Shot \d+:\s*/u;
 
 function shotHeading(shot: SceneShot, fps: number, options: TimelineOptions, number?: number): string {
   const transition = shot.transition.replaceAll('_', ' ');
-  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}–${shot.endFrame - 1}] ${transition}.`;
-  const cut = transitions[shot.transition] ?? transition;
+  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}–${shot.endFrame - 1}] ${transition}.` +
+    (shot.transitionCue ? ' ' + shot.transitionCue : '');
   if (!options.modelPacedCuts)
-    return shot.transition === 'open' ? '' : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
+    return sceneTransitionWords(shot, `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, `);
   // The 2.0 guide recommends Shot 1, Shot 2 identifiers and calls precise timing unstable. The 2.5 guide reads either.
-  if (options.writer === 'seedance' && number) return `Shot ${number}:`;
-  if (options.writer === 'fastH3' && shot.transition === 'hard_cut') return 'Hard cut to the next camera setup.';
-  if (options.writer === 'hostedH3' && shot.transition === 'hard_cut') return 'Cut to the next view.';
-  const order = shot.transition === 'open' ? '' : `Then ${cut}.`;
+  if (options.writer === 'seedance' && number) {
+    const range = options.wholeSecondShotRanges ? `[${shot.startFrame / fps}–${shot.endFrame / fps}s]` : '';
+    return [`Shot ${number}:`, range, sceneTransitionWords(shot)].filter(Boolean).join(' ');
+  }
+  if (options.writer === 'fastH3' && shot.transition === 'hard_cut' && !shot.transitionCue) return 'Hard cut to the next camera setup.';
+  if (options.writer === 'hostedH3' && shot.transition === 'hard_cut' && !shot.transitionCue) return 'Cut to the next view.';
+  const order = sceneTransitionWords(shot, 'Then ');
   if (options.cutTiming !== 'time_ranges') return order;
   const seconds = (frame: number) => Number((frame / fps).toFixed(2));
   return [`[${seconds(shot.startFrame)}–${seconds(shot.endFrame)}s]`, order].filter(Boolean).join(' ');
@@ -53,6 +108,9 @@ export function sceneTimelineWords(timeline: SceneTimeline, scene: Partial<Scene
   const timing = (frame: number) => modelFacing ? `At ${Number((frame / timeline.fps).toFixed(3))} seconds` : `Frame ${frame}`;
   const wholeTake = new Set(timeline.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const rows: string[] = [];
+  const headingOptions = options.wholeSecondShotRanges && timeline.shots.some(shot =>
+    shot.startFrame % timeline.fps || shot.endFrame % timeline.fps)
+    ? {...options, wholeSecondShotRanges:false} : options;
   if (!modelFacing) rows.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
   let turnIndex = 0;
   for (const [index, shot] of timeline.shots.entries()) {
@@ -75,7 +133,7 @@ export function sceneTimelineWords(timeline: SceneTimeline, scene: Partial<Scene
       !scene.openingPositions?.some(initial => initial.character === person.character && initial.position === person.position));
     const opening = positions.map(person => person.character + ': ' + person.position.replace(/[.!?]+$/, '') + '.').join(' ');
     rows.push([
-      shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : undefined), hold,
+      shotHeading(shot, timeline.fps, headingOptions, timeline.shots.length > 1 ? index + 1 : undefined), hold,
       opening && 'At the start of this shot, ' + opening,
       ...[shot.framing, shot.blocking, shot.action].filter(value => value && !wholeTake.has(value)),
       ...cues, ...guides, shot.sound && shot.sound !== scene.sound && 'Sound: ' + shot.sound,
@@ -235,8 +293,29 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   const script = expected.flatMap(line => line.tts ? [line.tts] : []);
   const splitSentences = (text: string) => text.trimEnd().replace(/([:—–=])\s*\n\s*/gu,'$1 ').split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed,script);
-  const numbered = original.some(span => !span.quoted && /(?:^|\n)Shot \d+: /u.test(span.text));
-  const unlabel = (text: string) => numbered ? text.trim().replace(shotLabel,'') : text.trim();
+  const headings = numberedHeadings(stageText(composed,script));
+  const numbered = headings.length > 0;
+  const range = /^\[\d+–\d+s\]/u;
+  const approvedRanges = new Set(headings.flatMap(match => match[2] ? [match[2]] : []));
+  if (approvedRanges.size) {
+    const authored = numberedHeadings(stageText(template,script));
+    const ordered = authored.length === headings.length && authored.every((match, i) => !i || Number(match[1]) > Number(authored[i-1][1]));
+    let prior = -1;
+    for (const [i, match] of authored.entries()) {
+      if (!match[2]) continue;
+      const corresponding = ordered ? i : headings.findIndex(heading => heading[1] === match[1]);
+      if (corresponding <= prior || match[2] !== headings[corresponding]?.[2])
+        throw new Error('scene_direction_unverified: ' + match[0].trim() + ' changes the approved time range of this shot');
+      prior = corresponding;
+    }
+  }
+  const unlabel = (text: string) => {
+    const trimmed = text.trim();
+    if (!numbered || !shotLabel.test(trimmed)) return trimmed;
+    const body = trimmed.replace(shotLabel,'');
+    const timing = body.match(range)?.[0];
+    return timing && approvedRanges.has(timing) ? body.slice(timing.length).trimStart() : body;
+  };
   const approvedDirections = new Set(original.filter(span => !span.quoted)
     .flatMap(span => splitSentences(span.text)).map(unlabel));
   // A draft written before shots were numbered keeps the sentence the planner then wrote between them.

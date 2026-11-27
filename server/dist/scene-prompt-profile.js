@@ -99,8 +99,8 @@ export function scenePromptProfile(tool, model) {
         return { ...pictureTags, writer: 'fastH3' };
     const profile = operations[tool ?? ''] ?? ordered;
     // Seedance 2.5 added the @ prefix for multimodal reference inputs.
-    if (tool === 'seedance_reference' && typeof model === 'string' && model.startsWith('dreamina-seedance-2-5-'))
-        return { ...profile, referenceLabels: 'at_indexed' };
+    if (profile.writer === 'seedance' && seedanceSeries(model) === '2.5')
+        return { ...profile, wholeSecondShotRanges: true, ...(tool === 'seedance_reference' ? { referenceLabels: 'at_indexed' } : {}) };
     return profile;
 }
 export function usesGeneratedVoice(tool, dialogueVoice) {

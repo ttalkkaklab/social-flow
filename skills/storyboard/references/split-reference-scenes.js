@@ -66,6 +66,8 @@ function assignGroups(scene, groups, cards, numbers) {
   return groups.map((group, index) => {
     const members = group.shotIds.map(id => byId.get(id).card);
     const first = members[0], offset = byId.get(first.id).start;
+    if (index && first.timeline?.transitionCue)
+      throw new Error('scene_split_transition: ' + first.id + ' needs its preceding shot for the authored transition cue.');
     const nextId = groups[index + 1]?.shotIds[0], end = nextId ? byId.get(nextId).start : Infinity;
     const last = index === groups.length - 1;
     const no = numbers[index];

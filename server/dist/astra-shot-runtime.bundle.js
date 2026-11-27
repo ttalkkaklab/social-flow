@@ -50005,7 +50005,8 @@ var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
   endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
-  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade", "whip_pan", "foreground_wipe"]),
+  transitionCue: sceneText.optional().describe("For a whip pan, name the direction and what the camera lands on. For a foreground wipe, name what fills the frame and what it reveals. Required for both transitions."),
   framing: sceneText,
   action: sceneText,
   openingPositions: openingPositionsSchema.optional().describe("Positions at this shot opening. Image numbers refer to this shot\u2019s subject references."),
@@ -50024,6 +50025,9 @@ var shotTimelineSchema = external_exports.object({
 }).strict().superRefine((shot, ctx) => {
   const issue = (message) => ctx.addIssue({ code: "custom", message });
   if (shot.startFrame >= shot.endFrame) issue("Shot needs a positive frame interval");
+  if (["whip_pan", "foreground_wipe"].includes(shot.transition) && !shot.transitionCue)
+    issue("Write a transitionCue for " + shot.transition);
+  if (shot.transition === "open" && shot.transitionCue) issue("An opening shot has no incoming transition");
   const lines = /* @__PURE__ */ new Set();
   for (const cue of shot.dialogueCues ?? []) {
     if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue("Dialogue cue outside its shot: " + cue.lineId);
@@ -50165,6 +50169,10 @@ var action = "(?:steps? (?:back|forward|aside)|(?:is |are )?(?:standing|waiting)
 var stage = new RegExp("^(?:(?:hold on|open on|cut to|show|pan to|push in on|close on) " + subject + "|rack focus from " + subject + " to " + subject + "|keep " + figure + " (?:sharp|in focus|in frame|still)|use a (?:wide|medium|close|tracking) shot of " + figure + "(?: and " + figure + ")?|\u24C8(?: and \u24C8)? " + action + ")(?: (?:as|while) \u24C8 " + action + ")?" + timing + "$", "iu");
 
 // src/scene-prompt-profile.ts
+function seedanceSeries(model2) {
+  if (typeof model2 !== "string") return void 0;
+  return model2.startsWith("dreamina-seedance-2-5-") ? "2.5" : model2.startsWith("dreamina-seedance-2-0-") ? "2.0" : void 0;
+}
 var ordered = {
   cutTiming: "cut_order",
   referenceLabels: "indexed",
@@ -50205,8 +50213,8 @@ var operations = {
 function scenePromptProfile(tool, model2) {
   if (tool === "astra_genai_scene" && model2 === "minimax-h3") return { ...pictureTags, writer: "fastH3" };
   const profile = operations[tool ?? ""] ?? ordered;
-  if (tool === "seedance_reference" && typeof model2 === "string" && model2.startsWith("dreamina-seedance-2-5-"))
-    return { ...profile, referenceLabels: "at_indexed" };
+  if (profile.writer === "seedance" && seedanceSeries(model2) === "2.5")
+    return { ...profile, wholeSecondShotRanges: true, ...tool === "seedance_reference" ? { referenceLabels: "at_indexed" } : {} };
   return profile;
 }
 function usesGeneratedVoice(tool, dialogueVoice) {
@@ -50537,6 +50545,8 @@ function shotVisualDirection(shot, concise = false) {
   const words = load3("../../skills/storyboard/references/assemble-bg-prompt.js");
   const views = load3("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  if (viewWords && nonEnglishOutsideQuotes(viewWords))
+    throw new Error(`video_prompt_language: ${shot.id || "shot"} view.subject, view.crop and viewerId must be English`);
   const catalogue = load3("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load3("../../skills/storyboard/references/structure-contract.js");
   const frame2 = directions().framing(shot);
@@ -52271,7 +52281,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.132.0",
+  version: "0.132.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -55286,7 +55296,13 @@ var shotDialogueSchema = external_exports.object({
 var choice = external_exports.object({ id: nonEmpty, reason: nonEmpty }).strict();
 var shotViewContract = () => loadFromHere2(join5(REFERENCES_DIR, "shot-view.js"));
 var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
-  for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const issues = shotViewContract().validate(view);
+  for (const message of issues) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (issues.length) return;
+  for (const field of ["subject", "crop", "viewerId"]) {
+    if (view[field] && nonEnglishOutsideQuotes(view[field]))
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [field], message: `video_prompt_language: view.${field} must be English` });
+  }
 });
 var shotIconsSchema = external_exports.object({
   path: outlinePath,

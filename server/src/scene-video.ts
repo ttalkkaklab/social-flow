@@ -162,13 +162,15 @@ export function compileSceneTimeline(raw: Record<string, unknown>[], scene: Part
         ...(warnings.length ? {warnings} : {}) };
     });
     return { shotId, startFrame, endFrame, transition, framing, action,
+      ...(timeline?.transitionCue ? {transitionCue:timeline.transitionCue} : {}),
       ...(concise && notes.end ? {closingState:notes.end} : {}),
       ...(positions?.length ? {openingPositions:positions} : {}), ...(blocking ? {blocking} : {}),
       ...(sound ? {sound} : {}), ...(dialogue.length ? {dialogue} : {}) };
   });
   if (scene.keyframes?.some(pin => pin.frame <= 0 || pin.frame >= cursor - 1))
     throw new Error('scene_image_timing: scene keyframes must fall between the opening and ending frames');
-  const cuts = shots.slice(1).map(({ shotId, startFrame: frame, transition }, i) => ({ from: shots[i].shotId, to: shotId, frame, transition }));
+  const cuts = shots.slice(1).map(({ shotId, startFrame: frame, transition, transitionCue }, i) =>
+    ({ from: shots[i].shotId, to: shotId, frame, transition, ...(transitionCue ? {transitionCue} : {}) }));
   const audio = scene.audio && { ...(scene.audio.mode ? {mode:scene.audio.mode} : {}), path: realpathSync(path.resolve(episode, 'storyboard', scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some(c => c.frame >= cursor)) throw new Error('scene_audio_timing: cue outside the scene');
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...(guides.length ? {shotReferenceImages:guides} : {}), ...(audio ? { audio } : {}) };
@@ -209,8 +211,8 @@ export function prepareSceneRequest<T>(
   const owner = (board?.STRUCTURE as {scenes?: {no:number; speakers?:string[]; frames?:unknown}[]} | undefined)?.scenes?.find(s => s.no === sceneNo);
   load('../../skills/_shared/scene-cast.js').sceneCast(owner ?? {no:sceneNo},members);
   const ownsFrames = owner?.frames !== undefined || owner?.speakers !== undefined;
-  // GenAI scene mode paces every cut itself, so a frame-addressed timeline becomes ordered shots with their lengths.
-  const modelPacedCuts = members.length > 1 && (options.sceneMode || ownsFrames &&
+  // GenAI and Seedance pace their own cuts. Frame intervals on the board guide the prompt.
+  const modelPacedCuts = members.length > 1 && (options.sceneMode || options.profile?.writer === 'seedance' || ownsFrames &&
     !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === 'cut')));
   const cutTiming = options.profile?.cutTiming;
   const directedCuts = cutTiming === 'time_ranges' || cutTiming === 'action_beats';
@@ -230,7 +232,8 @@ export function prepareSceneRequest<T>(
   const complete = scenePromptText(directedScene, shared, words, dialogue, scopedDialogue);
   const suffix = (value: string) => [value, options.suffix].filter(Boolean).join(' ');
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTiming = {modelFacing:true, modelPacedCuts, cutTiming, writer:options.profile?.writer};
+  const providerTiming = {modelFacing:true, modelPacedCuts, cutTiming, writer:options.profile?.writer,
+    wholeSecondShotRanges:options.profile?.wholeSecondShotRanges};
   const providerTimeline = sceneTimelineWords(fitted, scene, {
     ...providerTiming, includeDialogue:!options.bindDialogue,
     describeDelivery:modelPacedCuts && directedCuts && !options.bindDialogue && fitStep < 3,
@@ -267,32 +270,31 @@ export function prepareSceneRequest<T>(
 
 /**
  * A GenAI scene over its model's prompt cap is composed again with fewer optional words (user's choice 2026-11-25). Step 1
- * says each sentence once and shortens the panel sentence; 2 leaves out design notes (opening attention, crop and
- * viewpoint, depth, accents, lighting); 3 the timed acting beats and delivery direction; 4 expressions; 5 per-shot sound,
- * blocking, closing states, screen axis and continuity. Size, angle, camera move, focus, action and lines always stay.
+ * says each direction once and shortens the panel sentence; 2 leaves out depth and lighting notes; 3 vocal directions
+ * and delivery labels; 4 shot expressions; 5 per-shot sound. Opening evidence, composition, movement, blocking, action
+ * beats and closing states stay. If they cannot fit, the plan reports the prompt limit.
  */
-export const SCENE_FIT_STEPS = ['repeated sentences and the long panel sentence', 'design notes', 'timed acting beats and delivery direction',
-  'expressions', 'per-shot sound, blocking, closing states, axis and continuity'] as const;
+export const SCENE_FIT_STEPS = ['repeated sentences and the long panel sentence', 'depth and lighting notes', 'vocal directions and delivery labels',
+  'shot expressions', 'per-shot sound'] as const;
 function fitSceneTimeline(timeline: SceneTimeline, members: Record<string, unknown>[], scene: Partial<SceneVideoDirection>,
   coverage: ReturnType<typeof sceneCoverage>, concise: boolean, step: number): SceneTimeline {
-  // A sentence whose words, after any short label, were already said adds nothing.
-  const body = (text: string) => text.replace(/^[^.:"]{1,40}:\s*/, '').replace(/[.\s]+$/, '').toLowerCase();
-  const drop = new Set<VisualPartKind>([...(step >= 2 ? ['view', 'depth', 'accent', 'design'] as const : []),
-    ...(step >= 4 ? ['expression'] as const : []), ...(step >= 5 ? ['end', 'space'] as const : [])]);
+  // Match an entire direction. A phrase quoted or negated in another direction is a separate instruction.
+  const body = (text: string) => text.trim().replace(/[.\s]+$/, '');
+  const drop = new Set<VisualPartKind>([...(step >= 2 ? ['depth', 'design'] as const : []),
+    ...(step >= 4 ? ['expression'] as const : [])]);
   return {...timeline, shots:timeline.shots.map((shot, index) => {
-    const card = members[index], notes = sceneShotNotes(card, concise), said: string[] = [];
-    const keep = (text?: string) => text && !said.some(earlier => earlier.toLowerCase().includes(body(text))) ? (said.push(text), text) : '';
+    const card = members[index], notes = sceneShotNotes(card, concise), said = new Set<string>();
+    const keep = (text?: string) => text && !said.has(body(text)) ? (said.add(body(text)), text) : '';
     const framing = shotVisualParts(card, coverage.shots[index], coverage.common, concise ? '' : notes.end,
       (card.timeline as {framing?: string} | undefined)?.framing, concise).filter(part => !drop.has(part.kind))
-      .flatMap(part => part.kind === 'view' ? part.text.split(/(?=Opening (?:attention|crop|viewpoint): )/).map(text => text.trim()) : [part.text])
-      .map(keep).filter(Boolean).join(' ');
-    const blocking = step >= 5 ? '' : keep(notes.blocking);
+      .map(part => keep(part.text)).filter(Boolean).join(' ');
+    const blocking = keep(notes.blocking);
     const action = [keep(notes.action || (members.length === 1 ? scene.action || scene.emotion : '')),
-      ...(step >= 3 ? [] : notes.beats.map(keep))].filter(Boolean).join(' ');
+      ...notes.beats.map(keep)].filter(Boolean).join(' ');
     const {blocking:_blocking, sound, closingState, ...rest} = shot;
     const dialogue = step >= 3 ? shot.dialogue?.map(({direction:_direction, ...line}) => line) : shot.dialogue;
     return {...rest, framing:framing || shot.framing, action, ...(dialogue ? {dialogue} : {}), ...(blocking ? {blocking} : {}),
-      ...(step < 5 && sound ? {sound} : {}), ...(step < 5 && closingState ? {closingState} : {})};
+      ...(step < 5 && sound ? {sound} : {}), ...(closingState ? {closingState} : {})};
   })};
 }
 

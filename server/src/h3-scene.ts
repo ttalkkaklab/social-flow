@@ -6,7 +6,7 @@ import { createRequire } from 'node:module';
 import { genaiSceneSchema, sceneLabels, resolveScenePrompt, type GenaiSceneArgs } from './genai-scene.js';
 import { nonEnglishOutsideQuotes } from './prompt-language.js';
 import { compileSceneTimeline } from './scene-video.js';
-import { assertSceneDialogue } from './scene-prompt.js';
+import { assertSceneDialogue, sceneTransitionWords } from './scene-prompt.js';
 import { currentSceneVoice } from './video-voice.js';
 import type { SceneVideoDirection } from './msr-opening.js';
 import { videoTextPolicy } from './video-prompt.js';
@@ -92,8 +92,12 @@ export function composeH3Scene(episode: string, board: Record<string, unknown>, 
   const linePrompt = (line: Line) => face(line.speaker) + ' speaks in the voice of {' + line.speaker + '.voice}: "' + line.tts + '"';
   const composed = [direction.emotion, direction.action, direction.camera, direction.sound, videoTextPolicy(),
     ...direction.openingPositions.map(row => (cast.has(row.character) ? face(row.character) : row.character) + ': ' + row.position),
-    ...timeline.shots.map((shot,i) => ['Follow {' + shot.shotId + '.image} for about ' + (shots[i].frames / timeline.fps).toFixed(2) + ' seconds.',
-      shot.framing,shot.action,shot.sound, ...turns[i].map(linePrompt)].filter(Boolean).join(' '))].filter(Boolean).join('\n');
+    ...timeline.shots.map((shot,i) => [sceneTransitionWords(shot),
+      'Follow {' + shot.shotId + '.image} for about ' + (shots[i].frames / timeline.fps).toFixed(2) + ' seconds.',
+      ...((shot.openingPositions ?? []).filter(row => i > 0 || !direction.openingPositions.some(initial =>
+        initial.character === row.character && initial.position === row.position))
+        .map(row => (cast.has(row.character) ? face(row.character) : row.character) + ': ' + row.position)),
+      shot.framing,shot.blocking,shot.action,shot.sound, ...turns[i].map(linePrompt)].filter(Boolean).join(' '))].filter(Boolean).join('\n');
   const prompt = savedPrompt ?? composed;
   const lines = turns.flat();
   assertSceneDialogue(prompt,lines,[...cast.keys()].map(speaker=>({speaker,name:speaker})),composed,true,savedPrompt === direction.prompt);

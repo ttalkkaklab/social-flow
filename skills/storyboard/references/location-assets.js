@@ -255,6 +255,7 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
     target=seen?[seen.position[0],seen.position[1],seen.position[2]+seen.height*.93]:object?object.position:[from[0]+facing(viewer)[0]*3,from[1]+facing(viewer)[1]*3,from[2]];
     const dir=unit(target.map((v,i)=>v-from[i]))||[0,-1,0];
     position=from.map((v,i)=>v+dir[i]*.3);lensMm=35;
+    if(!['eye','pov'].includes(a))warnings.push(`angle ${a} cannot change the observer's eye position in POV; the camera follows the authored gaze`);
   } else if((view?view.mode==='ots':size==='ots'||a==='over')&&(observer?people.length>=1:people.length>=2)){
     // Over the shoulder: past the second listed person's shoulder onto the first, on the reference camera's side of their line.
     const [far,near]=observer?[people[0],observer]:people,dir=unit([far.position[0]-near.position[0],far.position[1]-near.position[1]])||[0,1];
@@ -263,7 +264,34 @@ function shotCamera(m,{stateId,actors=[],cast=[],size,angle,width,height,side,mu
     position=[near.position[0]-dir[0]*.55+lateral[0]*.32,near.position[1]-dir[1]*.55+lateral[1]*.32,near.position[2]+near.height*.95];
     const [lo,hi]=PERSON_SPAN[frame];
     target=[far.position[0],far.position[1],far.position[2]+(lo+hi)/2*far.height];
-    lensMm=fit(Math.hypot(...position.map((v,i)=>v-target[i])),(hi-lo)*far.height*1.25);
+    const fitSubject=p=>fit(Math.hypot(...p.map((v,i)=>v-target[i])),(hi-lo)*far.height*1.25);
+    if(a==='low'||a==='high'){
+      // Keep the same side of the line and aim above or below the far subject's framing point.
+      const shoulder=position[2], clearance=Math.max(.08,Math.min(.18,near.height*.08));
+      position[2]=a==='low'?Math.min(shoulder-clearance,target[2]-clearance):Math.max(shoulder+clearance,target[2]+clearance);
+      const minimumHeight=Math.min(floor,near.position[2])+.15;
+      if(position[2]<minimumHeight){
+        position[2]=minimumHeight;
+        warnings.push('The floor limits the low over-the-shoulder camera height.');
+      }
+      const shoulderAxis=[Math.cos(near.rotationZDeg*deg),Math.sin(near.rotationZDeg*deg)];
+      const armSide=dot(shoulderAxis,lateral)<0?-1:1;
+      const arm=[near.position[0]+shoulderAxis[0]*armSide*near.height*.2,
+        near.position[1]+shoulderAxis[1]*armSide*near.height*.2,near.position[2]+near.height*.76];
+      const keepsShoulder=p=>{
+        const delta=target.map((v,i)=>v-p[i]),forward=unit(delta),right=[...(unit([delta[1],-delta[0]])||lateral),0];
+        const up=[right[1]*forward[2],-right[0]*forward[2],right[0]*forward[1]-right[1]*forward[0]];
+        const offset=arm.map((v,i)=>v-p[i]),dot3=(v,w)=>v.reduce((sum,x,i)=>sum+x*w[i],0);
+        const depth=dot3(offset,forward),lens=fitSubject(p);
+        return depth>0&&Math.abs(dot3(offset,right))*lens<18*depth&&Math.abs(dot3(offset,up))*lens<sensorV/2*depth;
+      };
+      const adjusted=[0,.6,1.2,1.8].map(distance=>[
+        position[0]-dir[0]*distance,position[1]-dir[1]*distance,position[2],
+      ]).find(p=>keepsShoulder(p)&&!objects.some(o=>o.role==='wall'&&entersBox(p,target,o)!==null));
+      if(adjusted)position=adjusted;
+      else warnings.push('The requested angle and crop may push the foreground shoulder out of frame; check the set render.');
+    } else if(!['eye','over'].includes(a))warnings.push(`angle ${a} cannot be rendered while holding this over-the-shoulder setup; the set camera stays at shoulder height`);
+    lensMm=fitSubject(position);
   } else {
     if(size==='ots'||a==='over')warnings.push('over the shoulder needs two blocked people; the render frames the first from the front');
     if(view?.mode==='ots')throw new Error('shot_view_subject_missing: ots needs a blocked subject and observer');
