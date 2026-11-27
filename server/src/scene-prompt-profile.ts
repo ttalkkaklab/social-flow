@@ -4,6 +4,7 @@ export interface ScenePromptProfile {
   cutTiming: 'cut_order' | 'time_ranges' | 'action_beats' | 'approximate_holds';
   referenceLabels: 'indexed' | 'at_indexed' | 'picture_audio_tags' | 'reference_indexed';
   allowsGeneratedVoice: boolean;
+  wholeSecondShotRanges?: boolean;
 }
 
 type SceneWriter = 'ltx' | 'msr' | 'recorded' | 'hostedH3' | 'fastH3' | 'veo' | 'seedance' | 'heygen';
@@ -129,8 +130,8 @@ export function scenePromptProfile(tool?: string, model?: unknown): Readonly<Sce
   if (tool === 'astra_genai_scene' && model === 'minimax-h3') return {...pictureTags, writer:'fastH3'};
   const profile = operations[tool ?? ''] ?? ordered;
   // Seedance 2.5 added the @ prefix for multimodal reference inputs.
-  if (tool === 'seedance_reference' && typeof model === 'string' && model.startsWith('dreamina-seedance-2-5-'))
-    return {...profile, referenceLabels: 'at_indexed'};
+  if (profile.writer === 'seedance' && seedanceSeries(model) === '2.5')
+    return {...profile, wholeSecondShotRanges:true, ...(tool === 'seedance_reference' ? {referenceLabels:'at_indexed' as const} : {})};
   return profile;
 }
 

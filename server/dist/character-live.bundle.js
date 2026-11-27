@@ -34626,7 +34626,8 @@ var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
   endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
-  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade", "whip_pan", "foreground_wipe"]),
+  transitionCue: sceneText.optional().describe("For a whip pan, name the direction and what the camera lands on. For a foreground wipe, name what fills the frame and what it reveals. Required for both transitions."),
   framing: sceneText,
   action: sceneText,
   openingPositions: openingPositionsSchema.optional().describe("Positions at this shot opening. Image numbers refer to this shot\u2019s subject references."),
@@ -34645,6 +34646,9 @@ var shotTimelineSchema = external_exports.object({
 }).strict().superRefine((shot, ctx) => {
   const issue = (message) => ctx.addIssue({ code: "custom", message });
   if (shot.startFrame >= shot.endFrame) issue("Shot needs a positive frame interval");
+  if (["whip_pan", "foreground_wipe"].includes(shot.transition) && !shot.transitionCue)
+    issue("Write a transitionCue for " + shot.transition);
+  if (shot.transition === "open" && shot.transitionCue) issue("An opening shot has no incoming transition");
   const lines = /* @__PURE__ */ new Set();
   for (const cue of shot.dialogueCues ?? []) {
     if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue("Dialogue cue outside its shot: " + cue.lineId);
@@ -34736,7 +34740,7 @@ import * as path3 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.132.0",
+  version: "0.132.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",

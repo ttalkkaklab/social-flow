@@ -122,6 +122,33 @@ test('background direction controls the world camera and rejects an opposing sub
   m.cameras.front.position=[0,0,6];
   assert.throws(()=>L.shotCamera(m,{...args,backgroundView:'front'}),/background_camera_required/);
 });
+
+test('over-the-shoulder camera heights change pitch without switching screen sides',()=>{
+  const observer=mina({position:[-1,0,0],rotationZDeg:90});
+  const far=mina({id:'jun',position:[1,0,.2],height:1.55,rotationZDeg:-90});
+  const view={mode:'ots',viewerId:'mina',subjectId:'jun',subject:'Jun',reason:'Show the reply',crop:'Jun waist-up'};
+  const args={stateId:'day', actors:[observer,far], cast:['jun'], size:'ms', width:960, height:540, view};
+  const [lowResult,eyeResult,highResult]=['low','eye','high'].map(angle=>L.shotCamera(spec,{...args,angle}));
+  const [low,eye,high]=[lowResult.camera,eyeResult.camera,highResult.camera];
+  assert.ok(low.position[2]<eye.position[2]&&eye.position[2]<high.position[2]);
+  assert.ok(low.position[2]<low.target[2]&&high.position[2]>high.target[2]);
+  for(const camera of [low,high]){
+    assert.equal(camera.position[1],eye.position[1]);
+    assert.ok(camera.position[0]<observer.position[0]);
+    assert.deepEqual(camera.target,eye.target);
+    assert.ok(Math.abs(project(camera,[...far.position.slice(0,2),far.position[2]+far.height*.93])[1])<1);
+  }
+  const shoulder=[observer.position[0],-observer.height*.2,observer.height*.76];
+  assert.ok(project(low,shoulder).slice(0,2).every(coordinate=>Math.abs(coordinate)<1));
+  assert.match(highResult.warnings.join(' '),/foreground shoulder out of frame/);
+  const openSet={...spec,objects:spec.objects.filter(object=>object.role==='floor')};
+  const rotated={...observer,rotationZDeg:30};
+  const portrait=L.shotCamera(openSet,{...args,actors:[rotated,{...far,position:[1,0,0]}],angle:'high',width:540,height:960});
+  const rotatedShoulder=[rotated.position[0]-Math.cos(Math.PI/6)*rotated.height*.2,-Math.sin(Math.PI/6)*rotated.height*.2,rotated.height*.76];
+  assert.deepEqual(portrait.warnings,[]);
+  assert.ok(project(portrait.camera,rotatedShoulder).every(coordinate=>Math.abs(coordinate)<1));
+  assert.match(L.shotCamera(spec,{...args,angle:'overhead'}).warnings.join(' '),/overhead.*shoulder/);
+});
 test('authored views retain their bearing, target body details and never substitute a face for a missing target',()=>{
   const m=structuredClone(spec);m.objects=m.objects.filter(o=>o.role!=='wall');
   const view={subject:'Mina deciding',crop:'Face and shoulder tops',reason:'Read the hesitation',mode:'profile-right',subjectId:'mina'};

@@ -3143,7 +3143,7 @@ window.STORYBOARD_READY = (async function () {
     }).join("\n")]]);
     var none = function (t) { return '<div class="speech-silent">' + t + "</div>"; };
     var direction = fields([[ko ? "구도" : "Framing", tl.framing], [ko ? "동작" : "Action", tl.action || (s.shot?.videoDesign || {}).action || vis.action || (video.promptSource || {}).action],
-      [ko ? "화면 전환" : "Transition", tl.transition || s.transition]]);
+      [ko ? "화면 전환" : "Transition", [tl.transition || s.transition, tl.transitionCue].filter(Boolean).join(" · ")]]);
     var legacy = grouped ? "" : fields([[ko ? "영상 프롬프트" : "Video prompt", video.prompt || (video.speechBinding || {}).videoPrompt],
       [ko ? "말하는 클립 프롬프트" : "Speech-clip prompt", (vis.clip || {}).prompt]]);
     function shotControl(key, label, drawing, body) {

@@ -22,7 +22,7 @@ import { dispatchVideo, ROUTES } from '../dist/handlers.js';
 import {readBoard} from '../dist/storyboard.js';
 import { TOOLS } from '../dist/tools.js';
 import { astraGenaiBaseUrl } from '../dist/astra-genai-client.js';
-import { genaiSceneFrames, resolveScenePrompt, sceneLabels } from '../dist/genai-scene.js';
+import { genaiSceneBody, genaiSceneFrames, resolveScenePrompt, sceneLabels } from '../dist/genai-scene.js';
 const require = createRequire(import.meta.url);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const settings = require('../../skills/_shared/model-settings.js');
@@ -2057,17 +2057,29 @@ test('a GenAI scene sends one cast for the speakers of all its shots, by the pan
     ['s0 ' + panel('hero', 'front'), 's0 ' + panel('hero', 'back'), 's1 ' + panel('guest', 'front'), 's1 ' + panel('guest', 'back')]);
   // The person who enters later still has an opening row, so the gateway is told where they start.
   assert.match(plan.args.prompt, /guest \(\{guest\.(?:face|image)\}\): Not in the opening view; appears in a later shot\./);
-  // Over the cap the scene is composed again with fewer optional words, in a fixed order: design notes and expressions
-  // go, the action and lines stay, and the plan says what was left out.
+  // Over the cap, optional lighting and expressions go. The prop, viewpoint, blocking and closing framing still reach the gateway.
   const host = f.board.SCENES[0].visual;
-  host.camera = {framing:'The host stands at the left by the open door under the hall lamp. '.repeat(14).trim()};
+  host.camera = {view:{mode:'ots', viewerId:'guest', subjectId:'hero', subject:'the brass key',
+    crop:'The guest’s shoulder on screen left and the host’s hand in the center', reason:'Disclose the clue'},
+    end:'Settle on the brass key.'};
+  f.board.SCENES[0].shot.space = {light:'The host stands at the left by the open door under the hall lamp. '.repeat(14).trim()};
+  f.board.SCENES[0].shot.videoDesign = {motion:{beats:[{at:.5,state:'The key flashes in his palm.'}]}};
   host.expression = {hero:'brows raised, lips parted and shoulders drawn up toward the door. '.repeat(24).trim()};
   f.save();
   const fitted = planVideo({episode:f.episode, sceneNo:1, requestId:'pooled', args:{reserveUsd:0}}, false);
   assert.match(fitted.directionWarnings.find(warning => warning.startsWith('scene_prompt_fitted')),
-    /cap the scene leaves out repeated sentences and the long panel sentence; design notes; timed acting beats and delivery direction; expressions$/);
+    /cap the scene leaves out repeated sentences and the long panel sentence; depth and lighting notes; vocal directions and delivery labels; shot expressions$/);
   assert.doesNotMatch(fitted.args.prompt, /hall lamp|brows raised/);
   assert.match(fitted.args.prompt, /The host waits\.[\s\S]*The guest steps in\./);
+  const fittedWire = genaiSceneBody(fitted.args, file => 'asset://' + path.basename(file)).input.prompt;
+  assert.match(fittedWire, /Opening attention: the brass key\. Opening crop: The guest’s shoulder on screen left.*Opening viewpoint: over the named observer’s shoulder.*Closing frame: Settle on the brass key/);
+  assert.match(fittedWire, /At 0\.5 s into this shot: The key flashes in his palm\./);
+  const originalSubject = host.camera.view.subject;
+  host.camera.view.subject = '파란 열쇠';
+  f.save();
+  assert.throws(() => planVideo({episode:f.episode,sceneNo:1,requestId:'foreign-view'}, false),
+    /video_prompt_language: s0 view\.subject/);
+  host.camera.view.subject = originalSubject;
   // The short panel sentence keeps every reference name whole, so the gateway's numbering still reaches it.
   assert.match(fitted.args.prompt, /\{hero\.(?:face|image)\}/);
   // The gateway caps the numbered prompt; a scene still longer at the last step is refused before any file is uploaded.
@@ -2271,11 +2283,23 @@ test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned
  const f=await pinnedSpeakerScene(t,'reference',['hero','guest'],{engine:'astra-genai',model:'minimax-h3',resolution:'288x512'},[72,72]);
  f.board.SCENES[1].referenceImage='guest.png';
  const direction=f.board.STRUCTURE.scenes[0].videoDirection;
- direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\n{guest.face} speaks in the voice of {guest.voice}: "I stayed."';
+ const second = f.board.SCENES[1];
+ second.timeline = {startFrame:72,endFrame:144,transition:'whip_pan',
+   transitionCue:'Pan right through the blur and land on the guest beside the window.',
+   framing:'Low angle.', action:'The guest raises her hand.',
+   openingPositions:[{character:'guest',images:[],position:'She stands by the near window.'}]};
  f.save();
  const input={episode:f.episode,sceneNo:1,requestId:'first-take',maxCostUsd:0};
+ const auto = planVideo(input,false);
+ const wire = genaiSceneBody(auto.args, file => 'asset://' + path.basename(file));
+ assert.match(wire.input.prompt, /Whip-pan into the next view\. Pan right through the blur.*Follow \{s2\.image\} for about 3\.00 seconds\..*She stands by the near window\..*Low angle\..*The guest raises her hand/);
+ assert.deepEqual(wire.input.shots.map(shot => shot.seconds), [3,3]);
+ assert.equal(numbered(auto),auto.sceneRequest.prompt);
+ direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\n{guest.face} speaks in the voice of {guest.voice}: "I stayed."';
+ f.save();
  const p=planVideo(input);
  assert.equal(p.args.prompt,direction.prompt);
+ assert.ok(p.directionWarnings.some(warning => warning.startsWith('scene_transition_cue_unconfirmed: s2 (whip_pan)')));
  assert.deepEqual(p.args.shots.map(s=>s.id),p.shotIds);
  assert.ok(p.args.shots.every(s=>s.imagePath));
  assert.deepEqual(p.args.cast.map(c=>c.id),['hero','guest']);
@@ -2287,7 +2311,6 @@ test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned
    /Video output must stay inside the selected episode/);
  assert.equal(planVideo({...input,requestId:'second-take'}).args.prompt,p.args.prompt);
  assert.throws(()=>planVideo({...input,requestId:'suffix',prompt:'Only the second shot.'}),/scene_prompt_mismatch/);
- const second = f.board.SCENES[1];
  second.visual.frames = {storyboardKeyframes:[{file:'opening.png',startFrame:90}]};
  f.save();
  assert.throws(() => planVideo(input, false), /scene_inputs_unsupported/);
@@ -2498,7 +2521,7 @@ test('Seedance scene previews bind local motion to the selected model dialect', 
       assert.equal(planVideo({...input,prompt:preview.promptTemplate},false).args.prompt,preview.args.prompt);
       // Both series number their shots, and a draft in the wording before that still plans.
       assert.deepEqual(preview.args.prompt.match(/^Shot \d+:/gm),['Shot 1:','Shot 2:']);
-      const earlier = preview.promptTemplate.replace(/^Shot 1: /m,'').replace(/^Shot 2: /m,'Then cut directly. ');
+      const earlier = preview.promptTemplate.replace(/^Shot 1: /m,'').replace(/^Shot 2: Cut directly\. /m,'Then cut directly. ');
       assert.match(planVideo({...input,prompt:earlier},false).args.prompt,/^Then cut directly\. /m);
       // The vendor's recommended ranges are said beside the plan and stay out of the manifest an approval signs.
       assert.ok(preview.promptGuidance.reference.endsWith('prompt-seedance.md'));
@@ -2506,6 +2529,29 @@ test('Seedance scene previews bind local motion to the selected model dialect', 
       const saved = planVideo(input);
       const manifest = JSON.parse(fs.readFileSync(path.join(f.episode,'.work/video-routing/plans',saved.id + '.json'),'utf8'));
       assert.deepEqual([saved.id,manifest.promptGuidance],[preview.id,undefined]);
+      const [first, second] = f.board.SCENES;
+      first.duration = 2;
+      second.duration = 3;
+      fs.writeFileSync(path.join(f.episode,'storyboard','cedar-reveal.png'),png);
+      second.referenceImage = 'cedar-reveal.png';
+      first.timeline = {startFrame:0,endFrame:48,transition:'open',framing:'Wide view.', action:'The host waits.'};
+      second.timeline = {startFrame:48,endFrame:120,transition:'foreground_wipe',framing:'Low angle.',
+        transitionCue:'The near cedar fills the frame, then clears to reveal the guest.', action:'The guest looks back.'};
+      f.save();
+      const cut = planVideo({...input,requestId:'foreground-join'},false);
+      assert.equal(cut.sceneRequest.modelPacedCuts,true);
+      assert.match(cut.args.prompt, /Shot 2: (?:\[2–5s\] )?Cut to the next view while the foreground fills the frame\. The near cedar fills the frame, then clears to reveal the guest/);
+      assert.equal(cut.args.prompt.includes('[2–5s]'),Boolean(prefix));
+      assert.ok(cut.args.referenceImagePaths.some(file => file.endsWith('/cedar-reveal.png')));
+      const untimed = cut.promptTemplate.replace(/^(Shot \d+: )\[\d+–\d+s\] /gm,'$1');
+      assert.doesNotThrow(() => planVideo({...input,requestId:'older-template',prompt:untimed},false));
+      second.timeline.transition = 'dissolve';
+      delete second.timeline.transitionCue;
+      f.save();
+      assert.match(planVideo({...input,requestId:'dissolve'},false).args.prompt,/Shot 2: .*Dissolve to the next view/);
+      second.timeline.images = [{frame:48,role:'start',path:'guest.png'}];
+      f.save();
+      assert.throws(() => planVideo({...input,requestId:'exact-pin'},false),/scene_image_scope: .* s2/);
     });
   }
 });

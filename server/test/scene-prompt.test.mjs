@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import fs from 'node:fs';
 import { scenePromptProfile, sceneWritingGuide, referenceLabel, promptGuidance, referenceAdvice } from '../dist/scene-prompt-profile.js';
 import { SceneEditGrammar } from '../dist/scene-edit-grammar.js';
-import { sceneTimelineWords, scenePromptSlots, resolveScenePrompt, assertSceneDialogue } from '../dist/scene-prompt.js';
+import { sceneTimelineWords, sceneTransitionWarnings, scenePromptSlots, resolveScenePrompt, assertSceneDialogue } from '../dist/scene-prompt.js';
 
 test('provider syntax preserves the shot, speaker and closing action with each quote', () => {
   const timeline = {fps:24, images:[], shots:[
@@ -82,14 +82,44 @@ test('Seedance shots are numbered and an authored prompt keeps, drops or renumbe
     {shotId:'s1', startFrame:0, endFrame:36, transition:'open', framing:'Medium shot.'},
     {shotId:'s2', startFrame:36, endFrame:96, transition:'hard_cut', framing:'Close on the latch.'}];
   const words = list => sceneTimelineWords({fps:24, images:[], shots:list}, {}, {modelFacing:true, modelPacedCuts:true, writer:'seedance', cutTiming:'action_beats'});
-  assert.deepEqual(words(shots).split('\n'), ['Shot 1: Medium shot.', 'Shot 2: Close on the latch.']);
+  assert.deepEqual(words(shots).split('\n'), ['Shot 1: Medium shot.', 'Shot 2: Cut directly. Close on the latch.']);
+  const transition = {...shots[1],transition:'fade',transitionCue:'Fade through the shadow on the doorway.'};
+  assert.equal(words([shots[0],transition]).split('\n')[1],
+    'Shot 2: Fade to the next view. Fade through the shadow on the doorway. Close on the latch.');
+  const timed = list => sceneTimelineWords({fps:24, images:[], shots:list}, {},
+    {modelFacing:true, modelPacedCuts:true, writer:'seedance', cutTiming:'action_beats', wholeSecondShotRanges:true});
+  assert.equal(timed([shots[0],transition]),words([shots[0],transition]));
+  assert.match(timed([{...shots[0],endFrame:48},{...transition,startFrame:48}]),/^Shot 2: \[2–4s\] Fade to the next view/m);
   assert.equal(words(shots.slice(0,1)), 'Medium shot.');
   const lines = [{speaker:'hero', tts:'Look.', delivery:'on_screen'}], cast = [{speaker:'hero', name:'Hero'}];
   const composed = 'Shot 1: Medium shot. hero: "Look."\nShot 2: Close on the latch.';
+  const ranged = 'Shot 1: [0–2s] Medium shot. hero: "Look."\nShot 2: [2–4s] Close on the latch.';
+  assert.doesNotThrow(() => assertSceneDialogue(composed,lines,cast,ranged));
+  assert.throws(() => assertSceneDialogue(ranged.replace('[2–4s]','[2–99s]'),lines,cast,ranged), /scene_direction_unverified/);
+  const swapped = ranged.replace('[0–2s]','[2–4s]').replace(/Shot 2: \[2–4s\]/,'Shot 2: [0–2s]');
+  assert.throws(() => assertSceneDialogue(swapped,lines,cast,ranged), /scene_direction_unverified/);
+  assert.throws(() => assertSceneDialogue(ranged.split('\n').reverse().join('\n'),lines,cast,ranged), /scene_direction_unverified/);
+  assert.match(words([shots[0],{...shots[1],transition:'whip:r2l'}]),/Whip-pan right to left into the next view/);
   for (const draft of [composed, 'Medium shot. hero: "Look."\nThen cut directly. Close on the latch.', 'Shot 1: Close on the latch.\nShot 2: hero: "Look."'])
     assert.doesNotThrow(() => assertSceneDialogue(draft, lines, cast, composed), draft);
   assert.throws(() => assertSceneDialogue('Shot 1: Medium shot. hero: "Look."\nShot 2: The latch explodes.', lines, cast, composed), /scene_direction_unverified/);
   // A prompt whose planner version has no numbered shots takes no typed label.
   const plain = 'Medium shot. hero: "Look."\nThen cut directly. Close on the latch.';
   assert.throws(() => assertSceneDialogue('Shot 1: Medium shot. hero: "Look."', lines, cast, plain), /scene_direction_unverified/);
+});
+
+test('an overridden scene confirms transitions only with ordered directions outside dialogue', () => {
+  const dissolve = {from:'s1',to:'s2',frame:24,transition:'dissolve'};
+  const wipe = {from:'s2',to:'s3',frame:48,transition:'foreground_wipe',transitionCue:'A cedar covers the frame.'};
+  const wipeWords = 'Cut to the next view while the foreground fills the frame. A cedar covers the frame.';
+  const script = 'Dissolve to the next view. ' + wipeWords;
+  assert.deepEqual(sceneTransitionWarnings([dissolve,wipe],script),[]);
+  for (const prompt of ['Hero says: "' + script + '"','Do not dissolve to the next view. Do not ' + wipeWords])
+    assert.deepEqual(sceneTransitionWarnings([dissolve,wipe],prompt,[script]).map(warning => warning.match(/s\d/)[0]),['s2','s3']);
+  assert.equal(sceneTransitionWarnings([dissolve,{...dissolve,to:'s3'}],'Dissolve to the next view.').length,1);
+  assert.equal(sceneTransitionWarnings([dissolve],'Shot 1: Dissolve to the next view. The host waits.\nShot 2: The guest looks back.').length,1);
+  assert.deepEqual(sceneTransitionWarnings([dissolve],'Shot 1: The host waits.\nShot 2: Dissolve to the next view. The guest looks back.'),[]);
+  const h3 = 'Follow {s1.image} for about 1 second.\nFollow {s2.image} for about 1 second.';
+  assert.equal(sceneTransitionWarnings([dissolve],'Dissolve to the next view. '+h3).length,1);
+  assert.deepEqual(sceneTransitionWarnings([dissolve],h3.replace('Follow {s2','Dissolve to the next view. Follow {s2')),[]);
 });

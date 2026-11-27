@@ -160,6 +160,8 @@ export function shotVisualDirection(shot, concise = false) {
     const words = load('../../skills/storyboard/references/assemble-bg-prompt.js');
     const views = load('../../skills/storyboard/references/shot-view.js');
     const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
+    if (viewWords && nonEnglishOutsideQuotes(viewWords))
+        throw new Error(`video_prompt_language: ${shot.id || 'shot'} view.subject, view.crop and viewerId must be English`);
     const catalogue = load('../../skills/storyboard/references/film-techniques.js');
     const contract = load('../../skills/storyboard/references/structure-contract.js');
     const frame = directions().framing(shot);

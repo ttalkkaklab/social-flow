@@ -1833,6 +1833,8 @@ function splitStoryScene(args: z.infer<typeof storySceneSchema>, win: Board, st:
     throw new Error('scene_split_number: use ' + newSceneNo + ' for the second part; later scenes move forward in playback order');
   const numbers = new Map(order.map((no, i) => [no, i + (i > index ? 2 : 1)]));
   const members = shots.filter(shot => shot.scene === source.no), boundary = members.indexOf(first);
+  if (first.timeline?.transitionCue)
+    throw new Error('scene_split_transition: ' + first.id + ' needs its preceding shot for the authored transition cue. Choose another boundary.');
   const sequence = st.sequences.find(sequence => sequence.scenes.includes(source.no));
   const left = args.scenes.find(scene => scene.no === leftNo), right = args.scenes.find(scene => scene.no === newSceneNo);
   if (!sequence || !left?.videoDirection?.prompt || !right?.videoDirection?.prompt ||
@@ -1947,8 +1949,9 @@ export function writeStoryShots(args: z.infer<typeof storyShotSchema>): ApplyRes
   for (const { id, ...entry } of args.shots) {
     const fps = st.scenes.find(scene => scene.no === entry.scene)?.videoDirection?.fps ?? 24;
     const timeline = entry.timeline;
+    // A generated visual join is authored inside the scene. Its assembly placeholder is a plain cut.
     const story = timeline ? { ...entry, duration: (timeline.endFrame - timeline.startFrame) / fps,
-      transition: ({open:undefined, hard_cut:'cut', dissolve:'dissolve', fade:'dip'})[timeline.transition] } : entry;
+      transition: ({open:undefined, hard_cut:'cut', dissolve:'dissolve', fade:'dip', whip_pan:'cut', foreground_wipe:'cut'})[timeline.transition] } : entry;
     if (!order.includes(story.scene)) throw new Error(`story_order: scene ${story.scene} is not in a sequence — write it with story_scene`);
     if (id) {
       const index = shots.findIndex((shot) => shot.id === id);
@@ -2545,7 +2548,13 @@ export const shotViewContract = () => loadFromHere(join(REFERENCES_DIR, 'shot-vi
   SCHEMA: Record<string, unknown>; validate(view: unknown): string[]; instructions(view: unknown): string;
 };
 const shotViewSchema = z.custom<ShotView>().superRefine((view, ctx) => {
-  for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  const issues = shotViewContract().validate(view);
+  for (const message of issues) ctx.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (issues.length) return;
+  for (const field of ['subject', 'crop', 'viewerId'] as const) {
+    if (view[field] && nonEnglishOutsideQuotes(view[field]))
+      ctx.addIssue({code:z.ZodIssueCode.custom,path:[field],message:`video_prompt_language: view.${field} must be English`});
+  }
 });
 export const shotIconsSchema = z.object({
   path: outlinePath,
@@ -2634,9 +2643,6 @@ export function writeShotIcons(args: z.infer<typeof shotIconsSchema>): ApplyResu
     if (backgroundView) visual.camera = { ...(visual.camera as Record<string, unknown> | undefined), backgroundView };
     if (view) {
       shotViewSchema.parse(view);
-      for (const [key, value] of [['subject', view.subject], ['crop', view.crop]]) {
-        if (nonEnglishOutsideQuotes(value)) throw new Error(`video_prompt_language: shot_icons ${id} view.${key} must be English`);
-      }
       // The structured view replaces old opening prose and flags, not the closing camera.
       const { framing: _framing, rear: _rear, pov: _pov, ...camera } = (visual.camera ?? {}) as Record<string, unknown>;
       visual.camera = { ...camera, view };

@@ -180,6 +180,8 @@ export function shotVisualDirection(shot: Record<string, unknown>, concise = fal
   const words = load('../../skills/storyboard/references/assemble-bg-prompt.js') as { frameSizeWords(size:string, camera:unknown, noPerson:boolean, cutRole:string):string; ANGLE_WORDS: Record<string, string> };
   const views = load('../../skills/storyboard/references/shot-view.js') as { instructions(view: unknown): string; withoutPeople(card:unknown):boolean; openingFraming(timeline:string):string; framingConflicts(size:string, view:unknown, scene:string, noPerson:boolean):string[] };
   const viewWords = camera.view === undefined ? '' : views.instructions(camera.view);
+  if (viewWords && nonEnglishOutsideQuotes(viewWords))
+    throw new Error(`video_prompt_language: ${shot.id || 'shot'} view.subject, view.crop and viewerId must be English`);
   const catalogue = load('../../skills/storyboard/references/film-techniques.js') as { byId: Record<string, { category: string; fields: Record<string, string>; prompt?: string; instruction: string; label: { en: string } }> };
   const contract = load('../../skills/storyboard/references/structure-contract.js');
   const frame = directions().framing(shot);

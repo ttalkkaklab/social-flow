@@ -105111,6 +105111,7 @@ var require_location_assets = __commonJS({
         const dir = unit(target.map((v, i2) => v - from[i2])) || [0, -1, 0];
         position = from.map((v, i2) => v + dir[i2] * 0.3);
         lensMm = 35;
+        if (!["eye", "pov"].includes(a)) warnings.push(`angle ${a} cannot change the observer's eye position in POV; the camera follows the authored gaze`);
       } else if ((view ? view.mode === "ots" : size === "ots" || a === "over") && (observer ? people.length >= 1 : people.length >= 2)) {
         const [far, near] = observer ? [people[0], observer] : people, dir = unit([far.position[0] - near.position[0], far.position[1] - near.position[1]]) || [0, 1];
         let lateral = [-dir[1], dir[0]];
@@ -105118,7 +105119,38 @@ var require_location_assets = __commonJS({
         position = [near.position[0] - dir[0] * 0.55 + lateral[0] * 0.32, near.position[1] - dir[1] * 0.55 + lateral[1] * 0.32, near.position[2] + near.height * 0.95];
         const [lo, hi] = PERSON_SPAN[frame2];
         target = [far.position[0], far.position[1], far.position[2] + (lo + hi) / 2 * far.height];
-        lensMm = fit(Math.hypot(...position.map((v, i2) => v - target[i2])), (hi - lo) * far.height * 1.25);
+        const fitSubject = (p) => fit(Math.hypot(...p.map((v, i2) => v - target[i2])), (hi - lo) * far.height * 1.25);
+        if (a === "low" || a === "high") {
+          const shoulder = position[2], clearance = Math.max(0.08, Math.min(0.18, near.height * 0.08));
+          position[2] = a === "low" ? Math.min(shoulder - clearance, target[2] - clearance) : Math.max(shoulder + clearance, target[2] + clearance);
+          const minimumHeight = Math.min(floor, near.position[2]) + 0.15;
+          if (position[2] < minimumHeight) {
+            position[2] = minimumHeight;
+            warnings.push("The floor limits the low over-the-shoulder camera height.");
+          }
+          const shoulderAxis = [Math.cos(near.rotationZDeg * deg), Math.sin(near.rotationZDeg * deg)];
+          const armSide = dot(shoulderAxis, lateral) < 0 ? -1 : 1;
+          const arm = [
+            near.position[0] + shoulderAxis[0] * armSide * near.height * 0.2,
+            near.position[1] + shoulderAxis[1] * armSide * near.height * 0.2,
+            near.position[2] + near.height * 0.76
+          ];
+          const keepsShoulder = (p) => {
+            const delta = target.map((v, i2) => v - p[i2]), forward = unit(delta), right = [...unit([delta[1], -delta[0]]) || lateral, 0];
+            const up = [right[1] * forward[2], -right[0] * forward[2], right[0] * forward[1] - right[1] * forward[0]];
+            const offset = arm.map((v, i2) => v - p[i2]), dot3 = (v, w) => v.reduce((sum, x2, i2) => sum + x2 * w[i2], 0);
+            const depth = dot3(offset, forward), lens = fitSubject(p);
+            return depth > 0 && Math.abs(dot3(offset, right)) * lens < 18 * depth && Math.abs(dot3(offset, up)) * lens < sensorV / 2 * depth;
+          };
+          const adjusted = [0, 0.6, 1.2, 1.8].map((distance) => [
+            position[0] - dir[0] * distance,
+            position[1] - dir[1] * distance,
+            position[2]
+          ]).find((p) => keepsShoulder(p) && !objects.some((o) => o.role === "wall" && entersBox(p, target, o) !== null));
+          if (adjusted) position = adjusted;
+          else warnings.push("The requested angle and crop may push the foreground shoulder out of frame; check the set render.");
+        } else if (!["eye", "over"].includes(a)) warnings.push(`angle ${a} cannot be rendered while holding this over-the-shoulder setup; the set camera stays at shoulder height`);
+        lensMm = fitSubject(position);
       } else {
         if (size === "ots" || a === "over") warnings.push("over the shoulder needs two blocked people; the render frames the first from the front");
         if (view?.mode === "ots") throw new Error("shot_view_subject_missing: ots needs a blocked subject and observer");
@@ -124416,7 +124448,8 @@ var frame = external_exports.number().int().nonnegative();
 var shotTimelineSchema = external_exports.object({
   startFrame: frame,
   endFrame: frame.describe("Exclusive end, in zero-based scene frames."),
-  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade"]),
+  transition: external_exports.enum(["open", "hard_cut", "dissolve", "fade", "whip_pan", "foreground_wipe"]),
+  transitionCue: sceneText.optional().describe("For a whip pan, name the direction and what the camera lands on. For a foreground wipe, name what fills the frame and what it reveals. Required for both transitions."),
   framing: sceneText,
   action: sceneText,
   openingPositions: openingPositionsSchema.optional().describe("Positions at this shot opening. Image numbers refer to this shot\u2019s subject references."),
@@ -124435,6 +124468,9 @@ var shotTimelineSchema = external_exports.object({
 }).strict().superRefine((shot, ctx) => {
   const issue2 = (message) => ctx.addIssue({ code: "custom", message });
   if (shot.startFrame >= shot.endFrame) issue2("Shot needs a positive frame interval");
+  if (["whip_pan", "foreground_wipe"].includes(shot.transition) && !shot.transitionCue)
+    issue2("Write a transitionCue for " + shot.transition);
+  if (shot.transition === "open" && shot.transitionCue) issue2("An opening shot has no incoming transition");
   const lines = /* @__PURE__ */ new Set();
   for (const cue of shot.dialogueCues ?? []) {
     if (cue.frame < shot.startFrame || cue.frame >= shot.endFrame) issue2("Dialogue cue outside its shot: " + cue.lineId);
@@ -126949,7 +126985,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.132.0",
+  version: "0.132.1",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -128578,8 +128614,8 @@ var operations = {
 function scenePromptProfile(tool2, model2) {
   if (tool2 === "astra_genai_scene" && model2 === "minimax-h3") return { ...pictureTags, writer: "fastH3" };
   const profile = operations[tool2 ?? ""] ?? ordered;
-  if (tool2 === "seedance_reference" && typeof model2 === "string" && model2.startsWith("dreamina-seedance-2-5-"))
-    return { ...profile, referenceLabels: "at_indexed" };
+  if (profile.writer === "seedance" && seedanceSeries(model2) === "2.5")
+    return { ...profile, wholeSecondShotRanges: true, ...tool2 === "seedance_reference" ? { referenceLabels: "at_indexed" } : {} };
   return profile;
 }
 function usesGeneratedVoice(tool2, dialogueVoice) {
@@ -128599,19 +128635,66 @@ function formatReferenceLabel(style, kind, index) {
 var transitions = {
   hard_cut: "cut directly",
   dissolve: "dissolve to the next view",
-  fade: "fade to the next view"
+  fade: "fade to the next view",
+  whip_pan: "whip-pan into the next view",
+  foreground_wipe: "cut to the next view while the foreground fills the frame",
+  dip: "dip to black before the next view",
+  "dip:white": "dip to white before the next view",
+  jcut: "bring in sound from the next shot before cutting to its picture",
+  iris: "reveal the next view through a circular iris",
+  blur: "blur into the next view",
+  zoom: "zoom into the next view"
 };
+var transitionDirections = { l2r: "left to right", r2l: "right to left", u2d: "top to bottom", d2u: "bottom to top" };
+var numberedHeadings = (stage2) => [...stage2.matchAll(/^Shot (\d+):[ \t]*(\[\d+[–-]\d+s\])?[ \t]*/gmu)];
+var stageText = (prompt, lines) => spans(prompt, lines).map((span) => span.quoted ? "\0" : span.text).join("");
+function sceneTransitionWords(shot, prefix = "") {
+  if (shot.transition === "open") return "";
+  const [kind, side] = shot.transition.split(":");
+  const direction = transitionDirections[side];
+  const directional = direction && (kind === "whip" || kind === "push") && `${kind === "whip" ? "whip-pan" : "push the frame"} ${direction} into the next view`;
+  const cut = transitions[shot.transition] ?? (directional || shot.transition.replaceAll("_", " "));
+  const sentence2 = prefix ? prefix + cut : cut[0].toUpperCase() + cut.slice(1);
+  return sentence2 + "." + (shot.transitionCue ? " " + shot.transitionCue.replace(/[.!?]+$/, "") + "." : "");
+}
+function sceneTransitionWarnings(cuts, authoredPrompt, lines) {
+  if (authoredPrompt === void 0) return [];
+  const sentences = (value2) => value2.split(/(?:[.!?](?=\s|$)|\n)\s*/u).map((part) => part.trim().toLowerCase().replace(/\s+/g, " ").replace(/^(?:then |at [\d.]+ seconds, )/, "")).filter(Boolean);
+  const stage2 = stageText(authoredPrompt, lines);
+  const headings = numberedHeadings(stage2);
+  const numbered = headings.length === cuts.length + 1 && headings.every((match2, i2) => !i2 || Number(match2[1]) > Number(headings[i2 - 1][1]));
+  const shotRows = stage2.split("\n").flatMap((row) => [...row.matchAll(/\bFollow \{([^{}.]+)\.image\}/gu)].map((match2) => ({ id: match2[1], row })));
+  const unnumbered = headings.length || shotRows.length ? [] : sentences(stage2);
+  let next = 0;
+  return cuts.flatMap((cut, i2) => {
+    if (cut.transition === "hard_cut" && !cut.transitionCue) return [];
+    const words = sceneTransitionWords(cut);
+    const expected = sentences(words);
+    const heading = headings[i2 + 1];
+    const h3Rows = shotRows.filter((row) => row.id === cut.to);
+    const scoped = numbered || shotRows.length > 0;
+    const parts = numbered ? sentences(stage2.slice(heading.index + heading[0].length, headings[i2 + 2]?.index)) : h3Rows.length === 1 ? sentences(h3Rows[0].row) : unnumbered;
+    const at = parts.findIndex((_, index) => index >= (scoped ? 0 : next) && expected.every((sentence2, offset) => sentence2 === parts[index + offset]));
+    if (at >= 0) {
+      next = at + expected.length;
+      return [];
+    }
+    return [`scene_transition_cue_unconfirmed: ${cut.to} (${cut.transition}) uses an authored prompt. Verify that it describes this storyboard direction: ${words}`];
+  });
+}
 var shotLabel = /^Shot \d+:\s*/u;
 function shotHeading(shot, fps, options, number3) {
   const transition = shot.transition.replaceAll("_", " ");
-  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}\u2013${shot.endFrame - 1}] ${transition}.`;
-  const cut = transitions[shot.transition] ?? transition;
+  if (!options.modelFacing) return `${shot.shotId} [${shot.startFrame}\u2013${shot.endFrame - 1}] ${transition}.` + (shot.transitionCue ? " " + shot.transitionCue : "");
   if (!options.modelPacedCuts)
-    return shot.transition === "open" ? "" : `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, ${cut}.`;
-  if (options.writer === "seedance" && number3) return `Shot ${number3}:`;
-  if (options.writer === "fastH3" && shot.transition === "hard_cut") return "Hard cut to the next camera setup.";
-  if (options.writer === "hostedH3" && shot.transition === "hard_cut") return "Cut to the next view.";
-  const order = shot.transition === "open" ? "" : `Then ${cut}.`;
+    return sceneTransitionWords(shot, `At ${Number((shot.startFrame / fps).toFixed(3))} seconds, `);
+  if (options.writer === "seedance" && number3) {
+    const range = options.wholeSecondShotRanges ? `[${shot.startFrame / fps}\u2013${shot.endFrame / fps}s]` : "";
+    return [`Shot ${number3}:`, range, sceneTransitionWords(shot)].filter(Boolean).join(" ");
+  }
+  if (options.writer === "fastH3" && shot.transition === "hard_cut" && !shot.transitionCue) return "Hard cut to the next camera setup.";
+  if (options.writer === "hostedH3" && shot.transition === "hard_cut" && !shot.transitionCue) return "Cut to the next view.";
+  const order = sceneTransitionWords(shot, "Then ");
   if (options.cutTiming !== "time_ranges") return order;
   const seconds2 = (frame2) => Number((frame2 / fps).toFixed(2));
   return [`[${seconds2(shot.startFrame)}\u2013${seconds2(shot.endFrame)}s]`, order].filter(Boolean).join(" ");
@@ -128628,6 +128711,7 @@ function sceneTimelineWords(timeline, scene, options = {}) {
   const timing2 = (frame2) => modelFacing ? `At ${Number((frame2 / timeline.fps).toFixed(3))} seconds` : `Frame ${frame2}`;
   const wholeTake = new Set(timeline.shots.length === 1 ? [scene.camera, scene.action, scene.emotion] : []);
   const rows2 = [];
+  const headingOptions = options.wholeSecondShotRanges && timeline.shots.some((shot) => shot.startFrame % timeline.fps || shot.endFrame % timeline.fps) ? { ...options, wholeSecondShotRanges: false } : options;
   if (!modelFacing) rows2.push(`Scene at ${timeline.fps} fps. Frame numbers start at zero.`);
   let turnIndex = 0;
   for (const [index, shot] of timeline.shots.entries()) {
@@ -128651,7 +128735,7 @@ function sceneTimelineWords(timeline, scene, options = {}) {
     const positions = (shot.openingPositions || []).filter((person) => index !== 0 || !scene.openingPositions?.some((initial) => initial.character === person.character && initial.position === person.position));
     const opening = positions.map((person) => person.character + ": " + person.position.replace(/[.!?]+$/, "") + ".").join(" ");
     rows2.push([
-      shotHeading(shot, timeline.fps, options, timeline.shots.length > 1 ? index + 1 : void 0),
+      shotHeading(shot, timeline.fps, headingOptions, timeline.shots.length > 1 ? index + 1 : void 0),
       hold,
       opening && "At the start of this shot, " + opening,
       ...[shot.framing, shot.blocking, shot.action].filter((value2) => value2 && !wholeTake.has(value2)),
@@ -128785,8 +128869,29 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
   const script = expected.flatMap((line) => line.tts ? [line.tts] : []);
   const splitSentences2 = (text4) => text4.trimEnd().replace(/([:—–=])\s*\n\s*/gu, "$1 ").split(/(?:[.!?](?=\s|$)|\n)\s*/u);
   const original = spans(composed, script);
-  const numbered = original.some((span) => !span.quoted && /(?:^|\n)Shot \d+: /u.test(span.text));
-  const unlabel = (text4) => numbered ? text4.trim().replace(shotLabel, "") : text4.trim();
+  const headings = numberedHeadings(stageText(composed, script));
+  const numbered = headings.length > 0;
+  const range = /^\[\d+–\d+s\]/u;
+  const approvedRanges = new Set(headings.flatMap((match2) => match2[2] ? [match2[2]] : []));
+  if (approvedRanges.size) {
+    const authored = numberedHeadings(stageText(template, script));
+    const ordered2 = authored.length === headings.length && authored.every((match2, i2) => !i2 || Number(match2[1]) > Number(authored[i2 - 1][1]));
+    let prior = -1;
+    for (const [i2, match2] of authored.entries()) {
+      if (!match2[2]) continue;
+      const corresponding = ordered2 ? i2 : headings.findIndex((heading) => heading[1] === match2[1]);
+      if (corresponding <= prior || match2[2] !== headings[corresponding]?.[2])
+        throw new Error("scene_direction_unverified: " + match2[0].trim() + " changes the approved time range of this shot");
+      prior = corresponding;
+    }
+  }
+  const unlabel = (text4) => {
+    const trimmed = text4.trim();
+    if (!numbered || !shotLabel.test(trimmed)) return trimmed;
+    const body = trimmed.replace(shotLabel, "");
+    const timing2 = body.match(range)?.[0];
+    return timing2 && approvedRanges.has(timing2) ? body.slice(timing2.length).trimStart() : body;
+  };
   const approvedDirections = new Set(original.filter((span) => !span.quoted).flatMap((span) => splitSentences2(span.text)).map(unlabel));
   if (numbered) approvedDirections.add("Then cut directly");
   const attributions = [];
@@ -133263,6 +133368,8 @@ function shotVisualDirection(shot, concise = false) {
   const words = load6("../../skills/storyboard/references/assemble-bg-prompt.js");
   const views = load6("../../skills/storyboard/references/shot-view.js");
   const viewWords = camera.view === void 0 ? "" : views.instructions(camera.view);
+  if (viewWords && nonEnglishOutsideQuotes(viewWords))
+    throw new Error(`video_prompt_language: ${shot.id || "shot"} view.subject, view.crop and viewerId must be English`);
   const catalogue = load6("../../skills/storyboard/references/film-techniques.js");
   const contract2 = load6("../../skills/storyboard/references/structure-contract.js");
   const frame2 = directions().framing(shot);
@@ -134252,6 +134359,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
       transition,
       framing,
       action: action2,
+      ...timeline?.transitionCue ? { transitionCue: timeline.transitionCue } : {},
       ...concise && notes.end ? { closingState: notes.end } : {},
       ...positions?.length ? { openingPositions: positions } : {},
       ...blocking ? { blocking } : {},
@@ -134261,7 +134369,7 @@ function compileSceneTimeline(raw, scene, episode, board, coverage2 = sceneCover
   });
   if (scene.keyframes?.some((pin) => pin.frame <= 0 || pin.frame >= cursor - 1))
     throw new Error("scene_image_timing: scene keyframes must fall between the opening and ending frames");
-  const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition }));
+  const cuts = shots.slice(1).map(({ shotId, startFrame: frame2, transition, transitionCue }, i2) => ({ from: shots[i2].shotId, to: shotId, frame: frame2, transition, ...transitionCue ? { transitionCue } : {} }));
   const audio = scene.audio && { ...scene.audio.mode ? { mode: scene.audio.mode } : {}, path: realpathSync7(path23.resolve(episode, "storyboard", scene.audio.path)), startFrame: 0, endFrame: cursor, cues: scene.audio.cues ?? [] };
   if (audio?.cues.some((c) => c.frame >= cursor)) throw new Error("scene_audio_timing: cue outside the scene");
   return { fps, frameCount: cursor, shotIds, shots, images, cuts, ...guides.length ? { shotReferenceImages: guides } : {}, ...audio ? { audio } : {} };
@@ -134271,7 +134379,7 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const owner = board?.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
   load9("../../skills/_shared/scene-cast.js").sceneCast(owner ?? { no: sceneNo }, members);
   const ownsFrames = owner?.frames !== void 0 || owner?.speakers !== void 0;
-  const modelPacedCuts = members.length > 1 && (options.sceneMode || ownsFrames && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut")));
+  const modelPacedCuts = members.length > 1 && (options.sceneMode || options.profile?.writer === "seedance" || ownsFrames && !scene.audio && members.every((card, index) => !card.timeline && (index === 0 || !card.transition || card.transition === "cut")));
   const cutTiming = options.profile?.cutTiming;
   const directedCuts = cutTiming === "time_ranges" || cutTiming === "action_beats";
   const concise = modelPacedCuts && (options.bindDialogue || directedCuts);
@@ -134299,7 +134407,13 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
   const complete = scenePromptText(directedScene, shared5, words, dialogue, scopedDialogue);
   const suffix = (value2) => [value2, options.suffix].filter(Boolean).join(" ");
   const prompt = suffix(openingPrompt(complete, scene.openingPositions));
-  const providerTiming = { modelFacing: true, modelPacedCuts, cutTiming, writer: options.profile?.writer };
+  const providerTiming = {
+    modelFacing: true,
+    modelPacedCuts,
+    cutTiming,
+    writer: options.profile?.writer,
+    wholeSecondShotRanges: options.profile?.wholeSecondShotRanges
+  };
   const providerTimeline = sceneTimelineWords(fitted, scene, {
     ...providerTiming,
     includeDialogue: !options.bindDialogue,
@@ -134343,21 +134457,20 @@ function prepareSceneRequest(sceneNo, members, scene, episode, dialogue, options
 }
 var SCENE_FIT_STEPS = [
   "repeated sentences and the long panel sentence",
-  "design notes",
-  "timed acting beats and delivery direction",
-  "expressions",
-  "per-shot sound, blocking, closing states, axis and continuity"
+  "depth and lighting notes",
+  "vocal directions and delivery labels",
+  "shot expressions",
+  "per-shot sound"
 ];
 function fitSceneTimeline(timeline, members, scene, coverage2, concise, step) {
-  const body = (text4) => text4.replace(/^[^.:"]{1,40}:\s*/, "").replace(/[.\s]+$/, "").toLowerCase();
+  const body = (text4) => text4.trim().replace(/[.\s]+$/, "");
   const drop = /* @__PURE__ */ new Set([
-    ...step >= 2 ? ["view", "depth", "accent", "design"] : [],
-    ...step >= 4 ? ["expression"] : [],
-    ...step >= 5 ? ["end", "space"] : []
+    ...step >= 2 ? ["depth", "design"] : [],
+    ...step >= 4 ? ["expression"] : []
   ]);
   return { ...timeline, shots: timeline.shots.map((shot, index) => {
-    const card = members[index], notes = sceneShotNotes(card, concise), said = [];
-    const keep2 = (text4) => text4 && !said.some((earlier) => earlier.toLowerCase().includes(body(text4))) ? (said.push(text4), text4) : "";
+    const card = members[index], notes = sceneShotNotes(card, concise), said = /* @__PURE__ */ new Set();
+    const keep2 = (text4) => text4 && !said.has(body(text4)) ? (said.add(body(text4)), text4) : "";
     const framing = shotVisualParts(
       card,
       coverage2.shots[index],
@@ -134365,11 +134478,11 @@ function fitSceneTimeline(timeline, members, scene, coverage2, concise, step) {
       concise ? "" : notes.end,
       card.timeline?.framing,
       concise
-    ).filter((part) => !drop.has(part.kind)).flatMap((part) => part.kind === "view" ? part.text.split(/(?=Opening (?:attention|crop|viewpoint): )/).map((text4) => text4.trim()) : [part.text]).map(keep2).filter(Boolean).join(" ");
-    const blocking = step >= 5 ? "" : keep2(notes.blocking);
+    ).filter((part) => !drop.has(part.kind)).map((part) => keep2(part.text)).filter(Boolean).join(" ");
+    const blocking = keep2(notes.blocking);
     const action2 = [
       keep2(notes.action || (members.length === 1 ? scene.action || scene.emotion : "")),
-      ...step >= 3 ? [] : notes.beats.map(keep2)
+      ...notes.beats.map(keep2)
     ].filter(Boolean).join(" ");
     const { blocking: _blocking, sound, closingState, ...rest } = shot;
     const dialogue = step >= 3 ? shot.dialogue?.map(({ direction: _direction, ...line }) => line) : shot.dialogue;
@@ -134380,7 +134493,7 @@ function fitSceneTimeline(timeline, members, scene, coverage2, concise, step) {
       ...dialogue ? { dialogue } : {},
       ...blocking ? { blocking } : {},
       ...step < 5 && sound ? { sound } : {},
-      ...step < 5 && closingState ? { closingState } : {}
+      ...closingState ? { closingState } : {}
     };
   }) };
 }
@@ -134804,8 +134917,11 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
     videoTextPolicy(),
     ...direction.openingPositions.map((row) => (cast.has(row.character) ? face(row.character) : row.character) + ": " + row.position),
     ...timeline.shots.map((shot, i2) => [
+      sceneTransitionWords(shot),
       "Follow {" + shot.shotId + ".image} for about " + (shots[i2].frames / timeline.fps).toFixed(2) + " seconds.",
+      ...(shot.openingPositions ?? []).filter((row) => i2 > 0 || !direction.openingPositions.some((initial) => initial.character === row.character && initial.position === row.position)).map((row) => (cast.has(row.character) ? face(row.character) : row.character) + ": " + row.position),
       shot.framing,
+      shot.blocking,
       shot.action,
       shot.sound,
       ...turns[i2].map(linePrompt)
@@ -136071,7 +136187,16 @@ function buildH3Plan(input, context2, persist) {
     ...args.references.map((ref) => ref.imagePath),
     ...args.shots.flatMap((shot) => shot.imagePath ? [shot.imagePath] : [])
   ].map((file3) => fs20.realpathSync(file3));
-  const warnings = [...h3.warnings, ...omittedCharacterPictures(context2, context2.sceneMembers, new Set(sent), new Set(args.cast.map((member) => member.id)))];
+  const warnings = [
+    ...h3.warnings,
+    ...sceneTransitionWarnings(
+      timeline.cuts,
+      input.prompt ?? saved,
+      timeline.shots.flatMap((shot) => shot.dialogue?.map((line) => line.text) ?? [])
+    ),
+    ...omittedCharacterPictures(context2, context2.sceneMembers, new Set(sent), new Set(args.cast.map((member) => member.id)))
+  ];
+  if (timeline.cuts.length) warnings.push("scene_cut_timing_model_paced: H3 receives shot lengths and transition directions. Check the actual cut frames in the output.");
   const inputs2 = { ...h3.inputs, ...inputFiles(args, context2.episode) }, quote = quoteVideo("astra_genai_scene", args);
   if (input.maxCostUsd !== void 0 && quote.reserveUsd > input.maxCostUsd) throw new Error("video_quote_exceeded");
   const body = {
@@ -136333,6 +136458,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   const driftWarning = drift ? [`camera_move_${drift}: the ${input.args.prompt === void 0 ? "saved" : "explicit"} prompt ${drift === "missing" ? "omits" : "contradicts"} the planned move. Board direction: ${cameraMoveWords(boardCamera)}`] : [];
   const directionOf = (c) => replaced ? { sourcePrompt, directionWarnings: [], ...outsidePrompt(c?.directionBindings), ...c ? { performance: c.performance } : {} } : c ? { sourcePrompt, directionBindings: c.directionBindings, directionWarnings: c.warnings, performance: c.performance } : { sourcePrompt, directionWarnings: [input.args.prompt !== void 0 ? "Explicit args.prompt bypasses storyboard direction compilation; inspect the submitted prompt against the icons." : "Only an archived prompt is available for this card; add structured action to recompile from current attributes.", ...driftWarning] };
   const cutWarnings = sceneRequest?.modelPacedCuts ? ["scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames."] : [];
+  if (sceneRequest) cutWarnings.push(...sceneTransitionWarnings(sceneRequest.cuts, input.prompt, lines.flatMap((line) => line.tts ? [line.tts] : [])));
   for (const guide of (sceneRequest?.shotReferenceImages ?? []).filter((item) => !sceneTool || item.shotId === sceneRequest?.shotIds[0])) {
     if (!guide.submitted) cutWarnings.push("shot_reference_omitted: " + guide.shotId + " receives no composition image. " + guide.reason);
   }
@@ -139368,6 +139494,8 @@ function splitStoryScene(args, win, st) {
     throw new Error("scene_split_number: use " + newSceneNo + " for the second part; later scenes move forward in playback order");
   const numbers = new Map(order.map((no, i2) => [no, i2 + (i2 > index ? 2 : 1)]));
   const members = shots.filter((shot) => shot.scene === source2.no), boundary = members.indexOf(first);
+  if (first.timeline?.transitionCue)
+    throw new Error("scene_split_transition: " + first.id + " needs its preceding shot for the authored transition cue. Choose another boundary.");
   const sequence = st.sequences.find((sequence2) => sequence2.scenes.includes(source2.no));
   const left = args.scenes.find((scene) => scene.no === leftNo), right = args.scenes.find((scene) => scene.no === newSceneNo);
   if (!sequence || !left?.videoDirection?.prompt || !right?.videoDirection?.prompt || left.sequence !== sequence.id || right.sequence !== sequence.id)
@@ -139493,7 +139621,7 @@ function writeStoryShots(args) {
     const story = timeline ? {
       ...entry2,
       duration: (timeline.endFrame - timeline.startFrame) / fps,
-      transition: { open: void 0, hard_cut: "cut", dissolve: "dissolve", fade: "dip" }[timeline.transition]
+      transition: { open: void 0, hard_cut: "cut", dissolve: "dissolve", fade: "dip", whip_pan: "cut", foreground_wipe: "cut" }[timeline.transition]
     } : entry2;
     if (!order.includes(story.scene)) throw new Error(`story_order: scene ${story.scene} is not in a sequence \u2014 write it with story_scene`);
     if (id2) {
@@ -140050,7 +140178,13 @@ var VIDEO_SPEEDS = ["slow", "steady", "fast"];
 var STILL_SPEEDS = ["very slow", "slow", "fast", "very fast"];
 var shotViewContract = () => loadFromHere2(join14(REFERENCES_DIR, "shot-view.js"));
 var shotViewSchema = external_exports.custom().superRefine((view, ctx) => {
-  for (const message of shotViewContract().validate(view)) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  const issues = shotViewContract().validate(view);
+  for (const message of issues) ctx.addIssue({ code: external_exports.ZodIssueCode.custom, message });
+  if (issues.length) return;
+  for (const field2 of ["subject", "crop", "viewerId"]) {
+    if (view[field2] && nonEnglishOutsideQuotes(view[field2]))
+      ctx.addIssue({ code: external_exports.ZodIssueCode.custom, path: [field2], message: `video_prompt_language: view.${field2} must be English` });
+  }
 });
 var shotIconsSchema = external_exports.object({
   path: outlinePath,
@@ -140144,9 +140278,6 @@ function writeShotIcons(args) {
     if (backgroundView) visual.camera = { ...visual.camera, backgroundView };
     if (view) {
       shotViewSchema.parse(view);
-      for (const [key, value2] of [["subject", view.subject], ["crop", view.crop]]) {
-        if (nonEnglishOutsideQuotes(value2)) throw new Error(`video_prompt_language: shot_icons ${id2} view.${key} must be English`);
-      }
       const { framing: _framing, rear: _rear, pov: _pov, ...camera } = visual.camera ?? {};
       visual.camera = { ...camera, view };
       plan2.info = view.subject;
@@ -150235,7 +150366,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Set duration for model-paced cuts or supply timeline for exact frame ranges and dialogue cues. Use referenceImage for an optional composition guide. Set scene endpoints on story_scene.frames and exact shot anchors on timeline.images, with their scene frame and role. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
-Use timeline.framing for video direction. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
+Use timeline.framing for video direction. For an incoming whip_pan or foreground_wipe, write timeline.transitionCue with the direction and landing or the occluding object and reveal. The model gets the cue as prose. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -161355,7 +161486,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.132.0" },
+  { name: "social-flow", version: "0.132.1" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

@@ -52,7 +52,9 @@ Two recommendations are not counted by the planner.
   precise timing unstable and recommends `Shot 1`, `Shot 2` identifiers, and the 2.5 guide
   states that 2.0 responds to shot numbers and not to timestamps. So the prompt carries no
   seconds and the model paces each shot (`scene_cut_timing_model_paced`). The 2.5 guide
-  reads shot numbers or whole-second ranges. The planner writes shot numbers on both.
+  reads shot numbers or whole-second ranges. Both versions keep numbered shots and explicit
+  transition directions. The planner includes ranges on 2.5 when every shot boundary lands
+  on a whole second. In both versions the times guide generation.
 - References are `Image N` and `Audio N` on 2.0 and `@Image N` and `@Audio N` on 2.5.
 - Each referenced speaker sends a face and a front view, and the scene sends its opening
   picture. Two speakers with their voices are therefore seven files, so a two-speaker scene

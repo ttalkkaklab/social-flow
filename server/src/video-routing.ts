@@ -40,7 +40,7 @@ import type { ToolResult } from './handlers.js';
 import { checkVoiceoverDirection, nonEnglishOutsideQuotes } from './prompt-language.js';
 import { attributeWords, commonCameraWords, resolvedDirection, sceneShotNotes, shotVisualWords, withSceneCamera, cameraDrift, cameraMoveWords, compileVideoPrompt, sceneCameraDirection, scenePromptText, videoTextPolicy, type DirectionBinding, type VideoPromptSource } from './video-prompt.js';
 import { assertSelection } from './adapter-parameters.js';
-import { assertSceneDialogue, resolveScenePrompt, scenePromptSlots, scenePromptTemplate, type PromptImage, type PromptIssue } from './scene-prompt.js';
+import { assertSceneDialogue, resolveScenePrompt, scenePromptSlots, scenePromptTemplate, sceneTransitionWarnings, type PromptImage, type PromptIssue } from './scene-prompt.js';
 import { readVideoProduction, refreshVideoReview } from './video-review.js';
 import { requireReadyProject } from './project.js';
 import { checkDesktopOffering, LOCAL_DESKTOP_ENGINE } from './ltx-desktop-local.js';
@@ -720,7 +720,10 @@ function buildH3Plan(input: PlanInput, context: Context, persist: boolean): Vide
   if (Array.from(modelPrompt).length > limit) throw new Error('scene_prompt_too_long: H3 accepts ' + limit + ' characters. Split the storyboard scene before planning separate prompts.');
   const sent = [...args.cast.flatMap(member => member.images.map(image => image.imagePath)), ...args.references.map(ref => ref.imagePath),
     ...args.shots.flatMap(shot => shot.imagePath ? [shot.imagePath] : [])].map(file => fs.realpathSync(file));
-  const warnings = [...h3.warnings, ...omittedCharacterPictures(context, context.sceneMembers, new Set(sent), new Set(args.cast.map(member => member.id)))];
+  const warnings = [...h3.warnings, ...sceneTransitionWarnings(timeline.cuts,input.prompt ?? saved,
+    timeline.shots.flatMap(shot => shot.dialogue?.map(line => line.text) ?? [])),
+    ...omittedCharacterPictures(context, context.sceneMembers, new Set(sent), new Set(args.cast.map(member => member.id)))];
+  if (timeline.cuts.length) warnings.push('scene_cut_timing_model_paced: H3 receives shot lengths and transition directions. Check the actual cut frames in the output.');
   const inputs = {...h3.inputs, ...inputFiles(args,context.episode)}, quote = quoteVideo('astra_genai_scene',args);
   if (input.maxCostUsd !== undefined && quote.reserveUsd > input.maxCostUsd) throw new Error('video_quote_exceeded');
   const body = {version:1 as const,episode:context.episode,sceneNo:input.sceneNo,shotId:context.shotId,shotIds:timeline.shotIds,
@@ -959,6 +962,7 @@ function buildVideoPlan(input: PlanInput, {context, tool, sceneTool}: ReturnType
   const cutWarnings = sceneRequest?.modelPacedCuts
     ? ['scene_cut_timing_model_paced: The generator receives cut order without frame-accurate timing. Check the output against the recorded cut frames.']
     : [];
+  if (sceneRequest) cutWarnings.push(...sceneTransitionWarnings(sceneRequest.cuts,input.prompt,lines.flatMap(line => line.tts ? [line.tts] : [])));
   // Scene mode opens each later shot on its composition image; the first opens on the scene opening.
   for (const guide of (sceneRequest?.shotReferenceImages ?? []).filter(item => !sceneTool || item.shotId === sceneRequest?.shotIds[0])) {
     if (!guide.submitted) cutWarnings.push('shot_reference_omitted: ' + guide.shotId + ' receives no composition image. ' + guide.reason);
