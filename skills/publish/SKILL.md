@@ -19,7 +19,11 @@ allowed-tools: ["mcp__social-flow__facebook_captions", "mcp__plugin_social-flow_
 **Automatic execution policy:** Read [automation guidance](../_shared/automation-guidance.md) first. Creative rules and review findings guide improvements; scores, review/hash/freeze records, CTA choices and intermediate approval steps do not block authorized work. Preserve actual external-action authorization and stop at the artifact the user requested. This policy supersedes older quality-gate wording below.
 
 
-Use local episode files under `data/<channel>/episodes/<topic>/`.
+Read `data/<channel>/profile.md` before preparing a post from
+`data/<channel>/episodes/<topic>/`. Apply that channel's instructions for product
+links, commission disclosures and covers to each platform's draft. If a required
+platform disclosure is unavailable, keep that post in draft and record the reason
+in the episode's `output/publish-log.md`. Honor any active publication hold.
 
 For a first-comment-only request on existing posts, read their publication receipts
 and verify the target accounts/permalinks. Follow
