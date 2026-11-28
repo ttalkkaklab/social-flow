@@ -135,7 +135,7 @@ unreviewed identity/dialogue/speaker/lip-sync findings. Saved plans become stale
 speech, voice settings or reference bytes change. Selected audition samples travel
 with the character handoff; no automatic listening gate or paid generation is added.
 
-A shot keeps the lines spoken in its view, replies included. The selected video model limits the pinned voices of one render, and `video_plan` reports a scene over it.
+Each shot has at most one speaking character across on-screen speech, off-screen speech, narration and inner thoughts. Start a new shot before a different character speaks, even in the same framing. Silent listeners may remain visible. The selected video model limits the pinned voices of one render, and `video_plan` reports a scene over it.
 [Scene attention](skills/storyboard/references/shot-view.md#plan-attention-across-the-scene)
 chooses the visible evidence independently of the voice: faces, consequential details,
 discovery POVs or spatial relationships. Addressing someone does not pull that listener
@@ -1028,9 +1028,7 @@ For offline speech on Apple Silicon, select mlx-audio with model VoxCPM2 and con
   with `not_reviewed`. A requested adversarial improvement loop evaluates real audio
   against its stated target and records each finding; it does not become the default.
 - **Use WAV for assembly.** Keep provider timestamps and actual generated duration;
-  resample sources where required. When TTS voices a shot with several speakers, attach
-  each line's own audio and let `compose-speech.js` build the card's track; one
-  mixed-speaker take cannot stand for its lines.
+  resample sources where required. Attach each line’s audio and let `compose-speech.js` build the single-speaker track for each shot.
 - **BGM follows saved `models.music`** through `music_plan → music_execute`.
   Existing channel audio is reused first. See the [provider research](https://github.com/ttalkkaklab/social-flow/blob/1eabc4fb598b99135fe39a1a2be1f7dbe07fd5a9/docs/research/2026-10-18-music-models/README.md)
   for official contracts, Korean support evidence and third-party boundaries.
@@ -1394,7 +1392,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. On GenAI a silent cast member's look comes from the shot pictures `shot_image` draws from the sheet panels; the scene sends no picture of them and the plan names each one it leaves out (`scene_reference_omitted`). On other engines declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Restage a single shot in which three speak and flag a requested one-take for a decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Split a shot at every change of speaker. If a requested one-take needs two voices, resolve the conflict before writing its dialogue.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 ## Contributors

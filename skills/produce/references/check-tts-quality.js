@@ -314,7 +314,7 @@ function check(work, board) {
     if(require('../../_shared/scene-acting.js').hasCuedThought(s) && receipt?.generator!=='speech_compose')
       throw new Error('Compose the private speech at its authored frame for card '+i);
     if(win.SB_DOC?.speechPlanVersion===1 && lines.length && win.VOICE!=='user') {
-      if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('Multi-speaker shots need separately attached lines and speech_compose receipt');
+      if(new Set(lines.map(n=>n.speaker)).size!==1 && receipt?.generator!=='speech_compose')throw new Error('An archived mixed-speaker shot lacks its composition receipt. Split new dialogue at each change of speaker.');
       const padded=lines.some(n=>(n.acting?.leadInSeconds??0)>0||(n.acting?.tailOutSeconds??0)>0) || s.performance?.some(event=>event.kind==='action' && (win.SB_DOC?.performanceTimingVersion===1 || event.durationSeconds!==undefined || event.withGroup!==undefined));
       const direct=!padded && !require('../../_shared/scene-acting.js').hasCuedThought(s) && lines.length===1 && lines[0].audio?.sha256===media[audio];
       if(!direct && (!receipt || receipt.audioSha256!==media[audio] || JSON.stringify(receipt.lineIds)!==JSON.stringify(lines.map(n=>n.id)) || receipt.expectedText!==lines.map(n=>n.tts).join('. ')))throw new Error('Scene WAV has no current line-bound generation receipt for card '+i);

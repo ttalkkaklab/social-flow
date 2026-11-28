@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const settings = require('./model-settings.js');
 const { evaluateWindowScript } = require('./scenes-vm.js');
 const { videoSlot, resolveVideoChoice } = require('../storyboard/references/production-mode.js');
-const { videoLines } = require('../storyboard/references/structure-contract.js');
+const { videoLines, shotSpeakerFinding } = require('../storyboard/references/structure-contract.js');
 const { projectSceneCast, sceneSpeechRoute } = require('./scene-cast.js');
 const { productionPerformance } = require('./scene-acting.js');
 const { framePlan, imageReferences, previzHandoff } = require('../storyboard/references/render-routing.js');
@@ -138,6 +138,10 @@ function readVideoContext(episode, shotId, sceneNo, selectionOnly = false) {
   let scene = sceneNo === undefined ? undefined : board.STRUCTURE?.scenes?.find(s => s.no === sceneNo);
   if (scene?.speakers !== undefined && scene.frames === undefined && !storedMembers.some(card => card.timeline?.images?.some(pin => pin.role === 'start'))) scene = {...scene,frames:{}};
   if (sceneNo !== undefined && (!scene || !storedMembers.length)) throw new Error('sceneNo must identify a storyboard scene with shots');
+  for (const card of storedMembers) {
+    const issue = shotSpeakerFinding(board, card, scenes.indexOf(card));
+    if (issue) throw new Error(issue.what);
+  }
   const choice = s => resolveVideoChoice(production, s, snapshot?.config.models.video);
   const { selection: savedSelection, source } = choice(storedMembers[0]);
   const owner = scene ?? (selectionOnly && board.STRUCTURE?.scenes?.find(s => s.no === storedMembers[0].scene));

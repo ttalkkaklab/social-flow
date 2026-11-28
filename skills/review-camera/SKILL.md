@@ -15,8 +15,7 @@ Read
 [action direction](../storyboard/references/action-direction.md) and
 [shot continuity](../storyboard/references/shot-continuity.md) and
 [dialogue coverage](../storyboard/references/dialogue-coverage.md). Test its worked cases
-against each speaking shot: an exchange one view holds, a reply whose evidence needs another
-view and two faces that both read. Challenge a profile two-shot whose speaking mouth cannot be read. Inspect the whole sequence
+against each speaking shot: a single speaker across several lines, a reply on the next shot and a silent listener in a two-shot. Challenge a profile two-shot whose speaking mouth cannot be read. Inspect the whole sequence
 for speech ownership, eyelines and preserved lines; these findings are guidance, not gates.
 
 Apply [scene attention](../storyboard/references/shot-view.md#plan-attention-across-the-scene).

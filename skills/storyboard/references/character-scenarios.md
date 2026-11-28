@@ -166,8 +166,7 @@ note the episode's starting/resulting state in storyboard.md when useful, not in
 identity schema. Unapproved alternatives do not establish series history.
 
 Allow a scene to hold multiple lines, multiple speakers and silence. Cut only after the
-scene reads coherently. The first speaker's line, second speaker's answer and listener's
-response can share a shot. Set dialogue `to` to the actual addressee; `audience` means a real
+scene reads coherently. Give the second speaker’s answer its own shot. A listener can react silently during either shot. Set dialogue `to` to the actual addressee; `audience` means a real
 address to the viewer, not a placeholder for unknown blocking. A narrator-only explanation
 and a silent visual story are valid expressions.
 Use `to: unidentified` only for an in-world listener whose identity is unknown, such as a
@@ -284,9 +283,7 @@ delivery and `SB_DOC.speechPlanVersion:1` before review. Set
 `SB_DOC.performanceTimingVersion:1` on new boards so production requires finite timing for
 independent actions. Unknown action durations are valid draft findings; older unversioned
 timing retains its compatibility path and an explicit warning, not a fabricated duration. Keep each speaker’s lines and audio
-receipts separate. A shot may contain several speakers: the speech composer joins their
-attached takes in performance order, including anticipation, independent actions and reactions. Split
-shots when the staging calls for a cut and update performance group references.
+receipts separate. The speech composer joins one speaker’s takes per shot in performance order. Reconcile performance group references when splitting at a change of speaker.
 
 Translate the dramatic situation into optional per-line `acting` before production:
 `context`, `intent`, `emotion`, `vocal`, `visual`, `leadInSeconds` and `tailOutSeconds`.

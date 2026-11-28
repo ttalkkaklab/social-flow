@@ -60,16 +60,7 @@ audio. Do not tell the model both to repeat sample words and to say new dialogue
 
 ## Runtime design
 
-For MSR with two visible speakers, `shot_prompt` takes `speakerBindings` from the
-actual start image: `{speaker:"hero",screenPosition:"left",description:"the orc in black armor"}`.
-Left/right are the viewer's coordinates; Image 1 may be the person on the right.
-Both speakers need distinct positions. The compiler repeats each turn's name,
-position, appearance, Image N and Audio N, with the other visible mouths closed.
-The start-image hash pins these bindings; changed image bytes require reauthoring.
-Two-speaker dialogue remains supported; this does not split shots automatically.
-Apply [dialogue coverage](../../storyboard/references/dialogue-coverage.md) during authoring:
-OTS/reverse can keep one speaking face per clip while retaining two visible characters;
-a readable two-shot can retain both speakers. Bindings do not repair an occluded mouth.
+Each shot has at most one speaking character across on-screen speech, off-screen speech, narration and inner thoughts. Start a new shot before a different character speaks, even in the same framing. Silent listeners may remain visible. Verify each line against its pinned voice and the speaking mouth in the take. See [dialogue coverage](../../storyboard/references/dialogue-coverage.md).
 
 Keep spoken words in `shot_dialogue`. MSR refuses quotes of those words in the
 action or an explicit request prompt (`video_dialogue_embedded`) rather than

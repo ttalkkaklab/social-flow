@@ -286,7 +286,7 @@ One short is a book, a sequence is a paragraph, a scene is a sentence, a shot is
 A short is usually one sequence. A scene breaks when place or time changes, or a completed
 value turn gives way to a new event. Within it, keep a continuous exchange or action in one
 shot when its framing can show all relevant cues. Split when a new view changes what the
-viewer notices; a new sentence or a second speaker alone is not a cut reason.
+viewer notices; a new sentence can stay on the shot. A different speaker needs a new card.
 
 `type` (cover/points/quote/broll/outro) is the kind of screen. The **playback role** is `beat`.
 It's orthogonal to the grammar axis.
@@ -1101,9 +1101,9 @@ and `delivery: "voiceover" | "on_screen" | "off_screen"`. Narrator is a characte
 TTS settings. Omitted speakers are a legacy import convention only. Example:
 
 ```js
-narration: [
-  { id: "d-intro", speaker: "narrator", delivery: "voiceover", tts: "The door opened.", sub: "The door opened." },
-  { id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here.", acting: { direction: "firm, reassuring", tags: [] } }
+SCENES: [
+  { id: "s0001", narration: [{ id: "d-intro", speaker: "narrator", delivery: "voiceover", tts: "The door opened.", sub: "The door opened." }] },
+  { id: "s0002", narration: [{ id: "d-warning", speaker: "mina", delivery: "on_screen", tts: "Stay here.", sub: "Stay here.", acting: { direction: "firm, reassuring", tags: [] } }] }
 ]
 ```
 
@@ -1128,17 +1128,16 @@ resolves supported generator arguments; `plan_video` carries the same acting con
 Legacy lines without `acting` keep baseline delivery. Neither the field nor a successful
 plan certifies the resulting expression or prosody. See the speech contract for examples.
 
-A shot may hold an exchange. When a render exceeds the selected model's pinned-voice capacity,
-split at an authored cut into consecutive shots preserving these line ids.
+A shot can hold several lines by one speaker. Start a new shot before a different character speaks. Preserve line IDs across the cut. When a scene exceeds the model’s pinned-voice capacity, split the scene at an existing shot boundary.
 
 > The example and the character caps below are story-v1 guidance for resumed boards. A
 > `speechPlanVersion:1` board writes every entry in the shape above — `id`, `speaker`,
 > `delivery` — and takes its length from the performance (storyboard SKILL §5).
 
 ```js
-narration: [
-  { id: "d-fee", speaker: "mina", delivery: "on_screen", tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다." },
-  { id: "d-fine", speaker: "narrator", delivery: "voiceover", tts: "안 내면 과태료가 붙습니다.", sub: "안 내면 과태료가 붙습니다." }
+SCENES: [
+  { id: "s0001", narration: [{ id: "d-fee", speaker: "mina", delivery: "on_screen", tts: "사천칠백만 동이 기준입니다.", sub: "4,700만 동이 기준입니다." }] },
+  { id: "s0002", narration: [{ id: "d-fine", speaker: "narrator", delivery: "voiceover", tts: "안 내면 과태료가 붙습니다.", sub: "안 내면 과태료가 붙습니다." }] }
 ]
 ```
 

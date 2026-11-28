@@ -18,10 +18,7 @@ until `project_manage status` returns `ready` in that directory.
 
 For motion-graphic shots, follow [motion type selection and design](references/motion-graphics.md): persist `shot.motionGraphic` with a common `THEME.motionGraphicTheme` when the episode needs consistency and contextual `style.theme` (`auto` or an explicit channel theme), choose the type from viewer intent and available evidence, and keep style, choreography and renderer separate. Built-in abstract scenes use the installed `prepare-motion-graphic.js`; asset-dependent types retain their authored or mesh routes.
 
-Follow [dialogue coverage](references/dialogue-coverage.md): a shot keeps every line spoken
-in its view, so cut where the staging, the visible evidence or the selected model's
-pinned-voice capacity calls for another view, not at every speaker change, and do not make
-every speaker the picture's subject. First plan the scene's
+Follow [dialogue coverage](references/dialogue-coverage.md): give each shot one voice and open a new card when the speaker changes. First plan the scene’s
 [attention and visible changes](references/shot-view.md#plan-attention-across-the-scene),
 then set each shot's size, angle and delivery. Keep silent
 listeners in the cast when visible. Use `frames.mode:"first"` and image2video for
@@ -40,7 +37,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. On GenAI a silent cast member's look comes from the shot pictures `shot_image` draws from the sheet panels; the scene sends no picture of them and the plan names each one it leaves out (`scene_reference_omitted`). On other engines declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Restage a single shot in which three speak and flag a requested one-take for a decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Split a shot at every change of speaker. If a requested one-take needs two voices, resolve the conflict before writing its dialogue.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 **Story language (user directive, 2026-11-18).** Write the synopsis, scenario, story
@@ -546,11 +543,11 @@ mandatory spoken thesis/CTA and narration-only suggestions. Keep the actual runt
 
 `SCENES[]` remains the flat shot array. Bind each shot to its dramatic scene; cut for a
 change of attention, revealed information, an action boundary or a necessary reaction.
-One shot may carry a complete exchange. Use the ordered `performance` and speech-group
+Keep consecutive lines by the same speaker together when the action allows. Use the ordered `performance` and speech-group
 references in character-scenarios so that every story event survives the translation.
 Do not add coverage merely to meet a size count or repeat a medium close-up for every line.
 Before committing the shot list, read each complete scene without cuts, then compare the
-proposed boundaries. An explicit one-take keeps all turns and continuous action on one card. Merge adjacent shots when the frame carries the continuing action, replies included. Split when a reveal, reaction, action boundary, viewpoint or necessary
+proposed boundaries. A requested one-take can have one voice. If the script needs a reply, report the conflict and retain the lines until the author chooses cuts or revises the dialogue. Merge adjacent shots only if the result has at most one speaker. Split when a reveal, reaction, action boundary, viewpoint or necessary
 geography changes what the audience follows. A close-up is one possible reason, not a rule.
 Follow [shot boundary decisions](references/shot-boundaries.md) after `shot_dialogue` and
 after later framing/timing changes. Use `storyboard_read.boundaryReview` to inspect every
@@ -558,11 +555,11 @@ actual playback join, including silent action and speaker changes.
 After `shot_dialogue`, read each scene's complete speech and action without the shot breaks.
 Keep a continuing speaker in the same shot while the frame carries the performance; a pause,
 new sentence, changed speech purpose, glance or hand gesture alone does not require a cut.
-A speaker change alone does not require a cut; the selected model's pinned-voice capacity applies to each render and `video_plan` reports a scene over it.
+A speaker change requires a cut; the selected model's pinned-voice capacity applies to each render and `video_plan` reports a scene over it.
 For face-to-face generated dialogue, apply [dialogue coverage](references/dialogue-coverage.md):
 use speaker-facing OTS/reverse when the speaking face carries the new information, or
 purposeful off_screen speech over a reaction, detail or spatial view when that carries it.
-Give each camera setup its own shot size and angle. In a requested one-take, let the next person speak in the same frame or follow them with a continuous move.
+Give each camera setup its own shot size and angle. In a one-take, show the listener responding through action.
 Revise provisional shots before images: preserve line IDs, order, speaker, delivery and acting;
 use `storyboard_apply.shotsById` and `removeShotIds` to merge, or `story_shot` followed by
 characters/lines to split. Reconcile performance groups, story/event references and continuity

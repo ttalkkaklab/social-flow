@@ -12,7 +12,7 @@ import * as nodeModule from 'node:module';
 import { execFileSync } from 'node:child_process';
 const voiceContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-voice.js');
 const characterSpeechContract = () => nodeModule.createRequire(import.meta.url)('../../skills/_shared/character-speech.js');
-import { readBoard, serializeBoard } from './storyboard.js';
+import { contract, readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
@@ -225,6 +225,15 @@ export function manageSpeech(args, options = {}) {
     const mutates = ['prepare', 'update', 'attach_audio', 'attach_video', 'retime'].includes(args.action);
     if (mutates && args.expectedRevision !== revision)
         throw new Error('Read speech first and supply its current expectedRevision; the storyboard may have changed');
+    function checkSpeakers(targets) {
+        for (const shot of targets ?? []) {
+            const issue = contract().shotSpeakerFinding(win, shot, win.SCENES.indexOf(shot));
+            if (issue)
+                throw new Error(issue.what);
+        }
+    }
+    if (!['list', 'update', 'prepare'].includes(args.action))
+        checkSpeakers(win.SCENES?.filter(shot => !args.shotId || shot.id === args.shotId));
     const doc = object(win.SB_DOC);
     const rawCharacters = doc.characters;
     const voiceWarnings = [];
@@ -615,6 +624,8 @@ export function manageSpeech(args, options = {}) {
     }
     if (args.action === 'plan_audio' && (!selected.length || selected.some(({ line }) => !line.id || !line.speaker || !line.delivery)))
         throw new Error('Prepare explicit speech before planning audio');
+    if (changed && ['update', 'prepare'].includes(args.action))
+        checkSpeakers(scenes);
     if (changed) {
         const ids = new Set();
         for (const { scene, line } of all) {

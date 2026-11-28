@@ -177,7 +177,7 @@ describe('beat references through public shot edits', () => {
       {...existing,start:event(2),end:event(2)}, {...following,start:event(3),end:event(3)}]);
   });
 
-  it('keeps quoted anchors and earlier review evidence on the speaker who delivered an identical line', () => {
+  it('keeps quoted anchors and earlier review evidence on the original of two identical lines', () => {
     const dir = tmp(), admission = 'I signed the release.';
     const read = () => readBoard(dir).win;
     const apply = patch => {
@@ -196,8 +196,8 @@ describe('beat references through public shot edits', () => {
       review:{hash:'the previous read', payoff:{reason:'The guard admitted it.', refs:[payoff]}}};
     apply({globals:{STORY:story}, set:{structure:structure([scene(1)]), shots:cards}});
     let guard = read().SCENES[1];
-    guard.narration.unshift(line('courier','readback'));
-    guard.performance = [says('courier',1), says('guard',2)];
+    guard.narration.unshift(line('guard','readback'));
+    guard.performance = [says('guard',1), says('guard',2)];
     apply({shotsById:[{id:guard.id,shot:guard}]});
     const afterLines = read().STORY;
     assert.deepEqual(afterLines.payoff, ref(2,2,admission));
@@ -208,9 +208,9 @@ describe('beat references through public shot edits', () => {
       ref(2,1,opening.quote),ref(3,2,admission),ref(4,1,ending.quote)]);
     assert.deepEqual(board.STORY.review.payoff.refs,[board.STORY.payoff]);
     assert.equal(board.STORY.review.hash,'the previous read');
-    // Changing the earlier evidence to the courier in the same patch explicitly names the new ordinal.
+    // Changing the earlier evidence to the readback in the same patch explicitly names the new ordinal.
     const explicit = ref(2,1,admission);
-    const review = {...board.STORY.review,payoff:{reason:'The courier read it back.',refs:[explicit]}};
+    const review = {...board.STORY.review,payoff:{reason:'The guard read it back.',refs:[explicit]}};
     apply({removeShotIds:['s0004'], globals:{STORY:{...board.STORY,payoff:explicit, review}}});
     board = read();
     assert.deepEqual(board.STORY.payoff,explicit);
@@ -237,7 +237,7 @@ describe('beat references through public shot edits', () => {
     assert.equal(apply({set:{structure:structure([scene(1)]),shots:[speech,source]},
       globals:{STORY:{primaryHookType:'in_medias_res',payoff,ending,transcripts:[live]}}}).written,true);
     const old = read(), spoken = old.SCENES[0];
-    spoken.narration.unshift({id:'courier',speaker:'courier',tts:'I did.'});
+    spoken.narration.unshift({id:'readback',speaker:'guard',tts:'I did.'});
     const edited = apply({set:{shots:[old.SCENES[1],spoken]},globals:{STORY:old.STORY}});
     assert.equal(edited.written,true,JSON.stringify(edited.findings));
     const after = read().STORY;
@@ -408,8 +408,8 @@ describe('beat references through public shot edits', () => {
       {kind:'dialogue',group:1,character:'claimant',to:'clerk',audience:{speaker:'Voice on the intercom',listener:'The clerk'}},
       {kind:'dialogue',group:2,character:'clerk',to:'claimant',audience:{speaker:'The clerk',listener:'Voice on the intercom'}},
     ]};
-    const setup = applyStoryboard({path:dir,set:{structure:structure([scene(1)]),shots:[card]},globals:{STORY:{primaryHookType:'in_medias_res'}}});
-    assert.equal(setup.written,true,JSON.stringify(setup.findings));
+    // Repair a historical two-speaker card in one edit.
+    writeFileSync(join(dir,'scenes.js'),serializeBoard({STRUCTURE:structure([scene(1)]),SCENES:[card],STORY:{primaryHookType:'in_medias_res',hookContractVersion:1}}));
     const edit = async lines => {
       const result = await ROUTES.shot_dialogue({path:dir,shots:[{id:card.id,lines}]});
       assert.ok(!result.isError,JSON.stringify(result.content));
@@ -835,8 +835,19 @@ describe('story first, then characters and lines', () => {
     assert.throws(() => writeStoryShots({path:dir,shots:[{scene:1,summary:'A reverse.'}]}),/scene_one_take/);
     castFile(dir,['mina','joon']);
     writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['mina','joon']}]});
-    writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'mina',tts:'안녕'},{speaker:'joon',tts:'반가워'}]}]});
-    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line=>line.speaker),['mina','joon']);
+    const before = readBoard(dir);
+    const lines = [{speaker:'mina',tts:'Hello.'},{speaker:'joon',tts:'Hi.'}];
+    const refused = writeShotDialogue({path:dir,shots:[{id:'s0001',lines}]});
+    assert.ok(refused.findings.some(f => f.code === 'shot_multiple_speakers'));
+    assert.equal(refused.written,false);
+    const bulk = applyStoryboard({path:dir,draft:true,shotsById:[{id:'s0001',shot:{...before.win.SCENES[0],narration:lines}}]});
+    assert.ok(bulk.findings.some(f => f.code === 'shot_multiple_speakers'));
+    for (const tts of ['Mina: Hello.\nJoon: Hi.', '[Mina]: Hello.\n[Joon]: Hi.', '[Mina]：Wait [Joon]：Go', '[Mina] Wait.\n[Joon] Go.', '**Mina:** Wait.\n**Joon:** Go.']) {
+      const embedded = writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'mina',tts}]}]});
+      assert.equal(embedded.written,false);
+      assert.ok(embedded.findings.some(f => f.code === 'shot_multiple_speakers'));
+    }
+    assert.equal(readBoard(dir).sha256,before.sha256);
     assert.equal(storySceneSchema.safeParse({ path: dir, scenes: [{ ...scene, charge: { open: '+', close: '+++' } }] }).success, false);
     assert.deepEqual(TOOLS.find((t) => t.name === 'story_scene').inputSchema.properties.scenes.items.properties.charge.properties.close.enum, ['+', '-', '++', '--']);
   });
@@ -874,47 +885,42 @@ describe('story first, then characters and lines', () => {
     writeStorySequences({path:dir, primaryHookType:'in_medias_res',sequences:[{id:'q1',title:'A key',purpose:'Follow the key'}]});
     const people = ['ada','bo','cy'];
     const makeScene = no => ({sequence:'q1',no,place:'Hall',time:'Day',event:'The key changes hands',summary:'Follow the key.'});
-    writeStoryScenes({path:dir,scenes:[{...makeScene(1),speakers:['reader','ada','bo','cy'],
+    writeStoryScenes({path:dir,scenes:[{...makeScene(1),speakers:['ada','bo','cy'],
       speakerReferences:people.map(character => ({character,path:relative(dir,join(root,'assets/characters',character,'face.png'))})),
       frames:{start:'first.png',end:'last.png'}},makeScene(2)]});
     for (const name of ['first','second','last']) writeFileSync(join(dir,name+'.png'),png);
-    const timeline = (start, picture, people) => ({startFrame:start,endFrame:start+48,transition:start?'hard_cut':'open',
+    const timeline = (start, picture, people) => ({startFrame:start,endFrame:start+(start<48?24:48),transition:start?'hard_cut':'open',
       framing:'Medium shot.',action:'The key changes hands.',openingPositions:people.map(character=>({character,images:[],position:'Beside the door.'})),
       images:[{role:'start',frame:start,path:picture}]});
     writeStoryShots({path:dir,shots:[{scene:1,summary:'Ada hands Bo the key.',timeline:timeline(0,'first.png',['ada','bo'])},
+      {scene:1,summary:'Bo takes the key.',timeline:timeline(24,'first.png',['ada','bo'])},
       {scene:1,summary:'Bo hands Cy the key.',timeline:timeline(48,'second.png',['bo','cy'])},{scene:2,summary:'The gate opens.'}]});
     const archive = readBoard(dir);
-    const seen = writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['ada','bo']},{id:'s0002',characters:['bo','cy']},{id:'s0003',characters:[]}]});
+    const seen = writeShotCharacters({path:dir,shots:[{id:'s0001',characters:['ada','bo']},{id:'s0002',characters:['ada','bo']},{id:'s0003',characters:['bo','cy']},{id:'s0004',characters:[]}]});
     assert.ok(seen.written,JSON.stringify(seen.findings));
     // Three people in view do not split the scene; the scene references the people it voices.
     assert.ok(!seen.findings.some(f=>f.code==='scene_reference_split'));
-    assert.deepEqual(readBoard(dir).win.SCENES.map(card=>card.scene),[1,1,2]);
-    const spoken = writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'ada',tts:'Here.'},{speaker:'bo',tts:'Got it.'}]},
-      {id:'s0002',lines:[{speaker:'reader',delivery:'voiceover',tts:'At last.'},{speaker:'cy',tts:'Thanks.'}]}]});
+    assert.deepEqual(readBoard(dir).win.SCENES.map(card=>card.scene),[1,1,1,2]);
+    const spoken = writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'ada',tts:'Here.'}]},{id:'s0002',lines:[{speaker:'bo',tts:'Got it.'}]},
+      {id:'s0003',lines:[{speaker:'cy',tts:'Thanks.'}]}]});
     assert.ok(spoken.written,JSON.stringify(spoken.findings));
-    // Cy is the third speaker. Bo is silent in s0002, and the narrator speaks over the picture.
+    // Cy is the third speaker. Bo is silent in the third shot.
     assert.deepEqual(spoken.findings.find(f=>f.code==='scene_reference_split').groups.map(g=>[g.sceneNo,g.shotIds,g.characters]),[
-      [1,['s0001'],['ada','bo']], [2,['s0002'],['cy']]]);
+      [1,['s0001','s0002'],['ada','bo']], [2,['s0003'],['cy']]]);
     const saved=readBoard(dir).win, [first,second] = saved.STRUCTURE.scenes;
     assert.deepEqual(saved.STRUCTURE.sequences[0].scenes,[1,2,3]);
-    assert.deepEqual(saved.SCENES.map(card=>[card.id,card.scene]),[['s0001',1],['s0002',2],['s0003',3]]);
-    assert.deepEqual([first.speakers,second.speakers],[['ada','bo'],['reader','cy']]);
+    assert.deepEqual(saved.SCENES.map(card=>[card.id,card.scene]),[['s0001',1],['s0002',1],['s0003',2],['s0004',3]]);
+    assert.deepEqual([first.speakers,second.speakers],[['ada','bo'],['cy']]);
     assert.deepEqual(second.speakerReferences.map(ref=>ref.character),['cy']);
     assert.deepEqual([first.frames,second.frames],[{start:'first.png'},{start:'second.png',end:'last.png'}]);
-    const moved=saved.SCENES[1].timeline;
+    const moved=saved.SCENES[2].timeline;
     assert.deepEqual([moved.startFrame,moved.endFrame,moved.transition,moved.images[0].frame],[0,48,'open',0]);
     assert.equal(readStoryboard({path:dir,level:'shots'}).boundaryReview.sceneBoundaries[0].reason,'scene_character_reference_limit');
-    const impossible=writeShotDialogue({path:dir,shots:[{id:'s0002',lines:[{speaker:'ada',delivery:'off_screen',tts:'Wait.'},
-      {speaker:'bo',tts:'Here.'},{speaker:'cy',tts:'Thanks.'}]}]});
-    assert.equal(impossible.written,false);
-    assert.ok(impossible.findings.some(f=>f.code==='scene_cast_exceeded' && f.shotId==='s0002' && !f.splitBefore.length));
-    assert.deepEqual(readBoard(dir).win.SCENES,saved.SCENES);
-
     // An older board kept both pairs in one scene. Previewing its repair preserves the original file.
     archive.win.SCENES.forEach((card,i) => { card.visual = {...card.visual, character:saved.SCENES[i].visual.character}; card.narration = saved.SCENES[i].narration; });
     archive.win.STRUCTURE.scenes[0].videoDirection = {emotion:'The visitors relax.',openingPositions:['ada','bo'].map(character => ({character,images:[],position:'Beside the door.'})),
       keyframes:[{frame:72,path:'first.png'},{frame:48,path:'second.png'},{frame:47,path:'last.png'}]};
-    archive.win.SCENES[1].visual.frames = {storyboardKeyframes:[{file:'second.png',startFrame:48},{file:'last.png',startFrame:95}]};
+    archive.win.SCENES[2].visual.frames = {storyboardKeyframes:[{file:'second.png',startFrame:48},{file:'last.png',startFrame:95}]};
     archive.win.STRUCTURE.sequences[0].payoff=2;
     archive.win.SB_DOC={...archive.win.SB_DOC,sceneNotes:{2:'Unlock the gate.'}};
     const explicit=structuredClone(archive.win);
@@ -923,7 +929,7 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir,'scenes.js'),authored);
     const missingPrompts=applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
     assert.equal(missingPrompts.written,false);
-    assert.ok(missingPrompts.findings.some(f=>f.code==='scene_split_prompts' && f.splitBefore.includes('s0002')));
+    assert.ok(missingPrompts.findings.some(f=>f.code==='scene_split_prompts' && f.splitBefore.includes('s0003')));
     assert.equal(readFileSync(join(dir,'scenes.js'),'utf8'),authored);
     const source = serializeBoard(archive.win,archive.header);
     writeFileSync(join(dir,'scenes.js'),source);
@@ -938,13 +944,13 @@ describe('story first, then characters and lines', () => {
     assert.equal(repaired.STRUCTURE.sequences[0].payoff,3);
     assert.equal(repaired.SB_DOC.sceneNotes[3],'Unlock the gate.');
     assert.equal(repaired.STRUCTURE.scenes[1].referenceSplitFrom,1);
-    assert.deepEqual(repaired.SCENES[1].visual.frames.storyboardKeyframes.map(pin=>pin.startFrame),[0,47]);
+    assert.deepEqual(repaired.SCENES[2].visual.frames.storyboardKeyframes.map(pin=>pin.startFrame),[0,47]);
     assert.equal(repaired.STRUCTURE.scenes[0].frames.end,'last.png');
     assert.equal(repaired.STRUCTURE.scenes[0].videoDirection.keyframes,undefined);
     assert.deepEqual(repaired.STRUCTURE.scenes[1].videoDirection.keyframes,[{frame:24,path:'first.png'}]);
-    assert.deepEqual(repaired.SCENES.slice(0,2).map(card=>[card.scene,card.timeline.startFrame,card.timeline.endFrame]),[[1,0,48],[2,0,48]]);
+    assert.deepEqual(repaired.SCENES.slice(0,3).map(card=>[card.scene,card.timeline.startFrame,card.timeline.endFrame]),[[1,0,24],[1,24,48],[2,0,48]]);
   });
-  it('keeps legacy per-shot artwork when splitting a GenAI scene with three shot openings', () => {
+  it('keeps legacy per-shot artwork when splitting a GenAI scene with four shot openings', () => {
     const root = mkdtempSync(join(tmpdir(),'sb-reference-')); dirs.push(root);
     const video = {engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'};
     setupProject(root,{video});
@@ -952,11 +958,11 @@ describe('story first, then characters and lines', () => {
     castFile(dir,['ada','bo','cy'],{root});
     const marks = people => people.map(character => ({character,images:[],position:'By the door.'}));
     const scene = {no:1,place:'Hall',time:'Day',event:'The key changes hands',videoDirection:{openingPositions:marks(['ada','bo']),
-      emotion:'The visitors relax.',keyframes:[{frame:48,path:'second.png'},{frame:47,path:'end.png'}]}};
-    const names = ['first.png','second.png','third.png'];
+      emotion:'The visitors relax.',keyframes:[{frame:96,path:'third.png'},{frame:95,path:'end.png'}]}};
+    const names = ['first.png','second.png','third.png','fourth.png'];
     for (const name of [...names,'end.png']) writeFileSync(join(dir,name),png);
-    const cards = [['ada','bo'],['bo','cy'],['cy']].map((people,i) => ({...shot('points','body',1),id:'s000'+(i+1),duration:2,
-      narration:people.map((speaker,n) => ({id:'s000'+(i+1)+'-l'+n,speaker,delivery:'on_screen',tts:'Take it.'})),shot:{size:'ms',angle:'eye',render:{mode:'generated_video'}},
+    const cards = [['ada','bo'],['bo'],['cy'],['cy']].map((people,i) => ({...shot('points','body',1),id:'s000'+(i+1),duration:2,
+      narration:people.slice(0,1).map((speaker,n) => ({id:'s000'+(i+1)+'-l'+n,speaker,delivery:'on_screen',tts:'Take it.'})),shot:{size:'ms',angle:'eye',render:{mode:'generated_video'}},
       visual:{character:people,action:'They pass the key.',frames:{mode:'first',start:names[i]},video:{openingPositions:marks(people)}}}));
     writeFileSync(join(dir,'scenes.js'),serializeBoard({PRODUCTION:{videoModel:video},STRUCTURE:structure([scene]),SCENES:cards}));
     const update = applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
@@ -965,9 +971,9 @@ describe('story first, then characters and lines', () => {
     assert.deepEqual(repaired.STRUCTURE.scenes.map(scene=>scene.frames),[undefined,undefined]);
     assert.deepEqual(repaired.SCENES.map(card=>contract().shotImage(repaired,card)),names);
     assert.deepEqual(contract().imageGaps(repaired,2),[]);
-    assert.equal(repaired.SCENES[0].visual.frames.end,'end.png');
-    // Cy is the third speaker, so the part from s0002 keeps its own two openings.
-    assert.deepEqual(repaired.SCENES.map(card=>card.scene),[1,2,2]);
+    assert.equal(repaired.SCENES[1].visual.frames.end,'end.png');
+    // Cy is the third speaker, so the part from s0003 keeps its own two openings.
+    assert.deepEqual(repaired.SCENES.map(card=>card.scene),[1,1,2,2]);
   });
   it('characters wait for a complete story; lines wait for the shot\'s characters', () => {
     const dir = tmp();
@@ -992,9 +998,9 @@ describe('story first, then characters and lines', () => {
     writeFileSync(join(dir, 'cast.json'), JSON.stringify({ characters: keyed }));
     writeShotCharacters({ path: dir, shots: [{ id: 's0001', characters: ['mina'] }, { id: 's0002', characters: [] }] });
     assert.throws(() => writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'joon', tts: '야', delivery: 'on_screen' }] }] }), /story_order/);
-    // A shot keeps the lines of several speakers in spoken order; the selected model's voice capacity is checked at planning.
-    writeShotDialogue({ path: dir, shots: [{ id: 's0001', lines: [{ speaker: 'mina', tts: '안녕' }, { speaker: 'narrator', tts: '그날 밤.' }] }] });
-    assert.deepEqual(readBoard(dir).win.SCENES[0].narration.map(line => line.speaker), ['mina', 'narrator']);
+    const rejected = writeShotDialogue({path:dir,shots:[{id:'s0001',lines:[{speaker:'mina',tts:'Hello.'},{speaker:'narrator',tts:'That night.'}]}]});
+    assert.equal(rejected.written,false);
+    assert.ok(rejected.findings.some(issue => issue.code === 'shot_multiple_speakers'));
     const thought = { id: 'private', speaker: 'mina', voiceoverKind: 'inner_thought', tts: 'She knows.' };
     const writeLine = line => writeShotDialogue({path:dir, shots:[{id:'s0001',lines:[line]}]});
     const savedLine = () => readBoard(dir).win.SCENES[0].narration[0];

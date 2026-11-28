@@ -62,7 +62,7 @@ function referenceConflict(scene, groups) {
   const shotId = group.shotIds[0];
   const characters = oversized ? group.characters : unique([...groups[0].characters, ...group.firstShotCharacters]);
   const reason = oneTake ? 'The requested one-take needs a staging decision.'
-    : oversized ? 'Reblock this shot into views with at most two speaking characters.' : 'Split before ' + shotId + '.';
+    : oversized ? 'Split this shot at each change of speaker. Keep the turns in playback order.' : 'Split before ' + shotId + '.';
   const message = 'scene_cast_exceeded: scene ' + scene.no + ', shot ' + shotId + ' references ' + characters.join(', ') + '. ' + reason;
   return {code:'scene_cast_exceeded', sceneNo:scene.no, shotId, characters, groups, splitBefore:oneTake || oversized ? [] : groups.slice(1).map(g => g.shotIds[0]),
     executable:false, videoSubmitted:false, message};

@@ -224,7 +224,7 @@ test('three speaking subjects exceed one distilled MSR render, including an unin
  f.board.SCENES=[shot];
  f.board.STRUCTURE.scenes[0].videoDirection.oneTake=true;
  f.save();
- assert.throws(check, e => e.report?.code === 'scene_cast_exceeded' && e.report.splitBefore.length === 0 && /one-take/.test(e.message));
+ assert.throws(check, /shot_multiple_speakers: s1/);
  assert.equal(fs.existsSync(path.join(f.episode,'.work/video-routing/plans')),false);
 });
 test('remuxing the same recording cannot authorize a second speaker',async t=>{
@@ -800,15 +800,14 @@ test('native gateway video settings select the Desktop adapter and preserve audi
  const f=fixture(t,{engine:'astra-genai-desktop',model:'ltx-2.5-fast',resolution:'270p'});
  const audio=singleSpeakerScene(f,121/24);
  const shot=f.board.SCENES[0], scene=f.board.STRUCTURE.scenes[0];
- scene.speakers.push('guest');
+
  scene.videoDirection.openingPositions.push({character:'guest',images:[],position:'Across the desk.'});
  f.board.SB_DOC.characters.push({id:'guest'});
- shot.narration.push({id:'reply',speaker:'guest',delivery:'on_screen',tts:'Welcome.'});
  f.save();
  const p=planVideo({episode:f.episode,sceneNo:1,requestId:'desktop',args:{reserveUsd:0}});
  assert.equal(p.tool,'astra_genai_desktop_audio2video');assert.equal(p.args.allowAudioTruncation,false);assert.equal(p.args.model,'ltx-2.5-fast');assert.equal(p.args.resolution,'270p');assert.ok(p.inputs[audio]);
  assert.equal(p.voiceContinuity.strategy,'supplied_audio');
- assert.deepEqual(p.speechRoute.speakers,['hero','guest']);
+ assert.deepEqual(p.speechRoute.speakers,['hero']);
  assert.throws(()=>planVideo({episode:f.episode,sceneNo:1,requestId:'wrong',operation:'image',args:{prompt:'ball',imagePath:audio,duration:2,loras:[{ref:'x'}],reserveUsd:0}}));
 });
 test('a saved engine that cannot keep a voice is refused by name, not as a missing adapter',t=>{
@@ -930,8 +929,7 @@ test('a GenAI reference project plans silent and thought shots as scenes on thei
  f.save();
  assert.equal(plan().args.generateAudio,false);
  shot.narration=[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello'},{id:'l2',speaker:'friend',delivery:'on_screen',tts:'Hi'}];f.save();
- // Neither speaker has a picture to carry a voice, which a GenAI scene needs.
- assert.throws(plan,/scene_speech_references: a GenAI scene voices each speaking character/);
+ assert.throws(plan,/shot_multiple_speakers/);
  shot.narration[1]={id:'l2',speaker:'hero',delivery:'voiceover',tts:'A thought'};f.save();
  assert.throws(plan,/msr_speech_route|scene_video_mixed_delivery/);
 });
@@ -966,10 +964,16 @@ function addPhoneReply(f, card, opening='opening.png') {
   f.board.SB_DOC.characters.push({id:'caller',voiceOnly:true,tts,
     voiceReference:{path:voice,tts,sha256:digest(fs.readFileSync(voice))}});
   const lead = card.narration[0].speaker;
-  card.narration.push({id:'reply',speaker:'caller',delivery:'off_screen',tts:'Yes.'});
+  card.scene=1;
+  card.visual.action ??= 'The visitor opens the door.';
   card.duration ??= 5;
+  f.board.SCENES.push({id:'reply',scene:1,duration:1,referenceImage:opening,
+    shot:{size:'ms',angle:'eye'},visual:{action:'The visitor listens.'},
+    narration:[{id:'reply',speaker:'caller',delivery:'off_screen',tts:'Yes.'}]});
+  card.duration -= 1;
   card.shot ??= {size:'ms',angle:'eye'};
   card.visual.frames={mode:'reference',start:opening};
+  f.board.STRUCTURE.scenes[0].frames={start:opening};
   f.board.STRUCTURE.scenes[0].videoDirection = {emotion:'A warm reply.',openingPositions:[
     {character:lead,images:[],position:'At the door.'},{character:'caller',images:[],position:'Off screen on the phone.'}]};
 }
@@ -981,22 +985,22 @@ test('hosted reference video binds one or two voices and ends its image list wit
  execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','sine=d=3',path.join(f.episode,'hero.wav')]);
  f.board.SB_DOC={characters:[{id:'hero',name:'Hero',tts:{engine:'gemini',voiceId:'Kore',language:'en'},voiceReference:{path:'../hero.wav',imagePaths:['../face.png']}}]};
  f.board.SCENES[0]={id:'s1',narration:[{id:'l1',speaker:'hero',delivery:'on_screen',tts:'Hello there'}],visual:{frames:{mode:'reference',start:'../start.png'},
-  references:[{id:'hero-face',path:'../face.png',role:'character',use:'both',purpose:'Hero face'},{id:'street',path:'../place.png',role:'background',use:'both',purpose:'the street'}],video:{prompt:'Hero greets the viewer.'}}};
+  references:[{id:'hero-face',path:'../face.png',role:'character',use:'both',purpose:'Hero face'},{id:'street',path:'../place.png',role:'background',scope:'scene',use:'both',purpose:'the street'}],video:{prompt:'Hero greets the viewer.'}}};
  f.board.SCENES[1]={id:'s2',visual:{frames:{mode:'first',start:'../start.png'},references:[],video:{prompt:'Hero walks on.'}}};const hero=f.board.SB_DOC.characters[0];
  Object.assign(hero.voiceReference,{tts:hero.tts,sha256:digest(fs.readFileSync(path.join(f.episode,'hero.wav')))});
  addPhoneReply(f,f.board.SCENES[0],'../start.png');
  f.save();
  const p=planVideo({episode:f.episode,sceneNo:1,requestId:'ref'});
  assert.equal(p.tool,'minimax_reference');
- assert.deepEqual(p.args.referenceImagePaths.map(file=>path.basename(file)),['face.png','start.png']);
+ assert.deepEqual(p.args.referenceImagePaths.map(file=>path.basename(file)),['face.png','start.png','start.png']);
  assert.equal(p.args.ratio,'16:9');
  assert.deepEqual(p.args.referenceAudioPaths.map(file=>path.basename(file)),['hero.wav','caller.wav']);
- assert.match(p.args.prompt,/reference image 2 \(start/);
- assert.match(p.args.prompt,/reference image 1, uses reference audio 1/);
+ assert.match(p.args.prompt,/reference image 3 \(start/);
+ assert.match(p.args.prompt,/hero \(reference image 1, reference audio 1\):/);
  assert.ok(p.quote.reserveUsd>0);
  assert.match(p.args.prompt,/"Hello there"/);
  assert.match(p.args.prompt,/"Yes\."/);
- f.board.SCENES[0].narration.pop();
+ f.board.SCENES.pop();
  f.board.STRUCTURE.scenes[0].videoDirection.openingPositions.pop();
  f.save();
  const solo=planVideo({episode:f.episode,sceneNo:1,requestId:'one-voice'});
@@ -1071,16 +1075,19 @@ test('a GenAI scene names each shot missing its direction and preserves ordered 
  first.visual.references.push(...second.visual.references);
  f.board.SCENES = [first];
  f.save();
+ assert.throws(()=>planVideo(input),/shot_multiple_speakers/);
+ first.narration[1].speaker=first.narration[0].speaker;
+ f.save();
  const plan=planVideo(input);
  assert.deepEqual(plan.shotIds,['s1']);
  assert.equal(plan.sceneNo,1); assert.equal(plan.tool,'astra_genai_scene');
  assert.deepEqual(plan.args.shots.map(shot=>[shot.id,shot.frames,path.basename(shot.imagePath)]),[['s1',216,'opening.png']]);
  // Each speaker's picture carries their sample; the opening stays the background.
- assert.deepEqual(plan.args.cast.map(member=>[member.id,path.basename(member.voicePath)]),[['heir','heir.wav'],['witness','witness.wav']]);
+ assert.deepEqual(plan.args.cast.map(member=>[member.id,path.basename(member.voicePath)]),[['heir','heir.wav']]);
  assert.deepEqual(plan.args.references.map(ref=>[ref.role,path.basename(ref.imagePath)]),[['background','opening.png']]);
  const sent=numbered(plan);
  assert.ok(sent.startsWith('Opening frame'));
- assert.match(sent,/heir \(Image 1, Audio 1\): "왜 그랬어요\?"[\s\S]+witness \(Image 2, Audio 2\): "제가 찢었습니다\."/);
+ assert.match(sent,/heir \(Image 1, Audio 1\): "왜 그랬어요\?"[\s\S]+heir \(Image 1, Audio 1\): "제가 찢었습니다\."/);
  assert.equal(sent.split(words[0]).length,2);
  assert.match(sent,/Whisper the answer/);
  assert.doesNotMatch(sent,/hard cut|camera holds|tripod|gets to his feet|walk over/i);
@@ -1102,7 +1109,7 @@ test('a GenAI scene names each shot missing its direction and preserves ordered 
  const reordered=planVideo({...input,requestId:'reordered'},false);
  const prompt=reordered.args.prompt;
  assert.ok(prompt.indexOf(words[1])>=0 && prompt.indexOf(words[1])<prompt.indexOf(words[0]));
- assert.match(prompt,/As witness speaks\. Touch the latch\. As heir speaks\./);
+ assert.match(prompt,/Touch the latch/);
  f.board.STRUCTURE.scenes[0].directionDefaults={camera:'camera.static'};
  first.narration[0].acting={direction:'Stammer on the first syllable.',vocal:'Whisper the answer.',tags:['sighs']};
  f.save();
@@ -1558,7 +1565,7 @@ test('a workshop and a voice cannot buy an on-screen principal for either legacy
   assert.match(render(read(path.join(f.episode,'storyboard')),null,'en',1),/han-seoyun.*face/);
   // A second principal's appearance is evaluated on their own scene interval.
   const later={...shot,id:'s0002',visual:{character:'later-actor'},narration:[{speaker:'later-actor',delivery:'on_screen',tts:'Wait.'}]};
-  delete shot.visual.character; shot.narration=[{speaker:character,delivery:'on_screen',tts:'Come in.'},{speaker:'caller',delivery:'off_screen',tts:'Yes.'}];
+  delete shot.visual.character; shot.narration=[{speaker:character,delivery:'on_screen',tts:'Come in.'}];
   fs.writeFileSync(path.join(f.episode,'storyboard/cast.json'),JSON.stringify({characters:{[character]:{}}}));
   for (const [view,role] of [
     [{mode:'front',subjectId:character},'face'],
@@ -1620,7 +1627,7 @@ test('the paid Seedance body matches the approved set, face, wardrobe and voice 
   t.mock.method(globalThis,'setTimeout',(fn,ms,...args)=>timer(fn,ms===10000?0:ms,...args));
   const planned=await ROUTES.video_plan(input);
   const plan=JSON.parse(planned.content[0].text);
-  assert.deepEqual(plan.args.referenceImagePaths,[face,front,room]);
+  assert.deepEqual(plan.args.referenceImagePaths,[face,front,room,room]);
   assert.deepEqual(plan.characterBindings.filter(b=>b.character).map(b=>[b.role,b.slot,b.character]),
     [['face',1,character],['front',2,character],['voice',1,character],['voice',2,'caller']]);
   approveVideo({episode:f.episode,planIds:[plan.id],request:'Use the reviewed sheet.'});
@@ -1672,17 +1679,18 @@ test('the paid Seedance body matches the approved set, face, wardrobe and voice 
   await execute();
   assert.equal(bodies.length,1);
   const parts=bodies[0].content.filter(p=>p.type!=='text');
-  assert.deepEqual(parts.map(p=>p.role),['reference_image','reference_image','reference_image','reference_audio','reference_audio']);
+  assert.deepEqual(parts.map(p=>p.role),['reference_image','reference_image','reference_image','reference_image','reference_audio','reference_audio']);
   const hashUri=uri=>digest(Buffer.from(uri.split(',')[1],'base64'));
   assert.equal(parts[0].image_url.url,'asset://asset-seoyun');
   assert.equal(hashUri(parts[1].image_url.url),digest(fs.readFileSync(front)));
   assert.equal(hashUri(parts[2].image_url.url),digest(fs.readFileSync(room)));
-  assert.equal(hashUri(parts[3].audio_url.url),digest(fs.readFileSync(voice)));
-  assert.equal(hashUri(parts[4].audio_url.url),digest(fs.readFileSync(path.join(dir,'caller.wav'))));
+  assert.equal(hashUri(parts[3].image_url.url),digest(fs.readFileSync(room)));
+  assert.equal(hashUri(parts[4].audio_url.url),digest(fs.readFileSync(voice)));
+  assert.equal(hashUri(parts[5].audio_url.url),digest(fs.readFileSync(path.join(dir,'caller.wav'))));
   assert.deepEqual(f.state().jobs.preview.characterBindings,plan.characterBindings);
 });
 
-test('Seedance keeps the camera-facing body panel, ordered props and both pinned voices', t => {
+test('Seedance keeps the camera-facing body panel, ordered props and the pinned voice', t => {
   const f=fixture(t,{engine:'seedance',model:'dreamina-seedance-2-0-260128',resolution:'480p'});
   const board = path.join(f.episode, 'storyboard'), folder = path.join(f.root,'assets/characters/hero');
   fs.mkdirSync(folder, {recursive:true});
@@ -1704,7 +1712,7 @@ test('Seedance keeps the camera-facing body panel, ordered props and both pinned
   card.visual.video.prompt = 'A person waves from a doorway.';
   card.visual.video.openingPositions = [{character:'hero',images:[1,2],position:'standing in the doorway'}];
   card.narration = [{id:'spoken',speaker:'hero',delivery:'on_screen',tts:'문 앞이야.'}];
-  addPhoneReply(f,card);
+  card.visual.frames.start='opening.png';
   const plan = () => planVideo({episode:f.episode,sceneNo:1,requestId:'cast',maxCostUsd:4}, false);
   for (const [mode,bodyView] of [['front','front'], ['rear','back']]) {
     card.visual.camera = {view:{mode,subjectId:'hero',subject:'The visitor',reason:'Show the moving body.',crop:'Waist up.',subjectType:'person'}};
@@ -1713,7 +1721,7 @@ test('Seedance keeps the camera-facing body panel, ordered props and both pinned
     assert.equal(p.characterInputs[0].bodyView, bodyView);
     assert.deepEqual(p.imageBindings.filter(ref=>ref.submitted).map(ref=>path.basename(ref.path)),
       mode==='rear'?['back.png','opening.png']:['face.png','front.png','opening.png']);
-    assert.deepEqual(p.args.referenceAudioPaths,[wav,path.join(board,'caller.wav')]);
+    assert.deepEqual(p.args.referenceAudioPaths,[wav]);
     assert.equal(p.voiceContinuity.speakers[0].reference.sha256,sha256);
     assert.match(p.args.prompt,/문 앞이야/);
   }
@@ -1750,7 +1758,7 @@ test('Seedance original face IDs are checked on the account before saving a plan
   card.narration = [{speaker:'hero',delivery:'on_screen',tts:'Hello.'}];
   card.visual = {character:'hero', frames:{mode:'reference'}, video:{prompt:'A full-length dancer taps one shoe.'},
     characterInputs:[{character:'hero',bodyView:'front',faceTaskId:'cgt-original',faceReviewPath:'cast-review.json'}]};
-  addPhoneReply(f,card); card.duration=4;
+  card.duration=4; card.visual.frames.start='opening.png';
   f.save();
   const model = 'dreamina-seedance-2-0-260128', original = 'https://example.org/file?signature=private';
   const task = {id:'cgt-original',model,status:'succeeded',duration:4,created_at:Math.floor(Date.now()/1000),content:{video_url:original}};
@@ -1890,11 +1898,11 @@ test('scene submission requires shot images and distinguishes soft references fr
   f.save();
   assert.deepEqual(planVideo(input,false).sceneRequest.shotReferenceImages.map(g=>g.shotId),['s2']);
   assert.equal(anchored.args.referenceImagePaths,undefined);
-  for (const [index,id] of ['ada','bo','cy'].entries()) {
-    const card = f.board.SCENES[index % 2];
-    (card.narration ??= []).push({speaker:id,tts:'Hello.',delivery:index===2?'voiceover':'off_screen'});
+  for (const [index,id] of ['ada','bo'].entries()) {
+    const card = f.board.SCENES[index];
+    (card.narration ??= []).push({speaker:id,tts:'Hello.',delivery:index===1?'voiceover':'off_screen'});
   }
-  scene.speakers=['ada','bo','cy']; f.save();
+  scene.speakers=['ada','bo']; f.save();
   const external=planVideo(input,false);
   assert.equal(external.tool,'seedance_img2video');
   assert.equal(external.voiceContinuity.strategy,'external_tts');
@@ -2196,10 +2204,7 @@ test('model-paced MSR scenes keep bound dialogue inside the corresponding shot',
   assert.ok(echo[2].includes('guest (Image 2, Audio 2): "'+words[0]+'"'));
   f.board.SCENES[2].narration.push({id:'phone',speaker:'speaker',delivery:'off_screen',tts:'Come in.'});
   f.save();
-  const mixed = planVideo({episode:f.episode,sceneNo:1,requestId:'offscreen-reply',args:{reserveUsd:0}},false);
-  const lastShot = mixed.sceneRequest.prompt.split('Then cut directly.').at(-1);
-  assert.match(lastShot,/Visible mouths stay still for off-screen voices/);
-  assert.ok(lastShot.indexOf('guest (Image 2, Audio 2)') < lastShot.indexOf('speaker (Image 1, Audio 1, off screen)'));
+  assert.throws(()=>planVideo({episode:f.episode,sceneNo:1,requestId:'offscreen-reply',args:{reserveUsd:0}},false),/shot_multiple_speakers/);
   f.board.SCENES[2].narration.pop();
   // A nearly full prompt drops optional pacing prose before sacrificing either bound quote.
   const padding = 'The lane is wet. '.repeat(Math.max(0,Math.floor((2050-second.sceneRequest.prompt.length)/17)));
@@ -2223,13 +2228,13 @@ test('an authored scene prompt names its references and takes the numbers the ga
  assert.equal(planVideo({...input,requestId:'round-trip',prompt:compiled.promptTemplate},false).args.prompt,compiled.args.prompt);
  assert.equal(numbered(compiled),compiled.sceneRequest.prompt);
  // The author's sentences go out as written after the opening positions this lane always states; only the names change.
- const own='{hero.face} waits by the left door and says with {hero.voice}, "You came." {guest.image} answers with {guest.voice}, "I stayed."';
+ const own='{hero.face} waits by the left door and says with {hero.voice}, "You came." Then cut directly. {guest.image} answers with {guest.voice}, "I stayed."';
  assert.throws(()=>planVideo({...input,args:{...input.args,shots:[{id:'s1'}]}}),/scene_split_required/);
  assert.throws(()=>planVideo({...input,prompt:own}),/scene_prompt_mismatch/);
  f.board.STRUCTURE.scenes[0].videoDirection.prompt=own;
  f.save();
  const authored=planVideo({...input,prompt:own});
- const body='Image 1 waits by the left door and says with Audio 1, "You came." Image 2 answers with Audio 2, "I stayed."';
+ const body='Image 1 waits by the left door and says with Audio 1, "You came." Then cut directly. Image 2 answers with Audio 2, "I stayed."';
  assert.ok(authored.sceneRequest.prompt.startsWith('Opening frame') && authored.sceneRequest.prompt.endsWith('\n\n'+body));
  assert.equal(numbered(authored),authored.sceneRequest.prompt);
  // The opening is shot 1's picture, not a reference, so every submitted reference is named here.
@@ -2295,7 +2300,7 @@ test('an H3 episode plans exactly its saved prompt, all shot pictures and pinned
  assert.match(wire.input.prompt, /Whip-pan into the next view\. Pan right through the blur.*Follow \{s2\.image\} for about 3\.00 seconds\..*She stands by the near window\..*Low angle\..*The guest raises her hand/);
  assert.deepEqual(wire.input.shots.map(shot => shot.seconds), [3,3]);
  assert.equal(numbered(auto),auto.sceneRequest.prompt);
- direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\n{guest.face} speaks in the voice of {guest.voice}: "I stayed."';
+ direction.prompt='{hero.face} speaks in the voice of {hero.voice}: "You came."\nCut directly. {guest.face} speaks in the voice of {guest.voice}: "I stayed."';
  f.save();
  const p=planVideo(input);
  assert.equal(p.args.prompt,direction.prompt);
@@ -2394,7 +2399,8 @@ test('archived drafts cannot override attributes and production uses the current
   assert.throws(() => planVideo({...input,prompt:draft.prompt + ' Match Image 1.'},false), /label_literal/);
   const padded = planVideo({...input,prompt:draft.prompt + '  '},false);
   assert.equal(numbered(padded), padded.sceneRequest.prompt);
-  const sameTurns = 'Hero looks at Guest and asks, “You came.” Guest replies to Hero, “I stayed.”';
+  const sameTurns = 'Hero looks at Guest and asks, “You came.” Then cut directly. Guest replies to Hero, “I stayed.”';
+  assert.throws(()=>planVideo({...input,prompt:sameTurns.replace('Then cut directly. ','')},false),/shot_multiple_speakers/);
   assert.ok(planVideo({...input,prompt:sameTurns}, false).args.prompt.endsWith(sameTurns));
   assert.throws(() => planVideo({...input,prompt:'Use {guest.voice} for Hero in {hero.face}. Use {hero.voice} for Guest in {guest.face}. ' + sameTurns},false), /scene_dialogue_speaker/);
   for (const extra of ["Guest whispers, ‘Come inside.’", "Guest adds: Come inside.", "Guest says, 'Come inside.'"])
@@ -2490,8 +2496,8 @@ test('the same authored names take picture and audio tags on the H3 reference la
  assert.equal(compiled.tool,'fasth3_omni_reference');
  assert.doesNotMatch(compiled.promptTemplate,/<(Picture|Audio) \d+>/);
  assert.equal(planVideo({...input,prompt:compiled.promptTemplate},false).args.prompt,compiled.args.prompt);
- const authored=planVideo({...input,prompt:'{hero.face} speaks with {hero.voice}: "You came." {guest.face} replies with {guest.voice}: "I stayed." Match {s1.image}.'},false);
- assert.match(authored.args.prompt,/^<Picture 1> speaks with <Audio 1>: "You came\." <Picture 2> replies with <Audio 2>: "I stayed\." Match <Picture \d>\.$/);
+ const authored=planVideo({...input,prompt:'{hero.face} speaks with {hero.voice}: "You came." Hard cut to the next camera setup. {guest.face} replies with {guest.voice}: "I stayed." Match {s1.image}.'},false);
+ assert.match(authored.args.prompt,/^<Picture 1> speaks with <Audio 1>: "You came\." Hard cut to the next camera setup\. <Picture 2> replies with <Audio 2>: "I stayed\." Match <Picture \d>\.$/);
 });
 
 test('Seedance scene previews bind local motion to the selected model dialect', async t => {

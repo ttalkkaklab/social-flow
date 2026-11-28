@@ -72,7 +72,7 @@ why the decisive choices occurred, how they obtained the information and what th
 changed. Name missing prerequisites rather than guessing them from genre conventions.
 An intentional mystery may withhold the answer; it still gives the audience enough context
 to follow the question and later recognize the clue. A silent joke need not explain itself.
-Do not penalize an unspoken theme, absent narrator, quiet ending, multiple speakers, no CTA,
+Do not penalize an unspoken theme, absent narrator, quiet ending, several speakers across shots, no CTA,
 no twist or fiction without citations. Dialogue to another character is not viewer address.
 
 Record this first reading before opening the author metadata. This separation matters more
@@ -209,7 +209,7 @@ Read `storyboard_read.boundaryReview` as unverified evidence, not a verdict. Cha
 every actual playback join against holding/reframing the whole scene. Apply
 `skills/storyboard/references/shot-boundaries.md`, including its preservation audit and
 adversarial cases. Cite the information lost by merging or the redundancy kept by cutting.
-Compare adjacent setups: a continuing exchange or action may share one shot, while a reveal,
+Preserve every change of speaker as a shot boundary. One speaker’s continuing lines or action may share a shot. A reveal,
 reaction, viewpoint change or necessary spatial clarification can earn a cut. Identify the
 opening, change and consequence; flag idle tails and repeated setup rather than demanding
 shortness everywhere. Check estimated duration against the whole performance, including

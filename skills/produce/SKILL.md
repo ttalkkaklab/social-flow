@@ -751,9 +751,7 @@ voiceSettings; declare text language separately when the API auto-detects it. No
 listening, STT, scores, retry-to-pass loop or human listening approval runs by default;
 an explicitly requested review/improvement loop may inspect actual media and report findings.
 
-A shot may contain several speakers. Keep each line's speaker, pinned voice and receipt;
-use the shared composer to place their takes in performance order. Cut on the scene's
-staging or a real adapter constraint, not on every speaker change.
+Each shot has at most one speaking character across on-screen speech, off-screen speech, narration and inner thoughts. Start a new shot before a different character speaks, even in the same framing. Silent listeners may remain visible. Keep each line’s pinned voice and receipt.
 Use WAV, preserve the selected voice and speed, and resample differing sample rates before
 assembly. The current builder cannot concatenate MP3 as PCM. Keep speech at speed 1 unless
 the user requested another speed under [tts-speed.md](references/tts-speed.md).

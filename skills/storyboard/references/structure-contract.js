@@ -1198,6 +1198,70 @@
 
   }
 
+  // Check a source card before scene planning flattens its lines across cuts.
+  function shotSpeakerFinding(win, shot, index) {
+    const speakers = new Set();
+    const events = Array.isArray(shot.performance) ? shot.performance : [];
+    const narration = Array.isArray(shot.narration) ? shot.narration : [];
+    const clip = shot.visual?.reuse?.clip || shot.visual?.clip;
+    const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
+    const groups = clip && transcripts.find(item => item?.shot === index + 1 && item.source === clip)?.groups;
+    const narrator = win.SB_DOC?.narratorCharacterId;
+    // A screenplay pasted into one tts field still assigns the labelled turns.
+    // Only parse explicit labels, so a mention of the listener in ordinary speech stays valid.
+    const labelledTexts = narration.flatMap(line => {
+      if (typeof line?.tts !== 'string') return [];
+      const words = line.tts.replace(/\*\*/gu, '').replace(/\[([^\[\]\r\n:：]+)\][ \t]*[:：]?/gu, ' $1: ');
+      return /[:：]/u.test(words) ? [words] : [];
+    });
+    if (labelledTexts.length) {
+      const registry = win.SB_DOC?.characters;
+      const cast = Array.isArray(registry) ? registry : Object.entries(registry || {}).map(([id, entry]) => ({...entry,id}));
+      const names = new Map();
+      for (const id of [...(castOf(shot) || []), ...narration.map(line => line?.speaker),
+        ...(win.STRUCTURE?.scenes?.find(scene => scene?.no === shot.scene)?.speakers || [])]) {
+        if (text(id)) names.set(id.toLowerCase(), id);
+      }
+      for (const actor of cast) {
+        if (!text(actor?.id)) continue;
+        names.set(actor.id.toLowerCase(), actor.id);
+        if (text(actor.name)) names.set(actor.name.toLowerCase(), actor.id);
+      }
+      for (const words of labelledTexts) {
+        const labels = [...words.matchAll(/(?:^|\n|[.!?。！？]\s+)\s*([\p{L}\p{N}_-]+(?: [\p{L}\p{N}_-]+){0,4})\s*[:：]/gu)];
+        for (const [, label] of labels) {
+          const id = names.get(label.toLowerCase());
+          if (id) speakers.add(id);
+        }
+        // Screenplay shorthand may put the reply directly after the previous
+        // words without punctuation. Only scan those suffixes in a labelled turn.
+        if (labels.some(match => names.has(match[1].toLowerCase()))) {
+          for (const prefix of words.toLowerCase().split(/[:：]/u).slice(0, -1)) {
+            const tail = prefix.trimEnd();
+            for (const [name, id] of names) {
+              if (tail === name || tail.endsWith(' ' + name) || tail.endsWith('\n' + name)) speakers.add(id);
+            }
+          }
+        }
+      }
+    }
+    for (const event of events) {
+      if (['dialogue', 'narration'].includes(event?.kind) && text(event.character)) speakers.add(event.character);
+    }
+    for (const lines of [narration, Array.isArray(groups) ? groups : []]) {
+      lines.forEach((line, i) => {
+        if (!line || !(text(line.tts) || text(line.text) || text(line.sub))) return;
+        const performer = events.find(event => event?.group === i + 1 && ['dialogue', 'narration'].includes(event.kind))?.character;
+        speakers.add(line.speaker || performer || narrator || null);
+      });
+    }
+    if (speakers.size <= 1) return;
+    const where = shot.id || 'shot ' + (index + 1);
+    const names = [...speakers].map(id => id || '(unassigned narrator)').join(', ');
+    return {level:'bad', code:'shot_multiple_speakers', where,
+      what:'shot_multiple_speakers: ' + where + ' has ' + names + '. Give each speaker turn its own shot in playback order. A one-take can have only one voice.'};
+  }
+
   // Authoring can proceed without editorial rationale, a review stamp or a camera
   // grammar worksheet. These checks protect the data consumers actually address.
   function executionCheck(win) {
@@ -1208,6 +1272,8 @@
     shots.forEach((s, i) => {
       const where = 'shot ' + (i + 1);
       if (!s || typeof s !== 'object' || Array.isArray(s)) { bad(where, 'shot must be an object'); return; }
+      const speakerIssue = shotSpeakerFinding(win, s, i);
+      if (speakerIssue) out.push(speakerIssue);
       if (s.id !== undefined) {
         if (typeof s.id !== 'string' || !/^s\d{4,}$/.test(s.id)) bad(where, 'id: expected s followed by at least four digits (for example s0001)');
         else if (ids.has(s.id)) bad(where, `id: duplicate ${s.id} (already used by shot ${ids.get(s.id)})`);
@@ -1398,7 +1464,7 @@
   const PRODUCTION_MODES = ['full_video','video_80','video_50','video_30','video_lt10','no_video'];
   const api = { VERSION, photoRoute, episodeTitle, COMPOSITION_SCHEMA, validateComposition, compositionNeeded, checkCompositions, compositionText, DEPTH_SCHEMA, validateDepth, depthNeeded, checkDepths, depthText, EYELINE_SCHEMA, validateEyeline, checkEyelines, eyelineNeeded, eyelineText, VOCAB: { SCALES: SIZES.slice(0, SIZES.indexOf('insert')), SIZES, ANGLES, TYPES, BEATS, INFO_TYPES, SHARE_TYPES, HOOK_TYPES, HOOK_FORMS, ARCS,
                                   RENDER_MODES, PRODUCTION_MODES, CHARGES_OPEN, CHARGES_CLOSE, TRANSITION_RE },
-                check, sceneBoundaries, sceneBoundaryFindings, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
+                check, sceneBoundaries, sceneBoundaryFindings, shotSpeakerFinding, executionCheck, guidedCheck, castOf, outlineGaps, castGaps, iconGaps, imageGaps, shotImage, promptBasis, promptDrift, videoLines, sync, outline, slugOf, ownerOf };
   if (typeof module === 'object' && module.exports) module.exports = api;
   else root.STRUCTURE_CONTRACT = api;
 })(typeof window === 'object' ? window : globalThis);
