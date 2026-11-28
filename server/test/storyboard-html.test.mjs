@@ -451,11 +451,14 @@ test('offline score players resolve the assigned catalog asset and episode recor
   writeFileSync(join(channel, 'assets/catalog.md'), '| bgm | original | music/score #1.mp3 | |\n');
   writeFileSync(join(channel, 'assets/music/score #1.mp3'), 'fixture');
   writeFileSync(join(episode, '.work/bgm-turn.wav'), 'fixture');
-  const board = { MUSIC: { theme:{asset:'original'}, turn:{prompt:'A piano note'}, missing:{asset:'absent'} } };
+  mkdirSync(join(dir, 'audio'));
+  writeFileSync(join(dir, 'audio/dance #1.wav'), 'fixture');
+  const board = { MUSIC: { theme:{asset:'original'}, turn:{prompt:'A piano note'}, dance:{asset:'audio/dance #1.wav'}, missing:{asset:'absent'} } };
   const {content} = require('../../skills/storyboard/references/audience-review-data.js').exportData(board, dir, true);
   const window = {}; runInNewContext(content, {window});
   assert.equal(window.REVIEW_SCORE_SOURCES.theme.href, '../../../assets/music/score%20%231.mp3');
   assert.equal(window.REVIEW_SCORE_SOURCES.turn.href, '../.work/bgm-turn.wav');
+  assert.equal(window.REVIEW_SCORE_SOURCES.dance.href, 'audio/dance%20%231.wav');
   assert.equal(window.REVIEW_SCORE_SOURCES.missing, undefined);
 });
 

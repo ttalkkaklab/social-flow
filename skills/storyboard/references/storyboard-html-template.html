@@ -669,6 +669,16 @@
   .score-cue { margin-top: 14px; }
   .score-cue + .score-cue { padding-top: 12px; border-top: 1px solid var(--hair); }
   .score-name { display: block; font-size: 1.12rem; line-height: 1.35; }
+  .episode-playback { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 24px; margin-block: 16px; }
+  .episode-playback figure { margin: 0; max-width: 100%; }
+  .episode-playback figcaption { margin-bottom: 6px; font-weight: 700; }
+  .episode-playback video { display: block; width: auto; max-width: 100%; max-height: min(46vh, 360px); border-radius: 8px; background: #111; }
+  .episode-playback audio { display: block; width: min(300px, 100%); }
+  .episode-playback .episode-music { width: 300px; }
+  .episode-music details { margin-top: 10px; }
+  .episode-music summary { cursor: pointer; }
+  .episode-music .episode-take { margin-top: 8px; }
+  @media print { .episode-playback { display: none; } }
   .score-player { display: grid; grid-template-columns: 46px minmax(0, 1fr) auto; align-items: center; gap: 6px 11px;
     padding: 14px; margin: 0; border-radius: 14px; background: linear-gradient(115deg, #20304b, #192236 75%); color: #fff; }
   .score-player .score-name { font-size: 1rem; overflow-wrap: anywhere; }
@@ -4294,6 +4304,31 @@ window.STORYBOARD_READY = (async function () {
     h += '<p class="review-video-type">' + esc(LANG === 'ko' ? '영상 유형: ' : 'Video type: ') +
       esc(typeNames[LANG] || typeNames.en || videoType.id) +
       (videoType.detail ? ' · ' + esc(videoType.detail) : '') + '</p>';
+  }
+
+  var playback = DOC.playback || {};
+  var finalVideo = safeSrc(playback.video), finalMusic = safeSrc(playback.music), poster = safeSrc(playback.poster);
+  if (finalVideo || finalMusic) {
+    var videoLabel = LANG === 'ko' ? '완성 영상' : 'Final video';
+    var musicLabel = LANG === 'ko' ? '음악' : 'Music';
+    h += '<section class="episode-playback" id="episode-playback" aria-label="' + (LANG === 'ko' ? '에피소드 재생' : 'Episode playback') + '">';
+    if (finalVideo) h += '<figure><figcaption>' + videoLabel + '</figcaption><video controls playsinline preload="metadata" aria-label="' +
+      videoLabel + '" src="' + esc(finalVideo) + '"' + (poster ? ' poster="' + esc(poster) + '"' : '') + '></video></figure>';
+    if (finalMusic) {
+      h += '<figure class="episode-music"><figcaption>' + musicLabel + '</figcaption><audio controls preload="metadata" aria-label="' +
+        musicLabel + '" src="' + esc(finalMusic) + '"></audio>';
+      var takes = Array.isArray(playback.musicTakes) ? playback.musicTakes.filter(safeSrc) : [];
+      if (takes.length) {
+        h += '<details><summary>' + (LANG === 'ko' ? '원곡 테이크' : 'Original takes') + '</summary>';
+        takes.forEach(function (src, i) {
+          var label = (LANG === 'ko' ? '테이크 ' : 'Take ') + (i + 1);
+          h += '<div class="episode-take">' + label + '<audio controls preload="none" aria-label="' + label + '" src="' + esc(src) + '"></audio></div>';
+        });
+        h += '</details>';
+      }
+      h += '</figure>';
+    }
+    h += '</section>';
   }
 
   /* New stories derive length from performance. Only supplied constraints apply;

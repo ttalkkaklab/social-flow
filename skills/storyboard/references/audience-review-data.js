@@ -16,7 +16,9 @@ function scoreSources(board, directory) {
     if (name.startsWith('$') || !cue || !/^[^/\\\x00-\x1f]+$/.test(name)) continue;
     const asset = typeof cue.asset === 'string' ? cue.asset.trim() : '';
     let file;
-    if (asset) {
+    if (/^audio\/[^/\\\x00-\x1f]+$/.test(asset)) {
+      file = path.join(directory, asset);
+    } else if (asset) {
       if (/[/\\\x00-\x1f]/.test(asset)) continue;
       const resolver = path.resolve(__dirname, '../../channel/references/resolve-asset.py');
       const found = spawnSync('python3', [resolver, channel, 'bgm', asset], {encoding:'utf8'});
