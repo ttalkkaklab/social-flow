@@ -400,7 +400,7 @@ const receiptSchema = z.object({
   expected: mediaContract.optional(), native: mediaContract.optional(),
   requestId: z.string().optional(), requestPath: z.string().optional(), submittedAt: z.string().optional(),
   videoPath: z.string(), jobId: z.string().min(1).optional(),
-  status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(), nativeSha256: z.string().optional(),
+  status: z.enum(['submitting', 'submitted', 'completed']), sha256: z.string().optional(), nativeSha256: z.string().optional(), nativePath: z.string().optional(),
   conditioningAudioSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).passthrough();
 type Receipt = z.infer<typeof receiptSchema>;
@@ -434,7 +434,9 @@ function deliverScene(native: string, expected: MediaContract, cut: string) {
     ...(expected.audio ? ['-c:a', 'aac', '-b:a', '192k'] : ['-an']), '-movflags', '+faststart', cut], { timeout: 120_000 });
 }
 
-export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema> & {onJobCompleted?: () => void}, planned?:MediaContract, binding?:{target:string; jobId?:string}) {
+export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatusSchema> & {onJobCompleted?: () => void}, planned?:MediaContract, binding?:{target:string; jobId?:string}): Promise<{
+  jobId:string; status:string; videoPath?:string; nativePath?:string; downloaded:boolean; review:'not_reviewed';
+}> {
   let receipt = receiptSchema.parse(JSON.parse(fs.readFileSync(input.receiptPath, 'utf8')));
   if (binding && (path.resolve(receipt.videoPath) !== path.resolve(binding.target) ||
       binding.jobId && receipt.jobId && receipt.jobId !== binding.jobId))
@@ -453,8 +455,11 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
     input.onJobCompleted?.();
     const bytes = fs.readFileSync(receipt.videoPath);
     if (createHash('sha256').update(bytes).digest('hex') !== receipt.sha256) throw new Error('GenAI cached output changed');
+    if (receipt.nativePath && (receipt.nativePath !== receipt.videoPath + '.native.mp4' ||
+        !fs.existsSync(receipt.nativePath) || createHash('sha256').update(fs.readFileSync(receipt.nativePath)).digest('hex') !== receipt.nativeSha256))
+      throw new Error('GenAI cached native output changed');
     if (receipt.expected || planned || counted) checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
-    return { jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
+    return { jobId, status: 'completed', videoPath: receipt.videoPath, ...(receipt.nativePath ? {nativePath:receipt.nativePath} : {}), downloaded: true, review: 'not_reviewed' };
   }
   const job = generationSchema.parse(await requestGenai('GET', GENERATIONS_ROUTE + '/' + encodeURIComponent(jobId)));
   if (job.id !== jobId) throw new Error('GenAI status job ID mismatch');
@@ -491,16 +496,20 @@ export async function getGenaiVideoStatus(input: z.infer<typeof genaiVideoStatus
       }
     } else checkOutput(temp, expected, counted);
     const final = fs.readFileSync(delivered), sha256 = createHash('sha256').update(final).digest('hex');
-    try { fs.linkSync(delivered, receipt.videoPath); }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
-      if (createHash('sha256').update(fs.readFileSync(receipt.videoPath)).digest('hex') !== sha256)
-        throw new Error('GenAI video output conflicts with download');
+    const nativePath = delivered !== temp ? receipt.videoPath + '.native.mp4' : undefined;
+    const nativeSha256 = receipt.native ? createHash('sha256').update(bytes).digest('hex') : undefined;
+    for (const [source, target, digest] of [[delivered,receipt.videoPath,sha256], ...(nativePath ? [[temp,nativePath,nativeSha256!]] : [])]) {
+      try { fs.linkSync(source, target); }
+      catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+        if (createHash('sha256').update(fs.readFileSync(target)).digest('hex') !== digest)
+          throw new Error('GenAI video output conflicts with download');
+      }
     }
-    atomicJson(input.receiptPath, { ...receipt, status: 'completed', sha256,
-      ...(receipt.native ? { nativeSha256: createHash('sha256').update(bytes).digest('hex') } : {}) });
+    receipt = {...receipt, status:'completed', sha256, ...(nativeSha256 ? {nativeSha256} : {}), ...(nativePath ? {nativePath} : {})};
+    atomicJson(input.receiptPath, receipt);
   } finally { fs.rmSync(temp, { force: true }); fs.rmSync(cut, { force: true }); }
-  return { jobId, status: 'completed', videoPath: receipt.videoPath, downloaded: true, review: 'not_reviewed' };
+  return { jobId, status: 'completed', videoPath: receipt.videoPath, ...(receipt.nativePath ? {nativePath:receipt.nativePath} : {}), downloaded: true, review: 'not_reviewed' };
 }
 
 /** A fallback body above this is not sent: voice cannot be shrunk, and so large a body on a slow link meets the edge's 524 again. */

@@ -628,4 +628,8 @@ test('a scene download must have the native 8k+1 frames and is cut back to the s
   assert.equal(done.sha256, sha256(fs.readFileSync(target)));
   assert.equal(done.nativeSha256, sha256(native));
   assert.notEqual(done.sha256, done.nativeSha256);
+  assert.deepEqual(fs.readFileSync(done.nativePath),native);
+  assert.equal((await getGenaiVideoStatus({receiptPath,download:true})).nativePath,done.nativePath);
+  fs.writeFileSync(done.nativePath,'changed original');
+  await assert.rejects(getGenaiVideoStatus({receiptPath,download:true}), /cached native output changed/);
 });

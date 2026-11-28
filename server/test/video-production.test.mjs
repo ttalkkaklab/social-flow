@@ -106,6 +106,11 @@ test('canonical reviews keep completed remote history and recognise a separately
  assert.deepEqual(combined.candidates.find(c=>c.planId===revisionId).changes,[]);
  fs.writeFileSync(path.join(archive,'state.json'),JSON.stringify({jobs:{render:{planId:id,status:'submission_unknown'}}}));
  assert.deepEqual(review.read(board,win).candidates.map(c=>c.planId),[liveId]);
+ const scenePlan={id,episode:root,sceneNo:1,shotId:'s1',shotIds:['s1'],requestId:'render',args:{},inputs:{}};
+ fs.writeFileSync(path.join(archive,'plans',id+'.json'),JSON.stringify(scenePlan));
+ const observed=review.read(board,{SCENES:win.SCENES.map(card=>({...card,scene:1}))});
+ assert.equal(observed.candidates.find(c=>c.planId===id).recovery.episode,root);
+ assert.equal(observed.summary.pendingRequests,1);
 });
 
 test('a scene moved by a split keeps its take and receipt; the old combined scene stays in history',t=>{
@@ -150,4 +155,14 @@ test('background snapshots distinguish unchecked review evidence from zero passe
  assert.match(review.renderSummary(snapshot,'ko'),/검수 통과 미확인/);
  fs.writeFileSync(path.join(episode,'take.mp4'),'changed bytes');
  assert.equal(review.read(board).summary.reviewedShots,0);
+});
+
+test('scene playback matches the complete ordered group and prefers its edited delivery',()=>{
+ const ids=['one','two'],stored={shots:ids,path:'video/mixed.mp4'};
+ const take={sceneNo:4,shotIds:ids,selected:true,status:'completed',clip:'video/original.mp4'};
+ const report={candidates:[take]};
+ assert.equal(review.scenePlayback(report,stored,4,ids),stored.path);
+ assert.equal(review.scenePlayback(report,undefined,4,ids),take.clip);
+ assert.equal(review.scenePlayback(report,stored,4,['two','one']),undefined);
+ assert.equal(review.scenePlayback({candidates:[{...take,historicalScene:true}]},null,4,ids),undefined);
 });

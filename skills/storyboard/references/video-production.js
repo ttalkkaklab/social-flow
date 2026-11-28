@@ -45,7 +45,7 @@ function read(directory, board, {verifyInputs=true} = {}) {
  const state=json(path.join(store,'state.json')) || {jobs:{}};
  const jobs=obj(state.jobs);
  const sources=[{root:episode,store,jobs}];
- // Finished takes may have been rendered from an episode-local production copy.
+ // A production copy can have a pending full scene or an older completed take.
  // Keep those records read-only. New jobs and recovery still belong to their original store.
  const archives=json(path.join(store,'archives.json'));
  for(const relative of Array.isArray(archives)?new Set(archives):[]) {
@@ -103,7 +103,8 @@ function read(directory, board, {verifyInputs=true} = {}) {
   if(plan.id!==file.slice(0,-5) || path.resolve(plan.episode || '.')!==source.root) {warnings.push('Invalid production plan: '+file);continue;}
   const job=source.jobs[plan.requestId]?.planId===plan.id?source.jobs[plan.requestId]:null;
   if(source.root!==episode) {
-   if(job?.status!=='completed'||livePlanIds.has(plan.id)||archivedJobs.has(plan.id))continue;
+   const sameScene=Array.isArray(plan.shotIds)&&sceneNumbers.get(JSON.stringify(plan.shotIds))===plan.sceneNo&&Number.isInteger(plan.sceneNo);
+   if(!job||(!sameScene&&job.status!=='completed')||livePlanIds.has(plan.id)||archivedJobs.has(plan.id))continue;
    archivedJobs.set(plan.id,job);
   }
   planStores.set(plan.id,source.store);
@@ -139,11 +140,11 @@ function read(directory, board, {verifyInputs=true} = {}) {
    inputs,imageBindings:(plan.imageBindings||[]).map(b=>({id:b.id,path:path.relative(dir,b.path).split(path.sep).join('/'),role:b.role,purpose:b.purpose,preserve:b.preserve,avoid:b.avoid,submitted:b.submitted})),
    characterBindings:job?.characterBindings||plan.characterBindings,
    directionBindings:plan.directionBindings||[],voiceContinuity:plan.voiceContinuity?{strategy:plan.voiceContinuity.strategy,speakers:(plan.voiceContinuity.speakers||[]).map(s=>({speaker:s.speaker,audioIndex:s.audioIndex,imageIndices:s.imageIndices,screenBinding:s.screenBinding,reference:s.reference?{path:path.relative(dir,s.reference.path).split(path.sep).join('/'),sha256:s.reference.sha256}:null})),warnings:plan.voiceContinuity.warnings}:null,
-   performance:plan.performance||null,warnings:plan.directionWarnings||[],stale,clip,selected,
+   performance:plan.performance||null,warnings:plan.directionWarnings||[],stale,clip,selected,nativeClip:local(receipt?.nativePath),
    cost:{reservedUsd:job?.reserveUsd??plan.quote?.reserveUsd,settledUsd:job?.settledUsd??null,basis:plan.quote?.basis||'unknown'},
    review:selected&&!plan.sceneNo&&video.speechBinding?.quality?.review==='pass'?
     verifyInputs?(video.speechBinding.videoSha256===hash(output)?'pass':'not_reviewed'):'unverified':'not_reviewed',
-   recovery:job&&!['completed','failed'].includes(job.status)?{tool:'video_status',episode,requestId:plan.requestId,action:/^astra_genai_/.test(plan.tool)?'refresh':'read'}:null});
+   recovery:job&&!['completed','failed'].includes(job.status)?{tool:'video_status',episode:source.root,requestId:plan.requestId,action:/^astra_genai_/.test(plan.tool)?'refresh':'read'}:null});
  }
  candidates.sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.planId.localeCompare(b.planId));
  for(const candidate of candidates) {
@@ -183,7 +184,13 @@ function write(episode) {
  const data=read(dir,undefined,{verifyInputs:false}),file=path.join(dir,'video-production-data.js'),tmp=file+'.'+process.pid+'.tmp';
  try {fs.writeFileSync(tmp,'window.VIDEO_PRODUCTION = '+JSON.stringify(data).replace(/</g,'\\u003c')+';\n',{mode:0o600});fs.renameSync(tmp,file);} finally {fs.rmSync(tmp,{force:true});}
 }
-function render(report,shotId,language,sceneNo) {
+function scenePlayback(report,stored,number,ids) {
+ const matches=members=>Array.isArray(members)&&members.length===ids.length&&members.every((id,i)=>id===ids[i]);
+ if(stored&&matches(stored.shots)&&safePath(stored.path))return stored.path;
+ const take=(report?.candidates||[]).findLast(c=>c.sceneNo===number&&!c.historicalScene&&c.selected&&c.status==='completed'&&matches(c.shotIds)&&safePath(c.clip));
+ return take?.clip;
+}
+function render(report,shotId,language,sceneNo,contentLanguage,scenePlayer,attachedRequestIds) {
  const ko=language==='ko',t=(a,b)=>ko?a:b,items=(report?.candidates||[]).filter(c=>!c.historicalScene && (sceneNo === undefined ? !c.sceneNo && c.shotId===shotId : c.sceneNo===sceneNo));
  const problems=(report?.blocked||[]).filter(p=>sceneNo===undefined?p.shotId===shotId:p.sceneNo===sceneNo)
   .map(p=>'<p class="production-review">'+esc([p.shotId,p.character,p.role,p.code].filter(Boolean).join(' · '))+'<br>'+esc(p.message)+'</p>').join('');
@@ -195,7 +202,8 @@ function render(report,shotId,language,sceneNo) {
   const elapsed=c.startedAt?Math.round(Math.max(0,(Date.parse(c.finishedAt||c.updatedAt)-Date.parse(c.startedAt))/1000)):null;
   const status=displayStatus(c);
   let h='<article class="production-take"><h4>'+esc(purpose[c.purpose]||c.purpose)+' · '+esc(labels[status]||status)+(c.selected?' · '+t('현재 연결됨','Attached'):'')+'</h4>';
-  if(c.clip&&safePath(c.clip))h+='<video controls preload="none" src="'+esc(c.clip)+'"></video>';
+  if(c.clip&&safePath(c.clip))h+=scenePlayer?'<a href="'+esc(c.clip)+'" target="_blank" rel="noopener">'+t('생성 원본 열기','Open original take')+'</a>':'<video controls preload="none" src="'+esc(c.clip)+'"></video>';
+  if(c.nativeClip&&safePath(c.nativeClip))h+='<p><a href="'+esc(c.nativeClip)+'" target="_blank" rel="noopener">'+t('자르기 전 원본 열기','Open the untrimmed original')+'</a></p>';
   h+='<dl>'+row(t('요청','Request'),c.requestId)+row(t('모델','Model'),[c.selection?.engine,c.selection?.model,c.settings?.resolution||c.selection?.resolution].filter(Boolean).join(' / '))+
    row(t('연결 서버 기록','Recorded endpoint'),c.endpoint)+row(t('로컬 상태 갱신','Local state update'),c.updatedAt)+row(t('서버 상태 확인','Provider observation'),c.observedAt)+row(t('서버가 보고한 상태','Provider status'),c.providerStatus)+row(t('시작 시각','Started'),c.startedAt)+row(t('기록된 경과 시간(초)','Recorded elapsed seconds'),elapsed)+
    row(t('비용(USD)','Cost (USD)'),c.cost.settledUsd===null?t('예약·추정 ','Reserved/estimated ')+c.cost.reservedUsd:c.cost.settledUsd)+row(t('변경 이유','Change note'),c.changeNote)+row(t('이전 후보와 다른 항목','Changed fields'),c.changes.map(key=>ko?({prompt:'프롬프트',selection:'모델 선택',settings:'생성 설정',inputs:'참조 자료',performance:'행동 시간표'}[key]||key):key).join(', '))+'</dl>';
@@ -208,7 +216,10 @@ function render(report,shotId,language,sceneNo) {
    (c.clip&&!(c.shotIds?.length>1)?'<details><summary>'+t('에이전트에 전달할 연결 요청','Attachment request for the agent')+'</summary><pre>'+esc(JSON.stringify({tool:'speech_manage',path:report.storyboardPath,action:'attach_video',shotId:c.shotId,videoPath:c.clip},null,2))+'</pre></details>':'')+'</article>';
   return h;
  }).join('');
- return problems+'<details class="production-review"><summary>'+t('생성 후보 · 실제 요청','Takes and actual requests')+' ('+items.length+')</summary><p>'+t('후보를 비교한 뒤 기존 영상 연결 도구로 채택합니다. 이 화면은 파일을 변경하지 않습니다.','Compare takes, then use the existing attachment tool to adopt one. This view does not modify files.')+'</p><div class="production-takes">'+cards+'</div><details><summary>'+t('문제별 수정 방법','Repair options')+'</summary><ul>'+repairs.map(r=>'<li><b>'+esc(r.label[ko?0:1])+'</b> — '+esc(ko?({trim:'기존 영상의 끝부분을 자릅니다. 마지막 동작과 다음 컷 연결을 확인합니다.',mix:'기존 음원을 조정합니다. 클리핑과 앞뒤 영상의 음량을 확인합니다.',upscale:'원본을 보존하고 지원하는 업스케일러를 사용합니다. 얼굴·행동 오류는 고칠 수 없습니다.',speech:'음성을 수정하고 더빙 또는 말하는 클립 재생성을 선택합니다. 더빙은 립싱크를 바꿀 수 있습니다.',regenerate:'처음 잘못된 이미지나 계획을 수정한 뒤 별도 후보를 생성합니다. 이전 후보와 얼굴·움직임을 비교합니다.'}[r.id]):r.action+' '+r.risk)+'</li>').join('')+'</ul></details></details>';
+ const latest=items.at(-1);
+ const showRevision=scenePlayer&&latest.purpose==='revision'&&!latest.selected&&!attachedRequestIds?.includes(latest.requestId);
+ const revision=showRevision?(latest.status==='completed'?t('새 수정본 검수 대기','New take awaiting review'):t('수정본','Revision')+' · '+(labels[displayStatus(latest)]||latest.status))+' · ':'';
+ return problems+'<details class="production-review"><summary>'+esc(revision)+t('생성 후보 · 실제 요청','Takes and actual requests')+' ('+items.length+')</summary><p>'+t('후보를 비교한 뒤 기존 영상 연결 도구로 채택합니다. 이 화면은 파일을 변경하지 않습니다.','Compare takes, then use the existing attachment tool to adopt one. This view does not modify files.')+'</p><div class="production-takes">'+cards+'</div><details><summary>'+t('문제별 수정 방법','Repair options')+'</summary><ul>'+repairs.map(r=>'<li><b>'+esc(r.label[ko?0:1])+'</b> — '+esc(ko?({trim:'기존 영상의 끝부분을 자릅니다. 마지막 동작과 다음 컷 연결을 확인합니다.',mix:'기존 음원을 조정합니다. 클리핑과 앞뒤 영상의 음량을 확인합니다.',upscale:'원본을 보존하고 지원하는 업스케일러를 사용합니다. 얼굴·행동 오류는 고칠 수 없습니다.',speech:'음성을 수정하고 더빙 또는 말하는 클립 재생성을 선택합니다. 더빙은 립싱크를 바꿀 수 있습니다.',regenerate:'처음 잘못된 이미지나 계획을 수정한 뒤 별도 후보를 생성합니다. 이전 후보와 얼굴·움직임을 비교합니다.'}[r.id]):r.action+' '+r.risk)+'</li>').join('')+'</ul></details></details>';
 }
 function renderSummary(report,language) {
  if(!report?.candidates?.length)return '';
@@ -218,6 +229,6 @@ function renderSummary(report,language) {
      :'Generated '+s.completedShots+' shots · Attached '+s.attachedShots+' · Reviewed '+(s.reviewedShots===null?'unverified':s.reviewedShots)+' · Pending '+s.pendingRequests+' requests · Unknown '+s.unknownRequests)+
   '</p><p>'+(ko?'저장된 상태 기준: ':'Snapshot: ')+esc(report.asOf||'—')+'</p>'+report.warnings.map(w=>'<p>'+esc(w)+'</p>').join('')+'</section>';
 }
-const api={read,write,render,renderSummary,changes,repairs,generationMode,currentPlan};
+const api={read,write,render,renderSummary,changes,repairs,generationMode,currentPlan,scenePlayback};
 if(typeof module==='object'&&module.exports)module.exports=api;else root.VIDEO_PRODUCTION_REVIEW=api;
 })(typeof window==='object'?window:globalThis);

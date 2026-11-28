@@ -39,7 +39,7 @@ export function composeH3Scene(episode: string, board: Record<string, unknown>, 
   const dir = path.join(episode, 'storyboard');
   if (direction.motionReferencePaths?.length || direction.audio || timeline.images.some(pin => pin.role === 'end' || pin.role === 'keyframe') ||
       cards.some(card => (card.timeline as {dialogueCues?:unknown[]} | undefined)?.dialogueCues?.length))
-    throw new Error('scene_inputs_unsupported: H3 scene mode takes untimed reference pictures and voice samples. Revise the scene or split it at an existing shot boundary.');
+    throw new Error('scene_inputs_unsupported: H3 scene mode takes untimed reference pictures and voice samples. Revise unsupported inputs while preserving the original scene.');
   const cast = new Map<string, GenaiSceneArgs['cast'][number]>();
   const references = new Map<string, GenaiSceneArgs['references'][number]>();
   for (const pin of timeline.images.filter(pin => pin.role !== 'start')) {
@@ -89,8 +89,12 @@ export function composeH3Scene(episode: string, board: Record<string, unknown>, 
     return {id:shot.shotId,frames:shot.endFrame-shot.startFrame,imagePath,...(start?.strength === undefined ? {} : {strength:start.strength})};
   });
   const face = (id: string) => '{' + id + '.' + cast.get(id)!.images[0].role + '}';
-  const linePrompt = (line: Line) => face(line.speaker) + ' speaks in the voice of {' + line.speaker + '.voice}: "' + line.tts + '"';
-  const composed = [direction.emotion, direction.action, direction.camera, direction.sound, videoTextPolicy(),
+  const linePrompt = (line: Line) => (line.delivery === 'off_screen' ? 'Keep the speaker off screen during the following line. ' : '') +
+    face(line.speaker) + ' speaks in the voice of {' + line.speaker + '.voice}: "' + line.tts + '"';
+  const composed = ['Begin directly in the composition of {' + shots[0].id + '.image}. Cast portraits identify people and must never appear as introductory shots.',
+    direction.oneTake && 'Keep this scene in one uninterrupted take.',
+    direction.emotion, direction.action, direction.camera, direction.sound, videoTextPolicy(),
+    turns.some(lines => lines.length) && 'Use the voice references for vocal identity. The quoted dialogue is the entire spoken script; do not repeat words from the samples or add other speakers.',
     ...direction.openingPositions.map(row => (cast.has(row.character) ? face(row.character) : row.character) + ': ' + row.position),
     ...timeline.shots.map((shot,i) => [sceneTransitionWords(shot),
       'Follow {' + shot.shotId + '.image} for about ' + (shots[i].frames / timeline.fps).toFixed(2) + ' seconds.',

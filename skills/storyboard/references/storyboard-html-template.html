@@ -745,6 +745,7 @@
   }
   .scene-band:not([open]) .scene-band-stats::after { transform: rotate(-45deg); }
   .scene-band-body { padding-top: var(--s3); }
+  .scene-final-video video { display: block; width: min(100%, 20rem); height: auto; border-radius: 8px; background: #111; }
   @container (max-width: 600px) {
     .scene-notes-grid { grid-template-columns: minmax(0, 1fr); }
     .scene-notes-grid > .scene-note + .scene-note { border-inline-start: 0; border-top: 1px solid var(--hair); }
@@ -5724,7 +5725,7 @@ window.STORYBOARD_READY = (async function () {
                                 shotGroups.filter(function (g) { return g.sequence === grp.sequence; }));
       prevSeq = grp.sequence;
     }
-    var coverage, sc = hasSceneField && stScene(grp.scene);
+    var coverage, scenePlayer, sc = hasSceneField && stScene(grp.scene);
     if (hasSceneField) {
       coverage = window.SCENE_DIRECTION.resolve(sc || {}, grp.items.map(function (item) { return item.s; }));
       var soundRow = audiencePlan.scenes.find(function (row) { return row.no === grp.scene; });
@@ -5745,9 +5746,13 @@ window.STORYBOARD_READY = (async function () {
            sceneOutHtml(sc) + "</span>" +
            '<span class="scene-band-stats">' + esc(T.shotsN(grp.items.length)) + (scLen !== null ? " · " + esc(durTxt(scLen)) : "") + "</span>" +
            '</summary><div class="scene-band-body">';
+      scenePlayer = window.VIDEO_PRODUCTION_REVIEW?.scenePlayback?.(window.VIDEO_PRODUCTION,
+        DOC.scenePlayback?.[grp.scene],grp.scene,grp.items.map(function (item) { return item.s.id; }));
+      if (scenePlayer) h += '<section class="scene-final-video"><video controls playsinline preload="metadata" aria-label="' +
+        esc((LANG === 'ko' ? '씬 ' : 'Scene ') + grp.scene) + '" src="' + esc(scenePlayer) + '"></video></section>';
       h += sceneNotesHtml(grp, sceneSettingsHtml(sc, grp, coverage.defaults) + sceneDesignNotes(grp.scene),
         musicCard(grp.items, sc, scLen) + audienceCard(grp.scene, soundRow) + (DOC.audioNotes && DOC.audioNotes[grp.scene] ? '<div class="note">' + copy(DOC.audioNotes[grp.scene]) + '</div>' : ''), sceneVideoPromptHtml(sc, grp));
-      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene, CONTENT.language);
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, null, LANG, grp.scene, CONTENT.language,scenePlayer,DOC.scenePlayback?.[grp.scene]?.requestIds);
     }
     h += beatNotes(grp);
     grp.items.forEach(function (item, memberIndex) {
@@ -5955,11 +5960,13 @@ window.STORYBOARD_READY = (async function () {
       var states = revealsOf(s);
 
       h += shotBodyHtml(s, narr, hasSceneField, no, directionIcons);
-      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, s.id, LANG);
+      if (window.VIDEO_PRODUCTION_REVIEW) h += window.VIDEO_PRODUCTION_REVIEW.render(window.VIDEO_PRODUCTION, s.id, LANG, undefined, CONTENT.language,scenePlayer);
 
       h += '<div id="image-references-' + esc(s.id || '') + '"></div>';
-      var producedCuts = productionCutsHtml(s);
-      h += producedCuts || (vis.video ? '<div class="production-cut-none">' + esc(LANG === 'ko' ? '아직 제작 영상이 없습니다' : 'No production video yet') + '</div>' : '');
+      if (!scenePlayer) {
+        var producedCuts = productionCutsHtml(s);
+        h += producedCuts || (vis.video ? '<div class="production-cut-none">' + esc(LANG === 'ko' ? '아직 제작 영상이 없습니다' : 'No production video yet') + '</div>' : '');
+      }
 
       // The same note is not repeated on every scene — only the first time.
       if (!recOf(s) && s.type === "points" && narr.length && narr.length !== states.length && !carryNoted) {
@@ -6281,7 +6288,7 @@ window.STORYBOARD_READY = (async function () {
   app.querySelectorAll('.score-player').forEach(function (player) { window.ReviewScorePlayer.mount(player, LANG === "ko"); });
   app.querySelectorAll('details.scene-band, details.seq').forEach(function (group) {
     group.addEventListener('toggle', function () {
-      if (!group.open) group.querySelectorAll('.scene-workbench audio').forEach(function (audio) { audio.pause(); });
+      if (!group.open) group.querySelectorAll('.scene-workbench audio, .scene-final-video video').forEach(function (media) { media.pause(); });
     });
   });
   app.querySelectorAll('audio, video').forEach(function (media) {

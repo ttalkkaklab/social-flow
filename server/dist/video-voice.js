@@ -40,7 +40,7 @@ export function resolveCharacterVoice(character, context, warnings) {
     return load('../../skills/_shared/scene-voice.js').resolveCharacterVoice(character, path.join(context.episode, 'storyboard'), context.shot, warnings);
 }
 export function voiceReference(character, context, warnings) {
-    return load('../../skills/_shared/scene-voice.js').voiceReference(character, path.join(context.episode, 'storyboard'), warnings);
+    return load('../../skills/_shared/scene-voice.js').voiceReference(character, path.join(context.episode, 'storyboard'), warnings, context.shot, object(context.board.STORY).language);
 }
 export function currentSceneVoice(board, boardDir, shot, id, warnings) {
     return load('../../skills/_shared/scene-voice.js').currentSceneVoice(board, boardDir, shot, id, warnings);

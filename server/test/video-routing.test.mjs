@@ -2742,3 +2742,20 @@ test('timed shot positions, closing frames and opening crops agree in the actual
   assert.match(fixed.args.prompt,/latch falls shut/);
   assert.doesNotMatch(fixed.args.prompt,/latch stands wide open/);
 });
+
+test('production copies cannot submit a subset or a reordered original scene',t=>{
+ const f=fixture(t);
+ const copy=path.join(f.episode,'.work','retake');
+ fs.mkdirSync(copy,{recursive:true});
+ fs.cpSync(path.join(f.episode,'storyboard'),path.join(copy,'storyboard'),{recursive:true});
+ fs.mkdirSync(path.join(copy,'.work'),{recursive:true});
+ fs.copyFileSync(path.join(f.episode,'.work/model-settings.json'),path.join(copy,'.work/model-settings.json'));
+ f.board.SCENES[1].scene=1;f.save();
+ const input={episode:copy,sceneNo:1,requestId:'test-original-scope',operation:'image',args:{durationSeconds:8}};
+ assert.throws(()=>planVideo(input,false),/original scene 1.*s1, s2.*has \[s1\]/);
+ const copyFile=path.join(copy,'storyboard/scenes.js');
+ f.board.STRUCTURE.scenes[0].videoDirection={openingPositions:[]};
+ const reordered={...f.board,SCENES:[...f.board.SCENES].reverse().map(shot=>({...shot,duration:2}))};
+ fs.writeFileSync(copyFile,Object.entries(reordered).map(([key,value])=>'window.'+key+'='+JSON.stringify(value)+';').join('\n'));
+ assert.throws(()=>planVideo(input),/original scene 1.*s1, s2.*has \[s2, s1\]/);
+});
