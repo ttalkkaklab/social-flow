@@ -592,9 +592,9 @@ and a line pinned to a frame are refused at planning (`scene_mode_model_unsuppor
 two pinned voices across all its cuts. The production GPU budget (2026-11-26) allows two
 referenced people and two character images per scene, and those people are the scene's speakers
 (2026-11-27): a silent person reaches the clip through the shot pictures. The planner uses a face
-and body panel for one speaker or one face each for two. Storyboard writes split at the first
-authored cut that needs a third speaker. Keep shot order and dialogue, inspect the new opening and
-rebase frame cues. A shot or requested one-take that needs three reports `scene_cast_exceeded`.
+and body panel for one speaker or one face each for two. Storyboard writes keep the shots together
+and report `scene_cast_exceeded` when the scene needs a third speaker. If the user requests a
+split, preserve shot order and dialogue, inspect the new opening and rebase frame cues.
 An ending or timed picture inside a
 shot, and a panel a shot named that the scene cast leaves out, are not sent and the plan names
 each (`scene_picture_omitted`, `scene_reference_omitted`) (user's choice, 2026-11-25). The gateway
