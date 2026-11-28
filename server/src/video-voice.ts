@@ -78,7 +78,7 @@ export function resolveCharacterVoice(character: Record<string,unknown>, context
 }
 
 export function voiceReference(character: Record<string,unknown>, context: VoiceContext, warnings: string[]): SpeakerVoice['reference'] {
-  return load('../../skills/_shared/scene-voice.js').voiceReference(character,path.join(context.episode,'storyboard'),warnings);
+  return load('../../skills/_shared/scene-voice.js').voiceReference(character,path.join(context.episode,'storyboard'),warnings,context.shot,object(context.board.STORY).language);
 }
 
 export function currentSceneVoice(board: Record<string,unknown> | undefined, boardDir: string, shot: Record<string,unknown>,

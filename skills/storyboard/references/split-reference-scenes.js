@@ -180,6 +180,12 @@ function splitReferenceScenes(board, previous, boardDir, includeExisting = false
       scenes.push(scene);
       continue;
     }
+    if (!includeExisting) {
+      findings.push({...conflict, level:'warn', where:'scene ' + scene.no,
+        what:'The selected model cannot voice this scene in one request. The storyboard keeps its original shots.'});
+      scenes.push(scene);
+      continue;
+    }
     if (scene.videoDirection?.prompt?.trim()) {
       findings.push({...conflict, level:'bad', code:'scene_split_prompts', where:String(conflict.shotId),
         what:'Split before ' + conflict.splitBefore.join(', ') + ' with story_scene.split and supply a complete prompt for each part.'});

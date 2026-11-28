@@ -41,7 +41,7 @@ export const genaiSceneSchema = z.object({
     cast: z.array(z.object({
         id, images: z.array(z.object({ role, imagePath: file }).strict()).min(1).max(sceneLimits.maxCharacterImages),
         voicePath: file.optional().describe('Pinned voice sample; it rides on the member\'s first picture.'),
-    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: split scenes with more than two speaking people').default([]),
+    }).strict()).max(sceneLimits.maxReferencedCharacters, 'scene_cast_exceeded: the model supports at most two speaking people in the scene').default([]),
     references: z.array(z.object({ id, role: z.enum(['background', 'object']), imagePath: file }).strict()).max(9).default([]),
     shots: z.array(z.object({
         id, frames: z.number().int().positive(),
@@ -75,14 +75,14 @@ export const genaiSceneSchema = z.object({
     if (args.model === 'minimax-h3') {
         const pictures = characterImages + args.references.length + args.shots.filter(shot => shot.imagePath).length;
         if (pictures < 1 || pictures > 9)
-            issue('H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.');
+            issue('H3 scene mode takes 1..9 pictures including the opening picture of each shot. Keep the scene intact and reduce optional references.');
         if (args.cast.filter(member => member.voicePath).length > 2)
-            issue('H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.');
+            issue('H3 scene mode takes two voices. This scene exceeds the model voice limit.');
         if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
             issue('H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.');
         const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
         if (frames < H3_FRAMES.min || frames > H3_FRAMES.max)
-            issue('H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.');
+            issue('H3 renders 124..345 frames on its 17k+5 grid. Adjust the length of the intact scene or report the limit.');
         if (args.shots.some(shot => shot.strength !== undefined && shot.strength !== 1))
             issue('H3 shot pictures are untimed references and take no strength.');
         return;

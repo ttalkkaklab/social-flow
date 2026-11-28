@@ -6,6 +6,7 @@ const {existsSync,readFileSync,realpathSync} = require('node:fs');
 const {isDeepStrictEqual} = require('node:util');
 const {handoff} = require('../channel/references/character-sheet.js');
 const {requiredCharacters} = require('./scene-cast.js');
+const {normalizeLanguage} = require('./character-voice.js');
 
 const object = value => value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 const text = value => typeof value === 'string' ? value.trim() : '';
@@ -68,7 +69,7 @@ function resolveCharacterVoice(character, boardDir, shot, warnings) {
   return resolved;
 }
 
-function voiceReference(character, boardDir, warnings) {
+function voiceReference(character, boardDir, warnings, shot, storyLanguage) {
   const declared = object(character.voiceReference);
   if (character.voiceReferenceWarning && !declared.path) {
     warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
@@ -98,6 +99,25 @@ function voiceReference(character, boardDir, warnings) {
   const absolute = realpathSync(file), sha256 = fileHash(absolute);
   const selected = declared.sha256 || object(character.voiceSelection).audioSha256;
   if (selected && selected !== sha256) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
+  const lines = (shot?.narration ?? []).filter(line => line.speaker === character.id && line.delivery !== 'voiceover' && text(line.tts));
+  const spoken = new Set(lines.map(line => normalizeLanguage(line.language || storyLanguage)).filter(Boolean));
+  if (spoken.size) {
+    const languages = new Set([normalizeLanguage(character.tts?.language)].filter(Boolean));
+    // The selection can outlive an episode override that relabels both TTS settings and reference metadata.
+    const selectionFile = character.voiceSelection?.auditionPath;
+    const receipts = new Set([path.join(path.dirname(absolute), 'audition.json')]);
+    if (typeof selectionFile === 'string') receipts.add(path.resolve(boardDir, selectionFile));
+    for (const receipt of receipts) {
+      if (!existsSync(receipt)) continue;
+      const audition = JSON.parse(readFileSync(receipt, 'utf8'));
+      const candidate = audition.candidates?.find(item => item.audioSha256 === sha256);
+      const recorded = normalizeLanguage(candidate?.tts?.language);
+      if (recorded) languages.add(recorded);
+    }
+    for (const language of spoken) for (const recorded of languages) {
+      if (recorded !== language) throw new Error(`voice_reference_language_mismatch: ${character.id} speaks ${language} in ${shot.id}; the pinned reference uses ${recorded}. Select a recording of this speaker in ${language}.`);
+    }
+  }
   const provenance = declared.tts && declared.sha256 ? 'pinned_settings_and_bytes' : 'legacy_sample_unverified';
   if (provenance === 'legacy_sample_unverified') warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
   return { path: absolute, sha256, provenance };
@@ -111,7 +131,7 @@ function currentSceneVoice(board,boardDir,shot,id,warnings) {
   if (!matches.length) return undefined;
   const issues=[];
   const character=resolveCharacterVoice(matches[0],boardDir,shot,issues);
-  const ref=voiceReference(character,boardDir,issues);
+  const ref=voiceReference(character,boardDir,issues,shot,board?.STORY?.language);
   if (warnings) warnings.push(...issues);
   else if (!ref && issues.length) throw new Error('voice_reference_stale: ' + issues.join(' '));
   return ref;

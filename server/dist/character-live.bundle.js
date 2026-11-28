@@ -34672,7 +34672,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 );
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
-  prompt: external_exports.string().min(1).max(32e3).refine((text) => !!text.trim(), "Enter the complete scene prompt").optional().describe("One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts."),
+  prompt: external_exports.string().min(1).max(32e3).refine((text) => !!text.trim(), "Enter the complete scene prompt").optional().describe("One production prompt covering every shot in this scene, in storyboard order."),
   promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
@@ -35576,7 +35576,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: the model supports at most two speaking people in the scene").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -35607,12 +35607,12 @@ var genaiSceneSchema = external_exports.object({
   const [width, height] = args.resolution.split("x").map(Number);
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
-    if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
+    if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Keep the scene intact and reduce optional references.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. This scene exceeds the model voice limit.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
-    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue("H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.");
+    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue("H3 renders 124..345 frames on its 17k+5 grid. Adjust the length of the intact scene or report the limit.");
     if (args.shots.some((shot) => shot.strength !== void 0 && shot.strength !== 1)) issue("H3 shot pictures are untimed references and take no strength.");
     return;
   }
@@ -36156,6 +36156,7 @@ var receiptSchema = external_exports.object({
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   sha256: external_exports.string().optional(),
   nativeSha256: external_exports.string().optional(),
+  nativePath: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
@@ -36220,8 +36221,10 @@ async function getGenaiVideoStatus(input, planned, binding) {
     input.onJobCompleted?.();
     const bytes2 = fs3.readFileSync(receipt.videoPath);
     if (createHash5("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    if (receipt.nativePath && (receipt.nativePath !== receipt.videoPath + ".native.mp4" || !fs3.existsSync(receipt.nativePath) || createHash5("sha256").update(fs3.readFileSync(receipt.nativePath)).digest("hex") !== receipt.nativeSha256))
+      throw new Error("GenAI cached native output changed");
     if (receipt.expected || planned || counted) checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
-    return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+    return { jobId, status: "completed", videoPath: receipt.videoPath, ...receipt.nativePath ? { nativePath: receipt.nativePath } : {}, downloaded: true, review: "not_reviewed" };
   }
   const job = generationSchema.parse(await requestGenai("GET", GENERATIONS_ROUTE + "/" + encodeURIComponent(jobId)));
   if (job.id !== jobId) throw new Error("GenAI status job ID mismatch");
@@ -36254,24 +36257,24 @@ async function getGenaiVideoStatus(input, planned, binding) {
       }
     } else checkOutput(temp, expected, counted);
     const final = fs3.readFileSync(delivered), sha256 = createHash5("sha256").update(final).digest("hex");
-    try {
-      fs3.linkSync(delivered, receipt.videoPath);
-    } catch (error) {
-      if (error.code !== "EEXIST") throw error;
-      if (createHash5("sha256").update(fs3.readFileSync(receipt.videoPath)).digest("hex") !== sha256)
-        throw new Error("GenAI video output conflicts with download");
+    const nativePath = delivered !== temp ? receipt.videoPath + ".native.mp4" : void 0;
+    const nativeSha256 = receipt.native ? createHash5("sha256").update(bytes).digest("hex") : void 0;
+    for (const [source, target, digest] of [[delivered, receipt.videoPath, sha256], ...nativePath ? [[temp, nativePath, nativeSha256]] : []]) {
+      try {
+        fs3.linkSync(source, target);
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        if (createHash5("sha256").update(fs3.readFileSync(target)).digest("hex") !== digest)
+          throw new Error("GenAI video output conflicts with download");
+      }
     }
-    atomicJson(input.receiptPath, {
-      ...receipt,
-      status: "completed",
-      sha256,
-      ...receipt.native ? { nativeSha256: createHash5("sha256").update(bytes).digest("hex") } : {}
-    });
+    receipt = { ...receipt, status: "completed", sha256, ...nativeSha256 ? { nativeSha256 } : {}, ...nativePath ? { nativePath } : {} };
+    atomicJson(input.receiptPath, receipt);
   } finally {
     fs3.rmSync(temp, { force: true });
     fs3.rmSync(cut, { force: true });
   }
-  return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+  return { jobId, status: "completed", videoPath: receipt.videoPath, ...receipt.nativePath ? { nativePath: receipt.nativePath } : {}, downloaded: true, review: "not_reviewed" };
 }
 async function prepareGenaiSources(body) {
   let supported2 = true;

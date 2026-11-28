@@ -876,7 +876,7 @@ describe('story first, then characters and lines', () => {
     assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakers:speakers.slice(0,2)}]}), /scene_speaker_mismatch/);
     assert.throws(() => writeStoryScenes({path:dir,scenes:[{...scene,speakerReferences:[scene.speakerReferences[0],scene.speakerReferences[0]]}]}), /scene_reference_owner/);
   });
-  it('splits a GenAI scene before a third speaker, rebases the timeline and preserves both parts on later writes', () => {
+  it('preserves a GenAI scene with a third speaker and rebases shots only on an explicit storyboard split', () => {
     const root = mkdtempSync(join(tmpdir(),'sb-reference-')); dirs.push(root);
     setupProject(root,{video:{engine:'astra-genai',model:'ltx-2.5-22b-distilled',resolution:'576x1024'}});
     const dir = join(root,'data/c/episodes/handoff/storyboard');
@@ -905,7 +905,10 @@ describe('story first, then characters and lines', () => {
       {id:'s0003',lines:[{speaker:'cy',tts:'Thanks.'}]}]});
     assert.ok(spoken.written,JSON.stringify(spoken.findings));
     // Cy is the third speaker. Bo is silent in the third shot.
-    assert.deepEqual(spoken.findings.find(f=>f.code==='scene_reference_split').groups.map(g=>[g.sceneNo,g.shotIds,g.characters]),[
+    assert.ok(spoken.findings.some(f=>f.code==='scene_cast_exceeded'));
+    assert.deepEqual(readBoard(dir).win.SCENES.map(card=>card.scene),[1,1,1,2]);
+    const regrouped=applyStoryboard({path:dir,splitReferenceScenes:true,draft:true});
+    assert.deepEqual(regrouped.findings.find(f=>f.code==='scene_reference_split').groups.map(g=>[g.sceneNo,g.shotIds,g.characters]),[
       [1,['s0001','s0002'],['ada','bo']], [2,['s0003'],['cy']]]);
     const saved=readBoard(dir).win, [first,second] = saved.STRUCTURE.scenes;
     assert.deepEqual(saved.STRUCTURE.sequences[0].scenes,[1,2,3]);

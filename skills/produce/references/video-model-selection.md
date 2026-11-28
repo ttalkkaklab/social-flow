@@ -520,7 +520,7 @@ trousers sew themselves back up a beat later). Generate a second sheet for the c
 the other way for a flashback: age the character, the location and the props together, or the
 flashback reads as a costume instead of a memory.
 
-**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. Production GenAI scenes reference only their speakers: a face and body for one speaker or one face per speaker for a pair. Split before a third speaker enters; silent people come from the shot pictures. Still-image composition keeps the sheet layout above.
+**Character reference selection.** Use the saved adapter. With Seedance, pass a portrait from the character's sheet in its authored reference slot. Production GenAI scenes reference only their speakers: a face and body for one speaker or one face per speaker for a pair. Report the model limit when a third pinned speaker enters. Silent people come from the shot pictures. Still-image composition keeps the sheet layout above.
 
 ---
 

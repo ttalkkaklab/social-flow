@@ -117,6 +117,10 @@ test('missing selected audition evidence warns without substituting an older sam
 test('FastH3 native voices use Picture and Audio labels without exact lip-sync claims', t => {
   const ctx=fixture(t), [hero,friend]=ctx.board.SB_DOC.characters;
   ctx.board.STORY = {language:'vi'};
+  for (const character of [hero,friend]) {
+    character.tts={...character.tts,language:'vi'};
+    character.voiceReference.tts=character.tts;
+  }
   const result=prepareVideoVoice('fasth3_omni_reference', {prompt:'Act.', referenceImagePaths:[hero.voiceReference.imagePaths[0],friend.voiceReference.imagePaths[0]]},ctx);
   assert.equal(result.voiceContinuity.strategy,'reference_voice');
   assert.match(result.args.prompt,/hero.*<Picture 1>.*<Audio 1>/);
@@ -329,4 +333,18 @@ test('id-only voice-only speakers resolve pinned speech with pending body detail
  assert.equal(selected().provenance,'pinned_settings_and_bytes');
  fs.writeFileSync(sample,'second caller sample');
  assert.throws(selected,/voice_reference_stale/);
+});
+
+test('native video checks the language of the sample with matching audition bytes', t => {
+  const ctx=fixture(t), actor=ctx.board.SB_DOC.characters[0], shot=ctx.shot;
+  shot.narration[0].language='vi-VN';
+  assert.throws(()=>currentSceneVoice(ctx.board,ctx.episode,shot,'hero',[]),/voice_reference_language_mismatch.*vi.*ko/);
+  actor.tts={...actor.tts,language:'vi'};
+  actor.voiceReference.tts=actor.tts;
+  const candidate={tts:{language:'ko'},audioSha256:actor.voiceReference.sha256};
+  fs.writeFileSync(path.join(ctx.episode,'audition.json'),JSON.stringify({candidates:[candidate]}));
+  assert.throws(()=>currentSceneVoice(ctx.board,ctx.episode,shot,'hero',[]),/voice_reference_language_mismatch/);
+  candidate.audioSha256='unrelated';
+  fs.writeFileSync(path.join(ctx.episode,'audition.json'),JSON.stringify({candidates:[candidate]}));
+  assert.equal(currentSceneVoice(ctx.board,ctx.episode,shot,'hero',[]).sha256,actor.voiceReference.sha256);
 });

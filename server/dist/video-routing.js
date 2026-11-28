@@ -314,7 +314,7 @@ function recordScenePrompt(plan) {
             if (err.code !== 'EEXIST')
                 throw err;
             if (fs.readFileSync(file, 'utf8') !== digest)
-                throw new Error('scene_prompt_mismatch: this storyboard scene already has a different prompt. Revise the scene or split it before planning both prompts.');
+                throw new Error('scene_prompt_mismatch: this storyboard scene already has a different prompt. Save all shot directions in one production prompt.');
         }
     }
     finally {
@@ -468,9 +468,10 @@ export function assertSpeechRenderCapacity(tool, model, scene, cards, route, gen
 function resolvePlanContext(input) {
     assertNoPostLipSync(input);
     if (['shots', 'shotIds', 'prompts'].some(key => Object.hasOwn(input.args, key)))
-        throw new Error('scene_split_required: video_plan takes one complete storyboard scene. Use story_scene.split for separate prompts or shot groups.');
+        throw new Error('scene_split_required: video_plan takes one complete authored scene with every shot in its original order.');
     requireReadyProject(input.episode, { allowVideoSnapshot: true });
     const context = routingContext(input.episode, undefined, input.sceneNo, false);
+    assertSceneMembers(context, context);
     requireSupportedSelection(context.selection);
     assertSelection('video', context.selection, input);
     const structure = load(structurePath);
@@ -579,13 +580,27 @@ function storyboardPlan(input, resolved) {
     const { prompt, ...fromBoard } = input;
     const plan = buildFittedPlan(fromBoard, resolved, false);
     if (prompt !== undefined && prompt !== plan.promptTemplate && prompt !== plan.args.prompt && prompt !== plan.authoredPrompt)
-        throw new Error('scene_prompt_mismatch: save the complete revised prompt on story_scene.videoDirection.prompt. If both prompts are needed, split the storyboard scene at a shot boundary before planning.');
+        throw new Error('scene_prompt_mismatch: save the complete revised prompt on story_scene.videoDirection.prompt. Keep the direction for every shot in that scene prompt.');
     assertSceneMembers(resolved.context, plan);
     return plan;
 }
 function assertSceneMembers(context, plan) {
     if (JSON.stringify(context.shotIds) !== JSON.stringify(plan.shotIds))
-        throw new Error('scene_split_required: the request must cover every shot in its storyboard scene, in order. Split the storyboard scene before planning separate prompts.');
+        throw new Error('scene_split_required: one request must cover every shot in its storyboard scene, in order.');
+    // Production copies inside an episode may change the take, but not the unit that was commissioned.
+    for (let parent = fs.realpathSync(context.episode); parent !== path.dirname(parent); parent = path.dirname(parent)) {
+        if (path.basename(parent) !== '.work')
+            continue;
+        const boardFile = path.join(path.dirname(parent), 'storyboard/scenes.js');
+        if (!fs.existsSync(boardFile))
+            continue;
+        const { evaluateWindowScript } = load('../../skills/_shared/scenes-vm.js');
+        const owner = evaluateWindowScript(fs.readFileSync(boardFile, 'utf8'), { filename: boardFile });
+        const members = (owner.SCENES ?? []).filter((shot) => shot.scene === plan.sceneNo);
+        const ids = members.map((shot) => shot.id);
+        if (!ids.length || JSON.stringify(ids) !== JSON.stringify(plan.shotIds))
+            throw new Error(`scene_split_required: original scene ${plan.sceneNo} in ${boardFile} requires [${ids.join(', ')}] in one request; this production copy has [${plan.shotIds?.join(', ')}].`);
+    }
 }
 /** A GenAI scene over its model's prompt cap is composed again with fewer optional words, one step at a time. An authored prompt is the author's to fit. */
 function buildFittedPlan(input, resolved, persist) {
@@ -634,7 +649,7 @@ function genaiSceneArgs(sceneTool, args, scene, openingPath, storyboard, slots, 
     // The gateway measures the prompt after it numbers the names; refuse here before any file is uploaded.
     const length = resolveScenePlaceholders(parsed.prompt, sceneLabels(parsed)).length, limit = genaiScenePromptLimit(String(selection.model));
     if (length > limit)
-        throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit}. Shorten the scene direction or split the scene at an authored cut`);
+        throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit}. Shorten the wording while keeping all scene members`);
     return { keys, args: parsed };
 }
 /** The planner's names with the numbers the gateway gives the references they point at. */
@@ -728,10 +743,10 @@ function buildH3Plan(input, context, persist) {
     verifyDistinctSamples(args.cast.flatMap(member => member.voicePath ? [{ speaker: member.id, path: member.voicePath }] : []));
     const limit = genaiScenePromptLimit('minimax-h3');
     if (Array.from(modelPrompt).length > limit)
-        throw new Error('scene_prompt_too_long: H3 accepts ' + limit + ' characters. Split the storyboard scene before planning separate prompts.');
+        throw new Error('scene_prompt_too_long: H3 accepts ' + limit + ' characters. Keep all original shots in one prompt.');
     const sent = [...args.cast.flatMap(member => member.images.map(image => image.imagePath)), ...args.references.map(ref => ref.imagePath),
         ...args.shots.flatMap(shot => shot.imagePath ? [shot.imagePath] : [])].map(file => fs.realpathSync(file));
-    const warnings = [...h3.warnings, ...sceneTransitionWarnings(timeline.cuts, input.prompt ?? saved, timeline.shots.flatMap(shot => shot.dialogue?.map(line => line.text) ?? [])),
+    const warnings = [...h3.warnings, 'scene_opening_untimed: H3 uses composition references, not pinned frames. Compare the opening, framing and acting with each shot picture before selecting the take.', ...sceneTransitionWarnings(timeline.cuts, input.prompt ?? saved, timeline.shots.flatMap(shot => shot.dialogue?.map(line => line.text) ?? [])),
         ...omittedCharacterPictures(context, context.sceneMembers, new Set(sent), new Set(args.cast.map(member => member.id)))];
     if (timeline.cuts.length)
         warnings.push('scene_cut_timing_model_paced: H3 receives shot lengths and transition directions. Check the actual cut frames in the output.');
@@ -1026,7 +1041,7 @@ function buildVideoPlan(input, { context, tool, sceneTool }, persist, fitStep = 
         delete bound.requiredSeconds; // The finished edit must still cover the plan.
     }
     if (durationPlan.status === 'split_required')
-        throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+        throw new Error(`video_duration_exceeded: ${context.shotId} needs ${durationPlan.requiredSeconds}s; ${tool} allows ${durationPlan.maxSeconds}s. Report the limit for the intact scene; preserve its dialogue and membership.`);
     // GenAI I2V's live backend owns the maximum; its integer duration must still cover the shot.
     if ((tool === 'astra_genai_img2video' || tool === 'astra_genai_text2video') && durationPlan.requiredSeconds !== undefined) {
         if (bound.requiredSeconds !== undefined) {
@@ -1055,7 +1070,7 @@ function buildVideoPlan(input, { context, tool, sceneTool }, persist, fitStep = 
         if (!(sceneFrameCount > 0))
             throw new Error('scene_duration_required: give scene ' + context.sceneNo + ' a duration before planning it in GenAI scene mode');
         if (render > GENAI_SCENE_FRAMES.max)
-            throw new Error(`scene_frames_exceeded: scene ${context.sceneNo} runs ${sceneFrameCount} frames; GenAI scene mode renders at most ${GENAI_SCENE_FRAMES.max}. Split it at an authored cut.`);
+            throw new Error(`scene_frames_exceeded: scene ${context.sceneNo} runs ${sceneFrameCount} frames; GenAI scene mode renders at most ${GENAI_SCENE_FRAMES.max}. Revise timing within the intact scene or report the model limit.`);
         delete bound.duration;
         bound.numFrames = render;
     }
@@ -1207,7 +1222,7 @@ function buildVideoPlan(input, { context, tool, sceneTool }, persist, fitStep = 
         const issue = authored && error instanceof z.ZodError ? error.issues.find(issue => issue.path[0] === 'prompt') : undefined;
         // A scene is composed on the image lane first; its 5,000-character schema reads as the scene's own, lower limit.
         if (sceneTool && !authored && error instanceof z.ZodError && error.issues.some(issue => issue.path[0] === 'prompt' || /exceeds \d+ characters/.test(issue.message)))
-            throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the scene direction or split the scene at an authored cut`);
+            throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the wording while keeping all scene members`);
         if (!issue)
             throw error;
         throw new Error(/^[a-z_]+: /.test(issue.message) ? issue.message : 'prompt_refused: ' + issue.message);

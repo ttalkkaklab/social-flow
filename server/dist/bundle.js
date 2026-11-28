@@ -97811,6 +97811,7 @@ var require_scene_voice = __commonJS({
     var { isDeepStrictEqual: isDeepStrictEqual2 } = __require("node:util");
     var { handoff } = require_character_sheet();
     var { requiredCharacters: requiredCharacters2 } = require_scene_cast();
+    var { normalizeLanguage } = require_character_voice();
     var object7 = (value2) => value2 && typeof value2 === "object" && !Array.isArray(value2) ? value2 : {};
     var text4 = (value2) => typeof value2 === "string" ? value2.trim() : "";
     var fileHash2 = (file3) => createHash36("sha256").update(readFileSync45(file3)).digest("hex");
@@ -97861,7 +97862,7 @@ var require_scene_voice = __commonJS({
       }
       return resolved;
     }
-    function voiceReference2(character, boardDir, warnings) {
+    function voiceReference2(character, boardDir, warnings, shot, storyLanguage) {
       const declared = object7(character.voiceReference);
       if (character.voiceReferenceWarning && !declared.path) {
         warnings.push(`${character.id}: ${character.voiceReferenceWarning}; restore the selected sample instead of substituting an old voice.wav.`);
@@ -97890,6 +97891,24 @@ var require_scene_voice = __commonJS({
       const absolute = realpathSync16(file3), sha2563 = fileHash2(absolute);
       const selected = declared.sha256 || object7(character.voiceSelection).audioSha256;
       if (selected && selected !== sha2563) throw new Error(`voice_reference_stale: ${character.id} sample bytes changed`);
+      const lines = (shot?.narration ?? []).filter((line) => line.speaker === character.id && line.delivery !== "voiceover" && text4(line.tts));
+      const spoken = new Set(lines.map((line) => normalizeLanguage(line.language || storyLanguage)).filter(Boolean));
+      if (spoken.size) {
+        const languages = new Set([normalizeLanguage(character.tts?.language)].filter(Boolean));
+        const selectionFile = character.voiceSelection?.auditionPath;
+        const receipts = /* @__PURE__ */ new Set([path41.join(path41.dirname(absolute), "audition.json")]);
+        if (typeof selectionFile === "string") receipts.add(path41.resolve(boardDir, selectionFile));
+        for (const receipt of receipts) {
+          if (!existsSync48(receipt)) continue;
+          const audition = JSON.parse(readFileSync45(receipt, "utf8"));
+          const candidate2 = audition.candidates?.find((item) => item.audioSha256 === sha2563);
+          const recorded = normalizeLanguage(candidate2?.tts?.language);
+          if (recorded) languages.add(recorded);
+        }
+        for (const language of spoken) for (const recorded of languages) {
+          if (recorded !== language) throw new Error(`voice_reference_language_mismatch: ${character.id} speaks ${language} in ${shot.id}; the pinned reference uses ${recorded}. Select a recording of this speaker in ${language}.`);
+        }
+      }
       const provenance = declared.tts && declared.sha256 ? "pinned_settings_and_bytes" : "legacy_sample_unverified";
       if (provenance === "legacy_sample_unverified") warnings.push(`${character.id}: sample identity is unverified; a file name or hash is not a listening review.`);
       return { path: absolute, sha256: sha2563, provenance };
@@ -97901,7 +97920,7 @@ var require_scene_voice = __commonJS({
       if (!matches.length) return void 0;
       const issues = [];
       const character = resolveCharacterVoice2(matches[0], boardDir, shot, issues);
-      const ref = voiceReference2(character, boardDir, issues);
+      const ref = voiceReference2(character, boardDir, issues, shot, board?.STORY?.language);
       if (warnings) warnings.push(...issues);
       else if (!ref && issues.length) throw new Error("voice_reference_stale: " + issues.join(" "));
       return ref;
@@ -102920,7 +102939,7 @@ var require_seedance_route = __commonJS({
       const durationSeconds = Math.max(spec.duration[0], Math.ceil(used));
       if (scene.visual?.camera?.preset === "drone-flythrough" && scene.visual.camera.trajectory?.seconds !== durationSeconds)
         throw new Error("drone trajectory.seconds must equal the resolved billed duration " + durationSeconds);
-      if (durationSeconds > spec.duration[1]) throw new Error(model2 + " takes at most " + spec.duration[1] + " seconds; shorten or split the scene");
+      if (durationSeconds > spec.duration[1]) throw new Error(model2 + " takes at most " + spec.duration[1] + " seconds in one request");
       if (purpose === "previz") {
         if (referencePreviz && !spec.videos) throw new Error(model2 + " does not accept a reference video");
         if (previz.seconds !== durationSeconds) throw new Error("previz.seconds (" + previz.seconds + ") must equal the billed length " + durationSeconds + "s \u2014 render the previz at the cut length");
@@ -124566,7 +124585,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 );
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
-  prompt: external_exports.string().min(1).max(32e3).refine((text4) => !!text4.trim(), "Enter the complete scene prompt").optional().describe("One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts."),
+  prompt: external_exports.string().min(1).max(32e3).refine((text4) => !!text4.trim(), "Enter the complete scene prompt").optional().describe("One production prompt covering every shot in this scene, in storyboard order."),
   promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
@@ -129055,7 +129074,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file2 }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file2.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: the model supports at most two speaking people in the scene").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file2 }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -129086,12 +129105,12 @@ var genaiSceneSchema = external_exports.object({
   const [width, height] = args.resolution.split("x").map(Number);
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
-    if (pictures < 1 || pictures > 9) issue2("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 2) issue2("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
+    if (pictures < 1 || pictures > 9) issue2("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Keep the scene intact and reduce optional references.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue2("H3 scene mode takes two voices. This scene exceeds the model voice limit.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue2("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
-    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue2("H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.");
+    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue2("H3 renders 124..345 frames on its 17k+5 grid. Adjust the length of the intact scene or report the limit.");
     if (args.shots.some((shot) => shot.strength !== void 0 && shot.strength !== 1)) issue2("H3 shot pictures are untimed references and take no strength.");
     return;
   }
@@ -129704,6 +129723,7 @@ var receiptSchema2 = external_exports.object({
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   sha256: external_exports.string().optional(),
   nativeSha256: external_exports.string().optional(),
+  nativePath: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
 var STATUS = { queued: "pending", running: "processing", succeeded: "completed", failed: "failed", cancelled: "cancelled" };
@@ -129768,8 +129788,10 @@ async function getGenaiVideoStatus(input, planned, binding) {
     input.onJobCompleted?.();
     const bytes2 = fs14.readFileSync(receipt.videoPath);
     if (createHash16("sha256").update(bytes2).digest("hex") !== receipt.sha256) throw new Error("GenAI cached output changed");
+    if (receipt.nativePath && (receipt.nativePath !== receipt.videoPath + ".native.mp4" || !fs14.existsSync(receipt.nativePath) || createHash16("sha256").update(fs14.readFileSync(receipt.nativePath)).digest("hex") !== receipt.nativeSha256))
+      throw new Error("GenAI cached native output changed");
     if (receipt.expected || planned || counted) checkOutput(receipt.videoPath, receipt.expected ?? planned, true);
-    return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+    return { jobId, status: "completed", videoPath: receipt.videoPath, ...receipt.nativePath ? { nativePath: receipt.nativePath } : {}, downloaded: true, review: "not_reviewed" };
   }
   const job = generationSchema.parse(await requestGenai("GET", GENERATIONS_ROUTE + "/" + encodeURIComponent(jobId)));
   if (job.id !== jobId) throw new Error("GenAI status job ID mismatch");
@@ -129802,24 +129824,24 @@ async function getGenaiVideoStatus(input, planned, binding) {
       }
     } else checkOutput(temp, expected, counted);
     const final = fs14.readFileSync(delivered), sha2563 = createHash16("sha256").update(final).digest("hex");
-    try {
-      fs14.linkSync(delivered, receipt.videoPath);
-    } catch (error2) {
-      if (error2.code !== "EEXIST") throw error2;
-      if (createHash16("sha256").update(fs14.readFileSync(receipt.videoPath)).digest("hex") !== sha2563)
-        throw new Error("GenAI video output conflicts with download");
+    const nativePath = delivered !== temp ? receipt.videoPath + ".native.mp4" : void 0;
+    const nativeSha256 = receipt.native ? createHash16("sha256").update(bytes).digest("hex") : void 0;
+    for (const [source2, target, digest6] of [[delivered, receipt.videoPath, sha2563], ...nativePath ? [[temp, nativePath, nativeSha256]] : []]) {
+      try {
+        fs14.linkSync(source2, target);
+      } catch (error2) {
+        if (error2.code !== "EEXIST") throw error2;
+        if (createHash16("sha256").update(fs14.readFileSync(target)).digest("hex") !== digest6)
+          throw new Error("GenAI video output conflicts with download");
+      }
     }
-    atomicJson(input.receiptPath, {
-      ...receipt,
-      status: "completed",
-      sha256: sha2563,
-      ...receipt.native ? { nativeSha256: createHash16("sha256").update(bytes).digest("hex") } : {}
-    });
+    receipt = { ...receipt, status: "completed", sha256: sha2563, ...nativeSha256 ? { nativeSha256 } : {}, ...nativePath ? { nativePath } : {} };
+    atomicJson(input.receiptPath, receipt);
   } finally {
     fs14.rmSync(temp, { force: true });
     fs14.rmSync(cut, { force: true });
   }
-  return { jobId, status: "completed", videoPath: receipt.videoPath, downloaded: true, review: "not_reviewed" };
+  return { jobId, status: "completed", videoPath: receipt.videoPath, ...receipt.nativePath ? { nativePath: receipt.nativePath } : {}, downloaded: true, review: "not_reviewed" };
 }
 async function prepareGenaiSources(body) {
   let supported = true;
@@ -134053,7 +134075,7 @@ function resolveCharacterVoice(character, context2, warnings) {
   return load8("../../skills/_shared/scene-voice.js").resolveCharacterVoice(character, path22.join(context2.episode, "storyboard"), context2.shot, warnings);
 }
 function voiceReference(character, context2, warnings) {
-  return load8("../../skills/_shared/scene-voice.js").voiceReference(character, path22.join(context2.episode, "storyboard"), warnings);
+  return load8("../../skills/_shared/scene-voice.js").voiceReference(character, path22.join(context2.episode, "storyboard"), warnings, context2.shot, object5(context2.board.STORY).language);
 }
 function currentSceneVoice(board, boardDir, shot, id2, warnings) {
   return load8("../../skills/_shared/scene-voice.js").currentSceneVoice(board, boardDir, shot, id2, warnings);
@@ -134951,7 +134973,7 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
   const timeline = compileSceneTimeline(cards, direction, episode, board);
   const dir = path24.join(episode, "storyboard");
   if (direction.motionReferencePaths?.length || direction.audio || timeline.images.some((pin) => pin.role === "end" || pin.role === "keyframe") || cards.some((card) => card.timeline?.dialogueCues?.length))
-    throw new Error("scene_inputs_unsupported: H3 scene mode takes untimed reference pictures and voice samples. Revise the scene or split it at an existing shot boundary.");
+    throw new Error("scene_inputs_unsupported: H3 scene mode takes untimed reference pictures and voice samples. Revise unsupported inputs while preserving the original scene.");
   const cast = /* @__PURE__ */ new Map();
   const references = /* @__PURE__ */ new Map();
   for (const pin of timeline.images.filter((pin2) => pin2.role !== "start")) {
@@ -134999,13 +135021,16 @@ function composeH3Scene(episode, board, cards, direction, options, savedPrompt, 
     return { id: shot.shotId, frames: shot.endFrame - shot.startFrame, imagePath, ...start?.strength === void 0 ? {} : { strength: start.strength } };
   });
   const face = (id2) => "{" + id2 + "." + cast.get(id2).images[0].role + "}";
-  const linePrompt = (line) => face(line.speaker) + " speaks in the voice of {" + line.speaker + '.voice}: "' + line.tts + '"';
+  const linePrompt = (line) => (line.delivery === "off_screen" ? "Keep the speaker off screen during the following line. " : "") + face(line.speaker) + " speaks in the voice of {" + line.speaker + '.voice}: "' + line.tts + '"';
   const composed = [
+    "Begin directly in the composition of {" + shots[0].id + ".image}. Cast portraits identify people and must never appear as introductory shots.",
+    direction.oneTake && "Keep this scene in one uninterrupted take.",
     direction.emotion,
     direction.action,
     direction.camera,
     direction.sound,
     videoTextPolicy(),
+    turns.some((lines2) => lines2.length) && "Use the voice references for vocal identity. The quoted dialogue is the entire spoken script; do not repeat words from the samples or add other speakers.",
     ...direction.openingPositions.map((row) => (cast.has(row.character) ? face(row.character) : row.character) + ": " + row.position),
     ...timeline.shots.map((shot, i2) => [
       sceneTransitionWords(shot),
@@ -135827,7 +135852,7 @@ function recordScenePrompt(plan2) {
     } catch (err4) {
       if (err4.code !== "EEXIST") throw err4;
       if (fs20.readFileSync(file3, "utf8") !== digest6)
-        throw new Error("scene_prompt_mismatch: this storyboard scene already has a different prompt. Revise the scene or split it before planning both prompts.");
+        throw new Error("scene_prompt_mismatch: this storyboard scene already has a different prompt. Save all shot directions in one production prompt.");
     }
   } finally {
     fs20.rmSync(tmp, { force: true });
@@ -136016,9 +136041,10 @@ function assertSpeechRenderCapacity(tool2, model2, scene, cards, route, generate
 function resolvePlanContext(input) {
   assertNoPostLipSync(input);
   if (["shots", "shotIds", "prompts"].some((key) => Object.hasOwn(input.args, key)))
-    throw new Error("scene_split_required: video_plan takes one complete storyboard scene. Use story_scene.split for separate prompts or shot groups.");
+    throw new Error("scene_split_required: video_plan takes one complete authored scene with every shot in its original order.");
   requireReadyProject(input.episode, { allowVideoSnapshot: true });
   const context2 = routingContext(input.episode, void 0, input.sceneNo, false);
+  assertSceneMembers(context2, context2);
   requireSupportedSelection(context2.selection);
   assertSelection("video", context2.selection, input);
   const structure = load11(structurePath);
@@ -136119,13 +136145,24 @@ function storyboardPlan(input, resolved) {
   const { prompt, ...fromBoard } = input;
   const plan2 = buildFittedPlan(fromBoard, resolved, false);
   if (prompt !== void 0 && prompt !== plan2.promptTemplate && prompt !== plan2.args.prompt && prompt !== plan2.authoredPrompt)
-    throw new Error("scene_prompt_mismatch: save the complete revised prompt on story_scene.videoDirection.prompt. If both prompts are needed, split the storyboard scene at a shot boundary before planning.");
+    throw new Error("scene_prompt_mismatch: save the complete revised prompt on story_scene.videoDirection.prompt. Keep the direction for every shot in that scene prompt.");
   assertSceneMembers(resolved.context, plan2);
   return plan2;
 }
 function assertSceneMembers(context2, plan2) {
   if (JSON.stringify(context2.shotIds) !== JSON.stringify(plan2.shotIds))
-    throw new Error("scene_split_required: the request must cover every shot in its storyboard scene, in order. Split the storyboard scene before planning separate prompts.");
+    throw new Error("scene_split_required: one request must cover every shot in its storyboard scene, in order.");
+  for (let parent = fs20.realpathSync(context2.episode); parent !== path29.dirname(parent); parent = path29.dirname(parent)) {
+    if (path29.basename(parent) !== ".work") continue;
+    const boardFile2 = path29.join(path29.dirname(parent), "storyboard/scenes.js");
+    if (!fs20.existsSync(boardFile2)) continue;
+    const { evaluateWindowScript: evaluateWindowScript2 } = load11("../../skills/_shared/scenes-vm.js");
+    const owner = evaluateWindowScript2(fs20.readFileSync(boardFile2, "utf8"), { filename: boardFile2 });
+    const members = (owner.SCENES ?? []).filter((shot) => shot.scene === plan2.sceneNo);
+    const ids = members.map((shot) => shot.id);
+    if (!ids.length || JSON.stringify(ids) !== JSON.stringify(plan2.shotIds))
+      throw new Error(`scene_split_required: original scene ${plan2.sceneNo} in ${boardFile2} requires [${ids.join(", ")}] in one request; this production copy has [${plan2.shotIds?.join(", ")}].`);
+  }
 }
 function buildFittedPlan(input, resolved, persist) {
   for (let step = 0; ; step++) {
@@ -136185,7 +136222,7 @@ function genaiSceneArgs(sceneTool, args, scene, openingPath, storyboard, slots, 
     filename: args.filename
   });
   const length = resolveScenePrompt2(parsed.prompt, sceneLabels(parsed)).length, limit2 = genaiScenePromptLimit(String(selection.model));
-  if (length > limit2) throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit2}. Shorten the scene direction or split the scene at an authored cut`);
+  if (length > limit2) throw new Error(`scene_prompt_too_long: scene prompt runs ${length} characters after numbering; ${selection.model} takes at most ${limit2}. Shorten the wording while keeping all scene members`);
   return { keys: keys3, args: parsed };
 }
 function relabelSlots(slots, keys3, labels) {
@@ -136272,7 +136309,7 @@ function buildH3Plan(input, context2, persist) {
   checkSceneVoices(args);
   verifyDistinctSamples(args.cast.flatMap((member) => member.voicePath ? [{ speaker: member.id, path: member.voicePath }] : []));
   const limit2 = genaiScenePromptLimit("minimax-h3");
-  if (Array.from(modelPrompt).length > limit2) throw new Error("scene_prompt_too_long: H3 accepts " + limit2 + " characters. Split the storyboard scene before planning separate prompts.");
+  if (Array.from(modelPrompt).length > limit2) throw new Error("scene_prompt_too_long: H3 accepts " + limit2 + " characters. Keep all original shots in one prompt.");
   const sent = [
     ...args.cast.flatMap((member) => member.images.map((image2) => image2.imagePath)),
     ...args.references.map((ref) => ref.imagePath),
@@ -136280,6 +136317,7 @@ function buildH3Plan(input, context2, persist) {
   ].map((file3) => fs20.realpathSync(file3));
   const warnings = [
     ...h3.warnings,
+    "scene_opening_untimed: H3 uses composition references, not pinned frames. Compare the opening, framing and acting with each shot picture before selecting the take.",
     ...sceneTransitionWarnings(
       timeline.cuts,
       input.prompt ?? saved,
@@ -136602,7 +136640,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     delete bound.requiredSeconds;
   }
   if (durationPlan.status === "split_required")
-    throw new Error(`video_duration_exceeded: ${context2.shotId} needs ${durationPlan.requiredSeconds}s; ${tool2} allows ${durationPlan.maxSeconds}s. Split at a meaningful performance boundary; never truncate or switch models.`);
+    throw new Error(`video_duration_exceeded: ${context2.shotId} needs ${durationPlan.requiredSeconds}s; ${tool2} allows ${durationPlan.maxSeconds}s. Report the limit for the intact scene; preserve its dialogue and membership.`);
   if ((tool2 === "astra_genai_img2video" || tool2 === "astra_genai_text2video") && durationPlan.requiredSeconds !== void 0) {
     if (bound.requiredSeconds !== void 0) {
       if (["duration", "durationSeconds", "numFrames", "frames", "autoDuration", "audioMaxDuration"].some((key) => bound[key] !== void 0))
@@ -136623,7 +136661,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
     const render = genaiSceneFrames(sceneFrameCount);
     if (!(sceneFrameCount > 0)) throw new Error("scene_duration_required: give scene " + context2.sceneNo + " a duration before planning it in GenAI scene mode");
     if (render > GENAI_SCENE_FRAMES.max)
-      throw new Error(`scene_frames_exceeded: scene ${context2.sceneNo} runs ${sceneFrameCount} frames; GenAI scene mode renders at most ${GENAI_SCENE_FRAMES.max}. Split it at an authored cut.`);
+      throw new Error(`scene_frames_exceeded: scene ${context2.sceneNo} runs ${sceneFrameCount} frames; GenAI scene mode renders at most ${GENAI_SCENE_FRAMES.max}. Revise timing within the intact scene or report the model limit.`);
     delete bound.duration;
     bound.numFrames = render;
   }
@@ -136763,7 +136801,7 @@ function buildVideoPlan(input, { context: context2, tool: tool2, sceneTool }, pe
   } catch (error2) {
     const issue2 = authored && error2 instanceof external_exports.ZodError ? error2.issues.find((issue3) => issue3.path[0] === "prompt") : void 0;
     if (sceneTool && !authored && error2 instanceof external_exports.ZodError && error2.issues.some((issue3) => issue3.path[0] === "prompt" || /exceeds \d+ characters/.test(issue3.message)))
-      throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the scene direction or split the scene at an authored cut`);
+      throw new Error(`scene_prompt_too_long: scene prompt runs ${openingPrompt(String(voice.args.prompt), voice.args.openingPositions).length} characters; ${selection.model} takes at most ${genaiScenePromptLimit(String(selection.model))}. Shorten the wording while keeping all scene members`);
     if (!issue2) throw error2;
     throw new Error(/^[a-z_]+: /.test(issue2.message) ? issue2.message : "prompt_refused: " + issue2.message);
   }
@@ -138582,7 +138620,7 @@ function applyTransition(shots, at, change) {
   shots[at] = { ...source2, transition: change.transition, edit: edit2 };
 }
 var storyboardApplySchema = external_exports.object({
-  splitReferenceScenes: external_exports.boolean().optional().describe("Apply GenAI reference splits to an existing storyboard"),
+  splitReferenceScenes: external_exports.boolean().optional().describe("Apply user-requested GenAI reference splits to an existing storyboard"),
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
   set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
@@ -139657,7 +139695,7 @@ function splitStoryScene(args, win, st) {
 function assertArchivedSceneDrafts(next, previous) {
   if (!next?.length || sameShape(next) === sameShape(previous)) return;
   if (new Set(next.map((draft) => draft.prompt)).size > 1)
-    throw new Error("scene_split_required: separate production prompts require separate storyboard scenes. Use story_scene.split and save one prompt per scene.");
+    throw new Error("scene_split_required: save one complete videoDirection.prompt covering every ordered shot in the scene. Archived promptDrafts are read-only.");
   throw new Error("video_prompt_deferred: archived promptDrafts are read-only. Save the production prompt in videoDirection.prompt.");
 }
 function writeStoryScenes(args, requireSceneCast = false) {
@@ -146510,7 +146548,7 @@ var SERVER_INSTRUCTIONS = `social-flow plans, produces and publishes short- and 
 
 Start: \`capability_status\` shows which providers are configured on this machine; \`project_manage\` holds the saved project settings (models, visual style, ratio, SNS targets). Reuse saved choices instead of asking again.
 
-Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. Use the saved model's inputs. Each scene has one prompt. Save wording on the storyboard and split the scene before planning separate prompts. GenAI submits one scene-mode request and numbers the named references. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
+Episode video: \`video_catalog\` \u2192 \`video_plan\` \u2192 \`video_approve\` (the user's yes to that shot, or to every shot) \u2192 \`video_execute\`, and \`video_status\` after an interruption. Plan the whole scene from its authored soundtrack, pinned character voices or selected model-generated voices. Use the saved model's inputs. Each scene has one prompt. Save one prompt for all original scene members. Preserve its boundaries when a model limit is reached. GenAI submits one scene-mode request and numbers the named references. The catalog tools take an engine for its parameter schemas (ltx-desktop-local alone answers with the app's live catalog), and the plan tools take engine and model as checks on the saved selection.
 
 Story planning: use \`story_intensity_plan\` to develop story pressure and \`story_catharsis_plan\` to choose its payoff. Both return authoring guidance for the synopsis and board.
 
@@ -150423,7 +150461,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
         split: { type: "object", additionalProperties: false, required: ["beforeShot"], properties: {
           beforeShot: { type: "string", pattern: "^s[0-9]{4,}$" },
           newSceneNo: { type: "integer", minimum: 1 }
-        }, description: "For separate production prompts, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs." },
+        }, description: "When the user requests a new scene boundary, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs." },
         scenes: { type: "array", minItems: 1, description: "Scenes in playback order", items: { type: "object", additionalProperties: false, required: ["sequence", "no", "place", "time", "event", "summary"], properties: {
           sequence: { type: "string", description: "The sequence id this scene belongs to" },
           no: { type: "integer", minimum: 1, description: "Scene number, unique on the board" },
@@ -150836,7 +150874,7 @@ storyboard_apply assigns stable shot ids (s0001\u2026) and advances STRUCTURE.ne
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline \xB7 shot.composition \xB7 shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary \u2014 pass the object scenes-schema.md defines (visual \xB7 shot.space \xB7 visual.camera \xB7 visual.video \u2026); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards split across authored cuts when a third speaker enters; silent people do not count. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } \u2014 on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards keep their authored scene boundaries and report the voice limit when a third speaker enters. Preview a user-requested reference split with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no\u2026] }. The reasons for each field are in scenes-schema.md \xA7structure.
 
 Returns: the file written or not, counts, and findings (! violation \xB7 warning).`,
     inputSchema: {
@@ -150894,7 +150932,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
             events: { type: "array", items: { type: "object" }, description: "Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order." }
           } }
         } },
-        splitReferenceScenes: { type: "boolean", description: "Split existing GenAI scenes before a shot introduces a third speaking character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged." },
+        splitReferenceScenes: { type: "boolean", description: "Apply a user-requested scene boundary edit to GenAI scenes with more than two pinned speakers. Use dryRun to preview the proposed groups." },
         dryRun: { type: "boolean", description: "Validate and report, write nothing" },
         draft: { type: "boolean", description: "The story pass (storyboard \xA74a): camera-continuity records \u2014 shot.lineCrossing, shot.coverage \u2014 are deferred (later), not violations; leave it off in \xA74b" }
       },
@@ -150988,7 +151026,7 @@ for (const tool2 of TOOLS) {
   tool2.inputSchema.properties = { ...tool2.inputSchema.properties, requiredSeconds: {
     type: "number",
     exclusiveMinimum: 0,
-    description: "Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated."
+    description: "Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Report the limit when the required coverage exceeds the supported duration."
   } };
   tool2.description += "\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.";
 }
@@ -151048,11 +151086,11 @@ TOOLS.push(
   {
     name: "video_plan",
     title: "Plan a video with saved model settings",
-    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan carries the whole scene and returns its named promptTemplate. Save an edit on story_scene.videoDirection.prompt. Split the storyboard scene before planning separate prompts. On the GenAI engine the scene is one scene-mode request (POST /v1/generations, mode scene): the prompt keeps its {name} placeholders, the gateway numbers them, and /v1/generations/validate confirms the numbering, frames and cuts before the plan is saved (sceneValidation). promptGuidance carries the writing sentence for the selected model, its reference page and an advice entry for each count outside the range the vendor guide recommends; advice never refuses a plan. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
+    description: "Plan one generated scene with episode, sceneNo and requestId. Every generated shot needs a storyboard image (shot_image_required). The first shot can use the scene opening. Compiles all member shots in playback order, including framing, actions, timed image roles, cut boundaries and one continuous audio track. Unsupported combinations report each unmapped shot, frame and input before a plan can be approved. The result contains member shotIds, image and voice bindings, a quote and a plan ID for video_approve and video_execute. A plan carries the whole scene and returns its named promptTemplate. Save an edit on story_scene.videoDirection.prompt. Keep all original shots in one request, including in a production copy. On the GenAI engine the scene is one scene-mode request (POST /v1/generations, mode scene): the prompt keeps its {name} placeholders, the gateway numbers them, and /v1/generations/validate confirms the numbering, frames and cuts before the plan is saved (sceneValidation). promptGuidance carries the writing sentence for the selected model, its reference page and an advice entry for each count outside the range the vendor guide recommends; advice never refuses a plan. The planner uses the authored speech delivery, scene soundtrack, pinned voices and model-generated voice choice to select a supported operation. Voice and image capacity apply to the selected render. No generation.",
     inputSchema: { ...videoContextSchema, properties: {
       ...videoContextSchema.properties,
       wholeScene: { type: "boolean", enum: [true], description: "Storyboard authoring mode. Requires one native request for the complete scene. Refuses a route that would split it." },
-      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional assertion of the complete storyboard prompt. Save revisions with story_scene.videoDirection.prompt. If two prompts must both render, split the storyboard scene at a shot boundary first." },
+      prompt: { type: "string", minLength: 1, maxLength: 32e3, description: "Optional assertion of the complete storyboard prompt. Save revisions with story_scene.videoDirection.prompt. Combine the original scene\u2019s shot directions in its one prompt." },
       sceneNo: { type: "integer", minimum: 1, description: "Storyboard scene number. Plans one clip for all its ordered shots." },
       engine: { type: "string", description: "Optional assertion of the saved video engine. A different saved engine refuses the plan (model_selection_mismatch); a plan never switches the selection." },
       model: { type: "string", description: "Optional assertion of the saved video model, checked the same way." },

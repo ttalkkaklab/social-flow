@@ -50051,7 +50051,7 @@ var scenePromptDrafts = external_exports.array(external_exports.object({
 );
 var sceneVideoDirectionSchema = external_exports.object({
   motionReferencePaths: external_exports.array(external_exports.string().trim().min(1)).min(1).max(3).optional().describe("Ordered local motion reference videos for FastH3 or Seedance reference. Paths are relative to the storyboard. An embedded soundtrack can consume a FastH3 audio slot."),
-  prompt: external_exports.string().min(1).max(32e3).refine((text2) => !!text2.trim(), "Enter the complete scene prompt").optional().describe("One production prompt for every shot in this scene. Split the storyboard scene before authoring separate prompts."),
+  prompt: external_exports.string().min(1).max(32e3).refine((text2) => !!text2.trim(), "Enter the complete scene prompt").optional().describe("One production prompt covering every shot in this scene, in storyboard order."),
   promptDrafts: scenePromptDrafts.optional().describe("Archived drafts on older boards. The video request is compiled from current attributes."),
   openingPositions: openingPositionsSchema,
   dialogueVoice: external_exports.literal("model_generated").optional().describe("Allow a synthesized speaking voice for this scene on Veo or on Seedance first-frame video. Omit when the performance requires the selected voice sample."),
@@ -50273,7 +50273,7 @@ var genaiSceneSchema = external_exports.object({
     id,
     images: external_exports.array(external_exports.object({ role, imagePath: file }).strict()).min(1).max(genai_scene_limits_default.maxCharacterImages),
     voicePath: file.optional().describe("Pinned voice sample; it rides on the member's first picture.")
-  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: split scenes with more than two speaking people").default([]),
+  }).strict()).max(genai_scene_limits_default.maxReferencedCharacters, "scene_cast_exceeded: the model supports at most two speaking people in the scene").default([]),
   references: external_exports.array(external_exports.object({ id, role: external_exports.enum(["background", "object"]), imagePath: file }).strict()).max(9).default([]),
   shots: external_exports.array(external_exports.object({
     id,
@@ -50304,12 +50304,12 @@ var genaiSceneSchema = external_exports.object({
   const [width, height] = args.resolution.split("x").map(Number);
   if (args.model === "minimax-h3") {
     const pictures = characterImages + args.references.length + args.shots.filter((shot) => shot.imagePath).length;
-    if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Split the storyboard scene if more are required.");
-    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. Split the storyboard scene at a shot boundary.");
+    if (pictures < 1 || pictures > 9) issue("H3 scene mode takes 1..9 pictures including the opening picture of each shot. Keep the scene intact and reduce optional references.");
+    if (args.cast.filter((member) => member.voicePath).length > 2) issue("H3 scene mode takes two voices. This scene exceeds the model voice limit.");
     if (args.fps !== 24 || Math.min(width, height) < 256 || Math.max(width, height) > 2048 || width % 32 || height % 32 || width * height > 1032192)
       issue("H3 takes 24 fps and sides of 256..2048 in multiples of 32, up to 1,032,192 pixels.");
     const frames = genaiSceneFrames(sceneFrames(args), args.model, args.holdToMinDuration);
-    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue("H3 renders 124..345 frames on its 17k+5 grid. Adjust the scene length or split a longer scene at an authored cut.");
+    if (frames < H3_FRAMES.min || frames > H3_FRAMES.max) issue("H3 renders 124..345 frames on its 17k+5 grid. Adjust the length of the intact scene or report the limit.");
     if (args.shots.some((shot) => shot.strength !== void 0 && shot.strength !== 1)) issue("H3 shot pictures are untimed references and take no strength.");
     return;
   }
@@ -53689,6 +53689,7 @@ var receiptSchema2 = external_exports.object({
   status: external_exports.enum(["submitting", "submitted", "completed"]),
   sha256: external_exports.string().optional(),
   nativeSha256: external_exports.string().optional(),
+  nativePath: external_exports.string().optional(),
   conditioningAudioSha256: external_exports.string().regex(/^[a-f0-9]{64}$/).optional()
 }).passthrough();
 var genaiVideoStatusSchema = external_exports.object({ receiptPath: external_exports.string().min(1), download: external_exports.boolean().default(false) }).strict();
@@ -55114,7 +55115,7 @@ var transitionPatchSchema = external_exports.object({
 }).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var storyboardApplySchema = external_exports.object({
-  splitReferenceScenes: external_exports.boolean().optional().describe("Apply GenAI reference splits to an existing storyboard"),
+  splitReferenceScenes: external_exports.boolean().optional().describe("Apply user-requested GenAI reference splits to an existing storyboard"),
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
   set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),
