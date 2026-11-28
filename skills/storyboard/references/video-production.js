@@ -186,8 +186,11 @@ function write(episode) {
 }
 function scenePlayback(report,stored,number,ids) {
  const matches=members=>Array.isArray(members)&&members.length===ids.length&&members.every((id,i)=>id===ids[i]);
- if(stored&&matches(stored.shots)&&safePath(stored.path))return stored.path;
  const take=(report?.candidates||[]).findLast(c=>c.sceneNo===number&&!c.historicalScene&&c.selected&&c.status==='completed'&&matches(c.shotIds)&&safePath(c.clip));
+ if(stored&&matches(stored.shots)&&safePath(stored.path)) {
+  const sources=stored.requestIds;
+  if(!take?.requestId||!Array.isArray(sources)||!sources.length||sources.includes(take.requestId))return stored.path;
+ }
  return take?.clip;
 }
 function render(report,shotId,language,sceneNo,contentLanguage,scenePlayer,attachedRequestIds) {

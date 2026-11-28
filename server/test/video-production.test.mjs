@@ -162,6 +162,13 @@ test('scene playback matches the complete ordered group and prefers its edited d
  const take={sceneNo:4,shotIds:ids,selected:true,status:'completed',clip:'video/original.mp4'};
  const report={candidates:[take]};
  assert.equal(review.scenePlayback(report,stored,4,ids),stored.path);
+ const edit={...stored,requestIds:['first']};
+ const revision={...take,requestId:'later'};
+ assert.equal(review.scenePlayback({candidates:[{...take,requestId:'first'}]},edit,4,ids),edit.path);
+ assert.equal(review.scenePlayback({candidates:[revision]},edit,4,ids),revision.clip);
+ assert.equal(review.scenePlayback({candidates:[{...revision,selected:false}]},edit,4,ids),edit.path);
+ assert.equal(review.scenePlayback({candidates:[{...revision,status:'queued'}]},edit,4,ids),edit.path);
+ assert.equal(review.scenePlayback({candidates:[revision]},stored,4,ids),stored.path);
  assert.equal(review.scenePlayback(report,undefined,4,ids),take.clip);
  assert.equal(review.scenePlayback(report,stored,4,['two','one']),undefined);
  assert.equal(review.scenePlayback({candidates:[{...take,historicalScene:true}]},null,4,ids),undefined);

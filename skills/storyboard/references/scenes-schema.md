@@ -1128,7 +1128,7 @@ resolves supported generator arguments; `plan_video` carries the same acting con
 Legacy lines without `acting` keep baseline delivery. Neither the field nor a successful
 plan certifies the resulting expression or prosody. See the speech contract for examples.
 
-A shot can hold several lines by one speaker. Start a new shot before a different character speaks. Preserve line IDs across the cut. When a scene exceeds the model’s pinned-voice capacity, split the scene at an existing shot boundary.
+A shot can hold several lines by one speaker. Start a new shot before a different character speaks. Preserve line IDs across the cut. Keep the shots together in one generation request. If their voices exceed the model’s capacity, report the limit and identify any operation that can render the complete scene.
 
 > The example and the character caps below are story-v1 guidance for resumed boards. A
 > `speechPlanVersion:1` board writes every entry in the shape above — `id`, `speaker`,
@@ -2237,7 +2237,7 @@ What to write depends on whether the clip's own sound survives the build:
 
 ### Video prompts and generation requests
 
-The board records scene and shot attributes. When video is requested, `video_plan` reads the current board and composes the scene for the selected model and operation. Its request and approval retain the exact prompt. A matching saved request appears on the scene review. An older board can contain historical `visual.prompt`, `visual.video.prompt`, `visual.clip.prompt` or `videoDirection.promptDrafts`. Record reusable changes as attributes. Save an exact wording edit in `videoDirection.prompt`. Each scene supplies one production prompt. Use `story_scene.split` when two separate prompts must render.
+The board records scene and shot attributes. When video is requested, `video_plan` reads the current board and composes the scene for the selected model and operation. Its request and approval retain the exact prompt. A matching saved request appears on the scene review. An older board can contain historical `visual.prompt`, `visual.video.prompt`, `visual.clip.prompt` or `videoDirection.promptDrafts`. Record reusable changes as attributes. Save an exact wording edit in `videoDirection.prompt`. Each scene supplies one production prompt. Use `story_scene.split` only when the user requests a change to the story’s scene boundaries.
 
 ### Music cues (`window.MUSIC` · `sound`)
 
