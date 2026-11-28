@@ -666,9 +666,8 @@ what the audience is supposed to get.
     Hold one or two seconds first, and hold them in a shot of their own: a reused frame, a
     reaction, an insert. Packing the pause and the line into one cut removes the pause; the
     generated clip plays them as one breath. On our timeline that shot is often free — a frame
-    already generated for another scene, re-cut. The same split applies inside a scene whose
-    dialogue is dense: separate prompts per beat, then pick the best delivery of each line
-    across the batches rather than hunting for one take that nails all three.
+    already generated for another scene, re-cut. For dense dialogue, give each beat a shot and mark its pause in the scene prompt.
+    Review the timing and delivery across the complete take.
 14. **The payoff copies the plant's frame.** A plant-and-payoff pair (scenario-craft §3)
     shares `size`, `angle` and `space` — the viewer recognizes the object because they stand
     where they stood when it was planted, and no line has to say "remember this". Breaking

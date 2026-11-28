@@ -662,7 +662,7 @@ function applyTransition(shots, at, change) {
     shots[at] = { ...source, transition: change.transition, edit };
 }
 export const storyboardApplySchema = z.object({
-    splitReferenceScenes: z.boolean().optional().describe('Apply GenAI reference splits to an existing storyboard'),
+    splitReferenceScenes: z.boolean().optional().describe('Apply user-requested GenAI reference splits to an existing storyboard'),
     path: z.string().min(1).describe('The storyboard directory (scenes.js is created there when missing), or its scenes.js'),
     draft: z.boolean().default(false).describe('The story pass (storyboard §4a) — camera-continuity records (lineCrossing, coverage) are deferred, not violations'),
     set: z.object({ structure: structureSchema.optional(), shots: z.array(shotSchema).min(1) }).optional()
@@ -1897,7 +1897,7 @@ function assertArchivedSceneDrafts(next, previous) {
     if (!next?.length || sameShape(next) === sameShape(previous))
         return;
     if (new Set(next.map(draft => draft.prompt)).size > 1)
-        throw new Error('scene_split_required: separate production prompts require separate storyboard scenes. Use story_scene.split and save one prompt per scene.');
+        throw new Error('scene_split_required: save one complete videoDirection.prompt covering every ordered shot in the scene. Archived promptDrafts are read-only.');
     throw new Error('video_prompt_deferred: archived promptDrafts are read-only. Save the production prompt in videoDirection.prompt.');
 }
 export function writeStoryScenes(args, requireSceneCast = false) {

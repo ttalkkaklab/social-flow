@@ -55115,7 +55115,7 @@ var transitionPatchSchema = external_exports.object({
 }).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var nextTransitionSchema = external_exports.object(transitionFields).strict().refine(...secondsOnMovingJoins).refine(...reasonOnChosenJoins);
 var storyboardApplySchema = external_exports.object({
-  splitReferenceScenes: external_exports.boolean().optional().describe("Apply GenAI reference splits to an existing storyboard"),
+  splitReferenceScenes: external_exports.boolean().optional().describe("Apply user-requested GenAI reference splits to an existing storyboard"),
   path: external_exports.string().min(1).describe("The storyboard directory (scenes.js is created there when missing), or its scenes.js"),
   draft: external_exports.boolean().default(false).describe("The story pass (storyboard \xA74a) \u2014 camera-continuity records (lineCrossing, coverage) are deferred, not violations"),
   set: external_exports.object({ structure: structureSchema.optional(), shots: external_exports.array(shotSchema).min(1) }).optional().describe("Replace the whole board \u2014 the structure and every shot. The way a new board is written"),

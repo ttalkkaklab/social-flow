@@ -2178,7 +2178,7 @@ character: [                         // an entry may carry its jurisdiction inst
 
 `shot_characters` writes this field in the storyboard's second step, after every shot story.
 
-**Character reference slots.** `visual.character` accepts up to four cast IDs. Production GenAI scenes reference only their speakers (a natively voiced line, not voice-over), at most two, with two character images in total; silent people listed here reach the clip through the shot pictures. The writer splits a third speaker at the preceding cut. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
+**Character reference slots.** `visual.character` accepts up to four cast IDs. Production GenAI scenes reference only their speakers (a natively voiced line, not voice-over), at most two, with two character images in total; silent people listed here reach the clip through the shot pictures. The writer reports a third pinned speaker and keeps the scene together. Clothing and prop references count toward the same four subject slots. Only subjects 1 and 2 can carry voice samples.
 
 **People in the frame (user directive, 2026-11-17).** `shot_characters` also writes
 `visual.bystanders` — up to two cast ids seen without an on-screen line, four of the cast in a
@@ -2662,10 +2662,7 @@ either way (absolute rule 10); this is about words that live inside the picture.
   illustration (`visual.bg`) as the source.
 - Keep `duration` inside one clip — Seedance makes only as many seconds as you ask and bills that much, but
   the 2.0 grades take **4–15s** and 2.5 **4–30s** (server-validated), and the check strip warns past the
-  route's cap. A long performance can outrun that cap — the legacy estimate (characters / 4.5)
-  shows it early, the measured speech and action timing (storyboard SKILL §5) shows it exactly —
-  and a 13-second sentence on a motion background is a storyboard defect: trim the narration or
-  split the scene. A clip shorter than its scene loops, and the loop shows its seam.
+  route's cap. Measure the speech and action timing (storyboard SKILL §5). If the scene exceeds the route’s cap, report the required duration and any compatible whole-scene operation. A shorter background clip loops at playback.
 - The plan check is the same as b-roll's (absolute rule 13) — go through the rule's list
   yourself before calling the video adapter; the plan-mode delegation of 0.49 is not part of the flow.
 
@@ -3899,7 +3896,7 @@ The scene's narrative attention applies throughout. A shot separately records it
 
 Save `videoDirection` in `STRUCTURE.scenes[]` with `story_scene`. Its fields use English. Keep the original spoken text on the ordered shot cards.
 
-`videoDirection.prompt` holds the complete prompt for the current scene. To render two prompts, call `story_scene` with `split: {beforeShot}` and include both scene records with their complete prompts. Give the parts consecutive playback numbers. Later scenes, their shots and sequence payoff references move forward together. The moved shots retain their IDs, lines and durations. Their scene-frame intervals, image frames and dialogue cues start at the new scene origin. A new take reads the current board again.
+`videoDirection.prompt` holds the complete prompt for the current scene. When the user requests a new scene boundary, call `story_scene` with `split: {beforeShot}` and include both scene records with their complete prompts. Give the parts consecutive playback numbers. Later scenes, their shots and sequence payoff references move forward together. The moved shots retain their IDs, lines and durations. Their scene-frame intervals, image frames and dialogue cues start at the new scene origin. A new take reads the current board again.
 
 ```js
 videoDirection: {

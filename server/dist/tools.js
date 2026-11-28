@@ -4709,7 +4709,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                 path: { type: 'string', description: 'The storyboard directory or its scenes.js' },
                 split: { type: 'object', additionalProperties: false, required: ['beforeShot'], properties: {
                         beforeShot: { type: 'string', pattern: '^s[0-9]{4,}$' }, newSceneNo: { type: 'integer', minimum: 1 }
-                    }, description: 'For separate production prompts, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs.' },
+                    }, description: 'When the user requests a new scene boundary, split at an existing shot. Include both scene records and their complete videoDirection.prompt in scenes. Use the two consecutive playback numbers for the scene records. All following scenes shift forward; shots retain their IDs.' },
                 scenes: { type: 'array', minItems: 1, description: 'Scenes in playback order', items: { type: 'object', additionalProperties: false, required: ['sequence', 'no', 'place', 'time', 'event', 'summary'], properties: {
                             sequence: { type: 'string', description: 'The sequence id this scene belongs to' },
                             no: { type: 'integer', minimum: 1, description: 'Scene number, unique on the board' },
@@ -5088,7 +5088,7 @@ storyboard_apply assigns stable shot ids (s0001…) and advances STRUCTURE.nextS
 Shot creation, upserts and inserts expose type, shot.render.mode, shot.videoDesign, visual.camera and the three plan records shot.eyeline · shot.composition · shot.depth in the input schema. shot.depth names the sharp subject or planes. Set listening perspective in sound.perspective, participant arrangement and cutRole separately from size. For a drone shot choose preset:"drone-flythrough", variant:"cinematic" or "fpv", and the trajectory. The preset does not change the episode style or select a paid model.
 Do NOT pass a shot's visual plan through a summary — pass the object scenes-schema.md defines (visual · shot.space · visual.camera · visual.video …); unknown keys on a shot pass through untouched. Nonblocking edit_* findings expose performed-speech changes, removed actions, inherited images and dangling prop-event shot ids. They require an editorial comparison, not regeneration or approval. Editing a board drops its stale \`// approved:\` line; existing task authorization is unchanged.
 
-Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards keep their authored scene boundaries and report the voice limit when a third speaker enters. Preview existing boards with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
+Scene: { no, place, time, event, summary, charge: { open: "+"|"-", close: "+"|"-"|"++"|"--" }, turn, out? } — on a story-first board a scene without its one-sentence summary is refused (story_order). Production GenAI boards keep their authored scene boundaries and report the voice limit when a third speaker enters. Preview a user-requested reference split with splitReferenceScenes and dryRun. A one-take or single shot over the limit reports its cast and shot ID. Sequence: { id, title, purpose, question?, payoff?, scenes: [no…] }. The reasons for each field are in scenes-schema.md §structure.
 
 Returns: the file written or not, counts, and findings (! violation · warning).`,
         inputSchema: {
@@ -5141,7 +5141,7 @@ Returns: the file written or not, counts, and findings (! violation · warning).
                                 events: { type: 'array', items: { type: 'object' }, description: 'Each: {id,propId,kind,at:{day,order},from,to,reason,recordedAt,recordedBy,shotIds?}. Kinds transfer/lend/return/pick_up/put_down/lose/damage/repair/move/correct. from asserts every changed field. Story time is independent of shot order.' },
                             } },
                     } },
-                splitReferenceScenes: { type: 'boolean', description: 'Split existing GenAI scenes before a shot introduces a third speaking character. dryRun previews the groups; a shot or requested one-take that needs three must be restaged.' },
+                splitReferenceScenes: { type: 'boolean', description: 'Apply a user-requested scene boundary edit to GenAI scenes with more than two pinned speakers. Use dryRun to preview the proposed groups.' },
                 dryRun: { type: 'boolean', description: 'Validate and report, write nothing' },
                 draft: { type: 'boolean', description: 'The story pass (storyboard §4a): camera-continuity records — shot.lineCrossing, shot.coverage — are deferred (later), not violations; leave it off in §4b' },
             },
@@ -5221,7 +5221,7 @@ for (const tool of TOOLS) {
         continue;
     tool.inputSchema.properties = { ...tool.inputSchema.properties, requiredSeconds: {
             type: 'number', exclusiveMinimum: 0,
-            description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Over-limit shots must be split; never truncated.',
+            description: 'Required source coverage in seconds, e.g. 3.2. Include the measured shot body, source trim and outgoing transition handle. Selects the shortest supported duration without changing model/resolution. Mutually exclusive with duration, durationSeconds, numFrames, frames, autoDuration and audioMaxDuration. Use for new shots; exact legacy requests may retain their explicit length. Report the limit when the required coverage exceeds the supported duration.',
         } };
     tool.description += '\nFor shot-length optimization, pass requiredSeconds (e.g. 3.2) instead of a fixed duration/frame count. Returns the required/requested/excess seconds as a duration plan; these are not measured output seconds. Do NOT use this option for extending, editing or retaking existing footage.';
 }

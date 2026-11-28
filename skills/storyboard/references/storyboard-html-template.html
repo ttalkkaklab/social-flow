@@ -4180,7 +4180,7 @@ window.STORYBOARD_READY = (async function () {
         var mbCap = 15;   // Seedance 2.0 and host image_to_video both stop at 15 s
         if (s.duration > mbCap)
           flag("warn", T.shotCap(no), "motion background " + s.duration + "s — past the " + engineOf(s) +
-               " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Trim the narration, split the scene, or route to a model that takes it");
+               " route's one-call cap (" + mbCap + "s; server-validated), so the clip loops and the seam shows. Check for a model that supports the full scene duration");
         if (narr.some(function (n) { return n.img; }))
           flag("bad", T.shotCap(no), "motion background together with per-line illustrations — swapping the background per segment cannot work (scenes-schema)");
       }
