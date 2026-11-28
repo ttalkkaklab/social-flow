@@ -94934,7 +94934,7 @@ var require_film_techniques = __commonJS({
       }
       const refs = [["front", "\uC815\uBA74 \uC804\uC2E0", "Front reference", "\uC804\uC2E0\xB7\uC758\uC0C1\xB7\uCCB4\uD615", "Headless front mannequin; preserve build, wardrobe and shoes.", "M8 29V15h16v14M16 15v14"], ["back", "\uD6C4\uBA74 \uC804\uC2E0", "Back reference", "\uD6C4\uBA74\xB7\uB4A4\uB3CC\uC544\uC12C", "Headless rear mannequin; preserve clothing seams and match front scale.", "M8 29V15h16v14M16 15v14M11 17h10"], ["face", "\uC5BC\uAD74 \uCC38\uC870", "Face reference", "\uB300\uC0AC\xB7\uC5BC\uAD74 \uBC18\uC751", "Neutral face including hair; keep identity separate from scene lighting.", "M16 3a12 12 0 1 0 .01 0M10 13h3m6 0h3M12 21h8"], ["costume", "\uC758\uC0C1 \uC804\uC6A9 \uCC38\uC870", "Costume reference", "\uC758\uC0C1\xB7\uCCB4\uD615 \uBCF4\uC870", "Optional wardrobe variant; baseline front/back already omit the head.", "M10 4 3 10l4 7 3-3v15h12V14l3 3 4-7-7-6-6 7z"]];
       for (const [key, ko, en, use, instruction, glyph] of refs) add("character." + key, "character", ko, en, use, instruction, glyph, { reference: key });
-      const timing2 = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C\xB7\uAE00\uC744 \uD655\uC778\uD558\uB294 \uC2DC\uAC04. \uC77D\uC744 \uBD84\uB7C9\uC774 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the actual discovery or reading and its consequence; end when the cue is understood, without a preset insert length.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29. \uC608\uBE44\uB3D9\uC791, \uB3D9\uC791, \uBC18\uC751\uC774 \uB2E4 \uB4E4\uC5B4\uAC00\uB294 \uC2DC\uAC04.", "Time anticipation, contact and response in order. Overlap simultaneous action; keep one continuous action together unless a new viewpoint reveals its consequence.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654. \uC2E4\uCE21\uD55C \uB300\uC0AC \uAE38\uC774\uC640 \uBC18\uC751 \uAF2C\uB9AC\uAC00 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the complete exchange with speaker changes, interruptions and motivated reactions. Two speakers can share one shot; do not add a new shot or a fixed hold for each turn.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58 \uAD00\uACC4\uB97C \uC77D\uB294 \uC2DC\uAC04. \uCC98\uC74C \uBCF4\uB294 \uC7A5\uC18C\uB294 \uAE38\uAC8C, \uB2E4\uC2DC \uCC3E\uC740 \uC7A5\uC18C\uB294 \uC9E7\uAC8C.", "Give only the time needed to understand the relevant geography; let story action establish the place whenever possible.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uC758\uBBF8\uC778 \uC7A5\uBA74. \uB04A\uC73C\uBA74 \uC758\uBBF8\uAC00 \uAE68\uC9C0\uB294 \uD589\uB3D9.", "Keep continuous time when it carries the event; derive length from its changing action, with no minimum long-take duration. Stay within the adapter limit.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
+      const timing2 = [["insert", "\uC778\uC11C\uD2B8 \uC2DC\uAC04", "Insert timing", "\uB2E8\uC11C\xB7\uC0AC\uBB3C\xB7\uAE00\uC744 \uD655\uC778\uD558\uB294 \uC2DC\uAC04. \uC77D\uC744 \uBD84\uB7C9\uC774 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the actual discovery or reading and its consequence; end when the cue is understood, without a preset insert length.", "M3 8h26v16H3zM11 12h10v8H11z"], ["action", "\uD589\uB3D9 \uC2DC\uAC04", "Action timing", "\uC774\uB3D9\xB7\uC811\uCD09\xB7\uB3C4\uCC29. \uC608\uBE44\uB3D9\uC791, \uB3D9\uC791, \uBC18\uC751\uC774 \uB2E4 \uB4E4\uC5B4\uAC00\uB294 \uC2DC\uAC04.", "Time anticipation, contact and response in order. Overlap simultaneous action; keep one continuous action together unless a new viewpoint reveals its consequence.", "M3 24l8-12 7 8 11-15M3 29h26"], ["dialogue", "\uB300\uC0AC\xB7\uAC10\uC815 \uC2DC\uAC04", "Dialogue timing", "\uB9D0\uACFC \uD45C\uC815\uC758 \uBCC0\uD654. \uC2E4\uCE21\uD55C \uB300\uC0AC \uAE38\uC774\uC640 \uBC18\uC751 \uAF2C\uB9AC\uAC00 \uAE38\uC774\uB97C \uC815\uD55C\uB2E4.", "Time the complete exchange with speaker changes, interruptions and motivated reactions. Start a new shot at a change of speaker. Derive the hold from the action.", "M3 4h26v18H13l-6 7v-7H3zM8 10h16M8 16h10"], ["establishing", "\uACF5\uAC04 \uC18C\uAC1C \uC2DC\uAC04", "Establishing timing", "\uC7A5\uC18C\uC640 \uC704\uCE58 \uAD00\uACC4\uB97C \uC77D\uB294 \uC2DC\uAC04. \uCC98\uC74C \uBCF4\uB294 \uC7A5\uC18C\uB294 \uAE38\uAC8C, \uB2E4\uC2DC \uCC3E\uC740 \uC7A5\uC18C\uB294 \uC9E7\uAC8C.", "Give only the time needed to understand the relevant geography; let story action establish the place whenever possible.", "M3 27V12l13-9 13 9v15zM12 27V16h8v11"], ["long-take", "\uB871\uD14C\uC774\uD06C \uC2DC\uAC04", "Long-take timing", "\uC5F0\uC18D \uC2DC\uAC04 \uC790\uCCB4\uAC00 \uC758\uBBF8\uC778 \uC7A5\uBA74. \uB04A\uC73C\uBA74 \uC758\uBBF8\uAC00 \uAE68\uC9C0\uB294 \uD589\uB3D9.", "Keep continuous time when it carries the event; derive length from its changing action, with no minimum long-take duration. Stay within the adapter limit.", "M2 16h28M3 10v12m6-12v12m6-12v12m6-12v12m6-12v12"]];
       for (const [key, ko, en, use, instruction, glyph] of timing2) add("timing." + key, "timing", ko, en, use, instruction, glyph, { timing: key });
       const byId = Object.assign(/* @__PURE__ */ Object.create(null), Object.fromEntries(entries.map((entry2) => [entry2.id, entry2])));
       const GUIDE = {
@@ -97013,7 +97013,7 @@ var require_scene_references = __commonJS({
       const group = oversized ?? groups[1];
       const shotId = group.shotIds[0];
       const characters = oversized ? group.characters : unique([...groups[0].characters, ...group.firstShotCharacters]);
-      const reason = oneTake ? "The requested one-take needs a staging decision." : oversized ? "Reblock this shot into views with at most two speaking characters." : "Split before " + shotId + ".";
+      const reason = oneTake ? "The requested one-take needs a staging decision." : oversized ? "Split this shot at each change of speaker. Keep the turns in playback order." : "Split before " + shotId + ".";
       const message = "scene_cast_exceeded: scene " + scene.no + ", shot " + shotId + " references " + characters.join(", ") + ". " + reason;
       return {
         code: "scene_cast_exceeded",
@@ -102127,6 +102127,71 @@ var require_structure_contract = __commonJS({
           unscheduledShots: shots.flatMap((s2, i2) => scheduled.has(i2) ? [] : [shotRow(s2, i2)])
         };
       }
+      function shotSpeakerFinding(win, shot, index) {
+        const speakers = /* @__PURE__ */ new Set();
+        const events = Array.isArray(shot.performance) ? shot.performance : [];
+        const narration = Array.isArray(shot.narration) ? shot.narration : [];
+        const clip2 = shot.visual?.reuse?.clip || shot.visual?.clip;
+        const transcripts = Array.isArray(win.STORY?.transcripts) ? win.STORY.transcripts : [];
+        const groups = clip2 && transcripts.find((item) => item?.shot === index + 1 && item.source === clip2)?.groups;
+        const narrator = win.SB_DOC?.narratorCharacterId;
+        const labelledTexts = narration.flatMap((line) => {
+          if (typeof line?.tts !== "string") return [];
+          const words = line.tts.replace(/\*\*/gu, "").replace(/\[([^\[\]\r\n:：]+)\][ \t]*[:：]?/gu, " $1: ");
+          return /[:：]/u.test(words) ? [words] : [];
+        });
+        if (labelledTexts.length) {
+          const registry2 = win.SB_DOC?.characters;
+          const cast = Array.isArray(registry2) ? registry2 : Object.entries(registry2 || {}).map(([id2, entry2]) => ({ ...entry2, id: id2 }));
+          const names2 = /* @__PURE__ */ new Map();
+          for (const id2 of [
+            ...castOf(shot) || [],
+            ...narration.map((line) => line?.speaker),
+            ...win.STRUCTURE?.scenes?.find((scene) => scene?.no === shot.scene)?.speakers || []
+          ]) {
+            if (text4(id2)) names2.set(id2.toLowerCase(), id2);
+          }
+          for (const actor2 of cast) {
+            if (!text4(actor2?.id)) continue;
+            names2.set(actor2.id.toLowerCase(), actor2.id);
+            if (text4(actor2.name)) names2.set(actor2.name.toLowerCase(), actor2.id);
+          }
+          for (const words of labelledTexts) {
+            const labels = [...words.matchAll(/(?:^|\n|[.!?。！？]\s+)\s*([\p{L}\p{N}_-]+(?: [\p{L}\p{N}_-]+){0,4})\s*[:：]/gu)];
+            for (const [, label] of labels) {
+              const id2 = names2.get(label.toLowerCase());
+              if (id2) speakers.add(id2);
+            }
+            if (labels.some((match2) => names2.has(match2[1].toLowerCase()))) {
+              for (const prefix of words.toLowerCase().split(/[:：]/u).slice(0, -1)) {
+                const tail = prefix.trimEnd();
+                for (const [name2, id2] of names2) {
+                  if (tail === name2 || tail.endsWith(" " + name2) || tail.endsWith("\n" + name2)) speakers.add(id2);
+                }
+              }
+            }
+          }
+        }
+        for (const event of events) {
+          if (["dialogue", "narration"].includes(event?.kind) && text4(event.character)) speakers.add(event.character);
+        }
+        for (const lines of [narration, Array.isArray(groups) ? groups : []]) {
+          lines.forEach((line, i2) => {
+            if (!line || !(text4(line.tts) || text4(line.text) || text4(line.sub))) return;
+            const performer = events.find((event) => event?.group === i2 + 1 && ["dialogue", "narration"].includes(event.kind))?.character;
+            speakers.add(line.speaker || performer || narrator || null);
+          });
+        }
+        if (speakers.size <= 1) return;
+        const where = shot.id || "shot " + (index + 1);
+        const names = [...speakers].map((id2) => id2 || "(unassigned narrator)").join(", ");
+        return {
+          level: "bad",
+          code: "shot_multiple_speakers",
+          where,
+          what: "shot_multiple_speakers: " + where + " has " + names + ". Give each speaker turn its own shot in playback order. A one-take can have only one voice."
+        };
+      }
       function executionCheck(win) {
         const out = [], bad = (where, what) => out.push({ level: "bad", where, what });
         if (!win || !Array.isArray(win.SCENES)) return [{ level: "bad", where: "board", what: "SCENES must be an array" }];
@@ -102138,6 +102203,8 @@ var require_structure_contract = __commonJS({
             bad(where, "shot must be an object");
             return;
           }
+          const speakerIssue = shotSpeakerFinding(win, s2, i2);
+          if (speakerIssue) out.push(speakerIssue);
           if (s2.id !== void 0) {
             if (typeof s2.id !== "string" || !/^s\d{4,}$/.test(s2.id)) bad(where, "id: expected s followed by at least four digits (for example s0001)");
             else if (ids.has(s2.id)) bad(where, `id: duplicate ${s2.id} (already used by shot ${ids.get(s2.id)})`);
@@ -102360,6 +102427,7 @@ var require_structure_contract = __commonJS({
         check: check2,
         sceneBoundaries,
         sceneBoundaryFindings,
+        shotSpeakerFinding,
         executionCheck,
         guidedCheck,
         castOf,
@@ -102392,7 +102460,7 @@ var require_video_selection = __commonJS({
     var settings = require_model_settings();
     var { evaluateWindowScript: evaluateWindowScript2 } = require_scenes_vm();
     var { videoSlot, resolveVideoChoice } = require_production_mode();
-    var { videoLines } = require_structure_contract();
+    var { videoLines, shotSpeakerFinding } = require_structure_contract();
     var { projectSceneCast, sceneSpeechRoute } = require_scene_cast();
     var { productionPerformance } = require_scene_acting();
     var { framePlan, imageReferences, previzHandoff } = require_render_routing();
@@ -102504,6 +102572,10 @@ var require_video_selection = __commonJS({
       let scene = sceneNo === void 0 ? void 0 : board.STRUCTURE?.scenes?.find((s2) => s2.no === sceneNo);
       if (scene?.speakers !== void 0 && scene.frames === void 0 && !storedMembers.some((card) => card.timeline?.images?.some((pin) => pin.role === "start"))) scene = { ...scene, frames: {} };
       if (sceneNo !== void 0 && (!scene || !storedMembers.length)) throw new Error("sceneNo must identify a storyboard scene with shots");
+      for (const card of storedMembers) {
+        const issue2 = shotSpeakerFinding(board, card, scenes.indexOf(card));
+        if (issue2) throw new Error(issue2.what);
+      }
       const choice2 = (s2) => resolveVideoChoice(production, s2, snapshot?.config.models.video);
       const { selection: savedSelection, source: source2 } = choice2(storedMembers[0]);
       const owner = scene ?? (selectionOnly && board.STRUCTURE?.scenes?.find((s2) => s2.no === storedMembers[0].scene));
@@ -107675,7 +107747,7 @@ var require_check_tts_quality = __commonJS({
         if (require_scene_acting().hasCuedThought(s2) && receipt?.generator !== "speech_compose")
           throw new Error("Compose the private speech at its authored frame for card " + i2);
         if (win.SB_DOC?.speechPlanVersion === 1 && lines.length && win.VOICE !== "user") {
-          if (new Set(lines.map((n) => n.speaker)).size !== 1 && receipt?.generator !== "speech_compose") throw new Error("Multi-speaker shots need separately attached lines and speech_compose receipt");
+          if (new Set(lines.map((n) => n.speaker)).size !== 1 && receipt?.generator !== "speech_compose") throw new Error("An archived mixed-speaker shot lacks its composition receipt. Split new dialogue at each change of speaker.");
           const padded = lines.some((n) => (n.acting?.leadInSeconds ?? 0) > 0 || (n.acting?.tailOutSeconds ?? 0) > 0) || s2.performance?.some((event) => event.kind === "action" && (win.SB_DOC?.performanceTimingVersion === 1 || event.durationSeconds !== void 0 || event.withGroup !== void 0));
           const direct = !padded && !require_scene_acting().hasCuedThought(s2) && lines.length === 1 && lines[0].audio?.sha256 === media2[audio];
           if (!direct && (!receipt || receipt.audioSha256 !== media2[audio] || JSON.stringify(receipt.lineIds) !== JSON.stringify(lines.map((n) => n.id)) || receipt.expectedText !== lines.map((n) => n.tts).join(". "))) throw new Error("Scene WAV has no current line-bound generation receipt for card " + i2);
@@ -126985,7 +127057,7 @@ import * as path11 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.132.1",
+  version: "0.132.2",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -128657,6 +128729,18 @@ function sceneTransitionWords(shot, prefix = "") {
   const sentence2 = prefix ? prefix + cut : cut[0].toUpperCase() + cut.slice(1);
   return sentence2 + "." + (shot.transitionCue ? " " + shot.transitionCue.replace(/[.!?]+$/, "") + "." : "");
 }
+var cutSentences = /* @__PURE__ */ new Set([
+  ...Object.values(transitions),
+  "hard cut to the next camera setup",
+  ...Object.values(transitionDirections).flatMap((side) => ["whip-pan ", "push the frame "].map((move) => move + side + " into the next view"))
+]);
+function hasShotBoundary(stage2, numbered) {
+  if (numbered && numberedHeadings(stage2).length) return true;
+  return stage2.split(/(?:[.!?](?=\s|$)|\n)\s*/u).some((sentence2) => {
+    const cue = sentence2.trim().replace(/^Shot \d+:\s*/u, "").replace(/^\[[\d.]+[–-][\d.]+s\]\s*/u, "").replace(/^(?:Then |At [\d.]+ seconds, )/iu, "").toLowerCase();
+    return cutSentences.has(cue);
+  });
+}
 function sceneTransitionWarnings(cuts, authoredPrompt, lines) {
   if (authoredPrompt === void 0) return [];
   const sentences = (value2) => value2.split(/(?:[.!?](?=\s|$)|\n)\s*/u).map((part) => part.trim().toLowerCase().replace(/\s+/g, " ").replace(/^(?:then |at [\d.]+ seconds, )/, "")).filter(Boolean);
@@ -128871,6 +128955,8 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
   const original = spans(composed, script);
   const headings = numberedHeadings(stageText(composed, script));
   const numbered = headings.length > 0;
+  const labels = numberedHeadings(stageText(template, script));
+  const orderedShotLabels = labels.length === headings.length && labels.every((label, i2) => label[1] === headings[i2][1]);
   const range = /^\[\d+–\d+s\]/u;
   const approvedRanges = new Set(headings.flatMap((match2) => match2[2] ? [match2[2]] : []));
   if (approvedRanges.size) {
@@ -128905,10 +128991,11 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
   }
   const grammar = new SceneEditGrammar(cast);
   let index = 0;
-  let clause = "", wrappedClause = "";
+  let clause = "", wrappedClause = "", betweenTurns = "";
   const parts = spans(template, script);
   for (const [partIndex, span] of parts.entries()) {
     if (!span.quoted) {
+      betweenTurns += span.text;
       const sentences = splitSentences2(span.text);
       wrappedClause = unlabel(span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1) ?? "");
       clause = parts[partIndex + 1]?.quoted ? unlabel(sentences.pop() ?? "") : "";
@@ -128934,6 +129021,10 @@ function assertSceneDialogue(template, expected, cast, composed, nativeDialogue 
       throw new Error("scene_dialogue_mismatch: keep exactly the approved spoken lines in scene order");
     if (line.speaker && clause.trim() !== attributions[index - 1] && !grammar.ownsTurn(clause, line.speaker, line.delivery) && (wrappedClause === clause.trim() || !grammar.ownsTurn(wrappedClause, line.speaker, line.delivery)))
       throw new Error("scene_dialogue_speaker: introduce the quote directly with its approved speaker. Put complex blocking in a preceding sentence");
+    const previous = expected[index - 2];
+    if (previous?.speaker && line.speaker && previous.speaker !== line.speaker && !hasShotBoundary(betweenTurns, numbered && orderedShotLabels))
+      throw new Error("shot_multiple_speakers: keep a shot boundary between different speakers in the scene prompt");
+    betweenTurns = "";
   }
   if (nativeDialogue && index !== expected.length)
     throw new Error("scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes");
@@ -141170,9 +141261,6 @@ function writeShotPrompt(args) {
       throw new Error("openingPositions: use the character IDs assigned to this shot");
   }
   const speakerBindings = args.speakerBindings ?? [];
-  const visibleSpeakers = [...new Set((shot.narration ?? []).filter((line) => line.delivery === "on_screen" && line.tts).map((line) => line.speaker))];
-  if (args.speakerBindings && msr && visibleSpeakers.length > 1 && visibleSpeakers.some((id2) => !speakerBindings.some((binding) => binding.speaker === id2)))
-    throw new Error("video_speaker_binding_required: inspect the start image and pass speakerBindings for both on-screen speakers");
   if (new Set(speakerBindings.map((binding) => binding.speaker)).size !== speakerBindings.length || new Set(speakerBindings.map((binding) => binding.screenPosition)).size !== speakerBindings.length)
     throw new Error("video_speaker_binding_invalid: use one distinct screen position per speaker");
   for (const binding of speakerBindings) {
@@ -150364,7 +150452,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
     name: "story_shot",
     title: "Write shot stories (story step 3 of 3)",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
-    description: `Keep each camera cut as a separate shot. Track a pan, dolly, zoom or entrance within the same take. Set duration for model-paced cuts or supply timeline for exact frame ranges and dialogue cues. Use referenceImage for an optional composition guide. Set scene endpoints on story_scene.frames and exact shot anchors on timeline.images, with their scene frame and role. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines and turns; never allocate one shot per sentence or gesture. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
+    description: `Start a separate shot on each cut or change of speaker. Track a pan, dolly, zoom or entrance within the same take. Set duration for model-paced cuts or supply timeline for exact frame ranges and dialogue cues. Use referenceImage for an optional composition guide. Set scene endpoints on story_scene.frames and exact shot anchors on timeline.images, with their scene frame and role. Record one scene-length soundtrack in story_scene.videoDirection.audio. Use it after story_scene to write each provisional shot as one sentence summarizing a coherent performance in its scene. A summary may cover several lines from one speaker and the listener\u2019s silent reactions. Keep them together while the framing holds. Name the visible cause, discovery or changed behavior before choosing the cast; avoid a scene made only of speaker A / speaker B summaries. Revisit boundaries after shot_dialogue using storyboard_read.boundaryReview.sceneRuns (the uninterrupted scene) and boundaries (hold, reframe or cut); inspect performanceTiming and videoTiming before images. Without an id the shot is added at the end of its scene and gets a stable id (s0001\u2026); with an id that shot's scene and summary are revised and everything else on it is kept; a new scene moves it to the end of that scene. Refused (story_order) before any scene exists or for a scene outside a sequence. A story-first episode board also repeats story_sequence's cast check (cast_required, cast_source_missing, character_panel_missing). Local file only; no image, speech or prompt.
 
 Use timeline.framing for video direction. For an incoming whip_pan or foreground_wipe, write timeline.transitionCue with the direction and landing or the occluding object and reveal. The model gets the cue as prose. Do NOT pass top-level characters, dialogue, narration, camera, visual fields or a title \u2014 the input refuses them; a shot's title is on-screen text, which a full_video cut never carries. Once every shot has its story, shot_characters and shot_dialogue come next, then shot_icons; on a board these tools started (STORY.authoring "story-first") storyboard_apply refuses a shot without scene and summary.
 
@@ -150559,7 +150647,7 @@ Returns: the file written or not, counts, and findings (! violation \xB7 warning
 
 Before writing, read the exchange in order from each speaker's current knowledge: who hears this, what earlier event triggers it, and what response does the speaker want now? A future proposal or scene outcome cannot motivate an earlier reply. Set the actual addressee in performance.to through storyboard_apply; do not assume every line addresses the audience. Use check-story.js --text/--map for review so listeners and event order survive export. See storyboard's causal-dialogue reference. This guidance is editorial, not an automated judgment of meaning.
 
-Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. A shot keeps every line spoken during its camera setup, replies included; cut where the staging needs another view, not at each speaker change. The selected video model limits the pinned voices of one render, which video_plan reports (scene_render_voice_limit). Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. For a private thought set voiceoverKind to inner_thought and use the character's speaker id. The line uses voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; preserve an explicit one-take when a route lacks capacity and report that limit. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
+Use it to write a shot's lines in spoken order, each attributed to a character from the episode cast. The given lines replace the shot's lines; [] makes it silent. Each shot has at most one speaking character across on-screen speech, off-screen speech, narration and inner thoughts. Start a new shot before a different character speaks, even in the same framing. Silent listeners may remain visible. The selected video model limits the pinned voices of one render, which video_plan reports (scene_render_voice_limit). Choose the picture's evidence independently of who speaks: a purposeful listener reaction, hand insert, POV or spatial view can carry off_screen physical speech with the same speaker and addressee. Retain visible body parts in the cast and set delivery explicitly; do not default a hand-only speaking character to on_screen or call physical speech voiceover. Set each resulting shot's size and angle with shot_icons. For a private thought set voiceoverKind to inner_thought and use the character's speaker id. The line uses voiceover delivery, with image2video and measured, timed TTS instead of MSR. After writing the complete scene, inspect every storyboard_read.boundaryReview join against an uninterrupted performance, merge only redundant boundaries and compare revised performance duration with videoTiming; A requested one-take can have one voice. If the script needs a reply, report the conflict and retain the lines until the author chooses cuts or revises the dialogue. Delivery defaults to on_screen for one of the shot's characters and voiceover for anyone else \u2014 a narrator is a character who speaks without being seen. A line with a known id keeps its acting and audio binding, and changed text makes that audio stale. Refused (story_order) before the shot's characters are set and for an on_screen speaker outside them; an unknown speaker is cast_unknown, and a story-first board repeats story_sequence's cast check (cast_source_missing, character_panel_missing). Local file only; no audio, image or prompt is generated.
 
 Do NOT write a line the approved scenario does not give: where it reports that someone speaks without the words, write no line for that moment \u2014 stage it so the words are not needed (the listener's face, the speaker's back, distance) or ask. Do NOT generate speech here \u2014 speech_manage plans and binds audio later. Do NOT write icon attributes or visual plans; shot_icons comes next, then storyboard_apply.
 
@@ -150723,7 +150811,7 @@ Do NOT use it just to inspect a shot \u2014 use storyboard_read. Do NOT use it f
         end: { type: "string", description: "The closing picture, in English" },
         sound: { type: "string", description: `Ambient sound and effects, in English; the shot's lines come from shot_dialogue. "no music" is added unless it names music \u2014 the episode bed is laid in assembly` },
         openingPositions: openingPositionsProperty,
-        speakerBindings: { type: "array", maxItems: 2, description: "Visible speakers matched to the start image, e.g. hero at viewer-left in black armor. Required for two MSR on-screen speakers.", items: {
+        speakerBindings: { type: "array", maxItems: 2, description: "Inspected cast positions in the start image. Only the shot\u2019s speaking character has dialogue.", items: {
           type: "object",
           additionalProperties: false,
           required: ["speaker", "screenPosition", "description"],
@@ -153068,6 +153156,14 @@ function manageSpeech(args, options = {}) {
   const revision = hash5(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
+  function checkSpeakers(targets) {
+    for (const shot of targets ?? []) {
+      const issue2 = contract().shotSpeakerFinding(win, shot, win.SCENES.indexOf(shot));
+      if (issue2) throw new Error(issue2.what);
+    }
+  }
+  if (!["list", "update", "prepare"].includes(args.action))
+    checkSpeakers(win.SCENES?.filter((shot) => !args.shotId || shot.id === args.shotId));
   const doc = object6(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
@@ -153449,6 +153545,7 @@ function manageSpeech(args, options = {}) {
     }
   }
   if (args.action === "plan_audio" && (!selected.length || selected.some(({ line }) => !line.id || !line.speaker || !line.delivery))) throw new Error("Prepare explicit speech before planning audio");
+  if (changed && ["update", "prepare"].includes(args.action)) checkSpeakers(scenes);
   if (changed) {
     const ids = /* @__PURE__ */ new Set();
     for (const { scene, line } of all) {
@@ -161486,7 +161583,7 @@ ROUTES.music_status = async (args) => args?.action === "resume" ? resumeMusic2(a
 // src/index.ts
 import { readFileSync as readFinalRequest } from "node:fs";
 var server = new Server(
-  { name: "social-flow", version: "0.132.1" },
+  { name: "social-flow", version: "0.132.2" },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS }
 );
 server.setRequestHandler(ListToolsRequestSchema, async () => {

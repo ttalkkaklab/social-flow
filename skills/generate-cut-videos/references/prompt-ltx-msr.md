@@ -31,7 +31,7 @@ limits here, so `promptGuidance.advice` stays empty.
 
 - A Lightricks maintainer, answering a repository issue on 4 November 2026, calls two
   subjects the practical number and suggests keeping two speaking subjects per shot and
-  covering a third with cuts or reverse shots.
+  covering a third with cuts or reverse shots. This describes upstream model capacity. Social Flow starts a new shot at every change of speaker.
 - The MSR paper names two failures: subjects with similar looks or clothes can blend, and a
   character's appearance can drift when they turn away or return to the frame.
 - Almost every training example carried two to five reference pictures: 20.35 percent had

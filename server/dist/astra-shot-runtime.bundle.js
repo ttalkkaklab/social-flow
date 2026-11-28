@@ -50227,6 +50227,27 @@ function formatReferenceLabel(style, kind, index) {
   return (style === "at_indexed" ? "@" : "") + label + " " + index;
 }
 
+// src/scene-prompt.ts
+var transitions = {
+  hard_cut: "cut directly",
+  dissolve: "dissolve to the next view",
+  fade: "fade to the next view",
+  whip_pan: "whip-pan into the next view",
+  foreground_wipe: "cut to the next view while the foreground fills the frame",
+  dip: "dip to black before the next view",
+  "dip:white": "dip to white before the next view",
+  jcut: "bring in sound from the next shot before cutting to its picture",
+  iris: "reveal the next view through a circular iris",
+  blur: "blur into the next view",
+  zoom: "zoom into the next view"
+};
+var transitionDirections = { l2r: "left to right", r2l: "right to left", u2d: "top to bottom", d2u: "bottom to top" };
+var cutSentences = /* @__PURE__ */ new Set([
+  ...Object.values(transitions),
+  "hard cut to the next camera setup",
+  ...Object.values(transitionDirections).flatMap((side) => ["whip-pan ", "push the frame "].map((move) => move + side + " into the next view"))
+]);
+
 // src/genai-scene.ts
 var GENAI_SCENE_MODELS = ["ltx-2.5-22b-distilled", "minimax-h3"];
 var GENAI_SCENE_FRAMES = { min: 25, max: 361, step: 8 };
@@ -52281,7 +52302,7 @@ import * as path6 from "node:path";
 // package.json
 var package_default = {
   name: "@zeans/social-flow-mcp-server",
-  version: "0.132.1",
+  version: "0.132.2",
   license: "Apache-2.0",
   description: "Built-in MCP server for the social-flow plugin \u2014 direct SNS publishing (Threads\xB7Instagram\xB7Facebook\xB7YouTube) + research search (5 SerpApi tools\xB7SNS issue scout\xB78 Naver Open API types) + image\xB7video\xB7voice\xB7music generation (OpenAI GPT Image\xB7Veo 3.1\xB7Seedance\xB7Gemini TTS\xB7ElevenLabs\xB7Lyria\xB7Suno) + optional on-device MLX Core / mlx-serve (mlx_*)",
   type: "module",
@@ -55616,6 +55637,14 @@ function manageSpeech(args, options = {}) {
   const revision = hash(before);
   const mutates = ["prepare", "update", "attach_audio", "attach_video", "retime"].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error("Read speech first and supply its current expectedRevision; the storyboard may have changed");
+  function checkSpeakers(targets) {
+    for (const shot of targets ?? []) {
+      const issue = contract().shotSpeakerFinding(win, shot, win.SCENES.indexOf(shot));
+      if (issue) throw new Error(issue.what);
+    }
+  }
+  if (!["list", "update", "prepare"].includes(args.action))
+    checkSpeakers(win.SCENES?.filter((shot) => !args.shotId || shot.id === args.shotId));
   const doc = object3(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings = [];
@@ -55997,6 +56026,7 @@ function manageSpeech(args, options = {}) {
     }
   }
   if (args.action === "plan_audio" && (!selected.length || selected.some(({ line }) => !line.id || !line.speaker || !line.delivery))) throw new Error("Prepare explicit speech before planning audio");
+  if (changed && ["update", "prepare"].includes(args.action)) checkSpeakers(scenes);
   if (changed) {
     const ids = /* @__PURE__ */ new Set();
     for (const { scene, line } of all) {

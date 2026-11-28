@@ -16,7 +16,7 @@ const characterSpeechContract = () => nodeModule.createRequire(import.meta.url)(
   verifiedSpeechGeneration(audioPath: string, proof: unknown, voice: unknown, line: unknown, options?: {required: boolean; referenceSha256?: string}): NonNullable<z.infer<typeof speechManageSchema>['generation']>;
   conditioningAudioSha256(videoPath: string): string | undefined;
 };
-import { readBoard, serializeBoard } from './storyboard.js';
+import { contract, readBoard, serializeBoard } from './storyboard.js';
 import { actingSchema, compileActing, type SpeechActing } from './speech-acting.js';
 import { resolveTtsModel } from './tts-models.js';
 import { ASTRA_VIDEO_MAX_PROMPT_CHARS } from './astra-video-client.js';
@@ -217,6 +217,14 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
   const revision = hash(before);
   const mutates = ['prepare', 'update', 'attach_audio', 'attach_video', 'retime'].includes(args.action);
   if (mutates && args.expectedRevision !== revision) throw new Error('Read speech first and supply its current expectedRevision; the storyboard may have changed');
+  function checkSpeakers(targets: typeof win.SCENES) {
+    for (const shot of targets ?? []) {
+      const issue = contract().shotSpeakerFinding(win, shot, win.SCENES!.indexOf(shot));
+      if (issue) throw new Error(issue.what);
+    }
+  }
+  if (!['list', 'update', 'prepare'].includes(args.action))
+    checkSpeakers(win.SCENES?.filter(shot => !args.shotId || shot.id === args.shotId));
   const doc = object(win.SB_DOC);
   const rawCharacters = doc.characters;
   const voiceWarnings: string[] = [];
@@ -554,6 +562,7 @@ export function manageSpeech(args: z.infer<typeof speechManageSchema>, options: 
     }
   }
   if (args.action === 'plan_audio' && (!selected.length || selected.some(({line})=>!line.id || !line.speaker || !line.delivery))) throw new Error('Prepare explicit speech before planning audio');
+  if (changed && ['update','prepare'].includes(args.action)) checkSpeakers(scenes);
   if (changed) {
     const ids = new Set();
     for (const { scene, line } of all) {

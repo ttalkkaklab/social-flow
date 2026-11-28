@@ -165,7 +165,6 @@ test('a GenAI scene counts its speakers and leaves a scene-wide silent face out'
     shot.timeline.openingPositions = f.scene.openingPositions;
     shot.narration = [line(cast[i].id,shot.id+'-l1')];
   }
-  f.members[0].narration.push(line(cast[1].id,'reply'));
   const listener = {id:'listener',panels:{face:'images/listener.png'}};
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=red:s=16x16','-frames:v','1',path.join(f.dir,listener.panels.face)]);
   cast.push(listener);
@@ -184,7 +183,7 @@ test('a GenAI scene counts its speakers and leaves a scene-wide silent face out'
   f.scene.oneTake = true;
   f.members[0].narration.push(line('tu-vi','third'));
   save();
-  assert.throws(()=>planVideo(f.input,false),e=>e.report?.shotId==='s0001' && !e.report.splitBefore.length);
+  assert.throws(()=>planVideo(f.input,false),/shot_multiple_speakers: s0001/);
 });
 
 test('a refused GenAI scene reads what scene mode takes from the common catalog without submitting media',async t=>{

@@ -63,6 +63,18 @@ test('stable dialogue addresses survive prepare; edits target one character and 
  assert.equal(manageSpeech({path:target,action:'list',speaker:'narrator'}).lines[0].tts,'Outside');
  assert.throws(()=>manageSpeech({path:target,action:'update',lineId:first.id,expectedRevision:next.revision,patch:{speaker:'missing'}}),/Unknown speaker/);
 });
+test('editing one of two lines cannot add a second speaker to the shot', t => {
+ const {target}=setup(t), file=join(target,'scenes.js');
+ const board=require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
+ const line=board.SCENES[0].narration[0];
+ board.SCENES[0].narration.push({...line,id:'second',tts:'One more thing.'});
+ writeFileSync(file,Object.entries(board).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
+ const before=readFileSync(file);
+ const {revision}=manageSpeech({path:target,action:'list'});
+ assert.throws(()=>manageSpeech({path:target,action:'update',lineId:'second',expectedRevision:revision,
+   patch:{speaker:'narrator',delivery:'voiceover'}}),/shot_multiple_speakers/);
+ assert.deepEqual(readFileSync(file),before);
+});
 test('a speechless replacement binds audible effects and reports missing or silent tracks',t=>{
  const {dir,target,r}=setup(t),file=join(target,'scenes.js');
  const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
@@ -189,19 +201,19 @@ test('public speech planning and attachment share the model voice limit for each
    const result=await ROUTES.speech_manage({path,action,shotId:'shot1',expectedRevision,videoPath:candidate,...options});
    return JSON.parse(result.content[0].text);
  };
- const rejectOverflow=async(path,options)=>{
+ const rejectOverflow=async(path,options,reason=/scene_render_voice_limit: .* needs 3 pinned voices.* accepts 2 per render/)=>{
    const bytes=readFileSync(join(path,'scenes.js'));
    for(const action of ['plan_video','attach_video']){
-     await assert.rejects(call(action,path,options),/scene_render_voice_limit: .* needs 3 pinned voices.* accepts 2 per render/);
+     await assert.rejects(call(action,path,options),reason);
      assert.deepEqual(readFileSync(join(path,'scenes.js')),bytes);
    }
  };
  board.SCENES=[card('shot1',lines)];
  save();
- await rejectOverflow(target);
+ await rejectOverflow(target,{},/shot_multiple_speakers/);
  const standalone=join(dir,'import'); mkdirSync(standalone);
  save(join(standalone,'scenes.js'));
- await rejectOverflow(standalone,{tool:'astra_genai_msr'});
+ await rejectOverflow(standalone,{tool:'astra_genai_msr'},/shot_multiple_speakers/);
  board.SCENES=lines.map((line,i)=>card('shot'+(i+1),[line]));
  save();
  await rejectOverflow(target);
@@ -210,7 +222,7 @@ test('public speech planning and attachment share the model voice limit for each
  save();
  // A GenAI scene is one render, so three speakers across its cuts still need three voices.
  await rejectOverflow(target);
- board.SCENES=[card('shot1',lines)];
+ board.SCENES=lines.map((line,i)=>card('shot'+(i+1),[line]));
  board.PRODUCTION.videoModel={engine:'seedance',model:'dreamina-seedance-2-0-fast-260128',operation:'reference'};
  save();
  assert.equal((await call('plan_video')).plan.mode,'native');
@@ -219,9 +231,10 @@ test('public speech planning and attachment share the model voice limit for each
  save();
  assert.equal((await call('plan_video')).plan.mode,'audio_conditioned');
  delete board.STRUCTURE;
+ board.SCENES=[card('shot1',lines)];
  board.PRODUCTION.videoModel=ltx;
  save(join(standalone,'scenes.js'));
- await rejectOverflow(standalone);
+ await rejectOverflow(standalone,{},/shot_multiple_speakers/);
 });
 test('public native attachment verifies its source and registered operation even without a snapshot',async t=>{
  const {dir,target,r}=setup(t); setupProject(dir);
@@ -769,7 +782,7 @@ for(const render of ['conditioning','native','mix','silent','off-screen'])test('
    }
  }
 });
-for(const ensemble of [false,true])test('a managed native scene retains '+(ensemble?'the pins for simultaneous speakers':'the selected voice and face')+' on import',async t=>{
+for(const ensemble of [false,true])test('a managed native scene retains '+(ensemble?'no mixed-speaker take':'the selected voice and face')+' on import',async t=>{
  const {dir,target,file,first,retake,original,remux,bind}=a2vFixture(t);
  const read=()=>require('../../skills/_shared/scenes-vm.js').evaluateWindowScript(readFileSync(file,'utf8'));
  const save=win=>writeFileSync(file,Object.entries(win).map(([k,v])=>'window.'+k+'='+JSON.stringify(v)+';').join('\n'));
@@ -810,6 +823,12 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
      videoPath:source,sha256:sha(source),fingerprint,requestId:'scene-'+fingerprint,sceneRequestSha256:sha(source+'.scene-request.json')}));
  }
  save(win);await receipt(ensemble?[first,retake,first]:[first]);
+ if (ensemble) {
+   const before=readFileSync(file);
+   await assert.rejects(bind(remux),/shot_multiple_speakers/);
+   assert.deepEqual(readFileSync(file),before);
+   return;
+ }
  assert.equal((await bind(remux)).plan.mode,'native');
  const archive=read(),wrong=/speech_video_source_mismatch/;
  async function rejected(current){
@@ -818,14 +837,7 @@ for(const ensemble of [false,true])test('a managed native scene retains '+(ensem
    await assert.rejects(bind(remux),wrong);
    assert.deepEqual(readFileSync(file),before);
  }
- if(ensemble){
-   await t.test('two different samples at one frame keep their owners and repeated occurrences',async()=>{
-     await receipt([retake,first,first]);
-     await rejected(archive);
-     await receipt([first,retake,retake]);
-     await rejected(archive);
-   });
- }else{
+ {
    const valid=buildOneShotReel(work,target,archive);
    assert.equal(valid.status,0,valid.stderr);
    for(const change of ['different voice','removed voice','different face'])await t.test(change+' rejects attachment and archived assembly',async()=>{

@@ -337,7 +337,7 @@ test('a managed scene rejects an ambiguous copied portrait and accepts its regis
   doc.characters.push({id:'caller',voiceOnly:true,tts:otherTts,voiceReference:{path:otherVoice,tts:otherTts,sha256:createHash('sha256').update(fs.readFileSync(otherVoice)).digest('hex')}});
   execFileSync('ffmpeg',['-v','error','-f','lavfi','-i','color=white:s=320x320','-frames:v','1',path.join(board,'opening.png')]);
   const shot = {
-    id: 's1', scene:1, narration:[{speaker:'iris',delivery:'on_screen',tts:'Wait.'},{speaker:'caller',delivery:'off_screen',tts:'Okay.'}],
+    id: 's1', scene:1, duration:2, shot:{size:'ms',angle:'eye'}, narration:[{speaker:'iris',delivery:'on_screen',tts:'Wait.'}],
     visual: {
       frames: { mode: 'reference',start:'opening.png' },
       references: [{ id: 'iris', role: 'character', use: 'video', path: 'shot.png', purpose: 'The dancer.' }],
@@ -347,9 +347,12 @@ test('a managed scene rejects an ambiguous copied portrait and accepts its regis
   const auth = {
     videoAuthorization: { reference: 'Fixture approval', maxUsd: 1, maxAttempts: 1, maxConcurrent: 1 },
   };
+  const reply = {id:'s2',scene:1,duration:2,shot:{size:'ms',angle:'eye'},referenceImage:'opening.png',
+    visual:{action:'Iris listens.'},narration:[{speaker:'caller',delivery:'off_screen',tts:'Okay.'}]};
+  shot.visual.action='Iris waits.';
   const save = () => fs.writeFileSync(
     path.join(board, 'scenes.js'),
-    'window.SB_DOC='+ JSON.stringify(doc) + ';window.PRODUCTION=' + JSON.stringify(auth) + ';\nwindow.STRUCTURE={scenes:[{no:1}]};window.SCENES=' + JSON.stringify([shot]) + ';',
+    'window.SB_DOC='+ JSON.stringify(doc) + ';window.PRODUCTION=' + JSON.stringify(auth) + ';\nwindow.STRUCTURE={scenes:[{no:1,frames:{start:"opening.png"},videoDirection:{emotion:"Iris waits.",openingPositions:[{character:"iris",images:[],position:"By the door."}]}}]};window.SCENES=' + JSON.stringify([shot,reply]) + ';',
   );
   save();
   const plan = () => ROUTES.video_plan({

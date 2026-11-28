@@ -360,15 +360,9 @@ for a second or more of silence before a line. Each of these reports; none refus
 trim is applied without the author. Attaching other footage removes the old trim. Filmed sync
 footage keeps `in=0`. See `skills/produce/references/cinematic-edit.md`.
 
-## Dialogue coverage (user directive, 2026-11-09; speaker limit by model 2026-11-24)
+## Dialogue coverage (owner directive, 2026-11-28)
 
-One speaker per shot was a plugin rule; the models bind several pinned voices in one render.
-A shot keeps every line spoken in its view, replies included, and `shot_dialogue` no longer
-refuses a second speaker. The limit is the selected model's pinned voices per render (the
-scene), counted over natively voiced lines;
-`video_plan` reports a render over it (`scene_render_voice_limit`). Cut where the staging,
-the visible evidence or that capacity calls for another view. A visible listener without a
-line stays silent.
+Each shot has at most one speaking character across on-screen speech, off-screen speech, narration and inner thoughts. Start a new shot before a different character speaks, even in the same framing. Silent listeners may remain visible. A requested one-take can have one voice. If the script needs a reply, report the conflict and retain the lines until the author chooses cuts or revises the dialogue. Scene-level pinned-voice limits still apply across cuts.
 Choose the scene's visible evidence before cast/lines: speaker-facing OTS or close-ups
 when the face matters, purposeful off_screen speech over listener reactions, details,
 POVs or spatial views when those carry the change. Addressing a listener never requires
@@ -386,9 +380,7 @@ with native MSR thoughts. Existing usable clips do not require regeneration.
 
 ## MSR voice and LTX default (user directive, 2026-10-30; voice optional 2026-10-31)
 
-For two on-screen MSR speakers in a shot, bind both to the inspected
-start image by viewer-relative position and appearance with `shot_prompt.speakerBindings`;
-repeat the identity and image/audio mapping on compiled turns. Keep dialogue in
+For MSR, identify the speaking character in the inspected opening image. Keep dialogue in
 `shot_dialogue` and action in `shot_prompt`. Recompile saved action with current icons
 at video planning time and report each setting's delivery route. Experimental success
 is not a guarantee of model adherence, voice identity or subtitle absence.
@@ -1034,7 +1026,7 @@ Each generated shot needs a composition image before video planning. The scene o
 
 - Use an opening image for a picture with no visible dialogue. Keep off-screen-only speech and narration on the external soundtrack. On GenAI a silent cast member's look comes from the shot pictures `shot_image` draws from the sheet panels; the scene sends no picture of them and the plan names each one it leaves out (`scene_reference_omitted`). On other engines declare visual references for silent cast members whose appearance must carry through.
 - Use audio-to-video when a finished scene-length recording must drive the performance, regardless of how many people speak on it; GenAI scene mode renders its own soundtrack and refuses such a scene. Generate a fresh speaking take for a changed line. Post-render lip-sync of synthesized speech to existing footage is forbidden, including after a failed native take or a voice change.
-- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Restage a single shot in which three speak and flag a requested one-take for a decision.
+- For authored dialogue in pinned character voices, bind each speaker's sample to their identity. A production GenAI scene references only its speakers, at most two, and at most two character pictures in total (2026-11-27): a natively voiced line needs its speaker's picture because the pinned voice rides on it. One speaker can use a face and a body panel; two use one face each. Props share the four subject slots, and the background and shot openings have their own inputs. Split before the shot that introduces a third speaker. Split a shot at every change of speaker. If a requested one-take needs two voices, resolve the conflict before writing its dialogue.
 - Seedance 2.0 reference accepts up to nine images and three audio clips in one request. Its opening image guides composition. Veo can generate dialogue when the board explicitly selects `videoDirection.dialogueVoice: "model_generated"`. Its Standard/Fast asset mode accepts up to three images of one subject. The planner reports any required input the selected operation cannot send before approval.
 
 Before generating images, save the scene's seats or standing marks, fixed landmarks, facing and camera axis in `story_scene.directionDefaults`. Compose and inspect the first shot before the other shots. `shot_image` uses the first available scene image for the physical layout of later shots in the same space. The authored shot still defines the current viewpoint, crop, expression, action phase and prop state. A built set with actor blocking takes precedence. See [scene image generation](skills/generate-cut-images/SKILL.md).

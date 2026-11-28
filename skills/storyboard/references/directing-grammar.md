@@ -52,7 +52,7 @@ and inspect actual source images together before video generation. Different cam
 labels or filenames do not establish different pictures.
 
 Choose boundaries when an action, discovery, relationship or emotional state changes.
-Cut to the next speaker when the change serves the scene; a view that holds the exchange keeps the reply on its card.
+Cut when a different character speaks. The new shot can show the listener or a shared action when that carries the reply.
 Consecutive lines by one character can play over one coherent action. Follow
 [dialogue coverage](dialogue-coverage.md): choose who speaks in each setup,
 then choose its size and angle. Use speaker-facing OTS/reverse when a face carries the change and keep

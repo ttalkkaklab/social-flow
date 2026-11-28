@@ -56,9 +56,7 @@ beside each speaker's portrait and dialogue bubble.
 
 Stable shot ids and line ids survive reorder and model changes. `speech_manage` prepares,
 finds and updates them and attaches audio hashes. Per-line audio records are not scene WAVs:
-the shared composer accepts several speakers in one shot and makes one timed WAV per card.
-Keep each line bound to its own speaker, voice and audio receipt. Split an exchange when
-staging or the selected adapter calls for a cut, not merely because the speaker changes.
+the shared composer places the shot’s single speaker’s lines in performance order. Start the reply on the next card.
 The composer's file/timing checks are not listening QA.
 
 ## Common voice layer

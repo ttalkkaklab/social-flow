@@ -3636,9 +3636,6 @@ export function writeShotPrompt(args) {
             throw new Error('openingPositions: use the character IDs assigned to this shot');
     }
     const speakerBindings = args.speakerBindings ?? [];
-    const visibleSpeakers = [...new Set((shot.narration ?? []).filter(line => line.delivery === 'on_screen' && line.tts).map(line => line.speaker))];
-    if (args.speakerBindings && msr && visibleSpeakers.length > 1 && visibleSpeakers.some(id => !speakerBindings.some(binding => binding.speaker === id)))
-        throw new Error('video_speaker_binding_required: inspect the start image and pass speakerBindings for both on-screen speakers');
     if (new Set(speakerBindings.map(binding => binding.speaker)).size !== speakerBindings.length ||
         new Set(speakerBindings.map(binding => binding.screenPosition)).size !== speakerBindings.length)
         throw new Error('video_speaker_binding_invalid: use one distinct screen position per speaker');

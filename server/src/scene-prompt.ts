@@ -40,6 +40,20 @@ export function sceneTransitionWords(shot: Pick<SceneShot,'transition'|'transiti
   return sentence + '.' + (shot.transitionCue ? ' ' + shot.transitionCue.replace(/[.!?]+$/, '') + '.' : '');
 }
 
+// A wording edit must still cut between speakers. Match the directions the writers
+// emit as whole stage sentences, outside quotes, so spoken words cannot supply a cut.
+const cutSentences = new Set([...Object.values(transitions), 'hard cut to the next camera setup',
+  ...Object.values(transitionDirections).flatMap(side => ['whip-pan ', 'push the frame '].map(move => move + side + ' into the next view'))]);
+
+function hasShotBoundary(stage: string, numbered: boolean): boolean {
+  if (numbered && numberedHeadings(stage).length) return true;
+  return stage.split(/(?:[.!?](?=\s|$)|\n)\s*/u).some(sentence => {
+    const cue = sentence.trim().replace(/^Shot \d+:\s*/u, '').replace(/^\[[\d.]+[–-][\d.]+s\]\s*/u, '')
+      .replace(/^(?:Then |At [\d.]+ seconds, )/iu, '').toLowerCase();
+    return cutSentences.has(cue);
+  });
+}
+
 /** A saved prompt owns its wording. Surface a storyboard cue the author should check after an override. */
 export function sceneTransitionWarnings(cuts: SceneTimeline['cuts'], authoredPrompt: string | undefined, lines?: readonly string[]): string[] {
   if (authoredPrompt === undefined) return [];
@@ -295,6 +309,8 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   const original = spans(composed,script);
   const headings = numberedHeadings(stageText(composed,script));
   const numbered = headings.length > 0;
+  const labels = numberedHeadings(stageText(template,script));
+  const orderedShotLabels = labels.length === headings.length && labels.every((label, i) => label[1] === headings[i][1]);
   const range = /^\[\d+–\d+s\]/u;
   const approvedRanges = new Set(headings.flatMap(match => match[2] ? [match[2]] : []));
   if (approvedRanges.size) {
@@ -331,10 +347,11 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
   }
   const grammar = new SceneEditGrammar(cast);
   let index = 0;
-  let clause = '', wrappedClause = '';
+  let clause = '', wrappedClause = '', betweenTurns = '';
   const parts = spans(template,script);
   for (const [partIndex, span] of parts.entries()) {
     if (!span.quoted) {
+      betweenTurns += span.text;
       const sentences = splitSentences(span.text);
       wrappedClause = unlabel(span.text.trimEnd().split(/[.!?](?=\s|$)/u).at(-1) ?? '');
       clause = parts[partIndex+1]?.quoted ? unlabel(sentences.pop() ?? '') : '';
@@ -358,6 +375,11 @@ export function assertSceneDialogue(template: string, expected: readonly {speake
     if (line.speaker && clause.trim() !== attributions[index - 1] && !grammar.ownsTurn(clause,line.speaker,line.delivery) &&
         (wrappedClause === clause.trim() || !grammar.ownsTurn(wrappedClause,line.speaker,line.delivery)))
       throw new Error('scene_dialogue_speaker: introduce the quote directly with its approved speaker. Put complex blocking in a preceding sentence');
+    const previous = expected[index - 2];
+    if (previous?.speaker && line.speaker && previous.speaker !== line.speaker &&
+        !hasShotBoundary(betweenTurns, numbered && orderedShotLabels))
+      throw new Error('shot_multiple_speakers: keep a shot boundary between different speakers in the scene prompt');
+    betweenTurns = '';
   }
   if (nativeDialogue && index !== expected.length)
     throw new Error('scene_dialogue_mismatch: preserve each approved spoken line verbatim in quotes');
